@@ -9,7 +9,7 @@ public class MockTaskConsumer {
 	}
 
 	public void step() {
-		taskBroker.getTasks();
+		taskBroker.takeTasks();
 		
 	}
 

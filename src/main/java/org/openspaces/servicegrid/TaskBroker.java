@@ -4,10 +4,8 @@ import org.openspaces.servicegrid.model.Task;
 
 public interface TaskBroker {
 
-	void addTask(Task installServiceTask);
+	void addTask(Task task);
 
-	Iterable<Task> getTasksByTag(String tag);
-
-	Iterable<Task> getTasks();
+	Iterable<Task> takeTasks();
 
 }

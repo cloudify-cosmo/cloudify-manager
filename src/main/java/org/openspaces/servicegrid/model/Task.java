@@ -1,6 +1,5 @@
 package org.openspaces.servicegrid.model;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -10,7 +9,7 @@ import com.google.common.collect.Maps;
 public class Task {
 
 	private String type;
-	private Map<String,Object> properties = Maps.newHashMap();
+	private final Map<String,Object> properties = Maps.newHashMap();
 	private Set<String> tags = Sets.newHashSet();
 
 	public String getType() {

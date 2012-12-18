@@ -1,19 +1,22 @@
 package org.openspaces.servicegrid;
 
+import static org.mockito.Mockito.mock;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+
 import org.openspaces.servicegrid.model.ServiceConfig;
 import org.openspaces.servicegrid.model.ServiceId;
-import org.openspaces.servicegrid.model.ServiceStatus;
-import org.openspaces.servicegrid.model.Task;
+import org.openspaces.servicegrid.model.ServiceState;
 import org.testng.annotations.Test;
-import static org.testng.Assert.*;
-import static org.mockito.Mockito.*;
 
 public class InstallServiceTest {
 
 	@Test
 	public void installServiceGetServiceIdTest() {
 		
-		final ServiceController serviceController = new ServiceController(mock(TaskBroker.class));
+		TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
+		final ServiceController serviceController = new ServiceController(taskBrokerProvider, mock(ServiceStateViewer.class));
 		final ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setName("tomcat");
 		
@@ -26,8 +29,8 @@ public class InstallServiceTest {
 	@Test
 	public void installServiceGetServiceStatusTest() {
 		
-		TaskBroker taskBroker = new MockTaskBroker();
-		final ServiceController serviceController = new ServiceController(taskBroker);
+		TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
+		final ServiceController serviceController = new ServiceController(taskBrokerProvider, mock(ServiceStateViewer.class));
 		final ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setName("tomcat");
 		
@@ -35,36 +38,32 @@ public class InstallServiceTest {
 		final ServiceId serviceId = serviceController.installService(serviceConfig);
 		
 		//GET http://host/services/tomcat/_status
-		ServiceStatus status = serviceController.getServiceStatus(serviceId);
-		assertEqualsServiceConfig(status.getConfig(), serviceConfig);
-		assertEquals(status.getId(), serviceId);
-		assertNull(status.getLastEvent());
+		ServiceState status = serviceController.getServiceStatus(serviceId);
+		assertNull(status);
 	}
 
 	@Test
-	public void installServiceAndPlanGetServiceStatusTest() {
+	public void installServiceDelegateToOrchestratorAndGetServiceStatusTest() {
 		
-		final TaskBroker taskBroker = new MockTaskBroker();
-		ServiceOrchestrator serviceOrchestrator = new ServiceOrchestrator();
-		MockTaskProducer taskProducer = new MockTaskProducer(taskBroker, serviceOrchestrator);
-		MockTaskConsumer taskConsumer = new MockTaskConsumer(taskBroker);
+		final TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
+		ServiceStateHolder mapStateHolder = new MapServiceStateHolder();  
+		ServiceStateViewer stateViewer = mapStateHolder;
+		ServiceStateHolder stateHolder = mapStateHolder;
+		ServiceOrchestrator serviceOrchestrator = new ServiceOrchestrator(stateHolder);
+		MockBrokerPollingContainer taskProducer = new MockBrokerPollingContainer(taskBrokerProvider.getTaskBroker("serviceOrchestrator"), serviceOrchestrator);
 		
-		final ServiceController serviceController = new ServiceController(taskBroker);
+		final ServiceController serviceController = new ServiceController(taskBrokerProvider, stateViewer);
 		final ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setName("tomcat");
-		
 		
 		//POST http://host/services
 		final ServiceId serviceId = serviceController.installService(serviceConfig);
 		
+		taskProducer.step();
 		//GET http://host/services/tomcat/_status
-		ServiceStatus status = serviceController.getServiceStatus(serviceId);
+		ServiceState status = serviceController.getServiceStatus(serviceId);
 		assertEqualsServiceConfig(status.getConfig(), serviceConfig);
 		assertEquals(status.getId(), serviceId);
-		assertNull(status.getLastEvent());
-		
-		taskProducer.step();
-		taskConsumer.step();
 	}
 	
 	private void assertEqualsServiceConfig(

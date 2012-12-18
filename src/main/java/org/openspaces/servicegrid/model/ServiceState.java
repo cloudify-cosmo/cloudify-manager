@@ -1,7 +1,7 @@
 package org.openspaces.servicegrid.model;
 
 
-public class ServiceStatus {
+public class ServiceState {
 
 	private ServiceConfig config;
 	private ServiceId id;
@@ -26,4 +26,9 @@ public class ServiceStatus {
 		this.id = id;
 	}
 
+	/*public State getState() {
+		// TODO XML: Auto-generated method stub
+		return null;
+	}*/
+	
 }
