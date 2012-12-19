@@ -5,15 +5,13 @@ import org.openspaces.servicegrid.model.ServiceId;
 import org.openspaces.servicegrid.model.ServiceState;
 import org.openspaces.servicegrid.model.Task;
 
-import com.google.common.collect.Sets;
-
 public class ServiceController {
 
 	private final TaskBroker taskBroker;
 	private final ServiceStateViewer stateViewer;
 	
 	public ServiceController(TaskBrokerProvider taskBrokerProvider, ServiceStateViewer stateViewer) {
-		this.taskBroker = taskBrokerProvider.getTaskBroker();
+		this.taskBroker = taskBrokerProvider.getTaskBroker(null);
 		this.stateViewer = stateViewer;
 	}
 	
@@ -24,7 +22,7 @@ public class ServiceController {
 		
 		Task installServiceTask = new Task();
 		installServiceTask.setType("install-service");
-		installServiceTask.setTags(Sets.newHashSet("serviceOrchestrator"));
+		installServiceTask.setTarget("serviceOrchestrator");
 		installServiceTask.setProperty("service-id", serviceId);
 		installServiceTask.setProperty("service-config", serviceConfig);
 		taskBroker.addTask(installServiceTask);

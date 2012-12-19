@@ -15,14 +15,12 @@ public class MockTaskBrokerProvider implements TaskBrokerProvider {
 	public MockTaskBrokerProvider() {
 	}
 	
-	public TaskBroker getTaskBroker(final String... tags) {
+	public TaskBroker getTaskBroker(final String target) {
 		return new TaskBroker() {
 
 			public Iterable<Task> takeTasks() {
 				List<Task> tasks = Lists.newArrayList();
-				for (String tag : tags) {
-					tasks.addAll(tasksByTag.removeAll(tag));
-				}
+				tasks.addAll(tasksByTag.removeAll(target));
 				return tasks;
 			}
 

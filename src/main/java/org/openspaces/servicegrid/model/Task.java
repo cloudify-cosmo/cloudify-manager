@@ -3,14 +3,16 @@ package org.openspaces.servicegrid.model;
 import java.util.Map;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Sets;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public class Task {
 
 	private String type;
 	private final Map<String,Object> properties = Maps.newHashMap();
 	private Set<String> tags = Sets.newHashSet();
+	private String target;
+	private TaskId id;
 
 	public String getType() {
 		return type;
@@ -34,5 +36,21 @@ public class Task {
 
 	public Set<String> getTags() {
 		return this.tags;
+	}
+
+	public void setTarget(String target) {
+		this.target = target;
+	}
+	
+	public String getTarget() {
+		return target;
+	}
+
+	public TaskId getId() {
+		return id;
+	}
+
+	public void setId(TaskId id) {
+		this.id = id;
 	}
 }

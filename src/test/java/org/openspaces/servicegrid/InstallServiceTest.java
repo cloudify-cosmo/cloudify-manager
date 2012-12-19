@@ -50,7 +50,7 @@ public class InstallServiceTest {
 		ServiceStateViewer stateViewer = mapStateHolder;
 		ServiceStateHolder stateHolder = mapStateHolder;
 		ServiceOrchestrator serviceOrchestrator = new ServiceOrchestrator(stateHolder);
-		MockBrokerPollingContainer taskProducer = new MockBrokerPollingContainer(taskBrokerProvider.getTaskBroker("serviceOrchestrator"), serviceOrchestrator);
+		MockBrokerPollingContainer taskProducer = new MockBrokerPollingContainer(taskBrokerProvider.getTaskBroker(null), serviceOrchestrator);
 		
 		final ServiceController serviceController = new ServiceController(taskBrokerProvider, stateViewer);
 		final ServiceConfig serviceConfig = new ServiceConfig();
