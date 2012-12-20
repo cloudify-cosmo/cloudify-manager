@@ -1,37 +1,54 @@
 package org.openspaces.servicegrid;
 
-import org.openspaces.servicegrid.model.ServiceConfig;
-import org.openspaces.servicegrid.model.ServiceId;
-import org.openspaces.servicegrid.model.ServiceState;
-import org.openspaces.servicegrid.model.Task;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import org.openspaces.servicegrid.model.service.ServiceConfig;
+import org.openspaces.servicegrid.model.service.ServiceId;
+import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.service.ServiceState;
+import org.openspaces.servicegrid.model.tasks.InstallServiceTask;
+
+import com.google.common.base.Throwables;
 
 public class ServiceController {
 
 	private final TaskBroker taskBroker;
-	private final ServiceStateViewer stateViewer;
+	private final StateViewer stateViewer;
+	private URL executorId;
 	
-	public ServiceController(TaskBrokerProvider taskBrokerProvider, ServiceStateViewer stateViewer) {
+	public ServiceController(TaskBrokerProvider taskBrokerProvider, StateViewer stateViewer) {
 		this.taskBroker = taskBrokerProvider.getTaskBroker(null);
 		this.stateViewer = stateViewer;
+		try {
+			this.executorId = new URL("http://localhost/executors/service-orchestrator");
+		} catch (MalformedURLException e) {
+			Throwables.propagate(e);
+		}
 	}
 	
 	public ServiceId installService(ServiceConfig serviceConfig) {
 		
 		ServiceId serviceId = new ServiceId();
 		serviceId.setServiceName(serviceConfig.getName());
-		
-		Task installServiceTask = new Task();
-		installServiceTask.setType("install-service");
-		installServiceTask.setTarget("serviceOrchestrator");
-		installServiceTask.setProperty("service-id", serviceId);
-		installServiceTask.setProperty("service-config", serviceConfig);
-		taskBroker.addTask(installServiceTask);
+				
+		InstallServiceTask installServiceTask = new InstallServiceTask();
+		installServiceTask.setTarget(executorId);
+		installServiceTask.setServiceId(serviceId);
+		installServiceTask.setServiceConfig(serviceConfig);
+		taskBroker.postTask(installServiceTask);
 		
 		return serviceId;
 	}
 
-	public ServiceState getServiceStatus(ServiceId serviceId) {
+	public ServiceState getServiceState(ServiceId serviceId) {
+
+		ServiceState serviceState = null;
 		
-		return stateViewer.getServiceState(serviceId);
+		ServiceOrchestratorState taskExecutorState = (ServiceOrchestratorState) stateViewer.getTaskExecutorState(executorId);
+		if (taskExecutorState != null) {
+			serviceState = taskExecutorState.getServiceState(serviceId);
+		}
+		return serviceState;
 	}
 }

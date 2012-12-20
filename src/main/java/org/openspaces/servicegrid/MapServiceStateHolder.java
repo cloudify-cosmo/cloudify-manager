@@ -1,23 +1,23 @@
 package org.openspaces.servicegrid;
 
+import java.net.URL;
 import java.util.Map;
 
-import org.openspaces.servicegrid.model.ServiceId;
-import org.openspaces.servicegrid.model.ServiceState;
+import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
 import com.google.common.collect.Maps;
 
-public class MapServiceStateHolder implements ServiceStateHolder {
+public class MapServiceStateHolder implements StateHolder {
 
-	private final Map<ServiceId, ServiceState> servicesState = Maps.newConcurrentMap();
+	private final Map<URL, TaskExecutorState> taskExecutorsStateById = Maps.newConcurrentMap();
 	
-	public ServiceState getServiceState(ServiceId serviceId) {
-		return servicesState.get(serviceId);
+	@Override
+	public void putTaskExecutorState(URL executorId, TaskExecutorState state) {
+		taskExecutorsStateById.put(executorId, state);
 	}
-
-	public void updateServiceState(ServiceId serviceId,
-			ServiceState serviceState) {
-		servicesState.put(serviceId, serviceState);
+	
+	@Override
+	public TaskExecutorState getTaskExecutorState(URL executorId) {
+		return taskExecutorsStateById.get(executorId);
 	}
-
 }

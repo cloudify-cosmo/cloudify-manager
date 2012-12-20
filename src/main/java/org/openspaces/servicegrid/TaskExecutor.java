@@ -3,8 +3,12 @@ package org.openspaces.servicegrid;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
-public interface Orchestrator<S extends TaskExecutorState, T extends Task> extends TaskExecutor<S> {
+public interface TaskExecutor<S extends TaskExecutorState> {
 
-	Iterable<T> orchestrate();
-
+	void execute(Task task);
+	
+	S getState();
+	
+	String getId();
+	
 }

@@ -1,36 +1,67 @@
 package org.openspaces.servicegrid;
 
-import java.util.ArrayList;
+import org.openspaces.servicegrid.model.service.ServiceId;
+import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.service.ServiceState;
+import org.openspaces.servicegrid.model.tasks.InstallServiceTask;
+import org.openspaces.servicegrid.model.tasks.ServiceTask;
+import org.openspaces.servicegrid.model.tasks.Task;
 
-import org.openspaces.servicegrid.model.ServiceConfig;
-import org.openspaces.servicegrid.model.ServiceId;
-import org.openspaces.servicegrid.model.ServiceState;
-import org.openspaces.servicegrid.model.Task;
+public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorState, ServiceTask> {
 
-import com.google.common.collect.Lists;
+	private final ServiceOrchestratorState state;
+	//private final StateHolder stateHolder;
 
-public class ServiceOrchestrator implements Orchestrator {
-
-	private final ServiceStateHolder stateHolder;
-
-	public ServiceOrchestrator(ServiceStateHolder stateHolder) {
-		this.stateHolder = stateHolder;
+	public ServiceOrchestrator(/*StateHolder stateHolder*/) {
+		//this.stateHolder = stateHolder;
+		this.state = new ServiceOrchestratorState();
 	}
 
-	public Iterable<Task> orchestrate(Iterable<Task> tasks) {
+	@Override
+	public void execute(Task task) {
 		
-		ArrayList<Task> newTasks = Lists.newArrayList();
+		if (task instanceof InstallServiceTask){
+			installService((InstallServiceTask) task);
+		}
+	}
+
+	private void installService(InstallServiceTask installServiceTask) {
+		ServiceId serviceId = installServiceTask.getServiceId();
 		
-		for (Task task : tasks) {
-			if ("install-service".equals(task.getType())){
-				ServiceState serviceState = new ServiceState();
-				serviceState.setId(task.getProperty("service-id", ServiceId.class));
-				serviceState.setConfig(task.getProperty("service-config", ServiceConfig.class));
-				stateHolder.updateServiceState(serviceState.getId(), serviceState);
-			}
+		ServiceState serviceState = state.getServiceState(serviceId);
+		if (serviceState != null) {
+			throw new IllegalArgumentException(serviceId + " is already installed");
+		}
+		serviceState = new ServiceState();
+		serviceState.setConfig(installServiceTask.getServiceConfig());
+		serviceState.setId(installServiceTask.getServiceId());
+		state.putServiceState(serviceId, serviceState);
+	}
+	
+	
+	@Override
+	public Iterable<ServiceTask> orchestrate() {
+	
+		throw new UnsupportedOperationException();
+		/*
+		ArrayList<ServiceTask> newTasks = Lists.newArrayList();
+		for (ServiceOrchestratorState serviceState : stateHolder.getServices()) {
+			StartMachineTask task = new StartMachineTask();
+			serviceState.addTask(task);
+			newTasks.add(task);
 		}
 		
 		return newTasks;
+		*/
+	}
+
+	public String getId() {
+		return "service-orchestrator";
+	}
+
+	@Override
+	public ServiceOrchestratorState getState() {
+		return state;
 	}
 
 }

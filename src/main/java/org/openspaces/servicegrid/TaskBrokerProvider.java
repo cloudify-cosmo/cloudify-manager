@@ -1,5 +1,8 @@
 package org.openspaces.servicegrid;
 
+import java.net.URL;
+
 public interface TaskBrokerProvider {
-	TaskBroker getTaskBroker(String target);
+	
+	TaskBroker getTaskBroker(URL executorId);
 }

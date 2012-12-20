@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid.model;
+package org.openspaces.servicegrid.model.service;
 
 public class ServiceConfig {
 
