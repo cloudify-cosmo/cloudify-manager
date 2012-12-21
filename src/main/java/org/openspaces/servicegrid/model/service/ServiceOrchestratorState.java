@@ -1,20 +1,31 @@
 package org.openspaces.servicegrid.model.service;
 
-import java.util.Map;
+import java.net.URL;
+import java.util.Set;
 
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public class ServiceOrchestratorState extends TaskExecutorState {
 
-	Map<ServiceId, ServiceState> serviceStateById = Maps.newHashMap();
-
-	public ServiceState getServiceState(ServiceId serviceId) {
-		return serviceStateById.get(serviceId);
+	private ServiceConfig config;
+	
+	private Set<URL> instances = Sets.newLinkedHashSet();
+	
+	public ServiceConfig getConfig() {
+		return config;
+	}
+	
+	public void setConfig(ServiceConfig config) {
+		this.config = config;
 	}
 
-	public void putServiceState(ServiceId serviceId, ServiceState serviceConfig) {
-		serviceStateById.put(serviceId, serviceConfig);
+	public Iterable<URL> getInstanceIds() {
+		return instances;
+	}
+	
+	public void addInstanceId(URL executorId) {
+		instances.add(executorId);
 	}
 }

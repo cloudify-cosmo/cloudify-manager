@@ -1,54 +1,52 @@
 package org.openspaces.servicegrid;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 
+import org.openspaces.servicegrid.model.service.AggregatedServiceState;
 import org.openspaces.servicegrid.model.service.ServiceConfig;
-import org.openspaces.servicegrid.model.service.ServiceId;
+import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
-import org.openspaces.servicegrid.model.service.ServiceState;
-import org.openspaces.servicegrid.model.tasks.InstallServiceTask;
-
-import com.google.common.base.Throwables;
+import org.openspaces.servicegrid.model.tasks.SetServiceConfigTask;
 
 public class ServiceController {
 
 	private final TaskBroker taskBroker;
 	private final StateViewer stateViewer;
-	private URL executorId;
+	private URL targetExecutorId;
 	
-	public ServiceController(TaskBrokerProvider taskBrokerProvider, StateViewer stateViewer) {
+	public ServiceController(TaskBrokerProvider taskBrokerProvider, StateViewer stateViewer, URL targetExecutorId) {
 		this.taskBroker = taskBrokerProvider.getTaskBroker(null);
 		this.stateViewer = stateViewer;
-		try {
-			this.executorId = new URL("http://localhost/executors/service-orchestrator");
-		} catch (MalformedURLException e) {
-			Throwables.propagate(e);
-		}
+		this.targetExecutorId = targetExecutorId;
+		
 	}
 	
-	public ServiceId installService(ServiceConfig serviceConfig) {
+	public URL installService(ServiceConfig serviceConfig) {
 		
-		ServiceId serviceId = new ServiceId();
-		serviceId.setServiceName(serviceConfig.getName());
-				
-		InstallServiceTask installServiceTask = new InstallServiceTask();
-		installServiceTask.setTarget(executorId);
-		installServiceTask.setServiceId(serviceId);
+		SetServiceConfigTask installServiceTask = new SetServiceConfigTask();
+		installServiceTask.setTarget(targetExecutorId);
 		installServiceTask.setServiceConfig(serviceConfig);
 		taskBroker.postTask(installServiceTask);
 		
-		return serviceId;
+		return targetExecutorId;
 	}
 
-	public ServiceState getServiceState(ServiceId serviceId) {
 
-		ServiceState serviceState = null;
+	public AggregatedServiceState getServiceState(URL serviceId) {
+		AggregatedServiceState state = new AggregatedServiceState();
+		ServiceOrchestratorState orchestratorState = (ServiceOrchestratorState) stateViewer.getTaskExecutorState(targetExecutorId);
+		state.setServiceConfig(orchestratorState.getConfig());
 		
-		ServiceOrchestratorState taskExecutorState = (ServiceOrchestratorState) stateViewer.getTaskExecutorState(executorId);
-		if (taskExecutorState != null) {
-			serviceState = taskExecutorState.getServiceState(serviceId);
+		for (URL instanceId : orchestratorState.getInstanceIds()) {
+			ServiceInstanceState instanceState = (ServiceInstanceState) stateViewer.getTaskExecutorState(instanceId);
+			state.addInstance(instanceId, instanceState);
 		}
-		return serviceState;
+		
+		return state;
+				
+	}
+
+	public ServiceInstanceState getServiceInstanceState(URL instanceId) {
+		return (ServiceInstanceState) stateViewer.getTaskExecutorState(instanceId);
 	}
 }

@@ -9,6 +9,18 @@ public class Task {
 	//@JsonIgnore
 	private URL id;
 
+	private URL impersonatedTarget;
+
+	private URL source;
+
+	public URL getSource() {
+		return source;
+	}
+
+	public URL getImpersonatedTarget() {
+		return impersonatedTarget;
+	}
+
 	public void setTarget(URL target) {
 		this.target = target;
 	}
@@ -23,5 +35,13 @@ public class Task {
 
 	public void setId(URL id) {
 		this.id = id;
+	}
+	
+	public void setImpersonatedTarget(URL impersonatedTarget) {
+		this.impersonatedTarget = impersonatedTarget;
+	}
+	
+	public void setSource(URL source) {
+		this.source = source;
 	}
 }

@@ -8,7 +8,4 @@ public interface TaskExecutor<S extends TaskExecutorState> {
 	void execute(Task task);
 	
 	S getState();
-	
-	String getId();
-	
 }
