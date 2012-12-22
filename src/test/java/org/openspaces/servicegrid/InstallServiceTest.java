@@ -56,6 +56,8 @@ public class InstallServiceTest {
 		
 		//POST http://host/services
 		final URL tomcatServiceId = serviceController.installService(serviceConfig);
+		//TODO: Should HTTP return 200 or 201 or 202 ? -> Future<URL> ?
+		
 		//GET http://host/services/12345
 		AggregatedServiceState state = serviceController.getServiceState(tomcatServiceId);
 		assertNull(state);
