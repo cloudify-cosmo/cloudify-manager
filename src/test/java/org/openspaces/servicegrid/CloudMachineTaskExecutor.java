@@ -8,7 +8,7 @@ import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 public class CloudMachineTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState,ServiceInstanceState> {
 
 	private final ServiceInstanceState impersonatedState = new ServiceInstanceState();
-	private final ServiceInstanceState state = new ServiceInstanceState();
+	private final TaskExecutorState state = new TaskExecutorState();
 	
 	@Override
 	public void execute(Task task) {

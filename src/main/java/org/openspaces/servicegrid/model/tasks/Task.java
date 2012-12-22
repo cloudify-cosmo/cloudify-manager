@@ -6,9 +6,6 @@ public class Task {
 
 	private URL target;
 	
-	//@JsonIgnore
-	private URL id;
-
 	private URL impersonatedTarget;
 
 	private URL source;
@@ -29,14 +26,6 @@ public class Task {
 		return target;
 	}
 
-	public URL getId() {
-		return id;
-	}
-
-	public void setId(URL id) {
-		this.id = id;
-	}
-	
 	public void setImpersonatedTarget(URL impersonatedTarget) {
 		this.impersonatedTarget = impersonatedTarget;
 	}

@@ -1,18 +1,21 @@
 package org.openspaces.servicegrid;
 
-import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Map.Entry;
-import java.util.UUID;
 
-import org.openspaces.servicegrid.model.service.AggregatedServiceState;
-import org.openspaces.servicegrid.model.service.ServiceConfig;
+import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
-import org.openspaces.servicegrid.model.service.ServiceInstanceState.Progress;
+import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.tasks.StartMachineTask;
+import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.rest.HttpError;
+import org.openspaces.servicegrid.rest.HttpException;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.google.common.base.Throwables;
@@ -20,109 +23,115 @@ import com.google.common.collect.Iterables;
 
 public class InstallServiceTest {
 
-	private final URL serviceOrchestratorId;
-	private final URL managementExecutorId;
-
-	InstallServiceTest() {
+	private TaskExecutorStateWriter stateWriter;
+	private TaskExecutorStatePollingReader stateReader;
+	private ServiceCli cli;
+	private ServiceOrchestrator orchestrator; 
+	private MockOrchestratorPollingContainer orchestratorContainer;
+	private TaskProducer taskProducer;
+	private TaskConsumer taskConsumer;
+	private MockTaskPolling cloudContainer;
+	private CloudMachineTaskExecutor cloudExecutor;
+		
+	private final URL tomcatServiceId;
+	private final URL tomcatDownloadUrl;
+	private final URL cloudExecutorId;
+	
+	public InstallServiceTest() {
 		try {
-			managementExecutorId = new URL("http://localhost/executors/" + UUID.randomUUID());
-			serviceOrchestratorId = new URL("http://localhost/executors/" + UUID.randomUUID());
+			tomcatServiceId = new URL("http://localhost/services/tomcat/");
+			tomcatDownloadUrl = new URL("http://repository.cloudifysource.org/org/apache/tomcat/apache-tomcat-7.0.23/tomcat.zip");
+			cloudExecutorId = new URL("http://localhost/services/cloud");
 		} catch (MalformedURLException e) {
 			throw Throwables.propagate(e);
 		}
 	}
 	
-	@Test
-	public void installServiceGetServiceIdTest() {
+	@BeforeMethod
+	public void before() {
+		MapTaskExecutorState state = new MapTaskExecutorState();
+		stateWriter = state;
+		stateReader = state;
 		
-		TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
-		final ServiceController serviceController = new ServiceController(taskBrokerProvider, mock(StateViewer.class), serviceOrchestratorId);
-		final ServiceConfig serviceConfig = new ServiceConfig();
-		serviceConfig.setName("tomcat");
-
-		//POST http://host/services
-		final URL tomcatServiceId = serviceController.installService(serviceConfig);
-		assertEquals(tomcatServiceId, serviceOrchestratorId);
+		MapTaskBroker taskBroker = new MapTaskBroker();
+		taskProducer = taskBroker;
+		taskConsumer = taskBroker;
+		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer);
+		cloudExecutor = new CloudMachineTaskExecutor();
+		
+		cli = new ServiceCli(stateReader, stateWriter, taskConsumer, taskProducer);
+		orchestratorContainer = new MockOrchestratorPollingContainer(tomcatServiceId, stateWriter, taskConsumer, taskProducer, orchestrator);
+		cloudContainer = new MockTaskPolling(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
 	}
 	
+	@Test
+	public void createServiceGetServiceStateTest() {
+		
+		cli.createService(tomcatServiceId);
+		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
+		assertNull(serviceState.getDownloadUrl());
+		assertNull(serviceState.getFirstPendingTaskId());
+	}
 	
 	@Test
-	public void installServiceGetServiceStatusTest() {
+	public void createServiceAlreadyExistsTest() {
 		
-		TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
-		final ServiceController serviceController = new ServiceController(taskBrokerProvider, mock(StateViewer.class), serviceOrchestratorId);
-		final ServiceConfig serviceConfig = new ServiceConfig();
-		serviceConfig.setName("tomcat");
+		cli.createService(tomcatServiceId);
+		try {
+			cli.createService(tomcatServiceId);
+			fail("Expected conflict");
+		}
+		catch (HttpException e) {
+			assertEquals(e.getHttpError(), HttpError.HTTP_CONFLICT);
+		}
+	}
+	
+	@Test
+	public void installServiceTest() {
 		
-		//POST http://host/services
-		final URL tomcatServiceId = serviceController.installService(serviceConfig);
-		//TODO: Should HTTP return 200 or 201 or 202 ? -> Future<URL> ?
-		
-		//GET http://host/services/12345
-		AggregatedServiceState state = serviceController.getServiceState(tomcatServiceId);
-		assertNull(state);
+		createServiceGetServiceStateTest();
+		InstallServiceTask installServiceTask = new InstallServiceTask();
+		installServiceTask.setDownloadUrl(tomcatDownloadUrl);
+		URL taskId = cli.addServiceTask(tomcatServiceId, installServiceTask);
+		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
+		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
+		assertNull(serviceState.getDownloadUrl());
+		assertNull(serviceState.getFirstPendingTaskId());
 	}
 
 	@Test
-	public void installServiceStepExecutorAndGetServiceStatusTest() {
+	public void installServiceStepExecutorTest() {
 		
-		final TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
-		StateHolder mapStateHolder = new MapServiceStateHolder();  
-		StateViewer stateViewer = mapStateHolder;
-		StateHolder stateHolder = mapStateHolder;
-		ServiceOrchestrator serviceOrchestrator = new ServiceOrchestrator(managementExecutorId );
-		MockOrchestratorTaskPolling executor = new MockOrchestratorTaskPolling(serviceOrchestratorId, taskBrokerProvider, stateHolder, serviceOrchestrator);
-		
-		final ServiceController serviceController = new ServiceController(taskBrokerProvider, stateViewer, serviceOrchestratorId);
-		
-		//POST http://host/services
-		final ServiceConfig serviceConfig = new ServiceConfig();
-		serviceConfig.setName("tomcat");
-		final URL tomcatServiceId = serviceController.installService(serviceConfig);
-		
-		executor.stepTaskExecutor();
-		//GET http://host/services/tomcat/_aggregated
-		AggregatedServiceState serviceState = serviceController.getServiceState(tomcatServiceId);
-		assertEqualsServiceConfig(serviceState.getConfig(),serviceConfig);
-	}
-			
-	@Test
-	public void installServiceCreateNewMachineTest() {
-		
-		final TaskBrokerProvider taskBrokerProvider = new MockTaskBrokerProvider();
-		StateHolder mapStateHolder = new MapServiceStateHolder();  
-		StateViewer stateViewer = mapStateHolder;
-		StateHolder stateHolder = mapStateHolder;
-		ServiceOrchestrator serviceOrchestrator = new ServiceOrchestrator(managementExecutorId );
-		MockOrchestratorTaskPolling orchestratorPolling = new MockOrchestratorTaskPolling(serviceOrchestratorId, taskBrokerProvider, stateHolder, serviceOrchestrator);
-		
-		TaskExecutor<?> cloudExecutor = new CloudMachineTaskExecutor();
-		MockTaskPolling executorPolling = new MockTaskPolling(managementExecutorId, taskBrokerProvider, stateHolder, cloudExecutor);
-		
-		final ServiceController serviceController = new ServiceController(taskBrokerProvider, stateViewer, serviceOrchestratorId);
-		
-		//POST http://host/services
-		final ServiceConfig serviceConfig = new ServiceConfig();
-		serviceConfig.setName("tomcat");
-		final URL tomcatServiceId = serviceController.installService(serviceConfig);
-		
-		orchestratorPolling.stepTaskExecutor();
-		orchestratorPolling.stepTaskOrchestrator();
-		executorPolling.stepTaskExecutor();
-		
-		//GET http://host/services/tomcat
-		AggregatedServiceState serviceState = serviceController.getServiceState(tomcatServiceId);
-		assertEqualsServiceConfig(serviceState.getConfig(),serviceConfig);
-		
-		Entry<URL, ServiceInstanceState> instance = Iterables.getOnlyElement(serviceState.getInstances().entrySet());
-		assertEquals(instance.getValue().getProgress(), Progress.STARTING_MACHINE);
+		installServiceTest();
+		orchestratorContainer.stepTaskExecutor();
+		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
+		assertEquals(serviceState.getDownloadUrl(), tomcatDownloadUrl);
+		assertNull(serviceState.getFirstPendingTaskId());
+		URL taskId = serviceState.getLastCompletedTaskId();
+		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
 	}
 
-	private void assertEqualsServiceConfig(
-			ServiceConfig actual,
-			ServiceConfig expected) {
-		
-		assertEquals(actual.getName(), expected.getName());
-		
+	@Test
+	public void installServiceStepExecutorTwiceTest() {
+		installServiceStepExecutorTest();
+		orchestratorContainer.stepTaskExecutor();
 	}
+	
+	@Test
+	public void installServiceAndStartMachineTest() {
+		
+		installServiceStepExecutorTest();
+		orchestratorContainer.stepOrchestrator();
+		cloudContainer.stepTaskExecutor();
+		final TaskExecutorState cloudState = cli.getServiceState(cloudExecutorId);
+		assertNull(cloudState.getFirstPendingTaskId());
+		URL taskId = cloudState.getLastCompletedTaskId();
+		assertTrue(cli.getTask(taskId) instanceof StartMachineTask);
+		
+		final ServiceOrchestratorState tomcatState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
+		URL tomcatInstanceId = Iterables.getOnlyElement(tomcatState.getInstanceIds());
+		ServiceInstanceState tomcatInstanceState = (ServiceInstanceState) cli.getServiceState(tomcatInstanceId);
+		assertEquals(tomcatInstanceState.getProgress(), ServiceInstanceState.Progress.STARTING_MACHINE);
+	}
+
 }

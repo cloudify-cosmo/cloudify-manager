@@ -5,44 +5,46 @@ import java.net.URL;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
+import com.google.common.base.Preconditions;
+
 public class MockTaskPolling {
 
-	private final StateHolder stateHolder;
+	private final TaskExecutorStateWriter stateWriter;
 	private final TaskExecutor<?> taskExecutor;
 	private final URL executorId;
-	private final TaskBroker taskBroker;
+	private final TaskConsumer taskConsumer;
+	private URL lastTaskId;
 	
-	public MockTaskPolling(URL executorId, TaskBrokerProvider taskBrokerProvider, StateHolder stateHolder, TaskExecutor<?> taskExecutor) {
+	public MockTaskPolling(URL executorId, TaskExecutorStateWriter stateWriter, TaskConsumer taskConsumer, TaskExecutor<?> taskExecutor) {
 		this.executorId = executorId;
-		this.stateHolder = stateHolder;
+		this.stateWriter = stateWriter;
+		this.taskConsumer = taskConsumer;
 		this.taskExecutor = taskExecutor;
-		this.taskBroker = taskBrokerProvider.getTaskBroker(executorId);
 	}
 
-	private void afterExecute(Task task) {
+	private void afterExecute(URL taskId, Task task) {
 
 		final TaskExecutorState state = taskExecutor.getState();
-		state.removeExecutingTask(task);
-		state.addCompletedTask(task);
-		stateHolder.putTaskExecutorState(executorId, state);
+		state.completeExecutingTask(taskId);
+		stateWriter.put(getExecutorId(), state, null);
 		
 		if (task.getImpersonatedTarget() != null) {
-			if (! (taskExecutor instanceof ImpersonatingTaskExecutor)) {
-				throw new IllegalArgumentException(executorId + " cannot handler task, since it requires impersonation");
-			}
+			Preconditions.checkArgument(
+					taskExecutor instanceof ImpersonatingTaskExecutor, 
+					getExecutorId() + " cannot handle task, since it requires impersonation");
 			ImpersonatingTaskExecutor<?,?> impersonatingTaskExecutor = (ImpersonatingTaskExecutor<?,?>) taskExecutor;
-			stateHolder.putTaskExecutorState(task.getImpersonatedTarget(), impersonatingTaskExecutor.getImpersonatedState());	
+			stateWriter.put(task.getImpersonatedTarget(), impersonatingTaskExecutor.getImpersonatedState(), null);	
 		}
 	}
 
 	private void beforeExecute(Task task) {
-	
-		if (!task.getTarget().equals(executorId)) {
-			throw new IllegalArgumentException("Expected task target is " + executorId + " instead found " + task.getTarget());
-		}
+		Preconditions.checkNotNull(task.getTarget());
+		Preconditions.checkArgument(
+				task.getTarget().equals(getExecutorId()),
+				"Expected task target is %s instead found %s", getExecutorId() , task.getTarget());
+		
 		final TaskExecutorState state = taskExecutor.getState();
-		state.addExecutingTask(task);
-		stateHolder.putTaskExecutorState(executorId, state);
+		stateWriter.put(getExecutorId(), state, null);
 	}
 
 	public TaskExecutor<? extends TaskExecutorState> getTaskExecutor() {
@@ -52,12 +54,29 @@ public class MockTaskPolling {
 
 	public void stepTaskExecutor() {
 		
-		Iterable<Task> tasks = taskBroker.getNextTasks();
-		for (Task task : tasks) {
-			beforeExecute(task);
-			taskExecutor.execute(task);
-			afterExecute(task);
+		final TaskExecutorState state = taskExecutor.getState();
+		Iterable<URL> newTaskIds = taskConsumer.listTaskIds(getExecutorId(), lastTaskId);
+		for (URL newTaskId : newTaskIds) {
+			state.addPendingTaskId(newTaskId);
+			lastTaskId = newTaskId;
+		}
+		if (!state.isExecutingTask()) {
+			URL taskId = state.executeFirstPendingTask();
+			if (taskId != null) {
+				Task task = taskConsumer.get(taskId);
+				Preconditions.checkNotNull(task);
+				beforeExecute(task);
+				taskExecutor.execute(task);
+				afterExecute(taskId, task);
+			}
 		}
 	}
+	
+	public URL getExecutorId() {
+		return executorId;
+	}
 
+	public TaskExecutorStateWriter getStateWriter() {
+		return stateWriter;
+	}
 }

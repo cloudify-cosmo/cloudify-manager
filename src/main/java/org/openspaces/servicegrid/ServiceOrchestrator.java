@@ -5,10 +5,12 @@ import java.net.URL;
 import java.util.List;
 import java.util.UUID;
 
+import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
-import org.openspaces.servicegrid.model.tasks.SetServiceConfigTask;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
+import org.openspaces.servicegrid.rest.HttpError;
+import org.openspaces.servicegrid.rest.HttpException;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -16,29 +18,46 @@ import com.google.common.collect.Lists;
 public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorState> {
 
 	private final ServiceOrchestratorState state;
-	private final URL targetExecutorId;
+	private final TaskConsumer taskConsumer;
+	private URL cloudExecutorId;
+	private final URL orchestratorExecutorId;
 	
-	public ServiceOrchestrator(URL targetExecutorId) {
-		this.targetExecutorId = targetExecutorId;
+	public ServiceOrchestrator(URL orchestratorExecutorId, URL cloudExecutorId, TaskConsumer taskConsumer) {
+		this.orchestratorExecutorId = orchestratorExecutorId;
+		this.taskConsumer = taskConsumer;
+		this.cloudExecutorId = cloudExecutorId;
 		this.state = new ServiceOrchestratorState();
 	}
 
 	@Override
 	public void execute(Task task) {
 		
-		if (task instanceof SetServiceConfigTask){
-			state.setConfig(((SetServiceConfigTask) task).getServiceConfig());
+		if (task instanceof InstallServiceTask){
+			boolean installed = false;
+			for (final URL oldTaskId : state.getCompletedTaskIds()) {
+				Task oldTask = taskConsumer.get(oldTaskId);
+				if (oldTask instanceof InstallServiceTask) {
+					installed = true;
+				}
+			}
+			
+			if (installed) {
+				throw new HttpException(HttpError.HTTP_CONFLICT);
+			}
+			state.setDownloadUrl(((InstallServiceTask) task).getDownloadUrl());
 		}
 	}
+
 
 	@Override
 	public List<Task> orchestrate() {
 	
 		List<Task> newTasks = Lists.newArrayList();
 		final StartMachineTask task = new StartMachineTask();
-		task.setTarget(targetExecutorId);
+
 		URL instanceId = newInstanceId();
 		task.setImpersonatedTarget(instanceId);	
+		task.setTarget(cloudExecutorId);
 		newTasks.add(task);
 		state.addInstanceId(instanceId);
 		return newTasks;
@@ -46,7 +65,7 @@ public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorStat
 
 	private URL newInstanceId() {
 		try {
-			return new URL("http://localhost/executors/" + UUID.randomUUID());
+			return new URL(orchestratorExecutorId.toExternalForm() + "instances/" + UUID.randomUUID());
 		} catch (MalformedURLException e) {
 			throw Throwables.propagate(e);
 		}

@@ -9,17 +9,8 @@ import com.google.common.collect.Sets;
 
 public class ServiceOrchestratorState extends TaskExecutorState {
 
-	private ServiceConfig config;
-	
 	private Set<URL> instances = Sets.newLinkedHashSet();
-	
-	public ServiceConfig getConfig() {
-		return config;
-	}
-	
-	public void setConfig(ServiceConfig config) {
-		this.config = config;
-	}
+	private URL downloadUrl;
 
 	public Iterable<URL> getInstanceIds() {
 		return instances;
@@ -28,4 +19,13 @@ public class ServiceOrchestratorState extends TaskExecutorState {
 	public void addInstanceId(URL executorId) {
 		instances.add(executorId);
 	}
+
+	public URL getDownloadUrl() {
+		return downloadUrl;
+	}
+	
+	public void setDownloadUrl(URL downloadUrl) {
+		this.downloadUrl = downloadUrl;
+	}
+
 }
