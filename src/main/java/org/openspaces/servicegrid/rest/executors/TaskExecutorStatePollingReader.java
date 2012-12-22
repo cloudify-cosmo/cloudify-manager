@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.rest.executors;
 
 import java.net.URL;
 

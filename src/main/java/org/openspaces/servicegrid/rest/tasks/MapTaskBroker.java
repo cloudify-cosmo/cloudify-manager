@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.rest.tasks;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.rest.HttpError;
-import org.openspaces.servicegrid.rest.HttpException;
-import org.openspaces.servicegrid.rest.NotFoundHttpException;
+import org.openspaces.servicegrid.rest.http.HttpError;
+import org.openspaces.servicegrid.rest.http.HttpException;
+import org.openspaces.servicegrid.rest.http.NotFoundHttpException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;

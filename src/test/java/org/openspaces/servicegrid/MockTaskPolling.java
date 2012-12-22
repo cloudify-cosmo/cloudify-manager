@@ -4,6 +4,8 @@ import java.net.URL;
 
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
+import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
 
 import com.google.common.base.Preconditions;
 
@@ -74,9 +76,5 @@ public class MockTaskPolling {
 	
 	public URL getExecutorId() {
 		return executorId;
-	}
-
-	public TaskExecutorStateWriter getStateWriter() {
-		return stateWriter;
 	}
 }

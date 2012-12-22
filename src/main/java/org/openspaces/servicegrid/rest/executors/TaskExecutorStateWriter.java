@@ -1,9 +1,9 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.rest.executors;
 
 import java.net.URL;
 
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.HttpEtag;
+import org.openspaces.servicegrid.rest.http.HttpEtag;
 
 public interface TaskExecutorStateWriter {
 	

@@ -15,7 +15,6 @@ public class CloudMachineTaskExecutor implements ImpersonatingTaskExecutor<TaskE
 		if (task instanceof StartMachineTask) {
 			impersonatedState.setProgress(ServiceInstanceState.Progress.STARTING_MACHINE);
 		}
-		
 	}
 
 	@Override

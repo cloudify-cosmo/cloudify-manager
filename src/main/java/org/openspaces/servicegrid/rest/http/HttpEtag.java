@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid.rest;
+package org.openspaces.servicegrid.rest.http;
 
 public class HttpEtag {
 

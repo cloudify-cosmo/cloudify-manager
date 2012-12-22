@@ -8,13 +8,20 @@ import static org.testng.Assert.fail;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.HttpError;
-import org.openspaces.servicegrid.rest.HttpException;
+import org.openspaces.servicegrid.rest.executors.MapTaskExecutorState;
+import org.openspaces.servicegrid.rest.executors.TaskExecutorStatePollingReader;
+import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
+import org.openspaces.servicegrid.rest.http.HttpError;
+import org.openspaces.servicegrid.rest.http.HttpException;
+import org.openspaces.servicegrid.rest.tasks.MapTaskBroker;
+import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
+import org.openspaces.servicegrid.rest.tasks.TaskProducer;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -25,7 +32,7 @@ public class InstallServiceTest {
 
 	private TaskExecutorStateWriter stateWriter;
 	private TaskExecutorStatePollingReader stateReader;
-	private ServiceCli cli;
+	private ServiceClient cli;
 	private ServiceOrchestrator orchestrator; 
 	private MockOrchestratorPollingContainer orchestratorContainer;
 	private TaskProducer taskProducer;
@@ -59,7 +66,7 @@ public class InstallServiceTest {
 		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer);
 		cloudExecutor = new CloudMachineTaskExecutor();
 		
-		cli = new ServiceCli(stateReader, stateWriter, taskConsumer, taskProducer);
+		cli = new ServiceClient(stateReader, stateWriter, taskConsumer, taskProducer);
 		orchestratorContainer = new MockOrchestratorPollingContainer(tomcatServiceId, stateWriter, taskConsumer, taskProducer, orchestrator);
 		cloudContainer = new MockTaskPolling(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
 	}

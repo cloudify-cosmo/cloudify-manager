@@ -9,8 +9,9 @@ import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.rest.HttpError;
-import org.openspaces.servicegrid.rest.HttpException;
+import org.openspaces.servicegrid.rest.http.HttpError;
+import org.openspaces.servicegrid.rest.http.HttpException;
+import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;

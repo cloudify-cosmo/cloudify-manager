@@ -1,23 +1,27 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.client;
 
 import java.net.URL;
 
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
-import org.openspaces.servicegrid.model.tasks.ServiceTask;
+import org.openspaces.servicegrid.model.service.ServiceTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.HttpEtag;
+import org.openspaces.servicegrid.rest.executors.TaskExecutorStatePollingReader;
+import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
+import org.openspaces.servicegrid.rest.http.HttpEtag;
+import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
+import org.openspaces.servicegrid.rest.tasks.TaskProducer;
 
 import com.google.common.base.Preconditions;
 
-public class ServiceCli {
+public class ServiceClient {
 
 	private final TaskExecutorStateWriter stateWriter;
 	private final TaskExecutorStatePollingReader stateReader;
 	private final TaskProducer taskProducer;
 	private final TaskConsumer taskConsumer;
 
-	public ServiceCli(
+	public ServiceClient(
 			TaskExecutorStatePollingReader stateReader, 
 			TaskExecutorStateWriter stateWriter,
 			TaskConsumer taskConsumer,

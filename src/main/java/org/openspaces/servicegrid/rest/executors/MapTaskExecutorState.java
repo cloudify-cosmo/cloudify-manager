@@ -1,14 +1,14 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.rest.executors;
 
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.HttpError;
-import org.openspaces.servicegrid.rest.HttpEtag;
-import org.openspaces.servicegrid.rest.HttpException;
-import org.openspaces.servicegrid.rest.NotFoundHttpException;
+import org.openspaces.servicegrid.rest.http.HttpError;
+import org.openspaces.servicegrid.rest.http.HttpEtag;
+import org.openspaces.servicegrid.rest.http.HttpException;
+import org.openspaces.servicegrid.rest.http.NotFoundHttpException;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
