@@ -33,19 +33,28 @@ public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorStat
 	public void execute(Task task) {
 		
 		if (task instanceof InstallServiceTask){
-			boolean installed = false;
-			for (final URL oldTaskId : state.getCompletedTaskIds()) {
-				Task oldTask = taskConsumer.get(oldTaskId);
-				if (oldTask instanceof InstallServiceTask) {
-					installed = true;
-				}
-			}
-			
-			if (installed) {
-				throw new HttpException(HttpError.HTTP_CONFLICT);
-			}
-			state.setDownloadUrl(((InstallServiceTask) task).getDownloadUrl());
+			installService((InstallServiceTask) task);
 		}
+	}
+
+	private void installService(InstallServiceTask task) {
+		boolean installed = isServiceInstalled();
+		
+		if (installed) {
+			throw new HttpException(HttpError.HTTP_CONFLICT);
+		}
+		state.setDownloadUrl(task.getDownloadUrl());
+	}
+
+	private boolean isServiceInstalled() {
+		boolean installed = false;
+		for (final URL oldTaskId : state.getCompletedTaskIds()) {
+			final Task oldTask = taskConsumer.get(oldTaskId);
+			if (oldTask instanceof InstallServiceTask) {
+				installed = true;
+			}
+		}
+		return installed;
 	}
 
 
