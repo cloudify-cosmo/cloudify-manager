@@ -4,8 +4,8 @@ import java.net.URL;
 
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
-import org.openspaces.servicegrid.rest.tasks.StreamProducer;
+import org.openspaces.servicegrid.streams.StreamConsumer;
+import org.openspaces.servicegrid.streams.StreamProducer;
 
 import com.google.common.base.Preconditions;
 

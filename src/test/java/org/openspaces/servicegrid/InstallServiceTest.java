@@ -15,8 +15,8 @@ import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
-import org.openspaces.servicegrid.rest.tasks.StreamProducer;
+import org.openspaces.servicegrid.streams.StreamConsumer;
+import org.openspaces.servicegrid.streams.StreamProducer;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -97,6 +97,23 @@ public class InstallServiceTest {
 		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
 		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
 		assertNull(serviceState.getDownloadUrl());
+	}
+	
+	@Test
+	public void installServiceAlreadyInstalledTest() {
+		
+		installServiceStepExecutorTest();
+		
+		InstallServiceTask installServiceTask = new InstallServiceTask();
+		installServiceTask.setDownloadUrl(tomcatDownloadUrl);
+		cli.addServiceTask(tomcatServiceId, installServiceTask);
+		try {
+			orchestratorContainer.stepTaskExecutor();
+			fail("Expected exception");
+		}
+		catch (IllegalStateException e) {
+			
+		}
 	}
 
 	@Test

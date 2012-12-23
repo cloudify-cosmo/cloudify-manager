@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid.rest.tasks;
+package org.openspaces.servicegrid.streams;
 
 import java.net.URL;
 

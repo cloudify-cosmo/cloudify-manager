@@ -9,10 +9,9 @@ import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.rest.http.HttpError;
-import org.openspaces.servicegrid.rest.http.HttpException;
-import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
+import org.openspaces.servicegrid.streams.StreamConsumer;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
@@ -40,10 +39,7 @@ public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorStat
 
 	private void installService(InstallServiceTask task) {
 		boolean installed = isServiceInstalled();
-		
-		if (installed) {
-			throw new HttpException(HttpError.HTTP_CONFLICT);
-		}
+		Preconditions.checkState(!installed);
 		state.setDownloadUrl(task.getDownloadUrl());
 	}
 

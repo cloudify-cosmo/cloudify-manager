@@ -5,8 +5,8 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
-import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
-import org.openspaces.servicegrid.rest.tasks.StreamProducer;
+import org.openspaces.servicegrid.streams.StreamConsumer;
+import org.openspaces.servicegrid.streams.StreamProducer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
