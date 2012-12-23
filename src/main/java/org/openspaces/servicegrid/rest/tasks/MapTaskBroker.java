@@ -2,83 +2,81 @@ package org.openspaces.servicegrid.rest.tasks;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.rest.http.HttpError;
-import org.openspaces.servicegrid.rest.http.HttpException;
-import org.openspaces.servicegrid.rest.http.NotFoundHttpException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 public class MapTaskBroker implements TaskProducer, TaskConsumer {
 
-	Map<URL, Task> tasksPerId = Maps.newHashMap();
-	Map<URL, Integer> numberOfTasksPerExecutorId = Maps.newHashMap();
-
+	Multimap<URL,Task> streamById = ArrayListMultimap.create();
+	
 	@Override
 	public URL post(URL executorId, Task task) {
 		
-		if (task.getTarget() == null || !task.getTarget().equals(executorId)) {
-			throw new HttpException(HttpError.BAD_REQUEST);
-		}
-		
-		Integer numberOfTasks = numberOfTasksPerExecutorId.get(executorId);
-		if (numberOfTasks == null) {
-			numberOfTasks = 0;
-		}
-		numberOfTasks++;
-		numberOfTasksPerExecutorId.put(executorId, numberOfTasks);
-		URL taskId = newTaskUrl(executorId, numberOfTasks-1);
-		tasksPerId.put(taskId, task);
+		Collection<Task> stream = streamById.get(executorId);
+		stream.add(task);
+		URL taskId = newTaskUrl(executorId, stream.size() -1);
 		return taskId;
 	}
 
 	@Override
 	public Iterable<URL> listTaskIds(final URL executorId, URL lastTaskId) {
-		Preconditions.checkNotNull(executorId);
 		
-		String lastTaskUrl = lastTaskId == null ? null : lastTaskId.toExternalForm();
-		String tasksRootUrl = executorId.toExternalForm() + "tasks/";
-		
-		Preconditions.checkArgument(
-				lastTaskId == null || lastTaskUrl.startsWith(tasksRootUrl),
-				"%s is not related to %s",lastTaskId ,executorId);
-		
-		Integer numberOfTasks = numberOfTasksPerExecutorId.get(executorId);
-		if (numberOfTasks == null) {
-			numberOfTasks = 0;
-		}
-		Integer index = null;
-		if (lastTaskId != null) { 
-			String indexString = lastTaskUrl.substring(tasksRootUrl.length());
-			try {
-				index = Integer.valueOf(indexString);
-				Preconditions.checkElementIndex(index, numberOfTasks);
-			}
-			catch (NumberFormatException e) {
-				Preconditions.checkArgument(false, "URL %s is invalid", lastTaskId);
-			}
-		}
+		Integer index = getIndex(lastTaskId, executorId);
 		if (index == null) {
 			index = -1;
 		}
 		
+		final Collection<Task> stream = streamById.get(executorId);
 		List<URL> newTaskIds = Lists.newLinkedList();
-		for (index++ ; index < numberOfTasks ; index++) {
+		for (index++ ; index < stream.size() ; index++) {
 			newTaskIds.add(newTaskUrl(executorId, index));
 		}
 		return Iterables.unmodifiableIterable(newTaskIds);
 	}
 
+	private Integer getIndex(final URL taskId, final URL executorId) {
+		
+		Preconditions.checkNotNull(executorId);
+		final Collection<Task> stream = streamById.get(executorId);
+		String lastTaskUrl = taskId == null ? null : taskId.toExternalForm();
+		String tasksRootUrl = executorId.toExternalForm() + "tasks/";
+		
+		Preconditions.checkArgument(
+				taskId == null || lastTaskUrl.startsWith(tasksRootUrl),
+				"%s is not related to %s",taskId ,executorId);
+		
+		Integer index = null;
+		if (taskId != null) { 
+			final String indexString = lastTaskUrl.substring(tasksRootUrl.length());
+			try {
+				index = Integer.valueOf(indexString);
+				Preconditions.checkElementIndex(index, stream.size());
+			}
+			catch (final NumberFormatException e) {
+				Preconditions.checkArgument(false, "URL %s is invalid", taskId);
+			}
+		}
+		return index;
+	}
+
 	private static URL newTaskUrl(URL executorId, int index) {
+		String url = executorId.toExternalForm() + "tasks/" + index;
+		return newUrl(url);
+	}
+
+	private static URL newUrl(String url) {
 		try {
-			return new URL(executorId.toExternalForm() + "tasks/" + index);
+			return new URL(url);
 		} catch (final MalformedURLException e) {
 			throw Throwables.propagate(e);
 		}
@@ -86,14 +84,17 @@ public class MapTaskBroker implements TaskProducer, TaskConsumer {
 
 	@Override
 	public Task get(URL taskId) {
-		if (taskId == null) {
-			throw new HttpException(HttpError.BAD_REQUEST);
-		}
-		Task task = tasksPerId.get(taskId);
-		if (task == null) {
-			throw new NotFoundHttpException(taskId); 
-		}
-		return task;
+		
+		String[] split = taskId.toExternalForm().split(Pattern.quote("tasks/"));
+		Preconditions.checkElementIndex(0, split.length);
+		
+		URL executorId = newUrl(split[0]);
+		Integer index = getIndex(taskId, executorId);
+		Preconditions.checkNotNull(index);
+		
+		Collection<Task> stream = streamById.get(executorId);
+		Preconditions.checkPositionIndex(index, stream.size());
+		return Iterables.get(stream,index);
 	}
 	
 }
