@@ -43,10 +43,6 @@ public class InstallServiceTest {
 	private final URL cloudExecutorId;
 	private final URL agentLifecycleExecutorId;
 	
-	//private URL agentLifecycleExecutorId;
-	//private MockAgentLifecycleTaskExecutor agentExecutor;
-	//private MockTaskContainer agentLifecycleContainer;
-	
 	public InstallServiceTest() {
 		try {
 			orchestratorExecutorId = new URL("http://localhost/services/tomcat/");
