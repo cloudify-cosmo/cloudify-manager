@@ -4,7 +4,7 @@ import static org.testng.Assert.assertEquals;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
+import java.util.Set;
 
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
@@ -20,15 +20,17 @@ import org.testng.annotations.Test;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class ServiceOrchestrationTest {
 	
 	private StreamConsumer<TaskExecutorState> stateReader;
 	private ServiceClient client;
-	private List<MockTaskContainer> containers;
+	private Set<MockTaskContainer> containers;
 	private URL orchestratorExecutorId;
 	private MockTaskContainer orchestratorContainer;
+	private StreamProducer<TaskExecutorState> stateWriter;
+	private StreamConsumer<Task> taskConsumer;
 
 	@BeforeMethod
 	public void before() {
@@ -45,12 +47,12 @@ public class ServiceOrchestrationTest {
 		}
 		
 		MockStreams<TaskExecutorState> state = new MockStreams<TaskExecutorState>();
-		StreamProducer<TaskExecutorState> stateWriter = state;
+		stateWriter = state;
 		stateReader = state;
 	
 		MockStreams<Task> taskBroker = new MockStreams<Task>();
 		StreamProducer<Task> taskProducer = taskBroker;
-		StreamConsumer<Task> taskConsumer = taskBroker;
+		taskConsumer = taskBroker;
 		
 		stateWriter.addElement(orchestratorExecutorId, new ServiceOrchestratorState());
 	
@@ -71,21 +73,28 @@ public class ServiceOrchestrationTest {
 				new ServiceOrchestrator(
 						serviceOrchestratorParameter));
 
-		containers = Lists.newArrayList(
+		containers = Sets.newHashSet(
 								
 				new MockTaskContainer(
 						cloudExecutorId, 
 						stateWriter,
 						taskConsumer, 
-						new MockCloudMachineTaskExecutor()));
+						new MockCloudMachineTaskExecutor("localhost")),
+						
+				new MockTaskContainer(
+						agentLifecycleExecutorId, 
+						stateWriter,
+						taskConsumer, 
+						new MockAgentLifecycleTaskExecutor())
+				);
 	}
 	
 	@Test
 	public void installSingleInstanceServiceTest() {
 		installService();
 		execute();
-		final ServiceOrchestratorState serviceState = stateReader.getElement(stateReader.getLastElementId(orchestratorExecutorId));
-		final URL serviceInstanceExecutorId = Iterables.getOnlyElement(serviceState.getInstanceIds());
+		
+		final URL serviceInstanceExecutorId = getServiceInstaceExecutorId();
 		
 		URL stateId0 = stateReader.getFirstElementId(serviceInstanceExecutorId);
 		ServiceInstanceState state0 = stateReader.getElement(stateId0);
@@ -95,6 +104,12 @@ public class ServiceOrchestrationTest {
 		//URL state1 = stateReader.getNextElementId(state0);
 		//URL state2 = stateReader.getNextElementId(state1);
 		
+	}
+
+	private URL getServiceInstaceExecutorId() {
+		final ServiceOrchestratorState serviceState = stateReader.getElement(stateReader.getLastElementId(orchestratorExecutorId));
+		final URL serviceInstanceExecutorId = Iterables.getOnlyElement(serviceState.getInstanceIds());
+		return serviceInstanceExecutorId;
 	}
 	
 	private void installService() {
@@ -110,9 +125,10 @@ public class ServiceOrchestrationTest {
 	}
 	
 	private void execute() {
-		boolean stop = true;
+
 		for (int i = 0 ; i < 1000 ;i++) {
 
+			boolean stop = true;
 			orchestrate();
 			
 			for (MockTaskContainer container : containers) {
@@ -120,11 +136,18 @@ public class ServiceOrchestrationTest {
 					stop = false;
 				}
 			}
+
+			final ServiceOrchestratorState serviceState = stateReader.getElement(stateReader.getLastElementId(orchestratorExecutorId));
+			 
+			for (URL serviceInstanceExecutorId : serviceState.getExecutingTaskIds()) {
+				containers.add(new MockTaskContainer(serviceInstanceExecutorId, stateWriter, taskConsumer, new MockServiceInstanceTaskExecutor()));
+			}
+		
 			if (stop) {
 				return;
 			}
 		}
-		
-		Assert.fail("execute too many cycles");
+		ServiceInstanceState lastState = stateReader.getElement(stateReader.getLastElementId(getServiceInstaceExecutorId()));
+		Assert.fail("Executing too many cycles progress=" + lastState.getProgress());
 	}
 }

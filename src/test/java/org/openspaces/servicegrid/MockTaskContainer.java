@@ -62,7 +62,8 @@ public class MockTaskContainer {
 		boolean needAnotherStep = false;
 		
 		final TaskExecutorState state = getTaskExecutorState();
-				
+		Preconditions.checkNotNull(state);
+		
 		URL taskId;
 		if (lastTaskId == null) {
 			taskId = taskConsumer.getFirstElementId(executorId);
@@ -108,4 +109,32 @@ public class MockTaskContainer {
 	public URL getExecutorId() {
 		return executorId;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((executorId == null) ? 0 : executorId.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		MockTaskContainer other = (MockTaskContainer) obj;
+		if (executorId == null) {
+			if (other.executorId != null)
+				return false;
+		} else if (!executorId.equals(other.executorId))
+			return false;
+		return true;
+	}
+	
+	
 }

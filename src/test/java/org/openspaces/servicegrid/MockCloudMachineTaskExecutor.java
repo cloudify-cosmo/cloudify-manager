@@ -9,14 +9,27 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 
 	private final TaskExecutorState state = new TaskExecutorState();
 	private TaskExecutorStateModifier impersonatedStateModifier;
+	private final String ipAddressMock;
+	
+	public MockCloudMachineTaskExecutor() {
+		ipAddressMock = null;
+	}
+	
+	public MockCloudMachineTaskExecutor(String ipAddress) {
+		this.ipAddressMock = ipAddress;
+	}
 	
 	@Override
 	public void execute(Task task, TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartMachineTask) {
 			this.impersonatedStateModifier = impersonatedStateModifier;
-				final ServiceInstanceState impersonatedState = new ServiceInstanceState();
-				impersonatedState.setProgress(ServiceInstanceState.Progress.STARTING_MACHINE);
-				impersonatedStateModifier.updateState(impersonatedState);
+			final ServiceInstanceState impersonatedState = new ServiceInstanceState();
+			impersonatedState.setProgress(ServiceInstanceState.Progress.STARTING_MACHINE);
+			impersonatedStateModifier.updateState(impersonatedState);
+		
+			if(ipAddressMock != null) {
+				signalLastStartedMachineFinished(ipAddressMock);
+			}			
 		}
 	}
 	
