@@ -9,7 +9,7 @@ import org.openspaces.servicegrid.streams.StreamProducer;
 
 import com.google.common.base.Preconditions;
 
-public class MockTaskPolling {
+public class MockTaskContainer {
 
 	private final StreamProducer<TaskExecutorState> stateWriter;
 	private final TaskExecutor<?> taskExecutor;
@@ -17,7 +17,7 @@ public class MockTaskPolling {
 	private final StreamConsumer<Task> taskConsumer;
 	private URL lastTaskId;
 	
-	public MockTaskPolling(URL executorId, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, TaskExecutor<?> taskExecutor) {
+	public MockTaskContainer(URL executorId, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, TaskExecutor<?> taskExecutor) {
 		this.executorId = executorId;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;

@@ -27,15 +27,18 @@ public class InstallServiceTest {
 
 	private StreamProducer<TaskExecutorState> stateWriter;
 	private StreamConsumer<TaskExecutorState> stateReader;
-	private ServiceClient cli;
-	private ServiceOrchestrator orchestrator; 
-	private MockOrchestratorPollingContainer orchestratorContainer;
+	
 	private StreamProducer<Task> taskProducer;
 	private StreamConsumer<Task> taskConsumer;
-	private MockTaskPolling cloudContainer;
+	
+	private ServiceClient cli;
+	private final URL tomcatServiceId;
+	private ServiceOrchestrator orchestrator; 
+	private MockTaskContainer orchestratorContainer;
+	
+	private MockTaskContainer cloudContainer;
 	private CloudMachineTaskExecutor cloudExecutor;
 		
-	private final URL tomcatServiceId;
 	private final URL tomcatDownloadUrl;
 	private final URL cloudExecutorId;
 	
@@ -58,12 +61,12 @@ public class InstallServiceTest {
 		MockStreams<Task> taskBroker = new MockStreams<Task>();
 		taskProducer = taskBroker;
 		taskConsumer = taskBroker;
-		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer);
+		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer, taskProducer);
 		cloudExecutor = new CloudMachineTaskExecutor();
 		
 		cli = new ServiceClient(stateReader, stateWriter, taskConsumer, taskProducer);
-		orchestratorContainer = new MockOrchestratorPollingContainer(tomcatServiceId, stateWriter, taskConsumer, taskProducer, orchestrator);
-		cloudContainer = new MockTaskPolling(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
+		orchestratorContainer = new MockTaskContainer(tomcatServiceId, stateWriter, taskConsumer, orchestrator);
+		cloudContainer = new MockTaskContainer(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
 	}
 	
 	@Test
@@ -137,7 +140,8 @@ public class InstallServiceTest {
 	public void installServiceAndStartMachineTest() {
 		
 		installServiceStepExecutorTest();
-		orchestratorContainer.stepOrchestrator();
+		cli.addServiceTask(tomcatServiceId, new OrchestrateTask());
+		orchestratorContainer.stepTaskExecutor();
 		cloudContainer.stepTaskExecutor();
 		final TaskExecutorState cloudState = cli.getServiceState(cloudExecutorId);
 		URL taskId = cloudState.getLastCompletedTaskId();
