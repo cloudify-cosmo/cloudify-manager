@@ -12,6 +12,7 @@ import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
@@ -32,21 +33,25 @@ public class InstallServiceTest {
 	private StreamConsumer<Task> taskConsumer;
 	
 	private ServiceClient client;
-	private final URL tomcatServiceId;
+	
+	private final URL orchestratorExecutorId;
 	private ServiceOrchestrator orchestrator; 
 	private MockTaskContainer orchestratorContainer;
 	
 	private MockTaskContainer cloudContainer;
-	private CloudMachineTaskExecutor cloudExecutor;
-		
-	private final URL tomcatDownloadUrl;
+	private MockCloudMachineTaskExecutor cloudExecutor;
 	private final URL cloudExecutorId;
+	private final URL agentLifecycleExecutorId;
+	
+	//private URL agentLifecycleExecutorId;
+	//private MockAgentLifecycleTaskExecutor agentExecutor;
+	//private MockTaskContainer agentLifecycleContainer;
 	
 	public InstallServiceTest() {
 		try {
-			tomcatServiceId = new URL("http://localhost/services/tomcat/");
-			tomcatDownloadUrl = new URL("http://repository.cloudifysource.org/org/apache/tomcat/apache-tomcat-7.0.23/tomcat.zip");
+			orchestratorExecutorId = new URL("http://localhost/services/tomcat/");
 			cloudExecutorId = new URL("http://localhost/services/cloud");
+			agentLifecycleExecutorId = new URL("http://localhost/services/agentLifecycle");
 		} catch (MalformedURLException e) {
 			throw Throwables.propagate(e);
 		}
@@ -61,70 +66,61 @@ public class InstallServiceTest {
 		MockStreams<Task> taskBroker = new MockStreams<Task>();
 		taskProducer = taskBroker;
 		taskConsumer = taskBroker;
-		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer, taskProducer);
-		cloudExecutor = new CloudMachineTaskExecutor();
+		stateWriter.addElement(orchestratorExecutorId, new ServiceOrchestratorState());
+		orchestrator = new ServiceOrchestrator(createServiceOrchestratorParameter());
+		cloudExecutor = new MockCloudMachineTaskExecutor();
 		
-		client = new ServiceClient(stateReader, stateWriter, taskConsumer, taskProducer);
-		orchestratorContainer = new MockTaskContainer(tomcatServiceId, stateWriter, taskConsumer, orchestrator);
+		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
+		orchestratorContainer = new MockTaskContainer(orchestratorExecutorId, stateWriter, taskConsumer, orchestrator);
 		cloudContainer = new MockTaskContainer(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
+	}
+
+	private ServiceOrchestratorParameter createServiceOrchestratorParameter() {
+		final ServiceOrchestratorParameter serviceOrchestratorParameter = new ServiceOrchestratorParameter();
+		serviceOrchestratorParameter.setOrchestratorExecutorId(orchestratorExecutorId);
+		serviceOrchestratorParameter.setCloudExecutorId(cloudExecutorId);
+		serviceOrchestratorParameter.setAgentLifecycleExecutorId(agentLifecycleExecutorId);
+		serviceOrchestratorParameter.setTaskConsumer(taskConsumer);
+		serviceOrchestratorParameter.setTaskProducer(taskProducer);
+		serviceOrchestratorParameter.setStateReader(stateReader);
+		return serviceOrchestratorParameter;
 	}
 	
 	@Test
 	public void createServiceGetServiceStateTest() {
 		
-		createService();
-		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) client.getServiceState(tomcatServiceId);
-		assertNull(serviceState.getDownloadUrl());
+		final ServiceOrchestratorState serviceState = client.getExecutorState(orchestratorExecutorId);
+		assertNull(serviceState.getDisplayName());
 	}
 	
-	@Test
-	public void createServiceAlreadyExistsTest() {
-		
-		createService();
-		try {
-			createService();
-			fail("Expected conflict");
-		}
-		catch (IllegalArgumentException e) {
-			
-		}
-	}
-	
-
-	private void createService() {
-		client.createService(tomcatServiceId);
-	}
 	
 	@Test
 	public void installServiceStepExecutorTest() {
 		
-		createService();
-	
 		installService();		
-		assertNull(client.<ServiceOrchestratorState>getServiceState(tomcatServiceId).getDownloadUrl());
+		assertNull(client.<ServiceOrchestratorState>getExecutorState(orchestratorExecutorId).getDisplayName());
 		
 		orchestratorContainer.stepTaskExecutor();
-		final ServiceOrchestratorState serviceState = client.getServiceState(tomcatServiceId);
-		assertEquals(serviceState.getDownloadUrl(), tomcatDownloadUrl);
+		final ServiceOrchestratorState serviceState = client.getExecutorState(orchestratorExecutorId);
+		assertEquals(serviceState.getDisplayName(), "tomcat");
 		URL taskId = serviceState.getLastCompletedTaskId();
 		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
 	}
 
 	private void installService() {
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
-		installServiceTask.setDownloadUrl(tomcatDownloadUrl);
-		final URL taskId = client.addServiceTask(tomcatServiceId, installServiceTask);
+		installServiceTask.setDisplayName("tomcat");
+		final URL taskId = client.addServiceTask(orchestratorExecutorId, installServiceTask);
 		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
 	}
 	
 	@Test
 	public void installServiceAlreadyInstalledTest() {
 		
-		installServiceStepExecutorTest();
+		installService();		
+		orchestratorContainer.stepTaskExecutor();
 		
-		InstallServiceTask installServiceTask = new InstallServiceTask();
-		installServiceTask.setDownloadUrl(tomcatDownloadUrl);
-		client.addServiceTask(tomcatServiceId, installServiceTask);
+		installService();
 		try {
 			orchestratorContainer.stepTaskExecutor();
 			fail("Expected exception");
@@ -133,28 +129,61 @@ public class InstallServiceTest {
 			
 		}
 	}
-	
-	@Test
-	public void installServiceStepExecutorTwiceTest() {
-		installServiceStepExecutorTest();
-		orchestratorContainer.stepTaskExecutor();
-	}
-	
+		
 	@Test
 	public void installServiceAndStartMachineTest() {
 		
-		installServiceStepExecutorTest();
-		client.addServiceTask(tomcatServiceId, new OrchestrateTask());
+		installService();		
+		orchestratorContainer.stepTaskExecutor();
+		
+		orchestrate();
 		orchestratorContainer.stepTaskExecutor();
 		cloudContainer.stepTaskExecutor();
-		final TaskExecutorState cloudState = client.getServiceState(cloudExecutorId);
-		URL taskId = cloudState.getLastCompletedTaskId();
-		assertTrue(client.getTask(taskId) instanceof StartMachineTask);
+		assertTrue(getLastTask(cloudExecutorId) instanceof StartMachineTask);
 		
-		final ServiceOrchestratorState tomcatState = (ServiceOrchestratorState) client.getServiceState(tomcatServiceId);
-		URL tomcatInstanceId = Iterables.getOnlyElement(tomcatState.getInstanceIds());
-		ServiceInstanceState tomcatInstanceState = (ServiceInstanceState) client.getServiceState(tomcatInstanceId);
-		assertEquals(tomcatInstanceState.getProgress(), ServiceInstanceState.Progress.STARTING_MACHINE);
+		assertEquals(getTomcatInstanceState().getProgress(), ServiceInstanceState.Progress.STARTING_MACHINE);
+	}
+
+	private Task getLastTask(URL executorId) {
+		final TaskExecutorState cloudExecutorState = client.getExecutorState(executorId);
+		final URL taskId = cloudExecutorState.getLastCompletedTaskId();
+		final Task lastCloudTask = client.getTask(taskId);
+		return lastCloudTask;
+	}
+
+	private ServiceInstanceState getTomcatInstanceState() {
+		final ServiceOrchestratorState tomcatState = client.getExecutorState(orchestratorExecutorId);
+		final URL tomcatInstanceId = Iterables.getOnlyElement(tomcatState.getInstanceIds());
+		final ServiceInstanceState tomcatInstanceState = client.getExecutorState(tomcatInstanceId);
+		return tomcatInstanceState;
+	}
+	
+	
+	@Test
+	public void installServiceAndStartAgentTest() {
+		
+		installService();		
+		orchestratorContainer.stepTaskExecutor();
+		
+		orchestrate();
+		orchestratorContainer.stepTaskExecutor();
+		//Initiate machine creation
+		cloudContainer.stepTaskExecutor();
+		//Finish machine started on localhost
+		cloudExecutor.signalLastStartedMachineFinished("localhost");		
+		assertEquals(getTomcatInstanceState().getProgress(), ServiceInstanceState.Progress.MACHINE_STARTED);
+		
+		orchestrate();
+		orchestratorContainer.stepTaskExecutor();
+		
+		StartAgentTask lastElement = (StartAgentTask) taskConsumer.getElement(taskConsumer.getLastElementId(agentLifecycleExecutorId));
+		// make sure agent is installed on correct ip address
+		assertEquals(lastElement.getIpAddress(), "localhost");
+		
+	}
+
+	private void orchestrate() {
+		client.addServiceTask(orchestratorExecutorId, new OrchestrateTask());
 	}
 
 }

@@ -10,7 +10,7 @@ import com.google.common.collect.Sets;
 public class ServiceOrchestratorState extends TaskExecutorState {
 
 	private Set<URL> instances = Sets.newLinkedHashSet();
-	private URL downloadUrl;
+	private String displayName;
 
 	public Iterable<URL> getInstanceIds() {
 		return instances;
@@ -20,12 +20,12 @@ public class ServiceOrchestratorState extends TaskExecutorState {
 		instances.add(executorId);
 	}
 
-	public URL getDownloadUrl() {
-		return downloadUrl;
+	public String getDisplayName() {
+		return displayName;
 	}
 	
-	public void setDownloadUrl(URL downloadUrl) {
-		this.downloadUrl = downloadUrl;
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
 	}
 
 }

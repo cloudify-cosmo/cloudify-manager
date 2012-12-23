@@ -19,24 +19,14 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	Multimap<URL,T> streamById = ArrayListMultimap.create();
 	
 	/**
-	 * HTTP PUT with not_exists etag
-	 */
-	@Override
-	public URL addFirstElement(URL streamId, T element) {
-		Preconditions.checkArgument(
-				streamById.get(streamId).isEmpty() , "Stream %s already exists", streamId);
-		return addElement(streamId, element);
-	}
-	
-	/**
 	 * HTTP POST
 	 */
 	@Override
 	public URL addElement(URL streamId, T element) {
 		
-		Collection<T> stream = streamById.get(streamId);
+		final Collection<T> stream = streamById.get(streamId);
 		stream.add(element);
-		URL elementId = getTaskUrl(streamId, stream.size() -1);
+		final URL elementId = getTaskUrl(streamId, stream.size() -1);
 		return elementId;
 	}
 
@@ -54,6 +44,7 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 		Integer index = null;
 		if (elementId != null) { 
 			final String indexString = lastTaskUrl.substring(tasksRootUrl.length());
+			
 			try {
 				index = Integer.valueOf(indexString);
 				Preconditions.checkElementIndex(index, stream.size());

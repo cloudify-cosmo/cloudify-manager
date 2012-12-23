@@ -6,33 +6,38 @@ import java.util.List;
 import java.util.UUID;
 
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
+import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
+import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorState> {
 
 	private final ServiceOrchestratorState state;
+	
 	private final StreamConsumer<Task> taskConsumer;
 	private final StreamProducer<Task> taskProducer;
-	private URL cloudExecutorId;
+	private final URL cloudExecutorId;
 	private final URL orchestratorExecutorId;
+	private final StreamConsumer<TaskExecutorState> stateReader;
+	private final URL agentLifecycleExecutorId;
 	
-	public ServiceOrchestrator(
-			URL orchestratorExecutorId, 
-			URL cloudExecutorId, 
-			StreamConsumer<Task> taskConsumer,
-			StreamProducer<Task> taskProducer) {
-		this.orchestratorExecutorId = orchestratorExecutorId;
-		this.taskConsumer = taskConsumer;
-		this.cloudExecutorId = cloudExecutorId;
-		this.taskProducer = taskProducer;
+	public ServiceOrchestrator(ServiceOrchestratorParameter parameterObject) {
+		this.orchestratorExecutorId = parameterObject.getOrchestratorExecutorId();
+		this.agentLifecycleExecutorId = parameterObject.getAgentLifecycleExecutorId();
+		this.taskConsumer = parameterObject.getTaskConsumer();
+		this.cloudExecutorId = parameterObject.getCloudExecutorId();
+		this.taskProducer = parameterObject.getTaskProducer();
+		this.stateReader = parameterObject.getStateReader();
 		this.state = new ServiceOrchestratorState();
 	}
 
@@ -55,7 +60,7 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	private void installService(InstallServiceTask task) {
 		boolean installed = isServiceInstalled();
 		Preconditions.checkState(!installed);
-		state.setDownloadUrl(task.getDownloadUrl());
+		state.setDisplayName(task.getDisplayName());
 	}
 
 	private boolean isServiceInstalled() {
@@ -72,13 +77,27 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	private List<Task> orchestrate() {
 	
 		List<Task> newTasks = Lists.newArrayList();
-		final StartMachineTask task = new StartMachineTask();
-
-		URL instanceId = newInstanceId();
-		task.setImpersonatedTarget(instanceId);	
-		task.setTarget(cloudExecutorId);
-		newTasks.add(task);
-		state.addInstanceId(instanceId);
+		
+		if (Iterables.isEmpty(state.getInstanceIds())) {
+			final StartMachineTask task = new StartMachineTask();
+			URL instanceId = newInstanceId();
+			task.setImpersonatedTarget(instanceId);	
+			task.setTarget(cloudExecutorId);
+			newTasks.add(task);
+			state.addInstanceId(instanceId);
+		}
+		else {
+			URL instanceId = Iterables.getOnlyElement(state.getInstanceIds());
+			ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId));
+			Preconditions.checkNotNull(instanceState);
+			if (instanceState.getProgress().equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
+				final StartAgentTask task = new StartAgentTask();
+				task.setImpersonatedTarget(instanceId);	
+				task.setTarget(agentLifecycleExecutorId);
+				task.setIpAddress(instanceState.getIpAddress());
+				newTasks.add(task);
+			}
+		}
 		return newTasks;
 	}
 

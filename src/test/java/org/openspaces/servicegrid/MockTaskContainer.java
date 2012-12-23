@@ -2,6 +2,7 @@ package org.openspaces.servicegrid;
 
 import java.net.URL;
 
+import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
@@ -12,12 +13,12 @@ import com.google.common.base.Preconditions;
 public class MockTaskContainer {
 
 	private final StreamProducer<TaskExecutorState> stateWriter;
-	private final TaskExecutor<?> taskExecutor;
+	private final Object taskExecutor;
 	private final URL executorId;
 	private final StreamConsumer<Task> taskConsumer;
 	private URL lastTaskId;
 	
-	public MockTaskContainer(URL executorId, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, TaskExecutor<?> taskExecutor) {
+	public MockTaskContainer(URL executorId, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer,Object taskExecutor) {
 		this.executorId = executorId;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;
@@ -26,16 +27,20 @@ public class MockTaskContainer {
 
 	private void afterExecute(URL taskId, Task task) {
 
-		final TaskExecutorState state = taskExecutor.getState();
+		final TaskExecutorState state = getTaskExecutorState();
 		state.completeExecutingTask(taskId);
 		stateWriter.addElement(getExecutorId(), state);
-		
-		if (task.getImpersonatedTarget() != null) {
-			Preconditions.checkArgument(
-					taskExecutor instanceof ImpersonatingTaskExecutor, 
-					getExecutorId() + " cannot handle task, since it requires impersonation");
-			ImpersonatingTaskExecutor<?,?> impersonatingTaskExecutor = (ImpersonatingTaskExecutor<?,?>) taskExecutor;
-			stateWriter.addElement(task.getImpersonatedTarget(), impersonatingTaskExecutor.getImpersonatedState());	
+	}
+
+	private TaskExecutorState getTaskExecutorState() {
+		if (taskExecutor instanceof TaskExecutor<?>) {
+			return ((TaskExecutor<?>) taskExecutor).getState();
+		}
+		else if (taskExecutor instanceof ImpersonatingTaskExecutor<?>) {
+			return ((ImpersonatingTaskExecutor<?>) taskExecutor).getState();
+		}
+		else {
+			throw new IllegalStateException("taskExecutor illegal type");
 		}
 	}
 
@@ -45,18 +50,13 @@ public class MockTaskContainer {
 				task.getTarget().equals(getExecutorId()),
 				"Expected task target is %s instead found %s", getExecutorId() , task.getTarget());
 		
-		final TaskExecutorState state = taskExecutor.getState();
+		final TaskExecutorState state = getTaskExecutorState();
 		stateWriter.addElement(getExecutorId(), state);
 	}
 
-	public TaskExecutor<? extends TaskExecutorState> getTaskExecutor() {
-		return taskExecutor;
-	}
-	
-
 	public void stepTaskExecutor() {
 		
-		final TaskExecutorState state = taskExecutor.getState();
+		final TaskExecutorState state = getTaskExecutorState();
 		
 		if (!state.isExecutingTask()) {
 			URL taskId;
@@ -67,13 +67,34 @@ public class MockTaskContainer {
 				taskId = taskConsumer.getNextElementId(lastTaskId);
 			}
 			if (taskId != null) {
-				Task task = taskConsumer.getElement(taskId);
+				final Task task = taskConsumer.getElement(taskId);
 				state.executeTask(taskId);
 				lastTaskId = taskId;
 				beforeExecute(task);
-				taskExecutor.execute(task);
+				execute(task);
 				afterExecute(taskId, task);
 			}
+		}
+	}
+
+	private void execute(final Task task) {
+		if (task.getImpersonatedTarget() != null) {
+			Preconditions.checkArgument(
+					taskExecutor instanceof ImpersonatingTaskExecutor, 
+					getExecutorId() + " cannot handle task, since it requires impersonation");
+			final ImpersonatingTaskExecutor<?> impersonatingTaskExecutor = (ImpersonatingTaskExecutor<?>) taskExecutor;
+			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
+				
+				@Override
+				public void updateState(final ServiceInstanceState impersonatedState) {
+					stateWriter.addElement(task.getImpersonatedTarget(), impersonatedState);							
+				}
+
+			};
+			impersonatingTaskExecutor.execute(task, impersonatedStateModifier);
+		}
+		else {
+			((TaskExecutor<?>) taskExecutor).execute(task);
 		}
 	}
 	

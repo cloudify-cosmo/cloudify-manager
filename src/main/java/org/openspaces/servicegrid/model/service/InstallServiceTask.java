@@ -1,17 +1,16 @@
 package org.openspaces.servicegrid.model.service;
 
-import java.net.URL;
 
 
 public class InstallServiceTask extends ServiceTask {
 	
-	private URL downloadUrl;
+	private String displayName;
 
-	public URL getDownloadUrl() {
-		return downloadUrl;
+	public String getDisplayName() {
+		return displayName;
 	}
 
-	public void setDownloadUrl(URL downloadUrl) {
-		this.downloadUrl = downloadUrl;
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
 	}
 }
