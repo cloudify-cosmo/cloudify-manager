@@ -16,7 +16,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
-public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorState> {
+public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorState> {
 
 	private final ServiceOrchestratorState state;
 	private final StreamConsumer<Task> taskConsumer;
@@ -69,9 +69,7 @@ public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorStat
 		return installed;
 	}
 
-
-	@Override
-	public List<Task> orchestrate() {
+	private List<Task> orchestrate() {
 	
 		List<Task> newTasks = Lists.newArrayList();
 		final StartMachineTask task = new StartMachineTask();
