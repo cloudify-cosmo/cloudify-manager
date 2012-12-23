@@ -4,8 +4,8 @@ import java.net.URL;
 
 public interface StreamProducer<T> {
 
-	void createStream(URL streamId);
+	URL addFirstElement(URL streamId, T element);
 	
-	URL addToStream(URL streamId, T object);
+	URL addElement(URL streamId, T element);
 	
 }

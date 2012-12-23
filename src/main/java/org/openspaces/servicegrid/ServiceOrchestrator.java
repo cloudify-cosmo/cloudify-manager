@@ -50,7 +50,7 @@ public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorStat
 	private boolean isServiceInstalled() {
 		boolean installed = false;
 		for (final URL oldTaskId : state.getCompletedTaskIds()) {
-			final Task oldTask = taskConsumer.getById(oldTaskId);
+			final Task oldTask = taskConsumer.getElement(oldTaskId);
 			if (oldTask instanceof InstallServiceTask) {
 				installed = true;
 			}

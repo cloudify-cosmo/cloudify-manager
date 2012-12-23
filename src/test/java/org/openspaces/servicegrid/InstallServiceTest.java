@@ -13,12 +13,8 @@ import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
+import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.executors.MapTaskExecutorState;
-import org.openspaces.servicegrid.rest.executors.TaskExecutorStatePollingReader;
-import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
-import org.openspaces.servicegrid.rest.http.HttpError;
-import org.openspaces.servicegrid.rest.http.HttpException;
 import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
 import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 import org.testng.annotations.BeforeMethod;
@@ -29,13 +25,13 @@ import com.google.common.collect.Iterables;
 
 public class InstallServiceTest {
 
-	private TaskExecutorStateWriter stateWriter;
-	private TaskExecutorStatePollingReader stateReader;
+	private StreamProducer<TaskExecutorState> stateWriter;
+	private StreamConsumer<TaskExecutorState> stateReader;
 	private ServiceClient cli;
 	private ServiceOrchestrator orchestrator; 
 	private MockOrchestratorPollingContainer orchestratorContainer;
-	private StreamProducer taskProducer;
-	private StreamConsumer taskConsumer;
+	private StreamProducer<Task> taskProducer;
+	private StreamConsumer<Task> taskConsumer;
 	private MockTaskPolling cloudContainer;
 	private CloudMachineTaskExecutor cloudExecutor;
 		
@@ -55,11 +51,11 @@ public class InstallServiceTest {
 	
 	@BeforeMethod
 	public void before() {
-		MapTaskExecutorState state = new MapTaskExecutorState();
+		MockStreams<TaskExecutorState> state = new MockStreams<TaskExecutorState>();
 		stateWriter = state;
 		stateReader = state;
 		
-		MockStreams taskBroker = new MockStreams();
+		MockStreams<Task> taskBroker = new MockStreams<Task>();
 		taskProducer = taskBroker;
 		taskConsumer = taskBroker;
 		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer);
@@ -86,8 +82,8 @@ public class InstallServiceTest {
 			cli.createService(tomcatServiceId);
 			fail("Expected conflict");
 		}
-		catch (HttpException e) {
-			assertEquals(e.getHttpError(), HttpError.HTTP_CONFLICT);
+		catch (IllegalArgumentException e) {
+			
 		}
 	}
 	

@@ -22,42 +22,44 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	 * HTTP PUT with not_exists etag
 	 */
 	@Override
-	public void createStream(URL streamId) {
-		Preconditions.checkArgument(!streamById.containsKey(streamId), "Stream %s already exists", streamId);
+	public URL addFirstElement(URL streamId, T element) {
+		Preconditions.checkArgument(
+				streamById.get(streamId).isEmpty() , "Stream %s already exists", streamId);
+		return addElement(streamId, element);
 	}
 	
 	/**
 	 * HTTP POST
 	 */
 	@Override
-	public URL addToStream(URL streamId, T task) {
+	public URL addElement(URL streamId, T element) {
 		
 		Collection<T> stream = streamById.get(streamId);
-		stream.add(task);
-		URL taskId = getTaskUrl(streamId, stream.size() -1);
-		return taskId;
+		stream.add(element);
+		URL elementId = getTaskUrl(streamId, stream.size() -1);
+		return elementId;
 	}
 
-	private Integer getIndex(final URL taskId, final URL streamId) {
+	private Integer getIndex(final URL elementId, final URL streamId) {
 		
 		Preconditions.checkNotNull(streamId);
 		final Collection<T> stream = streamById.get(streamId);
-		String lastTaskUrl = taskId == null ? null : taskId.toExternalForm();
+		String lastTaskUrl = elementId == null ? null : elementId.toExternalForm();
 		String tasksRootUrl = streamId.toExternalForm() + "tasks/";
 		
 		Preconditions.checkArgument(
-				taskId == null || lastTaskUrl.startsWith(tasksRootUrl),
-				"%s is not related to %s",taskId ,streamId);
+				elementId == null || lastTaskUrl.startsWith(tasksRootUrl),
+				"%s is not related to %s",elementId ,streamId);
 		
 		Integer index = null;
-		if (taskId != null) { 
+		if (elementId != null) { 
 			final String indexString = lastTaskUrl.substring(tasksRootUrl.length());
 			try {
 				index = Integer.valueOf(indexString);
 				Preconditions.checkElementIndex(index, stream.size());
 			}
 			catch (final NumberFormatException e) {
-				Preconditions.checkArgument(false, "URL %s is invalid", taskId);
+				Preconditions.checkArgument(false, "URL %s is invalid", elementId);
 			}
 		}
 		return index;
@@ -80,11 +82,11 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	 * HTTP GET /index
 	 */
 	@Override
-	public T getById(URL taskId) {
+	public T getElement(URL elementId) {
 		
-		final URL streamId = getStreamId(taskId);
+		final URL streamId = getStreamId(elementId);
 		
-		Integer index = getIndex(taskId, streamId);
+		Integer index = getIndex(elementId, streamId);
 		Preconditions.checkNotNull(index);
 		
 		T task = getByIndex(streamId, index);
@@ -92,8 +94,8 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 		return task;
 	}
 
-	private URL getStreamId(URL taskId) {
-		final String[] split = taskId.toExternalForm().split(Pattern.quote("tasks/"));
+	private URL getStreamId(URL elementId) {
+		final String[] split = elementId.toExternalForm().split(Pattern.quote("tasks/"));
 		Preconditions.checkElementIndex(0, split.length);
 		final URL executorId = newUrl(split[0]);
 		return executorId;
@@ -108,11 +110,11 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	}
 
 	@Override
-	public URL getNextId(URL taskId) {
-		Preconditions.checkNotNull(taskId);
+	public URL getNextElementId(URL elementId) {
+		Preconditions.checkNotNull(elementId);
 		URL nextId = null;
-		URL streamId = getStreamId(taskId);
-		Integer index = getIndex(taskId,streamId);
+		URL streamId = getStreamId(elementId);
+		Integer index = getIndex(elementId,streamId);
 		Preconditions.checkNotNull(index);
 		Collection<T> stream = streamById.get(streamId);
 		if (stream.size() > index+1) {
@@ -122,7 +124,7 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	}
 
 	@Override
-	public URL getFirstId(URL streamId) {
+	public URL getFirstElementId(URL streamId) {
 		Preconditions.checkNotNull(streamId);
 		Collection<T> stream = streamById.get(streamId);
 		Preconditions.checkNotNull(stream);
@@ -130,6 +132,17 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 			return null;
 		}
 		return getTaskUrl(streamId , 0);
+	}
+
+	@Override
+	public URL getLastElementId(URL streamId) {
+		Preconditions.checkNotNull(streamId);
+		Collection<T> stream = streamById.get(streamId);
+		Preconditions.checkNotNull(stream);
+		if (stream.isEmpty()) {
+			return null;
+		}
+		return getTaskUrl(streamId , stream.size()-1);
 	}
 
 }

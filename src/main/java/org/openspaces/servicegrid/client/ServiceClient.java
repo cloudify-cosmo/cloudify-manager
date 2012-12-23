@@ -6,9 +6,6 @@ import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
 import org.openspaces.servicegrid.model.service.ServiceTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
-import org.openspaces.servicegrid.rest.executors.TaskExecutorStatePollingReader;
-import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
-import org.openspaces.servicegrid.rest.http.HttpEtag;
 import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
 import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 
@@ -16,16 +13,16 @@ import com.google.common.base.Preconditions;
 
 public class ServiceClient {
 
-	private final TaskExecutorStateWriter stateWriter;
-	private final TaskExecutorStatePollingReader stateReader;
-	private final StreamProducer taskProducer;
-	private final StreamConsumer taskConsumer;
+	private final StreamProducer<TaskExecutorState> stateWriter;
+	private final StreamConsumer<TaskExecutorState> stateReader;
+	private final StreamProducer<Task> taskProducer;
+	private final StreamConsumer<Task> taskConsumer;
 
 	public ServiceClient(
-			TaskExecutorStatePollingReader stateReader, 
-			TaskExecutorStateWriter stateWriter,
-			StreamConsumer taskConsumer,
-			StreamProducer taskProducer) {
+			StreamConsumer<TaskExecutorState> stateReader, 
+			StreamProducer<TaskExecutorState> stateWriter,
+			StreamConsumer<Task> taskConsumer,
+			StreamProducer<Task> taskProducer) {
 		this.stateReader = stateReader;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;
@@ -34,21 +31,21 @@ public class ServiceClient {
 
 	public void createService(URL serviceId) {
 		final ServiceOrchestratorState orchestratorState = new ServiceOrchestratorState();
-		stateWriter.put(serviceId, orchestratorState, HttpEtag.NOT_EXISTS);
+		stateWriter.addFirstElement(serviceId, orchestratorState);
 	}
 	
 	public URL addServiceTask(URL serviceId, ServiceTask task) {
 		Preconditions.checkNotNull(serviceId);
 		Preconditions.checkNotNull(task);
 		task.setTarget(serviceId);
-		return taskProducer.addToStream(serviceId, task);
+		return taskProducer.addElement(serviceId, task);
 	}
 	
 	public TaskExecutorState getServiceState(URL serviceId) {
-		return stateReader.get(serviceId);
+		return stateReader.getElement(stateReader.getLastElementId(serviceId));
 	}
 
 	public Task getTask(URL taskId) {
-		return (Task) taskConsumer.getById(taskId);
+		return (Task) taskConsumer.getElement(taskId);
 	}
 }

@@ -4,10 +4,12 @@ import java.net.URL;
 
 public interface StreamConsumer<T> {
 
-	URL getFirstId(URL streamId);
+	URL getFirstElementId(URL streamId);
 	
-	URL getNextId(URL taskId);
+	URL getNextElementId(URL elementId);
+	
+	URL getLastElementId(URL streamId);
 
-	T getById(URL taskId);
+	T getElement(URL elementId);
 
 }
