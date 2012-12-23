@@ -31,7 +31,7 @@ public class InstallServiceTest {
 	private StreamProducer<Task> taskProducer;
 	private StreamConsumer<Task> taskConsumer;
 	
-	private ServiceClient cli;
+	private ServiceClient client;
 	private final URL tomcatServiceId;
 	private ServiceOrchestrator orchestrator; 
 	private MockTaskContainer orchestratorContainer;
@@ -64,7 +64,7 @@ public class InstallServiceTest {
 		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer, taskProducer);
 		cloudExecutor = new CloudMachineTaskExecutor();
 		
-		cli = new ServiceClient(stateReader, stateWriter, taskConsumer, taskProducer);
+		client = new ServiceClient(stateReader, stateWriter, taskConsumer, taskProducer);
 		orchestratorContainer = new MockTaskContainer(tomcatServiceId, stateWriter, taskConsumer, orchestrator);
 		cloudContainer = new MockTaskContainer(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
 	}
@@ -72,17 +72,17 @@ public class InstallServiceTest {
 	@Test
 	public void createServiceGetServiceStateTest() {
 		
-		cli.createService(tomcatServiceId);
-		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
+		createService();
+		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) client.getServiceState(tomcatServiceId);
 		assertNull(serviceState.getDownloadUrl());
 	}
 	
 	@Test
 	public void createServiceAlreadyExistsTest() {
 		
-		cli.createService(tomcatServiceId);
+		createService();
 		try {
-			cli.createService(tomcatServiceId);
+			createService();
 			fail("Expected conflict");
 		}
 		catch (IllegalArgumentException e) {
@@ -90,16 +90,31 @@ public class InstallServiceTest {
 		}
 	}
 	
+
+	private void createService() {
+		client.createService(tomcatServiceId);
+	}
+	
 	@Test
-	public void installServiceTest() {
+	public void installServiceStepExecutorTest() {
 		
-		createServiceGetServiceStateTest();
-		InstallServiceTask installServiceTask = new InstallServiceTask();
+		createService();
+	
+		installService();		
+		assertNull(client.<ServiceOrchestratorState>getServiceState(tomcatServiceId).getDownloadUrl());
+		
+		orchestratorContainer.stepTaskExecutor();
+		final ServiceOrchestratorState serviceState = client.getServiceState(tomcatServiceId);
+		assertEquals(serviceState.getDownloadUrl(), tomcatDownloadUrl);
+		URL taskId = serviceState.getLastCompletedTaskId();
+		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
+	}
+
+	private void installService() {
+		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setDownloadUrl(tomcatDownloadUrl);
-		URL taskId = cli.addServiceTask(tomcatServiceId, installServiceTask);
-		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
-		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
-		assertNull(serviceState.getDownloadUrl());
+		final URL taskId = client.addServiceTask(tomcatServiceId, installServiceTask);
+		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
 	}
 	
 	@Test
@@ -109,7 +124,7 @@ public class InstallServiceTest {
 		
 		InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setDownloadUrl(tomcatDownloadUrl);
-		cli.addServiceTask(tomcatServiceId, installServiceTask);
+		client.addServiceTask(tomcatServiceId, installServiceTask);
 		try {
 			orchestratorContainer.stepTaskExecutor();
 			fail("Expected exception");
@@ -118,18 +133,7 @@ public class InstallServiceTest {
 			
 		}
 	}
-
-	@Test
-	public void installServiceStepExecutorTest() {
-		
-		installServiceTest();
-		orchestratorContainer.stepTaskExecutor();
-		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
-		assertEquals(serviceState.getDownloadUrl(), tomcatDownloadUrl);
-		URL taskId = serviceState.getLastCompletedTaskId();
-		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
-	}
-
+	
 	@Test
 	public void installServiceStepExecutorTwiceTest() {
 		installServiceStepExecutorTest();
@@ -140,16 +144,16 @@ public class InstallServiceTest {
 	public void installServiceAndStartMachineTest() {
 		
 		installServiceStepExecutorTest();
-		cli.addServiceTask(tomcatServiceId, new OrchestrateTask());
+		client.addServiceTask(tomcatServiceId, new OrchestrateTask());
 		orchestratorContainer.stepTaskExecutor();
 		cloudContainer.stepTaskExecutor();
-		final TaskExecutorState cloudState = cli.getServiceState(cloudExecutorId);
+		final TaskExecutorState cloudState = client.getServiceState(cloudExecutorId);
 		URL taskId = cloudState.getLastCompletedTaskId();
-		assertTrue(cli.getTask(taskId) instanceof StartMachineTask);
+		assertTrue(client.getTask(taskId) instanceof StartMachineTask);
 		
-		final ServiceOrchestratorState tomcatState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
+		final ServiceOrchestratorState tomcatState = (ServiceOrchestratorState) client.getServiceState(tomcatServiceId);
 		URL tomcatInstanceId = Iterables.getOnlyElement(tomcatState.getInstanceIds());
-		ServiceInstanceState tomcatInstanceState = (ServiceInstanceState) cli.getServiceState(tomcatInstanceId);
+		ServiceInstanceState tomcatInstanceState = (ServiceInstanceState) client.getServiceState(tomcatInstanceId);
 		assertEquals(tomcatInstanceState.getProgress(), ServiceInstanceState.Progress.STARTING_MACHINE);
 	}
 

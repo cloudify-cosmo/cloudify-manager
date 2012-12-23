@@ -41,8 +41,8 @@ public class ServiceClient {
 		return taskProducer.addElement(serviceId, task);
 	}
 	
-	public TaskExecutorState getServiceState(URL serviceId) {
-		return stateReader.getElement(stateReader.getLastElementId(serviceId));
+	public <T extends TaskExecutorState> T getServiceState(URL serviceId) {
+		return (T) stateReader.getElement(stateReader.getLastElementId(serviceId));
 	}
 
 	public Task getTask(URL taskId) {
