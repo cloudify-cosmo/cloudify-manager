@@ -19,7 +19,6 @@ import org.openspaces.servicegrid.rest.executors.TaskExecutorStatePollingReader;
 import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
 import org.openspaces.servicegrid.rest.http.HttpError;
 import org.openspaces.servicegrid.rest.http.HttpException;
-import org.openspaces.servicegrid.rest.tasks.MapTaskBroker;
 import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
 import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 import org.testng.annotations.BeforeMethod;
@@ -60,7 +59,7 @@ public class InstallServiceTest {
 		stateWriter = state;
 		stateReader = state;
 		
-		MapTaskBroker taskBroker = new MapTaskBroker();
+		MockStreams taskBroker = new MockStreams();
 		taskProducer = taskBroker;
 		taskConsumer = taskBroker;
 		orchestrator = new ServiceOrchestrator(tomcatServiceId, cloudExecutorId, taskConsumer);

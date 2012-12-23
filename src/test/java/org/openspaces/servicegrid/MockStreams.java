@@ -1,11 +1,12 @@
-package org.openspaces.servicegrid.rest.tasks;
+package org.openspaces.servicegrid;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
-import org.openspaces.servicegrid.model.tasks.Task;
+import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
+import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -13,9 +14,9 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 
-public class MapTaskBroker implements StreamProducer, StreamConsumer {
+public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 
-	Multimap<URL,Task> streamById = ArrayListMultimap.create();
+	Multimap<URL,T> streamById = ArrayListMultimap.create();
 	
 	/**
 	 * HTTP PUT with not_exists etag
@@ -29,9 +30,9 @@ public class MapTaskBroker implements StreamProducer, StreamConsumer {
 	 * HTTP POST
 	 */
 	@Override
-	public URL addToStream(URL streamId, Task task) {
+	public URL addToStream(URL streamId, T task) {
 		
-		Collection<Task> stream = streamById.get(streamId);
+		Collection<T> stream = streamById.get(streamId);
 		stream.add(task);
 		URL taskId = getTaskUrl(streamId, stream.size() -1);
 		return taskId;
@@ -40,7 +41,7 @@ public class MapTaskBroker implements StreamProducer, StreamConsumer {
 	private Integer getIndex(final URL taskId, final URL streamId) {
 		
 		Preconditions.checkNotNull(streamId);
-		final Collection<Task> stream = streamById.get(streamId);
+		final Collection<T> stream = streamById.get(streamId);
 		String lastTaskUrl = taskId == null ? null : taskId.toExternalForm();
 		String tasksRootUrl = streamId.toExternalForm() + "tasks/";
 		
@@ -79,14 +80,14 @@ public class MapTaskBroker implements StreamProducer, StreamConsumer {
 	 * HTTP GET /index
 	 */
 	@Override
-	public Task getById(URL taskId) {
+	public T getById(URL taskId) {
 		
 		final URL streamId = getStreamId(taskId);
 		
 		Integer index = getIndex(taskId, streamId);
 		Preconditions.checkNotNull(index);
 		
-		Task task = getByIndex(streamId, index);
+		T task = getByIndex(streamId, index);
 		Preconditions.checkNotNull(task);
 		return task;
 	}
@@ -98,8 +99,8 @@ public class MapTaskBroker implements StreamProducer, StreamConsumer {
 		return executorId;
 	}
 	
-	private Task getByIndex(URL streamId, int index) {
-		final Collection<Task> stream = streamById.get(streamId);
+	private T getByIndex(URL streamId, int index) {
+		final Collection<T> stream = streamById.get(streamId);
 		if (stream.size() <= index) {
 			return null;
 		}
@@ -113,7 +114,7 @@ public class MapTaskBroker implements StreamProducer, StreamConsumer {
 		URL streamId = getStreamId(taskId);
 		Integer index = getIndex(taskId,streamId);
 		Preconditions.checkNotNull(index);
-		Collection<Task> stream = streamById.get(streamId);
+		Collection<T> stream = streamById.get(streamId);
 		if (stream.size() > index+1) {
 			nextId = getTaskUrl(streamId, index+1);
 		}
@@ -123,7 +124,7 @@ public class MapTaskBroker implements StreamProducer, StreamConsumer {
 	@Override
 	public URL getFirstId(URL streamId) {
 		Preconditions.checkNotNull(streamId);
-		Collection<Task> stream = streamById.get(streamId);
+		Collection<T> stream = streamById.get(streamId);
 		Preconditions.checkNotNull(stream);
 		if (stream.isEmpty()) {
 			return null;

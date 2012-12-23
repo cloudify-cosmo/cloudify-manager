@@ -14,10 +14,10 @@ public class MockTaskPolling {
 	private final TaskExecutorStateWriter stateWriter;
 	private final TaskExecutor<?> taskExecutor;
 	private final URL executorId;
-	private final StreamConsumer taskConsumer;
+	private final StreamConsumer<Task> taskConsumer;
 	private URL lastTaskId;
 	
-	public MockTaskPolling(URL executorId, TaskExecutorStateWriter stateWriter, StreamConsumer taskConsumer, TaskExecutor<?> taskExecutor) {
+	public MockTaskPolling(URL executorId, TaskExecutorStateWriter stateWriter, StreamConsumer<Task> taskConsumer, TaskExecutor<?> taskExecutor) {
 		this.executorId = executorId;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;

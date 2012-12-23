@@ -2,14 +2,12 @@ package org.openspaces.servicegrid.rest.tasks;
 
 import java.net.URL;
 
-import org.openspaces.servicegrid.model.tasks.Task;
-
-public interface StreamConsumer {
+public interface StreamConsumer<T> {
 
 	URL getFirstId(URL streamId);
 	
 	URL getNextId(URL taskId);
 
-	Task getById(URL taskId);
+	T getById(URL taskId);
 
 }

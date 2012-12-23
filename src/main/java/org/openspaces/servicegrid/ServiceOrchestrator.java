@@ -19,11 +19,11 @@ import com.google.common.collect.Lists;
 public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorState> {
 
 	private final ServiceOrchestratorState state;
-	private final StreamConsumer taskConsumer;
+	private final StreamConsumer<Task> taskConsumer;
 	private URL cloudExecutorId;
 	private final URL orchestratorExecutorId;
 	
-	public ServiceOrchestrator(URL orchestratorExecutorId, URL cloudExecutorId, StreamConsumer taskConsumer) {
+	public ServiceOrchestrator(URL orchestratorExecutorId, URL cloudExecutorId, StreamConsumer<Task> taskConsumer) {
 		this.orchestratorExecutorId = orchestratorExecutorId;
 		this.taskConsumer = taskConsumer;
 		this.cloudExecutorId = cloudExecutorId;
