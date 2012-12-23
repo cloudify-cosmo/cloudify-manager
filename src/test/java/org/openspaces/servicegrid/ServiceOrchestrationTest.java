@@ -1,6 +1,5 @@
 package org.openspaces.servicegrid;
 
-import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertEquals;
 
 import java.net.MalformedURLException;
@@ -101,16 +100,20 @@ public class ServiceOrchestrationTest {
 	private void installService() {
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setDisplayName("tomcat");
-		final URL taskId = client.addServiceTask(orchestratorExecutorId, installServiceTask);
-		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
+		client.addServiceTask(orchestratorExecutorId, installServiceTask);
+		orchestrate();
+	}
+
+	private void orchestrate() {
+		client.addServiceTask(orchestratorExecutorId, new OrchestrateTask());
+		orchestratorContainer.stepTaskExecutor();
 	}
 	
 	private void execute() {
 		boolean stop = true;
 		for (int i = 0 ; i < 1000 ;i++) {
 
-			client.addServiceTask(orchestratorExecutorId, new OrchestrateTask());
-			orchestratorContainer.stepTaskExecutor();
+			orchestrate();
 			
 			for (MockTaskContainer container : containers) {
 				if (container.stepTaskExecutor()) {

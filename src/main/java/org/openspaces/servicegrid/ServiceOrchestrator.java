@@ -93,7 +93,10 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 			Preconditions.checkNotNull(instanceState);
 			String progress = instanceState.getProgress();
 			
-			if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
+			if (progress.equals(ServiceInstanceState.Progress.STARTING_MACHINE)) {
+				//Do nothing, orchestrator needs to wait for the machine to be started
+			}
+			else if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
 				final StartAgentTask task = new StartAgentTask();
 				task.setImpersonatedTarget(instanceId);	
 				task.setTarget(agentLifecycleExecutorId);
