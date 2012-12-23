@@ -5,6 +5,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.UUID;
 
+import org.openspaces.servicegrid.model.service.CreateServiceInstanceExecutorTask;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
@@ -90,24 +91,48 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 			URL instanceId = Iterables.getOnlyElement(state.getInstanceIds());
 			ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId));
 			Preconditions.checkNotNull(instanceState);
-			if (instanceState.getProgress().equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
+			String progress = instanceState.getProgress();
+			
+			if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
 				final StartAgentTask task = new StartAgentTask();
 				task.setImpersonatedTarget(instanceId);	
 				task.setTarget(agentLifecycleExecutorId);
 				task.setIpAddress(instanceState.getIpAddress());
+				task.setAgentExecutorId(newAgentExecutorId());
 				newTasks.add(task);
+			}
+			else if (progress.equals(ServiceInstanceState.Progress.AGENT_STARTED)) {
+				final CreateServiceInstanceExecutorTask task = new CreateServiceInstanceExecutorTask();
+				task.setImpersonatedTarget(instanceId);	
+				URL agentExecutorId = instanceState.getAgentExecutorId();
+				Preconditions.checkNotNull(agentExecutorId);
+				task.setTarget(agentExecutorId);
+				newTasks.add(task);
+			}
+			else {
+				throw new IllegalStateException("Unknown service instance state " + progress);
 			}
 		}
 		return newTasks;
 	}
 
 	private URL newInstanceId() {
+		return newUrl(orchestratorExecutorId.toExternalForm() + "instances/" + UUID.randomUUID());
+	}
+
+	private URL newAgentExecutorId() {
+		return newUrl(orchestratorExecutorId.toExternalForm() + "../agents/" + UUID.randomUUID());
+	}
+	
+	private URL newUrl(String url) {
 		try {
-			return new URL(orchestratorExecutorId.toExternalForm() + "instances/" + UUID.randomUUID());
-		} catch (MalformedURLException e) {
+			return new URL(url);
+		} catch (final MalformedURLException e) {
 			throw Throwables.propagate(e);
 		}
 	}
+	
+	
 
 	@Override
 	public ServiceOrchestratorState getState() {

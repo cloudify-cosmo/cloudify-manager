@@ -54,27 +54,34 @@ public class MockTaskContainer {
 		stateWriter.addElement(getExecutorId(), state);
 	}
 
-	public void stepTaskExecutor() {
+	/**
+	 * @return true - if need to be called again
+	 */
+	public boolean stepTaskExecutor() {
+		
+		boolean needAnotherStep = false;
 		
 		final TaskExecutorState state = getTaskExecutorState();
-		
-		if (!state.isExecutingTask()) {
-			URL taskId;
-			if (lastTaskId == null) {
-				taskId = taskConsumer.getFirstElementId(executorId);
-			}
-			else {
-				taskId = taskConsumer.getNextElementId(lastTaskId);
-			}
-			if (taskId != null) {
-				final Task task = taskConsumer.getElement(taskId);
-				state.executeTask(taskId);
-				lastTaskId = taskId;
-				beforeExecute(task);
-				execute(task);
-				afterExecute(taskId, task);
-			}
+				
+		URL taskId;
+		if (lastTaskId == null) {
+			taskId = taskConsumer.getFirstElementId(executorId);
 		}
+		else {
+			taskId = taskConsumer.getNextElementId(lastTaskId);
+		}
+		
+		if (taskId != null) {
+			final Task task = taskConsumer.getElement(taskId);
+			state.executeTask(taskId);
+			lastTaskId = taskId;
+			beforeExecute(task);
+			execute(task);
+			afterExecute(taskId, task);
+			needAnotherStep = true;
+		}
+		
+		return needAnotherStep;
 	}
 
 	private void execute(final Task task) {
