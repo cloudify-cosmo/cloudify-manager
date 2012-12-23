@@ -5,21 +5,21 @@ import java.net.URL;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
-import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
-import org.openspaces.servicegrid.rest.tasks.TaskProducer;
+import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
+import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 
 import com.google.common.base.Preconditions;
 
 
 public class MockOrchestratorPollingContainer extends MockTaskPolling {
 	
-	private TaskProducer taskProducer;
+	private StreamProducer taskProducer;
 
 	public MockOrchestratorPollingContainer(
 			URL orchestratorId,
 			TaskExecutorStateWriter stateWriter, 
-			TaskConsumer taskConsumer,
-			TaskProducer taskProducer,
+			StreamConsumer taskConsumer,
+			StreamProducer taskProducer,
 			Orchestrator<? extends TaskExecutorState> orchetrator) {
 	
 		super(orchestratorId, stateWriter, taskConsumer, orchetrator);
@@ -35,7 +35,7 @@ public class MockOrchestratorPollingContainer extends MockTaskPolling {
 		for (Task newTask : newTasks) {
 			newTask.setSource(super.getExecutorId());
 			Preconditions.checkNotNull(newTask.getTarget());
-			taskProducer.post(newTask.getTarget(), newTask);
+			taskProducer.addToStream(newTask.getTarget(), newTask);
 		}
 	}
 	

@@ -20,8 +20,8 @@ import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
 import org.openspaces.servicegrid.rest.http.HttpError;
 import org.openspaces.servicegrid.rest.http.HttpException;
 import org.openspaces.servicegrid.rest.tasks.MapTaskBroker;
-import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
-import org.openspaces.servicegrid.rest.tasks.TaskProducer;
+import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
+import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -35,8 +35,8 @@ public class InstallServiceTest {
 	private ServiceClient cli;
 	private ServiceOrchestrator orchestrator; 
 	private MockOrchestratorPollingContainer orchestratorContainer;
-	private TaskProducer taskProducer;
-	private TaskConsumer taskConsumer;
+	private StreamProducer taskProducer;
+	private StreamConsumer taskConsumer;
 	private MockTaskPolling cloudContainer;
 	private CloudMachineTaskExecutor cloudExecutor;
 		
@@ -77,7 +77,6 @@ public class InstallServiceTest {
 		cli.createService(tomcatServiceId);
 		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
 		assertNull(serviceState.getDownloadUrl());
-		assertNull(serviceState.getFirstPendingTaskId());
 	}
 	
 	@Test
@@ -103,7 +102,6 @@ public class InstallServiceTest {
 		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
 		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
 		assertNull(serviceState.getDownloadUrl());
-		assertNull(serviceState.getFirstPendingTaskId());
 	}
 
 	@Test
@@ -113,7 +111,6 @@ public class InstallServiceTest {
 		orchestratorContainer.stepTaskExecutor();
 		final ServiceOrchestratorState serviceState = (ServiceOrchestratorState) cli.getServiceState(tomcatServiceId);
 		assertEquals(serviceState.getDownloadUrl(), tomcatDownloadUrl);
-		assertNull(serviceState.getFirstPendingTaskId());
 		URL taskId = serviceState.getLastCompletedTaskId();
 		assertTrue(cli.getTask(taskId) instanceof InstallServiceTask);
 	}
@@ -131,7 +128,6 @@ public class InstallServiceTest {
 		orchestratorContainer.stepOrchestrator();
 		cloudContainer.stepTaskExecutor();
 		final TaskExecutorState cloudState = cli.getServiceState(cloudExecutorId);
-		assertNull(cloudState.getFirstPendingTaskId());
 		URL taskId = cloudState.getLastCompletedTaskId();
 		assertTrue(cli.getTask(taskId) instanceof StartMachineTask);
 		

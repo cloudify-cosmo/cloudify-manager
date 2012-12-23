@@ -9,8 +9,8 @@ import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.rest.executors.TaskExecutorStatePollingReader;
 import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
 import org.openspaces.servicegrid.rest.http.HttpEtag;
-import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
-import org.openspaces.servicegrid.rest.tasks.TaskProducer;
+import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
+import org.openspaces.servicegrid.rest.tasks.StreamProducer;
 
 import com.google.common.base.Preconditions;
 
@@ -18,14 +18,14 @@ public class ServiceClient {
 
 	private final TaskExecutorStateWriter stateWriter;
 	private final TaskExecutorStatePollingReader stateReader;
-	private final TaskProducer taskProducer;
-	private final TaskConsumer taskConsumer;
+	private final StreamProducer taskProducer;
+	private final StreamConsumer taskConsumer;
 
 	public ServiceClient(
 			TaskExecutorStatePollingReader stateReader, 
 			TaskExecutorStateWriter stateWriter,
-			TaskConsumer taskConsumer,
-			TaskProducer taskProducer) {
+			StreamConsumer taskConsumer,
+			StreamProducer taskProducer) {
 		this.stateReader = stateReader;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;
@@ -41,7 +41,7 @@ public class ServiceClient {
 		Preconditions.checkNotNull(serviceId);
 		Preconditions.checkNotNull(task);
 		task.setTarget(serviceId);
-		return taskProducer.post(serviceId, task);
+		return taskProducer.addToStream(serviceId, task);
 	}
 	
 	public TaskExecutorState getServiceState(URL serviceId) {
@@ -49,6 +49,6 @@ public class ServiceClient {
 	}
 
 	public Task getTask(URL taskId) {
-		return (Task) taskConsumer.get(taskId);
+		return (Task) taskConsumer.getById(taskId);
 	}
 }

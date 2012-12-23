@@ -11,7 +11,7 @@ import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.rest.http.HttpError;
 import org.openspaces.servicegrid.rest.http.HttpException;
-import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
+import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -19,11 +19,11 @@ import com.google.common.collect.Lists;
 public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorState> {
 
 	private final ServiceOrchestratorState state;
-	private final TaskConsumer taskConsumer;
+	private final StreamConsumer taskConsumer;
 	private URL cloudExecutorId;
 	private final URL orchestratorExecutorId;
 	
-	public ServiceOrchestrator(URL orchestratorExecutorId, URL cloudExecutorId, TaskConsumer taskConsumer) {
+	public ServiceOrchestrator(URL orchestratorExecutorId, URL cloudExecutorId, StreamConsumer taskConsumer) {
 		this.orchestratorExecutorId = orchestratorExecutorId;
 		this.taskConsumer = taskConsumer;
 		this.cloudExecutorId = cloudExecutorId;
@@ -50,7 +50,7 @@ public class ServiceOrchestrator implements Orchestrator<ServiceOrchestratorStat
 	private boolean isServiceInstalled() {
 		boolean installed = false;
 		for (final URL oldTaskId : state.getCompletedTaskIds()) {
-			final Task oldTask = taskConsumer.get(oldTaskId);
+			final Task oldTask = taskConsumer.getById(oldTaskId);
 			if (oldTask instanceof InstallServiceTask) {
 				installed = true;
 			}

@@ -3,7 +3,6 @@ package org.openspaces.servicegrid.rest.tasks;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
-import java.util.List;
 import java.util.regex.Pattern;
 
 import org.openspaces.servicegrid.model.tasks.Task;
@@ -12,48 +11,42 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
-public class MapTaskBroker implements TaskProducer, TaskConsumer {
+public class MapTaskBroker implements StreamProducer, StreamConsumer {
 
 	Multimap<URL,Task> streamById = ArrayListMultimap.create();
 	
+	/**
+	 * HTTP PUT with not_exists etag
+	 */
 	@Override
-	public URL post(URL executorId, Task task) {
+	public void createStream(URL streamId) {
+		Preconditions.checkArgument(!streamById.containsKey(streamId), "Stream %s already exists", streamId);
+	}
+	
+	/**
+	 * HTTP POST
+	 */
+	@Override
+	public URL addToStream(URL streamId, Task task) {
 		
-		Collection<Task> stream = streamById.get(executorId);
+		Collection<Task> stream = streamById.get(streamId);
 		stream.add(task);
-		URL taskId = newTaskUrl(executorId, stream.size() -1);
+		URL taskId = getTaskUrl(streamId, stream.size() -1);
 		return taskId;
 	}
 
-	@Override
-	public Iterable<URL> listTaskIds(final URL executorId, URL lastTaskId) {
+	private Integer getIndex(final URL taskId, final URL streamId) {
 		
-		Integer index = getIndex(lastTaskId, executorId);
-		if (index == null) {
-			index = -1;
-		}
-		
-		final Collection<Task> stream = streamById.get(executorId);
-		List<URL> newTaskIds = Lists.newLinkedList();
-		for (index++ ; index < stream.size() ; index++) {
-			newTaskIds.add(newTaskUrl(executorId, index));
-		}
-		return Iterables.unmodifiableIterable(newTaskIds);
-	}
-
-	private Integer getIndex(final URL taskId, final URL executorId) {
-		
-		Preconditions.checkNotNull(executorId);
-		final Collection<Task> stream = streamById.get(executorId);
+		Preconditions.checkNotNull(streamId);
+		final Collection<Task> stream = streamById.get(streamId);
 		String lastTaskUrl = taskId == null ? null : taskId.toExternalForm();
-		String tasksRootUrl = executorId.toExternalForm() + "tasks/";
+		String tasksRootUrl = streamId.toExternalForm() + "tasks/";
 		
 		Preconditions.checkArgument(
 				taskId == null || lastTaskUrl.startsWith(tasksRootUrl),
-				"%s is not related to %s",taskId ,executorId);
+				"%s is not related to %s",taskId ,streamId);
 		
 		Integer index = null;
 		if (taskId != null) { 
@@ -69,8 +62,8 @@ public class MapTaskBroker implements TaskProducer, TaskConsumer {
 		return index;
 	}
 
-	private static URL newTaskUrl(URL executorId, int index) {
-		String url = executorId.toExternalForm() + "tasks/" + index;
+	private URL getTaskUrl(URL streamId, int index) {
+		String url = streamId.toExternalForm() + "tasks/" + index;
 		return newUrl(url);
 	}
 
@@ -82,19 +75,60 @@ public class MapTaskBroker implements TaskProducer, TaskConsumer {
 		}
 	}
 
+	/**
+	 * HTTP GET /index
+	 */
 	@Override
-	public Task get(URL taskId) {
+	public Task getById(URL taskId) {
 		
-		String[] split = taskId.toExternalForm().split(Pattern.quote("tasks/"));
-		Preconditions.checkElementIndex(0, split.length);
+		final URL streamId = getStreamId(taskId);
 		
-		URL executorId = newUrl(split[0]);
-		Integer index = getIndex(taskId, executorId);
+		Integer index = getIndex(taskId, streamId);
 		Preconditions.checkNotNull(index);
 		
-		Collection<Task> stream = streamById.get(executorId);
-		Preconditions.checkPositionIndex(index, stream.size());
-		return Iterables.get(stream,index);
+		Task task = getByIndex(streamId, index);
+		Preconditions.checkNotNull(task);
+		return task;
+	}
+
+	private URL getStreamId(URL taskId) {
+		final String[] split = taskId.toExternalForm().split(Pattern.quote("tasks/"));
+		Preconditions.checkElementIndex(0, split.length);
+		final URL executorId = newUrl(split[0]);
+		return executorId;
 	}
 	
+	private Task getByIndex(URL streamId, int index) {
+		final Collection<Task> stream = streamById.get(streamId);
+		if (stream.size() <= index) {
+			return null;
+		}
+		return Iterables.get(stream,index);
+	}
+
+	@Override
+	public URL getNextId(URL taskId) {
+		Preconditions.checkNotNull(taskId);
+		URL nextId = null;
+		URL streamId = getStreamId(taskId);
+		Integer index = getIndex(taskId,streamId);
+		Preconditions.checkNotNull(index);
+		Collection<Task> stream = streamById.get(streamId);
+		if (stream.size() > index+1) {
+			nextId = getTaskUrl(streamId, index+1);
+		}
+		return nextId;
+	}
+
+	@Override
+	public URL getFirstId(URL streamId) {
+		Preconditions.checkNotNull(streamId);
+		Collection<Task> stream = streamById.get(streamId);
+		Preconditions.checkNotNull(stream);
+		if (stream.isEmpty()) {
+			return null;
+		}
+		return getTaskUrl(streamId , 0);
+	}
+
 }

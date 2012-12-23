@@ -4,7 +4,10 @@ import java.net.URL;
 
 import org.openspaces.servicegrid.model.tasks.Task;
 
-public interface TaskProducer {
+public interface StreamProducer {
 
-	URL post(URL executorId, Task object);
+	void createStream(URL streamId);
+	
+	URL addToStream(URL streamId, Task object);
+	
 }

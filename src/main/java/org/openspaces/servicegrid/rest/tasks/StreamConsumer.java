@@ -4,9 +4,12 @@ import java.net.URL;
 
 import org.openspaces.servicegrid.model.tasks.Task;
 
-public interface TaskConsumer {
+public interface StreamConsumer {
 
-	Iterable<URL> listTaskIds(URL executorId, URL lastTaskId);
+	URL getFirstId(URL streamId);
 	
-	Task get(URL taskId);
+	URL getNextId(URL taskId);
+
+	Task getById(URL taskId);
+
 }

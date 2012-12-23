@@ -5,7 +5,7 @@ import java.net.URL;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.rest.executors.TaskExecutorStateWriter;
-import org.openspaces.servicegrid.rest.tasks.TaskConsumer;
+import org.openspaces.servicegrid.rest.tasks.StreamConsumer;
 
 import com.google.common.base.Preconditions;
 
@@ -14,10 +14,10 @@ public class MockTaskPolling {
 	private final TaskExecutorStateWriter stateWriter;
 	private final TaskExecutor<?> taskExecutor;
 	private final URL executorId;
-	private final TaskConsumer taskConsumer;
+	private final StreamConsumer taskConsumer;
 	private URL lastTaskId;
 	
-	public MockTaskPolling(URL executorId, TaskExecutorStateWriter stateWriter, TaskConsumer taskConsumer, TaskExecutor<?> taskExecutor) {
+	public MockTaskPolling(URL executorId, TaskExecutorStateWriter stateWriter, StreamConsumer taskConsumer, TaskExecutor<?> taskExecutor) {
 		this.executorId = executorId;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;
@@ -57,16 +57,19 @@ public class MockTaskPolling {
 	public void stepTaskExecutor() {
 		
 		final TaskExecutorState state = taskExecutor.getState();
-		Iterable<URL> newTaskIds = taskConsumer.listTaskIds(getExecutorId(), lastTaskId);
-		for (URL newTaskId : newTaskIds) {
-			state.addPendingTaskId(newTaskId);
-			lastTaskId = newTaskId;
-		}
+		
 		if (!state.isExecutingTask()) {
-			URL taskId = state.executeFirstPendingTask();
+			URL taskId;
+			if (lastTaskId == null) {
+				taskId = taskConsumer.getFirstId(executorId);
+			}
+			else {
+				taskId = taskConsumer.getNextId(lastTaskId);
+			}
 			if (taskId != null) {
-				Task task = taskConsumer.get(taskId);
-				Preconditions.checkNotNull(task);
+				Task task = taskConsumer.getById(taskId);
+				state.executeTask(taskId);
+				lastTaskId = taskId;
 				beforeExecute(task);
 				taskExecutor.execute(task);
 				afterExecute(taskId, task);

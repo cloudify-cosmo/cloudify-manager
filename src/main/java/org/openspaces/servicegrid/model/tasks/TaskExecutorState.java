@@ -12,15 +12,10 @@ public class TaskExecutorState {
 	//Should serialize to List<URL> which is the taskid URLs
 	private Set<URL> executingTasks = Sets.newLinkedHashSet();
 	private Set<URL> completedTasks = Sets.newLinkedHashSet();
-	private Set<URL> pendingTasks = Sets.newLinkedHashSet();
 	
-	public URL executeFirstPendingTask() {
-		URL taskId = getFirstPendingTaskId();
-		if (taskId != null) {
-			pendingTasks.remove(taskId);
-			executingTasks.add(taskId);
-		}
-		return taskId;
+	public void executeTask(URL taskId) {
+		Preconditions.checkNotNull(taskId);
+		executingTasks.add(taskId);
 	}
 	
 	public void completeExecutingTask(URL taskId) {
@@ -28,11 +23,7 @@ public class TaskExecutorState {
 		Preconditions.checkState(remove,"task " + taskId + " is not executing");
 		completedTasks.add(taskId);
 	}
-	
-	public URL getFirstPendingTaskId() {
-		return Iterables.getFirst(pendingTasks, null);
-	}
-	
+		
 	public URL getLastCompletedTaskId() {
 		return Iterables.getLast(completedTasks, null);
 	}
@@ -45,16 +36,7 @@ public class TaskExecutorState {
 		return !Iterables.isEmpty(executingTasks);
 	}
 
-	public void addPendingTaskId(URL taskId) {
-		pendingTasks.add(taskId);
-	}
-	
 	public Iterable<URL> getCompletedTaskIds() {
 		return Iterables.unmodifiableIterable(completedTasks);
 	}
-
-	public Iterable<URL> getPendingTaskIds() {
-		return Iterables.unmodifiableIterable(pendingTasks);
-	}
-	
 }
