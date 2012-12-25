@@ -84,7 +84,7 @@ public class ServiceOrchestrationTest {
 						agentLifecycleExecutorId, 
 						stateReader, stateWriter,
 						taskConsumer, 
-						new MockAgentLifecycleTaskExecutor())
+						new MockStartAgentSshTaskExecutor())
 				);
 	}
 	

@@ -5,7 +5,7 @@ import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
-public class MockAgentLifecycleTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
+public class MockStartAgentSshTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
 
 	private TaskExecutorState state = new TaskExecutorState();
 
