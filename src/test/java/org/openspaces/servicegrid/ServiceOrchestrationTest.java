@@ -67,7 +67,7 @@ public class ServiceOrchestrationTest {
 	
 		orchestratorContainer = new MockTaskContainer(
 				orchestratorExecutorId,
-				stateWriter, 
+				stateReader, stateWriter, 
 				taskConsumer, 
 				new ServiceOrchestrator(
 						serviceOrchestratorParameter));
@@ -76,13 +76,13 @@ public class ServiceOrchestrationTest {
 								
 				new MockTaskContainer(
 						cloudExecutorId, 
-						stateWriter,
+						stateReader, stateWriter,
 						taskConsumer, 
 						new MockCloudMachineTaskExecutor("localhost")),
 						
 				new MockTaskContainer(
 						agentLifecycleExecutorId, 
-						stateWriter,
+						stateReader, stateWriter,
 						taskConsumer, 
 						new MockAgentLifecycleTaskExecutor())
 				);
@@ -100,8 +100,8 @@ public class ServiceOrchestrationTest {
 		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
 		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)));
-		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
+		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
 		Iterable<URL> agentIds = state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
 		Assert.assertEquals(instanceState.getAgentExecutorId(),Iterables.getOnlyElement(agentIds));
@@ -142,7 +142,7 @@ public class ServiceOrchestrationTest {
 			final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
 			 
 			for (URL serviceInstanceExecutorId : serviceState.getExecutingTaskIds()) {
-				containers.add(new MockTaskContainer(serviceInstanceExecutorId, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
+				containers.add(new MockTaskContainer(serviceInstanceExecutorId, state, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
 			}
 		
 			if (stop) {

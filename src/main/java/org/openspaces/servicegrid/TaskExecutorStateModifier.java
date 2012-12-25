@@ -5,4 +5,6 @@ import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 public interface TaskExecutorStateModifier {
 
 	void updateState(ServiceInstanceState impersonatedState);
+
+	ServiceInstanceState getState();
 }

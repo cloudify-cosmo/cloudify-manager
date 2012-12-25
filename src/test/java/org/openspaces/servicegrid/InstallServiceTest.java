@@ -69,8 +69,8 @@ public class InstallServiceTest {
 		cloudExecutor = new MockCloudMachineTaskExecutor();
 		
 		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
-		orchestratorContainer = new MockTaskContainer(orchestratorExecutorId, stateWriter, taskConsumer, orchestrator);
-		cloudContainer = new MockTaskContainer(cloudExecutorId, stateWriter, taskConsumer, cloudExecutor);
+		orchestratorContainer = new MockTaskContainer(orchestratorExecutorId, stateReader, stateWriter, taskConsumer, orchestrator);
+		cloudContainer = new MockTaskContainer(cloudExecutorId, stateReader, stateWriter, taskConsumer, cloudExecutor);
 	}
 
 	private ServiceOrchestratorParameter createServiceOrchestratorParameter() {

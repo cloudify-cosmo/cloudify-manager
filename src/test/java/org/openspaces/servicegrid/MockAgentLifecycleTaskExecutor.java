@@ -13,10 +13,9 @@ public class MockAgentLifecycleTaskExecutor implements ImpersonatingTaskExecutor
 	public void execute(Task task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartAgentTask) {
-			ServiceInstanceState impersonatedState = new ServiceInstanceState();
+			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
 			impersonatedState.setProgress(ServiceInstanceState.Progress.AGENT_STARTED);
-			impersonatedState.setIpAddress(((StartAgentTask)task).getIpAddress());
-			impersonatedState.setAgentExecutorId(((StartAgentTask)task).getAgentExecutorId());
+			impersonatedState.setAgentExecutorId(((StartAgentTask) task).getAgentExecutorId());
 			impersonatedStateModifier.updateState(impersonatedState);
 		}
 		

@@ -17,9 +17,11 @@ public class MockTaskContainer {
 	private final URL executorId;
 	private final StreamConsumer<Task> taskConsumer;
 	private URL lastTaskId;
+	private final StreamConsumer<TaskExecutorState> stateReader;
 	
-	public MockTaskContainer(URL executorId, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer,Object taskExecutor) {
+	public MockTaskContainer(URL executorId, StreamConsumer<TaskExecutorState> stateReader, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer,Object taskExecutor) {
 		this.executorId = executorId;
+		this.stateReader = stateReader;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;
 		this.taskExecutor = taskExecutor;
@@ -93,9 +95,28 @@ public class MockTaskContainer {
 			final ImpersonatingTaskExecutor<?> impersonatingTaskExecutor = (ImpersonatingTaskExecutor<?>) taskExecutor;
 			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
 				
+				ServiceInstanceState impersonatedState; 
+				boolean initialized;
+				
 				@Override
 				public void updateState(final ServiceInstanceState impersonatedState) {
-					stateWriter.addElement(task.getImpersonatedTarget(), impersonatedState);							
+					this.impersonatedState = impersonatedState;
+					initialized = true;
+					stateWriter.addElement(task.getImpersonatedTarget(), impersonatedState);
+				}
+
+				@Override
+				public ServiceInstanceState getState() {
+					if (!initialized) {
+						URL impersonatedTargetId = task.getImpersonatedTarget();
+						Preconditions.checkNotNull(impersonatedTargetId);
+						URL lastElementId = stateReader.getLastElementId(impersonatedTargetId);
+						if (lastElementId != null) {
+							this.impersonatedState = stateReader.getElement(lastElementId);
+						}
+						initialized = true;
+					}
+					return impersonatedState;
 				}
 
 			};
