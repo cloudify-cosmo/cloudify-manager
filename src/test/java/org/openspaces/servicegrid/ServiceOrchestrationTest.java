@@ -1,10 +1,9 @@
 package org.openspaces.servicegrid;
 
-import static org.testng.Assert.assertEquals;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
@@ -24,13 +23,13 @@ import com.google.common.collect.Sets;
 
 public class ServiceOrchestrationTest {
 	
-	private StreamConsumer<TaskExecutorState> stateReader;
 	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
 	private URL orchestratorExecutorId;
 	private MockTaskContainer orchestratorContainer;
-	private StreamProducer<TaskExecutorState> stateWriter;
+	private MockStreams<TaskExecutorState> state;
 	private StreamConsumer<Task> taskConsumer;
+	private final Logger logger = Logger.getLogger(this.getClass().getName());
 
 	@BeforeMethod
 	public void before() {
@@ -46,9 +45,9 @@ public class ServiceOrchestrationTest {
 			throw Throwables.propagate(e);
 		}
 		
-		MockStreams<TaskExecutorState> state = new MockStreams<TaskExecutorState>();
-		stateWriter = state;
-		stateReader = state;
+		state = new MockStreams<TaskExecutorState>();
+		StreamProducer<TaskExecutorState> stateWriter = state;
+		StreamConsumer<TaskExecutorState> stateReader = state;
 	
 		MockStreams<Task> taskBroker = new MockStreams<Task>();
 		StreamProducer<Task> taskProducer = taskBroker;
@@ -90,24 +89,27 @@ public class ServiceOrchestrationTest {
 	}
 	
 	@Test
-	public void installSingleInstanceServiceTest() {
+	public void installSingleInstanceServiceTest() throws MalformedURLException {
 		installService();
 		execute();
 		
-		final URL serviceInstanceExecutorId = getServiceInstaceExecutorId();
+		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
+		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
+		logger.info("URLs: " + state.getElementIdsStartingWith(new URL("http://localhost/")));
+		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
+		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
-		URL stateId0 = stateReader.getFirstElementId(serviceInstanceExecutorId);
-		ServiceInstanceState state0 = stateReader.getElement(stateId0);
-		assertEquals(state0.getProgress(), ServiceInstanceState.Progress.STARTING_MACHINE);
-		assertEquals(state0.getDisplayName(), "tomcat");
+		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)));
+		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 		
-		//URL state1 = stateReader.getNextElementId(state0);
-		//URL state2 = stateReader.getNextElementId(state1);
-		
+		Iterable<URL> agentIds = state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
+		Assert.assertEquals(instanceState.getAgentExecutorId(),Iterables.getOnlyElement(agentIds));
 	}
 
+
 	private URL getServiceInstaceExecutorId() {
-		final ServiceOrchestratorState serviceState = stateReader.getElement(stateReader.getLastElementId(orchestratorExecutorId));
+		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
 		final URL serviceInstanceExecutorId = Iterables.getOnlyElement(serviceState.getInstanceIds());
 		return serviceInstanceExecutorId;
 	}
@@ -137,17 +139,17 @@ public class ServiceOrchestrationTest {
 				}
 			}
 
-			final ServiceOrchestratorState serviceState = stateReader.getElement(stateReader.getLastElementId(orchestratorExecutorId));
+			final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
 			 
 			for (URL serviceInstanceExecutorId : serviceState.getExecutingTaskIds()) {
-				containers.add(new MockTaskContainer(serviceInstanceExecutorId, stateWriter, taskConsumer, new MockServiceInstanceTaskExecutor()));
+				containers.add(new MockTaskContainer(serviceInstanceExecutorId, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
 			}
 		
 			if (stop) {
 				return;
 			}
 		}
-		ServiceInstanceState lastState = stateReader.getElement(stateReader.getLastElementId(getServiceInstaceExecutorId()));
+		ServiceInstanceState lastState = state.getElement(state.getLastElementId(getServiceInstaceExecutorId()));
 		Assert.fail("Executing too many cycles progress=" + lastState.getProgress());
 	}
 }

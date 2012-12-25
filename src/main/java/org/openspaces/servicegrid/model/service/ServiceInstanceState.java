@@ -10,6 +10,8 @@ public class ServiceInstanceState extends TaskExecutorState {
 		public static final String STARTING_MACHINE = "STARTING_MACHINE"; 
 		public static final String MACHINE_STARTED = "MACHINE_STARTED";
 		public static final String AGENT_STARTED = "AGENT_STARTED";
+		public static final String INSTANCE_INSTALLED = "INSTANCE_INSTALLED";
+		public static final String INSTANCE_STARTED = "INSTANCE_STARTED";
 	}
 	
 	private String progress;
