@@ -9,6 +9,7 @@ import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
@@ -73,14 +74,15 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	 * HTTP GET /index
 	 */
 	@Override
-	public T getElement(URL elementId) {
+	public <G extends T> G getElement(URL elementId) {
 		
 		final URL streamId = getStreamId(elementId);
 		
 		Integer index = getIndex(elementId, streamId);
 		Preconditions.checkNotNull(index);
 		
-		T task = getByIndex(streamId, index);
+		@SuppressWarnings("unchecked")
+		G task = (G) getByIndex(streamId, index);
 		Preconditions.checkNotNull(task);
 		return task;
 	}
@@ -134,6 +136,18 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 			return null;
 		}
 		return getTaskUrl(streamId , stream.size()-1);
+	}
+
+	public Iterable<URL> getElementIdsStartingWith(final URL url) {
+		
+		final String urlPrefix = url.toExternalForm();
+		return Iterables.filter(streamById.keySet(), new Predicate<URL>() {
+
+			@Override
+			public boolean apply(URL input) {
+				return input.toExternalForm().startsWith(urlPrefix);
+			}
+		});
 	}
 
 }
