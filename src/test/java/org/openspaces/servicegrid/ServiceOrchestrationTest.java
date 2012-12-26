@@ -6,6 +6,11 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.client.ServiceClient;
+import org.openspaces.servicegrid.mock.MockEmbeddedAgentLifecycleTaskExecutor;
+import org.openspaces.servicegrid.mock.MockImmediateMachineSpawnerTaskExecutor;
+import org.openspaces.servicegrid.mock.MockStreams;
+import org.openspaces.servicegrid.mock.MockTaskContainer;
+import org.openspaces.servicegrid.mock.TaskExecutorWrapper;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
@@ -19,6 +24,7 @@ import org.testng.annotations.Test;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class ServiceOrchestrationTest {
@@ -72,20 +78,34 @@ public class ServiceOrchestrationTest {
 				new ServiceOrchestrator(
 						serviceOrchestratorParameter));
 
-		containers = Sets.newHashSet(
-								
+		containers = Sets.newCopyOnWriteArraySet(Lists.newArrayList(
+				orchestratorContainer,				
 				new MockTaskContainer(
 						cloudExecutorId, 
 						stateReader, stateWriter,
 						taskConsumer, 
-						new MockCloudMachineTaskExecutor("localhost")),
+						new MockImmediateMachineSpawnerTaskExecutor()),
 						
 				new MockTaskContainer(
 						agentLifecycleExecutorId, 
 						stateReader, stateWriter,
 						taskConsumer, 
-						new MockStartAgentSshTaskExecutor())
-				);
+						new MockEmbeddedAgentLifecycleTaskExecutor(new TaskExecutorWrapper() {
+							
+							@Override
+							public void wrapTaskExecutor(
+									TaskExecutor<? extends TaskExecutorState> taskExecutor, URL executorId) {
+								containers.add(new MockTaskContainer(executorId, state, state, taskConsumer, taskExecutor));
+							}
+							
+							@Override
+							public void wrapImpersonatingTaskExecutor(
+									ImpersonatingTaskExecutor<? extends TaskExecutorState> impersonatingTaskExecutor, URL executorId) {
+								containers.add(new MockTaskContainer(executorId, state, state, taskConsumer, impersonatingTaskExecutor));								
+							}
+						}
+						))
+				));
 	}
 	
 	@Test
@@ -93,13 +113,13 @@ public class ServiceOrchestrationTest {
 		installService();
 		execute();
 		
-		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
-		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
+		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
+		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),1);
 		logger.info("URLs: " + state.getElementIdsStartingWith(new URL("http://localhost/")));
 		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
-		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)));
+		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)), ServiceInstanceState.class);
 		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
@@ -109,8 +129,8 @@ public class ServiceOrchestrationTest {
 
 
 	private URL getServiceInstaceExecutorId() {
-		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
-		final URL serviceInstanceExecutorId = Iterables.getOnlyElement(serviceState.getInstanceIds());
+		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
+		final URL serviceInstanceExecutorId = Iterables.getOnlyElement(serviceState.getInstancesIds());
 		return serviceInstanceExecutorId;
 	}
 	
@@ -118,7 +138,6 @@ public class ServiceOrchestrationTest {
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setDisplayName("tomcat");
 		client.addServiceTask(orchestratorExecutorId, installServiceTask);
-		orchestrate();
 	}
 
 	private void orchestrate() {
@@ -139,21 +158,11 @@ public class ServiceOrchestrationTest {
 				}
 			}
 
-			final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
-			 
-			for (URL serviceInstanceExecutorId : serviceState.getInstanceIds()) {
-				containers.add(new MockTaskContainer(serviceInstanceExecutorId, state, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
-			}
-			
-			for (URL agentExecutorId : serviceState.getAgents()) {
-				containers.add(new MockTaskContainer(agentExecutorId, state, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
-			}
-					
 			if (stop) {
 				return;
 			}
 		}
-		ServiceInstanceState lastState = state.getElement(state.getLastElementId(getServiceInstaceExecutorId()));
+		ServiceInstanceState lastState = state.getElement(state.getLastElementId(getServiceInstaceExecutorId()), ServiceInstanceState.class);
 		Assert.fail("Executing too many cycles progress=" + lastState.getProgress());
 	}
 }

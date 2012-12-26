@@ -1,5 +1,7 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.mock;
 
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
@@ -23,7 +25,7 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 	public void execute(Task task, TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartMachineTask) {
 			this.impersonatedStateModifier = impersonatedStateModifier;
-			ServiceInstanceState impersonatedState = new ServiceInstanceState();
+			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
 			impersonatedState.setProgress(ServiceInstanceState.Progress.STARTING_MACHINE);
 			impersonatedStateModifier.updateState(impersonatedState);
 		

@@ -32,13 +32,12 @@ public class ServiceClient {
 		return taskProducer.addElement(serviceId, task);
 	}
 	
-	@SuppressWarnings("unchecked")
-	public <T extends TaskExecutorState> T getExecutorState(URL serviceId) {
+	public <T extends TaskExecutorState> T getExecutorState(URL serviceId, Class<T> clazz) {
 		URL lastElementId = stateReader.getLastElementId(serviceId);
-		return (T) stateReader.getElement(lastElementId);
+		return stateReader.getElement(lastElementId, clazz);
 	}
 
 	public Task getTask(URL taskId) {
-		return (Task) taskConsumer.getElement(taskId);
+		return taskConsumer.getElement(taskId, Task.class);
 	}
 }

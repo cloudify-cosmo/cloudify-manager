@@ -1,5 +1,7 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.mock;
 
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.Task;

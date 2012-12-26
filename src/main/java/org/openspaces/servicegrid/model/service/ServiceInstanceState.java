@@ -7,10 +7,13 @@ import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 public class ServiceInstanceState extends TaskExecutorState {
 
 	public static class Progress{
+		public static final String ORCHESTRATING = "ORCHESTRATING";
 		public static final String STARTING_MACHINE = "STARTING_MACHINE"; 
 		public static final String MACHINE_STARTED = "MACHINE_STARTED";
 		public static final String AGENT_STARTED = "AGENT_STARTED";
+		public static final String INSTALLING_INSTANCE = "INSTALLING_INSTANCE";
 		public static final String INSTANCE_INSTALLED = "INSTANCE_INSTALLED";
+		public static final String STARTING_INSTANCE = "STARTING_INSTANCE";
 		public static final String INSTANCE_STARTED = "INSTANCE_STARTED";
 	}
 	

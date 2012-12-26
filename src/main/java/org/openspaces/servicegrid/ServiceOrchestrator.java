@@ -5,10 +5,12 @@ import java.net.URL;
 import java.util.List;
 import java.util.UUID;
 
-import org.openspaces.servicegrid.model.service.CreateServiceInstanceExecutorTask;
+import org.openspaces.servicegrid.model.service.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
+import org.openspaces.servicegrid.model.service.OrchestrateServiceInstanceTask;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.service.StartServiceInstanceTask;
 import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.StartMachineTask;
 import org.openspaces.servicegrid.model.tasks.Task;
@@ -21,7 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorState> {
+public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorState>, ImpersonatingTaskExecutor<ServiceOrchestratorState> {
 
 	private final ServiceOrchestratorState state;
 	
@@ -67,7 +69,7 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	private boolean isServiceInstalled() {
 		boolean installed = false;
 		for (final URL oldTaskId : state.getCompletedTaskIds()) {
-			final Task oldTask = taskConsumer.getElement(oldTaskId);
+			final Task oldTask = taskConsumer.getElement(oldTaskId, Task.class);
 			if (oldTask instanceof InstallServiceTask) {
 				installed = true;
 			}
@@ -79,21 +81,27 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	
 		List<Task> newTasks = Lists.newArrayList();
 		
-		if (Iterables.isEmpty(state.getInstanceIds())) {
-			final StartMachineTask task = new StartMachineTask();
+		if (Iterables.isEmpty(state.getInstancesIds())) {
 			URL instanceId = newInstanceId();
-			task.setImpersonatedTarget(instanceId);	
-			task.setTarget(cloudExecutorId);
-			newTasks.add(task);
 			state.addInstanceId(instanceId);
+			
+			final OrchestrateServiceInstanceTask task = new OrchestrateServiceInstanceTask();
+			task.setImpersonatedTarget(instanceId);	
+			task.setTarget(orchestratorExecutorId);
+			newTasks.add(task);
 		}
 		else {
-			URL instanceId = Iterables.getOnlyElement(state.getInstanceIds());
-			ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId));
+			URL instanceId = Iterables.getOnlyElement(state.getInstancesIds());
+			ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId), ServiceInstanceState.class);
 			Preconditions.checkNotNull(instanceState);
 			String progress = instanceState.getProgress();
-			
-			if (progress.equals(ServiceInstanceState.Progress.STARTING_MACHINE)) {
+			if (progress.equals(ServiceInstanceState.Progress.ORCHESTRATING)){
+				final StartMachineTask task = new StartMachineTask();
+				task.setImpersonatedTarget(instanceId);	
+				task.setTarget(cloudExecutorId);
+				newTasks.add(task);
+			}
+			else if (progress.equals(ServiceInstanceState.Progress.STARTING_MACHINE)) {
 				//Do nothing, orchestrator needs to wait for the machine to be started
 			}
 			else if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
@@ -105,15 +113,30 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 				newTasks.add(task);
 			}
 			else if (progress.equals(ServiceInstanceState.Progress.AGENT_STARTED)) {
-				final CreateServiceInstanceExecutorTask task = new CreateServiceInstanceExecutorTask();
+				final InstallServiceInstanceTask task = new InstallServiceInstanceTask();
 				task.setImpersonatedTarget(instanceId);	
 				URL agentExecutorId = instanceState.getAgentExecutorId();
 				Preconditions.checkNotNull(agentExecutorId);
 				task.setTarget(agentExecutorId);
 				newTasks.add(task);
 			}
-			else {
-				throw new IllegalStateException("Unknown service instance state " + progress);
+			else if (progress.equals(ServiceInstanceState.Progress.INSTALLING_INSTANCE)) {
+				//Do nothing, orchestrator needs to wait for the instance to be installed
+			}
+			else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
+				//Ask for start service instance
+				final StartServiceInstanceTask task = new StartServiceInstanceTask();
+				task.setImpersonatedTarget(instanceId);	
+				URL agentExecutorId = instanceState.getAgentExecutorId();
+				Preconditions.checkNotNull(agentExecutorId);
+				task.setTarget(agentExecutorId);
+				newTasks.add(task);
+			}
+			else if (progress.equals(ServiceInstanceState.Progress.STARTING_INSTANCE)){
+				//Do nothing, wait for instance to start
+			}
+			else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)){
+				//Do nothing, instance is installed
 			}
 		}
 		return newTasks;
@@ -124,7 +147,7 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	}
 
 	private URL newAgentExecutorId() {
-		return newUrl(orchestratorExecutorId.toExternalForm() + "../agents/" + UUID.randomUUID());
+		return newUrl("http://localhost/agent/" + UUID.randomUUID());
 	}
 	
 	private URL newUrl(String url) {
@@ -140,6 +163,18 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	@Override
 	public ServiceOrchestratorState getState() {
 		return state;
+	}
+
+	@Override
+	public void execute(Task task,
+			TaskExecutorStateModifier impersonatedStateModifier) {
+		if (task instanceof OrchestrateServiceInstanceTask){
+			ServiceInstanceState impersonatedServiceInstanceState = new ServiceInstanceState();
+			impersonatedServiceInstanceState.setProgress(ServiceInstanceState.Progress.ORCHESTRATING);
+			impersonatedServiceInstanceState.setDisplayName(this.state.getDisplayName());			
+			impersonatedStateModifier.updateState(impersonatedServiceInstanceState);
+		}
+		
 	}
 
 }

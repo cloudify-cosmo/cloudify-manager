@@ -1,7 +1,10 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.mock;
 
 import java.net.URL;
 
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.TaskExecutor;
+import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
@@ -42,7 +45,7 @@ public class MockTaskContainer {
 			return ((ImpersonatingTaskExecutor<?>) taskExecutor).getState();
 		}
 		else {
-			throw new IllegalStateException("taskExecutor illegal type");
+			throw new IllegalStateException("taskExecutor illegal type - " + taskExecutor);
 		}
 	}
 
@@ -75,7 +78,7 @@ public class MockTaskContainer {
 		}
 		
 		if (taskId != null) {
-			final Task task = taskConsumer.getElement(taskId);
+			final Task task = taskConsumer.getElement(taskId, Task.class);
 			state.executeTask(taskId);
 			lastTaskId = taskId;
 			beforeExecute(task);
@@ -95,28 +98,20 @@ public class MockTaskContainer {
 			final ImpersonatingTaskExecutor<?> impersonatingTaskExecutor = (ImpersonatingTaskExecutor<?>) taskExecutor;
 			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
 				
-				ServiceInstanceState impersonatedState; 
-				boolean initialized;
-				
 				@Override
 				public void updateState(final ServiceInstanceState impersonatedState) {
-					this.impersonatedState = impersonatedState;
-					initialized = true;
 					stateWriter.addElement(task.getImpersonatedTarget(), impersonatedState);
 				}
 
 				@Override
 				public ServiceInstanceState getState() {
-					if (!initialized) {
-						URL impersonatedTargetId = task.getImpersonatedTarget();
-						Preconditions.checkNotNull(impersonatedTargetId);
-						URL lastElementId = stateReader.getLastElementId(impersonatedTargetId);
-						if (lastElementId != null) {
-							this.impersonatedState = stateReader.getElement(lastElementId);
-						}
-						initialized = true;
+					URL impersonatedTargetId = task.getImpersonatedTarget();
+					Preconditions.checkNotNull(impersonatedTargetId);
+					URL lastElementId = stateReader.getLastElementId(impersonatedTargetId);
+					if (lastElementId != null) {
+						return stateReader.getElement(lastElementId, ServiceInstanceState.class);
 					}
-					return impersonatedState;
+					return null;
 				}
 
 			};
@@ -155,6 +150,11 @@ public class MockTaskContainer {
 		} else if (!executorId.equals(other.executorId))
 			return false;
 		return true;
+	}
+	
+	@Override
+	public String toString() {
+		return taskExecutor.toString();
 	}
 	
 	

@@ -10,6 +10,6 @@ public interface StreamConsumer<T> {
 	
 	URL getLastElementId(URL streamId);
 
-	<G extends T> G getElement(URL elementId);
+	<G extends T> G getElement(URL elementId, Class<G> clazz);
 
 }

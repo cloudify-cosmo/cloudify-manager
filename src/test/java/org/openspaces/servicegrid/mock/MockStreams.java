@@ -1,10 +1,11 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.mock;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
+import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 
@@ -18,6 +19,7 @@ import com.google.common.collect.Multimap;
 public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 
 	Multimap<URL,T> streamById = ArrayListMultimap.create();
+	ObjectMapper mapper = new ObjectMapper();
 	
 	/**
 	 * HTTP POST
@@ -26,9 +28,19 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	public URL addElement(URL streamId, T element) {
 		
 		final Collection<T> stream = streamById.get(streamId);
-		stream.add(element);
+		stream.add(clone(element));
 		final URL elementId = getTaskUrl(streamId, stream.size() -1);
 		return elementId;
+	}
+
+	private T clone(T element) {
+		try {
+			@SuppressWarnings("unchecked")
+			T clone = (T)mapper.readValue(mapper.writeValueAsBytes(element), element.getClass());
+			return clone;
+		} catch (Exception e) {
+			throw Throwables.propagate(e);
+		}
 	}
 
 	private Integer getIndex(final URL elementId, final URL streamId) {
@@ -74,7 +86,7 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	 * HTTP GET /index
 	 */
 	@Override
-	public <G extends T> G getElement(URL elementId) {
+	public <G extends T> G getElement(URL elementId, Class<G> clazz) {
 		
 		final URL streamId = getStreamId(elementId);
 		
@@ -84,7 +96,9 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 		@SuppressWarnings("unchecked")
 		G task = (G) getByIndex(streamId, index);
 		Preconditions.checkNotNull(task);
-		return task;
+		@SuppressWarnings("unchecked")
+		G clonedTask = (G) clone(task);
+		return clonedTask;
 	}
 
 	private URL getStreamId(URL elementId) {

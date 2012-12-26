@@ -9,16 +9,20 @@ import com.google.common.collect.Sets;
 
 public class ServiceOrchestratorState extends TaskExecutorState {
 
-	private Set<URL> instances = Sets.newLinkedHashSet();
+	private Set<URL> instancesIds = Sets.newLinkedHashSet();
 	private Set<URL> agents = Sets.newLinkedHashSet();
 	private String displayName;
 
-	public Iterable<URL> getInstanceIds() {
-		return instances;
+	public Set<URL> getInstancesIds() {
+		return instancesIds;
+	}
+	
+	public void setInstancesIds(Set<URL> instancesIds) {
+		this.instancesIds = instancesIds;
 	}
 	
 	public void addInstanceId(URL executorId) {
-		instances.add(executorId);
+		instancesIds.add(executorId);
 	}
 
 	public String getDisplayName() {
