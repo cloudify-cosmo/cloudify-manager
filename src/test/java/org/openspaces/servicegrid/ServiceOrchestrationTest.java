@@ -141,10 +141,14 @@ public class ServiceOrchestrationTest {
 
 			final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId));
 			 
-			for (URL serviceInstanceExecutorId : serviceState.getExecutingTaskIds()) {
+			for (URL serviceInstanceExecutorId : serviceState.getInstanceIds()) {
 				containers.add(new MockTaskContainer(serviceInstanceExecutorId, state, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
 			}
-		
+			
+			for (URL agentExecutorId : serviceState.getAgents()) {
+				containers.add(new MockTaskContainer(agentExecutorId, state, state, taskConsumer, new MockServiceInstanceTaskExecutor()));
+			}
+					
 			if (stop) {
 				return;
 			}

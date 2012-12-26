@@ -10,6 +10,7 @@ import com.google.common.collect.Sets;
 public class ServiceOrchestratorState extends TaskExecutorState {
 
 	private Set<URL> instances = Sets.newLinkedHashSet();
+	private Set<URL> agents = Sets.newLinkedHashSet();
 	private String displayName;
 
 	public Iterable<URL> getInstanceIds() {
@@ -26,6 +27,14 @@ public class ServiceOrchestratorState extends TaskExecutorState {
 	
 	public void setDisplayName(String displayName) {
 		this.displayName = displayName;
+	}
+
+	public Set<URL> getAgents() {
+		return agents;
+	}
+
+	public void setAgents(Set<URL> agents) {
+		this.agents = agents;
 	}
 
 }
