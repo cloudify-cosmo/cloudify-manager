@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.agent.AgentTaskExecutor;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.Task;
@@ -17,7 +18,7 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 
 	private final TaskExecutorState state = new TaskExecutorState();
 	
-	private final Map<URL, MockEmbeddedAgentTaskExecutor> agents = Maps.newHashMap();
+	private final Map<URL, MockEmbeddedAgent> agents = Maps.newHashMap();
 	private final TaskExecutorWrapper executorWrapper;
 
 	public MockEmbeddedAgentLifecycleTaskExecutor(
@@ -33,9 +34,9 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
 			
 			URL agentExecutorId = ((StartAgentTask) task).getAgentExecutorId();
-			MockEmbeddedAgentTaskExecutor agentTaskExecutor = new MockEmbeddedAgentTaskExecutor();
-			agents.put(agentExecutorId, agentTaskExecutor);
-			executorWrapper.wrapImpersonatingTaskExecutor(agentTaskExecutor, agentExecutorId);
+			MockEmbeddedAgent agent = new MockEmbeddedAgent();
+			agents.put(agentExecutorId, agent);
+			executorWrapper.wrapImpersonatingTaskExecutor(new AgentTaskExecutor(agent), agentExecutorId);
 			impersonatedState.setProgress(ServiceInstanceState.Progress.AGENT_STARTED);
 			impersonatedState.setAgentExecutorId(agentExecutorId);
 			impersonatedStateModifier.updateState(impersonatedState);

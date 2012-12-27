@@ -12,8 +12,9 @@ import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.TaskExecutorWrapper;
 import org.openspaces.servicegrid.model.service.InstallServiceTask;
+import org.openspaces.servicegrid.model.service.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
-import org.openspaces.servicegrid.model.service.ServiceOrchestratorState;
+import org.openspaces.servicegrid.model.service.ServiceState;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
@@ -27,7 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-public class ServiceOrchestrationTest {
+public class ServiceGridOrchestrationTest {
 	
 	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
@@ -59,7 +60,7 @@ public class ServiceOrchestrationTest {
 		StreamProducer<Task> taskProducer = taskBroker;
 		taskConsumer = taskBroker;
 		
-		stateWriter.addElement(orchestratorExecutorId, new ServiceOrchestratorState());
+		stateWriter.addElement(orchestratorExecutorId, new ServiceGridOrchestratorState());
 	
 		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
 	
@@ -75,7 +76,7 @@ public class ServiceOrchestrationTest {
 				orchestratorExecutorId,
 				stateReader, stateWriter, 
 				taskConsumer, 
-				new ServiceOrchestrator(
+				new ServiceGridOrchestrator(
 						serviceOrchestratorParameter));
 
 		containers = Sets.newCopyOnWriteArraySet(Lists.newArrayList(
@@ -110,10 +111,10 @@ public class ServiceOrchestrationTest {
 	
 	@Test
 	public void installSingleInstanceServiceTest() throws MalformedURLException {
-		installService(1);
+		installService("tomcat", 1);
 		execute();
 		
-		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
+		final ServiceState serviceState = state.getElement(state.getLastElementId(getServiceUrl("tomcat")), ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),1);
 		logger.info("URLs: " + state.getElementIdsStartingWith(new URL("http://localhost/")));
 		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
@@ -129,10 +130,10 @@ public class ServiceOrchestrationTest {
 	
 	@Test
 	public void installMultipleInstanceServiceTest() throws MalformedURLException {
-		installService(2);
+		installService("tomcat", 2);
 		execute();
 		
-		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
+		final ServiceState serviceState = state.getElement(state.getLastElementId(getServiceUrl("tomcat")), ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),2);
 		logger.info("URLs: " + state.getElementIdsStartingWith(new URL("http://localhost/")));
 		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
@@ -147,29 +148,40 @@ public class ServiceOrchestrationTest {
 			Assert.assertTrue(Iterables.contains(agentIds, instanceState.getAgentExecutorId()));
 		}
 	}
-
-
-	private URL getServiceInstaceExecutorId() {
-		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
-		final URL serviceInstanceExecutorId = Iterables.getOnlyElement(serviceState.getInstancesIds());
-		return serviceInstanceExecutorId;
-	}
 	
-	private void installService(int numberOfInstances) {
+	/*public void installTwoSingleInstanceServicesTest(){
+		installService("tomcat", 1);
+		installService("cassandra", 1);
+		execute();
+	}*/
+	
+//	public void uninstallSingleInstanceServiceTest(){
+//		installService(1);
+//		execute();
+//		
+//	}
+
+
+	private void installService(String name, int numberOfInstances) throws MalformedURLException {
 		ServiceConfig serviceConfig = new ServiceConfig();
-		serviceConfig.setDisplayName("tomcat");
+		serviceConfig.setDisplayName(name);
 		serviceConfig.setNumberOfInstances(numberOfInstances);
+		serviceConfig.setServiceUrl(getServiceUrl(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
 		client.addServiceTask(orchestratorExecutorId, installServiceTask);
 	}
 
+	private URL getServiceUrl(String name) throws MalformedURLException {
+		return new URL("http://services/" + name);
+	}
+	
 	private void orchestrate() {
 		client.addServiceTask(orchestratorExecutorId, new OrchestrateTask());
 		orchestratorContainer.stepTaskExecutor();
 	}
 	
-	private void execute() {
+	private void execute() throws MalformedURLException {
 
 		for (int i = 0 ; i < 1000 ;i++) {
 
@@ -186,7 +198,19 @@ public class ServiceOrchestrationTest {
 				return;
 			}
 		}
-		ServiceInstanceState lastState = state.getElement(state.getLastElementId(getServiceInstaceExecutorId()), ServiceInstanceState.class);
-		Assert.fail("Executing too many cycles progress=" + lastState.getProgress());
+		StringBuilder sb = new StringBuilder();
+		Iterable<URL> servicesIds = state.getElementIdsStartingWith(new URL("http://services/"));
+		for (URL url : servicesIds) {
+			ServiceState serviceState = state.getElement(state.getLastElementId(url), ServiceState.class);
+			sb.append("service: " + serviceState.getServiceConfig().getDisplayName());
+			sb.append(" - ");
+			for (URL instanceUrl : serviceState.getInstancesIds()) {
+				ServiceInstanceState instanceState = state.getElement(state.getLastElementId(instanceUrl), ServiceInstanceState.class);
+				sb.append(instanceUrl).append("[").append(instanceState.getProgress()).append("] ");
+			}
+			
+		}
+		
+		Assert.fail("Executing too many cycles progress=" + sb);
 	}
 }

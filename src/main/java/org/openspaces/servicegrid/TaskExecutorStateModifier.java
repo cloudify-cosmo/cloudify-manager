@@ -1,10 +1,10 @@
 package org.openspaces.servicegrid;
 
-import org.openspaces.servicegrid.model.service.ServiceInstanceState;
+import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
 public interface TaskExecutorStateModifier {
 
-	void updateState(ServiceInstanceState impersonatedState);
+	void updateState(TaskExecutorState impersonatedState);
 
-	ServiceInstanceState getState();
+	<T extends TaskExecutorState> T getState();
 }

@@ -5,7 +5,6 @@ import java.net.URL;
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.model.service.ServiceInstanceState;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
@@ -99,17 +98,17 @@ public class MockTaskContainer {
 			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
 				
 				@Override
-				public void updateState(final ServiceInstanceState impersonatedState) {
+				public void updateState(final TaskExecutorState impersonatedState) {
 					stateWriter.addElement(task.getImpersonatedTarget(), impersonatedState);
 				}
 
 				@Override
-				public ServiceInstanceState getState() {
+				public TaskExecutorState getState() {
 					URL impersonatedTargetId = task.getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
 					URL lastElementId = stateReader.getLastElementId(impersonatedTargetId);
 					if (lastElementId != null) {
-						return stateReader.getElement(lastElementId, ServiceInstanceState.class);
+						return stateReader.getElement(lastElementId, TaskExecutorState.class);
 					}
 					return null;
 				}
