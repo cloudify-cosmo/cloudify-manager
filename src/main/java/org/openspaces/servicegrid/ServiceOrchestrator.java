@@ -63,7 +63,10 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 	private void installService(InstallServiceTask task) {
 		boolean installed = isServiceInstalled();
 		Preconditions.checkState(!installed);
-		state.setDisplayName(task.getDisplayName());
+		ServiceConfig serviceConfig = task.getServiceConfig();
+		Preconditions.checkNotNull(serviceConfig);
+		
+		state.setServiceConfig(serviceConfig);
 	}
 
 	private boolean isServiceInstalled() {
@@ -82,61 +85,63 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 		List<Task> newTasks = Lists.newArrayList();
 		
 		if (Iterables.isEmpty(state.getInstancesIds())) {
-			URL instanceId = newInstanceId();
-			state.addInstanceId(instanceId);
-			
-			final OrchestrateServiceInstanceTask task = new OrchestrateServiceInstanceTask();
-			task.setImpersonatedTarget(instanceId);	
-			task.setTarget(orchestratorExecutorId);
-			newTasks.add(task);
+			for (int i = 0; i < state.getServiceConfig().getNumberOfInstances(); i++) {
+				URL instanceId = newInstanceId();
+				state.addInstanceId(instanceId);
+				final OrchestrateServiceInstanceTask task = new OrchestrateServiceInstanceTask();
+				task.setImpersonatedTarget(instanceId);	
+				task.setTarget(orchestratorExecutorId);
+				newTasks.add(task);
+			}
 		}
 		else {
-			URL instanceId = Iterables.getOnlyElement(state.getInstancesIds());
-			ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId), ServiceInstanceState.class);
-			Preconditions.checkNotNull(instanceState);
-			String progress = instanceState.getProgress();
-			if (progress.equals(ServiceInstanceState.Progress.ORCHESTRATING)){
-				final StartMachineTask task = new StartMachineTask();
-				task.setImpersonatedTarget(instanceId);	
-				task.setTarget(cloudExecutorId);
-				newTasks.add(task);
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.STARTING_MACHINE)) {
-				//Do nothing, orchestrator needs to wait for the machine to be started
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
-				final StartAgentTask task = new StartAgentTask();
-				task.setImpersonatedTarget(instanceId);	
-				task.setTarget(agentLifecycleExecutorId);
-				task.setIpAddress(instanceState.getIpAddress());
-				task.setAgentExecutorId(newAgentExecutorId());
-				newTasks.add(task);
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.AGENT_STARTED)) {
-				final InstallServiceInstanceTask task = new InstallServiceInstanceTask();
-				task.setImpersonatedTarget(instanceId);	
-				URL agentExecutorId = instanceState.getAgentExecutorId();
-				Preconditions.checkNotNull(agentExecutorId);
-				task.setTarget(agentExecutorId);
-				newTasks.add(task);
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.INSTALLING_INSTANCE)) {
-				//Do nothing, orchestrator needs to wait for the instance to be installed
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
-				//Ask for start service instance
-				final StartServiceInstanceTask task = new StartServiceInstanceTask();
-				task.setImpersonatedTarget(instanceId);	
-				URL agentExecutorId = instanceState.getAgentExecutorId();
-				Preconditions.checkNotNull(agentExecutorId);
-				task.setTarget(agentExecutorId);
-				newTasks.add(task);
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.STARTING_INSTANCE)){
-				//Do nothing, wait for instance to start
-			}
-			else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)){
-				//Do nothing, instance is installed
+			for (URL instanceId : state.getInstancesIds()) {
+				ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId), ServiceInstanceState.class);
+				Preconditions.checkNotNull(instanceState);
+				String progress = instanceState.getProgress();
+				if (progress.equals(ServiceInstanceState.Progress.ORCHESTRATING)){
+					final StartMachineTask task = new StartMachineTask();
+					task.setImpersonatedTarget(instanceId);	
+					task.setTarget(cloudExecutorId);
+					newTasks.add(task);
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.STARTING_MACHINE)) {
+					//Do nothing, orchestrator needs to wait for the machine to be started
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED)) {
+					final StartAgentTask task = new StartAgentTask();
+					task.setImpersonatedTarget(instanceId);	
+					task.setTarget(agentLifecycleExecutorId);
+					task.setIpAddress(instanceState.getIpAddress());
+					task.setAgentExecutorId(newAgentExecutorId());
+					newTasks.add(task);
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.AGENT_STARTED)) {
+					final InstallServiceInstanceTask task = new InstallServiceInstanceTask();
+					task.setImpersonatedTarget(instanceId);	
+					URL agentExecutorId = instanceState.getAgentExecutorId();
+					Preconditions.checkNotNull(agentExecutorId);
+					task.setTarget(agentExecutorId);
+					newTasks.add(task);
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.INSTALLING_INSTANCE)) {
+					//Do nothing, orchestrator needs to wait for the instance to be installed
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
+					//Ask for start service instance
+					final StartServiceInstanceTask task = new StartServiceInstanceTask();
+					task.setImpersonatedTarget(instanceId);	
+					URL agentExecutorId = instanceState.getAgentExecutorId();
+					Preconditions.checkNotNull(agentExecutorId);
+					task.setTarget(agentExecutorId);
+					newTasks.add(task);
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.STARTING_INSTANCE)){
+					//Do nothing, wait for instance to start
+				}
+				else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)){
+					//Do nothing, instance is installed
+				}
 			}
 		}
 		return newTasks;
@@ -171,7 +176,7 @@ public class ServiceOrchestrator implements TaskExecutor<ServiceOrchestratorStat
 		if (task instanceof OrchestrateServiceInstanceTask){
 			ServiceInstanceState impersonatedServiceInstanceState = new ServiceInstanceState();
 			impersonatedServiceInstanceState.setProgress(ServiceInstanceState.Progress.ORCHESTRATING);
-			impersonatedServiceInstanceState.setDisplayName(this.state.getDisplayName());			
+			impersonatedServiceInstanceState.setDisplayName(this.state.getServiceConfig().getDisplayName());			
 			impersonatedStateModifier.updateState(impersonatedServiceInstanceState);
 		}
 		

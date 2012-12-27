@@ -91,7 +91,7 @@ public class InstallServiceTest {
 	public void createServiceGetServiceStateTest() {
 		
 		final ServiceOrchestratorState serviceState = getTomcatServiceState();
-		assertNull(serviceState.getDisplayName());
+		assertNull(serviceState.getServiceConfig());
 	}
 	
 	
@@ -99,18 +99,21 @@ public class InstallServiceTest {
 	public void installServiceStepExecutorTest() {
 		
 		installService();		
-		assertNull(client.getExecutorState(orchestratorExecutorId, ServiceOrchestratorState.class).getDisplayName());
+		assertNull(client.getExecutorState(orchestratorExecutorId, ServiceOrchestratorState.class).getServiceConfig());
 		
 		orchestratorContainer.stepTaskExecutor();
 		final ServiceOrchestratorState serviceState = getTomcatServiceState();
-		assertEquals(serviceState.getDisplayName(), "tomcat");
+		assertEquals(serviceState.getServiceConfig().getDisplayName(), "tomcat");
 		URL taskId = serviceState.getLastCompletedTaskId();
 		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
 	}
 
 	private void installService() {
+		final ServiceConfig serviceConfig = new ServiceConfig();
+		serviceConfig.setDisplayName("tomcat");
+		
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
-		installServiceTask.setDisplayName("tomcat");
+		installServiceTask.setServiceConfig(serviceConfig);
 		final URL taskId = client.addServiceTask(orchestratorExecutorId, installServiceTask);
 		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
 	}

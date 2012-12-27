@@ -110,7 +110,7 @@ public class ServiceOrchestrationTest {
 	
 	@Test
 	public void installSingleInstanceServiceTest() throws MalformedURLException {
-		installService();
+		installService(1);
 		execute();
 		
 		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
@@ -126,6 +126,27 @@ public class ServiceOrchestrationTest {
 		Iterable<URL> agentIds = state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
 		Assert.assertEquals(instanceState.getAgentExecutorId(),Iterables.getOnlyElement(agentIds));
 	}
+	
+	@Test
+	public void installMultipleInstanceServiceTest() throws MalformedURLException {
+		installService(2);
+		execute();
+		
+		final ServiceOrchestratorState serviceState = state.getElement(state.getLastElementId(orchestratorExecutorId), ServiceOrchestratorState.class);
+		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),2);
+		logger.info("URLs: " + state.getElementIdsStartingWith(new URL("http://localhost/")));
+		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
+		Assert.assertEquals(Iterables.size(instanceIds),2);
+		
+		Iterable<URL> agentIds = state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
+		Assert.assertEquals(Iterables.size(agentIds), 2);
+		for (URL url : instanceIds) {
+			ServiceInstanceState instanceState = state.getElement(state.getLastElementId(url), ServiceInstanceState.class);
+			Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
+			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+			Assert.assertTrue(Iterables.contains(agentIds, instanceState.getAgentExecutorId()));
+		}
+	}
 
 
 	private URL getServiceInstaceExecutorId() {
@@ -134,9 +155,12 @@ public class ServiceOrchestrationTest {
 		return serviceInstanceExecutorId;
 	}
 	
-	private void installService() {
+	private void installService(int numberOfInstances) {
+		ServiceConfig serviceConfig = new ServiceConfig();
+		serviceConfig.setDisplayName("tomcat");
+		serviceConfig.setNumberOfInstances(numberOfInstances);
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
-		installServiceTask.setDisplayName("tomcat");
+		installServiceTask.setServiceConfig(serviceConfig);
 		client.addServiceTask(orchestratorExecutorId, installServiceTask);
 	}
 

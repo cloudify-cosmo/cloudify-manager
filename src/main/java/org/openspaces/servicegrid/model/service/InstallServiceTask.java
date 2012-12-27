@@ -1,16 +1,19 @@
 package org.openspaces.servicegrid.model.service;
 
+import org.openspaces.servicegrid.ServiceConfig;
+
 
 
 public class InstallServiceTask extends ServiceTask {
 	
-	private String displayName;
+	private ServiceConfig serviceConfig;
+	
 
-	public String getDisplayName() {
-		return displayName;
+	public ServiceConfig getServiceConfig() {
+		return serviceConfig;
 	}
 
-	public void setDisplayName(String displayName) {
-		this.displayName = displayName;
+	public void setServiceConfig(ServiceConfig serviceConfig) {
+		this.serviceConfig = serviceConfig;
 	}
 }
