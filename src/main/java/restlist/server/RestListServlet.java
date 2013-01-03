@@ -1,8 +1,7 @@
 package restlist.server;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
@@ -19,38 +18,34 @@ import com.sun.jersey.spi.resource.Singleton;
 @Singleton
 public class RestListServlet {
  
-	private Map<URI, String> data = new HashMap<URI, String>();
-	
 	@GET
 	@Path("/{any}")
 	public Response get(@Context UriInfo uriInfo, @Context Request request) {
 		URI uri =  uriInfo.getAbsolutePath();
-		String response = data.get(uri);
-		if (response == null) {
+		List<String> entities = ListHolder.getData().get(uri);
+		
+		if (entities.isEmpty()) {
 			return Response.status(Responses.NOT_FOUND).build();
 		}
-		return Response.ok().entity(response).build();
+		String lastEntity = entities.get(entities.size()-1);
+		return Response.ok().entity(lastEntity).build();
 	}
 	
 	 @PUT
 	 @Path("/{any}")
-	 public Response putContainer(String message,@Context UriInfo uriInfo, @Context Request request) {
+	 public Response putContainer(String newEntity, @Context UriInfo uriInfo, @Context Request request) {
 	     
 	     URI uri =  uriInfo.getAbsolutePath();
 	 
 	     Response r;
-	     String existing = data.get(uri);
 	     
-	     if (existing == null) {
+	     if (!ListHolder.getData().containsKey(uri)) {
 	         r = Response.created(uri).build();
 	     } 
-	     else if (existing.equals(message)){
-	         r = Response.notModified().build();
-	     }
 	     else {
 	    	 r = Response.ok().build();
 	     }
-	     data.put(uri, message);
+	     ListHolder.getData().put(uri, newEntity);
 	     return r;
 	 }
 }

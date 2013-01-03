@@ -16,6 +16,7 @@ import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import restlist.server.ListHolder;
 import restlist.server.RestListServlet;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -45,6 +46,7 @@ public class RestListTest {
 	@BeforeMethod
 	public void restartServlet() {
 		servletContainer.reload();
+		ListHolder.resetData();
 	}
 	
 	private static ServletContextHandler createWebAppContext(Servlet servlet) {
