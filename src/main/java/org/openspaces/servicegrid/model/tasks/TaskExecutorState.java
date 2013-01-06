@@ -5,9 +5,9 @@ import java.util.Set;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
 
-import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 public class TaskExecutorState {
 
