@@ -11,6 +11,7 @@ import com.google.common.collect.Sets;
 public class ServiceGridOrchestratorState extends TaskExecutorState {
 
 	private Set<URL> agents = Sets.newLinkedHashSet();
+	private Set<URL> zombieAgents = Sets.newLinkedHashSet();
 	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet(); 
 	
 	public Set<ServiceConfig> getServices() {
@@ -31,6 +32,14 @@ public class ServiceGridOrchestratorState extends TaskExecutorState {
 
 	public void addService(ServiceConfig serviceConfig) {
 		servicesConfig.add(serviceConfig);
+	}
+
+	public Set<URL> getZombieAgents() {
+		return zombieAgents;
+	}
+
+	public void setZombieAgents(Set<URL> zombieAgents) {
+		this.zombieAgents = zombieAgents;
 	}
 
 }

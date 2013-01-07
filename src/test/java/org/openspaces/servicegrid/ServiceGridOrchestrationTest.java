@@ -19,6 +19,7 @@ import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -37,7 +38,7 @@ public class ServiceGridOrchestrationTest {
 	private MockStreams<TaskExecutorState> state;
 	private StreamConsumer<Task> taskConsumer;
 	private final Logger logger = Logger.getLogger(this.getClass().getName());
-
+	
 	@BeforeMethod
 	public void before() {
 		
@@ -63,7 +64,8 @@ public class ServiceGridOrchestrationTest {
 		stateWriter.addElement(orchestratorExecutorId, new ServiceGridOrchestratorState());
 	
 		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
-	
+				
+		final MockCurrentTimeProvider orchestratorTimeProvider = new MockCurrentTimeProvider();
 		final ServiceOrchestratorParameter serviceOrchestratorParameter = new ServiceOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorExecutorId(orchestratorExecutorId);
 		serviceOrchestratorParameter.setCloudExecutorId(cloudExecutorId);
@@ -71,13 +73,15 @@ public class ServiceGridOrchestrationTest {
 		serviceOrchestratorParameter.setTaskConsumer(taskConsumer);
 		serviceOrchestratorParameter.setTaskProducer(taskProducer);
 		serviceOrchestratorParameter.setStateReader(stateReader);
+		serviceOrchestratorParameter.setTimeProvider(orchestratorTimeProvider);
 	
 		orchestratorContainer = new MockTaskContainer(
 				orchestratorExecutorId,
 				stateReader, stateWriter, 
 				taskConsumer, 
 				new ServiceGridOrchestrator(
-						serviceOrchestratorParameter));
+						serviceOrchestratorParameter),
+				orchestratorTimeProvider);
 
 		containers = Sets.newCopyOnWriteArraySet(Lists.newArrayList(
 				orchestratorContainer,				
@@ -85,7 +89,8 @@ public class ServiceGridOrchestrationTest {
 						cloudExecutorId, 
 						stateReader, stateWriter,
 						taskConsumer, 
-						new MockImmediateMachineSpawnerTaskExecutor()),
+						new MockImmediateMachineSpawnerTaskExecutor(),
+						orchestratorTimeProvider),
 						
 				new MockTaskContainer(
 						agentLifecycleExecutorId, 
@@ -96,16 +101,17 @@ public class ServiceGridOrchestrationTest {
 							@Override
 							public void wrapTaskExecutor(
 									TaskExecutor<? extends TaskExecutorState> taskExecutor, URL executorId) {
-								containers.add(new MockTaskContainer(executorId, state, state, taskConsumer, taskExecutor));
+								containers.add(new MockTaskContainer(executorId, state, state, taskConsumer, taskExecutor, orchestratorTimeProvider));
 							}
 							
 							@Override
 							public void wrapImpersonatingTaskExecutor(
 									ImpersonatingTaskExecutor<? extends TaskExecutorState> impersonatingTaskExecutor, URL executorId) {
-								containers.add(new MockTaskContainer(executorId, state, state, taskConsumer, impersonatingTaskExecutor));								
+								containers.add(new MockTaskContainer(executorId, state, state, taskConsumer, impersonatingTaskExecutor, orchestratorTimeProvider));								
 							}
 						}
-						))
+						),
+						orchestratorTimeProvider)
 				));
 	}
 	
@@ -117,15 +123,15 @@ public class ServiceGridOrchestrationTest {
 		final ServiceState serviceState = state.getElement(state.getLastElementId(getServiceUrl("tomcat")), ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),1);
 		logger.info("URLs: " + state.getElementIdsStartingWith(new URL("http://localhost/")));
-		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
-		Assert.assertEquals(Iterables.size(instanceIds),1);
-		
-		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)), ServiceInstanceState.class);
+		ServiceInstanceState instanceState = getOnlyServiceInstanceState();
 		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
-		Iterable<URL> agentIds = state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
-		Assert.assertEquals(instanceState.getAgentExecutorId(),Iterables.getOnlyElement(agentIds));
+		Assert.assertEquals(instanceState.getAgentExecutorId(),getOnlyAgentId());
+	}
+
+	private URL getOnlyAgentId() throws MalformedURLException {
+		return Iterables.getOnlyElement(getAgentIds());
 	}
 	
 	@Test
@@ -139,7 +145,7 @@ public class ServiceGridOrchestrationTest {
 		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
-		Iterable<URL> agentIds = state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
+		Iterable<URL> agentIds = getAgentIds();
 		Assert.assertEquals(Iterables.size(agentIds), 2);
 		for (URL url : instanceIds) {
 			ServiceInstanceState instanceState = state.getElement(state.getLastElementId(url), ServiceInstanceState.class);
@@ -149,6 +155,19 @@ public class ServiceGridOrchestrationTest {
 		}
 	}
 	
+	@Test
+	public void agentFailoverTest() throws MalformedURLException {
+		installService("tomcat", 1);
+		execute();
+		killOnlyAgent();
+		execute();
+		Assert.assertEquals(getOnlyServiceInstanceState().getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		Iterable<URL> agentIds = getAgentIds();
+		Assert.assertEquals(Iterables.size(agentIds),2);
+		URL secondAgentId = Iterables.get(agentIds, 1);
+		Assert.assertEquals(getOnlyServiceInstanceState().getAgentExecutorId(),secondAgentId);	
+	}
+
 	/*public void installTwoSingleInstanceServicesTest(){
 		installService("tomcat", 1);
 		installService("cassandra", 1);
@@ -193,7 +212,7 @@ public class ServiceGridOrchestrationTest {
 					stop = false;
 				}
 			}
-
+						
 			if (stop) {
 				return;
 			}
@@ -212,5 +231,32 @@ public class ServiceGridOrchestrationTest {
 		}
 		
 		Assert.fail("Executing too many cycles progress=" + sb);
+	}
+	
+
+	private ServiceInstanceState getOnlyServiceInstanceState()
+			throws MalformedURLException {
+		Iterable<URL> instanceIds = state.getElementIdsStartingWith(new URL("http://localhost/services/tomcat/instances/"));
+		Assert.assertEquals(Iterables.size(instanceIds),1);
+		
+		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)), ServiceInstanceState.class);
+		return instanceState;
+	}
+
+	private Iterable<URL> getAgentIds() throws MalformedURLException {
+		return state.getElementIdsStartingWith(new URL("http://localhost/agent/"));
+	}
+
+	private void killOnlyAgent() throws MalformedURLException {
+		killAgent(getOnlyAgentId());
+	}
+	
+	private void killAgent(URL agentId) {
+		for (MockTaskContainer container : containers) {
+			if (container.getExecutorId().equals(agentId)) {
+				container.kill();
+				return;
+			}
+		}
 	}
 }

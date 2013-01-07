@@ -10,6 +10,8 @@ public class Task {
 
 	private URL source;
 
+	private long sourceTimestamp;
+
 	public URL getSource() {
 		return source;
 	}
@@ -32,5 +34,13 @@ public class Task {
 	
 	public void setSource(URL source) {
 		this.source = source;
+	}
+
+	public long getSourceTimestamp() {
+		return sourceTimestamp;
+	}
+
+	public void setSourceTimestamp(long sourceTimestamp) {
+		this.sourceTimestamp = sourceTimestamp;
 	}
 }

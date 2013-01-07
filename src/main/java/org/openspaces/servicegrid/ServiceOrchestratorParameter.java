@@ -6,6 +6,7 @@ import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 public class ServiceOrchestratorParameter {
 	
@@ -15,7 +16,8 @@ public class ServiceOrchestratorParameter {
 	private StreamConsumer<Task> taskConsumer;
 	private StreamProducer<Task> taskProducer;
 	private StreamConsumer<TaskExecutorState> stateReader;
-
+	private CurrentTimeProvider timeProvider;
+	
 	public URL getAgentLifecycleExecutorId() {
 		return agentLifecycleExecutorId;
 	}
@@ -62,5 +64,13 @@ public class ServiceOrchestratorParameter {
 
 	public void setCloudExecutorId(URL cloudExecutorId) {
 		this.cloudExecutorId = cloudExecutorId;
+	}
+
+	public CurrentTimeProvider getTimeProvider() {
+		return timeProvider;
+	}
+
+	public void setTimeProvider(CurrentTimeProvider timeProvider) {
+		this.timeProvider = timeProvider;
 	}
 }

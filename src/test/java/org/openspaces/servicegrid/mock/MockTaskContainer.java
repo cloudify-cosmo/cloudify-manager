@@ -9,6 +9,7 @@ import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 
 import com.google.common.base.Preconditions;
 
@@ -20,13 +21,17 @@ public class MockTaskContainer {
 	private final StreamConsumer<Task> taskConsumer;
 	private URL lastTaskId;
 	private final StreamConsumer<TaskExecutorState> stateReader;
+	private final MockCurrentTimeProvider timeProvider;
+	private boolean killed;
 	
-	public MockTaskContainer(URL executorId, StreamConsumer<TaskExecutorState> stateReader, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer,Object taskExecutor) {
+	public MockTaskContainer(URL executorId, StreamConsumer<TaskExecutorState> stateReader, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, Object taskExecutor, MockCurrentTimeProvider timeProvider) {
 		this.executorId = executorId;
 		this.stateReader = stateReader;
 		this.stateWriter = stateWriter;
 		this.taskConsumer = taskConsumer;
 		this.taskExecutor = taskExecutor;
+		this.timeProvider = timeProvider;
+		this.killed = false;
 	}
 
 	private void afterExecute(URL taskId, Task task) {
@@ -64,28 +69,31 @@ public class MockTaskContainer {
 	public boolean stepTaskExecutor() {
 		
 		boolean needAnotherStep = false;
-		
-		final TaskExecutorState state = getTaskExecutorState();
-		Preconditions.checkNotNull(state);
-		
-		URL taskId;
-		if (lastTaskId == null) {
-			taskId = taskConsumer.getFirstElementId(executorId);
+		if (!killed) {
+			
+			final TaskExecutorState state = getTaskExecutorState();
+			Preconditions.checkNotNull(state);
+			
+			URL taskId;
+			if (lastTaskId == null) {
+				taskId = taskConsumer.getFirstElementId(executorId);
+			}
+			else {
+				taskId = taskConsumer.getNextElementId(lastTaskId);
+			}
+			
+			if (taskId != null) {
+				final Task task = taskConsumer.getElement(taskId, Task.class);
+				state.executeTask(taskId);
+				lastTaskId = taskId;
+				beforeExecute(task);
+				execute(task);
+				afterExecute(taskId, task);
+				needAnotherStep = true;
+			}
+			
+			timeProvider.increaseBy(1);
 		}
-		else {
-			taskId = taskConsumer.getNextElementId(lastTaskId);
-		}
-		
-		if (taskId != null) {
-			final Task task = taskConsumer.getElement(taskId, Task.class);
-			state.executeTask(taskId);
-			lastTaskId = taskId;
-			beforeExecute(task);
-			execute(task);
-			afterExecute(taskId, task);
-			needAnotherStep = true;
-		}
-		
 		return needAnotherStep;
 	}
 
@@ -155,6 +163,8 @@ public class MockTaskContainer {
 	public String toString() {
 		return taskExecutor.toString();
 	}
-	
-	
+
+	public void kill() {
+		this.killed = true;
+	}
 }

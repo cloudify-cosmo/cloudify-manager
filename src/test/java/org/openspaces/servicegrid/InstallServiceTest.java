@@ -23,6 +23,7 @@ import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -31,6 +32,7 @@ import com.google.common.collect.Iterables;
 
 public class InstallServiceTest {
 
+	private static final MockCurrentTimeProvider timeProvider = new MockCurrentTimeProvider();
 	private StreamProducer<TaskExecutorState> stateWriter;
 	private StreamConsumer<TaskExecutorState> stateReader;
 	
@@ -72,8 +74,8 @@ public class InstallServiceTest {
 		cloudExecutor = new MockCloudMachineTaskExecutor();
 		
 		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
-		orchestratorContainer = new MockTaskContainer(orchestratorExecutorId, stateReader, stateWriter, taskConsumer, orchestrator);
-		cloudContainer = new MockTaskContainer(cloudExecutorId, stateReader, stateWriter, taskConsumer, cloudExecutor);
+		orchestratorContainer = new MockTaskContainer(orchestratorExecutorId, stateReader, stateWriter, taskConsumer, orchestrator, timeProvider);
+		cloudContainer = new MockTaskContainer(cloudExecutorId, stateReader, stateWriter, taskConsumer, cloudExecutor, timeProvider);
 	}
 
 	private ServiceOrchestratorParameter createServiceOrchestratorParameter() {
@@ -84,6 +86,7 @@ public class InstallServiceTest {
 		serviceOrchestratorParameter.setTaskConsumer(taskConsumer);
 		serviceOrchestratorParameter.setTaskProducer(taskProducer);
 		serviceOrchestratorParameter.setStateReader(stateReader);
+		serviceOrchestratorParameter.setTimeProvider(timeProvider);
 		return serviceOrchestratorParameter;
 	}
 	

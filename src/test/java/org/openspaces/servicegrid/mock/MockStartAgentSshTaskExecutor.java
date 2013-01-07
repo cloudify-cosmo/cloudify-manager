@@ -12,7 +12,7 @@ public class MockStartAgentSshTaskExecutor implements ImpersonatingTaskExecutor<
 	private TaskExecutorState state = new TaskExecutorState();
 
 	@Override
-	public void execute(Task task,
+	public void execute(Task task, 
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartAgentTask) {
 			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();

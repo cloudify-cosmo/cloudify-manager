@@ -24,6 +24,8 @@ public class AgentTaskExecutor implements
 			agent.installServiceInstance((InstallServiceInstanceTask) task, impersonatedStateModifier);
 		} else if (task instanceof StartServiceInstanceTask){
 			agent.startServiceInstance((StartServiceInstanceTask) task, impersonatedStateModifier);
+		} else if (task instanceof PingAgentTask){
+			//do nothing
 		}
 
 	}

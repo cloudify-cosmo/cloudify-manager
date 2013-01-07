@@ -32,18 +32,8 @@ public class TaskExecutorState {
 	}
 	
 	@JsonIgnore
-	public Iterable<URL> getExecutingTaskIds() {
-		return Iterables.unmodifiableIterable(getExecutingTasks());
-	}
-
-	@JsonIgnore
 	public boolean isExecutingTask() {
 		return !Iterables.isEmpty(getExecutingTasks());
-	}
-
-	@JsonIgnore
-	public Iterable<URL> getCompletedTaskIds() {
-		return Iterables.unmodifiableIterable(getCompletedTasks());
 	}
 
 	public Set<URL> getExecutingTasks() {
