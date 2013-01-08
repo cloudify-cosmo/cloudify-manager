@@ -1,16 +1,16 @@
 package org.openspaces.servicegrid.model.service;
 
-import java.net.URL;
+import java.net.URI;
 
 public class OrchestrateServiceInstanceTask extends ServiceTask {
-	private URL serviceUrl;
+	private URI serviceURI;
 
-	public URL getServiceUrl() {
-		return serviceUrl;
+	public URI getServiceURI() {
+		return serviceURI;
 	}
 
-	public void setServiceUrl(URL serviceUrl) {
-		this.serviceUrl = serviceUrl;
+	public void setServiceURI(URI serviceURI) {
+		this.serviceURI = serviceURI;
 	}
 	
 }

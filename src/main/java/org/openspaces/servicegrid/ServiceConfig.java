@@ -1,12 +1,12 @@
 package org.openspaces.servicegrid;
 
-import java.net.URL;
+import java.net.URI;
 
 public class ServiceConfig {
 
 	private String displayName;
 	private int numberOfInstances;
-	private URL serviceUrl;
+	private URI id;
 
 	public void setDisplayName(String displayName) {
 		this.displayName = displayName;
@@ -24,12 +24,12 @@ public class ServiceConfig {
 		return numberOfInstances;
 	}
 
-	public URL getServiceUrl() {
-		return serviceUrl;
+	public URI getServiceId() {
+		return id;
 	}
 
-	public void setServiceUrl(URL serviceUrl) {
-		this.serviceUrl = serviceUrl;
+	public void setServiceId(URI id) {
+		this.id = id;
 	}
 
 }

@@ -1,6 +1,6 @@
 package org.openspaces.servicegrid.model.service;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
@@ -15,11 +15,12 @@ public class ServiceInstanceState extends TaskExecutorState {
 		public static final String INSTANCE_INSTALLED = "INSTANCE_INSTALLED";
 		public static final String STARTING_INSTANCE = "STARTING_INSTANCE";
 		public static final String INSTANCE_STARTED = "INSTANCE_STARTED";
+		public static final String AGENT_NOT_RESPONDING = "AGENT_ZOMBIE";
 	}
 	
 	private String progress;
 	private String ipAddress;
-	private URL agentExecutorId;
+	private URI agentExecutorId;
 	private String displayName;
 	
 	public String getProgress() {
@@ -38,11 +39,11 @@ public class ServiceInstanceState extends TaskExecutorState {
 		this.ipAddress = ipAddress;
 	}
 
-	public URL getAgentExecutorId() {
+	public URI getAgentExecutorId() {
 		return agentExecutorId;
 	}
 
-	public void setAgentExecutorId(URL agentExecutorId) {
+	public void setAgentExecutorId(URI agentExecutorId) {
 		this.agentExecutorId = agentExecutorId;
 	}
 

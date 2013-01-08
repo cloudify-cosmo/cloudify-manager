@@ -1,16 +1,18 @@
 package org.openspaces.servicegrid.mock;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.Map;
 
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.AgentTaskExecutor;
 import org.openspaces.servicegrid.model.service.ServiceInstanceState;
+import org.openspaces.servicegrid.model.tasks.ResolveAgentNotRespondingTask;
 import org.openspaces.servicegrid.model.tasks.StartAgentTask;
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
 public class MockEmbeddedAgentLifecycleTaskExecutor implements
@@ -18,7 +20,7 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 
 	private final TaskExecutorState state = new TaskExecutorState();
 	
-	private final Map<URL, MockEmbeddedAgent> agents = Maps.newHashMap();
+	private final Map<URI, MockEmbeddedAgent> agents = Maps.newHashMap();
 	private final TaskExecutorWrapper executorWrapper;
 
 	public MockEmbeddedAgentLifecycleTaskExecutor(
@@ -33,13 +35,25 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 
 			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
 			
-			URL agentExecutorId = ((StartAgentTask) task).getAgentExecutorId();
+			URI agentExecutorId = ((StartAgentTask) task).getAgentExecutorId();
+			Preconditions.checkState(agentExecutorId.toString().endsWith("/"));
 			MockEmbeddedAgent agent = new MockEmbeddedAgent();
 			agents.put(agentExecutorId, agent);
-			executorWrapper.wrapImpersonatingTaskExecutor(new AgentTaskExecutor(agent), agentExecutorId);
+			executorWrapper.wrapTaskExecutor(new AgentTaskExecutor(agent), agentExecutorId);
 			impersonatedState.setProgress(ServiceInstanceState.Progress.AGENT_STARTED);
 			impersonatedState.setAgentExecutorId(agentExecutorId);
 			impersonatedStateModifier.updateState(impersonatedState);
+		}
+		else if (task instanceof ResolveAgentNotRespondingTask) {
+
+			ResolveAgentNotRespondingTask markAgentZombieTask = (ResolveAgentNotRespondingTask) task;
+			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
+			Preconditions.checkArgument(impersonatedState.getAgentExecutorId().equals(markAgentZombieTask.getZombieAgentExecutorId()));
+			impersonatedState.setProgress(ServiceInstanceState.Progress.AGENT_NOT_RESPONDING);
+			impersonatedStateModifier.updateState(impersonatedState);
+		}
+		else {
+			Preconditions.checkState(false, "Cannot run task " + task.getClass());
 		}
 
 	}

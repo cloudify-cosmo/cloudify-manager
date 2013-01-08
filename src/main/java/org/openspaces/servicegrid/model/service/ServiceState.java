@@ -1,27 +1,34 @@
 package org.openspaces.servicegrid.model.service;
 
-import java.net.URL;
-import java.util.Set;
+import java.net.URI;
+import java.util.Map;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.openspaces.servicegrid.ServiceConfig;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 public class ServiceState extends TaskExecutorState {
-	private Set<URL> instancesIds = Sets.newLinkedHashSet();
+	
+	private Map<URI,URI> instanceIdToAgentIdMapping = Maps.newLinkedHashMap();
+	
 	private ServiceConfig serviceConfig;
 
-	public Set<URL> getInstancesIds() {
-		return instancesIds;
+	@JsonIgnore
+	public Iterable<URI> getInstancesIds() {
+		return Iterables.unmodifiableIterable(getInstanceIdToAgentIdMapping().keySet());
 	}
 	
-	public void setInstancesIds(Set<URL> instancesIds) {
-		this.instancesIds = instancesIds;
+	@JsonIgnore
+	public URI getAgentIdOfInstance(URI instanceId) {
+		return getInstanceIdToAgentIdMapping().get(instanceId);
 	}
 	
-	public void addInstanceId(URL executorId) {
-		instancesIds.add(executorId);
+	@JsonIgnore
+	public void addInstanceId(URI instanceId, URI agentId) {
+		getInstanceIdToAgentIdMapping().put(instanceId, agentId);
 	}
 
 	public void setServiceConfig(ServiceConfig serviceConfig) {
@@ -30,5 +37,14 @@ public class ServiceState extends TaskExecutorState {
 	
 	public ServiceConfig getServiceConfig() {
 		return serviceConfig;
+	}
+
+	public Map<URI,URI> getInstanceIdToAgentIdMapping() {
+		return instanceIdToAgentIdMapping;
+	}
+
+	public void setInstanceIdToAgentIdMapping(
+			Map<URI,URI> instanceIdToAgentIdMapping) {
+		this.instanceIdToAgentIdMapping = instanceIdToAgentIdMapping;
 	}
 }

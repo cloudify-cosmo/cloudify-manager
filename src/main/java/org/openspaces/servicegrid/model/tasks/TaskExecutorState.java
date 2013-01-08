@@ -1,33 +1,33 @@
 package org.openspaces.servicegrid.model.tasks;
 
-import java.net.URL;
-import java.util.Set;
+import java.net.URI;
+import java.util.List;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 
 public class TaskExecutorState {
 
-	//Should serialize to List<URL> which is the taskid URLs
-	private Set<URL> executingTasks = Sets.newLinkedHashSet();
-	private Set<URL> completedTasks = Sets.newLinkedHashSet();
+	//Should serialize to List<URI> which is the taskid URIs
+	private List<URI> executingTasks = Lists.newArrayList();
+	private List<URI> completedTasks = Lists.newArrayList();
 	
-	public void executeTask(URL taskId) {
+	public void executeTask(URI taskId) {
 		Preconditions.checkNotNull(taskId);
 		getExecutingTasks().add(taskId);
 	}
 	
-	public void completeExecutingTask(URL taskId) {
+	public void completeExecutingTask(URI taskId) {
 		boolean remove = getExecutingTasks().remove(taskId);
 		Preconditions.checkState(remove,"task " + taskId + " is not executing");
 		getCompletedTasks().add(taskId);
 	}
 		
 	@JsonIgnore
-	public URL getLastCompletedTaskId() {
+	public URI getLastCompletedTaskId() {
 		return Iterables.getLast(getCompletedTasks(), null);
 	}
 	
@@ -36,19 +36,19 @@ public class TaskExecutorState {
 		return !Iterables.isEmpty(getExecutingTasks());
 	}
 
-	public Set<URL> getExecutingTasks() {
+	public List<URI> getExecutingTasks() {
 		return executingTasks;
 	}
 
-	public void setExecutingTasks(Set<URL> executingTasks) {
+	public void setExecutingTasks(List<URI> executingTasks) {
 		this.executingTasks = executingTasks;
 	}
 
-	public Set<URL> getCompletedTasks() {
+	public List<URI> getCompletedTasks() {
 		return completedTasks;
 	}
 
-	public void setCompletedTasks(Set<URL> completedTasks) {
+	public void setCompletedTasks(List<URI> completedTasks) {
 		this.completedTasks = completedTasks;
 	}
 }

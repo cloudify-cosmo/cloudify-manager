@@ -1,6 +1,6 @@
 package org.openspaces.servicegrid.client;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.openspaces.servicegrid.model.service.ServiceTask;
 import org.openspaces.servicegrid.model.tasks.Task;
@@ -25,19 +25,19 @@ public class ServiceClient {
 		this.taskProducer = taskProducer;
 	}
 	
-	public URL addServiceTask(URL serviceId, ServiceTask task) {
+	public URI addServiceTask(URI serviceId, ServiceTask task) {
 		Preconditions.checkNotNull(serviceId);
 		Preconditions.checkNotNull(task);
 		task.setTarget(serviceId);
 		return taskProducer.addElement(serviceId, task);
 	}
 	
-	public <T extends TaskExecutorState> T getExecutorState(URL serviceId, Class<T> clazz) {
-		URL lastElementId = stateReader.getLastElementId(serviceId);
+	public <T extends TaskExecutorState> T getExecutorState(URI serviceId, Class<T> clazz) {
+		URI lastElementId = stateReader.getLastElementId(serviceId);
 		return stateReader.getElement(lastElementId, clazz);
 	}
 
-	public Task getTask(URL taskId) {
+	public Task getTask(URI taskId) {
 		return taskConsumer.getElement(taskId, Task.class);
 	}
 }

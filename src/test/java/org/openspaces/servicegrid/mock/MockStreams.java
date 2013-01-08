@@ -1,9 +1,8 @@
 package org.openspaces.servicegrid.mock;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
-import java.util.regex.Pattern;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.streams.StreamConsumer;
@@ -18,18 +17,18 @@ import com.google.common.collect.Multimap;
 
 public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 
-	Multimap<URL,T> streamById = ArrayListMultimap.create();
-	ObjectMapper mapper = new ObjectMapper();
+	final private Multimap<URI,T> streamById = ArrayListMultimap.create();
+	final private ObjectMapper mapper = new ObjectMapper();
 	
 	/**
 	 * HTTP POST
 	 */
 	@Override
-	public URL addElement(URL streamId, T element) {
+	public URI addElement(URI streamId, T element) {
 		
-		final Collection<T> stream = streamById.get(streamId);
+		final Collection<T> stream = getStreamById(streamId);
 		stream.add(clone(element));
-		final URL elementId = getTaskUrl(streamId, stream.size() -1);
+		final URI elementId = getElementURIByIndex(streamId, stream.size() -1);
 		return elementId;
 	}
 
@@ -43,41 +42,50 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 		}
 	}
 
-	private Integer getIndex(final URL elementId, final URL streamId) {
+	private Integer getIndex(final URI elementId, final URI streamId) {
 		
 		Preconditions.checkNotNull(streamId);
-		final Collection<T> stream = streamById.get(streamId);
-		String lastTaskUrl = elementId == null ? null : elementId.toExternalForm();
-		String tasksRootUrl = streamId.toExternalForm() + "tasks/";
+		String fixedStreamURI = streamIdToExternalForm(streamId);
+		final Collection<T> stream = getStreamById(newURI(fixedStreamURI));
+		String lastTaskURI = elementId == null ? null : elementId.toString();
 		
 		Preconditions.checkArgument(
-				elementId == null || lastTaskUrl.startsWith(tasksRootUrl),
+				elementId == null || lastTaskURI.startsWith(fixedStreamURI),
 				"%s is not related to %s",elementId ,streamId);
 		
 		Integer index = null;
 		if (elementId != null) { 
-			final String indexString = lastTaskUrl.substring(tasksRootUrl.length());
+			final String indexString = lastTaskURI.substring(fixedStreamURI.length());
 			
 			try {
 				index = Integer.valueOf(indexString);
-				Preconditions.checkElementIndex(index, stream.size());
+				Preconditions.checkElementIndex(index, stream.size(),"index " + index +" is too big for an array of size " + stream.size() + " elementId="+elementId+" streamId="+streamId);
 			}
 			catch (final NumberFormatException e) {
-				Preconditions.checkArgument(false, "URL %s is invalid", elementId);
+				Preconditions.checkArgument(false, "URI %s is invalid", elementId);
 			}
 		}
 		return index;
 	}
 
-	private URL getTaskUrl(URL streamId, int index) {
-		String url = streamId.toExternalForm() + "tasks/" + index;
-		return newUrl(url);
+	private URI getElementURIByIndex(URI streamId, int index) {
+		String URI = streamIdToExternalForm(streamId) + index;
+		return newURI(URI);
 	}
 
-	private static URL newUrl(String url) {
+	private String streamIdToExternalForm(URI streamId) {
+		Preconditions.checkNotNull(streamId);
+		String externalForm = streamId.toString();
+		if (!externalForm.endsWith("/")) {
+			externalForm += "/";
+		}
+		return externalForm;
+	}
+
+	private static URI newURI(String URI) {
 		try {
-			return new URL(url);
-		} catch (final MalformedURLException e) {
+			return new URI(URI);
+		} catch (final URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
 	}
@@ -86,9 +94,9 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	 * HTTP GET /index
 	 */
 	@Override
-	public <G extends T> G getElement(URL elementId, Class<G> clazz) {
+	public <G extends T> G getElement(URI elementId, Class<G> clazz) {
 		
-		final URL streamId = getStreamId(elementId);
+		final URI streamId = getStreamId(elementId);
 		
 		Integer index = getIndex(elementId, streamId);
 		Preconditions.checkNotNull(index);
@@ -101,67 +109,77 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 		return clonedTask;
 	}
 
-	private URL getStreamId(URL elementId) {
-		final String[] split = elementId.toExternalForm().split(Pattern.quote("tasks/"));
-		Preconditions.checkElementIndex(0, split.length);
-		final URL executorId = newUrl(split[0]);
-		return executorId;
+	private URI getStreamId(URI elementId) {
+		String string = elementId.toString();
+		int seperator = string.lastIndexOf("/");
+		Preconditions.checkPositionIndex(seperator, string.length());
+		return newURI(string.substring(0,seperator+1));
 	}
 	
-	private T getByIndex(URL streamId, int index) {
-		final Collection<T> stream = streamById.get(streamId);
-		if (stream.size() <= index) {
+	private T getByIndex(URI streamId, int index) {
+		final Collection<T> stream = getStreamById(streamId);
+		if (index >= stream.size()) {
 			return null;
 		}
 		return Iterables.get(stream,index);
 	}
 
 	@Override
-	public URL getNextElementId(URL elementId) {
+	public URI getNextElementId(URI elementId) {
 		Preconditions.checkNotNull(elementId);
-		URL nextId = null;
-		URL streamId = getStreamId(elementId);
+		URI nextId = null;
+		URI streamId = getStreamId(elementId);
 		Integer index = getIndex(elementId,streamId);
 		Preconditions.checkNotNull(index);
-		Collection<T> stream = streamById.get(streamId);
-		if (stream.size() > index+1) {
-			nextId = getTaskUrl(streamId, index+1);
+		Collection<T> stream = getStreamById(streamId);
+		int nextIndex = index+1;
+		if (nextIndex < stream.size() ) {
+			nextId = getElementURIByIndex(streamId, nextIndex);
 		}
 		return nextId;
 	}
+	
+	private Collection<T> getStreamById(URI streamId) {
+		URI fixedStreamId = newURI(streamIdToExternalForm(streamId));
+		return streamById.get(fixedStreamId);
+	}
 
 	@Override
-	public URL getFirstElementId(URL streamId) {
+	public URI getFirstElementId(URI streamId) {
 		Preconditions.checkNotNull(streamId);
-		Collection<T> stream = streamById.get(streamId);
+		Collection<T> stream = getStreamById(streamId);
 		Preconditions.checkNotNull(stream);
 		if (stream.isEmpty()) {
 			return null;
 		}
-		return getTaskUrl(streamId , 0);
+		return getElementURIByIndex(streamId , 0);
 	}
 
 	@Override
-	public URL getLastElementId(URL streamId) {
+	public URI getLastElementId(URI streamId) {
 		Preconditions.checkNotNull(streamId);
-		Collection<T> stream = streamById.get(streamId);
+		Collection<T> stream = getStreamById(streamId);
 		Preconditions.checkNotNull(stream);
 		if (stream.isEmpty()) {
 			return null;
 		}
-		return getTaskUrl(streamId , stream.size()-1);
+		return getElementURIByIndex(streamId , stream.size()-1);
 	}
 
-	public Iterable<URL> getElementIdsStartingWith(final URL url) {
+	public Iterable<URI> getElementIdsStartingWith(final URI URI) {
 		
-		final String urlPrefix = url.toExternalForm();
-		return Iterables.filter(streamById.keySet(), new Predicate<URL>() {
+		final String URIPrefix = streamIdToExternalForm(URI);
+		return Iterables.filter(streamById.keySet(), new Predicate<URI>() {
 
 			@Override
-			public boolean apply(URL input) {
-				return input.toExternalForm().startsWith(urlPrefix);
+			public boolean apply(URI streamId) {
+				return streamIdToExternalForm(streamId).startsWith(URIPrefix);
 			}
 		});
+	}
+	
+	public Iterable<URI> getElementIds() {
+		return Iterables.unmodifiableIterable(streamById.keySet());
 	}
 
 }

@@ -1,46 +1,46 @@
 package org.openspaces.servicegrid.model.tasks;
 
-import java.net.URL;
+import java.net.URI;
 
 public class Task {
 
-	private URL target;
+	private URI target;
 	
-	private URL impersonatedTarget;
+	private URI impersonatedTarget;
 
-	private URL source;
+	private URI source;
 
-	private long sourceTimestamp;
+	private Long sourceTimestamp;
 
-	public URL getSource() {
+	public URI getSource() {
 		return source;
 	}
 
-	public URL getImpersonatedTarget() {
+	public URI getImpersonatedTarget() {
 		return impersonatedTarget;
 	}
 
-	public void setTarget(URL target) {
+	public void setTarget(URI target) {
 		this.target = target;
 	}
 	
-	public URL getTarget() {
+	public URI getTarget() {
 		return target;
 	}
 
-	public void setImpersonatedTarget(URL impersonatedTarget) {
+	public void setImpersonatedTarget(URI impersonatedTarget) {
 		this.impersonatedTarget = impersonatedTarget;
 	}
 	
-	public void setSource(URL source) {
+	public void setSource(URI source) {
 		this.source = source;
 	}
 
-	public long getSourceTimestamp() {
+	public Long getSourceTimestamp() {
 		return sourceTimestamp;
 	}
 
-	public void setSourceTimestamp(long sourceTimestamp) {
+	public void setSourceTimestamp(Long sourceTimestamp) {
 		this.sourceTimestamp = sourceTimestamp;
 	}
 }

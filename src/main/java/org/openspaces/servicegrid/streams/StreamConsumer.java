@@ -1,15 +1,15 @@
 package org.openspaces.servicegrid.streams;
 
-import java.net.URL;
+import java.net.URI;
 
 public interface StreamConsumer<T> {
 
-	URL getFirstElementId(URL streamId);
+	URI getFirstElementId(URI streamId);
 	
-	URL getNextElementId(URL elementId);
+	URI getNextElementId(URI elementId);
 	
-	URL getLastElementId(URL streamId);
+	URI getLastElementId(URI streamId);
 
-	<G extends T> G getElement(URL elementId, Class<G> clazz);
+	<G extends T> G getElement(URI elementId, Class<G> clazz);
 
 }

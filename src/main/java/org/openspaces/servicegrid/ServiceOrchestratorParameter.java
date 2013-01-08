@@ -1,6 +1,6 @@
 package org.openspaces.servicegrid;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.openspaces.servicegrid.model.tasks.Task;
 import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
@@ -10,19 +10,19 @@ import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 public class ServiceOrchestratorParameter {
 	
-	private URL orchestratorExecutorId;
-	private URL cloudExecutorId;
-	private URL agentLifecycleExecutorId;
+	private URI orchestratorExecutorId;
+	private URI cloudExecutorId;
+	private URI agentLifecycleExecutorId;
 	private StreamConsumer<Task> taskConsumer;
 	private StreamProducer<Task> taskProducer;
 	private StreamConsumer<TaskExecutorState> stateReader;
 	private CurrentTimeProvider timeProvider;
 	
-	public URL getAgentLifecycleExecutorId() {
+	public URI getAgentLifecycleExecutorId() {
 		return agentLifecycleExecutorId;
 	}
 
-	public void setAgentLifecycleExecutorId(URL agentLifecycleExecutorId) {
+	public void setAgentLifecycleExecutorId(URI agentLifecycleExecutorId) {
 		this.agentLifecycleExecutorId = agentLifecycleExecutorId;
 	}
 
@@ -50,19 +50,19 @@ public class ServiceOrchestratorParameter {
 		this.stateReader = stateReader;
 	}
 
-	public URL getOrchestratorExecutorId() {
+	public URI getOrchestratorExecutorId() {
 		return orchestratorExecutorId;
 	}
 
-	public void setOrchestratorExecutorId(URL orchestratorExecutorId) {
+	public void setOrchestratorExecutorId(URI orchestratorExecutorId) {
 		this.orchestratorExecutorId = orchestratorExecutorId;
 	}
 
-	public URL getCloudExecutorId() {
+	public URI getCloudExecutorId() {
 		return cloudExecutorId;
 	}
 
-	public void setCloudExecutorId(URL cloudExecutorId) {
+	public void setCloudExecutorId(URI cloudExecutorId) {
 		this.cloudExecutorId = cloudExecutorId;
 	}
 

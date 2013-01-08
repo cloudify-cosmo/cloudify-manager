@@ -1,6 +1,8 @@
 package org.openspaces.servicegrid.mock;
 
-import java.net.URL;
+import java.net.URI;
+
+import junit.framework.Assert;
 
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.TaskExecutor;
@@ -12,19 +14,19 @@ import org.openspaces.servicegrid.streams.StreamProducer;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 
 public class MockTaskContainer {
 
 	private final StreamProducer<TaskExecutorState> stateWriter;
 	private final Object taskExecutor;
-	private final URL executorId;
+	private final URI executorId;
 	private final StreamConsumer<Task> taskConsumer;
-	private URL lastTaskId;
 	private final StreamConsumer<TaskExecutorState> stateReader;
 	private final MockCurrentTimeProvider timeProvider;
 	private boolean killed;
 	
-	public MockTaskContainer(URL executorId, StreamConsumer<TaskExecutorState> stateReader, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, Object taskExecutor, MockCurrentTimeProvider timeProvider) {
+	public MockTaskContainer(URI executorId, StreamConsumer<TaskExecutorState> stateReader, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, Object taskExecutor, MockCurrentTimeProvider timeProvider) {
 		this.executorId = executorId;
 		this.stateReader = stateReader;
 		this.stateWriter = stateWriter;
@@ -34,12 +36,14 @@ public class MockTaskContainer {
 		this.killed = false;
 	}
 
-	private void afterExecute(URL taskId, Task task) {
+	private void afterExecute(URI taskId, Task task) {
 
 		final TaskExecutorState state = getTaskExecutorState();
 		state.completeExecutingTask(taskId);
 		stateWriter.addElement(getExecutorId(), state);
 	}
+
+	
 
 	private TaskExecutorState getTaskExecutorState() {
 		if (taskExecutor instanceof TaskExecutor<?>) {
@@ -71,30 +75,43 @@ public class MockTaskContainer {
 		boolean needAnotherStep = false;
 		if (!killed) {
 			
-			final TaskExecutorState state = getTaskExecutorState();
-			Preconditions.checkNotNull(state);
-			
-			URL taskId;
-			if (lastTaskId == null) {
-				taskId = taskConsumer.getFirstElementId(executorId);
-			}
-			else {
-				taskId = taskConsumer.getNextElementId(lastTaskId);
-			}
+			URI taskId = getNextTaskId();
 			
 			if (taskId != null) {
 				final Task task = taskConsumer.getElement(taskId, Task.class);
-				state.executeTask(taskId);
-				lastTaskId = taskId;
+				getTaskExecutorState().executeTask(taskId);
 				beforeExecute(task);
 				execute(task);
 				afterExecute(taskId, task);
-				needAnotherStep = true;
 			}
 			
-			timeProvider.increaseBy(1);
+			timeProvider.increaseBy(1000);
+			
+			URI nextTaskId = getNextTaskId();
+			needAnotherStep = (nextTaskId != null);
 		}
 		return needAnotherStep;
+	}
+
+	private URI getNextTaskId() {
+		return getNextTaskId(getTaskExecutorState());
+	}
+
+	private URI getNextTaskId(final TaskExecutorState state) {
+		Preconditions.checkNotNull(state);
+		final URI lastTaskId = getLastTaskIdOrNull(state);
+		URI taskId;
+		if (lastTaskId == null) {
+			taskId = taskConsumer.getFirstElementId(executorId);
+		}
+		else {
+			taskId = taskConsumer.getNextElementId(lastTaskId);
+		}
+		return taskId;
+	}
+
+	private URI getLastTaskIdOrNull(final TaskExecutorState state) {
+		return Iterables.getLast(Iterables.concat(state.getCompletedTasks(),state.getExecutingTasks()), null);
 	}
 
 	private void execute(final Task task) {
@@ -107,14 +124,18 @@ public class MockTaskContainer {
 				
 				@Override
 				public void updateState(final TaskExecutorState impersonatedState) {
-					stateWriter.addElement(task.getImpersonatedTarget(), impersonatedState);
+					URI impersonatedTargetId = task.getImpersonatedTarget();
+					Preconditions.checkNotNull(impersonatedTargetId);
+					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
+					stateWriter.addElement(impersonatedTargetId, impersonatedState);
 				}
 
 				@Override
 				public TaskExecutorState getState() {
-					URL impersonatedTargetId = task.getImpersonatedTarget();
+					URI impersonatedTargetId = task.getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
-					URL lastElementId = stateReader.getLastElementId(impersonatedTargetId);
+					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
+					URI lastElementId = stateReader.getLastElementId(impersonatedTargetId);
 					if (lastElementId != null) {
 						return stateReader.getElement(lastElementId, TaskExecutorState.class);
 					}
@@ -129,7 +150,7 @@ public class MockTaskContainer {
 		}
 	}
 	
-	public URL getExecutorId() {
+	public URI getExecutorId() {
 		return executorId;
 	}
 

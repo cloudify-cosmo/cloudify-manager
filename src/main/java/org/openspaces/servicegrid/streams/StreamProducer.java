@@ -1,9 +1,9 @@
 package org.openspaces.servicegrid.streams;
 
-import java.net.URL;
+import java.net.URI;
 
 public interface StreamProducer<T> {
 	
-	URL addElement(URL streamId, T element);
+	URI addElement(URI streamId, T element);
 	
 }

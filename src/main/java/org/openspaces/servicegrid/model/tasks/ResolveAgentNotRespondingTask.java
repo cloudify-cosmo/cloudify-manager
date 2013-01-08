@@ -4,15 +4,11 @@ import java.net.URI;
 
 import org.openspaces.servicegrid.model.tasks.Task;
 
-public class StartAgentTask extends Task {
+public class ResolveAgentNotRespondingTask extends Task {
 
 	private String ipAddress;
-	private URI agentExecutorId;
-
-	public URI getAgentExecutorId() {
-		return agentExecutorId;
-	}
-
+	private URI zombieAgentExecutorId;
+	
 	public String getIpAddress() {
 		return ipAddress;
 	}
@@ -21,8 +17,12 @@ public class StartAgentTask extends Task {
 		this.ipAddress = ipAddress;
 	}
 
-	public void setAgentExecutorId(URI agentExecutorId) {
-		this.agentExecutorId = agentExecutorId;
+	public URI getZombieAgentExecutorId() {
+		return zombieAgentExecutorId;
+	}
+
+	public void setZombieAgentExecutorId(URI zombieAgentExecutorId) {
+		this.zombieAgentExecutorId = zombieAgentExecutorId;
 	}
 
 }

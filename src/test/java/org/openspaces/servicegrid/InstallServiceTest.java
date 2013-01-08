@@ -5,8 +5,8 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.mock.MockCloudMachineTaskExecutor;
@@ -41,21 +41,21 @@ public class InstallServiceTest {
 	
 	private ServiceClient client;
 	
-	private final URL orchestratorExecutorId;
+	private final URI orchestratorExecutorId;
 	private ServiceGridOrchestrator orchestrator; 
 	private MockTaskContainer orchestratorContainer;
 	
 	private MockTaskContainer cloudContainer;
 	private MockCloudMachineTaskExecutor cloudExecutor;
-	private final URL cloudExecutorId;
-	private final URL agentLifecycleExecutorId;
+	private final URI cloudExecutorId;
+	private final URI agentLifecycleExecutorId;
 	
 	public InstallServiceTest() {
 		try {
-			orchestratorExecutorId = new URL("http://localhost/services/tomcat/");
-			cloudExecutorId = new URL("http://localhost/services/cloud");
-			agentLifecycleExecutorId = new URL("http://localhost/services/agentLifecycle");
-		} catch (MalformedURLException e) {
+			orchestratorExecutorId = new URI("http://localhost/services/tomcat/");
+			cloudExecutorId = new URI("http://localhost/services/cloud");
+			agentLifecycleExecutorId = new URI("http://localhost/services/agentLifecycle");
+		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
 	}
@@ -112,19 +112,19 @@ public class InstallServiceTest {
 	private void installService() {
 		final ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setDisplayName("tomcat");
-		serviceConfig.setServiceUrl(newURL("http://services/tomcat/"));
+		serviceConfig.setServiceId(newURI("http://localhost/services/tomcat/"));
 		serviceConfig.setNumberOfInstances(1);
 		
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
-		final URL taskId = client.addServiceTask(orchestratorExecutorId, installServiceTask);
+		final URI taskId = client.addServiceTask(orchestratorExecutorId, installServiceTask);
 		assertTrue(client.getTask(taskId) instanceof InstallServiceTask);
 	}
 	
-	private URL newURL(String url){
+	private URI newURI(String uri){
 		try {
-			return new URL(url);
-		} catch (MalformedURLException e) {
+			return new URI(uri);
+		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
 	}
@@ -163,27 +163,27 @@ public class InstallServiceTest {
 		assertEquals(getTomcatInstanceState().getProgress(), ServiceInstanceState.Progress.STARTING_MACHINE);
 	}
 
-	private Task getLastTask(URL executorId) {
+	private Task getLastTask(URI executorId) {
 		final TaskExecutorState cloudExecutorState = client.getExecutorState(executorId, TaskExecutorState.class);
-		final URL taskId = cloudExecutorState.getLastCompletedTaskId();
+		final URI taskId = cloudExecutorState.getLastCompletedTaskId();
 		final Task lastCloudTask = client.getTask(taskId);
 		return lastCloudTask;
 	}
 
 	private ServiceInstanceState getTomcatInstanceState() {
-		final URL tomcatInstanceId = getTomcatInstanceId();
+		final URI tomcatInstanceId = getTomcatInstanceId();
 		final ServiceInstanceState tomcatInstanceState = client.getExecutorState(tomcatInstanceId, ServiceInstanceState.class);
 		return tomcatInstanceState;
 	}
 
-	private URL getTomcatInstanceId() {
+	private URI getTomcatInstanceId() {
 		final ServiceState tomcatState = getTomcatServiceState();
-		final URL tomcatInstanceId = Iterables.getOnlyElement(tomcatState.getInstancesIds());
+		final URI tomcatInstanceId = Iterables.getOnlyElement(tomcatState.getInstancesIds());
 		return tomcatInstanceId;
 	}
 
 	private ServiceState getTomcatServiceState() {
-		return client.getExecutorState(newURL("http://services/tomcat/"), ServiceState.class);
+		return client.getExecutorState(newURI("http://services/tomcat/"), ServiceState.class);
 	}
 	
 	
@@ -234,7 +234,7 @@ public class InstallServiceTest {
 		
 		//simulate implementation of StartAgentTask
 		StartAgentTask lastAgentLifecycleTask = taskConsumer.getElement(taskConsumer.getLastElementId(agentLifecycleExecutorId), StartAgentTask.class);
-		URL agentExecutorId = lastAgentLifecycleTask.getAgentExecutorId();
+		URI agentExecutorId = lastAgentLifecycleTask.getAgentExecutorId();
 		ServiceInstanceState serviceInstanceState = 
 				stateReader.getElement(stateReader.getLastElementId(getTomcatInstanceId()), ServiceInstanceState.class);
 		serviceInstanceState.setAgentExecutorId(agentExecutorId);
