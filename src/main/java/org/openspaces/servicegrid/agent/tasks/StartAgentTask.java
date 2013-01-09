@@ -1,8 +1,8 @@
-package org.openspaces.servicegrid.model.tasks;
+package org.openspaces.servicegrid.agent.tasks;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.model.tasks.Task;
+import org.openspaces.servicegrid.Task;
 
 public class StartAgentTask extends Task {
 

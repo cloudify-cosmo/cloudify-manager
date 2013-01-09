@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid.model.service;
+package org.openspaces.servicegrid.service.tasks;
 
 import java.net.URI;
 

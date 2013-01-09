@@ -1,7 +1,6 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.service;
 
 import java.io.IOException;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -13,20 +12,24 @@ import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.openspaces.servicegrid.model.service.InstallServiceInstanceTask;
-import org.openspaces.servicegrid.model.service.InstallServiceTask;
-import org.openspaces.servicegrid.model.service.OrchestrateServiceInstanceTask;
-import org.openspaces.servicegrid.model.service.OrchestrateServiceTask;
-import org.openspaces.servicegrid.model.service.ServiceGridOrchestratorState;
-import org.openspaces.servicegrid.model.service.ServiceInstanceState;
-import org.openspaces.servicegrid.model.service.ServiceState;
-import org.openspaces.servicegrid.model.service.StartServiceInstanceTask;
-import org.openspaces.servicegrid.model.task.PingTask;
-import org.openspaces.servicegrid.model.tasks.ResolveAgentNotRespondingTask;
-import org.openspaces.servicegrid.model.tasks.StartAgentTask;
-import org.openspaces.servicegrid.model.tasks.StartMachineTask;
-import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutor;
+import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
+import org.openspaces.servicegrid.agent.tasks.ResolveAgentNotRespondingTask;
+import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
+import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
+import org.openspaces.servicegrid.service.state.ServiceConfig;
+import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
+import org.openspaces.servicegrid.service.state.ServiceInstanceState;
+import org.openspaces.servicegrid.service.state.ServiceState;
+import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
+import org.openspaces.servicegrid.service.tasks.OrchestrateServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.OrchestrateServiceTask;
+import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
@@ -214,7 +217,7 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 			if (!agentNewTasks.contains(agentExecutorId)) {
 				if (!isAgentExecutingTask(agentExecutorId)) {
 					if (getPendingAgentTask(agentExecutorId) == null) {
-						final PingTask pingTask = new PingTask();
+						final PingAgentTask pingTask = new PingAgentTask();
 						pingTask.setTarget(agentExecutorId);
 						addNewTask(newTasks, pingTask);
 					}
@@ -254,7 +257,7 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 			if (nextTaskToExecute != null) {
 				final Task task = taskConsumer.getElement(nextTaskToExecute, Task.class);
 				Preconditions.checkState(task.getSource().equals(orchestratorExecutorId), "All agent tasks are assumed to be from this orchestrator");
-				if (task instanceof PingTask) {
+				if (task instanceof PingAgentTask) {
 					final long taskTimestamp = task.getSourceTimestamp();
 					final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
 					if ( notRespondingMilliseconds > ZOMBIE_DETECTION_MILLISECONDS ) {

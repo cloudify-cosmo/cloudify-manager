@@ -1,6 +1,6 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.service;
 
-import org.openspaces.servicegrid.model.service.ServiceTask;
+import org.openspaces.servicegrid.service.tasks.ServiceTask;
 
 public class OrchestrateTask extends ServiceTask {
 

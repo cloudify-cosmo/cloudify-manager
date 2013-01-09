@@ -1,8 +1,8 @@
-package org.openspaces.servicegrid.model.service;
+package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.TaskExecutorState;
 
 public class ServiceInstanceState extends TaskExecutorState {
 

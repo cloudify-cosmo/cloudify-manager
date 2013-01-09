@@ -1,20 +1,21 @@
 package org.openspaces.servicegrid.agent;
 
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutor;
+import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.model.service.InstallServiceInstanceTask;
-import org.openspaces.servicegrid.model.service.StartServiceInstanceTask;
-import org.openspaces.servicegrid.model.task.PingTask;
-import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.agent.state.AgentState;
+import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
+import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 
 import com.google.common.base.Preconditions;
 
 public class AgentTaskExecutor implements
 		ImpersonatingTaskExecutor<TaskExecutorState> , TaskExecutor<TaskExecutorState> {
 
-	private final TaskExecutorState state = new TaskExecutorState();
+	private final AgentState state = new AgentState();
 	private final Agent agent;
 
 	public AgentTaskExecutor(Agent agent) {
@@ -40,7 +41,7 @@ public class AgentTaskExecutor implements
 
 	@Override
 	public void execute(Task task) {
-		if (task instanceof PingTask){
+		if (task instanceof PingAgentTask){
 			//do nothing
 		}
 		else {

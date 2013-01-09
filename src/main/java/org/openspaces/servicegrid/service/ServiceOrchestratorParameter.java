@@ -1,9 +1,9 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;

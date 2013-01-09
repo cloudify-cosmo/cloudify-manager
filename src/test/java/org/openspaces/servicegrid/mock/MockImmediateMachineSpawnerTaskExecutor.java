@@ -1,11 +1,11 @@
 package org.openspaces.servicegrid.mock;
 
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.model.service.ServiceInstanceState;
-import org.openspaces.servicegrid.model.tasks.StartMachineTask;
-import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
+import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
 public class MockImmediateMachineSpawnerTaskExecutor implements
 		ImpersonatingTaskExecutor<TaskExecutorState> {

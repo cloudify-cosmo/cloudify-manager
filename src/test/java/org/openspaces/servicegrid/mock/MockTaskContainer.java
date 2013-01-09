@@ -5,10 +5,10 @@ import java.net.URI;
 import junit.framework.Assert;
 
 import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutor;
+import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;

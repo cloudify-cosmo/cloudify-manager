@@ -2,9 +2,9 @@ package org.openspaces.servicegrid.client;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.model.service.ServiceTask;
-import org.openspaces.servicegrid.model.tasks.Task;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.service.tasks.ServiceTask;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 

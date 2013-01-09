@@ -1,8 +1,6 @@
-package org.openspaces.servicegrid.model.service;
+package org.openspaces.servicegrid.service.tasks;
 
-import org.openspaces.servicegrid.ServiceConfig;
-
-
+import org.openspaces.servicegrid.service.state.ServiceConfig;
 
 public class InstallServiceTask extends ServiceTask {
 	

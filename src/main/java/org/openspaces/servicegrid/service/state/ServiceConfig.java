@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid;
+package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
 

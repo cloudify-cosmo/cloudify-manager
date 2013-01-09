@@ -1,11 +1,10 @@
-package org.openspaces.servicegrid.model.service;
+package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
 import java.util.Map;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
-import org.openspaces.servicegrid.ServiceConfig;
-import org.openspaces.servicegrid.model.tasks.TaskExecutorState;
+import org.openspaces.servicegrid.TaskExecutorState;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
