@@ -17,8 +17,10 @@ import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
-import org.openspaces.servicegrid.agent.tasks.ResolveAgentNotRespondingTask;
+import org.openspaces.servicegrid.agent.tasks.PlanAgentTask;
+import org.openspaces.servicegrid.agent.tasks.DiagnoseAgentNotRespondingTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
@@ -27,8 +29,8 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
-import org.openspaces.servicegrid.service.tasks.OrchestrateServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.OrchestrateServiceTask;
+import org.openspaces.servicegrid.service.tasks.PlanServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
@@ -136,71 +138,76 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 			} else {
 				ServiceState serviceState = stateReader.getElement(lastElementId, ServiceState.class);
 				for (URI instanceId : serviceState.getInstancesIds()) {
+					Preconditions.checkNotNull(instanceId);
 					URI agentId = serviceState.getAgentIdOfInstance(instanceId);
-					URI instanceStreamLastElementId = stateReader.getLastElementId(instanceId);
-					if (instanceStreamLastElementId == null){
-						final OrchestrateServiceInstanceTask task = new OrchestrateServiceInstanceTask();
-						task.setServiceURI(serviceConfig.getServiceId());
-						task.setImpersonatedTarget(instanceId);	
+					Preconditions.checkNotNull(agentId);
+					URI agentStreamLastElementId = stateReader.getLastElementId(agentId);
+					
+					if (agentStreamLastElementId == null) {
+						final PlanAgentTask task = new PlanAgentTask();
+						task.setImpersonatedTarget(agentId);	
 						task.setTarget(orchestratorExecutorId);
 						addNewTaskIfNotExists(newTasks, task);
 					}
 					else {
-						ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId), ServiceInstanceState.class);
-						final String progress = instanceState.getProgress();
-						final URI agentExecutorId = instanceState.getAgentExecutorId();
-						final boolean agentNotResponding = agentExecutorId == null || isAgentNotResponding(agentExecutorId, nowTimestamp);
-
-						if (progress.equals(ServiceInstanceState.Progress.ORCHESTRATING)){
+						AgentState agentState = stateReader.getElement(agentStreamLastElementId, AgentState.class);
+						final String agentProgress = agentState.getProgress();
+						Preconditions.checkNotNull(agentProgress);
+						
+						if (agentProgress.equals(AgentState.Progress.PLANNED)){
 							final StartMachineTask task = new StartMachineTask();
-							task.setImpersonatedTarget(instanceId);	
+							task.setImpersonatedTarget(agentId);	
 							task.setTarget(cloudExecutorId);
 							addNewTaskIfNotExists(newTasks, task);
 						}
-						else if (progress.equals(ServiceInstanceState.Progress.STARTING_MACHINE)) {
-							//Do nothing, orchestrator needs to wait for the machine to be started
-						}
-						else if (progress.equals(ServiceInstanceState.Progress.MACHINE_STARTED) ||
-								 progress.equals(ServiceInstanceState.Progress.AGENT_NOT_RESPONDING)) {
+						else if (agentProgress.equals(AgentState.Progress.MACHINE_STARTED) ||
+								 agentProgress.equals(AgentState.Progress.AGENT_NOT_RESPONDING)) {
 							final StartAgentTask task = new StartAgentTask();
-							task.setImpersonatedTarget(instanceId);	
+							task.setImpersonatedTarget(agentId);	
 							task.setTarget(agentLifecycleExecutorId);
-							task.setIpAddress(instanceState.getIpAddress());
+							task.setIpAddress(agentState.getIpAddress());
 							task.setAgentExecutorId(agentId);
 							addNewTaskIfNotExists(newTasks, task);
 						}
-						else if (agentNotResponding) {
-							final ResolveAgentNotRespondingTask task = new ResolveAgentNotRespondingTask();
-							task.setImpersonatedTarget(instanceId);	
+						else if (isAgentNotResponding(agentId, nowTimestamp)) {
+							final DiagnoseAgentNotRespondingTask task = new DiagnoseAgentNotRespondingTask();
+							task.setImpersonatedTarget(agentId);	
 							task.setTarget(agentLifecycleExecutorId);
-							task.setIpAddress(instanceState.getIpAddress());
-							task.setZombieAgentExecutorId(agentExecutorId);
+							task.setIpAddress(agentState.getIpAddress());
 							addNewTaskIfNotExists(newTasks, task);
 						}
-						else if (progress.equals(ServiceInstanceState.Progress.AGENT_STARTED)) {
-							final InstallServiceInstanceTask task = new InstallServiceInstanceTask();
+						else {
+							URI instanceStreamLastElementId = stateReader.getLastElementId(instanceId);
+							if (instanceStreamLastElementId == null){
+						
+							final PlanServiceInstanceTask task = new PlanServiceInstanceTask();
+							task.setServiceId(serviceConfig.getServiceId());
+							task.setAgentId(agentId);
 							task.setImpersonatedTarget(instanceId);	
-							
-							Preconditions.checkNotNull(agentExecutorId);
-							task.setTarget(agentExecutorId);
+							task.setTarget(orchestratorExecutorId);
 							addNewTaskIfNotExists(newTasks, task);
-						}
-						else if (progress.equals(ServiceInstanceState.Progress.INSTALLING_INSTANCE)) {
-							//Do nothing, orchestrator needs to wait for the instance to be installed
-						}
-						else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
-							//Ask for start service instance
-							final StartServiceInstanceTask task = new StartServiceInstanceTask();
-							task.setImpersonatedTarget(instanceId);	
-							Preconditions.checkNotNull(agentExecutorId);
-							task.setTarget(agentExecutorId);
-							addNewTaskIfNotExists(newTasks, task);
-						}
-						else if (progress.equals(ServiceInstanceState.Progress.STARTING_INSTANCE)){
-							//Do nothing, wait for instance to start
-						}
-						else if (progress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)){
-							//Do nothing, instance is installed
+							}
+							else {
+								ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId), ServiceInstanceState.class);
+								final String instanceProgress = instanceState.getProgress();
+	
+								if (instanceProgress.equals(ServiceInstanceState.Progress.PLANNED)) {
+									final InstallServiceInstanceTask task = new InstallServiceInstanceTask();
+									task.setImpersonatedTarget(instanceId);	
+									task.setTarget(agentId);
+									addNewTaskIfNotExists(newTasks, task);
+								}
+								else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
+									//Ask for start service instance
+									final StartServiceInstanceTask task = new StartServiceInstanceTask();
+									task.setImpersonatedTarget(instanceId);	
+									task.setTarget(agentId);
+									addNewTaskIfNotExists(newTasks, task);
+								}
+								else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)){
+									//Do nothing, instance is installed
+								}
+							}
 						}
 					}
 				}
@@ -437,17 +444,22 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 			}
 			impersonatedStateModifier.updateState(serviceState);
 		}
-		else if (task instanceof OrchestrateServiceInstanceTask){
+		else if (task instanceof PlanServiceInstanceTask) {
 			ServiceInstanceState impersonatedServiceInstanceState = new ServiceInstanceState();
-			impersonatedServiceInstanceState.setProgress(ServiceInstanceState.Progress.ORCHESTRATING);
+			impersonatedServiceInstanceState.setProgress(ServiceInstanceState.Progress.PLANNED);
 			//TODO get config from service state or orchestrator state?
-			final URI serviceURI = ((OrchestrateServiceInstanceTask)task).getServiceURI();
-			final ServiceConfig serviceConfig = getServiceConfig(serviceURI);
+			final URI serviceId = ((PlanServiceInstanceTask)task).getServiceId();
+			final ServiceConfig serviceConfig = getServiceConfig(serviceId);
 			
-			impersonatedServiceInstanceState.setDisplayName(serviceConfig.getDisplayName());			
+			impersonatedServiceInstanceState.setDisplayName(serviceConfig.getDisplayName());
+			impersonatedServiceInstanceState.setAgentId(((PlanServiceInstanceTask)task).getAgentId());
 			impersonatedStateModifier.updateState(impersonatedServiceInstanceState);
 		}
-		
+		else if (task instanceof PlanAgentTask) {
+			AgentState impersonatedAgentState = new AgentState();
+			impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
+			impersonatedStateModifier.updateState(impersonatedAgentState);
+		}
 	}
 
 	private ServiceConfig getServiceConfig(final URI serviceURI) {

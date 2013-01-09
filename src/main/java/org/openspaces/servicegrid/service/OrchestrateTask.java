@@ -4,7 +4,7 @@ import org.openspaces.servicegrid.service.tasks.ServiceTask;
 
 public class OrchestrateTask extends ServiceTask {
 
-	private int maxNumberOfOrchestrationSteps;
+	private int maxNumberOfOrchestrationSteps = 1;
 
 	public int getMaxNumberOfOrchestrationSteps() {
 		return maxNumberOfOrchestrationSteps;

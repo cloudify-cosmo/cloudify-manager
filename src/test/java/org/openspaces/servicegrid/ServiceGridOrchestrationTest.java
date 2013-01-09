@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.mock.MockEmbeddedAgentLifecycleTaskExecutor;
 import org.openspaces.servicegrid.mock.MockImmediateMachineSpawnerTaskExecutor;
@@ -181,7 +182,10 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
-		Assert.assertEquals(instanceState.getAgentExecutorId(),getOnlyAgentId());
+		URI agentId = getOnlyAgentId();
+		Assert.assertEquals(instanceState.getAgentId(),agentId);
+		AgentState agentState = state.getElement(state.getLastElementId(agentId), AgentState.class);
+		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
 	}
 
 	private URI getOnlyAgentId() throws URISyntaxException {
@@ -206,7 +210,10 @@ public class ServiceGridOrchestrationTest {
 			ServiceInstanceState instanceState = state.getElement(state.getLastElementId(URI), ServiceInstanceState.class);
 			Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-			Assert.assertTrue(Iterables.contains(agentIds, instanceState.getAgentExecutorId()));
+			java.net.URI agentId = instanceState.getAgentId();
+			Assert.assertTrue(Iterables.contains(agentIds, agentId));
+			AgentState agentState = state.getElement(state.getLastElementId(agentId), AgentState.class);
+			Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
 		}
 	}
 	
@@ -221,7 +228,7 @@ public class ServiceGridOrchestrationTest {
 		Iterable<URI> agentIds = getAgentIds();
 		Assert.assertEquals(Iterables.size(agentIds),2);
 		URI secondAgentId = Iterables.get(agentIds, 1);
-		Assert.assertEquals(getOnlyServiceInstanceState().getAgentExecutorId(),secondAgentId);	
+		Assert.assertEquals(getOnlyServiceInstanceState().getAgentId(),secondAgentId);	
 	}
 
 	/*public void installTwoSingleInstanceServicesTest(){

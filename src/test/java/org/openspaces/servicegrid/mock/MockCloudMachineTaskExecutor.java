@@ -4,8 +4,8 @@ import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
-import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
 public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
 
@@ -25,9 +25,9 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 	public void execute(Task task, TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartMachineTask) {
 			this.impersonatedStateModifier = impersonatedStateModifier;
-			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
-			impersonatedState.setProgress(ServiceInstanceState.Progress.STARTING_MACHINE);
-			impersonatedStateModifier.updateState(impersonatedState);
+			AgentState agentState = impersonatedStateModifier.getState();
+			agentState.setProgress(AgentState.Progress.STARTING_MACHINE);
+			impersonatedStateModifier.updateState(agentState);
 		
 			if(ipAddressMock != null) {
 				signalLastStartedMachineFinished(ipAddressMock);
@@ -36,10 +36,10 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 	}
 	
 	public void signalLastStartedMachineFinished(String ipAddress){
-		ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
-		impersonatedState.setProgress(ServiceInstanceState.Progress.MACHINE_STARTED);
-		impersonatedState.setIpAddress(ipAddress);
-		impersonatedStateModifier.updateState(impersonatedState);
+		AgentState agentState = impersonatedStateModifier.getState();
+		agentState.setProgress(AgentState.Progress.MACHINE_STARTED);
+		agentState.setIpAddress(ipAddress);
+		impersonatedStateModifier.updateState(agentState);
 	}
 	
 	@Override

@@ -15,11 +15,12 @@ import com.google.common.base.Preconditions;
 public class AgentTaskExecutor implements
 		ImpersonatingTaskExecutor<TaskExecutorState> , TaskExecutor<TaskExecutorState> {
 
-	private final AgentState state = new AgentState();
+	private final AgentState state;
 	private final Agent agent;
 
-	public AgentTaskExecutor(Agent agent) {
+	public AgentTaskExecutor(AgentState state, Agent agent) {
 		this.agent = agent;
+		this.state = state;
 	}
 	
 	@Override

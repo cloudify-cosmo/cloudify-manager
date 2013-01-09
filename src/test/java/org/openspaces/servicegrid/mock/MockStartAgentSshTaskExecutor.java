@@ -4,8 +4,8 @@ import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
-import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
 public class MockStartAgentSshTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
 
@@ -15,9 +15,8 @@ public class MockStartAgentSshTaskExecutor implements ImpersonatingTaskExecutor<
 	public void execute(Task task, 
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartAgentTask) {
-			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
-			impersonatedState.setProgress(ServiceInstanceState.Progress.AGENT_STARTED);
-			impersonatedState.setAgentExecutorId(((StartAgentTask) task).getAgentExecutorId());
+			AgentState impersonatedState = impersonatedStateModifier.getState();
+			impersonatedState.setProgress(AgentState.Progress.AGENT_STARTED);
 			impersonatedStateModifier.updateState(impersonatedState);
 		}
 		

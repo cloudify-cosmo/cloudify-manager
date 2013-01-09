@@ -4,8 +4,8 @@ import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
-import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
 public class MockImmediateMachineSpawnerTaskExecutor implements
 		ImpersonatingTaskExecutor<TaskExecutorState> {
@@ -17,12 +17,12 @@ public class MockImmediateMachineSpawnerTaskExecutor implements
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartMachineTask) {
 			//Simulate starting machine
-			ServiceInstanceState impersonatedState = impersonatedStateModifier.getState();
-			impersonatedState.setProgress(ServiceInstanceState.Progress.STARTING_MACHINE);
+			AgentState impersonatedState = impersonatedStateModifier.getState();
+			impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
 			impersonatedStateModifier.updateState(impersonatedState);
 			//Immediately machine start 
 			impersonatedStateModifier.getState();
-			impersonatedState.setProgress(ServiceInstanceState.Progress.MACHINE_STARTED);
+			impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
 			impersonatedStateModifier.updateState(impersonatedState);
 		}
 	}

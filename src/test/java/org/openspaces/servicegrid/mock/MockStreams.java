@@ -96,6 +96,8 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	@Override
 	public <G extends T> G getElement(URI elementId, Class<G> clazz) {
 		
+		Preconditions.checkNotNull(elementId);
+		Preconditions.checkNotNull(clazz);
 		final URI streamId = getStreamId(elementId);
 		
 		Integer index = getIndex(elementId, streamId);
@@ -110,6 +112,7 @@ public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
 	}
 
 	private URI getStreamId(URI elementId) {
+		Preconditions.checkNotNull(elementId);
 		String string = elementId.toString();
 		int seperator = string.lastIndexOf("/");
 		Preconditions.checkPositionIndex(seperator, string.length());
