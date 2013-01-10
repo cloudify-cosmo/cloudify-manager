@@ -85,8 +85,6 @@ public class MockTaskContainer {
 				afterExecute(taskId, task);
 			}
 			
-			timeProvider.increaseBy(1000);
-			
 			URI nextTaskId = getNextTaskId();
 			needAnotherStep = (nextTaskId != null);
 		}

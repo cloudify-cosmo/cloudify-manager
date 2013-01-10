@@ -24,7 +24,7 @@ public class ServiceGridOrchestratorState extends TaskExecutorState {
 	}
 
 	public void setPlanned(boolean planned) {
-		this.planned = true;
+		this.planned = planned;
 	}
 	
 	public boolean isPlanned() {

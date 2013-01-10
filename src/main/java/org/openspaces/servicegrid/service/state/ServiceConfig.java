@@ -5,7 +5,7 @@ import java.net.URI;
 public class ServiceConfig {
 
 	private String displayName;
-	private int numberOfInstances;
+	private int plannedNumberOfInstances;
 	private URI id;
 
 	public void setDisplayName(String displayName) {
@@ -16,12 +16,12 @@ public class ServiceConfig {
 		return displayName;
 	}
 
-	public void setNumberOfInstances(int numberOfInstances) {
-		this.numberOfInstances = numberOfInstances;
+	public void setPlannedNumberOfInstances(int numberOfInstances) {
+		this.plannedNumberOfInstances = numberOfInstances;
 	}
 	
-	public int getNumberOfInstances() {
-		return numberOfInstances;
+	public int getPlannedNumberOfInstances() {
+		return plannedNumberOfInstances;
 	}
 
 	public URI getServiceId() {

@@ -25,6 +25,7 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
+import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
@@ -73,6 +74,9 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		if (task instanceof InstallServiceTask){
 			installService((InstallServiceTask) task);
 		}
+		else if (task instanceof ScaleOutServiceTask) {
+			scaleOutService((ScaleOutServiceTask)task);
+		}
 		else if (task instanceof OrchestrateTask) {
 			OrchestrateTask orchestrateTask = (OrchestrateTask) task;
 			for (int i = 0 ; i < orchestrateTask.getMaxNumberOfOrchestrationSteps(); i++) {
@@ -86,6 +90,21 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		else {
 			Preconditions.checkState(false, "Cannot handle task " + task.getClass());
 		}
+	}
+
+	private void scaleOutService(ScaleOutServiceTask task) {
+		
+		for (ServiceConfig serviceConfig : state.getServices()) {
+			if (serviceConfig.getServiceId().equals(task.getServiceId())) {
+				int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
+				if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
+					serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
+					state.setPlanned(false);
+					return;
+				}
+			}
+		}
+		Preconditions.checkArgument(false,"Cannot find service %s", task.getServiceId());
 	}
 
 	private void submitTasks(long nowTimestamp,
@@ -283,10 +302,8 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 	public Iterable<URI> getAgentIds() {
 		Set<URI> agentIds = Sets.newLinkedHashSet();
 		for (ServiceConfig service : state.getServices()) {
-			URI lastElementId = stateReader.getLastElementId(service.getServiceId());
-			//Service was just added, need to create a state for it
-			if (lastElementId != null) {
-				ServiceState serviceState = stateReader.getElement(lastElementId, ServiceState.class);
+			ServiceState serviceState = ServiceUtils.getLastState(stateReader, service.getServiceId(), ServiceState.class);
+			if (serviceState != null) {
 				for (URI instanceId : serviceState.getInstanceIds()) {
 					final URI agentId = getAgentIdOfServiceInstance(instanceId);
 					if (stateReader.getLastElementId(agentId) != null) {
@@ -438,5 +455,4 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 	public ServiceGridOrchestratorState getState() {
 		return state;
 	}
-
 }

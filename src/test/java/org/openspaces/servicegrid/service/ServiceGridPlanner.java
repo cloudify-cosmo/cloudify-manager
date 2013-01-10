@@ -87,18 +87,17 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 		List<Task> newTasks = Lists.newArrayList();
 		
 		for (ServiceConfig serviceConfig : planTask.getServices()) {
-			URI lastElementId = stateReader.getLastElementId(serviceConfig.getServiceId());
-			Preconditions.checkState(lastElementId == null);
-			//Service was just added, need to create a state for it
 			
-			final PlanServiceTask planServiceTask = new PlanServiceTask();
-			planServiceTask.setImpersonatedTarget(serviceConfig.getServiceId());
-			planServiceTask.setTarget(plannerExecutorId);
+			URI serviceId = serviceConfig.getServiceId();
+			ServiceState serviceState = ServiceUtils.getLastState(stateReader, serviceId, ServiceState.class);
+
 			List<URI> serviceInstanceIds = Lists.newArrayList();
-			planServiceTask.setServiceInstanceIds(serviceInstanceIds);
-			
-			for (int i = 0; i < serviceConfig.getNumberOfInstances(); i++) {
-				URI instanceId = newInstanceId(serviceConfig.getServiceId());
+			if (serviceState != null) {
+				serviceInstanceIds.addAll(serviceState.getInstanceIds());
+			}
+
+			while (serviceInstanceIds.size() < serviceConfig.getPlannedNumberOfInstances()) {
+				URI instanceId = newInstanceId(serviceId);
 				URI agentId = newAgentExecutorId();
 								
 				serviceInstanceIds.add(instanceId);
@@ -106,7 +105,7 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 				Preconditions.checkState(stateReader.getLastElementId(instanceId) == null);
 				final PlanServiceInstanceTask planInstanceTask = new PlanServiceInstanceTask();
 				planInstanceTask.setAgentId(agentId);
-				planInstanceTask.setServiceId(serviceConfig.getServiceId());
+				planInstanceTask.setServiceId(serviceId);
 				planInstanceTask.setImpersonatedTarget(instanceId);	
 				planInstanceTask.setTarget(plannerExecutorId);
 				addNewTask(newTasks, planInstanceTask);
@@ -119,6 +118,11 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 				addNewTask(newTasks, planAgentTask);
 			}
 			
+			final PlanServiceTask planServiceTask = new PlanServiceTask();
+			planServiceTask.setImpersonatedTarget(serviceId);
+			planServiceTask.setTarget(plannerExecutorId);
+			planServiceTask.setServiceInstanceIds(serviceInstanceIds);
+			planServiceTask.setServiceConfig(serviceConfig);
 			addNewTask(newTasks, planServiceTask);
 		}
 		
@@ -145,9 +149,13 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 
 	private void planService(PlanServiceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
+		
 		final PlanServiceTask planServiceTask = (PlanServiceTask) task;
-		final ServiceState serviceState = new ServiceState();
-		serviceState.setServiceConfig(planServiceTask.getServiceConfig());
+		ServiceState serviceState = impersonatedStateModifier.getState();
+		if (serviceState == null) {
+			serviceState = new ServiceState();
+		}
+		serviceState.setServiceConfig(planServiceTask.getServiceConfig());	
 		serviceState.setInstanceIds(planServiceTask.getServiceInstanceIds());
 		impersonatedStateModifier.updateState(serviceState);
 	}

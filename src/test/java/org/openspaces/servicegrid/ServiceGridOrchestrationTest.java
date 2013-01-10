@@ -26,6 +26,7 @@ import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
+import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
@@ -52,6 +53,7 @@ public class ServiceGridOrchestrationTest {
 	private StreamConsumer<Task> taskConsumer;
 	private final Logger logger;
 	private MockStreams<Task> taskBroker;
+	private final MockCurrentTimeProvider timeProvider = new MockCurrentTimeProvider();
 	
 	public ServiceGridOrchestrationTest() {
 		logger = Logger.getLogger(this.getClass().getName());
@@ -88,8 +90,7 @@ public class ServiceGridOrchestrationTest {
 		stateWriter.addElement(orchestratorExecutorId, new ServiceGridOrchestratorState());
 	
 		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
-				
-		final MockCurrentTimeProvider orchestratorTimeProvider = new MockCurrentTimeProvider();
+		
 		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorExecutorId(orchestratorExecutorId);
 		serviceOrchestratorParameter.setCloudExecutorId(cloudExecutorId);
@@ -98,7 +99,7 @@ public class ServiceGridOrchestrationTest {
 		serviceOrchestratorParameter.setTaskConsumer(taskConsumer);
 		serviceOrchestratorParameter.setTaskProducer(taskProducer);
 		serviceOrchestratorParameter.setStateReader(stateReader);
-		serviceOrchestratorParameter.setTimeProvider(orchestratorTimeProvider);
+		serviceOrchestratorParameter.setTimeProvider(timeProvider);
 	
 		orchestratorContainer = new MockTaskContainer(
 				orchestratorExecutorId,
@@ -106,14 +107,14 @@ public class ServiceGridOrchestrationTest {
 				taskConsumer, 
 				new ServiceGridOrchestrator(
 						serviceOrchestratorParameter),
-				orchestratorTimeProvider);
+				timeProvider);
 
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
 		servicePlannerParameter.setPlannerExecutorId(plannerExecutorId);
 		servicePlannerParameter.setTaskConsumer(taskConsumer);
 		servicePlannerParameter.setTaskProducer(taskProducer);
 		servicePlannerParameter.setStateReader(stateReader);
-		servicePlannerParameter.setTimeProvider(orchestratorTimeProvider);
+		servicePlannerParameter.setTimeProvider(timeProvider);
 		
 		containers = Sets.newCopyOnWriteArraySet();
 		addContainers(
@@ -124,14 +125,14 @@ public class ServiceGridOrchestrationTest {
 					stateReader, stateWriter, 
 					taskConsumer, 
 					new ServiceGridPlanner(servicePlannerParameter),
-					new MockCurrentTimeProvider()),
+					timeProvider),
 			
 				new MockTaskContainer(
 						cloudExecutorId, 
 						stateReader, stateWriter,
 						taskConsumer, 
 						new MockImmediateMachineSpawnerTaskExecutor(),
-						new MockCurrentTimeProvider()),
+						timeProvider),
 						
 				new MockTaskContainer(
 						agentLifecycleExecutorId, 
@@ -143,7 +144,7 @@ public class ServiceGridOrchestrationTest {
 							public void wrapTaskExecutor(
 									final Object taskExecutor, final URI executorId) {
 								
-								MockTaskContainer container = new MockTaskContainer(executorId, state, state, taskConsumer, taskExecutor, new MockCurrentTimeProvider());
+								MockTaskContainer container = new MockTaskContainer(executorId, state, state, taskConsumer, taskExecutor, timeProvider);
 								addContainer(container);
 							}
 
@@ -161,7 +162,7 @@ public class ServiceGridOrchestrationTest {
 
 						}
 						),
-						new MockCurrentTimeProvider())
+						timeProvider)
 		);
 	}
 	
@@ -172,17 +173,22 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private void addContainer(MockTaskContainer container) {
-		logger.info("Adding container for " + container.getExecutorId());
+		//logger.info("Adding container for " + container.getExecutorId());
 		Preconditions.checkState(!containers.contains(container), "Container " + container.getExecutorId() + " was already added");
 		containers.add(container);
 	}
 	
 	@AfterMethod
 	public void after() throws URISyntaxException {
-		Iterable<Task> tasks = filterOrchestratorTasks(getSortedTasks());
+		//Iterable<Task> tasks = filterOrchestratorTasks(getSortedTasks());
+		Iterable<Task> tasks = getSortedTasks();
 		for (final Task task : tasks) {
 			DecimalFormat timestampFormatter = new DecimalFormat("###,###");
-			String timestamp = timestampFormatter.format(task.getSourceTimestamp());
+			Long sourceTimestamp = task.getSourceTimestamp();
+			String timestamp = "";
+			if (sourceTimestamp != null) {
+				timestamp = timestampFormatter.format(sourceTimestamp);
+			}
 			logger.info(String.format("%-8s%-30starget: %s",timestamp,task.getClass().getSimpleName(),task.getTarget()));
 		}
 	}
@@ -259,7 +265,37 @@ public class ServiceGridOrchestrationTest {
 		logger.info("Starting installMultipleInstanceServiceTest");
 		installService("tomcat", 2);
 		execute();
-		
+		assertTwoTomcatInstances();
+	}
+	
+	
+	@Test
+	public void agentFailoverTest() throws URISyntaxException {
+		logger.info("Starting agentFailoverTest");
+		installService("tomcat", 1);
+		execute();
+		killOnlyAgent();
+		execute();
+		URI instanceId = getOnlyServiceInstanceId();
+		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		AgentState agentState = getAgentState(getOnlyAgentId());
+		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
+		Assert.assertEquals(agentState.getProgress(),AgentState.Progress.AGENT_STARTED);
+		Assert.assertEquals(agentState.getNumberOfRestarts(),1);
+	}
+	
+	@Test
+	public void scaleOutServiceTest() throws URISyntaxException {
+		logger.info("Starting installSingleInstanceServiceTest URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
+		installService("tomcat", 1);
+		execute();
+		scaleOutService("tomcat",2);
+		execute();
+		assertTwoTomcatInstances();
+	}
+
+	private void assertTwoTomcatInstances() throws URISyntaxException {
 		final URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = state.getElement(state.getLastElementId(serviceId), ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
@@ -284,36 +320,7 @@ public class ServiceGridOrchestrationTest {
 			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		}
 	}
-	
-	@Test
-	public void agentFailoverTest() throws URISyntaxException {
-		logger.info("Starting agentFailoverTest");
-		installService("tomcat", 1);
-		execute();
-		killOnlyAgent();
-		execute();
-		URI instanceId = getOnlyServiceInstanceId();
-		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		AgentState agentState = getAgentState(getOnlyAgentId());
-		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
-		Assert.assertEquals(agentState.getProgress(),AgentState.Progress.AGENT_STARTED);
-		Assert.assertEquals(agentState.getNumberOfRestarts(),1);
-	}
-
-	private AgentState getAgentState(URI agentId) {
-		return getLastState(agentId, AgentState.class);
-	}
-
-	private ServiceInstanceState getServiceInstanceState(URI instanceId) throws URISyntaxException {
-		return getLastState(instanceId, ServiceInstanceState.class);
-	}
-	
-	private <T extends TaskExecutorState> T getLastState(URI executorId, Class<T> stateClass) {
-		T lastState = ServiceUtils.getLastState(state, executorId, stateClass);
-		Assert.assertNotNull(lastState);
-		return lastState;
-	}
+		
 	
 	/*public void installTwoSingleInstanceServicesTest(){
 		installService("tomcat", 1);
@@ -327,17 +334,39 @@ public class ServiceGridOrchestrationTest {
 //		
 //	}
 
+	private AgentState getAgentState(URI agentId) {
+		return getLastState(agentId, AgentState.class);
+	}
+	
+	private ServiceInstanceState getServiceInstanceState(URI instanceId) throws URISyntaxException {
+		return getLastState(instanceId, ServiceInstanceState.class);
+	}
+	
+	private <T extends TaskExecutorState> T getLastState(URI executorId, Class<T> stateClass) {
+		T lastState = ServiceUtils.getLastState(state, executorId, stateClass);
+		Assert.assertNotNull(lastState);
+		return lastState;
+	}
 
 	private void installService(String name, int numberOfInstances) throws URISyntaxException {
 		ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setDisplayName(name);
-		serviceConfig.setNumberOfInstances(numberOfInstances);
+		serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
 		serviceConfig.setServiceId(getServiceId(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
 		client.addServiceTask(orchestratorExecutorId, installServiceTask);
 	}
 
+	private void scaleOutService(String serviceName, int plannedNumberOfInstances) throws URISyntaxException {
+		final ScaleOutServiceTask scaleOutServiceTask = new ScaleOutServiceTask();
+		URI serviceId = getServiceId(serviceName);
+		scaleOutServiceTask.setServiceId(serviceId);
+		scaleOutServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
+		client.addServiceTask(orchestratorExecutorId, scaleOutServiceTask);
+	}
+
+	
 	private URI getServiceId(String name) throws URISyntaxException {
 		return new URI("http://localhost/services/" + name + "/");
 	}
@@ -345,7 +374,7 @@ public class ServiceGridOrchestrationTest {
 	private void execute() throws URISyntaxException {
 		
 		int consecutiveEmptyCycles = 0;
-		for (int i = 0 ; i < 120 ;) {
+		for (; timeProvider.currentTimeMillis() < 300000; timeProvider.increaseBy(1000)) {
 
 			boolean emptyCycle = true;
 			OrchestrateTask orchestrateTask = new OrchestrateTask();
@@ -358,7 +387,6 @@ public class ServiceGridOrchestrationTest {
 					if (!container.getExecutorId().equals(orchestratorExecutorId)) {
 						emptyCycle = false;
 					}
-					i++;
 				}
 			}
 
