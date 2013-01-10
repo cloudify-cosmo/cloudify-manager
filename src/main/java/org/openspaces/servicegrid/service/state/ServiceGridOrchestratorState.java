@@ -8,7 +8,8 @@ import com.google.common.collect.Sets;
 
 public class ServiceGridOrchestratorState extends TaskExecutorState {
 
-	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet(); 
+	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
+	private boolean planned; 
 	
 	public Set<ServiceConfig> getServices() {
 		return servicesConfig;
@@ -20,5 +21,13 @@ public class ServiceGridOrchestratorState extends TaskExecutorState {
 	
 	public void addService(ServiceConfig serviceConfig) {
 		servicesConfig.add(serviceConfig);
+	}
+
+	public void setPlanned(boolean planned) {
+		this.planned = true;
+	}
+	
+	public boolean isPlanned() {
+		return this.planned;
 	}
 }

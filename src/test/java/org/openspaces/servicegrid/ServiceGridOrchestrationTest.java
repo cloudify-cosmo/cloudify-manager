@@ -16,9 +16,11 @@ import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.TaskExecutorWrapper;
 import org.openspaces.servicegrid.service.OrchestrateTask;
-import org.openspaces.servicegrid.service.PlanTask;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
-import org.openspaces.servicegrid.service.ServiceOrchestratorParameter;
+import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
+import org.openspaces.servicegrid.service.ServiceGridPlanner;
+import org.openspaces.servicegrid.service.ServiceGridPlannerParameter;
+import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
@@ -44,6 +46,7 @@ public class ServiceGridOrchestrationTest {
 	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
 	private URI orchestratorExecutorId;
+	private URI plannerExecutorId;
 	private MockTaskContainer orchestratorContainer;
 	private MockStreams<TaskExecutorState> state;
 	private StreamConsumer<Task> taskConsumer;
@@ -67,6 +70,7 @@ public class ServiceGridOrchestrationTest {
 		
 		try {
 			orchestratorExecutorId = new URI("http://localhost/services/orchestrator/");
+			plannerExecutorId = new URI("http://localhost/services/planner/");
 			cloudExecutorId = new URI("http://localhost/services/cloud/");
 			agentLifecycleExecutorId = new URI("http://localhost/services/agentLifecycle/");
 		} catch (URISyntaxException e) {
@@ -86,10 +90,11 @@ public class ServiceGridOrchestrationTest {
 		client = new ServiceClient(stateReader, taskConsumer, taskProducer);
 				
 		final MockCurrentTimeProvider orchestratorTimeProvider = new MockCurrentTimeProvider();
-		final ServiceOrchestratorParameter serviceOrchestratorParameter = new ServiceOrchestratorParameter();
+		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorExecutorId(orchestratorExecutorId);
 		serviceOrchestratorParameter.setCloudExecutorId(cloudExecutorId);
 		serviceOrchestratorParameter.setAgentLifecycleExecutorId(agentLifecycleExecutorId);
+		serviceOrchestratorParameter.setPlannerExecutorId(plannerExecutorId);
 		serviceOrchestratorParameter.setTaskConsumer(taskConsumer);
 		serviceOrchestratorParameter.setTaskProducer(taskProducer);
 		serviceOrchestratorParameter.setStateReader(stateReader);
@@ -103,9 +108,24 @@ public class ServiceGridOrchestrationTest {
 						serviceOrchestratorParameter),
 				orchestratorTimeProvider);
 
+		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
+		servicePlannerParameter.setPlannerExecutorId(plannerExecutorId);
+		servicePlannerParameter.setTaskConsumer(taskConsumer);
+		servicePlannerParameter.setTaskProducer(taskProducer);
+		servicePlannerParameter.setStateReader(stateReader);
+		servicePlannerParameter.setTimeProvider(orchestratorTimeProvider);
+		
 		containers = Sets.newCopyOnWriteArraySet();
 		addContainers(
 				orchestratorContainer,				
+				
+				new MockTaskContainer(
+					plannerExecutorId,
+					stateReader, stateWriter, 
+					taskConsumer, 
+					new ServiceGridPlanner(servicePlannerParameter),
+					new MockCurrentTimeProvider()),
+			
 				new MockTaskContainer(
 						cloudExecutorId, 
 						stateReader, stateWriter,
@@ -212,7 +232,6 @@ public class ServiceGridOrchestrationTest {
 	public void installSingleInstanceServiceTest() throws URISyntaxException {
 		logger.info("Starting installSingleInstanceServiceTest URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		installService("tomcat", 1);
-		plan();
 		execute();
 		URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = state.getElement(state.getLastElementId(serviceId), ServiceState.class);
@@ -239,7 +258,6 @@ public class ServiceGridOrchestrationTest {
 	public void installMultipleInstanceServiceTest() throws URISyntaxException {
 		logger.info("Starting installMultipleInstanceServiceTest");
 		installService("tomcat", 2);
-		plan();
 		execute();
 		
 		final URI serviceId = getServiceId("tomcat");
@@ -271,7 +289,6 @@ public class ServiceGridOrchestrationTest {
 	public void agentFailoverTest() throws URISyntaxException {
 		logger.info("Starting agentFailoverTest");
 		installService("tomcat", 1);
-		plan();
 		execute();
 		killOnlyAgent();
 		execute();
@@ -285,16 +302,15 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	private AgentState getAgentState(URI agentId) {
-		return getState(agentId, AgentState.class);
+		return getLastState(agentId, AgentState.class);
 	}
 
 	private ServiceInstanceState getServiceInstanceState(URI instanceId) throws URISyntaxException {
-		return getState(instanceId, ServiceInstanceState.class);
+		return getLastState(instanceId, ServiceInstanceState.class);
 	}
 	
-	private <T extends TaskExecutorState> T getState(URI executorId, Class<T> stateClass) {
-		URI lastStateId = state.getLastElementId(executorId);
-		T lastState = state.getElement(lastStateId, stateClass);
+	private <T extends TaskExecutorState> T getLastState(URI executorId, Class<T> stateClass) {
+		T lastState = ServiceUtils.getLastState(state, executorId, stateClass);
 		Assert.assertNotNull(lastState);
 		return lastState;
 	}
@@ -369,10 +385,7 @@ public class ServiceGridOrchestrationTest {
 		
 		Assert.fail("Executing too many cycles progress=" + sb);
 	}
-	private void plan() {
-		client.addServiceTask(orchestratorExecutorId, new PlanTask());
-	}
-
+	
 	private URI getOnlyServiceInstanceId() throws URISyntaxException {
 		final Iterable<URI> instanceIds = state.getElementIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),1);
