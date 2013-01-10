@@ -2,10 +2,12 @@ package org.openspaces.servicegrid;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DecimalFormat;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.mock.MockEmbeddedAgentLifecycleTaskExecutor;
@@ -14,6 +16,7 @@ import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.TaskExecutorWrapper;
 import org.openspaces.servicegrid.service.OrchestrateTask;
+import org.openspaces.servicegrid.service.PlanTask;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceOrchestratorParameter;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
@@ -28,14 +31,13 @@ import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.testng.log.TextFormatter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultiset;
 
 public class ServiceGridOrchestrationTest {
 	
@@ -45,9 +47,18 @@ public class ServiceGridOrchestrationTest {
 	private MockTaskContainer orchestratorContainer;
 	private MockStreams<TaskExecutorState> state;
 	private StreamConsumer<Task> taskConsumer;
-	private final Logger logger = Logger.getLogger(this.getClass().getName());
+	private final Logger logger;
 	private MockStreams<Task> taskBroker;
 	
+	public ServiceGridOrchestrationTest() {
+		logger = Logger.getLogger(this.getClass().getName());
+		Logger parentLogger = logger;
+		while (parentLogger.getHandlers().length == 0) {
+			parentLogger = logger.getParent();
+		}
+		
+		parentLogger.getHandlers()[0].setFormatter(new TextFormatter());
+	}
 	@BeforeMethod
 	public void before() {
 		
@@ -150,7 +161,9 @@ public class ServiceGridOrchestrationTest {
 	public void after() throws URISyntaxException {
 		Iterable<Task> tasks = filterOrchestratorTasks(getSortedTasks());
 		for (final Task task : tasks) {
-			logger.info(task.getSourceTimestamp() + " target: " + task.getTarget() + " type:"+task.getClass());
+			DecimalFormat timestampFormatter = new DecimalFormat("###,###");
+			String timestamp = timestampFormatter.format(task.getSourceTimestamp());
+			logger.info(String.format("%-8s%-30starget: %s",timestamp,task.getClass().getSimpleName(),task.getTarget()));
 		}
 	}
 
@@ -165,18 +178,29 @@ public class ServiceGridOrchestrationTest {
 	
 	private Iterable<Task> getSortedTasks() throws URISyntaxException {
 		final Iterable<URI> taskExecutorIds = taskBroker.getElementIdsStartingWith(new URI("http://localhost/"));
-		Multiset<Task> sortedTasks = TreeMultiset.create(
+		Set<Task> sortedTasks = Sets.newTreeSet(
 				new Comparator<Task>() {
-
+			private final ObjectMapper mapper = new ObjectMapper();
 			@Override
 			public int compare(Task o1, Task o2) {
-				if (o1.getSourceTimestamp() == null) return 1;
-				if (o2.getSourceTimestamp() == null) return -1;
-				return o1.getSourceTimestamp().compareTo(o2.getSourceTimestamp());
+				int c;
+				if (o1.getSourceTimestamp() == null) c = 1;
+				else if (o2.getSourceTimestamp() == null) c = -1;
+				else {
+					c = o1.getSourceTimestamp().compareTo(o2.getSourceTimestamp());
+					if (c == 0) {
+						try {
+							c = mapper.writeValueAsString(o1).compareTo(mapper.writeValueAsString(o2));
+						} catch (Throwable t) {
+							throw Throwables.propagate(t);
+						} 
+					}
+				}
+				return c;
 			}
 		});
-		for (final URI taskExecutorId : taskExecutorIds) {
-			for (URI taskId = taskBroker.getFirstElementId(taskExecutorId); taskId != null ; taskId = taskBroker.getNextElementId(taskId)) {
+		for (final URI executorId : taskExecutorIds) {
+			for (URI taskId = taskBroker.getFirstElementId(executorId); taskId != null ; taskId = taskBroker.getNextElementId(taskId)) {
 				final Task task = taskBroker.getElement(taskId, Task.class);
 				sortedTasks.add(task);
 			}
@@ -184,20 +208,23 @@ public class ServiceGridOrchestrationTest {
 		return sortedTasks;
 	}
 	
-	//@Test
+	@Test
 	public void installSingleInstanceServiceTest() throws URISyntaxException {
 		logger.info("Starting installSingleInstanceServiceTest URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		installService("tomcat", 1);
+		plan();
 		execute();
-		final ServiceState serviceState = state.getElement(state.getLastElementId(getServiceURI("tomcat")), ServiceState.class);
-		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),1);
+		URI serviceId = getServiceId("tomcat");
+		final ServiceState serviceState = state.getElement(state.getLastElementId(serviceId), ServiceState.class);
+		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
 		logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		URI instanceId = getOnlyServiceInstanceId();
+		URI agentId = getOnlyAgentId();
 		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
+		Assert.assertEquals(instanceState.getServiceId(), serviceId);
+		Assert.assertEquals(instanceState.getAgentId(), agentId);
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
-		URI agentId = getOnlyAgentId();
 		AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
@@ -208,14 +235,16 @@ public class ServiceGridOrchestrationTest {
 		return Iterables.getOnlyElement(getAgentIds());
 	}
 	
-	//@Test
+	@Test
 	public void installMultipleInstanceServiceTest() throws URISyntaxException {
 		logger.info("Starting installMultipleInstanceServiceTest");
 		installService("tomcat", 2);
+		plan();
 		execute();
 		
-		final ServiceState serviceState = state.getElement(state.getLastElementId(getServiceURI("tomcat")), ServiceState.class);
-		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),2);
+		final URI serviceId = getServiceId("tomcat");
+		final ServiceState serviceState = state.getElement(state.getLastElementId(serviceId), ServiceState.class);
+		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
 		logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		Iterable<URI> instanceIds = state.getElementIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
@@ -232,7 +261,8 @@ public class ServiceGridOrchestrationTest {
 			URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
 			Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
 			ServiceInstanceState instanceState = state.getElement(state.getLastElementId(instanceId), ServiceInstanceState.class);
-			Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
+			Assert.assertEquals(instanceState.getServiceId(), serviceId);
+			Assert.assertEquals(instanceState.getAgentId(), agentId);
 			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		}
 	}
@@ -241,6 +271,7 @@ public class ServiceGridOrchestrationTest {
 	public void agentFailoverTest() throws URISyntaxException {
 		logger.info("Starting agentFailoverTest");
 		installService("tomcat", 1);
+		plan();
 		execute();
 		killOnlyAgent();
 		execute();
@@ -285,18 +316,18 @@ public class ServiceGridOrchestrationTest {
 		ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setDisplayName(name);
 		serviceConfig.setNumberOfInstances(numberOfInstances);
-		serviceConfig.setServiceId(getServiceURI(name));
+		serviceConfig.setServiceId(getServiceId(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
 		client.addServiceTask(orchestratorExecutorId, installServiceTask);
 	}
 
-	private URI getServiceURI(String name) throws URISyntaxException {
-		return new URI("http://localhost/services/" + name);
+	private URI getServiceId(String name) throws URISyntaxException {
+		return new URI("http://localhost/services/" + name + "/");
 	}
 	
 	private void execute() throws URISyntaxException {
-
+		
 		int consecutiveEmptyCycles = 0;
 		for (int i = 0 ; i < 120 ;) {
 
@@ -329,7 +360,7 @@ public class ServiceGridOrchestrationTest {
 			ServiceState serviceState = state.getElement(state.getLastElementId(URI), ServiceState.class);
 			sb.append("service: " + serviceState.getServiceConfig().getDisplayName());
 			sb.append(" - ");
-			for (URI instanceURI : serviceState.getInstancesIds()) {
+			for (URI instanceURI : serviceState.getInstanceIds()) {
 				ServiceInstanceState instanceState = state.getElement(state.getLastElementId(instanceURI), ServiceInstanceState.class);
 				sb.append(instanceURI).append("[").append(instanceState.getProgress()).append("] ");
 			}
@@ -337,6 +368,9 @@ public class ServiceGridOrchestrationTest {
 		}
 		
 		Assert.fail("Executing too many cycles progress=" + sb);
+	}
+	private void plan() {
+		client.addServiceTask(orchestratorExecutorId, new PlanTask());
 	}
 
 	private URI getOnlyServiceInstanceId() throws URISyntaxException {
