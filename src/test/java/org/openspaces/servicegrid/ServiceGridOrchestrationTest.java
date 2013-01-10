@@ -53,7 +53,7 @@ public class ServiceGridOrchestrationTest {
 	private StreamConsumer<Task> taskConsumer;
 	private final Logger logger;
 	private MockStreams<Task> taskBroker;
-	private final MockCurrentTimeProvider timeProvider = new MockCurrentTimeProvider();
+	private MockCurrentTimeProvider timeProvider;
 	
 	public ServiceGridOrchestrationTest() {
 		logger = Logger.getLogger(this.getClass().getName());
@@ -66,6 +66,8 @@ public class ServiceGridOrchestrationTest {
 	}
 	@BeforeMethod
 	public void before() {
+		
+		timeProvider = new MockCurrentTimeProvider();
 		
 		final URI cloudExecutorId;
 		final URI agentLifecycleExecutorId;
