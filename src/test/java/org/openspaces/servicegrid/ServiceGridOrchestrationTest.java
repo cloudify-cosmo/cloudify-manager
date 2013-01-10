@@ -29,6 +29,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -109,10 +110,22 @@ public class ServiceGridOrchestrationTest {
 							
 							@Override
 							public void wrapTaskExecutor(
-									Object taskExecutor, URI executorId) {
+									final Object taskExecutor, final URI executorId) {
 								
 								MockTaskContainer container = new MockTaskContainer(executorId, state, state, taskConsumer, taskExecutor, new MockCurrentTimeProvider());
 								addContainer(container);
+							}
+
+							@Override
+							public void removeTaskExecutor(final URI executorId) {
+								containers.remove(
+									Iterables.find(containers, new Predicate<MockTaskContainer>() {
+										@Override
+										public boolean apply(MockTaskContainer executor) {
+											return executorId.equals(executor.getExecutorId());
+										}
+									})
+								);
 							}
 
 						}
@@ -129,6 +142,7 @@ public class ServiceGridOrchestrationTest {
 	
 	private void addContainer(MockTaskContainer container) {
 		logger.info("Adding container for " + container.getExecutorId());
+		Preconditions.checkState(!containers.contains(container), "Container " + container.getExecutorId() + " was already added");
 		containers.add(container);
 	}
 	
@@ -170,7 +184,7 @@ public class ServiceGridOrchestrationTest {
 		return sortedTasks;
 	}
 	
-	@Test
+	//@Test
 	public void installSingleInstanceServiceTest() throws URISyntaxException {
 		logger.info("Starting installSingleInstanceServiceTest URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		installService("tomcat", 1);
@@ -178,21 +192,23 @@ public class ServiceGridOrchestrationTest {
 		final ServiceState serviceState = state.getElement(state.getLastElementId(getServiceURI("tomcat")), ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstancesIds()),1);
 		logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
-		ServiceInstanceState instanceState = getOnlyServiceInstanceState();
+		URI instanceId = getOnlyServiceInstanceId();
+		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 		Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
 		URI agentId = getOnlyAgentId();
-		Assert.assertEquals(instanceState.getAgentId(),agentId);
-		AgentState agentState = state.getElement(state.getLastElementId(agentId), AgentState.class);
+		AgentState agentState = getAgentState(agentId);
+		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
+		Assert.assertEquals(agentState.getNumberOfRestarts(), 0);
 	}
 
 	private URI getOnlyAgentId() throws URISyntaxException {
 		return Iterables.getOnlyElement(getAgentIds());
 	}
 	
-	@Test
+	//@Test
 	public void installMultipleInstanceServiceTest() throws URISyntaxException {
 		logger.info("Starting installMultipleInstanceServiceTest");
 		installService("tomcat", 2);
@@ -205,15 +221,19 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
 		Iterable<URI> agentIds = getAgentIds();
-		Assert.assertEquals(Iterables.size(agentIds), 2);
-		for (URI URI : instanceIds) {
-			ServiceInstanceState instanceState = state.getElement(state.getLastElementId(URI), ServiceInstanceState.class);
+		int numberOfAgents = Iterables.size(agentIds);
+		Assert.assertEquals(numberOfAgents, 2);
+		for (int i = 0 ; i < numberOfAgents; i++) {
+			
+			URI agentId = Iterables.get(agentIds, i);
+			AgentState agentState = getAgentState(agentId);
+			Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
+			Assert.assertEquals(agentState.getNumberOfRestarts(), 0);
+			URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
+			Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
+			ServiceInstanceState instanceState = state.getElement(state.getLastElementId(instanceId), ServiceInstanceState.class);
 			Assert.assertEquals(instanceState.getDisplayName(), "tomcat");
 			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-			java.net.URI agentId = instanceState.getAgentId();
-			Assert.assertTrue(Iterables.contains(agentIds, agentId));
-			AgentState agentState = state.getElement(state.getLastElementId(agentId), AgentState.class);
-			Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
 		}
 	}
 	
@@ -224,13 +244,30 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		killOnlyAgent();
 		execute();
-		Assert.assertEquals(getOnlyServiceInstanceState().getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		Iterable<URI> agentIds = getAgentIds();
-		Assert.assertEquals(Iterables.size(agentIds),2);
-		URI secondAgentId = Iterables.get(agentIds, 1);
-		Assert.assertEquals(getOnlyServiceInstanceState().getAgentId(),secondAgentId);	
+		URI instanceId = getOnlyServiceInstanceId();
+		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		AgentState agentState = getAgentState(getOnlyAgentId());
+		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
+		Assert.assertEquals(agentState.getProgress(),AgentState.Progress.AGENT_STARTED);
+		Assert.assertEquals(agentState.getNumberOfRestarts(),1);
 	}
 
+	private AgentState getAgentState(URI agentId) {
+		return getState(agentId, AgentState.class);
+	}
+
+	private ServiceInstanceState getServiceInstanceState(URI instanceId) throws URISyntaxException {
+		return getState(instanceId, ServiceInstanceState.class);
+	}
+	
+	private <T extends TaskExecutorState> T getState(URI executorId, Class<T> stateClass) {
+		URI lastStateId = state.getLastElementId(executorId);
+		T lastState = state.getElement(lastStateId, stateClass);
+		Assert.assertNotNull(lastState);
+		return lastState;
+	}
+	
 	/*public void installTwoSingleInstanceServicesTest(){
 		installService("tomcat", 1);
 		installService("cassandra", 1);
@@ -302,12 +339,12 @@ public class ServiceGridOrchestrationTest {
 		Assert.fail("Executing too many cycles progress=" + sb);
 	}
 
-	private ServiceInstanceState getOnlyServiceInstanceState() throws URISyntaxException {
-		Iterable<URI> instanceIds = state.getElementIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
+	private URI getOnlyServiceInstanceId() throws URISyntaxException {
+		final Iterable<URI> instanceIds = state.getElementIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
-		ServiceInstanceState instanceState = state.getElement(state.getLastElementId(Iterables.getOnlyElement(instanceIds)), ServiceInstanceState.class);
-		return instanceState;
+		final URI serviceInstanceId = Iterables.getOnlyElement(instanceIds);
+		return serviceInstanceId;
 	}
 
 	private Iterable<URI> getAgentIds() throws URISyntaxException {

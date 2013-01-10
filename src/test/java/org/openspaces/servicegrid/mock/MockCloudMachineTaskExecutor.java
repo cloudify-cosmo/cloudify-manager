@@ -7,6 +7,8 @@ import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 
+import com.google.common.base.Preconditions;
+
 public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
 
 	private final TaskExecutorState state = new TaskExecutorState();
@@ -26,6 +28,7 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 		if (task instanceof StartMachineTask) {
 			this.impersonatedStateModifier = impersonatedStateModifier;
 			AgentState agentState = impersonatedStateModifier.getState();
+			Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.PLANNED));
 			agentState.setProgress(AgentState.Progress.STARTING_MACHINE);
 			impersonatedStateModifier.updateState(agentState);
 		

@@ -9,7 +9,7 @@ import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.AgentTaskExecutor;
 import org.openspaces.servicegrid.agent.state.AgentState;
-import org.openspaces.servicegrid.agent.tasks.DiagnoseAgentNotRespondingTask;
+import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 
 import com.google.common.base.Preconditions;
@@ -35,19 +35,27 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 
 			AgentState agentState = impersonatedStateModifier.getState();
 			Preconditions.checkNotNull(agentState);
-			URI agentExecutorId = ((StartAgentTask) task).getAgentExecutorId();
-			Preconditions.checkState(agentExecutorId.toString().endsWith("/"));
+			Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.MACHINE_STARTED));
+			URI agentId = ((StartAgentTask) task).getImpersonatedTarget();
+			Preconditions.checkState(agentId.toString().endsWith("/"));
 			MockEmbeddedAgent agent = new MockEmbeddedAgent();
-			agents.put(agentExecutorId, agent);
+			agents.put(agentId, agent);
 			agentState.setProgress(AgentState.Progress.AGENT_STARTED);
-			executorWrapper.wrapTaskExecutor(new AgentTaskExecutor(agentState, agent), agentExecutorId);
+			executorWrapper.wrapTaskExecutor(new AgentTaskExecutor(agentState, agent), agentId);
 			impersonatedStateModifier.updateState(agentState);
 		}
-		else if (task instanceof DiagnoseAgentNotRespondingTask) {
-
+		else if (task instanceof RestartNotRespondingAgentTask) {
+			
+			//In a real implementation here is where we validate the agent process is killed
 			AgentState agentState = impersonatedStateModifier.getState();
-			agentState.setProgress(AgentState.Progress.AGENT_NOT_RESPONDING);
+			Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+			agentState.setNumberOfRestarts(agentState.getNumberOfRestarts() +1);
+			URI agentId = task.getImpersonatedTarget();
+			MockEmbeddedAgent agent = new MockEmbeddedAgent();
+			executorWrapper.removeTaskExecutor(agentId);
+			executorWrapper.wrapTaskExecutor(new AgentTaskExecutor(agentState, agent), agentId);
 			impersonatedStateModifier.updateState(agentState);
+			//In a real implementation here is where we restart the agent process
 		}
 		else {
 			Preconditions.checkState(false, "Cannot run task " + task.getClass());

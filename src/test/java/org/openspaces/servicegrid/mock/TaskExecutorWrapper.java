@@ -6,5 +6,6 @@ public interface TaskExecutorWrapper {
 	
 	void wrapTaskExecutor(Object taskExecutor, URI executorId);
 
+	void removeTaskExecutor(URI executorId);
 	
 }

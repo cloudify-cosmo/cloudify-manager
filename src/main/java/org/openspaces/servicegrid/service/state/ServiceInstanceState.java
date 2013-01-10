@@ -1,7 +1,5 @@
 package org.openspaces.servicegrid.service.state;
 
-import java.net.URI;
-
 import org.openspaces.servicegrid.TaskExecutorState;
 
 public class ServiceInstanceState extends TaskExecutorState {
@@ -15,7 +13,6 @@ public class ServiceInstanceState extends TaskExecutorState {
 	}
 	
 	private String progress;
-	private URI agentId;
 	private String displayName;
 	
 	public String getProgress() {
@@ -24,14 +21,6 @@ public class ServiceInstanceState extends TaskExecutorState {
 
 	public void setProgress(String progress) {
 		this.progress = progress;
-	}
-
-	public URI getAgentId() {
-		return agentId;
-	}
-
-	public void setAgentId(URI agentId) {
-		this.agentId = agentId;
 	}
 
 	public String getDisplayName() {

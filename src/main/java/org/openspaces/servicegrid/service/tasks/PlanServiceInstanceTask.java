@@ -5,7 +5,6 @@ import java.net.URI;
 public class PlanServiceInstanceTask extends ServiceTask {
 	
 	private URI serviceId;
-	private URI agentId;
 
 	public URI getServiceId() {
 		return serviceId;
@@ -15,12 +14,4 @@ public class PlanServiceInstanceTask extends ServiceTask {
 		this.serviceId = serviceId;
 	}
 
-	public URI getAgentId() {
-		return agentId;
-	}
-
-	public void setAgentId(URI agentId) {
-		this.agentId = agentId;
-	}
-	
 }

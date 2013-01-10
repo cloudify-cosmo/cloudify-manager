@@ -20,7 +20,7 @@ import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.PlanAgentTask;
-import org.openspaces.servicegrid.agent.tasks.DiagnoseAgentNotRespondingTask;
+import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
@@ -147,6 +147,7 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 						final PlanAgentTask task = new PlanAgentTask();
 						task.setImpersonatedTarget(agentId);	
 						task.setTarget(orchestratorExecutorId);
+						task.setServiceInstanceIds(Lists.newArrayList(instanceId));
 						addNewTaskIfNotExists(newTasks, task);
 					}
 					else {
@@ -160,20 +161,18 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 							task.setTarget(cloudExecutorId);
 							addNewTaskIfNotExists(newTasks, task);
 						}
-						else if (agentProgress.equals(AgentState.Progress.MACHINE_STARTED) ||
-								 agentProgress.equals(AgentState.Progress.AGENT_NOT_RESPONDING)) {
+						else if (agentProgress.equals(AgentState.Progress.MACHINE_STARTED)) {
 							final StartAgentTask task = new StartAgentTask();
 							task.setImpersonatedTarget(agentId);	
 							task.setTarget(agentLifecycleExecutorId);
 							task.setIpAddress(agentState.getIpAddress());
-							task.setAgentExecutorId(agentId);
 							addNewTaskIfNotExists(newTasks, task);
 						}
 						else if (isAgentNotResponding(agentId, nowTimestamp)) {
-							final DiagnoseAgentNotRespondingTask task = new DiagnoseAgentNotRespondingTask();
+							
+							final RestartNotRespondingAgentTask task = new RestartNotRespondingAgentTask();
 							task.setImpersonatedTarget(agentId);	
 							task.setTarget(agentLifecycleExecutorId);
-							task.setIpAddress(agentState.getIpAddress());
 							addNewTaskIfNotExists(newTasks, task);
 						}
 						else {
@@ -182,7 +181,6 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 						
 							final PlanServiceInstanceTask task = new PlanServiceInstanceTask();
 							task.setServiceId(serviceConfig.getServiceId());
-							task.setAgentId(agentId);
 							task.setImpersonatedTarget(instanceId);	
 							task.setTarget(orchestratorExecutorId);
 							addNewTaskIfNotExists(newTasks, task);
@@ -220,12 +218,15 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		for (Task task : newTasks) {
 			agentNewTasks.add(task.getTarget());
 		}
-		for (URI agentExecutorId : getAgentIds()) {
-			if (!agentNewTasks.contains(agentExecutorId)) {
-				if (!isAgentExecutingTask(agentExecutorId)) {
-					if (getPendingAgentTask(agentExecutorId) == null) {
+		for (URI agentId : getAgentIds()) {
+			if (!agentNewTasks.contains(agentId)) {
+				if (!isExecutorExecutingTask(agentId)) {
+					if (getPendingExecutorTask(agentId) == null) {
+						AgentState agentState = getAgentState(agentId);
+						int numberOfRestarts = agentState.getNumberOfRestarts();
 						final PingAgentTask pingTask = new PingAgentTask();
-						pingTask.setTarget(agentExecutorId);
+						pingTask.setTarget(agentId);
+						pingTask.setNumberOfRestarts(numberOfRestarts);
 						addNewTask(newTasks, pingTask);
 					}
 				}
@@ -259,16 +260,20 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		
 		boolean isZombie = false;
 		
-		if (!isAgentExecutingTask(agentExecutorId)) {
-			final URI nextTaskToExecute = getPendingAgentTask(agentExecutorId);
+		if (!isExecutorExecutingTask(agentExecutorId)) {
+			final URI nextTaskToExecute = getPendingExecutorTask(agentExecutorId);
 			if (nextTaskToExecute != null) {
 				final Task task = taskConsumer.getElement(nextTaskToExecute, Task.class);
 				Preconditions.checkState(task.getSource().equals(orchestratorExecutorId), "All agent tasks are assumed to be from this orchestrator");
 				if (task instanceof PingAgentTask) {
-					final long taskTimestamp = task.getSourceTimestamp();
-					final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
-					if ( notRespondingMilliseconds > ZOMBIE_DETECTION_MILLISECONDS ) {
-						isZombie = true;
+					PingAgentTask pingAgentTask = (PingAgentTask) task;
+					AgentState agentState = getAgentState(agentExecutorId);
+					if (agentState.getNumberOfRestarts() == pingAgentTask.getNumberOfRestarts()) {
+						final long taskTimestamp = task.getSourceTimestamp();
+						final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
+						if ( notRespondingMilliseconds > ZOMBIE_DETECTION_MILLISECONDS ) {
+							isZombie = true;
+						}
 					}
 				}
 			}
@@ -348,31 +353,35 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		newTasks.add(task);
 	}
 
-	private boolean isAgentExecutingTask(URI agentExecutorId) {
-		TaskExecutorState agentState = getAgentState(agentExecutorId);
-		return agentState != null && !Iterables.isEmpty(agentState.getExecutingTasks());
+	private boolean isExecutorExecutingTask(URI executorId) {
+		TaskExecutorState executorState = getTaskExecutorState(executorId, TaskExecutorState.class);
+		return executorState != null && !Iterables.isEmpty(executorState.getExecutingTasks());
 	}
 
-	private TaskExecutorState getAgentState(URI agentExecutorId) {
-		TaskExecutorState agentState = null;
-		URI lastAgentStateId = stateReader.getLastElementId(agentExecutorId);
+	private <T extends TaskExecutorState> T getTaskExecutorState(URI executorId, Class<T> clazz) {
+		T executorState = null;
+		URI lastAgentStateId = stateReader.getLastElementId(executorId);
 		if (lastAgentStateId != null) {
-			agentState = stateReader.getElement(lastAgentStateId, TaskExecutorState.class);
+			executorState = stateReader.getElement(lastAgentStateId, clazz);
 		}
-		return agentState;
+		return executorState;
+	}
+	
+	private AgentState getAgentState(URI agentExecutorId) {
+		return getTaskExecutorState(agentExecutorId, AgentState.class);
 	}
 
-	private URI getPendingAgentTask(URI agentExecutorId) {
+	private URI getPendingExecutorTask(URI executorId) {
 		URI lastCompletedTask = null;
 		
-		final TaskExecutorState agentState = getAgentState(agentExecutorId);
-		if (agentState != null) {
-			lastCompletedTask = Iterables.getLast(agentState.getCompletedTasks(),null);
+		final TaskExecutorState executorState = getTaskExecutorState(executorId, TaskExecutorState.class);
+		if (executorState != null) {
+			lastCompletedTask = Iterables.getLast(executorState.getCompletedTasks(),null);
 		}
 		
 		URI nextTaskToExecute = null;
 		if (lastCompletedTask == null) {
-			nextTaskToExecute = taskConsumer.getFirstElementId(agentExecutorId);
+			nextTaskToExecute = taskConsumer.getFirstElementId(executorId);
 		}
 		else {
 			nextTaskToExecute = taskConsumer.getNextElementId(lastCompletedTask); 
@@ -381,23 +390,23 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		return nextTaskToExecute;
 	}
 
-	private Iterable<URI> getExecutingAndPendingAgentTasks(URI agentExecutorId) {
-		 Iterable<URI> tasks = Iterables.concat(getExecutingAgentTasks(agentExecutorId), getPendingAgentTasks(agentExecutorId));
+	private Iterable<URI> getExecutingAndPendingAgentTasks(URI executorId) {
+		 Iterable<URI> tasks = Iterables.concat(getExecutingTasks(executorId), getPendingExecutorTasks(executorId));
 		 return tasks;
 	}
 	
-	private Iterable<URI> getExecutingAgentTasks(URI agentExecutorId) {
-		TaskExecutorState agentState = getAgentState(agentExecutorId);
-		if (agentState == null) {
+	private Iterable<URI> getExecutingTasks(URI executorId) {
+		TaskExecutorState executorState = getTaskExecutorState(executorId, TaskExecutorState.class);
+		if (executorState == null) {
 			return Lists.newArrayList();
 		}
-		return agentState.getExecutingTasks();
+		return executorState.getExecutingTasks();
 	}
 	
-	private Iterable<URI> getPendingAgentTasks(URI agentExecutorId) {
+	private Iterable<URI> getPendingExecutorTasks(URI executorId) {
 
 		List<URI> tasks = Lists.newArrayList();
-		URI pendingTaskId = getPendingAgentTask(agentExecutorId);
+		URI pendingTaskId = getPendingExecutorTask(executorId);
 		while (pendingTaskId != null) {
 			tasks.add(pendingTaskId);
 			pendingTaskId = taskConsumer.getNextElementId(pendingTaskId);
@@ -452,12 +461,12 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 			final ServiceConfig serviceConfig = getServiceConfig(serviceId);
 			
 			impersonatedServiceInstanceState.setDisplayName(serviceConfig.getDisplayName());
-			impersonatedServiceInstanceState.setAgentId(((PlanServiceInstanceTask)task).getAgentId());
 			impersonatedStateModifier.updateState(impersonatedServiceInstanceState);
 		}
 		else if (task instanceof PlanAgentTask) {
 			AgentState impersonatedAgentState = new AgentState();
 			impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
+			impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
 			impersonatedStateModifier.updateState(impersonatedAgentState);
 		}
 	}
