@@ -2,7 +2,7 @@ package org.openspaces.servicegrid.mock;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.TaskExecutor;
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.MockEmbeddedAgentTaskExecutor;
@@ -23,7 +23,7 @@ public class MockEmbeddedAgentLifecycleTaskExecutor {
 		this.executorWrapper = executorWrapper;
 	}
 
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void startAgent(StartAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 
@@ -37,7 +37,7 @@ public class MockEmbeddedAgentLifecycleTaskExecutor {
 		impersonatedStateModifier.updateState(agentState);
 	}
 	
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void restartAgent(RestartNotRespondingAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 			

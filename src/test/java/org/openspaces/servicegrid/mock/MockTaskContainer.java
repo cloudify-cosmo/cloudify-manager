@@ -8,6 +8,7 @@ import java.util.Map;
 import junit.framework.Assert;
 
 import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
@@ -47,16 +48,18 @@ public class MockTaskContainer {
 		for (Method method : taskExecutor.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
 			if (method.getAnnotation(TaskExecutor.class) != null) {
-				Preconditions.checkArgument(parameterTypes.length == 1 || parameterTypes.length == 2, "execute method must have one or two parameters");
-				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not a task in " + taskExecutor);
+				Preconditions.checkArgument(parameterTypes.length >= 1 && !ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is an impersonating task. Use " + ImpersonatingTask.class.getSimpleName() + " annotation instead, in " + taskExecutor.getClass());
+				Preconditions.checkArgument(parameterTypes.length == 1, "task executor method must have one parameter");
+				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not a task in " + taskExecutor.getClass());
 				Class<? extends Task> taskType = (Class<? extends Task>) parameterTypes[0];
-				if (parameterTypes.length == 1) {
-					executeMethodByType.put(taskType, method);
-				}
-				if (parameterTypes.length == 2) {
-					Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"execute method second parameter type must be " + TaskExecutorStateModifier.class);
-					impersonatedExecuteMethodByType.put(taskType, method);
-				}
+				executeMethodByType.put(taskType, method);
+			}
+			else if (method.getAnnotation(ImpersonatingTaskExecutor.class) != null) {
+				Preconditions.checkArgument(parameterTypes.length == 2, "impersonating task executor method must have two parameters");
+				Preconditions.checkArgument(ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not an impersonating task in " + taskExecutor);
+				Class<? extends ImpersonatingTask> taskType = (Class<? extends ImpersonatingTask>) parameterTypes[0];
+				Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"execute method second parameter type must be " + TaskExecutorStateModifier.class);
+				impersonatedExecuteMethodByType.put(taskType, method);
 			}
 		}
 	}

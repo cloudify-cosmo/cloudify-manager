@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.UUID;
 
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
@@ -104,7 +105,7 @@ public class ServiceGridPlanner {
 		return newTasks;
 	}
 
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void planAgent(PlanAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		AgentState impersonatedAgentState = new AgentState();
@@ -113,7 +114,7 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(impersonatedAgentState);
 	}
 
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void planServiceInstance(PlanServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
@@ -124,7 +125,7 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(instanceState);
 	}
 
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void planService(PlanServiceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		

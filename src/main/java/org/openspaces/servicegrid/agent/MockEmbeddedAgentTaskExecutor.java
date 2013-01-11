@@ -1,5 +1,6 @@
 package org.openspaces.servicegrid.agent;
 
+import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
@@ -17,7 +18,7 @@ public class MockEmbeddedAgentTaskExecutor {
 		this.state = state;
 	}
 
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void startServiceInstance(StartServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		ServiceInstanceState instanceState = impersonatedStateModifier.getState();
@@ -29,7 +30,7 @@ public class MockEmbeddedAgentTaskExecutor {
 
 	}
 
-	@TaskExecutor
+	@ImpersonatingTaskExecutor
 	public void installServiceInstance(InstallServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		ServiceInstanceState instanceState = impersonatedStateModifier.getState();
