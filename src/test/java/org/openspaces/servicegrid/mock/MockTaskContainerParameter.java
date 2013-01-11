@@ -6,7 +6,6 @@ import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
-import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 
 public class MockTaskContainerParameter {
 	private URI executorId;
@@ -14,7 +13,6 @@ public class MockTaskContainerParameter {
 	private StreamProducer<TaskExecutorState> stateWriter;
 	private StreamConsumer<Task> taskConsumer;
 	private Object taskExecutor;
-	private MockCurrentTimeProvider timeProvider;
 
 	public MockTaskContainerParameter() {
 	}
@@ -59,11 +57,4 @@ public class MockTaskContainerParameter {
 		this.taskExecutor = taskExecutor;
 	}
 
-	public MockCurrentTimeProvider getTimeProvider() {
-		return timeProvider;
-	}
-
-	public void setTimeProvider(MockCurrentTimeProvider timeProvider) {
-		this.timeProvider = timeProvider;
-	}
 }

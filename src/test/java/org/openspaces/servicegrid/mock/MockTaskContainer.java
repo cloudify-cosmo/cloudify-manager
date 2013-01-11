@@ -11,7 +11,6 @@ import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
-import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -23,7 +22,6 @@ public class MockTaskContainer {
 	private final URI executorId;
 	private final StreamConsumer<Task> taskConsumer;
 	private final StreamConsumer<TaskExecutorState> stateReader;
-	private final MockCurrentTimeProvider timeProvider;
 	private boolean killed;
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
@@ -32,7 +30,6 @@ public class MockTaskContainer {
 		this.stateWriter = parameterObject.getStateWriter();
 		this.taskConsumer = parameterObject.getTaskConsumer();
 		this.taskExecutor = parameterObject.getTaskExecutor();
-		this.timeProvider = parameterObject.getTimeProvider();
 		this.killed = false;
 	}
 
