@@ -26,13 +26,13 @@ public class MockTaskContainer {
 	private final MockCurrentTimeProvider timeProvider;
 	private boolean killed;
 	
-	public MockTaskContainer(URI executorId, StreamConsumer<TaskExecutorState> stateReader, StreamProducer<TaskExecutorState> stateWriter, StreamConsumer<Task> taskConsumer, Object taskExecutor, MockCurrentTimeProvider timeProvider) {
-		this.executorId = executorId;
-		this.stateReader = stateReader;
-		this.stateWriter = stateWriter;
-		this.taskConsumer = taskConsumer;
-		this.taskExecutor = taskExecutor;
-		this.timeProvider = timeProvider;
+	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
+		this.executorId = parameterObject.getExecutorId();
+		this.stateReader = parameterObject.getStateReader();
+		this.stateWriter = parameterObject.getStateWriter();
+		this.taskConsumer = parameterObject.getTaskConsumer();
+		this.taskExecutor = parameterObject.getTaskExecutor();
+		this.timeProvider = parameterObject.getTimeProvider();
 		this.killed = false;
 	}
 

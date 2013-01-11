@@ -17,12 +17,10 @@ public class ServiceClient {
 	private final StreamConsumer<Task> taskConsumer;
 
 	public ServiceClient(
-			StreamConsumer<TaskExecutorState> stateReader, 
-			StreamConsumer<Task> taskConsumer,
-			StreamProducer<Task> taskProducer) {
-		this.stateReader = stateReader;
-		this.taskConsumer = taskConsumer;
-		this.taskProducer = taskProducer;
+			ServiceClientParameter parameterObject) {
+		this.stateReader = parameterObject.getStateReader();
+		this.taskConsumer = parameterObject.getTaskConsumer();
+		this.taskProducer = parameterObject.getTaskProducer();
 	}
 	
 	public URI addServiceTask(URI serviceId, ServiceTask task) {
