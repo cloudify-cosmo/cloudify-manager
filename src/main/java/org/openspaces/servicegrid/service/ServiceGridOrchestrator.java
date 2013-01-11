@@ -54,14 +54,14 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 
 	private CurrentTimeProvider timeProvider;
 
-	private final URI plannerExecutorId;
+	private final URI floorPlannerExecutorId;
 	
 	public ServiceGridOrchestrator(ServiceGridOrchestratorParameter parameterObject) {
 		this.orchestratorExecutorId = parameterObject.getOrchestratorExecutorId();
 		this.agentLifecycleExecutorId = parameterObject.getAgentLifecycleExecutorId();
 		this.taskConsumer = parameterObject.getTaskConsumer();
 		this.cloudExecutorId = parameterObject.getCloudExecutorId();
-		this.plannerExecutorId = parameterObject.getPlannerExecutorId();
+		this.floorPlannerExecutorId = parameterObject.getPlannerExecutorId();
 		this.taskProducer = parameterObject.getTaskProducer();
 		this.stateReader = parameterObject.getStateReader();
 		this.timeProvider = parameterObject.getTimeProvider();
@@ -99,7 +99,7 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 				int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
 				if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
 					serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
-					state.setPlanned(false);
+					state.setFloorPlanned(false);
 					return;
 				}
 			}
@@ -151,7 +151,7 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 	
 		List<Task> newTasks = Lists.newArrayList();
 		
-		plan(newTasks);
+		floorPlanning(newTasks);
 		
 		final Iterable<URI> healthyAgents = orchestrateAgents(newTasks, nowTimestamp);
 		
@@ -162,13 +162,13 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		return newTasks;
 	}
 
-	private void plan(List<Task> newTasks) {
-		if (!state.isPlanned()) {
-			final PlanTask planTask = new PlanTask();
+	private void floorPlanning(List<Task> newTasks) {
+		if (!state.isFloorPlanned()) {
+			final FloorPlanTask planTask = new FloorPlanTask();
 			planTask.setServices(state.getServices());
-			planTask.setTarget(plannerExecutorId);
+			planTask.setTarget(floorPlannerExecutorId);
 			addNewTask(newTasks, planTask);
-			state.setPlanned(true);
+			state.setFloorPlanned(true);
 		}
 	}
 

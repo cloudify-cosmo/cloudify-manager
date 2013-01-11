@@ -79,7 +79,7 @@ public class ServiceGridOrchestratorParameter {
 		return plannerExecutorId;
 	}
 
-	public void setPlannerExecutorId(URI orchestratorExecutorId) {
+	public void setFloorPlannerExecutorId(URI orchestratorExecutorId) {
 		this.plannerExecutorId = orchestratorExecutorId;
 	}
 }

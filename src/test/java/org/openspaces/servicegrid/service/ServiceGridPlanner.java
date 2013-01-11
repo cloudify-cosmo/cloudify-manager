@@ -45,8 +45,8 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 	public void execute(Task task) {
 		long nowTimestamp = timeProvider.currentTimeMillis();
 		
-		if (task instanceof PlanTask) {
-			Iterable<? extends Task> newTasks = plan((PlanTask)task);
+		if (task instanceof FloorPlanTask) {
+			Iterable<? extends Task> newTasks = plan((FloorPlanTask)task);
 			submitTasks(nowTimestamp, newTasks);
 		}
 		else {
@@ -82,7 +82,7 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 		}
 	}
 	
-	private Iterable<Task> plan(PlanTask planTask) {
+	private Iterable<Task> plan(FloorPlanTask planTask) {
 		
 		List<Task> newTasks = Lists.newArrayList();
 		

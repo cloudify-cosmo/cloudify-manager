@@ -50,7 +50,7 @@ public class ServiceGridOrchestrationTest {
 	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
 	private final URI orchestratorExecutorId;
-	private final URI plannerExecutorId;
+	private final URI floorPlannerExecutorId;
 	private final URI cloudExecutorId;
 	private final URI agentLifecycleExecutorId;
 	private MockStreams<TaskExecutorState> state;
@@ -62,7 +62,7 @@ public class ServiceGridOrchestrationTest {
 		setSimpleLoggerFormatter(logger);
 		
 		orchestratorExecutorId = new URI("http://localhost/services/orchestrator/");
-		plannerExecutorId = new URI("http://localhost/services/planner/");
+		floorPlannerExecutorId = new URI("http://localhost/services/planner/");
 		cloudExecutorId = new URI("http://localhost/services/cloud/");
 		agentLifecycleExecutorId = new URI("http://localhost/services/agentLifecycle/");
 	}
@@ -77,7 +77,7 @@ public class ServiceGridOrchestrationTest {
 		containers = Sets.newCopyOnWriteArraySet();
 		addContainers(
 				newOrchestratorContainer(),				
-				newPlannerContainer(),
+				newFloorPlannerContainer(),
 				newCloudContainer(),
 				newAgentLifecycleContainer()
 		);
@@ -351,7 +351,7 @@ public class ServiceGridOrchestrationTest {
 		serviceOrchestratorParameter.setOrchestratorExecutorId(orchestratorExecutorId);
 		serviceOrchestratorParameter.setCloudExecutorId(cloudExecutorId);
 		serviceOrchestratorParameter.setAgentLifecycleExecutorId(agentLifecycleExecutorId);
-		serviceOrchestratorParameter.setPlannerExecutorId(plannerExecutorId);
+		serviceOrchestratorParameter.setFloorPlannerExecutorId(floorPlannerExecutorId);
 		serviceOrchestratorParameter.setTaskConsumer(taskBroker);
 		serviceOrchestratorParameter.setTaskProducer(taskBroker);
 		serviceOrchestratorParameter.setStateReader(state);
@@ -361,17 +361,17 @@ public class ServiceGridOrchestrationTest {
 		return newContainer(orchestratorExecutorId, taskExecutor);
 	}
 
-	private MockTaskContainer newPlannerContainer() {
+	private MockTaskContainer newFloorPlannerContainer() {
 		
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
-		servicePlannerParameter.setPlannerExecutorId(plannerExecutorId);
+		servicePlannerParameter.setFloorPlannerExecutorId(floorPlannerExecutorId);
 		servicePlannerParameter.setTaskConsumer(taskBroker);
 		servicePlannerParameter.setTaskProducer(taskBroker);
 		servicePlannerParameter.setStateReader(state);
 		servicePlannerParameter.setTimeProvider(timeProvider);
 		
 		ServiceGridPlanner taskExecutor = new ServiceGridPlanner(servicePlannerParameter);
-		return newContainer(plannerExecutorId, taskExecutor);
+		return newContainer(floorPlannerExecutorId, taskExecutor);
 	}
 
 	private MockTaskContainer newCloudContainer() {

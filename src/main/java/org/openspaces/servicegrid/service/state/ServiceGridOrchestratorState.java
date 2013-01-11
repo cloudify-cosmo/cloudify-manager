@@ -23,11 +23,11 @@ public class ServiceGridOrchestratorState extends TaskExecutorState {
 		servicesConfig.add(serviceConfig);
 	}
 
-	public void setPlanned(boolean planned) {
+	public void setFloorPlanned(boolean planned) {
 		this.planned = planned;
 	}
 	
-	public boolean isPlanned() {
+	public boolean isFloorPlanned() {
 		return this.planned;
 	}
 }

@@ -5,7 +5,7 @@ import java.util.Set;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.tasks.ServiceTask;
 
-public class PlanTask extends ServiceTask {
+public class FloorPlanTask extends ServiceTask {
 
 	private Set<ServiceConfig> services;
 
