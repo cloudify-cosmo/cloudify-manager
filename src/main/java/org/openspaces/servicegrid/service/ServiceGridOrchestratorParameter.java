@@ -3,68 +3,49 @@ package org.openspaces.servicegrid.service;
 import java.net.URI;
 
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutorState;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 public class ServiceGridOrchestratorParameter {
 	
-	private URI orchestratorExecutorId;
-	private URI cloudExecutorId;
-	private URI agentLifecycleExecutorId;
-	private StreamConsumer<Task> taskConsumer;
-	private StreamProducer<Task> taskProducer;
-	private StreamConsumer<TaskExecutorState> stateReader;
+	private URI orchestratorId;
+	private URI machineProvisionerId;
+	private StreamReader<Task> taskReader;
+	private StreamReader<TaskConsumerState> stateReader;
 	private CurrentTimeProvider timeProvider;
-	private URI plannerExecutorId;
+	private URI floorPlannerId;
 	
-	public URI getAgentLifecycleExecutorId() {
-		return agentLifecycleExecutorId;
+	public StreamReader<Task> getTaskReader() {
+		return taskReader;
 	}
 
-	public void setAgentLifecycleExecutorId(URI agentLifecycleExecutorId) {
-		this.agentLifecycleExecutorId = agentLifecycleExecutorId;
+	public void setTaskConsumer(StreamReader<Task> taskReader) {
+		this.taskReader = taskReader;
 	}
 
-	public StreamConsumer<Task> getTaskConsumer() {
-		return taskConsumer;
-	}
-
-	public void setTaskConsumer(StreamConsumer<Task> taskConsumer) {
-		this.taskConsumer = taskConsumer;
-	}
-
-	public StreamProducer<Task> getTaskProducer() {
-		return taskProducer;
-	}
-
-	public void setTaskProducer(StreamProducer<Task> taskProducer) {
-		this.taskProducer = taskProducer;
-	}
-
-	public StreamConsumer<TaskExecutorState> getStateReader() {
+	public StreamReader<TaskConsumerState> getStateReader() {
 		return stateReader;
 	}
 
-	public void setStateReader(StreamConsumer<TaskExecutorState> stateReader) {
+	public void setStateReader(StreamReader<TaskConsumerState> stateReader) {
 		this.stateReader = stateReader;
 	}
 
-	public URI getOrchestratorExecutorId() {
-		return orchestratorExecutorId;
+	public URI getOrchestratorId() {
+		return orchestratorId;
 	}
 
-	public void setOrchestratorExecutorId(URI orchestratorExecutorId) {
-		this.orchestratorExecutorId = orchestratorExecutorId;
+	public void setOrchestratorId(URI id) {
+		this.orchestratorId = id;
 	}
 
-	public URI getCloudExecutorId() {
-		return cloudExecutorId;
+	public URI getMachineProvisionerId() {
+		return machineProvisionerId;
 	}
 
-	public void setCloudExecutorId(URI cloudExecutorId) {
-		this.cloudExecutorId = cloudExecutorId;
+	public void setMachineProvisionerId(URI cloudExecutorId) {
+		this.machineProvisionerId = cloudExecutorId;
 	}
 
 	public CurrentTimeProvider getTimeProvider() {
@@ -75,11 +56,11 @@ public class ServiceGridOrchestratorParameter {
 		this.timeProvider = timeProvider;
 	}
 	
-	public URI getPlannerExecutorId() {
-		return plannerExecutorId;
+	public URI getFloorPlannerId() {
+		return floorPlannerId;
 	}
 
-	public void setFloorPlannerExecutorId(URI orchestratorExecutorId) {
-		this.plannerExecutorId = orchestratorExecutorId;
+	public void setFloorPlannerId(URI floorPlannerId) {
+		this.floorPlannerId = floorPlannerId;
 	}
 }

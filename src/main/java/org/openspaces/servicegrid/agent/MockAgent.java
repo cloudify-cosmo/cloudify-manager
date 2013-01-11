@@ -1,8 +1,8 @@
 package org.openspaces.servicegrid.agent;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
-import org.openspaces.servicegrid.TaskExecutor;
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
+import org.openspaces.servicegrid.TaskConsumer;
+import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
@@ -10,15 +10,15 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 
-public class MockEmbeddedAgentTaskExecutor {
+public class MockAgent {
 
 	private final AgentState state;
 
-	public MockEmbeddedAgentTaskExecutor(AgentState state) {
+	public MockAgent(AgentState state) {
 		this.state = state;
 	}
 
-	@ImpersonatingTaskExecutor
+	@ImpersonatingTaskConsumer
 	public void startServiceInstance(StartServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		ServiceInstanceState instanceState = impersonatedStateModifier.getState();
@@ -30,7 +30,7 @@ public class MockEmbeddedAgentTaskExecutor {
 
 	}
 
-	@ImpersonatingTaskExecutor
+	@ImpersonatingTaskConsumer
 	public void installServiceInstance(InstallServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		ServiceInstanceState instanceState = impersonatedStateModifier.getState();
@@ -41,12 +41,12 @@ public class MockEmbeddedAgentTaskExecutor {
 		impersonatedStateModifier.updateState(instanceState);
 	}
 
-	@TaskExecutor
+	@TaskConsumer
 	public void execute(PingAgentTask task) {
 		//do nothing
 	}
 	
-	public TaskExecutorState getState() {
+	public TaskConsumerState getState() {
 		return state;
 	}
 

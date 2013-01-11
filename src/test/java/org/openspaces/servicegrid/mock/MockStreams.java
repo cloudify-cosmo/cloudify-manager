@@ -5,8 +5,8 @@ import java.net.URISyntaxException;
 import java.util.Collection;
 
 import org.codehaus.jackson.map.ObjectMapper;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.streams.StreamWriter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -15,7 +15,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 
-public class MockStreams<T> implements StreamProducer<T>, StreamConsumer<T> {
+public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 
 	final private Multimap<URI,T> streamById = ArrayListMultimap.create();
 	final private ObjectMapper mapper = new ObjectMapper();

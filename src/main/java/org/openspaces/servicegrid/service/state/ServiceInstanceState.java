@@ -2,9 +2,9 @@ package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskConsumerState;
 
-public class ServiceInstanceState extends TaskExecutorState {
+public class ServiceInstanceState extends TaskConsumerState {
 
 	public static class Progress{
 		public static final String PLANNED = "PLANNED";

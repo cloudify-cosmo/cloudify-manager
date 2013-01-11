@@ -9,7 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class TaskExecutorState {
+public class TaskConsumerState {
 
 	//Should serialize to List<URI> which is the taskid URIs
 	private List<URI> executingTasks = Lists.newArrayList();

@@ -2,7 +2,7 @@ package org.openspaces.servicegrid.streams;
 
 import java.net.URI;
 
-public interface StreamConsumer<T> {
+public interface StreamReader<T> {
 
 	URI getFirstElementId(URI streamId);
 	

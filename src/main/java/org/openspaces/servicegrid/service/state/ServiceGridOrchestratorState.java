@@ -2,11 +2,11 @@ package org.openspaces.servicegrid.service.state;
 
 import java.util.Set;
 
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskConsumerState;
 
 import com.google.common.collect.Sets;
 
-public class ServiceGridOrchestratorState extends TaskExecutorState {
+public class ServiceGridOrchestratorState extends TaskConsumerState {
 
 	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
 	private boolean planned; 

@@ -1,14 +1,14 @@
 package org.openspaces.servicegrid.mock;
 
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 
 public class MockStartAgentSshTaskExecutor {
 
-	private TaskExecutorState state = new TaskExecutorState();
+	private TaskConsumerState state = new TaskConsumerState();
 
 	public void execute(Task task, 
 			TaskExecutorStateModifier impersonatedStateModifier) {
@@ -20,7 +20,7 @@ public class MockStartAgentSshTaskExecutor {
 		
 	}
 
-	public TaskExecutorState getState() {
+	public TaskConsumerState getState() {
 		return state ;
 	}
 

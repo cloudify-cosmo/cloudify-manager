@@ -3,7 +3,7 @@ package org.openspaces.servicegrid;
 
 public interface TaskExecutorStateModifier {
 
-	void updateState(TaskExecutorState impersonatedState);
+	void updateState(TaskConsumerState impersonatedState);
 
-	<T extends TaskExecutorState> T getState();
+	<T extends TaskConsumerState> T getState();
 }

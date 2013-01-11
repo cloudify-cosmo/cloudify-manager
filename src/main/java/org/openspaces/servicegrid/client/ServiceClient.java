@@ -3,23 +3,23 @@ package org.openspaces.servicegrid.client;
 import java.net.URI;
 
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutorState;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.streams.StreamWriter;
 
 import com.google.common.base.Preconditions;
 
 public class ServiceClient {
 
-	private final StreamConsumer<TaskExecutorState> stateReader;
-	private final StreamProducer<Task> taskProducer;
-	private final StreamConsumer<Task> taskConsumer;
+	private final StreamReader<TaskConsumerState> stateReader;
+	private final StreamWriter<Task> taskProducer;
+	private final StreamReader<Task> taskConsumer;
 
 	public ServiceClient(
 			ServiceClientParameter parameterObject) {
 		this.stateReader = parameterObject.getStateReader();
-		this.taskConsumer = parameterObject.getTaskConsumer();
-		this.taskProducer = parameterObject.getTaskProducer();
+		this.taskConsumer = parameterObject.getTaskReader();
+		this.taskProducer = parameterObject.getTaskWriter();
 	}
 	
 	public URI addServiceTask(URI serviceId, Task task) {
@@ -29,7 +29,7 @@ public class ServiceClient {
 		return taskProducer.addElement(serviceId, task);
 	}
 	
-	public <T extends TaskExecutorState> T getExecutorState(URI serviceId, Class<T> clazz) {
+	public <T extends TaskConsumerState> T getExecutorState(URI serviceId, Class<T> clazz) {
 		URI lastElementId = stateReader.getLastElementId(serviceId);
 		return stateReader.getElement(lastElementId, clazz);
 	}

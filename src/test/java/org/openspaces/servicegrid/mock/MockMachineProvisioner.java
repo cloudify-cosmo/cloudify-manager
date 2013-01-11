@@ -2,28 +2,42 @@ package org.openspaces.servicegrid.mock;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
+import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.agent.MockEmbeddedAgentTaskExecutor;
+import org.openspaces.servicegrid.agent.MockAgent;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
+import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 
 import com.google.common.base.Preconditions;
 
-public class MockEmbeddedAgentLifecycleTaskExecutor {
+public class MockMachineProvisioner {
 
-	private final TaskExecutorState state = new TaskExecutorState();
+	private final TaskConsumerState state = new TaskConsumerState();
+	private final TaskConsumerRegistrar taskConsumerRegistrar;
 	
-	private final TaskExecutorWrapper executorWrapper;
-
-	public MockEmbeddedAgentLifecycleTaskExecutor(
-			TaskExecutorWrapper executorWrapper) {
-		this.executorWrapper = executorWrapper;
+	public MockMachineProvisioner(TaskConsumerRegistrar taskConsumerRegistrar) {
+		this.taskConsumerRegistrar = taskConsumerRegistrar;
+	}
+	
+	@ImpersonatingTaskConsumer
+	public void startMachine(StartMachineTask task,
+			TaskExecutorStateModifier impersonatedStateModifier) {
+	
+		//Simulate starting machine
+		AgentState impersonatedState = impersonatedStateModifier.getState();
+		impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
+		impersonatedStateModifier.updateState(impersonatedState);
+		//Immediately machine start 
+		impersonatedStateModifier.getState();
+		impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
+		impersonatedStateModifier.updateState(impersonatedState);
 	}
 
-	@ImpersonatingTaskExecutor
+
+	@ImpersonatingTaskConsumer
 	public void startAgent(StartAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 
@@ -33,11 +47,11 @@ public class MockEmbeddedAgentLifecycleTaskExecutor {
 		URI agentId = task.getImpersonatedTarget();
 		Preconditions.checkState(agentId.toString().endsWith("/"));
 		agentState.setProgress(AgentState.Progress.AGENT_STARTED);
-		executorWrapper.wrapTaskExecutor(new MockEmbeddedAgentTaskExecutor(agentState), agentId);
+		taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
 		impersonatedStateModifier.updateState(agentState);
 	}
 	
-	@ImpersonatingTaskExecutor
+	@ImpersonatingTaskConsumer
 	public void restartAgent(RestartNotRespondingAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 			
@@ -46,13 +60,13 @@ public class MockEmbeddedAgentLifecycleTaskExecutor {
 			Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
 			agentState.setNumberOfRestarts(agentState.getNumberOfRestarts() +1);
 			URI agentId = task.getImpersonatedTarget();
-			executorWrapper.removeTaskExecutor(agentId);
-			executorWrapper.wrapTaskExecutor(new MockEmbeddedAgentTaskExecutor(agentState), agentId);
+			taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+			taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
 			impersonatedStateModifier.updateState(agentState);
 			//In a real implementation here is where we restart the agent process
 	}
 
-	public TaskExecutorState getState() {
+	public TaskConsumerState getState() {
 		return state;
 	}
 

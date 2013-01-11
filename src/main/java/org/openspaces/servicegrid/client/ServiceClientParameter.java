@@ -1,40 +1,40 @@
 package org.openspaces.servicegrid.client;
 
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutorState;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.streams.StreamWriter;
 
 public class ServiceClientParameter {
 	
-	private StreamConsumer<TaskExecutorState> stateReader;
-	private StreamConsumer<Task> taskConsumer;
-	private StreamProducer<Task> taskProducer;
+	private StreamReader<TaskConsumerState> stateReader;
+	private StreamReader<Task> taskReader;
+	private StreamWriter<Task> taskWriter;
 
 	public ServiceClientParameter() {
 	}
 
-	public StreamConsumer<TaskExecutorState> getStateReader() {
+	public StreamReader<TaskConsumerState> getStateReader() {
 		return stateReader;
 	}
 
-	public void setStateReader(StreamConsumer<TaskExecutorState> stateReader) {
+	public void setStateReader(StreamReader<TaskConsumerState> stateReader) {
 		this.stateReader = stateReader;
 	}
 
-	public StreamConsumer<Task> getTaskConsumer() {
-		return taskConsumer;
+	public StreamReader<Task> getTaskReader() {
+		return taskReader;
 	}
 
-	public void setTaskConsumer(StreamConsumer<Task> taskConsumer) {
-		this.taskConsumer = taskConsumer;
+	public void setTaskReader(StreamReader<Task> taskReader) {
+		this.taskReader = taskReader;
 	}
 
-	public StreamProducer<Task> getTaskProducer() {
-		return taskProducer;
+	public StreamWriter<Task> getTaskWriter() {
+		return taskWriter;
 	}
 
-	public void setTaskProducer(StreamProducer<Task> taskProducer) {
-		this.taskProducer = taskProducer;
+	public void setTaskWriter(StreamWriter<Task> taskProducer) {
+		this.taskWriter = taskProducer;
 	}
 }

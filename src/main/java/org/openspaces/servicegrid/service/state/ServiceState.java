@@ -3,9 +3,9 @@ package org.openspaces.servicegrid.service.state;
 import java.net.URI;
 import java.util.List;
 
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskConsumerState;
 
-public class ServiceState extends TaskExecutorState {
+public class ServiceState extends TaskConsumerState {
 	
 	private List<URI> instanceIds;
 	

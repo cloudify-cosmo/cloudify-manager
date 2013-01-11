@@ -3,25 +3,28 @@ package org.openspaces.servicegrid.mock;
 import java.net.URI;
 
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutorState;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.streams.StreamWriter;
+import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 public class MockTaskContainerParameter {
 	private URI executorId;
-	private StreamConsumer<TaskExecutorState> stateReader;
-	private StreamProducer<TaskExecutorState> stateWriter;
-	private StreamConsumer<Task> taskConsumer;
-	private Object taskExecutor;
+	private StreamReader<TaskConsumerState> stateReader;
+	private StreamWriter<TaskConsumerState> stateWriter;
+	private StreamReader<Task> taskReader;
+	private StreamWriter<Task> taskWriter;
+	private Object taskConsumer;
+	private CurrentTimeProvider timeProvider;
 
 	public MockTaskContainerParameter() {
 	}
 
-	public StreamConsumer<TaskExecutorState> getStateReader() {
+	public StreamReader<TaskConsumerState> getStateReader() {
 		return stateReader;
 	}
 
-	public void setStateReader(StreamConsumer<TaskExecutorState> stateReader) {
+	public void setStateReader(StreamReader<TaskConsumerState> stateReader) {
 		this.stateReader = stateReader;
 	}
 
@@ -33,28 +36,44 @@ public class MockTaskContainerParameter {
 		this.executorId = executorId;
 	}
 
-	public StreamProducer<TaskExecutorState> getStateWriter() {
+	public StreamWriter<TaskConsumerState> getStateWriter() {
 		return stateWriter;
 	}
 
-	public void setStateWriter(StreamProducer<TaskExecutorState> stateWriter) {
+	public void setStateWriter(StreamWriter<TaskConsumerState> stateWriter) {
 		this.stateWriter = stateWriter;
 	}
 
-	public StreamConsumer<Task> getTaskConsumer() {
+	public StreamWriter<Task> getTaskWriter() {
+		return taskWriter;
+	}
+
+	public void setTaskWriter(StreamWriter<Task> taskWriter) {
+		this.taskWriter = taskWriter;
+	}
+
+	public Object getTaskConsumer() {
 		return taskConsumer;
 	}
 
-	public void setTaskConsumer(StreamConsumer<Task> taskConsumer) {
+	public void setTaskConsumer(Object taskConsumer) {
 		this.taskConsumer = taskConsumer;
 	}
 
-	public Object getTaskExecutor() {
-		return taskExecutor;
+	public StreamReader<Task> getTaskReader() {
+		return taskReader;
 	}
 
-	public void setTaskExecutor(Object taskExecutor) {
-		this.taskExecutor = taskExecutor;
+	public void setTaskReader(StreamReader<Task> taskReader) {
+		this.taskReader = taskReader;
+	}
+
+	public CurrentTimeProvider getTimeProvider() {
+		return timeProvider;
+	}
+
+	public void setTimeProvider(CurrentTimeProvider timeProvider) {
+		this.timeProvider = timeProvider;
 	}
 
 }

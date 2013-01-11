@@ -5,11 +5,11 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.UUID;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutor;
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PlanAgentTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
@@ -17,9 +17,7 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.PlanServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceTask;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
-import org.openspaces.servicegrid.time.CurrentTimeProvider;
+import org.openspaces.servicegrid.streams.StreamReader;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -27,38 +25,18 @@ import com.google.common.collect.Lists;
 
 public class ServiceGridPlanner {
 
-	private final TaskExecutorState state;
-	private final CurrentTimeProvider timeProvider;
-	private final StreamProducer<Task> taskProducer;
+	private final TaskConsumerState state;
 	private final URI plannerExecutorId;
-	private final StreamConsumer<TaskExecutorState> stateReader;
+	private final StreamReader<TaskConsumerState> stateReader;
 	
 	public ServiceGridPlanner(ServiceGridPlannerParameter parameterObject) {
 		this.plannerExecutorId = parameterObject.getPlannerExecutorId();
-		this.taskProducer = parameterObject.getTaskProducer();
 		this.stateReader = parameterObject.getStateReader();
-		this.timeProvider = parameterObject.getTimeProvider();
-		this.state = new TaskExecutorState();
+		this.state = new TaskConsumerState();
 	}
 	
-	@TaskExecutor
-	public void floorPlan(FloorPlanTask task) {
-		final long nowTimestamp = timeProvider.currentTimeMillis();
-		final Iterable<? extends Task> newTasks = plan(task);
-		submitTasks(nowTimestamp, newTasks);
-	}
-
-	private void submitTasks(long nowTimestamp,
-			Iterable<? extends Task> newTasks) {
-		for (final Task newTask : newTasks) {
-			newTask.setSource(plannerExecutorId);
-			newTask.setSourceTimestamp(nowTimestamp);
-			Preconditions.checkNotNull(newTask.getTarget());
-			taskProducer.addElement(newTask.getTarget(), newTask);
-		}
-	}
-	
-	private Iterable<Task> plan(FloorPlanTask planTask) {
+	@TaskProducer	
+	public Iterable<Task> plan(FloorPlanTask planTask) {
 		
 		List<Task> newTasks = Lists.newArrayList();
 		
@@ -105,7 +83,7 @@ public class ServiceGridPlanner {
 		return newTasks;
 	}
 
-	@ImpersonatingTaskExecutor
+	@ImpersonatingTaskConsumer
 	public void planAgent(PlanAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		AgentState impersonatedAgentState = new AgentState();
@@ -114,7 +92,7 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(impersonatedAgentState);
 	}
 
-	@ImpersonatingTaskExecutor
+	@ImpersonatingTaskConsumer
 	public void planServiceInstance(PlanServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
@@ -125,7 +103,7 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(instanceState);
 	}
 
-	@ImpersonatingTaskExecutor
+	@ImpersonatingTaskConsumer
 	public void planService(PlanServiceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		
@@ -157,7 +135,7 @@ public class ServiceGridPlanner {
 		}
 	}
 	
-	public TaskExecutorState getState() {
+	public TaskConsumerState getState() {
 		return state;
 	}
 

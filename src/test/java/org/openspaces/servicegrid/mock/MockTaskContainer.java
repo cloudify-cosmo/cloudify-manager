@@ -8,13 +8,16 @@ import java.util.Map;
 import junit.framework.Assert;
 
 import org.openspaces.servicegrid.ImpersonatingTask;
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
+import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutor;
-import org.openspaces.servicegrid.TaskExecutorState;
+import org.openspaces.servicegrid.TaskConsumer;
+import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.streams.StreamConsumer;
-import org.openspaces.servicegrid.streams.StreamProducer;
+import org.openspaces.servicegrid.TaskProducer;
+import org.openspaces.servicegrid.TaskProducerTask;
+import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.streams.StreamWriter;
+import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -23,43 +26,57 @@ import com.google.common.collect.Maps;
 
 public class MockTaskContainer {
 
-	private final StreamProducer<TaskExecutorState> stateWriter;
+	private final StreamWriter<TaskConsumerState> stateWriter;
 	private final Object taskExecutor;
 	private final URI executorId;
-	private final StreamConsumer<Task> taskConsumer;
-	private final StreamConsumer<TaskExecutorState> stateReader;
+	private final StreamReader<Task> taskReader;
+	private final StreamWriter<Task> taskWriter;
+	private final StreamReader<TaskConsumerState> stateReader;
 	private boolean killed;
 	private final Method getStateMethod;
-	private final Map<Class<? extends Task>,Method> impersonatedExecuteMethodByType;
-	private final Map<Class<? extends Task>,Method> executeMethodByType;
+	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
+	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
+	private final Map<Class<? extends TaskProducerTask>,Method> taskProducerMethodByType;
+	private final CurrentTimeProvider timeProvider;
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
 		this.executorId = parameterObject.getExecutorId();
 		this.stateReader = parameterObject.getStateReader();
 		this.stateWriter = parameterObject.getStateWriter();
-		this.taskConsumer = parameterObject.getTaskConsumer();
-		this.taskExecutor = parameterObject.getTaskExecutor();
+		this.taskReader = parameterObject.getTaskReader();
+		this.taskWriter = parameterObject.getTaskWriter();
+		this.taskExecutor = parameterObject.getTaskConsumer();
 		this.killed = false;
 		this.getStateMethod = getMethodByName("getState");
-		
-		this.executeMethodByType = Maps.newHashMap();
-		this.impersonatedExecuteMethodByType = Maps.newHashMap();
+		this.timeProvider = parameterObject.getTimeProvider();
+		this.taskConsumerMethodByType = Maps.newHashMap();
+		this.impersonatedTaskConsumerMethodByType = Maps.newHashMap();
+		this.taskProducerMethodByType = Maps.newHashMap();
 		
 		for (Method method : taskExecutor.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
-			if (method.getAnnotation(TaskExecutor.class) != null) {
+			if (method.getAnnotation(TaskConsumer.class) != null) {
+				Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
 				Preconditions.checkArgument(parameterTypes.length >= 1 && !ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is an impersonating task. Use " + ImpersonatingTask.class.getSimpleName() + " annotation instead, in " + taskExecutor.getClass());
-				Preconditions.checkArgument(parameterTypes.length == 1, "task executor method must have one parameter");
-				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not a task in " + taskExecutor.getClass());
+				Preconditions.checkArgument(parameterTypes.length == 1, "method must have one parameter");
+				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "method parameter " + parameterTypes[0] + " is not a task in " + taskExecutor.getClass());
 				Class<? extends Task> taskType = (Class<? extends Task>) parameterTypes[0];
-				executeMethodByType.put(taskType, method);
+				taskConsumerMethodByType.put(taskType, method);
 			}
-			else if (method.getAnnotation(ImpersonatingTaskExecutor.class) != null) {
-				Preconditions.checkArgument(parameterTypes.length == 2, "impersonating task executor method must have two parameters");
-				Preconditions.checkArgument(ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not an impersonating task in " + taskExecutor);
+			else if (method.getAnnotation(ImpersonatingTaskConsumer.class) != null) {
+				Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
+				Preconditions.checkArgument(parameterTypes.length == 2, "Impersonating task executor method must have two parameters");
+				Preconditions.checkArgument(ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "method first parameter %s is not an impersonating task in %s",parameterTypes[0], taskExecutor.getClass());
 				Class<? extends ImpersonatingTask> taskType = (Class<? extends ImpersonatingTask>) parameterTypes[0];
-				Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"execute method second parameter type must be " + TaskExecutorStateModifier.class);
-				impersonatedExecuteMethodByType.put(taskType, method);
+				Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"method second parameter type must be " + TaskExecutorStateModifier.class);
+				impersonatedTaskConsumerMethodByType.put(taskType, method);
+			}
+			else if (method.getAnnotation(TaskProducer.class) != null) {
+				Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), method + " return type must be Iterable<Task>");
+				Preconditions.checkArgument(parameterTypes.length == 1, "method must have one parameter");
+				Preconditions.checkArgument(TaskProducerTask.class.isAssignableFrom(parameterTypes[0]), "method parameter %s is not a task producer in %s", parameterTypes[0], taskExecutor.getClass() );
+				Class<? extends TaskProducerTask> taskType = (Class<? extends TaskProducerTask>) parameterTypes[0];
+				taskProducerMethodByType.put(taskType, method);
 			}
 		}
 	}
@@ -78,18 +95,18 @@ public class MockTaskContainer {
 
 	private void afterExecute(URI taskId, Task task) {
 
-		final TaskExecutorState state = getTaskExecutorState();
+		final TaskConsumerState state = getTaskExecutorState();
 		state.completeExecutingTask(taskId);
 		stateWriter.addElement(getExecutorId(), state);
 	}
 
-	private TaskExecutorState getTaskExecutorState() {
-		return invokeMethod(getStateMethod);
+	private TaskConsumerState getTaskExecutorState() {
+		return (TaskConsumerState) invokeMethod(getStateMethod);
 	}
 
-	private TaskExecutorState invokeMethod(Method method, Object ... args) {
+	private Object invokeMethod(Method method, Object ... args) {
 		try {
-			return (TaskExecutorState) method.invoke(taskExecutor, args);
+			return method.invoke(taskExecutor, args);
 		} catch (final IllegalAccessException e) {
 			throw Throwables.propagate(e);
 		} catch (final IllegalArgumentException e) {
@@ -105,14 +122,14 @@ public class MockTaskContainer {
 				task.getTarget().equals(getExecutorId()),
 				"Expected task target is %s instead found %s", getExecutorId() , task.getTarget());
 		
-		final TaskExecutorState state = getTaskExecutorState();
+		final TaskConsumerState state = getTaskExecutorState();
 		stateWriter.addElement(getExecutorId(), state);
 	}
 
 	/**
 	 * @return true - if need to be called again
 	 */
-	public boolean stepTaskExecutor() {
+	public boolean consumeNextTask() {
 		
 		boolean needAnotherStep = false;
 		if (!killed) {
@@ -120,7 +137,7 @@ public class MockTaskContainer {
 			URI taskId = getNextTaskId();
 			
 			if (taskId != null) {
-				final Task task = taskConsumer.getElement(taskId, Task.class);
+				final Task task = taskReader.getElement(taskId, Task.class);
 				getTaskExecutorState().executeTask(taskId);
 				beforeExecute(task);
 				execute(task);
@@ -137,39 +154,65 @@ public class MockTaskContainer {
 		return getNextTaskId(getTaskExecutorState());
 	}
 
-	private URI getNextTaskId(final TaskExecutorState state) {
+	private URI getNextTaskId(final TaskConsumerState state) {
 		Preconditions.checkNotNull(state);
 		final URI lastTaskId = getLastTaskIdOrNull(state);
 		URI taskId;
 		if (lastTaskId == null) {
-			taskId = taskConsumer.getFirstElementId(executorId);
+			taskId = taskReader.getFirstElementId(executorId);
 		}
 		else {
-			taskId = taskConsumer.getNextElementId(lastTaskId);
+			taskId = taskReader.getNextElementId(lastTaskId);
 		}
 		return taskId;
 	}
 
-	private URI getLastTaskIdOrNull(final TaskExecutorState state) {
+	private URI getLastTaskIdOrNull(final TaskConsumerState state) {
 		return Iterables.getLast(Iterables.concat(state.getCompletedTasks(),state.getExecutingTasks()), null);
 	}
 
+	private void submitTasks(long nowTimestamp,
+			Iterable<? extends Task> newTasks) {
+		for (final Task newTask : newTasks) {
+			newTask.setSource(executorId);
+			newTask.setSourceTimestamp(nowTimestamp);
+			Preconditions.checkNotNull(newTask.getTarget());
+			taskWriter.addElement(newTask.getTarget(), newTask);
+		}
+	}
+
 	private void execute(final Task task) {
-		if (!(task instanceof ImpersonatingTask)) {
-			Method executorMethod = executeMethodByType.get(task.getClass());
+		if (task instanceof TaskProducerTask) {
+			Method taskProducerMethod = taskProducerMethodByType.get(task.getClass());
+			Preconditions.checkArgument(
+					taskProducerMethod != null, 
+					"%s cannot consumer task %s", taskExecutor.getClass(), task);
+			
+			TaskProducerTask taskProducerTask = (TaskProducerTask) task;
+			long nowTimestamp = timeProvider.currentTimeMillis();
+			for (int i = 0 ; i < taskProducerTask.getMaxNumberOfSteps(); i++) {
+				final Iterable<? extends Task> newTasks = (Iterable<? extends Task>) invokeMethod(taskProducerMethod, taskProducerTask);
+				if (Iterables.isEmpty(newTasks)) {
+					break;
+				}
+				submitTasks(nowTimestamp, newTasks);
+			}		
+		}
+		else if (!(task instanceof ImpersonatingTask)) {
+			Method executorMethod = taskConsumerMethodByType.get(task.getClass());
 			Preconditions.checkArgument(
 					executorMethod != null, 
-					taskExecutor.getClass() + " cannot handle task " + task.getClass());
+					"%s cannot consume task %s", taskExecutor.getClass(), task.getClass());
 			invokeMethod(executorMethod, task);
 		} else {
-			Method executorMethod = impersonatedExecuteMethodByType.get(task.getClass());
+			Method executorMethod = impersonatedTaskConsumerMethodByType.get(task.getClass());
 			Preconditions.checkArgument(
 					executorMethod != null, 
-					taskExecutor.getClass() + " cannot handle impersonation task " + task.getClass());
+					"%s cannot consume impersonating task %s", taskExecutor.getClass(), task.getClass());
 			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
 				
 				@Override
-				public void updateState(final TaskExecutorState impersonatedState) {
+				public void updateState(final TaskConsumerState impersonatedState) {
 					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
 					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
@@ -177,13 +220,13 @@ public class MockTaskContainer {
 				}
 
 				@Override
-				public TaskExecutorState getState() {
+				public TaskConsumerState getState() {
 					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
 					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
 					URI lastElementId = stateReader.getLastElementId(impersonatedTargetId);
 					if (lastElementId != null) {
-						return stateReader.getElement(lastElementId, TaskExecutorState.class);
+						return stateReader.getElement(lastElementId, TaskConsumerState.class);
 					}
 					return null;
 				}

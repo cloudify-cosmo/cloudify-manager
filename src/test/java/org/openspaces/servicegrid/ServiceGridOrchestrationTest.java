@@ -11,12 +11,11 @@ import java.util.logging.Logger;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.client.ServiceClientParameter;
-import org.openspaces.servicegrid.mock.MockEmbeddedAgentLifecycleTaskExecutor;
-import org.openspaces.servicegrid.mock.MockImmediateMachineSpawnerTaskExecutor;
+import org.openspaces.servicegrid.mock.MockMachineProvisioner;
 import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
-import org.openspaces.servicegrid.mock.TaskExecutorWrapper;
+import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
 import org.openspaces.servicegrid.service.OrchestrateTask;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
@@ -47,11 +46,10 @@ public class ServiceGridOrchestrationTest {
 	private final Logger logger;
 	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
-	private final URI orchestratorExecutorId;
-	private final URI floorPlannerExecutorId;
-	private final URI cloudExecutorId;
-	private final URI agentLifecycleExecutorId;
-	private MockStreams<TaskExecutorState> state;
+	private final URI orchestratorId;
+	private final URI floorPlannerId;
+	private final URI machineProvisionerId;
+	private MockStreams<TaskConsumerState> state;
 	private MockStreams<Task> taskBroker;
 	private MockCurrentTimeProvider timeProvider;
 	
@@ -59,25 +57,23 @@ public class ServiceGridOrchestrationTest {
 		logger = Logger.getLogger(this.getClass().getName());
 		setSimpleLoggerFormatter(logger);
 		
-		orchestratorExecutorId = new URI("http://localhost/services/orchestrator/");
-		floorPlannerExecutorId = new URI("http://localhost/services/planner/");
-		cloudExecutorId = new URI("http://localhost/services/cloud/");
-		agentLifecycleExecutorId = new URI("http://localhost/services/agentLifecycle/");
+		orchestratorId = new URI("http://localhost/services/orchestrator/");
+		floorPlannerId = new URI("http://localhost/services/floorPlanner/");
+		machineProvisionerId = new URI("http://localhost/services/provisioner/");
 	}
 
 	@BeforeMethod
 	public void before(Method method) {
 		
 		timeProvider = new MockCurrentTimeProvider();
-		state = new MockStreams<TaskExecutorState>();
+		state = new MockStreams<TaskConsumerState>();
 		taskBroker = new MockStreams<Task>();
 		client = newServiceClient();
 		containers = Sets.newCopyOnWriteArraySet();
 		addContainers(
 				newOrchestratorContainer(),				
 				newFloorPlannerContainer(),
-				newCloudContainer(),
-				newAgentLifecycleContainer()
+				newMachineProvisionerContainer()
 		);
 		logger.info("Starting " + method.getName());
 	}
@@ -195,7 +191,7 @@ public class ServiceGridOrchestrationTest {
 		return getLastState(instanceId, ServiceInstanceState.class);
 	}
 	
-	private <T extends TaskExecutorState> T getLastState(URI executorId, Class<T> stateClass) {
+	private <T extends TaskConsumerState> T getLastState(URI executorId, Class<T> stateClass) {
 		T lastState = ServiceUtils.getLastState(state, executorId, stateClass);
 		Assert.assertNotNull(lastState);
 		return lastState;
@@ -213,7 +209,7 @@ public class ServiceGridOrchestrationTest {
 
 	private void submitTask(final Task installServiceTask) {
 		installServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
-		client.addServiceTask(orchestratorExecutorId, installServiceTask);
+		client.addServiceTask(orchestratorId, installServiceTask);
 		timeProvider.increaseBy(1000);
 	}
 
@@ -238,13 +234,13 @@ public class ServiceGridOrchestrationTest {
 
 			boolean emptyCycle = true;
 			OrchestrateTask orchestrateTask = new OrchestrateTask();
-			orchestrateTask.setMaxNumberOfOrchestrationSteps(100);
+			orchestrateTask.setMaxNumberOfSteps(100);
 			submitTask(orchestrateTask);
 			
 			for (MockTaskContainer container : containers) {
 				Assert.assertEquals(container.getExecutorId().getHost(),"localhost");
-				while (container.stepTaskExecutor()) {
-					if (!container.getExecutorId().equals(orchestratorExecutorId)) {
+				while (container.consumeNextTask()) {
+					if (!container.getExecutorId().equals(orchestratorId)) {
 						emptyCycle = false;
 					}
 				}
@@ -304,8 +300,8 @@ public class ServiceGridOrchestrationTest {
 	private Iterable<Task> getSortedTasks() throws URISyntaxException {
 	
 		List<Task> tasks = Lists.newArrayList(); 
-		final Iterable<URI> taskExecutorIds = taskBroker.getElementIdsStartingWith(new URI("http://localhost/"));
-		for (final URI executorId : taskExecutorIds) {
+		final Iterable<URI> taskConsumerIds = taskBroker.getElementIdsStartingWith(new URI("http://localhost/"));
+		for (final URI executorId : taskConsumerIds) {
 			for (URI taskId = taskBroker.getFirstElementId(executorId); taskId != null ; taskId = taskBroker.getNextElementId(taskId)) {
 				final Task task = taskBroker.getElement(taskId, Task.class);
 				tasks.add(task);
@@ -330,59 +326,50 @@ public class ServiceGridOrchestrationTest {
 	private ServiceClient newServiceClient() {
 		final ServiceClientParameter serviceClientParameter = new ServiceClientParameter();
 		serviceClientParameter.setStateReader(state);
-		serviceClientParameter.setTaskConsumer(taskBroker);
-		serviceClientParameter.setTaskProducer(taskBroker);
+		serviceClientParameter.setTaskReader(taskBroker);
+		serviceClientParameter.setTaskWriter(taskBroker);
 		return new ServiceClient(serviceClientParameter);
 	}
 
 	private MockTaskContainer newOrchestratorContainer() {
 		
 		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
-		serviceOrchestratorParameter.setOrchestratorExecutorId(orchestratorExecutorId);
-		serviceOrchestratorParameter.setCloudExecutorId(cloudExecutorId);
-		serviceOrchestratorParameter.setAgentLifecycleExecutorId(agentLifecycleExecutorId);
-		serviceOrchestratorParameter.setFloorPlannerExecutorId(floorPlannerExecutorId);
+		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
+		serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
+		serviceOrchestratorParameter.setFloorPlannerId(floorPlannerId);
 		serviceOrchestratorParameter.setTaskConsumer(taskBroker);
-		serviceOrchestratorParameter.setTaskProducer(taskBroker);
 		serviceOrchestratorParameter.setStateReader(state);
 		serviceOrchestratorParameter.setTimeProvider(timeProvider);
 	
-		ServiceGridOrchestrator taskExecutor = new ServiceGridOrchestrator(serviceOrchestratorParameter);
-		return newContainer(orchestratorExecutorId, taskExecutor);
+		ServiceGridOrchestrator taskConsumer = new ServiceGridOrchestrator(serviceOrchestratorParameter);
+		return newContainer(orchestratorId, taskConsumer);
 	}
 
 	private MockTaskContainer newFloorPlannerContainer() {
 		
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
-		servicePlannerParameter.setFloorPlannerExecutorId(floorPlannerExecutorId);
-		servicePlannerParameter.setTaskConsumer(taskBroker);
-		servicePlannerParameter.setTaskProducer(taskBroker);
+		servicePlannerParameter.setFloorPlannerExecutorId(floorPlannerId);
 		servicePlannerParameter.setStateReader(state);
 		servicePlannerParameter.setTimeProvider(timeProvider);
 		
-		ServiceGridPlanner taskExecutor = new ServiceGridPlanner(servicePlannerParameter);
-		return newContainer(floorPlannerExecutorId, taskExecutor);
+		ServiceGridPlanner taskConsumer = new ServiceGridPlanner(servicePlannerParameter);
+		return newContainer(floorPlannerId, taskConsumer);
 	}
 
-	private MockTaskContainer newCloudContainer() {
-		MockImmediateMachineSpawnerTaskExecutor taskExecutor = new MockImmediateMachineSpawnerTaskExecutor(); 
-		return newContainer(cloudExecutorId, taskExecutor);
-	}
-
-	private MockTaskContainer newAgentLifecycleContainer() {
+	private MockTaskContainer newMachineProvisionerContainer() {
 		
-		TaskExecutorWrapper executorWrapper = new TaskExecutorWrapper() {
-		
+		TaskConsumerRegistrar taskConsumerRegistrar = new TaskConsumerRegistrar() {
+			
 			@Override
-			public void wrapTaskExecutor(
-					final Object taskExecutor, final URI executorId) {
+			public void registerTaskConsumer(
+					final Object taskConsumer, final URI executorId) {
 				
-				MockTaskContainer container = newContainer(executorId, taskExecutor);
+				MockTaskContainer container = newContainer(executorId, taskConsumer);
 				addContainer(container);
 			}
 
 			@Override
-			public void removeTaskExecutor(final URI executorId) {
+			public void unregisterTaskConsumer(final URI executorId) {
 				containers.remove(
 					Iterables.find(containers, new Predicate<MockTaskContainer>() {
 						@Override
@@ -394,12 +381,9 @@ public class ServiceGridOrchestrationTest {
 			}
 
 		};
-		
-		MockEmbeddedAgentLifecycleTaskExecutor taskExecutor =
-			new MockEmbeddedAgentLifecycleTaskExecutor(executorWrapper);
-		
-		return newContainer(agentLifecycleExecutorId, 
-							taskExecutor);
+
+		MockMachineProvisioner taskConsumer = new MockMachineProvisioner(taskConsumerRegistrar); 
+		return newContainer(machineProvisionerId, taskConsumer);
 	}
 	
 	private void addContainers(MockTaskContainer ... newContainers) {
@@ -438,14 +422,15 @@ public class ServiceGridOrchestrationTest {
 	
 	private MockTaskContainer newContainer(
 			URI executorId,
-			Object taskExecutor) {
+			Object taskConsumer) {
 		MockTaskContainerParameter containerParameter = new MockTaskContainerParameter();
 		containerParameter.setExecutorId(executorId);
-		containerParameter.setTaskExecutor(taskExecutor);
+		containerParameter.setTaskConsumer(taskConsumer);
 		containerParameter.setStateReader(state);
 		containerParameter.setStateWriter(state);
-		containerParameter.setTaskConsumer(taskBroker);
-		
+		containerParameter.setTaskReader(taskBroker);
+		containerParameter.setTaskWriter(taskBroker);
+		containerParameter.setTimeProvider(timeProvider);
 		return new MockTaskContainer(containerParameter);
 	}
 

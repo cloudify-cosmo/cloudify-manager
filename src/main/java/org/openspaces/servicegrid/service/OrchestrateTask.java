@@ -1,17 +1,7 @@
 package org.openspaces.servicegrid.service;
 
-import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskProducerTask;
 
-public class OrchestrateTask extends Task {
+public class OrchestrateTask extends TaskProducerTask {
 
-	private int maxNumberOfOrchestrationSteps = 1;
-
-	public int getMaxNumberOfOrchestrationSteps() {
-		return maxNumberOfOrchestrationSteps;
-	}
-
-	public void setMaxNumberOfOrchestrationSteps(
-			int maxNumberOfOrchestrationSteps) {
-		this.maxNumberOfOrchestrationSteps = maxNumberOfOrchestrationSteps;
-	}
 }

@@ -2,11 +2,11 @@ package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.streams.StreamConsumer;
+import org.openspaces.servicegrid.streams.StreamReader;
 
 public class ServiceUtils {
 	
-	public static <T> T getLastState(StreamConsumer<? super T> stateReader, URI executorId, Class<T> clazz) {
+	public static <T> T getLastState(StreamReader<? super T> stateReader, URI executorId, Class<T> clazz) {
 		T executorState = null;
 		URI lastAgentStateId = stateReader.getLastElementId(executorId);
 		if (lastAgentStateId != null) {
