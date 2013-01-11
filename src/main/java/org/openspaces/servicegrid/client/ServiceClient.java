@@ -4,7 +4,6 @@ import java.net.URI;
 
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
-import org.openspaces.servicegrid.service.tasks.ServiceTask;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 
@@ -23,7 +22,7 @@ public class ServiceClient {
 		this.taskProducer = parameterObject.getTaskProducer();
 	}
 	
-	public URI addServiceTask(URI serviceId, ServiceTask task) {
+	public URI addServiceTask(URI serviceId, Task task) {
 		Preconditions.checkNotNull(serviceId);
 		Preconditions.checkNotNull(task);
 		task.setTarget(serviceId);

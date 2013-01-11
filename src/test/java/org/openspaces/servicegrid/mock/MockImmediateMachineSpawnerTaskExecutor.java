@@ -1,5 +1,6 @@
 package org.openspaces.servicegrid.mock;
 
+import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -9,7 +10,8 @@ public class MockImmediateMachineSpawnerTaskExecutor {
 
 	private final TaskExecutorState state = new TaskExecutorState();
 	
-	public void execute(StartMachineTask task,
+	@TaskExecutor
+	public void startMachine(StartMachineTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 	
 		//Simulate starting machine

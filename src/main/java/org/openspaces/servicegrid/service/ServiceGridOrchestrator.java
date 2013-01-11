@@ -12,6 +12,7 @@ import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
@@ -67,7 +68,8 @@ public class ServiceGridOrchestrator {
 		this.state = new ServiceGridOrchestratorState();
 	}
 
-	public void execute(final OrchestrateTask task) {
+	@TaskExecutor
+	public void orchestrate(final OrchestrateTask task) {
 		long nowTimestamp = timeProvider.currentTimeMillis();
 		for (int i = 0 ; i < task.getMaxNumberOfOrchestrationSteps(); i++) {
 			final Iterable<? extends Task> newTasks = orchestrate(nowTimestamp);
@@ -78,7 +80,8 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
-	public void execute(ScaleOutServiceTask task) {
+	@TaskExecutor
+	public void scaleOutService(ScaleOutServiceTask task) {
 		
 		for (ServiceConfig serviceConfig : state.getServices()) {
 			if (serviceConfig.getServiceId().equals(task.getServiceId())) {
@@ -103,7 +106,8 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
-	public void execute(InstallServiceTask task) {
+	@TaskExecutor
+	public void installService(InstallServiceTask task) {
 		boolean installed = isServiceInstalled();
 		Preconditions.checkState(!installed);
 		ServiceConfig serviceConfig = task.getServiceConfig();

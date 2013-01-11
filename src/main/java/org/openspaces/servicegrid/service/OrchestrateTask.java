@@ -1,8 +1,8 @@
 package org.openspaces.servicegrid.service;
 
-import org.openspaces.servicegrid.service.tasks.ServiceTask;
+import org.openspaces.servicegrid.Task;
 
-public class OrchestrateTask extends ServiceTask {
+public class OrchestrateTask extends Task {
 
 	private int maxNumberOfOrchestrationSteps = 1;
 

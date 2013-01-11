@@ -7,7 +7,9 @@ import java.util.Map;
 
 import junit.framework.Assert;
 
+import org.openspaces.servicegrid.ImpersonatingTask;
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.streams.StreamConsumer;
@@ -44,7 +46,7 @@ public class MockTaskContainer {
 		
 		for (Method method : taskExecutor.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
-			if (method.getName().equals("execute")) {
+			if (method.getAnnotation(TaskExecutor.class) != null) {
 				Preconditions.checkArgument(parameterTypes.length == 1 || parameterTypes.length == 2, "execute method must have one or two parameters");
 				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not a task in " + taskExecutor);
 				Class<? extends Task> taskType = (Class<? extends Task>) parameterTypes[0];
@@ -150,7 +152,7 @@ public class MockTaskContainer {
 	}
 
 	private void execute(final Task task) {
-		if (task.getImpersonatedTarget() == null) {
+		if (!(task instanceof ImpersonatingTask)) {
 			Method executorMethod = executeMethodByType.get(task.getClass());
 			Preconditions.checkArgument(
 					executorMethod != null, 
@@ -165,7 +167,7 @@ public class MockTaskContainer {
 				
 				@Override
 				public void updateState(final TaskExecutorState impersonatedState) {
-					URI impersonatedTargetId = task.getImpersonatedTarget();
+					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
 					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
 					stateWriter.addElement(impersonatedTargetId, impersonatedState);
@@ -173,7 +175,7 @@ public class MockTaskContainer {
 
 				@Override
 				public TaskExecutorState getState() {
-					URI impersonatedTargetId = task.getImpersonatedTarget();
+					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
 					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
 					URI lastElementId = stateReader.getLastElementId(impersonatedTargetId);

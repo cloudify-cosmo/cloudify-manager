@@ -1,8 +1,8 @@
 package org.openspaces.servicegrid.agent.tasks;
 
-import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.ImpersonatingTask;
 
-public class StartAgentTask extends Task {
+public class StartAgentTask extends ImpersonatingTask {
 
 	private String ipAddress;
 

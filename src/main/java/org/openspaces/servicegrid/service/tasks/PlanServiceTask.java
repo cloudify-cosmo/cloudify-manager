@@ -1,10 +1,9 @@
 package org.openspaces.servicegrid.service.tasks;
 
+import org.openspaces.servicegrid.ImpersonatingTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 
-
-
-public class PlanServiceTask extends ServiceTask {
+public class PlanServiceTask extends ImpersonatingTask {
 
 	private ServiceConfig serviceConfig;
 

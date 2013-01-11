@@ -1,7 +1,7 @@
 package org.openspaces.servicegrid.agent.tasks;
 
-import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.ImpersonatingTask;
 
-public class PlanAgentTask  extends Task {
+public class PlanAgentTask  extends ImpersonatingTask {
 
 }

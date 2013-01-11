@@ -1,8 +1,8 @@
 package org.openspaces.servicegrid.agent.tasks;
 
-import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.ImpersonatingTask;
 
-public class StartMachineTask extends Task {
+public class StartMachineTask extends ImpersonatingTask {
 
 
 }

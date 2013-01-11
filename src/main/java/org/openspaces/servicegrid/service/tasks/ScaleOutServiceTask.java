@@ -2,7 +2,9 @@ package org.openspaces.servicegrid.service.tasks;
 
 import java.net.URI;
 
-public class ScaleOutServiceTask extends ServiceTask {
+import org.openspaces.servicegrid.Task;
+
+public class ScaleOutServiceTask extends Task {
 
 	private int plannedNumberOfInstances;
 	private URI serviceId;

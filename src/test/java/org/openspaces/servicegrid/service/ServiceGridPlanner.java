@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -39,7 +40,8 @@ public class ServiceGridPlanner {
 		this.state = new TaskExecutorState();
 	}
 	
-	public void execute(FloorPlanTask task) {
+	@TaskExecutor
+	public void floorPlan(FloorPlanTask task) {
 		final long nowTimestamp = timeProvider.currentTimeMillis();
 		final Iterable<? extends Task> newTasks = plan(task);
 		submitTasks(nowTimestamp, newTasks);
@@ -102,7 +104,8 @@ public class ServiceGridPlanner {
 		return newTasks;
 	}
 
-	public void execute(PlanAgentTask task,
+	@TaskExecutor
+	public void planAgent(PlanAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		AgentState impersonatedAgentState = new AgentState();
 		impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
@@ -110,7 +113,8 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(impersonatedAgentState);
 	}
 
-	public void execute(PlanServiceInstanceTask task,
+	@TaskExecutor
+	public void planServiceInstance(PlanServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
 		ServiceInstanceState instanceState = new ServiceInstanceState();
@@ -120,7 +124,8 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(instanceState);
 	}
 
-	public void execute(PlanServiceTask task,
+	@TaskExecutor
+	public void planService(PlanServiceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		
 		final PlanServiceTask planServiceTask = (PlanServiceTask) task;

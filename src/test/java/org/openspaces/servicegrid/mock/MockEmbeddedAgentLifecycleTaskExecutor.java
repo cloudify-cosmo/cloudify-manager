@@ -2,6 +2,7 @@ package org.openspaces.servicegrid.mock;
 
 import java.net.URI;
 
+import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.MockEmbeddedAgentTaskExecutor;
@@ -22,21 +23,22 @@ public class MockEmbeddedAgentLifecycleTaskExecutor {
 		this.executorWrapper = executorWrapper;
 	}
 
-	public void execute(StartAgentTask task,
+	@TaskExecutor
+	public void startAgent(StartAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
-	
 
 		AgentState agentState = impersonatedStateModifier.getState();
 		Preconditions.checkNotNull(agentState);
 		Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.MACHINE_STARTED));
-		URI agentId = ((StartAgentTask) task).getImpersonatedTarget();
+		URI agentId = task.getImpersonatedTarget();
 		Preconditions.checkState(agentId.toString().endsWith("/"));
 		agentState.setProgress(AgentState.Progress.AGENT_STARTED);
 		executorWrapper.wrapTaskExecutor(new MockEmbeddedAgentTaskExecutor(agentState), agentId);
 		impersonatedStateModifier.updateState(agentState);
 	}
 	
-	public void execute(RestartNotRespondingAgentTask task,
+	@TaskExecutor
+	public void restartAgent(RestartNotRespondingAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 			
 			//In a real implementation here is where we validate the agent process is killed

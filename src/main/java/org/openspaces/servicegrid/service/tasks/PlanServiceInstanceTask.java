@@ -2,7 +2,9 @@ package org.openspaces.servicegrid.service.tasks;
 
 import java.net.URI;
 
-public class PlanServiceInstanceTask extends ServiceTask {
+import org.openspaces.servicegrid.ImpersonatingTask;
+
+public class PlanServiceInstanceTask extends ImpersonatingTask {
 	
 	private URI serviceId;
 	private URI agentId;

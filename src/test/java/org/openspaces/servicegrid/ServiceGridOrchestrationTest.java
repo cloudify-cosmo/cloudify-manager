@@ -28,7 +28,6 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
-import org.openspaces.servicegrid.service.tasks.ServiceTask;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -212,7 +211,7 @@ public class ServiceGridOrchestrationTest {
 		submitTask(installServiceTask);
 	}
 
-	private void submitTask(final ServiceTask installServiceTask) {
+	private void submitTask(final Task installServiceTask) {
 		installServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
 		client.addServiceTask(orchestratorExecutorId, installServiceTask);
 		timeProvider.increaseBy(1000);

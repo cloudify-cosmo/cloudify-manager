@@ -2,10 +2,10 @@ package org.openspaces.servicegrid.service;
 
 import java.util.Set;
 
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
-import org.openspaces.servicegrid.service.tasks.ServiceTask;
 
-public class FloorPlanTask extends ServiceTask {
+public class FloorPlanTask extends Task {
 
 	private Set<ServiceConfig> services;
 

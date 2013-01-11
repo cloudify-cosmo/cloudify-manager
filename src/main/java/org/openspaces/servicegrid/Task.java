@@ -6,8 +6,6 @@ import java.util.List;
 public class Task {
 
 	private URI target;
-	
-	private URI impersonatedTarget;
 
 	private URI source;
 
@@ -19,10 +17,6 @@ public class Task {
 		return source;
 	}
 
-	public URI getImpersonatedTarget() {
-		return impersonatedTarget;
-	}
-
 	public void setTarget(URI target) {
 		this.target = target;
 	}
@@ -31,10 +25,6 @@ public class Task {
 		return target;
 	}
 
-	public void setImpersonatedTarget(URI impersonatedTarget) {
-		this.impersonatedTarget = impersonatedTarget;
-	}
-	
 	public void setSource(URI source) {
 		this.source = source;
 	}
