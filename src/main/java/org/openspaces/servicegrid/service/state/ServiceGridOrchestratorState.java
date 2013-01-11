@@ -9,7 +9,7 @@ import com.google.common.collect.Sets;
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
 	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
-	private boolean planned; 
+	private boolean floorPlanningRequired; 
 	
 	public Set<ServiceConfig> getServices() {
 		return servicesConfig;
@@ -23,11 +23,11 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 		servicesConfig.add(serviceConfig);
 	}
 
-	public void setFloorPlanned(boolean planned) {
-		this.planned = planned;
+	public void setFloorPlanningRequired(boolean floorPlanningRequired) {
+		this.floorPlanningRequired = floorPlanningRequired;
 	}
 	
-	public boolean isFloorPlanned() {
-		return this.planned;
+	public boolean FloorPlanningRequired() {
+		return floorPlanningRequired;
 	}
 }

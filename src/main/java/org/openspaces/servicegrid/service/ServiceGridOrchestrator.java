@@ -72,7 +72,7 @@ public class ServiceGridOrchestrator {
 				int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
 				if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
 					serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
-					state.setFloorPlanned(false);
+					state.setFloorPlanningRequired(true);
 					return;
 				}
 			}
@@ -82,12 +82,13 @@ public class ServiceGridOrchestrator {
 
 	@TaskConsumer
 	public void installService(InstallServiceTask task) {
-		boolean installed = isServiceInstalled();
-		Preconditions.checkState(!installed);
 		ServiceConfig serviceConfig = task.getServiceConfig();
-		Preconditions.checkNotNull(serviceConfig);
 		fixServiceId(serviceConfig);
+		boolean installed = isServiceInstalled(serviceConfig.getServiceId());
+		Preconditions.checkState(!installed);
+		Preconditions.checkNotNull(serviceConfig);
 		state.addService(serviceConfig);
+		state.setFloorPlanningRequired(true);
 	}
 
 	private void fixServiceId(ServiceConfig serviceConfig) {
@@ -100,15 +101,14 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
-	private boolean isServiceInstalled() {
-		boolean installed = false;
-		for (final URI oldTaskId : state.getCompletedTasks()) {
-			final Task oldTask = taskReader.getElement(oldTaskId, Task.class);
-			if (oldTask instanceof InstallServiceTask) {
-				installed = true;
+	private boolean isServiceInstalled(final URI serviceId) {
+		return Iterables.tryFind(state.getServices(), new Predicate<ServiceConfig>() {
+
+			@Override
+			public boolean apply(ServiceConfig serviceConfig) {
+				return serviceConfig.getServiceId().equals(serviceId);
 			}
-		}
-		return installed;
+		}).isPresent();
 	}
 
 	@TaskProducer
@@ -117,25 +117,27 @@ public class ServiceGridOrchestrator {
 		long nowTimestamp = timeProvider.currentTimeMillis();
 		List<Task> newTasks = Lists.newArrayList();
 		
-		floorPlanning(newTasks);
+		if (state.FloorPlanningRequired()) {
+			orchestrateFloorPlanning(newTasks);
+			state.setFloorPlanningRequired(false);
+		}
+		else {
+			
+			final Iterable<URI> healthyAgents = orchestrateAgents(newTasks, nowTimestamp);
 		
-		final Iterable<URI> healthyAgents = orchestrateAgents(newTasks, nowTimestamp);
-		
-		orchestrateService(newTasks, healthyAgents);
-		
-		pingIdleAgents(newTasks);
+			orchestrateService(newTasks, healthyAgents);
+			
+			pingIdleAgents(newTasks);
+		}
 		
 		return newTasks;
 	}
 
-	private void floorPlanning(List<Task> newTasks) {
-		if (!state.isFloorPlanned()) {
-			final FloorPlanTask planTask = new FloorPlanTask();
-			planTask.setServices(state.getServices());
-			planTask.setTarget(floorPlannerId);
-			addNewTask(newTasks, planTask);
-			state.setFloorPlanned(true);
-		}
+	private void orchestrateFloorPlanning(List<Task> newTasks) {
+		final FloorPlanTask planTask = new FloorPlanTask();
+		planTask.setServices(state.getServices());
+		planTask.setTarget(floorPlannerId);
+		addNewTask(newTasks, planTask);
 	}
 
 	private void orchestrateService(
@@ -180,7 +182,7 @@ public class ServiceGridOrchestrator {
 		}
 		for (final URI agentId : getAgentIds()) {
 			if (!agentNewTasks.contains(agentId) &&
-				!isTaskConsumerConsumingTask(agentId) &&
+				!isExecutingTask(agentId) &&
 				getNextTaskToConsume(agentId) == null) {
 					
 				final AgentState agentState = getAgentState(agentId);
@@ -290,7 +292,7 @@ public class ServiceGridOrchestrator {
 		
 		boolean isZombie = false;
 		
-		if (!isTaskConsumerConsumingTask(agentId)) {
+		if (!isExecutingTask(agentId)) {
 			final URI nextTaskToConsume = getNextTaskToConsume(agentId);
 			if (nextTaskToConsume != null) {
 				final Task task = taskReader.getElement(nextTaskToConsume, Task.class);
@@ -320,22 +322,25 @@ public class ServiceGridOrchestrator {
 			final List<Task> newTasks,
 			final Task newTask) {
 		
+		if (getExistingTaskId(newTask) == null) {
+			addNewTask(newTasks, newTask);
+		}
+	}
+
+	private URI getExistingTaskId(final Task newTask) {
 		final URI agentId = newTask.getTarget();
-		URI existingTaskId = 
+		final URI existingTaskId = 
 			Iterables.find(getExecutingAndPendingAgentTasks(agentId),
 				new Predicate<URI>() {
 					@Override
-					public boolean apply(URI existingTaskId) {
-						Task existingTask = taskReader.getElement(existingTaskId, Task.class);
+					public boolean apply(final URI existingTaskId) {
+						final Task existingTask = taskReader.getElement(existingTaskId, Task.class);
 						Preconditions.checkArgument(agentId.equals(existingTask.getTarget()),"Expected target " + agentId + " actual target " + existingTask.getTarget());
 						return tasksEqualsIgnoreTimestampIgnoreSource(existingTask,newTask);
 				}},
 				null
 			);
-		
-		if (existingTaskId == null) {
-			addNewTask(newTasks, newTask);
-		}
+		return existingTaskId;
 	}
 	
 	private boolean tasksEqualsIgnoreTimestampIgnoreSource(final Task task1, final Task task2) {
@@ -365,9 +370,9 @@ public class ServiceGridOrchestrator {
 		newTasks.add(task);
 	}
 
-	private boolean isTaskConsumerConsumingTask(URI executorId) {
-		TaskConsumerState executorState = ServiceUtils.getLastState(stateReader, executorId, TaskConsumerState.class);
-		return executorState != null && !Iterables.isEmpty(executorState.getExecutingTasks());
+	private boolean isExecutingTask(URI taskConsumerId) {
+		TaskConsumerState taskConsumerState = ServiceUtils.getLastState(stateReader, taskConsumerId, TaskConsumerState.class);
+		return taskConsumerState != null && !Iterables.isEmpty(taskConsumerState.getExecutingTasks());
 	}
 
 	private AgentState getAgentState(URI agentId) {
