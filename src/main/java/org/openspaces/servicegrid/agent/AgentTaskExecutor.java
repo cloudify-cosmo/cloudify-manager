@@ -1,8 +1,6 @@
 package org.openspaces.servicegrid.agent;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -12,8 +10,7 @@ import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 
 import com.google.common.base.Preconditions;
 
-public class AgentTaskExecutor implements
-		ImpersonatingTaskExecutor<TaskExecutorState> , TaskExecutor<TaskExecutorState> {
+public class AgentTaskExecutor {
 
 	private final AgentState state;
 	private final Agent agent;
@@ -23,7 +20,6 @@ public class AgentTaskExecutor implements
 		this.state = state;
 	}
 	
-	@Override
 	public void execute(Task task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof InstallServiceInstanceTask){
@@ -35,12 +31,10 @@ public class AgentTaskExecutor implements
 		}
 	}
 
-	@Override
 	public TaskExecutorState getState() {
 		return state;
 	}
 
-	@Override
 	public void execute(Task task) {
 		if (task instanceof PingAgentTask){
 			//do nothing

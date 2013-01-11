@@ -3,7 +3,6 @@ package org.openspaces.servicegrid.mock;
 import java.net.URI;
 import java.util.Map;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
@@ -15,8 +14,7 @@ import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
-public class MockEmbeddedAgentLifecycleTaskExecutor implements
-		ImpersonatingTaskExecutor<TaskExecutorState> {
+public class MockEmbeddedAgentLifecycleTaskExecutor {
 
 	private final TaskExecutorState state = new TaskExecutorState();
 	
@@ -28,7 +26,6 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 		this.executorWrapper = executorWrapper;
 	}
 
-	@Override
 	public void execute(Task task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartAgentTask) {
@@ -63,7 +60,6 @@ public class MockEmbeddedAgentLifecycleTaskExecutor implements
 
 	}
 
-	@Override
 	public TaskExecutorState getState() {
 		return state;
 	}

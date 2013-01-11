@@ -1,17 +1,15 @@
 package org.openspaces.servicegrid.mock;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 
-public class MockStartAgentSshTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
+public class MockStartAgentSshTaskExecutor {
 
 	private TaskExecutorState state = new TaskExecutorState();
 
-	@Override
 	public void execute(Task task, 
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartAgentTask) {
@@ -22,7 +20,6 @@ public class MockStartAgentSshTaskExecutor implements ImpersonatingTaskExecutor<
 		
 	}
 
-	@Override
 	public TaskExecutorState getState() {
 		return state ;
 	}

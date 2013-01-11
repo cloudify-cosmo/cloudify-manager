@@ -1,6 +1,5 @@
 package org.openspaces.servicegrid.mock;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
@@ -9,7 +8,7 @@ import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 
 import com.google.common.base.Preconditions;
 
-public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<TaskExecutorState> {
+public class MockCloudMachineTaskExecutor {
 
 	private final TaskExecutorState state = new TaskExecutorState();
 	private TaskExecutorStateModifier impersonatedStateModifier;
@@ -23,7 +22,6 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 		this.ipAddressMock = ipAddress;
 	}
 	
-	@Override
 	public void execute(Task task, TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof StartMachineTask) {
 			this.impersonatedStateModifier = impersonatedStateModifier;
@@ -45,7 +43,6 @@ public class MockCloudMachineTaskExecutor implements ImpersonatingTaskExecutor<T
 		impersonatedStateModifier.updateState(agentState);
 	}
 	
-	@Override
 	public TaskExecutorState getState() {
 		return state;
 	}

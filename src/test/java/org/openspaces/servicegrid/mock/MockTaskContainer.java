@@ -1,18 +1,19 @@
 package org.openspaces.servicegrid.mock;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URI;
 
 import junit.framework.Assert;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.streams.StreamConsumer;
 import org.openspaces.servicegrid.streams.StreamProducer;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 
 public class MockTaskContainer {
@@ -23,6 +24,9 @@ public class MockTaskContainer {
 	private final StreamConsumer<Task> taskConsumer;
 	private final StreamConsumer<TaskExecutorState> stateReader;
 	private boolean killed;
+	private final Method getStateMethod;
+	private final Method impersonatedExecuteMethod;
+	private final Method executeMethod;
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
 		this.executorId = parameterObject.getExecutorId();
@@ -31,6 +35,21 @@ public class MockTaskContainer {
 		this.taskConsumer = parameterObject.getTaskConsumer();
 		this.taskExecutor = parameterObject.getTaskExecutor();
 		this.killed = false;
+		this.getStateMethod = getMethodByName("getState");
+		this.executeMethod = getMethodByName("execute", Task.class);
+		this.impersonatedExecuteMethod = getMethodByName("execute", Task.class, TaskExecutorStateModifier.class);
+	}
+
+	private Method getMethodByName(String methodName, Class<?> ... parameterTypes) {
+		Method method;
+		try {
+			method = taskExecutor.getClass().getMethod(methodName,parameterTypes);
+		} catch (final NoSuchMethodException e) {
+			return null;
+		} catch (final SecurityException e) {
+			throw Throwables.propagate(e);
+		}
+		return method;
 	}
 
 	private void afterExecute(URI taskId, Task task) {
@@ -40,17 +59,19 @@ public class MockTaskContainer {
 		stateWriter.addElement(getExecutorId(), state);
 	}
 
-	
-
 	private TaskExecutorState getTaskExecutorState() {
-		if (taskExecutor instanceof TaskExecutor<?>) {
-			return ((TaskExecutor<?>) taskExecutor).getState();
-		}
-		else if (taskExecutor instanceof ImpersonatingTaskExecutor<?>) {
-			return ((ImpersonatingTaskExecutor<?>) taskExecutor).getState();
-		}
-		else {
-			throw new IllegalStateException("taskExecutor illegal type - " + taskExecutor);
+		return invokeMethod(getStateMethod);
+	}
+
+	private TaskExecutorState invokeMethod(Method method, Object ... args) {
+		try {
+			return (TaskExecutorState) method.invoke(taskExecutor, args);
+		} catch (final IllegalAccessException e) {
+			throw Throwables.propagate(e);
+		} catch (final IllegalArgumentException e) {
+			throw Throwables.propagate(e);
+		} catch (final InvocationTargetException e) {
+			throw Throwables.propagate(e);
 		}
 	}
 
@@ -111,10 +132,9 @@ public class MockTaskContainer {
 
 	private void execute(final Task task) {
 		if (task.getImpersonatedTarget() != null) {
-			Preconditions.checkArgument(
-					taskExecutor instanceof ImpersonatingTaskExecutor, 
+			Preconditions.checkState(
+					impersonatedExecuteMethod != null, 
 					getExecutorId() + " cannot handle task, since it requires impersonation");
-			final ImpersonatingTaskExecutor<?> impersonatingTaskExecutor = (ImpersonatingTaskExecutor<?>) taskExecutor;
 			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
 				
 				@Override
@@ -138,10 +158,13 @@ public class MockTaskContainer {
 				}
 
 			};
-			impersonatingTaskExecutor.execute(task, impersonatedStateModifier);
+			invokeMethod(impersonatedExecuteMethod, task, impersonatedStateModifier);
 		}
 		else {
-			((TaskExecutor<?>) taskExecutor).execute(task);
+			Preconditions.checkState(
+					executeMethod != null, 
+					getExecutorId() + " cannot handle task");
+			invokeMethod(executeMethod, task);
 		}
 	}
 	

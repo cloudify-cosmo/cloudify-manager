@@ -12,7 +12,6 @@ import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
@@ -38,7 +37,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestratorState> {
+public class ServiceGridOrchestrator {
 
 	private static final long ZOMBIE_DETECTION_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
@@ -68,7 +67,6 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		this.state = new ServiceGridOrchestratorState();
 	}
 
-	@Override
 	public void execute(Task task) {
 		long nowTimestamp = timeProvider.currentTimeMillis();
 		if (task instanceof InstallServiceTask){
@@ -451,7 +449,6 @@ public class ServiceGridOrchestrator implements TaskExecutor<ServiceGridOrchestr
 		return tasks;
 	}
 		
-	@Override
 	public ServiceGridOrchestratorState getState() {
 		return state;
 	}

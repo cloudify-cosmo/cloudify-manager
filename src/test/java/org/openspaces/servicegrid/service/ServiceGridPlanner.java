@@ -5,9 +5,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.UUID;
 
-import org.openspaces.servicegrid.ImpersonatingTaskExecutor;
 import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskExecutor;
 import org.openspaces.servicegrid.TaskExecutorState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -25,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
-public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, ImpersonatingTaskExecutor<TaskExecutorState> {
+public class ServiceGridPlanner {
 
 	private final TaskExecutorState state;
 	private final CurrentTimeProvider timeProvider;
@@ -41,7 +39,6 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 		this.state = new TaskExecutorState();
 	}
 	
-	@Override
 	public void execute(Task task) {
 		long nowTimestamp = timeProvider.currentTimeMillis();
 		
@@ -54,7 +51,6 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 		}
 	}
 	
-	@Override
 	public void execute(Task task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		if (task instanceof PlanServiceTask){
@@ -178,7 +174,6 @@ public class ServiceGridPlanner implements TaskExecutor<TaskExecutorState>, Impe
 		}
 	}
 	
-	@Override
 	public TaskExecutorState getState() {
 		return state;
 	}
