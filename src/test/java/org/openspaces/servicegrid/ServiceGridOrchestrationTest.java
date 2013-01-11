@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.client.ServiceClientParameter;
@@ -315,7 +314,6 @@ public class ServiceGridOrchestrationTest {
 		}
 
 		Ordering<Task> ordering = new Ordering<Task>() {
-			private final ObjectMapper mapper = new ObjectMapper();
 			@Override
 			public int compare(Task o1, Task o2) {
 				int c;
@@ -323,13 +321,6 @@ public class ServiceGridOrchestrationTest {
 				else if (o2.getSourceTimestamp() == null) c = -1;
 				else {
 					c = o1.getSourceTimestamp().compareTo(o2.getSourceTimestamp());
-					/*if (c == 0) {
-						try {
-							c = mapper.writeValueAsString(o1).compareTo(mapper.writeValueAsString(o2));
-						} catch (Throwable t) {
-							throw Throwables.propagate(t);
-						} 
-					}*/
 				}
 				return c;
 			}
