@@ -67,30 +67,18 @@ public class ServiceGridOrchestrator {
 		this.state = new ServiceGridOrchestratorState();
 	}
 
-	public void execute(Task task) {
+	public void execute(final OrchestrateTask task) {
 		long nowTimestamp = timeProvider.currentTimeMillis();
-		if (task instanceof InstallServiceTask){
-			installService((InstallServiceTask) task);
-		}
-		else if (task instanceof ScaleOutServiceTask) {
-			scaleOutService((ScaleOutServiceTask)task);
-		}
-		else if (task instanceof OrchestrateTask) {
-			OrchestrateTask orchestrateTask = (OrchestrateTask) task;
-			for (int i = 0 ; i < orchestrateTask.getMaxNumberOfOrchestrationSteps(); i++) {
-				Iterable<? extends Task> newTasks = orchestrate(nowTimestamp);
-				if (Iterables.isEmpty(newTasks)) {
-					break;
-				}
-				submitTasks(nowTimestamp, newTasks);
+		for (int i = 0 ; i < task.getMaxNumberOfOrchestrationSteps(); i++) {
+			final Iterable<? extends Task> newTasks = orchestrate(nowTimestamp);
+			if (Iterables.isEmpty(newTasks)) {
+				break;
 			}
-		}
-		else {
-			Preconditions.checkState(false, "Cannot handle task " + task.getClass());
+			submitTasks(nowTimestamp, newTasks);
 		}
 	}
 
-	private void scaleOutService(ScaleOutServiceTask task) {
+	public void execute(ScaleOutServiceTask task) {
 		
 		for (ServiceConfig serviceConfig : state.getServices()) {
 			if (serviceConfig.getServiceId().equals(task.getServiceId())) {
@@ -115,7 +103,7 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
-	private void installService(InstallServiceTask task) {
+	public void execute(InstallServiceTask task) {
 		boolean installed = isServiceInstalled();
 		Preconditions.checkState(!installed);
 		ServiceConfig serviceConfig = task.getServiceConfig();

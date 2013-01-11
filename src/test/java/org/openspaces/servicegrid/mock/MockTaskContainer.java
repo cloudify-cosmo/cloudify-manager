@@ -3,6 +3,7 @@ package org.openspaces.servicegrid.mock;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -15,6 +16,7 @@ import org.openspaces.servicegrid.streams.StreamProducer;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 public class MockTaskContainer {
 
@@ -25,8 +27,8 @@ public class MockTaskContainer {
 	private final StreamConsumer<TaskExecutorState> stateReader;
 	private boolean killed;
 	private final Method getStateMethod;
-	private final Method impersonatedExecuteMethod;
-	private final Method executeMethod;
+	private final Map<Class<? extends Task>,Method> impersonatedExecuteMethodByType;
+	private final Map<Class<? extends Task>,Method> executeMethodByType;
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
 		this.executorId = parameterObject.getExecutorId();
@@ -36,8 +38,25 @@ public class MockTaskContainer {
 		this.taskExecutor = parameterObject.getTaskExecutor();
 		this.killed = false;
 		this.getStateMethod = getMethodByName("getState");
-		this.executeMethod = getMethodByName("execute", Task.class);
-		this.impersonatedExecuteMethod = getMethodByName("execute", Task.class, TaskExecutorStateModifier.class);
+		
+		this.executeMethodByType = Maps.newHashMap();
+		this.impersonatedExecuteMethodByType = Maps.newHashMap();
+		
+		for (Method method : taskExecutor.getClass().getMethods()) {
+			Class<?>[] parameterTypes = method.getParameterTypes();
+			if (method.getName().equals("execute")) {
+				Preconditions.checkArgument(parameterTypes.length == 1 || parameterTypes.length == 2, "execute method must have one or two parameters");
+				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is not a task in " + taskExecutor);
+				Class<? extends Task> taskType = (Class<? extends Task>) parameterTypes[0];
+				if (parameterTypes.length == 1) {
+					executeMethodByType.put(taskType, method);
+				}
+				if (parameterTypes.length == 2) {
+					Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"execute method second parameter type must be " + TaskExecutorStateModifier.class);
+					impersonatedExecuteMethodByType.put(taskType, method);
+				}
+			}
+		}
 	}
 
 	private Method getMethodByName(String methodName, Class<?> ... parameterTypes) {
@@ -131,10 +150,17 @@ public class MockTaskContainer {
 	}
 
 	private void execute(final Task task) {
-		if (task.getImpersonatedTarget() != null) {
-			Preconditions.checkState(
-					impersonatedExecuteMethod != null, 
-					getExecutorId() + " cannot handle task, since it requires impersonation");
+		if (task.getImpersonatedTarget() == null) {
+			Method executorMethod = executeMethodByType.get(task.getClass());
+			Preconditions.checkArgument(
+					executorMethod != null, 
+					taskExecutor.getClass() + " cannot handle task " + task.getClass());
+			invokeMethod(executorMethod, task);
+		} else {
+			Method executorMethod = impersonatedExecuteMethodByType.get(task.getClass());
+			Preconditions.checkArgument(
+					executorMethod != null, 
+					taskExecutor.getClass() + " cannot handle impersonation task " + task.getClass());
 			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
 				
 				@Override
@@ -158,13 +184,7 @@ public class MockTaskContainer {
 				}
 
 			};
-			invokeMethod(impersonatedExecuteMethod, task, impersonatedStateModifier);
-		}
-		else {
-			Preconditions.checkState(
-					executeMethod != null, 
-					getExecutorId() + " cannot handle task");
-			invokeMethod(executeMethod, task);
+			invokeMethod(executorMethod, task, impersonatedStateModifier);
 		}
 	}
 	

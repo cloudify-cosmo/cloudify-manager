@@ -39,34 +39,11 @@ public class ServiceGridPlanner {
 		this.state = new TaskExecutorState();
 	}
 	
-	public void execute(Task task) {
-		long nowTimestamp = timeProvider.currentTimeMillis();
-		
-		if (task instanceof FloorPlanTask) {
-			Iterable<? extends Task> newTasks = plan((FloorPlanTask)task);
-			submitTasks(nowTimestamp, newTasks);
-		}
-		else {
-			Preconditions.checkState(false, "Cannot handle task " + task.getClass());
-		}
+	public void execute(FloorPlanTask task) {
+		final long nowTimestamp = timeProvider.currentTimeMillis();
+		final Iterable<? extends Task> newTasks = plan(task);
+		submitTasks(nowTimestamp, newTasks);
 	}
-	
-	public void execute(Task task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
-		if (task instanceof PlanServiceTask){
-			planService((PlanServiceTask) task, impersonatedStateModifier);
-		}
-		else if (task instanceof PlanServiceInstanceTask) {
-			planServiceInstance((PlanServiceInstanceTask) task, impersonatedStateModifier);
-		}
-		else if (task instanceof PlanAgentTask) {
-			planAgent((PlanAgentTask) task, impersonatedStateModifier);
-		}
-		else {
-			Preconditions.checkState(false, "Unkown task " + task.getClass());
-		}
-	}
-	
 
 	private void submitTasks(long nowTimestamp,
 			Iterable<? extends Task> newTasks) {
@@ -125,7 +102,7 @@ public class ServiceGridPlanner {
 		return newTasks;
 	}
 
-	private void planAgent(PlanAgentTask task,
+	public void execute(PlanAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		AgentState impersonatedAgentState = new AgentState();
 		impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
@@ -133,7 +110,7 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(impersonatedAgentState);
 	}
 
-	private void planServiceInstance(PlanServiceInstanceTask task,
+	public void execute(PlanServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
 		ServiceInstanceState instanceState = new ServiceInstanceState();
@@ -143,7 +120,7 @@ public class ServiceGridPlanner {
 		impersonatedStateModifier.updateState(instanceState);
 	}
 
-	private void planService(PlanServiceTask task,
+	public void execute(PlanServiceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		
 		final PlanServiceTask planServiceTask = (PlanServiceTask) task;
