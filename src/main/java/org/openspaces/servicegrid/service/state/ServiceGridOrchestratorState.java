@@ -14,48 +14,48 @@ import com.google.common.collect.Iterables;
 
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
-	private ServiceGridFloorPlan floorPlan;
-	private boolean floorPlanChanged;
+	private ServiceGridDeploymentPlan deploymentPlan;
+	private boolean deploymentPlanChanged;
 
-	public ServiceGridFloorPlan getFloorPlan() {
-		return floorPlan;
+	public ServiceGridDeploymentPlan getDeploymentPlan() {
+		return deploymentPlan;
 	}
 
-	public void setFloorPlan(ServiceGridFloorPlan floorPlan) {
-		this.floorPlan = floorPlan;
+	public void setDeploymentPlan(ServiceGridDeploymentPlan deploymentPlan) {
+		this.deploymentPlan = deploymentPlan;
 	}
 
-	public boolean isFloorPlanChanged() {
-		return floorPlanChanged;
+	public boolean isDeploymentPlanChanged() {
+		return deploymentPlanChanged;
 	}
 
-	public void setFloorPlanChanged(boolean floorPlanChanged) {
-		this.floorPlanChanged = floorPlanChanged;
+	public void setDeploymentPlanChanged(boolean deploymentPlanChanged) {
+		this.deploymentPlanChanged = deploymentPlanChanged;
 	}
 	
 	@JsonIgnore
 	public Iterable<URI> getServiceInstanceIds(URI serviceId) {
-		return floorPlan.getInstanceIdsByServiceId().get(serviceId);
+		return deploymentPlan.getInstanceIdsByServiceId().get(serviceId);
 	}
 
 	@JsonIgnore
 	public Iterable<URI> getAgentInstanceIds(URI agentId) {
-		return floorPlan.getInstanceIdsByAgentId().get(agentId);
+		return deploymentPlan.getInstanceIdsByAgentId().get(agentId);
 	}
 	
 	@JsonIgnore
 	public List<ServiceConfig> getServices() {
-		return floorPlan.getServices();
+		return deploymentPlan.getServices();
 	}
 	
 	@JsonIgnore
 	public Iterable<URI> getAgentIds() {
-		return floorPlan.getInstanceIdsByAgentId().keySet();
+		return deploymentPlan.getInstanceIdsByAgentId().keySet();
 	}
 
 	@JsonIgnore
 	public URI getAgentIdOfServiceInstance(final URI instanceId) {
-		Collection<Entry<URI, URI>> instanceIdByAgentId = floorPlan.getInstanceIdsByAgentId().entries();
+		Collection<Entry<URI, URI>> instanceIdByAgentId = deploymentPlan.getInstanceIdsByAgentId().entries();
 		return Iterables.find(instanceIdByAgentId, new Predicate<Map.Entry<URI,URI>>() {
 
 					@Override

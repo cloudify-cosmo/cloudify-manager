@@ -18,11 +18,11 @@ import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
-import org.openspaces.servicegrid.service.state.ServiceGridFloorPlan;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
-import org.openspaces.servicegrid.service.tasks.EnforceNewFloorPlanTask;
+import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceTask;
@@ -59,19 +59,19 @@ public class ServiceGridOrchestrator {
 		this.stateReader = parameterObject.getStateReader();
 		this.timeProvider = parameterObject.getTimeProvider();
 		this.state = new ServiceGridOrchestratorState();
-		state.setFloorPlan(new ServiceGridFloorPlan());
+		state.setDeploymentPlan(new ServiceGridDeploymentPlan());
 	}
 
 	@TaskProducer
 	public Iterable<Task> orchestrate() {
 	
 		final List<Task> newTasks = Lists.newArrayList();
-		if (state.isFloorPlanChanged()) {
+		if (state.isDeploymentPlanChanged()) {
 			planServices(newTasks);
 			planAgents(newTasks);
-			state.setFloorPlanChanged(false);
+			state.setDeploymentPlanChanged(false);
 		}
-		else if (isFloorPlanningTasksComplete()){
+		else if (isDeploymentPlanningTasksComplete()){
 			final Iterable<URI> healthyAgents = orchestrateAgents(newTasks);
 			orchestrateService(newTasks, healthyAgents);
 		}
@@ -81,9 +81,9 @@ public class ServiceGridOrchestrator {
 
 	
 	@TaskConsumer
-	public void enforceNewFloorPlan(EnforceNewFloorPlanTask task) {
-		state.setFloorPlan(task.getFloorPlan());
-		state.setFloorPlanChanged(true);
+	public void updateDeploymentPlan(UpdateDeploymentPlanTask task) {
+		state.setDeploymentPlan(task.getDeploymentPlan());
+		state.setDeploymentPlanChanged(true);
 	}
 
 	@ImpersonatingTaskConsumer
@@ -124,7 +124,7 @@ public class ServiceGridOrchestrator {
 			List<Task> newTasks,
 			final Iterable<URI> healthyAgents) {
 		
-		Preconditions.checkState(!state.isFloorPlanChanged());
+		Preconditions.checkState(!state.isDeploymentPlanChanged());
 		
 		for (final ServiceConfig serviceConfig : state.getServices()) {
 			
@@ -208,7 +208,7 @@ public class ServiceGridOrchestrator {
 	}
 
 	private Iterable<URI> orchestrateAgents(List<Task> newTasks) {
-		Preconditions.checkState(!state.isFloorPlanChanged());
+		Preconditions.checkState(!state.isDeploymentPlanChanged());
 		final long nowTimestamp = timeProvider.currentTimeMillis();
 		Set<URI> healthyAgents = Sets.newHashSet();
 		for (URI agentId : state.getAgentIds()) {
@@ -340,7 +340,7 @@ public class ServiceGridOrchestrator {
 		return state;
 	}
 	
-	private boolean isFloorPlanningTasksComplete() {
+	private boolean isDeploymentPlanningTasksComplete() {
 		Iterable<URI> pendingTasks = ServiceUtils.getPendingTasks(stateReader, taskReader, orchestratorId);
 		URI pendingPlanTask = Iterables.find(pendingTasks, new Predicate<URI>() {
 

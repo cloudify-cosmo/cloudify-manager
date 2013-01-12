@@ -17,11 +17,13 @@ import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
 import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
-import org.openspaces.servicegrid.service.ServiceGridFloorPlanner;
+import org.openspaces.servicegrid.service.ServiceGridDeploymentPlanner;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
 import org.openspaces.servicegrid.service.ServiceGridPlannerParameter;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
+import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
@@ -47,7 +49,7 @@ public class ServiceGridOrchestrationTest {
 	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
 	private final URI orchestratorId;
-	private final URI floorPlannerId;
+	private final URI deploymentPlannerId;
 	private final URI machineProvisionerId;
 	private MockStreams<TaskConsumerState> state;
 	private MockStreams<Task> taskBroker;
@@ -58,7 +60,7 @@ public class ServiceGridOrchestrationTest {
 		setSimpleLoggerFormatter(logger);
 		
 		orchestratorId = new URI("http://localhost/services/orchestrator/");
-		floorPlannerId = new URI("http://localhost/services/floorPlanner/");
+		deploymentPlannerId = new URI("http://localhost/services/deploymentPlanner/");
 		machineProvisionerId = new URI("http://localhost/services/provisioner/");
 	}
 
@@ -72,7 +74,7 @@ public class ServiceGridOrchestrationTest {
 		containers = Sets.newCopyOnWriteArraySet();
 		addContainers(
 				newOrchestratorContainer(),				
-				newFloorPlannerContainer(),
+				newDeploymentPlannerContainer(),
 				newMachineProvisionerContainer()
 		);
 		logger.info("Starting " + method.getName());
@@ -89,7 +91,7 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		assertSingleTomcatInstance();
 	}
-		
+
 	@Test
 	public void installMultipleInstanceServiceTest() throws URISyntaxException {
 		installService("tomcat", 2);
@@ -124,7 +126,7 @@ public class ServiceGridOrchestrationTest {
 
 	private void assertSingleTomcatInstance() throws URISyntaxException {
 		URI serviceId = getServiceId("tomcat");
-		final ServiceState serviceState = state.getElement(state.getLastElementId(serviceId), ServiceState.class);
+		final ServiceState serviceState = StreamUtils.getLastElement(state, serviceId, ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
 		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		URI instanceId = getOnlyServiceInstanceId();
@@ -138,6 +140,13 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
 		Assert.assertEquals(agentState.getNumberOfRestarts(), 0);
+		
+		final ServiceGridPlannerState plannerState = StreamUtils.getLastElement(state, deploymentPlannerId, ServiceGridPlannerState.class);
+		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), instanceId);
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceId(), serviceId);
+		
 	}
 
 	private URI getOnlyAgentId() throws URISyntaxException {
@@ -151,6 +160,11 @@ public class ServiceGridOrchestrationTest {
 		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		Iterable<URI> instanceIds = state.getElementIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
+		
+		final ServiceGridPlannerState plannerState = StreamUtils.getLastElement(state, deploymentPlannerId, ServiceGridPlannerState.class);
+		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceId(), serviceId);
+		Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), 2);
 		
 		Iterable<URI> agentIds = getAgentIds();
 		int numberOfAgents = Iterables.size(agentIds);
@@ -167,7 +181,9 @@ public class ServiceGridOrchestrationTest {
 			Assert.assertEquals(instanceState.getServiceId(), serviceId);
 			Assert.assertEquals(instanceState.getAgentId(), agentId);
 			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+			Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
 		}
+		
 	}
 		
 	
@@ -204,7 +220,7 @@ public class ServiceGridOrchestrationTest {
 		serviceConfig.setServiceId(getServiceId(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
-		submitTask(floorPlannerId, installServiceTask);
+		submitTask(deploymentPlannerId, installServiceTask);
 	}
 
 	private void submitTask(final URI target, final Task installServiceTask) {
@@ -219,7 +235,7 @@ public class ServiceGridOrchestrationTest {
 		scaleOutServiceTask.setServiceId(serviceId);
 		scaleOutServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
 		scaleOutServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
-		submitTask(floorPlannerId, scaleOutServiceTask);
+		submitTask(deploymentPlannerId, scaleOutServiceTask);
 	}
 
 	
@@ -236,7 +252,7 @@ public class ServiceGridOrchestrationTest {
 			{
 			TaskProducerTask producerTask = new TaskProducerTask();
 			producerTask.setMaxNumberOfSteps(100);
-			submitTask(floorPlannerId, producerTask);
+			submitTask(deploymentPlannerId, producerTask);
 			}
 			{
 			TaskProducerTask producerTask = new TaskProducerTask();
@@ -344,7 +360,7 @@ public class ServiceGridOrchestrationTest {
 		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
 		serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
-		serviceOrchestratorParameter.setFloorPlannerId(floorPlannerId);
+		serviceOrchestratorParameter.setDeploymentPlannerId(deploymentPlannerId);
 		serviceOrchestratorParameter.setTaskConsumer(taskBroker);
 		serviceOrchestratorParameter.setStateReader(state);
 		serviceOrchestratorParameter.setTimeProvider(timeProvider);
@@ -353,14 +369,14 @@ public class ServiceGridOrchestrationTest {
 		return newContainer(orchestratorId, taskConsumer);
 	}
 
-	private MockTaskContainer newFloorPlannerContainer() {
+	private MockTaskContainer newDeploymentPlannerContainer() {
 		
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
 		servicePlannerParameter.setOrchestratorId(orchestratorId);
 		servicePlannerParameter.setTimeProvider(timeProvider);
 		
-		ServiceGridFloorPlanner taskConsumer = new ServiceGridFloorPlanner(servicePlannerParameter);
-		return newContainer(floorPlannerId, taskConsumer);
+		ServiceGridDeploymentPlanner taskConsumer = new ServiceGridDeploymentPlanner(servicePlannerParameter);
+		return newContainer(deploymentPlannerId, taskConsumer);
 	}
 
 	private MockTaskContainer newMachineProvisionerContainer() {

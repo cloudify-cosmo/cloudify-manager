@@ -11,13 +11,13 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
-public class ServiceGridFloorPlan {
+public class ServiceGridDeploymentPlan {
 
 	private List<ServiceConfig> services;
 	private LinkedListMultimap<URI,URI> instanceIdsByAgentId;
 	private LinkedListMultimap<URI,URI> instanceIdsByServiceId;
 	
-	public ServiceGridFloorPlan() {
+	public ServiceGridDeploymentPlan() {
 		services = Lists.newArrayList();
 		instanceIdsByAgentId = LinkedListMultimap.create();
 		instanceIdsByServiceId = LinkedListMultimap.create();

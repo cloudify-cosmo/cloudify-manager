@@ -10,8 +10,8 @@ import com.google.common.collect.Sets;
 public class ServiceGridPlannerState extends TaskConsumerState {
 
 	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
-	private boolean floorPlanningRequired;
-	private ServiceGridFloorPlan floorPlan;
+	private boolean deploymentPlanningRequired;
+	private ServiceGridDeploymentPlan deploymentPlan;
 	
 	public Set<ServiceConfig> getServices() {
 		return servicesConfig;
@@ -24,27 +24,27 @@ public class ServiceGridPlannerState extends TaskConsumerState {
 	@JsonIgnore
 	public void addService(ServiceConfig serviceConfig) {
 		servicesConfig.add(serviceConfig);
-		setFloorPlanningRequired(true);
+		setDeploymentPlanningRequired(true);
 	}
 
-	public void setFloorPlanningRequired(boolean floorPlanningRequired) {
-		this.floorPlanningRequired = floorPlanningRequired;
+	public void setDeploymentPlanningRequired(boolean deploymentPlanningRequired) {
+		this.deploymentPlanningRequired = deploymentPlanningRequired;
 	}
 	
-	public boolean isFloorPlanningRequired() {
-		return floorPlanningRequired;
+	public boolean isDeploymentPlanningRequired() {
+		return deploymentPlanningRequired;
 	}
 
-	public ServiceGridFloorPlan getFloorPlan() {
-		return floorPlan;
+	public ServiceGridDeploymentPlan getDeploymentPlan() {
+		return deploymentPlan;
 	}
 
-	public void setFloorPlan(ServiceGridFloorPlan floorPlan) {
-		this.floorPlan = floorPlan;
+	public void setDeploymentPlan(ServiceGridDeploymentPlan deploymentPlan) {
+		this.deploymentPlan = deploymentPlan;
 	}
 
 	@JsonIgnore
 	public void updateService(ServiceConfig serviceConfig) {
-		setFloorPlanningRequired(true);
+		setDeploymentPlanningRequired(true);
 	}
 }

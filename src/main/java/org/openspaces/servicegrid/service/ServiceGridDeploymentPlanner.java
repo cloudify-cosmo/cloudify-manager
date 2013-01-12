@@ -10,9 +10,9 @@ import org.openspaces.servicegrid.TaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
-import org.openspaces.servicegrid.service.state.ServiceGridFloorPlan;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
-import org.openspaces.servicegrid.service.tasks.EnforceNewFloorPlanTask;
+import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
@@ -24,16 +24,16 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceGridFloorPlanner {
+public class ServiceGridDeploymentPlanner {
 
 	private final ServiceGridPlannerState state;
 	private final URI orchestratorId;
 	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 	
-	public ServiceGridFloorPlanner(ServiceGridPlannerParameter parameterObject) {
+	public ServiceGridDeploymentPlanner(ServiceGridPlannerParameter parameterObject) {
 		this.orchestratorId = parameterObject.getOrchestratorId();
 		this.state = new ServiceGridPlannerState();
-		this.state.setFloorPlan(new ServiceGridFloorPlan());
+		this.state.setDeploymentPlan(new ServiceGridDeploymentPlan());
 	}
 
 	@TaskConsumer
@@ -63,28 +63,28 @@ public class ServiceGridFloorPlanner {
 	}
 
 	@TaskProducer	
-	public Iterable<Task> floorPlan() {
+	public Iterable<Task> deploymentPlan() {
 		
 		List<Task> newTasks = Lists.newArrayList();
-		if (state.isFloorPlanningRequired()) {
-			updateFloorPlan();
-			EnforceNewFloorPlanTask enforceTask = new EnforceNewFloorPlanTask();
+		if (state.isDeploymentPlanningRequired()) {
+			updateDeploymentPlan();
+			UpdateDeploymentPlanTask enforceTask = new UpdateDeploymentPlanTask();
 			enforceTask.setTarget(orchestratorId);
-			enforceTask.setFloorPlan(state.getFloorPlan());
+			enforceTask.setDeploymentPlan(state.getDeploymentPlan());
 			addNewTask(newTasks, enforceTask);
 			
-			state.setFloorPlanningRequired(false);
+			state.setDeploymentPlanningRequired(false);
 		}
 		return newTasks;
 	}
 
-	private ServiceGridFloorPlan updateFloorPlan() {
+	private ServiceGridDeploymentPlan updateDeploymentPlan() {
 		
-		ServiceGridFloorPlan floorPlan = state.getFloorPlan();
+		ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
 		
 		for (final ServiceConfig newService : state.getServices()) {
-			final ServiceConfig oldService = floorPlan.getServiceById(newService.getServiceId());
-			floorPlanUpdateService(floorPlan, oldService, newService);
+			final ServiceConfig oldService = deploymentPlan.getServiceById(newService.getServiceId());
+			deploymentPlanUpdateService(deploymentPlan, oldService, newService);
 				
 			final URI serviceId = newService.getServiceId();
 			
@@ -94,29 +94,29 @@ public class ServiceGridFloorPlanner {
 				
 				final URI instanceId = newInstanceId(serviceId);
 				final URI agentId = newAgentExecutorId();
-				floorPlan.addServiceInstance(serviceId, agentId, instanceId);
+				deploymentPlan.addServiceInstance(serviceId, agentId, instanceId);
 			}
 		}
-		return floorPlan;
+		return deploymentPlan;
 	}
 
-	private void floorPlanUpdateService(ServiceGridFloorPlan floorPlan, ServiceConfig oldService, ServiceConfig newService) {
+	private void deploymentPlanUpdateService(ServiceGridDeploymentPlan deploymentPlan, ServiceConfig oldService, ServiceConfig newService) {
 		
 		if (oldService == null) {
-			floorPlanAddServiceClone(floorPlan, newService);
+			deploymentPlanAddServiceClone(deploymentPlan, newService);
 		}
 		else if (!StreamUtils.elementEquals(mapper, newService,oldService)) {
-			floorPlan.removeService(oldService);
-			floorPlanAddServiceClone(floorPlan, newService);
+			deploymentPlan.removeService(oldService);
+			deploymentPlanAddServiceClone(deploymentPlan, newService);
 		}
 	}
 
-	private void floorPlanAddServiceClone(
-			ServiceGridFloorPlan floorPlan,
+	private void deploymentPlanAddServiceClone(
+			ServiceGridDeploymentPlan deploymentPlan,
 			ServiceConfig service) {
 		
 		final ServiceConfig serviceClone = StreamUtils.cloneElement(mapper, service);
-		floorPlan.addService(serviceClone);
+		deploymentPlan.addService(serviceClone);
 	}
 
 	
