@@ -4,10 +4,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.streams.StreamWriter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -18,7 +19,7 @@ import com.google.common.collect.Multimap;
 public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 
 	final private Multimap<URI,T> streamById = ArrayListMultimap.create();
-	final private ObjectMapper mapper = new ObjectMapper();
+	final private ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 	
 	/**
 	 * HTTP POST
@@ -27,19 +28,9 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	public URI addElement(URI streamId, T element) {
 		
 		final Collection<T> stream = getStreamById(streamId);
-		stream.add(clone(element));
+		stream.add(StreamUtils.cloneElement(mapper, element));
 		final URI elementId = getElementURIByIndex(streamId, stream.size() -1);
 		return elementId;
-	}
-
-	private T clone(T element) {
-		try {
-			@SuppressWarnings("unchecked")
-			T clone = (T)mapper.readValue(mapper.writeValueAsBytes(element), element.getClass());
-			return clone;
-		} catch (Exception e) {
-			throw Throwables.propagate(e);
-		}
 	}
 
 	private Integer getIndex(final URI elementId, final URI streamId) {
@@ -106,8 +97,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		@SuppressWarnings("unchecked")
 		G task = (G) getByIndex(streamId, index);
 		Preconditions.checkNotNull(task);
-		@SuppressWarnings("unchecked")
-		G clonedTask = (G) clone(task);
+		G clonedTask = StreamUtils.cloneElement(mapper, task);
 		return clonedTask;
 	}
 

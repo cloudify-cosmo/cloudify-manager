@@ -36,7 +36,7 @@ public class MockTaskContainer {
 	private final Method getStateMethod;
 	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
 	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
-	private final Map<Class<? extends TaskProducerTask>,Method> taskProducerMethodByType;
+	private final Method taskProducerMethod;
 	private final CurrentTimeProvider timeProvider;
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
@@ -51,8 +51,8 @@ public class MockTaskContainer {
 		this.timeProvider = parameterObject.getTimeProvider();
 		this.taskConsumerMethodByType = Maps.newHashMap();
 		this.impersonatedTaskConsumerMethodByType = Maps.newHashMap();
-		this.taskProducerMethodByType = Maps.newHashMap();
 		
+		Method taskProducerMethod = null;
 		for (Method method : taskExecutor.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
 			if (method.getAnnotation(TaskConsumer.class) != null) {
@@ -72,13 +72,13 @@ public class MockTaskContainer {
 				impersonatedTaskConsumerMethodByType.put(taskType, method);
 			}
 			else if (method.getAnnotation(TaskProducer.class) != null) {
-				Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), method + " return type must be Iterable<Task>");
-				Preconditions.checkArgument(parameterTypes.length == 1, "method must have one parameter");
-				Preconditions.checkArgument(TaskProducerTask.class.isAssignableFrom(parameterTypes[0]), "method parameter %s is not a task producer in %s", parameterTypes[0], taskExecutor.getClass() );
-				Class<? extends TaskProducerTask> taskType = (Class<? extends TaskProducerTask>) parameterTypes[0];
-				taskProducerMethodByType.put(taskType, method);
+				Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), "%s return type must be Iterable<Task>",method);
+				Preconditions.checkArgument(parameterTypes.length == 0, "%s method must not have any parameters", method);				
+				Preconditions.checkArgument(taskProducerMethod == null, "%s can have at most one @" + TaskProducer.class.getSimpleName()+" method", taskExecutor.getClass());
+				taskProducerMethod = method;
 			}
 		}
+		this.taskProducerMethod = taskProducerMethod;
 	}
 
 	private Method getMethodByName(String methodName, Class<?> ... parameterTypes) {
@@ -112,7 +112,7 @@ public class MockTaskContainer {
 		} catch (final IllegalArgumentException e) {
 			throw Throwables.propagate(e);
 		} catch (final InvocationTargetException e) {
-			throw Throwables.propagate(e);
+			throw Throwables.propagate(e.getCause());
 		}
 	}
 
@@ -127,27 +127,24 @@ public class MockTaskContainer {
 	}
 
 	/**
-	 * @return true - if need to be called again
+	 * @return the processed task
 	 */
-	public boolean consumeNextTask() {
+	public Task consumeNextTask() {
 		
-		boolean needAnotherStep = false;
+		Task task = null;
 		if (!killed) {
 			
 			URI taskId = getNextTaskId();
 			
 			if (taskId != null) {
-				final Task task = taskReader.getElement(taskId, Task.class);
+				task = taskReader.getElement(taskId, Task.class);
 				getTaskExecutorState().executeTask(taskId);
 				beforeExecute(task);
 				execute(task);
 				afterExecute(taskId, task);
 			}
-			
-			URI nextTaskId = getNextTaskId();
-			needAnotherStep = (nextTaskId != null);
 		}
-		return needAnotherStep;
+		return task;
 	}
 
 	private URI getNextTaskId() {
@@ -183,15 +180,14 @@ public class MockTaskContainer {
 
 	private void execute(final Task task) {
 		if (task instanceof TaskProducerTask) {
-			Method taskProducerMethod = taskProducerMethodByType.get(task.getClass());
 			Preconditions.checkArgument(
 					taskProducerMethod != null, 
-					"%s cannot consumer task %s", taskExecutor.getClass(), task);
+					"%s cannot consume task %s", taskExecutor.getClass(), task);
 			
 			TaskProducerTask taskProducerTask = (TaskProducerTask) task;
 			long nowTimestamp = timeProvider.currentTimeMillis();
 			for (int i = 0 ; i < taskProducerTask.getMaxNumberOfSteps(); i++) {
-				final Iterable<? extends Task> newTasks = (Iterable<? extends Task>) invokeMethod(taskProducerMethod, taskProducerTask);
+				final Iterable<? extends Task> newTasks = (Iterable<? extends Task>) invokeMethod(taskProducerMethod);
 				if (Iterables.isEmpty(newTasks)) {
 					break;
 				}

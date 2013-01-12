@@ -1,33 +1,68 @@
 package org.openspaces.servicegrid.service.state;
 
-import java.util.Set;
+import java.net.URI;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.openspaces.servicegrid.TaskConsumerState;
 
-import com.google.common.collect.Sets;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
-	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
-	private boolean floorPlanningRequired; 
-	
-	public Set<ServiceConfig> getServices() {
-		return servicesConfig;
-	}
-	
-	public void setServices(Set<ServiceConfig> services) {
-		this.servicesConfig = services;
-	}
-	
-	public void addService(ServiceConfig serviceConfig) {
-		servicesConfig.add(serviceConfig);
+	private ServiceGridFloorPlan floorPlan;
+	private boolean floorPlanChanged;
+
+	public ServiceGridFloorPlan getFloorPlan() {
+		return floorPlan;
 	}
 
-	public void setFloorPlanningRequired(boolean floorPlanningRequired) {
-		this.floorPlanningRequired = floorPlanningRequired;
+	public void setFloorPlan(ServiceGridFloorPlan floorPlan) {
+		this.floorPlan = floorPlan;
+	}
+
+	public boolean isFloorPlanChanged() {
+		return floorPlanChanged;
+	}
+
+	public void setFloorPlanChanged(boolean floorPlanChanged) {
+		this.floorPlanChanged = floorPlanChanged;
 	}
 	
-	public boolean FloorPlanningRequired() {
-		return floorPlanningRequired;
+	@JsonIgnore
+	public Iterable<URI> getServiceInstanceIds(URI serviceId) {
+		return floorPlan.getInstanceIdsByServiceId().get(serviceId);
 	}
+
+	@JsonIgnore
+	public Iterable<URI> getAgentInstanceIds(URI agentId) {
+		return floorPlan.getInstanceIdsByAgentId().get(agentId);
+	}
+	
+	@JsonIgnore
+	public List<ServiceConfig> getServices() {
+		return floorPlan.getServices();
+	}
+	
+	@JsonIgnore
+	public Iterable<URI> getAgentIds() {
+		return floorPlan.getInstanceIdsByAgentId().keySet();
+	}
+
+	@JsonIgnore
+	public URI getAgentIdOfServiceInstance(final URI instanceId) {
+		Collection<Entry<URI, URI>> instanceIdByAgentId = floorPlan.getInstanceIdsByAgentId().entries();
+		return Iterables.find(instanceIdByAgentId, new Predicate<Map.Entry<URI,URI>>() {
+
+					@Override
+					public boolean apply(Map.Entry<URI,URI> entry) {
+						return instanceId.equals(entry.getValue());
+					}
+		}, null).getKey();
+	}
+
 }

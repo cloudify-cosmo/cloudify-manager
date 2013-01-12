@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.agent.state.AgentState;
+import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.client.ServiceClientParameter;
 import org.openspaces.servicegrid.mock.MockMachineProvisioner;
@@ -16,17 +17,16 @@ import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
 import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
-import org.openspaces.servicegrid.service.OrchestrateTask;
+import org.openspaces.servicegrid.service.ServiceGridFloorPlanner;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
-import org.openspaces.servicegrid.service.ServiceGridPlanner;
 import org.openspaces.servicegrid.service.ServiceGridPlannerParameter;
-import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
+import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -192,7 +192,7 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private <T extends TaskConsumerState> T getLastState(URI executorId, Class<T> stateClass) {
-		T lastState = ServiceUtils.getLastState(state, executorId, stateClass);
+		T lastState = StreamUtils.getLastElement(state, executorId, stateClass);
 		Assert.assertNotNull(lastState);
 		return lastState;
 	}
@@ -204,12 +204,12 @@ public class ServiceGridOrchestrationTest {
 		serviceConfig.setServiceId(getServiceId(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
-		submitTask(installServiceTask);
+		submitTask(floorPlannerId, installServiceTask);
 	}
 
-	private void submitTask(final Task installServiceTask) {
+	private void submitTask(final URI target, final Task installServiceTask) {
 		installServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
-		client.addServiceTask(orchestratorId, installServiceTask);
+		client.addServiceTask(target, installServiceTask);
 		timeProvider.increaseBy(1000);
 	}
 
@@ -219,7 +219,7 @@ public class ServiceGridOrchestrationTest {
 		scaleOutServiceTask.setServiceId(serviceId);
 		scaleOutServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
 		scaleOutServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
-		submitTask(scaleOutServiceTask);
+		submitTask(floorPlannerId, scaleOutServiceTask);
 	}
 
 	
@@ -230,17 +230,25 @@ public class ServiceGridOrchestrationTest {
 	private void execute() throws URISyntaxException {
 		
 		int consecutiveEmptyCycles = 0;
-		for (; timeProvider.currentTimeMillis() < 300000; timeProvider.increaseBy(1000)) {
+		for (; timeProvider.currentTimeMillis() < 1000000; timeProvider.increaseBy(1000)) {
 
 			boolean emptyCycle = true;
-			OrchestrateTask orchestrateTask = new OrchestrateTask();
-			orchestrateTask.setMaxNumberOfSteps(100);
-			submitTask(orchestrateTask);
+			{
+			TaskProducerTask producerTask = new TaskProducerTask();
+			producerTask.setMaxNumberOfSteps(100);
+			submitTask(floorPlannerId, producerTask);
+			}
+			{
+			TaskProducerTask producerTask = new TaskProducerTask();
+			producerTask.setMaxNumberOfSteps(100);
+			submitTask(orchestratorId, producerTask);
+			}
 			
 			for (MockTaskContainer container : containers) {
 				Assert.assertEquals(container.getExecutorId().getHost(),"localhost");
-				while (container.consumeNextTask()) {
-					if (!container.getExecutorId().equals(orchestratorId)) {
+				Task task = null;
+				while ((task = container.consumeNextTask()) != null) {
+					if (!(task instanceof TaskProducerTask) && !(task instanceof PingAgentTask)) {
 						emptyCycle = false;
 					}
 				}
@@ -348,11 +356,10 @@ public class ServiceGridOrchestrationTest {
 	private MockTaskContainer newFloorPlannerContainer() {
 		
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
-		servicePlannerParameter.setFloorPlannerExecutorId(floorPlannerId);
-		servicePlannerParameter.setStateReader(state);
+		servicePlannerParameter.setOrchestratorId(orchestratorId);
 		servicePlannerParameter.setTimeProvider(timeProvider);
 		
-		ServiceGridPlanner taskConsumer = new ServiceGridPlanner(servicePlannerParameter);
+		ServiceGridFloorPlanner taskConsumer = new ServiceGridFloorPlanner(servicePlannerParameter);
 		return newContainer(floorPlannerId, taskConsumer);
 	}
 

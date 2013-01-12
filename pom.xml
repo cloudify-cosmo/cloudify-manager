@@ -24,10 +24,10 @@
 			<version>13.0.1</version>
 		</dependency>
 		<dependency>
-			<groupId>org.codehaus.jackson</groupId>
-			<artifactId>jackson-jaxrs</artifactId>
-			<version>1.9.9</version>
-		</dependency>
+		  <groupId>com.fasterxml.jackson.datatype</groupId>
+		  <artifactId>jackson-datatype-guava</artifactId>
+		  <version>2.1.2</version>
+		</dependency> 
 	</dependencies>
 	<build>
 	<plugins>
