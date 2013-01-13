@@ -40,6 +40,43 @@ public class MockManagement {
 		taskBroker = new MockStreams<Task>();
 	}
 	
+	public URI getDeploymentPlannerId() {
+		return deploymentPlannerId;
+	}
+
+	public URI getOrchestratorId() {
+		return orchestratorId;
+	}
+
+	public StreamReader<Task> getTaskReader() {
+		return taskBroker;
+	}
+
+	public StreamWriter<Task> getTaskWriter() {
+		return taskBroker;
+	}
+	
+	public StreamReader<TaskConsumerState> getStateReader() {
+		return state;
+	}
+	
+	public StreamWriter<TaskConsumerState> getStateWriter() {
+		return state;
+	}
+
+	public void restart() {
+		unregisterTaskConsumers();
+		state.clear();
+		taskBroker.clear();
+		registerTaskConsumers();
+	}
+
+	private void unregisterTaskConsumers() {
+		taskConsumerRegistrar.unregisterTaskConsumer(orchestratorId);
+		taskConsumerRegistrar.unregisterTaskConsumer(deploymentPlannerId);
+		taskConsumerRegistrar.unregisterTaskConsumer(machineProvisionerId);
+	}
+	
 	public void registerTaskConsumers() {
 		taskConsumerRegistrar.registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
 		taskConsumerRegistrar.registerTaskConsumer(newServiceGridDeploymentPlanner(timeProvider), deploymentPlannerId);
@@ -71,29 +108,5 @@ public class MockManagement {
 
 	private MockMachineProvisioner newMachineProvisionerContainer(TaskConsumerRegistrar taskConsumerRegistrar) {
 		return new MockMachineProvisioner(taskConsumerRegistrar); 
-	}
-
-	public URI getDeploymentPlannerId() {
-		return deploymentPlannerId;
-	}
-
-	public URI getOrchestratorId() {
-		return orchestratorId;
-	}
-
-	public StreamReader<Task> getTaskReader() {
-		return taskBroker;
-	}
-
-	public StreamWriter<Task> getTaskWriter() {
-		return taskBroker;
-	}
-	
-	public StreamReader<TaskConsumerState> getStateReader() {
-		return state;
-	}
-	
-	public StreamWriter<TaskConsumerState> getStateWriter() {
-		return state;
 	}
 }

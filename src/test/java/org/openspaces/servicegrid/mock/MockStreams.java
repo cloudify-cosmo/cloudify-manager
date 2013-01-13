@@ -175,4 +175,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		return Iterables.unmodifiableIterable(streamById.keySet());
 	}
 
+	public void clear() {
+		this.streamById.clear();
+	}
 }

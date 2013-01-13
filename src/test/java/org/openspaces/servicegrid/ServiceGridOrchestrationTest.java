@@ -71,7 +71,7 @@ public class ServiceGridOrchestrationTest {
 
 			@Override
 			public void unregisterTaskConsumer(final URI executorId) {
-				containers.remove(
+				boolean removed = containers.remove(
 					Iterables.find(containers, new Predicate<MockTaskContainer>() {
 						@Override
 						public boolean apply(MockTaskContainer executor) {
@@ -79,6 +79,7 @@ public class ServiceGridOrchestrationTest {
 						}
 					})
 				);
+				Preconditions.checkState(removed, "Failed to remove container " + executorId);
 			}
 
 		};
@@ -133,9 +134,19 @@ public class ServiceGridOrchestrationTest {
 		assertTwoTomcatInstances();
 	}
 
+	@Test
+	public void managementFailoverTest() throws URISyntaxException {
+		installService("tomcat", 1);
+		execute();
+		management.restart();
+		execute();
+		assertSingleTomcatInstance();
+	}
+	
 	private void assertSingleTomcatInstance() throws URISyntaxException {
 		URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
+		Assert.assertNotNull(serviceState, "No state for " + serviceId);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
 		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		URI instanceId = getOnlyServiceInstanceId();
