@@ -425,6 +425,8 @@ public class ServiceGridOrchestrationTest {
 		containerParameter.setStateWriter(management.getStateWriter());
 		containerParameter.setTaskReader(management.getTaskReader());
 		containerParameter.setTaskWriter(management.getTaskWriter());
+		containerParameter.setPersistentTaskReader(management.getPersistentTaskReader());
+		containerParameter.setPersistentTaskWriter(management.getPersistentTaskWriter());
 		containerParameter.setTimeProvider(timeProvider);
 		return new MockTaskContainer(containerParameter);
 	}

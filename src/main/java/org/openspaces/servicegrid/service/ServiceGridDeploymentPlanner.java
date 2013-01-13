@@ -12,9 +12,9 @@ import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
-import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
+import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,16 +29,16 @@ public class ServiceGridDeploymentPlanner {
 	private final ServiceGridPlannerState state;
 	private final URI orchestratorId;
 	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
-	
+		
 	public ServiceGridDeploymentPlanner(ServiceGridPlannerParameter parameterObject) {
 		this.orchestratorId = parameterObject.getOrchestratorId();
 		this.state = new ServiceGridPlannerState();
 		this.state.setDeploymentPlan(new ServiceGridDeploymentPlan());
 	}
 
-	@TaskConsumer
+	@TaskConsumer(persistTask = true)
 	public void scaleOutService(ScaleOutServiceTask task) {
-		
+				
 		for (ServiceConfig serviceConfig : state.getServices()) {
 			if (serviceConfig.getServiceId().equals(task.getServiceId())) {
 				int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
@@ -52,8 +52,9 @@ public class ServiceGridDeploymentPlanner {
 		Preconditions.checkArgument(false,"Cannot find service %s", task.getServiceId());
 	}
 
-	@TaskConsumer
+	@TaskConsumer(persistTask = true)
 	public void installService(InstallServiceTask task) {
+		
 		ServiceConfig serviceConfig = task.getServiceConfig();
 		fixServiceId(serviceConfig);
 		boolean installed = isServiceInstalled(serviceConfig.getServiceId());
@@ -164,5 +165,4 @@ public class ServiceGridDeploymentPlanner {
 	private static void addNewTask(List<Task> newTasks, final Task task) {
 		newTasks.add(task);
 	}
-
 }

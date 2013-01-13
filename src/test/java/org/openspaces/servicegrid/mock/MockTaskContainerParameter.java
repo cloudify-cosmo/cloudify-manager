@@ -16,6 +16,8 @@ public class MockTaskContainerParameter {
 	private StreamWriter<Task> taskWriter;
 	private Object taskConsumer;
 	private CurrentTimeProvider timeProvider;
+	private StreamReader<Task> persistentTaskReader;
+	private StreamWriter<Task> persistentTaskWriter;
 
 	public MockTaskContainerParameter() {
 	}
@@ -76,4 +78,19 @@ public class MockTaskContainerParameter {
 		this.timeProvider = timeProvider;
 	}
 
+	public StreamReader<Task> getPersistentTaskReader() {
+		return persistentTaskReader;
+	}
+
+	public void setPersistentTaskReader(StreamReader<Task> persistentTaskReader) {
+		this.persistentTaskReader = persistentTaskReader;
+	}
+
+	public StreamWriter<Task> getPersistentTaskWriter() {
+		return persistentTaskWriter;
+	}
+
+	public void setPersistentTaskWriter(StreamWriter<Task> persistentTaskWriter) {
+		this.persistentTaskWriter = persistentTaskWriter;
+	}
 }

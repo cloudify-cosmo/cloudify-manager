@@ -24,6 +24,7 @@ public class MockManagement {
 	private final MockStreams<Task> taskBroker;
 	private final CurrentTimeProvider timeProvider;
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
+	private final MockStreams<Task> persistentTaskBroker;
 	
 	
 	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
@@ -38,6 +39,7 @@ public class MockManagement {
 		}
 		state = new MockStreams<TaskConsumerState>();
 		taskBroker = new MockStreams<Task>();
+		persistentTaskBroker = new MockStreams<Task>();
 	}
 	
 	public URI getDeploymentPlannerId() {
@@ -101,12 +103,19 @@ public class MockManagement {
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
 		servicePlannerParameter.setOrchestratorId(orchestratorId);
 		servicePlannerParameter.setTimeProvider(timeProvider);
-		
 		return new ServiceGridDeploymentPlanner(servicePlannerParameter);
 		
 	}
 
 	private MockMachineProvisioner newMachineProvisionerContainer(TaskConsumerRegistrar taskConsumerRegistrar) {
 		return new MockMachineProvisioner(taskConsumerRegistrar); 
+	}
+
+	public StreamReader<Task> getPersistentTaskReader() {
+		return persistentTaskBroker;
+	}
+
+	public StreamWriter<Task> getPersistentTaskWriter() {
+		return persistentTaskBroker;
 	}
 }

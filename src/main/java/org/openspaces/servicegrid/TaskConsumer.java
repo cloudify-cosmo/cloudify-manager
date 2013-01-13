@@ -9,4 +9,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface TaskConsumer {
 
+	boolean persistTask() default false;
+
 }
