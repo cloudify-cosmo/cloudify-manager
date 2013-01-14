@@ -3,7 +3,6 @@ package org.openspaces.servicegrid.service;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.UUID;
 
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
@@ -143,11 +142,11 @@ public class ServiceGridDeploymentPlanner {
 	
 	private URI newInstanceId(URI serviceId) {
 		Preconditions.checkArgument(serviceId.toString().endsWith("/"),"service id " + serviceId + " must end with slash");
-		return newURI(serviceId.toString() + "instances/" + UUID.randomUUID() +"/");
+		return newURI(serviceId.toString() + "instances/" + state.getAndIncrementNextServiceInstanceIndex(serviceId) +"/");
 	}
 
 	private URI newAgentExecutorId() {
-		return newURI("http://localhost/agent/" + UUID.randomUUID()+"/");
+		return newURI("http://localhost/agent/" + state.getAndIncrementNextAgentIndex()+"/");
 	}
 	
 	private URI newURI(String URI) {
