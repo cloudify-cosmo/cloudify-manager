@@ -128,7 +128,7 @@ public class MockTaskContainer {
 
 		final TaskConsumerState state = getTaskConsumerState();
 		state.completeExecutingTask(taskId);
-		stateWriter.addElement(getExecutorId(), state);
+		stateWriter.addElement(getTaskConsumerId(), state);
 	}
 
 	private TaskConsumerState getTaskConsumerState() {
@@ -150,11 +150,11 @@ public class MockTaskContainer {
 	private void beforeExecute(Task task) {
 		Preconditions.checkNotNull(task.getTarget());
 		Preconditions.checkArgument(
-				task.getTarget().equals(getExecutorId()),
-				"Expected task target is %s instead found %s", getExecutorId() , task.getTarget());
+				task.getTarget().equals(getTaskConsumerId()),
+				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getTarget());
 		
 		final TaskConsumerState state = getTaskConsumerState();
-		stateWriter.addElement(getExecutorId(), state);
+		stateWriter.addElement(getTaskConsumerId(), state);
 	}
 
 	/**
@@ -174,7 +174,7 @@ public class MockTaskContainer {
 				// remote state had failover 
 				state.getCompletedTasks().clear();
 				Preconditions.checkState(state.getExecutingTasks().isEmpty());
-				stateWriter.addElement(getExecutorId(), state);
+				stateWriter.addElement(getTaskConsumerId(), state);
 				taskId = getNextTaskId(state);
 			}
 			
@@ -276,7 +276,7 @@ public class MockTaskContainer {
 		}
 	}
 	
-	public URI getExecutorId() {
+	public URI getTaskConsumerId() {
 		return taskConsumerId;
 	}
 

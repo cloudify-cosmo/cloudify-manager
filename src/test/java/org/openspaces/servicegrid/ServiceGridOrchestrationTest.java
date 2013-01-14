@@ -75,7 +75,7 @@ public class ServiceGridOrchestrationTest {
 					Iterables.find(containers, new Predicate<MockTaskContainer>() {
 						@Override
 						public boolean apply(MockTaskContainer executor) {
-							return executorId.equals(executor.getExecutorId());
+							return executorId.equals(executor.getTaskConsumerId());
 						}
 					})
 				);
@@ -281,7 +281,7 @@ public class ServiceGridOrchestrationTest {
 			}
 			
 			for (MockTaskContainer container : containers) {
-				Assert.assertEquals(container.getExecutorId().getHost(),"localhost");
+				Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");
 				Task task = null;
 				while ((task = container.consumeNextTask()) != null) {
 					if (!(task instanceof TaskProducerTask) && !(task instanceof PingAgentTask)) {
@@ -342,7 +342,7 @@ public class ServiceGridOrchestrationTest {
 	
 	private void killAgent(URI agentId) {
 		for (MockTaskContainer container : containers) {
-			if (container.getExecutorId().equals(agentId)) {
+			if (container.getTaskConsumerId().equals(agentId)) {
 				//logger.info("Killed agent " + agentId);
 				container.kill();
 				return;
@@ -389,10 +389,19 @@ public class ServiceGridOrchestrationTest {
 	
 	private void addContainer(MockTaskContainer container) {
 		//logger.info("Adding container for " + container.getExecutorId());
-		Preconditions.checkState(!containers.contains(container), "Container " + container.getExecutorId() + " was already added");
+		Preconditions.checkState(findContainserById(container.getTaskConsumerId()) == null, "Container " + container.getTaskConsumerId() + " was already added");
 		containers.add(container);
 	}
 	
+	private MockTaskContainer findContainserById(final URI id) {
+		return Iterables.find(containers, new Predicate<MockTaskContainer>(){
+
+			@Override
+			public boolean apply(MockTaskContainer container) {
+				return id.equals(container.getTaskConsumerId());
+			}}, null);
+	}
+
 	private void logAllTasks() throws URISyntaxException {
 		final Iterable<Task> tasks = getSortedTasks();
 		for (final Task task : tasks) {
