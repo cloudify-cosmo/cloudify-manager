@@ -5,7 +5,6 @@ import java.net.URI;
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
-import org.openspaces.servicegrid.agent.MockAgent;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;

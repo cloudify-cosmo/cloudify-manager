@@ -1,4 +1,4 @@
-package org.openspaces.servicegrid.agent;
+package org.openspaces.servicegrid.mock;
 
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.TaskConsumer;
