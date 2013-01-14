@@ -138,6 +138,7 @@ public class ServiceGridOrchestrationTest {
 	public void managementFailoverTest() throws URISyntaxException {
 		installService("tomcat", 1);
 		execute();
+		logAllTasks();
 		management.restart();
 		execute();
 		assertSingleTomcatInstance();
