@@ -75,6 +75,7 @@ public class ServiceGridOrchestrator {
 			}
 		}
 		else if (isDeploymentPlanningTasksComplete()){
+			// isDeploymentPlanningTasksComplete() returns true means that all ids are valid URIs (no broken links)
 			final Iterable<URI> healthyAgents = orchestrateAgents(newTasks);
 			orchestrateService(newTasks, healthyAgents);
 		}
