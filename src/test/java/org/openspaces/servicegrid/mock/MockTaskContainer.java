@@ -174,7 +174,6 @@ public class MockTaskContainer {
 				// remote state had failover 
 				state.getCompletedTasks().clear();
 				Preconditions.checkState(state.getExecutingTasks().isEmpty());
-				stateWriter.addElement(getTaskConsumerId(), state);
 				taskId = getNextTaskId(state);
 			}
 			
