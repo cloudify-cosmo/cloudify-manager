@@ -36,6 +36,7 @@ import org.testng.log.TextFormatter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -50,7 +51,7 @@ public class ServiceGridOrchestrationTest {
 	private MockCurrentTimeProvider timeProvider;
 	private TaskConsumerRegistrar taskConsumerRegistrar;
 	
-	public ServiceGridOrchestrationTest() throws URISyntaxException {
+	public ServiceGridOrchestrationTest() {
 		logger = Logger.getLogger(this.getClass().getName());
 		setSimpleLoggerFormatter(logger);
 	}
@@ -92,19 +93,19 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	@AfterMethod
-	public void after() throws URISyntaxException {
+	public void after() {
 		logAllTasks();
 	}
 	
 	@Test
-	public void installSingleInstanceServiceTest() throws URISyntaxException {
+	public void installSingleInstanceServiceTest() {
 		installService("tomcat", 1);
 		execute();
 		assertSingleTomcatInstance();
 	}
 
 	@Test
-	public void installMultipleInstanceServiceTest() throws URISyntaxException {
+	public void installMultipleInstanceServiceTest() {
 		installService("tomcat", 2);
 		execute();
 		assertTwoTomcatInstances();
@@ -112,7 +113,7 @@ public class ServiceGridOrchestrationTest {
 	
 	
 	@Test
-	public void agentFailoverTest() throws URISyntaxException {
+	public void agentFailoverTest() {
 		installService("tomcat", 1);
 		execute();
 		killOnlyAgent();
@@ -127,7 +128,7 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	@Test
-	public void scaleOutServiceTest() throws URISyntaxException {
+	public void scaleOutServiceTest() {
 		installService("tomcat", 1);
 		execute();
 		scaleOutService("tomcat",2);
@@ -135,9 +136,9 @@ public class ServiceGridOrchestrationTest {
 		//TODO: Second agent comes up only after it is validated not to respond to pings. Should it have came up immediately. Maybe it was there already? 
 		assertTwoTomcatInstances();
 	}
-
+	
 	@Test
-	public void managementFailoverTest() throws URISyntaxException {
+	public void managementFailoverTest() {
 		installService("tomcat", 1);
 		execute();
 		logAllTasks();
@@ -145,8 +146,8 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		assertSingleTomcatInstance();
 	}
-	
-	private void assertSingleTomcatInstance() throws URISyntaxException {
+		
+	private void assertSingleTomcatInstance() {
 		URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
 		Assert.assertNotNull(serviceState, "No state for " + serviceId);
@@ -172,16 +173,16 @@ public class ServiceGridOrchestrationTest {
 		
 	}
 
-	private URI getOnlyAgentId() throws URISyntaxException {
+	private URI getOnlyAgentId() {
 		return Iterables.getOnlyElement(getAgentIds());
 	}
 	
-	private void assertTwoTomcatInstances() throws URISyntaxException {
+	private void assertTwoTomcatInstances() {
 		final URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
 		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
-		Iterable<URI> instanceIds = getStateIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
+		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
 		final ServiceGridPlannerState plannerState = StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridPlannerState.class);
@@ -226,7 +227,7 @@ public class ServiceGridOrchestrationTest {
 		return getLastState(agentId, AgentState.class);
 	}
 	
-	private ServiceInstanceState getServiceInstanceState(URI instanceId) throws URISyntaxException {
+	private ServiceInstanceState getServiceInstanceState(URI instanceId) {
 		return getLastState(instanceId, ServiceInstanceState.class);
 	}
 	
@@ -236,7 +237,7 @@ public class ServiceGridOrchestrationTest {
 		return lastState;
 	}
 
-	private void installService(String name, int numberOfInstances) throws URISyntaxException {
+	private void installService(String name, int numberOfInstances) {
 		ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setDisplayName(name);
 		serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
@@ -252,7 +253,7 @@ public class ServiceGridOrchestrationTest {
 		timeProvider.increaseBy(1000);
 	}
 
-	private void scaleOutService(String serviceName, int plannedNumberOfInstances) throws URISyntaxException {
+	private void scaleOutService(String serviceName, int plannedNumberOfInstances) {
 		final ScaleOutServiceTask scaleOutServiceTask = new ScaleOutServiceTask();
 		URI serviceId = getServiceId(serviceName);
 		scaleOutServiceTask.setServiceId(serviceId);
@@ -262,11 +263,11 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	
-	private URI getServiceId(String name) throws URISyntaxException {
-		return new URI("http://localhost/services/" + name + "/");
+	private URI getServiceId(String name) {
+		return newURI("http://localhost/services/" + name + "/");
 	}
 	
-	private void execute() throws URISyntaxException {
+	private void execute() {
 		
 		int consecutiveEmptyCycles = 0;
 		for (; timeProvider.currentTimeMillis() < 1000000; timeProvider.increaseBy(1000)) {
@@ -302,7 +303,12 @@ public class ServiceGridOrchestrationTest {
 			}
 		}
 		StringBuilder sb = new StringBuilder();
-		Iterable<URI> servicesIds = getStateIdsStartingWith(new URI("http://services/"));
+		Iterable<URI> servicesIds;
+		try {
+			servicesIds = getStateIdsStartingWith(new URI("http://services/"));
+		} catch (URISyntaxException e) {
+			throw Throwables.propagate(e);
+		}
 		for (URI serviceId : servicesIds) {
 			ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
 			sb.append("service: " + serviceState.getServiceConfig().getDisplayName());
@@ -317,8 +323,8 @@ public class ServiceGridOrchestrationTest {
 		Assert.fail("Executing too many cycles progress=" + sb);
 	}
 	
-	private URI getOnlyServiceInstanceId() throws URISyntaxException {
-		final Iterable<URI> instanceIds = getStateIdsStartingWith(new URI("http://localhost/services/tomcat/instances/"));
+	private URI getOnlyServiceInstanceId() {
+		final Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
 		final URI serviceInstanceId = Iterables.getOnlyElement(instanceIds);
@@ -335,11 +341,11 @@ public class ServiceGridOrchestrationTest {
 		return instanceIds;
 	}
 
-	private Iterable<URI> getAgentIds() throws URISyntaxException {
-		return getStateIdsStartingWith(new URI("http://localhost/agent/"));
+	private Iterable<URI> getAgentIds() {
+		return getStateIdsStartingWith(newURI("http://localhost/agent/"));
 	}
 
-	private void killOnlyAgent() throws URISyntaxException {
+	private void killOnlyAgent() {
 		killAgent(getOnlyAgentId());
 	}
 	
@@ -354,10 +360,10 @@ public class ServiceGridOrchestrationTest {
 		Assert.fail("Failed to kill agent " + agentId);
 	}
 	
-	private Iterable<Task> getSortedTasks() throws URISyntaxException {
+	private Iterable<Task> getSortedTasks() {
 	
 		List<Task> tasks = Lists.newArrayList(); 
-		final Iterable<URI> taskConsumerIds = getTaskIdsStartingWith(new URI("http://localhost/"));
+		final Iterable<URI> taskConsumerIds = getTaskIdsStartingWith(newURI("http://localhost/"));
 		StreamReader<Task> taskReader = management.getTaskReader();
 		for (final URI executorId : taskConsumerIds) {
 			for (URI taskId = taskReader.getFirstElementId(executorId); taskId != null ; taskId = taskReader.getNextElementId(taskId)) {
@@ -382,6 +388,14 @@ public class ServiceGridOrchestrationTest {
 		return ordering.sortedCopy(tasks);
 	}
 	
+	private URI newURI(String uri) {
+		try {
+			return new URI(uri);
+		} catch (URISyntaxException e) {
+			throw Throwables.propagate(e);
+		}
+	}
+
 	private ServiceClient newServiceClient() {
 		final ServiceClientParameter serviceClientParameter = new ServiceClientParameter();
 		serviceClientParameter.setStateReader(getStateReader());
@@ -405,7 +419,7 @@ public class ServiceGridOrchestrationTest {
 			}}, null);
 	}
 
-	private void logAllTasks() throws URISyntaxException {
+	private void logAllTasks() {
 		final Iterable<Task> tasks = getSortedTasks();
 		for (final Task task : tasks) {
 			final DecimalFormat timestampFormatter = new DecimalFormat("###,###");
