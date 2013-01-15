@@ -25,6 +25,7 @@ import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceTask;
+import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.streams.StreamReader;
@@ -38,7 +39,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceGridOrchestrator {
+public class ServiceGridOrchestrator<x> {
 
 	private static final long NOT_RESPONDING_DETECTION_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
@@ -66,50 +67,22 @@ public class ServiceGridOrchestrator {
 	public Iterable<Task> orchestrate() {
 	
 		final List<Task> newTasks = Lists.newArrayList();
-		if (state.isDeploymentPlanChanged()) {
-			boolean completedPlanAgents = planAgents(newTasks);
-			if (completedPlanAgents) {
-				//TODO: Handle recovery of service instance state, based on agent ping
-				planServices(newTasks);
-				state.setDeploymentPlanChanged(false);
-			}
-		}
-		else if (isDeploymentPlanningTasksComplete()){
-			// isDeploymentPlanningTasksComplete() returns true means that all ids are valid URIs (no broken links)
+		
+		boolean ready = syncStateWithDeploymentPlan(newTasks);
+		
+		if (ready) {
+			//start orchestrating according to current state
 			final Iterable<URI> healthyAgents = orchestrateAgents(newTasks);
 			orchestrateService(newTasks, healthyAgents);
 		}
-		pingIdleAgents(newTasks);
+
+		pingAgents(newTasks);
 		return newTasks;
 	}
 
-	private boolean planAgents(final List<Task> newTasks) {
-		boolean completedPlanAgents = true;
-		final long nowTimestamp = timeProvider.currentTimeMillis();
-		for (final URI agentId : state.getAgentIds()) {
-			final AgentState agentState = getAgentState(agentId);
-			if (agentState == null) {
-				AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
-				if (pingHealth != AgentPingHealth.AGENT_NOT_RESPONDING) {
-					//either we need to wait until agent health is determined or agent is running already and is answering pings.
-					completedPlanAgents = false;
-					continue;
-				}
-				final PlanAgentTask planAgentTask = new PlanAgentTask();
-				planAgentTask.setImpersonatedTarget(agentId);	
-				planAgentTask.setTarget(orchestratorId);
-				planAgentTask.setServiceInstanceIds(Lists.newArrayList(state.getAgentInstanceIds(agentId)));
-				addNewTaskIfNotExists(newTasks, planAgentTask);
-			}
-		}
-		return completedPlanAgents;
-	}
-
-	
 	@TaskConsumer
 	public void updateDeploymentPlan(UpdateDeploymentPlanTask task) {
 		state.setDeploymentPlan(task.getDeploymentPlan());
-		state.setDeploymentPlanChanged(true);
 	}
 
 	@ImpersonatingTaskConsumer
@@ -119,17 +92,6 @@ public class ServiceGridOrchestrator {
 		impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
 		impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
 		impersonatedStateModifier.updateState(impersonatedAgentState);
-	}
-
-	@ImpersonatingTaskConsumer
-	public void planServiceInstance(PlanServiceInstanceTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
-		PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
-		ServiceInstanceState instanceState = new ServiceInstanceState();
-		instanceState.setProgress(ServiceInstanceState.Progress.PLANNED);
-		instanceState.setAgentId(planInstanceTask.getAgentId());
-		instanceState.setServiceId(planInstanceTask.getServiceId());
-		impersonatedStateModifier.updateState(instanceState);
 	}
 
 	@ImpersonatingTaskConsumer
@@ -146,16 +108,93 @@ public class ServiceGridOrchestrator {
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
+	@ImpersonatingTaskConsumer
+	public void planServiceInstance(PlanServiceInstanceTask task,
+			TaskExecutorStateModifier impersonatedStateModifier) {
+		PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
+		ServiceInstanceState instanceState = new ServiceInstanceState();
+		instanceState.setProgress(ServiceInstanceState.Progress.PLANNED);
+		instanceState.setAgentId(planInstanceTask.getAgentId());
+		instanceState.setServiceId(planInstanceTask.getServiceId());
+		impersonatedStateModifier.updateState(instanceState);
+	}
+	
+	private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {
+		boolean syncComplete = true;
+		final long nowTimestamp = timeProvider.currentTimeMillis();
+		for (final URI agentId : state.getAgentIds()) {
+			AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
+			AgentState agentState = getAgentState(agentId);
+			if (pingHealth == AgentPingHealth.AGENT_RESPONDING) {
+				Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
+				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
+					if (getServiceInstanceState(instanceId) == null) {
+						syncComplete = false;
+						final RecoverServiceInstanceStateTask planInstanceTask = new RecoverServiceInstanceStateTask();
+						planInstanceTask.setImpersonatedTarget(instanceId);	
+						planInstanceTask.setTarget(agentId);
+						addNewTaskIfNotExists(newTasks, planInstanceTask);
+					}
+				}
+			}
+			else if (pingHealth == AgentPingHealth.AGENT_NOT_RESPONDING) {
+				Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfAgent(agentId);
+				if (agentState == null ||
+					!Iterables.elementsEqual(agentState.getServiceInstanceIds(),plannedInstanceIds)) {
+					syncComplete = false;
+					final PlanAgentTask planAgentTask = new PlanAgentTask();
+					planAgentTask.setImpersonatedTarget(agentId);	
+					planAgentTask.setTarget(orchestratorId);
+					planAgentTask.setServiceInstanceIds(Lists.newArrayList(plannedInstanceIds));
+					addNewTaskIfNotExists(newTasks, planAgentTask);
+				}				
+				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
+					if (getServiceInstanceState(instanceId) == null) {
+						syncComplete = false;
+						final URI serviceId = state.getServiceIdOfServiceInstance(instanceId);
+						final PlanServiceInstanceTask planInstanceTask = new PlanServiceInstanceTask();
+						planInstanceTask.setImpersonatedTarget(instanceId);
+						planInstanceTask.setAgentId(agentId);
+						planInstanceTask.setServiceId(serviceId);
+						planInstanceTask.setTarget(orchestratorId);
+						addNewTaskIfNotExists(newTasks, planInstanceTask);
+					}
+				}
+			}
+			else {
+				Preconditions.checkState(pingHealth == AgentPingHealth.UNDETERMINED);
+				syncComplete = false;
+				//better luck next time. wait until agent health is determined.
+			}
+		}
+		
+		for (ServiceConfig service : state.getServices()) {
+			URI serviceId = service.getServiceId();
+			ServiceState serviceState = getServiceState(serviceId);
+			Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+			if (serviceState == null ||
+				!Iterables.elementsEqual(serviceState.getInstanceIds(),plannedInstanceIds)) {
+				syncComplete = false;
+				final PlanServiceTask planServiceTask = new PlanServiceTask();
+				planServiceTask.setImpersonatedTarget(serviceId);
+				planServiceTask.setTarget(orchestratorId);
+				planServiceTask.setServiceInstanceIds(Lists.newArrayList(plannedInstanceIds));
+				planServiceTask.setServiceConfig(service);
+				addNewTaskIfNotExists(newTasks, planServiceTask);
+			}
+		}
+		
+		return syncComplete;
+	}
+
 	private void orchestrateService(
 			List<Task> newTasks,
 			final Iterable<URI> healthyAgents) {
 		
-		Preconditions.checkState(!state.isDeploymentPlanChanged());
-		
 		for (final ServiceConfig serviceConfig : state.getServices()) {
 			
 			URI serviceId = serviceConfig.getServiceId();
-			for (final URI instanceId : state.getServiceInstanceIds(serviceId)) {
+			for (final URI instanceId : state.getServiceInstanceIdsOfService(serviceId)) {
 				
 				final URI agentId = state.getAgentIdOfServiceInstance(instanceId);
 				if (!Iterables.contains(healthyAgents,agentId)) {
@@ -168,10 +207,6 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
-	private ServiceState getServiceState(URI serviceId) {
-		return StreamUtils.getLastElement(stateReader, serviceId, ServiceState.class);
-	}
-
 	private ServiceInstanceState getServiceInstanceState(URI instanceId) {
 		return StreamUtils.getLastElement(stateReader, instanceId, ServiceInstanceState.class);
 	}
@@ -179,30 +214,19 @@ public class ServiceGridOrchestrator {
 	/**
 	 * Ping all agents that are not doing anything
 	 */
-	private void pingIdleAgents(List<Task> newTasks) {
+	private void pingAgents(List<Task> newTasks) {
 		
-		final Set<URI> agentNewTasks = Sets.newHashSet();
-		for (final Task task : newTasks) {
-			agentNewTasks.add(task.getTarget());
-		}
 		for (final URI agentId : state.getAgentIds()) {
-			if (!agentNewTasks.contains(agentId) &&
-				!isExecutingTask(agentId) &&
-				getNextTaskToConsume(agentId) == null) {
 					
-				final AgentState agentState = getAgentState(agentId);
-				final PingAgentTask pingTask = new PingAgentTask();
-				pingTask.setTarget(agentId);
-				if (agentState != null && agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
-					pingTask.setExpectedNumberOfRestartsInAgentState(agentState.getNumberOfRestarts());
-				}
-				addNewTask(newTasks, pingTask);
+			final AgentState agentState = getAgentState(agentId);
+			final PingAgentTask pingTask = new PingAgentTask();
+			pingTask.setTarget(agentId);
+			if (agentState != null && agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
+				pingTask.setExpectedNumberOfRestartsInAgentState(agentState.getNumberOfRestarts());
 			}
+			addNewTaskIfNotExists(newTasks, pingTask);
 		}
-	}
-
-	private URI getNextTaskToConsume(URI agentId) {
-		return ServiceUtils.getNextTaskToConsume(stateReader, taskReader, agentId);
+	
 	}
 
 	private void orchestrateServiceInstance(List<Task> newTasks, URI instanceId, URI agentId) {
@@ -233,7 +257,6 @@ public class ServiceGridOrchestrator {
 	}
 
 	private Iterable<URI> orchestrateAgents(List<Task> newTasks) {
-		Preconditions.checkState(!state.isDeploymentPlanChanged());
 		final long nowTimestamp = timeProvider.currentTimeMillis();
 		Set<URI> healthyAgents = Sets.newHashSet();
 		for (URI agentId : state.getAgentIds()) {
@@ -279,31 +302,35 @@ public class ServiceGridOrchestrator {
 	private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
 		
 		AgentPingHealth health = AgentPingHealth.UNDETERMINED;
-				
-		if (!isExecutingTask(agentId)) {
-			// look for ping that should have been consumed by now --> AGENT_NOT_RESPONDING
-			final URI nextTaskToConsume = getNextTaskToConsume(agentId);
-			if (nextTaskToConsume != null) {
-				final Task task = taskReader.getElement(nextTaskToConsume, Task.class);
-				Preconditions.checkState(task.getSource().equals(orchestratorId), "All agent tasks are assumed to be from this orchestrator");
-				if (task instanceof PingAgentTask) {
-					PingAgentTask pingAgentTask = (PingAgentTask) task;
-					AgentState agentState = getAgentState(agentId);
-					Integer expectedNumberOfRestartsInAgentState = pingAgentTask.getExpectedNumberOfRestartsInAgentState();
-					if (expectedNumberOfRestartsInAgentState == null && agentState != null) {
-						// ignore ping sent from management before the agent updated its state
-					}
-					else if (expectedNumberOfRestartsInAgentState != null && agentState != null && expectedNumberOfRestartsInAgentState != agentState.getNumberOfRestarts()) {
-						Preconditions.checkState(expectedNumberOfRestartsInAgentState < agentState.getNumberOfRestarts(), "Could not have sent ping to an agent that was not restarted yet");
-						// ignore ping sent from management to an agent that was already restarted
+		
+		// look for ping that should have been consumed by now --> AGENT_NOT_RESPONDING
+		Iterable<URI> pendingTasks = ServiceUtils.getPendingTasks(stateReader, taskReader, agentId);
+		for (final URI nextTaskToConsume : pendingTasks) {
+			final Task task = taskReader.getElement(nextTaskToConsume, Task.class);
+			Preconditions.checkState(task.getSource().equals(orchestratorId), "All agent tasks are assumed to be from this orchestrator");
+			if (task instanceof PingAgentTask) {
+				PingAgentTask pingAgentTask = (PingAgentTask) task;
+				AgentState agentState = getAgentState(agentId);
+				Integer expectedNumberOfRestartsInAgentState = pingAgentTask.getExpectedNumberOfRestartsInAgentState();
+				if (expectedNumberOfRestartsInAgentState == null && agentState != null) {
+					if (agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
+						// agent started after ping sent. Wait for next ping
 					}
 					else {
-						final long taskTimestamp = task.getSourceTimestamp();
-						final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
-						if ( notRespondingMilliseconds > NOT_RESPONDING_DETECTION_MILLISECONDS ) {
-							// ping should have been consumed by now
-							health = AgentPingHealth.AGENT_NOT_RESPONDING;
-						}
+						// agent not responding because it was not started yet
+						health = AgentPingHealth.AGENT_NOT_RESPONDING;
+					}
+				}
+				else if (expectedNumberOfRestartsInAgentState != null && agentState != null && expectedNumberOfRestartsInAgentState != agentState.getNumberOfRestarts()) {
+					Preconditions.checkState(expectedNumberOfRestartsInAgentState < agentState.getNumberOfRestarts(), "Could not have sent ping to an agent that was not restarted yet");
+					// agent restarted after ping sent. Wait for next ping
+				}
+				else {
+					final long taskTimestamp = task.getSourceTimestamp();
+					final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
+					if ( notRespondingMilliseconds > NOT_RESPONDING_DETECTION_MILLISECONDS ) {
+						// ping should have been consumed by now
+						health = AgentPingHealth.AGENT_NOT_RESPONDING;
 					}
 				}
 			}
@@ -405,46 +432,9 @@ public class ServiceGridOrchestrator {
 		return state;
 	}
 	
-	private boolean isDeploymentPlanningTasksComplete() {
-		Iterable<URI> pendingTasks = ServiceUtils.getPendingTasks(stateReader, taskReader, orchestratorId);
-		URI pendingPlanTask = Iterables.find(pendingTasks, new Predicate<URI>() {
-
-			@Override
-			public boolean apply(URI taskId) {
-				Task task = taskReader.getElement(taskId, Task.class);
-				Preconditions.checkNotNull(task);
-				return task instanceof PlanAgentTask || 
-					   task instanceof PlanServiceTask ||  
-					   task instanceof PlanServiceInstanceTask;
-			}
-		},null);
-		return pendingPlanTask == null;
-	}
-
-	private void planServices(List<Task> newTasks) {
-		
-		for (ServiceConfig service : state.getServices()) {
-			URI serviceId = service.getServiceId();
-			Iterable<URI> instanceIds = state.getServiceInstanceIds(serviceId);
-			
-			final PlanServiceTask planServiceTask = new PlanServiceTask();
-			planServiceTask.setImpersonatedTarget(serviceId);
-			planServiceTask.setTarget(orchestratorId);
-			planServiceTask.setServiceInstanceIds(Lists.newArrayList(instanceIds));
-			planServiceTask.setServiceConfig(service);
-			addNewTask(newTasks, planServiceTask);
-		
-			for (URI instanceId : instanceIds) {
-				if (getServiceInstanceState(instanceId) == null) {
-					final PlanServiceInstanceTask planInstanceTask = new PlanServiceInstanceTask();
-					planInstanceTask.setAgentId(state.getAgentIdOfServiceInstance(instanceId));
-					planInstanceTask.setServiceId(serviceId);
-					planInstanceTask.setImpersonatedTarget(instanceId);	
-					planInstanceTask.setTarget(orchestratorId);
-					addNewTask(newTasks, planInstanceTask);
-				}
-			}
-		}
+	private ServiceState getServiceState(URI serviceId) {
+		ServiceState serviceState = StreamUtils.getLastElement(stateReader, serviceId, ServiceState.class);
+		return serviceState;
 	}
 
 }

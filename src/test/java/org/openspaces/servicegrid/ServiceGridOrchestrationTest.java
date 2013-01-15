@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -131,6 +132,7 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		scaleOutService("tomcat",2);
 		execute();
+		//TODO: Second agent comes up only after it is validated not to respond to pings. Should it have came up immediately. Maybe it was there already? 
 		assertTwoTomcatInstances();
 	}
 
@@ -412,7 +414,14 @@ public class ServiceGridOrchestrationTest {
 			if (sourceTimestamp != null) {
 				timestamp = timestampFormatter.format(sourceTimestamp);
 			}
-			logger.info(String.format("%-8s%-30starget: %s",timestamp,task.getClass().getSimpleName(),task.getTarget()));
+			if (logger.isLoggable(Level.INFO)) {
+				String impersonatedTarget = "";
+				if (task instanceof ImpersonatingTask) {
+					ImpersonatingTask impersonatingTask = (ImpersonatingTask) task;
+					impersonatedTarget = "impersonated: " + impersonatingTask.getImpersonatedTarget();
+				}
+				logger.info(String.format("%-8s%-32starget: %-50s%-50s",timestamp,task.getClass().getSimpleName(),task.getTarget(), impersonatedTarget));
+			}
 		}
 	}
 	

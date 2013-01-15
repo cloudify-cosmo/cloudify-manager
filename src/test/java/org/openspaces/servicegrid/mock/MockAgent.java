@@ -11,6 +11,7 @@ import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
 
@@ -61,6 +62,22 @@ public class MockAgent {
 		instancesState.put(task.getImpersonatedTarget(), instanceState);
 	}
 
+	@ImpersonatingTaskConsumer
+	public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
+			TaskExecutorStateModifier impersonatedStateModifier) {
+		
+		URI instanceId = task.getImpersonatedTarget();
+		Preconditions.checkArgument(state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
+		ServiceInstanceState instanceState = instancesState.get(instanceId);
+		if (instanceState == null) {
+			instanceState = new ServiceInstanceState();
+			instanceState.setProgress(ServiceInstanceState.Progress.PLANNED);
+		}
+		
+		impersonatedStateModifier.updateState(instanceState);
+		
+	}
+	
 	@TaskConsumer
 	public void execute(PingAgentTask task) {
 		//do nothing
