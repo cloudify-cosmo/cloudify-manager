@@ -167,6 +167,10 @@ public class ServiceGridOrchestrationTest {
 	 * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
 	 * The reason it still fails is because the cloud driver did not get a command from the management
 	 * that it needs to find the crashed agent using outer means (SSH for example looking for files on disk)
+	 * 
+	 * TODO: The orchestrator needs to generate a list of ipaddresses that it discovered, and the number of agents
+	 * that are missing compared to the plan. The machine provisioning task then needs to SSH each machine
+	 * without an agent and restart the failed agent based on pre-existing file on disk
 	 */
 	@Test
 	public void managementAndOneAgentFailoverTest() {
