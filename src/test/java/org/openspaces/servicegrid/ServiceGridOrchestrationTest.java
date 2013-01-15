@@ -146,7 +146,19 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		assertSingleTomcatInstance();
 	}
-		
+	
+	@Test
+	public void managementAndOneAgentFailoverTest() {
+		//this test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
+		installService("tomcat", 2);
+		execute();
+		logAllTasks();
+		killAgent(Iterables.getLast(getAgentIds()));
+		management.restart();
+		execute();
+		assertTwoTomcatInstances();
+	}
+	
 	private void assertSingleTomcatInstance() {
 		URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
