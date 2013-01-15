@@ -97,6 +97,9 @@ public class ServiceGridOrchestrationTest {
 		logAllTasks();
 	}
 	
+	/**
+	 * Tests deployment of 1 instance
+	 */
 	@Test
 	public void installSingleInstanceServiceTest() {
 		installService("tomcat", 1);
@@ -104,6 +107,9 @@ public class ServiceGridOrchestrationTest {
 		assertSingleTomcatInstance();
 	}
 
+	/**
+	 * Tests deployment of 2 instances
+	 */
 	@Test
 	public void installMultipleInstanceServiceTest() {
 		installService("tomcat", 2);
@@ -112,6 +118,9 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	
+	/**
+	 * Tests agent failover (not machine failover)
+	 */
 	@Test
 	public void agentFailoverTest() {
 		installService("tomcat", 1);
@@ -127,6 +136,9 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(agentState.getNumberOfRestarts(),1);
 	}
 	
+	/**
+	 * Tests change in plan from 1 instance to 2 instances
+	 */
 	@Test
 	public void scaleOutServiceTest() {
 		installService("tomcat", 1);
@@ -137,6 +149,9 @@ public class ServiceGridOrchestrationTest {
 		assertTwoTomcatInstances();
 	}
 	
+	/**
+	 * Tests management state recovery from crash
+	 */
 	@Test
 	public void managementFailoverTest() {
 		installService("tomcat", 1);
@@ -147,13 +162,18 @@ public class ServiceGridOrchestrationTest {
 		assertSingleTomcatInstance();
 	}
 	
+	/**
+	 * Tests management state recovery from crash when one of the agents also failed.
+	 * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
+	 * The reason it still fails is because the cloud driver did not get a command from the management
+	 * that it needs to find the crashed agent using outer means (SSH for example looking for files on disk)
+	 */
 	@Test
 	public void managementAndOneAgentFailoverTest() {
-		//this test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
 		installService("tomcat", 2);
 		execute();
 		logAllTasks();
-		killAgent(Iterables.getLast(getAgentIds()));
+		killAgent(newURI("http://localhost/agent/1/"));
 		management.restart();
 		execute();
 		assertTwoTomcatInstances();
