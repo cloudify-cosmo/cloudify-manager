@@ -130,7 +130,9 @@ public class ServiceGridOrchestrationTest {
 		URI instanceId = getOnlyServiceInstanceId();
 		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		AgentState agentState = getAgentState(getOnlyAgentId());
+		URI agentId = instanceState.getAgentId();
+		Assert.assertEquals(agentId, getOnlyAgentId());
+		AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(),AgentState.Progress.AGENT_STARTED);
 		Assert.assertEquals(agentState.getNumberOfRestarts(),1);
@@ -188,8 +190,9 @@ public class ServiceGridOrchestrationTest {
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
 		Assert.assertNotNull(serviceState, "No state for " + serviceId);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
-		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		URI instanceId = getOnlyServiceInstanceId();
+		Assert.assertEquals(Iterables.getOnlyElement(serviceState.getInstanceIds()), instanceId);
+		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		URI agentId = getOnlyAgentId();
 		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 		Assert.assertEquals(instanceState.getServiceId(), serviceId);
