@@ -9,6 +9,7 @@ import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -428,10 +429,11 @@ public class ServiceGridOrchestrator<x> {
 		return StreamUtils.getLastElement(stateReader, agentId, AgentState.class);
 	}
 	
+	@TaskConsumerStateHolder
 	public ServiceGridOrchestratorState getState() {
 		return state;
 	}
-	
+
 	private ServiceState getServiceState(URI serviceId) {
 		ServiceState serviceState = StreamUtils.getLastElement(stateReader, serviceId, ServiceState.class);
 		return serviceState;

@@ -7,6 +7,7 @@ import java.util.List;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
@@ -55,10 +56,10 @@ public class ServiceGridDeploymentPlanner {
 	public void installService(InstallServiceTask task) {
 		
 		ServiceConfig serviceConfig = task.getServiceConfig();
+		Preconditions.checkNotNull(serviceConfig);
 		fixServiceId(serviceConfig);
 		boolean installed = isServiceInstalled(serviceConfig.getServiceId());
 		Preconditions.checkState(!installed);
-		Preconditions.checkNotNull(serviceConfig);
 		state.addService(serviceConfig);
 	}
 
@@ -68,6 +69,7 @@ public class ServiceGridDeploymentPlanner {
 		List<Task> newTasks = Lists.newArrayList();
 		if (state.isDeploymentPlanningRequired()) {
 			updateDeploymentPlan();
+			
 			UpdateDeploymentPlanTask enforceTask = new UpdateDeploymentPlanTask();
 			enforceTask.setTarget(orchestratorId);
 			enforceTask.setDeploymentPlan(state.getDeploymentPlan());
@@ -156,7 +158,8 @@ public class ServiceGridDeploymentPlanner {
 			throw Throwables.propagate(e);
 		}
 	}
-	
+
+	@TaskConsumerStateHolder
 	public TaskConsumerState getState() {
 		return state;
 	}

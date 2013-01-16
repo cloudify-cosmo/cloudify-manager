@@ -4,6 +4,7 @@ import java.net.URI;
 
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
@@ -27,6 +28,7 @@ public class MockMachineProvisioner {
 	
 		//Simulate starting machine
 		AgentState impersonatedState = impersonatedStateModifier.getState();
+		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.PLANNED));
 		impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
 		impersonatedStateModifier.updateState(impersonatedState);
 		//Immediately machine start 
@@ -65,6 +67,7 @@ public class MockMachineProvisioner {
 			//In a real implementation here is where we restart the agent process
 	}
 
+	@TaskConsumerStateHolder
 	public TaskConsumerState getState() {
 		return state;
 	}

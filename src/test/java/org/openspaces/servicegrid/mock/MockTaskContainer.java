@@ -13,6 +13,7 @@ import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.TaskProducerTask;
@@ -36,7 +37,7 @@ public class MockTaskContainer {
 	private final StreamWriter<Task> persistentTaskWriter;
 	private final StreamReader<TaskConsumerState> stateReader;
 	private boolean killed;
-	private final Method getStateMethod;
+	private final Method getTaskConsumerStateMethod;
 	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
 	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
 	private final Set<Method> taskConsumersToPersist;
@@ -51,7 +52,6 @@ public class MockTaskContainer {
 		this.taskWriter = parameterObject.getTaskWriter();
 		this.taskConsumer = parameterObject.getTaskConsumer();
 		this.killed = false;
-		this.getStateMethod = getMethodByName("getState");
 		this.timeProvider = parameterObject.getTimeProvider();
 		this.taskConsumerMethodByType = Maps.newHashMap();
 		this.impersonatedTaskConsumerMethodByType = Maps.newHashMap();
@@ -60,11 +60,13 @@ public class MockTaskContainer {
 		
 		//Reflect on @TaskProducer and @TaskConsumer methods
 		Method taskProducerMethod = null;
+		Method getStateMethod = null;
 		for (Method method : taskConsumer.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
 			TaskConsumer taskConsumerAnnotation = method.getAnnotation(TaskConsumer.class);
 			ImpersonatingTaskConsumer impersonatingTaskConsumerAnnotation = method.getAnnotation(ImpersonatingTaskConsumer.class);
 			TaskProducer taskProducerAnnotation = method.getAnnotation(TaskProducer.class);
+			TaskConsumerStateHolder taskConsumerStateHolderAnnotation = method.getAnnotation(TaskConsumerStateHolder.class);
 			if (taskConsumerAnnotation != null) {
 				Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
 				Preconditions.checkArgument(parameterTypes.length >= 1 && !ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is an impersonating task. Use " + ImpersonatingTask.class.getSimpleName() + " annotation instead, in " + taskConsumer.getClass());
@@ -76,8 +78,7 @@ public class MockTaskContainer {
 				if (taskConsumerAnnotation.persistTask()) {
 					taskConsumersToPersist.add(method);
 				}
-			} else {
-				if (impersonatingTaskConsumerAnnotation != null) {
+			} else if (impersonatingTaskConsumerAnnotation != null) {
 					Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
 					Preconditions.checkArgument(parameterTypes.length == 2, "Impersonating task executor method must have two parameters");
 					Preconditions.checkArgument(ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "method first parameter %s is not an impersonating task in %s",parameterTypes[0], taskConsumer.getClass());
@@ -88,17 +89,17 @@ public class MockTaskContainer {
 					if (impersonatingTaskConsumerAnnotation.persistTask()) {
 						taskConsumersToPersist.add(method);
 					}
-				} else {
-					if (taskProducerAnnotation != null) {
-						Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), "%s return type must be Iterable<Task>",method);
-						Preconditions.checkArgument(parameterTypes.length == 0, "%s method must not have any parameters", method);				
-						Preconditions.checkArgument(taskProducerMethod == null, "%s can have at most one @" + TaskProducer.class.getSimpleName()+" method", taskConsumer.getClass());
-						taskProducerMethod = method;
-					}
-				}
+			} else if (taskProducerAnnotation != null) {
+					Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), "%s return type must be Iterable<Task>",method);
+					Preconditions.checkArgument(parameterTypes.length == 0, "%s method must not have any parameters", method);				
+					Preconditions.checkArgument(taskProducerMethod == null, "%s can have at most one @" + TaskProducer.class.getSimpleName()+" method", taskConsumer.getClass());
+					taskProducerMethod = method;
+			} else if (taskConsumerStateHolderAnnotation != null) {
+				getStateMethod = method;
 			}
 		}
 		this.taskProducerMethod = taskProducerMethod;
+		this.getTaskConsumerStateMethod = getStateMethod;
 		
 		//recover persisted tasks
 		StreamReader<Task> persistentTaskReader = parameterObject.getPersistentTaskReader();
@@ -132,7 +133,8 @@ public class MockTaskContainer {
 	}
 
 	private TaskConsumerState getTaskConsumerState() {
-		return (TaskConsumerState) invokeMethod(getStateMethod);
+		Preconditions.checkState(getTaskConsumerStateMethod != null, taskConsumer.getClass() + " does not have any method annotated with @" + TaskConsumerStateHolder.class.getSimpleName());
+		return (TaskConsumerState) invokeMethod(getTaskConsumerStateMethod);
 	}
 
 	private Object invokeMethod(Method method, Object ... args) {
