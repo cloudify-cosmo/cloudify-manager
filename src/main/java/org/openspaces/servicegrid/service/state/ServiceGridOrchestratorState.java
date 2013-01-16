@@ -14,7 +14,7 @@ import com.google.common.collect.Iterables;
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
 	private ServiceGridDeploymentPlan deploymentPlan;
-	private boolean deploymentPlanChanged;
+	private boolean syncedStateWithDeploymentBefore;
 
 	public ServiceGridDeploymentPlan getDeploymentPlan() {
 		return deploymentPlan;
@@ -80,5 +80,13 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 					}
 		}, entryNotFound);
 		return entry != entryNotFound ? entry.getKey() : null;
+	}
+
+	public boolean isSyncedStateWithDeploymentBefore() {
+		return syncedStateWithDeploymentBefore;
+	}
+
+	public void setSyncedStateWithDeploymentBefore(boolean firstSyncStateWithDeployment) {
+		this.syncedStateWithDeploymentBefore = firstSyncStateWithDeployment;
 	}
 }

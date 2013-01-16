@@ -19,7 +19,6 @@ import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
-import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
@@ -61,7 +60,6 @@ public class ServiceGridOrchestrator<x> {
 		this.stateReader = parameterObject.getStateReader();
 		this.timeProvider = parameterObject.getTimeProvider();
 		this.state = new ServiceGridOrchestratorState();
-		state.setDeploymentPlan(new ServiceGridDeploymentPlan());
 	}
 
 	@TaskProducer
@@ -69,15 +67,18 @@ public class ServiceGridOrchestrator<x> {
 	
 		final List<Task> newTasks = Lists.newArrayList();
 		
-		boolean ready = syncStateWithDeploymentPlan(newTasks);
-		
-		if (ready) {
-			//start orchestrating according to current state
-			final Iterable<URI> healthyAgents = orchestrateAgents(newTasks);
-			orchestrateService(newTasks, healthyAgents);
+		if (state.getDeploymentPlan() != null) {
+			
+			boolean ready = syncStateWithDeploymentPlan(newTasks);
+			
+			if (ready) {
+				//start orchestrating according to current state
+				final Iterable<URI> healthyAgents = orchestrateAgents(newTasks);
+				orchestrateService(newTasks, healthyAgents);
+			}
+	
+			pingAgents(newTasks);
 		}
-
-		pingAgents(newTasks);
 		return newTasks;
 	}
 
@@ -120,12 +121,18 @@ public class ServiceGridOrchestrator<x> {
 		impersonatedStateModifier.updateState(instanceState);
 	}
 	
-	private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {
+	private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {	
 		boolean syncComplete = true;
 		final long nowTimestamp = timeProvider.currentTimeMillis();
 		for (final URI agentId : state.getAgentIds()) {
 			AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
 			AgentState agentState = getAgentState(agentId);
+			boolean agentNotStarted = (agentState == null || !agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+			if (agentNotStarted && state.isSyncedStateWithDeploymentBefore() && pingHealth == AgentPingHealth.UNDETERMINED) {
+				//If this agent were started, we would have resolved it as AGENT_STARTED in the previous sync
+				//The agent probably never even started
+				pingHealth = AgentPingHealth.AGENT_NOT_RESPONDING;
+			}
 			if (pingHealth == AgentPingHealth.AGENT_RESPONDING) {
 				Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
 				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
@@ -185,6 +192,9 @@ public class ServiceGridOrchestrator<x> {
 			}
 		}
 		
+		if (syncComplete) {
+			state.setSyncedStateWithDeploymentBefore(true);
+		}
 		return syncComplete;
 	}
 
@@ -420,15 +430,10 @@ public class ServiceGridOrchestrator<x> {
 		newTasks.add(task);
 	}
 
-	private boolean isExecutingTask(URI taskConsumerId) {
-		TaskConsumerState taskConsumerState = StreamUtils.getLastElement(stateReader, taskConsumerId, TaskConsumerState.class);
-		return taskConsumerState != null && !Iterables.isEmpty(taskConsumerState.getExecutingTasks());
-	}
-
 	private AgentState getAgentState(URI agentId) {
 		return StreamUtils.getLastElement(stateReader, agentId, AgentState.class);
 	}
-	
+
 	@TaskConsumerStateHolder
 	public ServiceGridOrchestratorState getState() {
 		return state;
