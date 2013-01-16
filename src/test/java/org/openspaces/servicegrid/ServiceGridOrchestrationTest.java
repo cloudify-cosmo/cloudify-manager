@@ -289,7 +289,6 @@ public class ServiceGridOrchestrationTest {
 	private void submitTask(final URI target, final Task installServiceTask) {
 		installServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
 		client.addServiceTask(target, installServiceTask);
-		timeProvider.increaseBy(1000);
 	}
 
 	private void scaleOutService(String serviceName, int plannedNumberOfInstances) {
@@ -335,6 +334,9 @@ public class ServiceGridOrchestrationTest {
 
 			if (emptyCycle) {
 				consecutiveEmptyCycles++;
+			}
+			else {
+				consecutiveEmptyCycles = 0;
 			}
 
 			if (consecutiveEmptyCycles > 60) {
