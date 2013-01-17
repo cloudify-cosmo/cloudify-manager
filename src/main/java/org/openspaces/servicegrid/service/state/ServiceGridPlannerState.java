@@ -7,6 +7,9 @@ import java.util.Set;
 import org.openspaces.servicegrid.TaskConsumerState;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -85,6 +88,19 @@ public class ServiceGridPlannerState extends TaskConsumerState {
 	public void setNextServiceInstanceIndexByServiceId(
 			Map<URI, Integer> nextServiceInstanceIndexByServiceId) {
 		this.nextServiceInstanceIndexByServiceId = nextServiceInstanceIndexByServiceId;
+	}
+
+	public ServiceConfig getServiceById(final URI serviceId) {
+		Preconditions.checkNotNull(serviceId);
+		final ServiceConfig serviceNotFound = null;
+		return Iterables.find(getServices(), new Predicate<ServiceConfig>(){
+
+			@Override
+			public boolean apply(ServiceConfig service) {
+				return serviceId.equals(service.getServiceId());
+			}
+		}, 
+		serviceNotFound);
 	}
 	
 	

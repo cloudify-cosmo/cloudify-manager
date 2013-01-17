@@ -12,8 +12,6 @@ import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
-import org.openspaces.servicegrid.client.ServiceClient;
-import org.openspaces.servicegrid.client.ServiceClientParameter;
 import org.openspaces.servicegrid.mock.MockAgent;
 import org.openspaces.servicegrid.mock.MockManagement;
 import org.openspaces.servicegrid.mock.MockStreams;
@@ -49,7 +47,6 @@ public class ServiceGridOrchestrationTest {
 	
 	private final Logger logger;
 	private MockManagement management;
-	private ServiceClient client;
 	private Set<MockTaskContainer> containers;
 	private MockCurrentTimeProvider timeProvider;
 	private TaskConsumerRegistrar taskConsumerRegistrar;
@@ -86,7 +83,6 @@ public class ServiceGridOrchestrationTest {
 		
 		management = new MockManagement(taskConsumerRegistrar, timeProvider);
 		management.registerTaskConsumers();
-		client = newServiceClient();
 		logger.info("Starting " + method.getName());
 	}
 	
@@ -299,7 +295,10 @@ public class ServiceGridOrchestrationTest {
 
 	private void submitTask(final URI target, final Task installServiceTask) {
 		installServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
-		client.addServiceTask(target, installServiceTask);
+		Preconditions.checkNotNull(target);
+		Preconditions.checkNotNull(installServiceTask);
+		installServiceTask.setTarget(target);
+		((MockStreams<Task>)management.getTaskReader()).addElement(target, installServiceTask);
 	}
 
 	private void scaleOutService(String serviceName, int plannedNumberOfInstances) {
@@ -477,14 +476,6 @@ public class ServiceGridOrchestrationTest {
 		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
-	}
-
-	private ServiceClient newServiceClient() {
-		final ServiceClientParameter serviceClientParameter = new ServiceClientParameter();
-		serviceClientParameter.setStateReader(getStateReader());
-		serviceClientParameter.setTaskReader(management.getTaskReader());
-		serviceClientParameter.setTaskWriter(management.getTaskWriter());
-		return new ServiceClient(serviceClientParameter);
 	}
 	
 	private void addContainer(MockTaskContainer container) {

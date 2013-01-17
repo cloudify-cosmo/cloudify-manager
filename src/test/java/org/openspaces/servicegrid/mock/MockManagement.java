@@ -90,7 +90,6 @@ public class MockManagement {
 		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
 		serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
-		serviceOrchestratorParameter.setDeploymentPlannerId(deploymentPlannerId);
 		serviceOrchestratorParameter.setTaskConsumer(taskBroker);
 		serviceOrchestratorParameter.setStateReader(state);
 		serviceOrchestratorParameter.setTimeProvider(timeProvider);
@@ -102,7 +101,6 @@ public class MockManagement {
 		
 		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
 		servicePlannerParameter.setOrchestratorId(orchestratorId);
-		servicePlannerParameter.setTimeProvider(timeProvider);
 		return new ServiceGridDeploymentPlanner(servicePlannerParameter);
 		
 	}

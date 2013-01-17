@@ -38,27 +38,27 @@ public class ServiceGridDeploymentPlanner {
 
 	@TaskConsumer(persistTask = true)
 	public void scaleOutService(ScaleOutServiceTask task) {
-				
-		for (ServiceConfig serviceConfig : state.getServices()) {
-			if (serviceConfig.getServiceId().equals(task.getServiceId())) {
-				int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
-				if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
-					serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
-					state.updateService(serviceConfig);
-					return;
-				}
-			}
+		
+		URI serviceId = task.getServiceId();
+		ServiceConfig serviceConfig = state.getServiceById(serviceId);
+		Preconditions.checkNotNull(serviceConfig, "Cannot find service %s", serviceId);
+		
+		int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
+		if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
+			serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
+			state.updateService(serviceConfig);
+			return;
 		}
-		Preconditions.checkArgument(false,"Cannot find service %s", task.getServiceId());
 	}
 
 	@TaskConsumer(persistTask = true)
 	public void installService(InstallServiceTask task) {
 		
-		ServiceConfig serviceConfig = task.getServiceConfig();
+		final ServiceConfig serviceConfig = task.getServiceConfig();
 		Preconditions.checkNotNull(serviceConfig);
-		fixServiceId(serviceConfig);
-		boolean installed = isServiceInstalled(serviceConfig.getServiceId());
+		final URI serviceId = serviceConfig.getServiceId();
+		Preconditions.checkArgument(serviceId.toString().endsWith("/"), "%s must end with /", serviceId);
+		boolean installed = isServiceInstalled(serviceId);
 		Preconditions.checkState(!installed);
 		state.addService(serviceConfig);
 	}
@@ -119,17 +119,6 @@ public class ServiceGridDeploymentPlanner {
 		
 		final ServiceConfig serviceClone = StreamUtils.cloneElement(mapper, service);
 		deploymentPlan.addService(serviceClone);
-	}
-
-	
-	private void fixServiceId(ServiceConfig serviceConfig) {
-		if (!serviceConfig.getServiceId().toString().endsWith("/")) {
-			try {
-				serviceConfig.setServiceId(new URI(serviceConfig.getServiceId()+"/"));
-			} catch (URISyntaxException e) {
-				throw Throwables.propagate(e);
-			}
-		}
 	}
 
 	private boolean isServiceInstalled(final URI serviceId) {

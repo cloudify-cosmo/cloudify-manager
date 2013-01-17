@@ -14,7 +14,6 @@ public class ServiceGridOrchestratorParameter {
 	private StreamReader<Task> taskReader;
 	private StreamReader<TaskConsumerState> stateReader;
 	private CurrentTimeProvider timeProvider;
-	private URI deploymentPlannerId;
 	
 	public StreamReader<Task> getTaskReader() {
 		return taskReader;
@@ -54,13 +53,5 @@ public class ServiceGridOrchestratorParameter {
 
 	public void setTimeProvider(CurrentTimeProvider timeProvider) {
 		this.timeProvider = timeProvider;
-	}
-	
-	public URI getDeploymentPlannerId() {
-		return deploymentPlannerId;
-	}
-
-	public void setDeploymentPlannerId(URI deploymentPlannerId) {
-		this.deploymentPlannerId = deploymentPlannerId;
 	}
 }

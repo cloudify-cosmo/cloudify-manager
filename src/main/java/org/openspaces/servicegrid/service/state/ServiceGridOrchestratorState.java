@@ -59,16 +59,6 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 	}
 
 	@JsonIgnore
-	public Iterable<URI> getServiceInstanceIds() {
-		return Iterables.unmodifiableIterable(deploymentPlan.getInstanceIdsByServiceId().values());
-	}
-
-	@JsonIgnore
-	public Iterable<URI> getServiceIds() {
-		return Iterables.unmodifiableIterable(deploymentPlan.getInstanceIdsByServiceId().keySet());
-	}
-
-	@JsonIgnore
 	public URI getServiceIdOfServiceInstance(final URI instanceId) {
 		final Collection<Entry<URI, URI>> instanceIdByServiceId = deploymentPlan.getInstanceIdsByServiceId().entries();
 		final Entry<URI, URI> entryNotFound = null;
