@@ -144,10 +144,12 @@ public class ServiceGridOrchestrator<x> {
 				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
 					if (getServiceInstanceState(instanceId) == null) {
 						syncComplete = false;
-						final RecoverServiceInstanceStateTask planInstanceTask = new RecoverServiceInstanceStateTask();
-						planInstanceTask.setImpersonatedTarget(instanceId);	
-						planInstanceTask.setTarget(agentId);
-						addNewTaskIfNotExists(newTasks, planInstanceTask);
+						final URI serviceId = state.getServiceIdOfServiceInstance(instanceId);
+						final RecoverServiceInstanceStateTask recoverInstanceStateTask = new RecoverServiceInstanceStateTask();
+						recoverInstanceStateTask.setImpersonatedTarget(instanceId);	
+						recoverInstanceStateTask.setTarget(agentId);
+						recoverInstanceStateTask.setServiceId(serviceId);
+						addNewTaskIfNotExists(newTasks, recoverInstanceStateTask);
 					}
 				}
 			}

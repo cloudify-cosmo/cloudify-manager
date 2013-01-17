@@ -67,13 +67,20 @@ public class MockAgent {
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		
 		URI instanceId = task.getImpersonatedTarget();
+		URI agentId = task.getTarget();
+		URI serviceId = task.getServiceId();
 		Preconditions.checkArgument(state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
 		ServiceInstanceState instanceState = instancesState.get(instanceId);
 		if (instanceState == null) {
 			instanceState = new ServiceInstanceState();
 			instanceState.setProgress(ServiceInstanceState.Progress.PLANNED);
+			instanceState.setAgentId(agentId);
+			instanceState.setServiceId(serviceId);
 		}
-		
+		else {
+			Preconditions.checkState(instanceState.getAgentId().equals(agentId));
+			Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
+		}
 		impersonatedStateModifier.updateState(instanceState);
 		
 	}
