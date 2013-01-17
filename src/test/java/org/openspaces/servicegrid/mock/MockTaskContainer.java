@@ -36,13 +36,16 @@ public class MockTaskContainer {
 	private final StreamWriter<Task> taskWriter;
 	private final StreamWriter<Task> persistentTaskWriter;
 	private final StreamReader<TaskConsumerState> stateReader;
-	private boolean killed;
-	private final Method getTaskConsumerStateMethod;
+	private final Method taskConsumerStateHolderMethod;
 	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
 	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
 	private final Set<Method> taskConsumersToPersist;
 	private final Method taskProducerMethod;
 	private final CurrentTimeProvider timeProvider;
+
+	// state objects that mocks process termination 
+	private boolean killed;
+	
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
 		this.taskConsumerId = parameterObject.getExecutorId();
@@ -60,7 +63,8 @@ public class MockTaskContainer {
 		
 		//Reflect on @TaskProducer and @TaskConsumer methods
 		Method taskProducerMethod = null;
-		Method getStateMethod = null;
+		Method taskConsumerStateHolderMethod = null;
+
 		for (Method method : taskConsumer.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
 			TaskConsumer taskConsumerAnnotation = method.getAnnotation(TaskConsumer.class);
@@ -95,11 +99,11 @@ public class MockTaskContainer {
 					Preconditions.checkArgument(taskProducerMethod == null, "%s can have at most one @" + TaskProducer.class.getSimpleName()+" method", taskConsumer.getClass());
 					taskProducerMethod = method;
 			} else if (taskConsumerStateHolderAnnotation != null) {
-				getStateMethod = method;
+				taskConsumerStateHolderMethod = method;
 			}
 		}
 		this.taskProducerMethod = taskProducerMethod;
-		this.getTaskConsumerStateMethod = getStateMethod;
+		this.taskConsumerStateHolderMethod = taskConsumerStateHolderMethod;
 		
 		//recover persisted tasks
 		StreamReader<Task> persistentTaskReader = parameterObject.getPersistentTaskReader();
@@ -133,8 +137,8 @@ public class MockTaskContainer {
 	}
 
 	private TaskConsumerState getTaskConsumerState() {
-		Preconditions.checkState(getTaskConsumerStateMethod != null, taskConsumer.getClass() + " does not have any method annotated with @" + TaskConsumerStateHolder.class.getSimpleName());
-		return (TaskConsumerState) invokeMethod(getTaskConsumerStateMethod);
+		Preconditions.checkState(taskConsumerStateHolderMethod != null, taskConsumer.getClass() + " does not have any method annotated with @" + TaskConsumerStateHolder.class.getSimpleName());
+		return (TaskConsumerState) invokeMethod(taskConsumerStateHolderMethod);
 	}
 
 	private Object invokeMethod(Method method, Object ... args) {
@@ -312,7 +316,13 @@ public class MockTaskContainer {
 		return taskConsumer.toString();
 	}
 
-	public void kill() {
+	public void killMachine() {
+		Preconditions.checkState(!killed);
 		this.killed = true;
 	}
+
+	public Object getTaskConsumer() {
+		return taskConsumer;
+	}
+	
 }

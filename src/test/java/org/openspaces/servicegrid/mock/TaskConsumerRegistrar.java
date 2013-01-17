@@ -4,8 +4,15 @@ import java.net.URI;
 
 public interface TaskConsumerRegistrar {
 	
-	void registerTaskConsumer(Object taskConsumer, URI executorId);
+	/**
+	 * Registers the task consumer with the specified id.
+	 */
+	void registerTaskConsumer(Object taskConsumer, URI taskConsumerId);
 
-	void unregisterTaskConsumer(URI executorId);
+	/**
+	 * Unregisters a task consumer with the specified id.
+	 * @return The task consumer object
+	 */
+	Object unregisterTaskConsumer(URI taskConsumerId);
 	
 }

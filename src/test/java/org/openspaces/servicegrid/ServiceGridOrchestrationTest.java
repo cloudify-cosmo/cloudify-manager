@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -13,6 +14,7 @@ import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.client.ServiceClient;
 import org.openspaces.servicegrid.client.ServiceClientParameter;
+import org.openspaces.servicegrid.mock.MockAgent;
 import org.openspaces.servicegrid.mock.MockManagement;
 import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
@@ -37,6 +39,7 @@ import org.testng.log.TextFormatter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -65,23 +68,18 @@ public class ServiceGridOrchestrationTest {
 			
 			@Override
 			public void registerTaskConsumer(
-					final Object taskConsumer, final URI executorId) {
+					final Object taskConsumer, final URI taskConsumerId) {
 				
-				MockTaskContainer container = newContainer(executorId, taskConsumer);
+				MockTaskContainer container = newContainer(taskConsumerId, taskConsumer);
 				addContainer(container);
 			}
 
 			@Override
-			public void unregisterTaskConsumer(final URI executorId) {
-				boolean removed = containers.remove(
-					Iterables.find(containers, new Predicate<MockTaskContainer>() {
-						@Override
-						public boolean apply(MockTaskContainer executor) {
-							return executorId.equals(executor.getTaskConsumerId());
-						}
-					})
-				);
-				Preconditions.checkState(removed, "Failed to remove container " + executorId);
+			public Object unregisterTaskConsumer(final URI taskConsumerId) {
+				MockTaskContainer mockTaskContainer = findContainer(taskConsumerId);
+				boolean removed = containers.remove(mockTaskContainer);
+				Preconditions.checkState(removed, "Failed to remove container " + taskConsumerId);
+				return mockTaskContainer.getTaskConsumer();
 			}
 
 		};
@@ -122,20 +120,25 @@ public class ServiceGridOrchestrationTest {
 	 * Tests agent failover (not machine failover)
 	 */
 	@Test
-	public void agentFailoverTest() {
+	public void machineFailoverTest() {
 		installService("tomcat", 1);
 		execute();
-		killOnlyAgent();
+		killOnlyMachine();
 		execute();
-		URI instanceId = getOnlyServiceInstanceId();
-		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		URI agentId = instanceState.getAgentId();
-		Assert.assertEquals(agentId, getOnlyAgentId());
-		AgentState agentState = getAgentState(agentId);
-		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
-		Assert.assertEquals(agentState.getProgress(),AgentState.Progress.AGENT_STARTED);
-		Assert.assertEquals(agentState.getNumberOfRestarts(),1);
+		final int numberOfAgentRestarts = 0;
+		final int numberOfMachineRestarts = 1;
+		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
+	}
+	
+	@Test
+	public void agentRestartTest() {
+		installService("tomcat", 1);
+		execute();
+		restartOnlyAgent();
+		execute();
+		final int numberOfAgentRestarts = 1;
+		final int numberOfMachineRestarts = 0;
+		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
 	}
 	
 	/**
@@ -147,7 +150,6 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		scaleOutService("tomcat",2);
 		execute();
-		//TODO: Second agent comes up only after it is validated not to respond to pings. Should it have came up immediately. Maybe it was there already? 
 		assertTwoTomcatInstances();
 	}
 	
@@ -155,37 +157,39 @@ public class ServiceGridOrchestrationTest {
 	 * Tests management state recovery from crash
 	 */
 	@Test
-	public void managementFailoverTest() {
+	public void managementRestartTest() {
 		installService("tomcat", 1);
 		execute();
 		logAllTasks();
-		management.restart();
+		restartManagement();
 		execute();
 		assertSingleTomcatInstance();
 	}
+
 	
 	/**
 	 * Tests management state recovery from crash when one of the agents also failed.
 	 * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
-	 * The reason it still fails is because the cloud driver did not get a command from the management
-	 * that it needs to find the crashed agent using outer means (SSH for example looking for files on disk)
-	 * 
-	 * TODO: The orchestrator needs to generate a list of ipaddresses that it discovered, and the number of agents
-	 * that are missing compared to the plan. The machine provisioning task then needs to SSH each machine
-	 * without an agent and restart the failed agent based on pre-existing file on disk
 	 */
 	@Test
-	public void managementAndOneAgentFailoverTest() {
+	public void managementRestartAndOneAgentRestartTest() {
 		installService("tomcat", 2);
 		execute();
 		logAllTasks();
-		killAgent(newURI("http://localhost/agent/1/"));
-		management.restart();
+		restartAgent(newURI("http://localhost/agent/1/"));
+		restartManagement();
 		execute();
-		assertTwoTomcatInstances();
+		 
+		assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
+	}
+
+	private void assertSingleTomcatInstance() {
+		final int numberOfAgentRestarts = 0;
+		final int numberOfMachineRestarts = 0;
+		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
 	}
 	
-	private void assertSingleTomcatInstance() {
+	private void assertSingleTomcatInstance(int numberOfAgentRestarts, int numberOfMachineRestarts) {
 		URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
 		Assert.assertNotNull(serviceState, "No state for " + serviceId);
@@ -202,7 +206,8 @@ public class ServiceGridOrchestrationTest {
 		AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
-		Assert.assertEquals(agentState.getNumberOfRestarts(), 0);
+		Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
+		Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
 		
 		final ServiceGridPlannerState plannerState = StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridPlannerState.class);
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
@@ -217,6 +222,11 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private void assertTwoTomcatInstances() {
+		
+		assertTwoTomcatInstances(expectedBothAgentsNotRestarted(), expectedBothMachinesNotRestarted());
+	}
+	
+	private void assertTwoTomcatInstances(Map<URI,Integer> numberOfAgentRestartsPerAgent, Map<URI,Integer> numberOfMachineRestartsPerAgent) {
 		final URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
@@ -237,7 +247,8 @@ public class ServiceGridOrchestrationTest {
 			URI agentId = Iterables.get(agentIds, i);
 			AgentState agentState = getAgentState(agentId);
 			Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
-			Assert.assertEquals(agentState.getNumberOfRestarts(), 0);
+			Assert.assertEquals(agentState.getNumberOfAgentRestarts(), (int) numberOfAgentRestartsPerAgent.get(agentId));
+			Assert.assertEquals(agentState.getNumberOfMachineRestarts(), (int) numberOfMachineRestartsPerAgent.get(agentId));
 			URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
 			Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
 			ServiceInstanceState instanceState = StreamUtils.getLastElement(getStateReader(), instanceId, ServiceInstanceState.class);
@@ -386,21 +397,52 @@ public class ServiceGridOrchestrationTest {
 		return getStateIdsStartingWith(newURI("http://localhost/agent/"));
 	}
 
-	private void killOnlyAgent() {
-		killAgent(getOnlyAgentId());
+	private void killOnlyMachine() {
+		killMachine(getOnlyAgentId());
 	}
 	
-	private void killAgent(URI agentId) {
-		for (MockTaskContainer container : containers) {
-			if (container.getTaskConsumerId().equals(agentId)) {
-				//logger.info("Killed agent " + agentId);
-				container.kill();
-				return;
+	private void restartOnlyAgent() {
+		restartAgent(getOnlyAgentId());
+	}
+	
+	/**
+	 * This method simulates failure of the agent, and immediate restart by a reliable watchdog
+	 * running on the same machine
+	 */
+	private void restartAgent(URI agentId) {
+		
+		MockAgent agent = (MockAgent) taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+		AgentState agentState = agent.getState();
+		Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+		agentState.setNumberOfAgentRestarts(agentState.getNumberOfAgentRestarts() +1);
+		taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
+	}
+
+	/**
+	 * This method simulates an unexpected crash of a machine 
+	 */
+	private void killMachine(URI agentId) {
+		findContainer(agentId).killMachine();
+	}
+	
+	/**
+	 * This method simulates the crash of all management processes
+	 * and their automatic start by a reliable watchdog running on the same machine
+	 */
+	private void restartManagement() {
+		management.restart();
+	}
+	
+	private MockTaskContainer findContainer(final URI agentId) {
+		return Iterables.find(containers, new Predicate<MockTaskContainer>() {
+
+			@Override
+			public boolean apply(MockTaskContainer container) {
+				return agentId.equals(container.getTaskConsumerId());
 			}
-		}
-		Assert.fail("Failed to kill agent " + agentId);
+		});
 	}
-	
+
 	private Iterable<Task> getSortedTasks() {
 	
 		List<Task> tasks = Lists.newArrayList(); 
@@ -509,4 +551,24 @@ public class ServiceGridOrchestrationTest {
 		return management.getStateReader();
 	}
 
+	private ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted() {
+		return ImmutableMap.<URI,Integer>builder()
+				 .put(newURI("http://localhost/agent/0/"), 0)
+				 .put(newURI("http://localhost/agent/1/"), 0)
+				 .build();
+	}
+	
+	private ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted() {
+		return ImmutableMap.<URI,Integer>builder()
+				 .put(newURI("http://localhost/agent/0/"), 0)
+				 .put(newURI("http://localhost/agent/1/"), 0)
+				 .build();
+	}
+
+	private ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted() {
+		return ImmutableMap.<URI,Integer>builder()
+		 .put(newURI("http://localhost/agent/0/"), 0)
+		 .put(newURI("http://localhost/agent/1/"), 1)
+		 .build();
+	}
 }

@@ -15,7 +15,7 @@ import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.PlanAgentTask;
-import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
+import org.openspaces.servicegrid.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
@@ -90,9 +90,15 @@ public class ServiceGridOrchestrator<x> {
 	@ImpersonatingTaskConsumer
 	public void planAgent(PlanAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
+		AgentState oldState = impersonatedStateModifier.getState();
+		int numberOfMachineRestarts = 0;
+		if (oldState != null) {
+			numberOfMachineRestarts = oldState.getNumberOfMachineRestarts() + 1;
+		}
 		AgentState impersonatedAgentState = new AgentState();
 		impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
 		impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
+		impersonatedAgentState.setNumberOfMachineRestarts(numberOfMachineRestarts);
 		impersonatedStateModifier.updateState(impersonatedAgentState);
 	}
 
@@ -148,7 +154,7 @@ public class ServiceGridOrchestrator<x> {
 			else if (pingHealth == AgentPingHealth.AGENT_NOT_RESPONDING) {
 				Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfAgent(agentId);
 				if (agentState == null ||
-					!Iterables.elementsEqual(agentState.getServiceInstanceIds(),plannedInstanceIds)) {
+					agentState.getProgress().equals(AgentState.Progress.MACHINE_TERMINATED)) {
 					syncComplete = false;
 					final PlanAgentTask planAgentTask = new PlanAgentTask();
 					planAgentTask.setImpersonatedTarget(agentId);	
@@ -233,7 +239,8 @@ public class ServiceGridOrchestrator<x> {
 			final PingAgentTask pingTask = new PingAgentTask();
 			pingTask.setTarget(agentId);
 			if (agentState != null && agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
-				pingTask.setExpectedNumberOfRestartsInAgentState(agentState.getNumberOfRestarts());
+				pingTask.setExpectedNumberOfAgentRestartsInAgentState(agentState.getNumberOfAgentRestarts());
+				pingTask.setExpectedNumberOfMachineRestartsInAgentState(agentState.getNumberOfMachineRestarts());
 			}
 			addNewTaskIfNotExists(newTasks, pingTask);
 		}
@@ -297,7 +304,7 @@ public class ServiceGridOrchestrator<x> {
 			}
 			else if (agentProgress.equals(AgentState.Progress.AGENT_STARTED)) {
 				if (pingHealth == AgentPingHealth.AGENT_NOT_RESPONDING) {
-					final RestartNotRespondingAgentTask task = new RestartNotRespondingAgentTask();
+					final TerminateMachineOfNonResponsiveAgentTask task = new TerminateMachineOfNonResponsiveAgentTask();
 					task.setImpersonatedTarget(agentId);	
 					task.setTarget(machineProvisionerId);
 					addNewTaskIfNotExists(newTasks, task);
@@ -322,8 +329,10 @@ public class ServiceGridOrchestrator<x> {
 			if (task instanceof PingAgentTask) {
 				PingAgentTask pingAgentTask = (PingAgentTask) task;
 				AgentState agentState = getAgentState(agentId);
-				Integer expectedNumberOfRestartsInAgentState = pingAgentTask.getExpectedNumberOfRestartsInAgentState();
-				if (expectedNumberOfRestartsInAgentState == null && agentState != null) {
+				Integer expectedNumberOfAgentRestartsInAgentState = pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
+				Integer expectedNumberOfMachineRestartsInAgentState = pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
+				if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
+					Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
 					if (agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
 						// agent started after ping sent. Wait for next ping
 					}
@@ -332,9 +341,17 @@ public class ServiceGridOrchestrator<x> {
 						health = AgentPingHealth.AGENT_NOT_RESPONDING;
 					}
 				}
-				else if (expectedNumberOfRestartsInAgentState != null && agentState != null && expectedNumberOfRestartsInAgentState != agentState.getNumberOfRestarts()) {
-					Preconditions.checkState(expectedNumberOfRestartsInAgentState < agentState.getNumberOfRestarts(), "Could not have sent ping to an agent that was not restarted yet");
+				else if (expectedNumberOfAgentRestartsInAgentState != null && 
+						 agentState != null && 
+						 expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentRestarts()) {
+					Preconditions.checkState(expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentRestarts(), "Could not have sent ping to an agent that was not restarted yet");
 					// agent restarted after ping sent. Wait for next ping
+				}
+				else if (expectedNumberOfMachineRestartsInAgentState != null && 
+						 agentState != null && 
+						 expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineRestarts()) {
+					Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineRestarts(), "Could not have sent ping to a machine that was not restarted yet");
+					// machine restarted after ping sent. Wait for next ping
 				}
 				else {
 					final long taskTimestamp = task.getSourceTimestamp();
@@ -357,9 +374,9 @@ public class ServiceGridOrchestrator<x> {
 					Task task = taskReader.getElement(completedTaskId, Task.class);
 					if (task instanceof PingAgentTask) {
 						PingAgentTask pingAgentTask = (PingAgentTask) task;
-						Integer expectedNumberOfRestartsInAgentState = pingAgentTask.getExpectedNumberOfRestartsInAgentState();
+						Integer expectedNumberOfRestartsInAgentState = pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
 						if (expectedNumberOfRestartsInAgentState != null && 
-							expectedNumberOfRestartsInAgentState == agentState.getNumberOfRestarts()) {
+							expectedNumberOfRestartsInAgentState == agentState.getNumberOfAgentRestarts()) {
 							final long taskTimestamp = task.getSourceTimestamp();
 							final long respondingMilliseconds = nowTimestamp - taskTimestamp;
 							if ( respondingMilliseconds <= NOT_RESPONDING_DETECTION_MILLISECONDS ) {

@@ -5,7 +5,6 @@ import java.util.Map;
 
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.TaskConsumer;
-import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
@@ -85,7 +84,7 @@ public class MockAgent {
 	}
 
 	@TaskConsumerStateHolder
-	public TaskConsumerState getState() {
+	public AgentState getState() {
 		return state;
 	}
 

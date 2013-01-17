@@ -7,9 +7,9 @@ import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
-import org.openspaces.servicegrid.agent.tasks.RestartNotRespondingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
+import org.openspaces.servicegrid.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
 
 import com.google.common.base.Preconditions;
 
@@ -27,7 +27,7 @@ public class MockMachineProvisioner {
 			TaskExecutorStateModifier impersonatedStateModifier) {
 	
 		//Simulate starting machine
-		AgentState impersonatedState = impersonatedStateModifier.getState();
+		final AgentState impersonatedState = impersonatedStateModifier.getState();
 		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.PLANNED));
 		impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
 		impersonatedStateModifier.updateState(impersonatedState);
@@ -37,34 +37,28 @@ public class MockMachineProvisioner {
 		impersonatedStateModifier.updateState(impersonatedState);
 	}
 
-
+	@ImpersonatingTaskConsumer
+	public void terminateMachineOfNonResponsiveAgent(TerminateMachineOfNonResponsiveAgentTask task, TaskExecutorStateModifier impersonatedStateModifier) {
+		final AgentState impersonatedState = impersonatedStateModifier.getState();
+		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+		final URI agentId = task.getImpersonatedTarget();
+		taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+		impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
+		impersonatedStateModifier.updateState(impersonatedState);
+	}
+	
 	@ImpersonatingTaskConsumer
 	public void startAgent(StartAgentTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 
-		AgentState agentState = impersonatedStateModifier.getState();
+		final AgentState agentState = impersonatedStateModifier.getState();
 		Preconditions.checkNotNull(agentState);
 		Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.MACHINE_STARTED));
-		URI agentId = task.getImpersonatedTarget();
+		final URI agentId = task.getImpersonatedTarget();
 		Preconditions.checkState(agentId.toString().endsWith("/"));
 		agentState.setProgress(AgentState.Progress.AGENT_STARTED);
 		taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
 		impersonatedStateModifier.updateState(agentState);
-	}
-	
-	@ImpersonatingTaskConsumer
-	public void restartAgent(RestartNotRespondingAgentTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
-			
-			//In a real implementation here is where we validate the agent process is killed
-			AgentState agentState = impersonatedStateModifier.getState();
-			Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
-			agentState.setNumberOfRestarts(agentState.getNumberOfRestarts() +1);
-			URI agentId = task.getImpersonatedTarget();
-			taskConsumerRegistrar.unregisterTaskConsumer(agentId);
-			taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
-			impersonatedStateModifier.updateState(agentState);
-			//In a real implementation here is where we restart the agent process
 	}
 
 	@TaskConsumerStateHolder

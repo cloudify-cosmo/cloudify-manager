@@ -12,12 +12,14 @@ public class AgentState extends TaskConsumerState {
 		public static final String STARTING_MACHINE = "STARTING_MACHINE"; 
 		public static final String MACHINE_STARTED = "MACHINE_STARTED";
 		public static final String AGENT_STARTED = "AGENT_STARTED";
+		public static final String MACHINE_TERMINATED = "MACHINE_TERMINATED";
 	}
 
 	private String progress;
 	private String ipAddress;
 	private List<URI> serviceInstanceIds;
-	private int numberOfRestarts;
+	private int numberOfAgentRestarts;
+	private int numberOfMachineRestarts;
 
 	public String getProgress() {
 		return progress;
@@ -43,11 +45,19 @@ public class AgentState extends TaskConsumerState {
 		return serviceInstanceIds;
 	}
 
-	public int getNumberOfRestarts() {
-		return numberOfRestarts;
+	public int getNumberOfAgentRestarts() {
+		return numberOfAgentRestarts;
 	}
 
-	public void setNumberOfRestarts(int numberOfRestarts) {
-		this.numberOfRestarts = numberOfRestarts;
+	public void setNumberOfAgentRestarts(int numberOfAgentRestarts) {
+		this.numberOfAgentRestarts = numberOfAgentRestarts;
+	}
+
+	public int getNumberOfMachineRestarts() {
+		return numberOfMachineRestarts;
+	}
+
+	public void setNumberOfMachineRestarts(int numberOfMachineRestarts) {
+		this.numberOfMachineRestarts = numberOfMachineRestarts;
 	}
 }
