@@ -113,7 +113,7 @@ public class ServiceGridOrchestrationTest {
 	
 	
 	/**
-	 * Tests agent failover (not machine failover)
+	 * Tests machine failover, and restart by the orchestrator
 	 */
 	@Test
 	public void machineFailoverTest() {
@@ -126,6 +126,10 @@ public class ServiceGridOrchestrationTest {
 		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
 	}
 	
+	/**
+	 * Test agent process failed, and restarted automatically by 
+	 * reliable watchdog running on the same machine
+	 */
 	@Test
 	public void agentRestartTest() {
 		installService("tomcat", 1);
@@ -161,7 +165,6 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		assertSingleTomcatInstance();
 	}
-
 	
 	/**
 	 * Tests management state recovery from crash when one of the agents also failed.
