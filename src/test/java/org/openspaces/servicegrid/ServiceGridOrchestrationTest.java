@@ -181,11 +181,29 @@ public class ServiceGridOrchestrationTest {
 		 
 		assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
 	}
+	
+	/**
+	 * Install two services, each with one instance
+	 */
+	@Test
+	public void installTwoSingleInstanceServicesTest(){
+		installService("tomcat", 1);
+		installService("cassandra", 1);
+		execute();
+		assertServiceInstalledWithOneInstance("tomcat");
+		assertServiceInstalledWithOneInstance("cassandra");
+	}
+
+	private void assertServiceInstalledWithOneInstance(String serviceName) {
+		int zeroMachineRestarts = 0;
+		int zeroAgentRestarts = 0;
+		assertServiceInstalledWithOneInstance(serviceName, zeroAgentRestarts, zeroMachineRestarts);
+	}
 
 	private void assertSingleServiceInstance() {
-		final int numberOfAgentRestarts = 0;
-		final int numberOfMachineRestarts = 0;
-		assertSingleServiceInstance("tomcat", numberOfAgentRestarts,numberOfMachineRestarts);
+		final int zeroAgentRestarts = 0;
+		final int zeroMachineRestarts = 0;
+		assertSingleServiceInstance("tomcat", zeroAgentRestarts,zeroMachineRestarts);
 	}
 	
 	private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
@@ -272,23 +290,6 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertNotNull(serviceState, "No state for " + serviceId);
 		return serviceState;
 	}
-		
-	@Test
-	public void installTwoSingleInstanceServicesTest(){
-		installService("tomcat", 1);
-		installService("cassandra", 1);
-		execute();
-		int numberOfMachineRestarts = 0;
-		int numberOfAgentRestarts = 0;
-		assertServiceInstalledWithOneInstance("tomcat", numberOfAgentRestarts, numberOfMachineRestarts);
-		assertServiceInstalledWithOneInstance("cassandra", numberOfAgentRestarts, numberOfMachineRestarts);
-	}
-	
-//	public void uninstallSingleInstanceServiceTest(){
-//		installService(1);
-//		execute();
-//		
-//	}
 
 	private AgentState getAgentState(URI agentId) {
 		return getLastState(agentId, AgentState.class);
