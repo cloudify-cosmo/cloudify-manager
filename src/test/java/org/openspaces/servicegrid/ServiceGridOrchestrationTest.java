@@ -24,7 +24,7 @@ import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
-import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
+import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
@@ -98,7 +98,7 @@ public class ServiceGridOrchestrationTest {
 	public void installSingleInstanceServiceTest() {
 		installService("tomcat", 1);
 		execute();
-		assertSingleServiceInstance();
+		assertSingleServiceInstance("tomcat");
 	}
 
 	/**
@@ -148,9 +148,33 @@ public class ServiceGridOrchestrationTest {
 	public void scaleOutServiceTest() {
 		installService("tomcat", 1);
 		execute();
-		scaleOutService("tomcat",2);
+		scaleService("tomcat",2);
 		execute();
 		assertTwoTomcatInstances();
+	}
+	
+	/**
+	 * Tests change in plan from 1 instance to 2 instances
+	 */
+	@Test
+	public void scaleInServiceTest() {
+		installService("tomcat", 2);
+		execute();
+		scaleService("tomcat",1);
+		execute();
+		assertSingleServiceInstance("tomcat");
+	}
+	
+	/**
+	 * Tests change in plan from 1 instance to 2 instances
+	 */
+	@Test
+	public void uninstallServiceTest() {
+		installService("tomcat",1);
+		execute();
+		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 0);
+		Assert.assertEquals(Iterables.size(getAgentIds()), 0);
+		Assert.assertEquals(Iterables.size(getServiceInstanceIds("tomcat")), 0);
 	}
 	
 	/**
@@ -163,7 +187,7 @@ public class ServiceGridOrchestrationTest {
 		logAllTasks();
 		restartManagement();
 		execute();
-		assertSingleServiceInstance();
+		assertSingleServiceInstance("tomcat");
 	}
 	
 	/**
@@ -193,17 +217,17 @@ public class ServiceGridOrchestrationTest {
 		assertServiceInstalledWithOneInstance("tomcat");
 		assertServiceInstalledWithOneInstance("cassandra");
 	}
-
+	
 	private void assertServiceInstalledWithOneInstance(String serviceName) {
 		int zeroMachineRestarts = 0;
 		int zeroAgentRestarts = 0;
 		assertServiceInstalledWithOneInstance(serviceName, zeroAgentRestarts, zeroMachineRestarts);
 	}
 
-	private void assertSingleServiceInstance() {
+	private void assertSingleServiceInstance(String serviceName) {
 		final int zeroAgentRestarts = 0;
 		final int zeroMachineRestarts = 0;
-		assertSingleServiceInstance("tomcat", zeroAgentRestarts,zeroMachineRestarts);
+		assertSingleServiceInstance(serviceName, zeroAgentRestarts,zeroMachineRestarts);
 	}
 	
 	private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
@@ -323,13 +347,13 @@ public class ServiceGridOrchestrationTest {
 		((MockStreams<Task>)management.getTaskReader()).addElement(target, installServiceTask);
 	}
 
-	private void scaleOutService(String serviceName, int plannedNumberOfInstances) {
-		final ScaleOutServiceTask scaleOutServiceTask = new ScaleOutServiceTask();
+	private void scaleService(String serviceName, int plannedNumberOfInstances) {
+		final ScaleServiceTask scaleServiceTask = new ScaleServiceTask();
 		URI serviceId = getServiceId(serviceName);
-		scaleOutServiceTask.setServiceId(serviceId);
-		scaleOutServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
-		scaleOutServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
-		submitTask(management.getDeploymentPlannerId(), scaleOutServiceTask);
+		scaleServiceTask.setServiceId(serviceId);
+		scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
+		scaleServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
+		submitTask(management.getDeploymentPlannerId(), scaleServiceTask);
 	}
 
 	
@@ -397,11 +421,15 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private URI getOnlyServiceInstanceId(String serviceName) {
-		final Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/"+serviceName+"/instances/"));
+		final Iterable<URI> instanceIds = getServiceInstanceIds(serviceName);
 		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
 		final URI serviceInstanceId = Iterables.getOnlyElement(instanceIds);
 		return serviceInstanceId;
+	}
+
+	private Iterable<URI> getServiceInstanceIds(String serviceName) {
+		return getStateIdsStartingWith(newURI("http://localhost/services/"+serviceName+"/instances/"));
 	}
 
 	private Iterable<URI> getStateIdsStartingWith(URI uri) {

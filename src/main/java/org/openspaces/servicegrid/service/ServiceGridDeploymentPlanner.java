@@ -13,7 +13,7 @@ import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
-import org.openspaces.servicegrid.service.tasks.ScaleOutServiceTask;
+import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
 
@@ -37,7 +37,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	@TaskConsumer(persistTask = true)
-	public void scaleOutService(ScaleOutServiceTask task) {
+	public void scaleOutService(ScaleServiceTask task) {
 		
 		URI serviceId = task.getServiceId();
 		ServiceConfig serviceConfig = state.getServiceById(serviceId);
