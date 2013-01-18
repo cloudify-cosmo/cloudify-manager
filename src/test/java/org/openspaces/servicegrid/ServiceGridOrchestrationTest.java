@@ -98,7 +98,7 @@ public class ServiceGridOrchestrationTest {
 	public void installSingleInstanceServiceTest() {
 		installService("tomcat", 1);
 		execute();
-		assertSingleTomcatInstance();
+		assertSingleServiceInstance();
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		final int numberOfAgentRestarts = 0;
 		final int numberOfMachineRestarts = 1;
-		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
+		assertSingleServiceInstance("tomcat", numberOfAgentRestarts, numberOfMachineRestarts);
 	}
 	
 	/**
@@ -138,7 +138,7 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		final int numberOfAgentRestarts = 1;
 		final int numberOfMachineRestarts = 0;
-		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
+		assertSingleServiceInstance("tomcat", numberOfAgentRestarts,numberOfMachineRestarts);
 	}
 	
 	/**
@@ -163,7 +163,7 @@ public class ServiceGridOrchestrationTest {
 		logAllTasks();
 		restartManagement();
 		execute();
-		assertSingleTomcatInstance();
+		assertSingleServiceInstance();
 	}
 	
 	/**
@@ -182,38 +182,46 @@ public class ServiceGridOrchestrationTest {
 		assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
 	}
 
-	private void assertSingleTomcatInstance() {
+	private void assertSingleServiceInstance() {
 		final int numberOfAgentRestarts = 0;
 		final int numberOfMachineRestarts = 0;
-		assertSingleTomcatInstance(numberOfAgentRestarts,numberOfMachineRestarts);
+		assertSingleServiceInstance("tomcat", numberOfAgentRestarts,numberOfMachineRestarts);
 	}
 	
-	private void assertSingleTomcatInstance(int numberOfAgentRestarts, int numberOfMachineRestarts) {
-		URI serviceId = getServiceId("tomcat");
-		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
-		Assert.assertNotNull(serviceState, "No state for " + serviceId);
-		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),1);
-		URI instanceId = getOnlyServiceInstanceId();
-		Assert.assertEquals(Iterables.getOnlyElement(serviceState.getInstanceIds()), instanceId);
-		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
-		URI agentId = getOnlyAgentId();
-		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+	private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
+		assertServiceInstalledWithOneInstance(serviceName, numberOfAgentRestarts, numberOfMachineRestarts);
+		
+		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 1);
+		Assert.assertEquals(Iterables.size(getAgentIds()), 1);
+	}
+
+	private void assertServiceInstalledWithOneInstance(
+			String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
+		final URI serviceId = getServiceId(serviceName);
+		final ServiceState serviceState = getServiceState(serviceId);
+		final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
+		final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+		Assert.assertEquals(getOnlyServiceInstanceId(serviceName), instanceId);
+		final URI agentId = instanceState.getAgentId();
 		Assert.assertEquals(instanceState.getServiceId(), serviceId);
-		Assert.assertEquals(instanceState.getAgentId(), agentId);
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
 		
-		AgentState agentState = getAgentState(agentId);
+		final AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
 		Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
 		Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
 		
-		final ServiceGridPlannerState plannerState = StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridPlannerState.class);
+		final ServiceGridPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), instanceId);
-		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceId(), serviceId);
-		
+		final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId); 
+		Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
+	}
+
+	private ServiceGridPlannerState getDeploymentPlannerState() {
+		return StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridPlannerState.class);
 	}
 
 	private URI getOnlyAgentId() {
@@ -227,13 +235,13 @@ public class ServiceGridOrchestrationTest {
 	
 	private void assertTwoTomcatInstances(Map<URI,Integer> numberOfAgentRestartsPerAgent, Map<URI,Integer> numberOfMachineRestartsPerAgent) {
 		final URI serviceId = getServiceId("tomcat");
-		final ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
+		final ServiceState serviceState = getServiceState(serviceId);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
 		//logger.info("URIs: " + state.getElementIdsStartingWith(new URI("http://localhost/")));
 		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
-		final ServiceGridPlannerState plannerState = StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridPlannerState.class);
+		final ServiceGridPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceId(), serviceId);
 		Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), 2);
@@ -258,13 +266,23 @@ public class ServiceGridOrchestrationTest {
 		}
 		
 	}
+
+	private ServiceState getServiceState(final URI serviceId) {
+		ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
+		Assert.assertNotNull(serviceState, "No state for " + serviceId);
+		return serviceState;
+	}
 		
-	
-	/*public void installTwoSingleInstanceServicesTest(){
+	@Test
+	public void installTwoSingleInstanceServicesTest(){
 		installService("tomcat", 1);
 		installService("cassandra", 1);
 		execute();
-	}*/
+		int numberOfMachineRestarts = 0;
+		int numberOfAgentRestarts = 0;
+		assertServiceInstalledWithOneInstance("tomcat", numberOfAgentRestarts, numberOfMachineRestarts);
+		assertServiceInstalledWithOneInstance("cassandra", numberOfAgentRestarts, numberOfMachineRestarts);
+	}
 	
 //	public void uninstallSingleInstanceServiceTest(){
 //		installService(1);
@@ -364,7 +382,7 @@ public class ServiceGridOrchestrationTest {
 			throw Throwables.propagate(e);
 		}
 		for (URI serviceId : servicesIds) {
-			ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
+			ServiceState serviceState = getServiceState(serviceId);
 			sb.append("service: " + serviceState.getServiceConfig().getDisplayName());
 			sb.append(" - ");
 			for (URI instanceURI : serviceState.getInstanceIds()) {
@@ -377,8 +395,8 @@ public class ServiceGridOrchestrationTest {
 		Assert.fail("Executing too many cycles progress=" + sb);
 	}
 	
-	private URI getOnlyServiceInstanceId() {
-		final Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
+	private URI getOnlyServiceInstanceId(String serviceName) {
+		final Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/"+serviceName+"/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),1);
 		
 		final URI serviceInstanceId = Iterables.getOnlyElement(instanceIds);
