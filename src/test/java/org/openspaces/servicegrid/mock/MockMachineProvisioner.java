@@ -10,6 +10,7 @@ import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
+import org.openspaces.servicegrid.agent.tasks.TerminateMachineTask;
 
 import com.google.common.base.Preconditions;
 
@@ -41,6 +42,16 @@ public class MockMachineProvisioner {
 	public void terminateMachineOfNonResponsiveAgent(TerminateMachineOfNonResponsiveAgentTask task, TaskExecutorStateModifier impersonatedStateModifier) {
 		final AgentState impersonatedState = impersonatedStateModifier.getState();
 		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+		final URI agentId = task.getImpersonatedTarget();
+		taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+		impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
+		impersonatedStateModifier.updateState(impersonatedState);
+	}
+	
+	@ImpersonatingTaskConsumer
+	public void terminateMachine(TerminateMachineTask task, TaskExecutorStateModifier impersonatedStateModifier) {
+		final AgentState impersonatedState = impersonatedStateModifier.getState();
+		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.AGENT_STOPPED));
 		final URI agentId = task.getImpersonatedTarget();
 		taskConsumerRegistrar.unregisterTaskConsumer(agentId);
 		impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);

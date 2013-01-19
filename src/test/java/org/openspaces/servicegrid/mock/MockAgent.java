@@ -9,10 +9,13 @@ import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
+import org.openspaces.servicegrid.agent.tasks.StopAgentTask;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.MarkAgentAsStoppingTask;
 import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.StopServiceInstanceTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,7 +26,7 @@ public class MockAgent {
 
 	private final AgentState state;
 	private final Map<URI, ServiceInstanceState> instancesState;
-	private ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
+	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 	
 	public MockAgent(AgentState state) {
 		this.state = state;
@@ -39,6 +42,9 @@ public class MockAgent {
 		
 		instanceState.setProgress(ServiceInstanceState.Progress.STARTING_INSTANCE);
 		impersonatedStateModifier.updateState(instanceState);
+		
+		// the code that actually starts the instance goes here
+		
 		instanceState = impersonatedStateModifier.getState();
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_STARTED);
 		impersonatedStateModifier.updateState(instanceState);
@@ -46,6 +52,23 @@ public class MockAgent {
 
 	}
 
+	@ImpersonatingTaskConsumer
+	public void stopServiceInstance(StopServiceInstanceTask task, TaskExecutorStateModifier impersonatedStateModifier) {
+		
+		final URI instanceId = task.getImpersonatedTarget();
+		final ServiceInstanceState instanceState = impersonatedStateModifier.getState();
+		instanceState.setProgress(ServiceInstanceState.Progress.STOPPING_INSTANCE);
+		impersonatedStateModifier.updateState(instanceState);
+		
+		// the code that actually stops the instance goes here
+		instancesState.remove(instanceId);
+		
+		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_STOPPED);
+		impersonatedStateModifier.updateState(instanceState);
+		
+		state.removeServiceInstanceId(instanceId);
+	}
+	
 	@ImpersonatingTaskConsumer
 	public void installServiceInstance(InstallServiceInstanceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
@@ -88,6 +111,16 @@ public class MockAgent {
 	@TaskConsumer
 	public void execute(PingAgentTask task) {
 		//do nothing
+	}
+	
+	@TaskConsumer
+	public void markAgentAsStopping(MarkAgentAsStoppingTask task) {
+		state.setProgress(AgentState.Progress.STOPPING_AGENT);
+	}
+	
+	@TaskConsumer
+	public void stopAgent(StopAgentTask task) {
+		state.setProgress(AgentState.Progress.AGENT_STOPPED);
 	}
 
 	@TaskConsumerStateHolder

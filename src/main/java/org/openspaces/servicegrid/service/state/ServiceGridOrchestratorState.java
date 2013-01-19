@@ -1,20 +1,25 @@
 package org.openspaces.servicegrid.service.state;
 
+
 import java.net.URI;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.openspaces.servicegrid.TaskConsumerState;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
 	private ServiceGridDeploymentPlan deploymentPlan;
 	private boolean syncedStateWithDeploymentBefore;
+	private Set<URI> orphanServiceIds = Sets.<URI>newHashSet();
 
 	public ServiceGridDeploymentPlan getDeploymentPlan() {
 		return deploymentPlan;
@@ -37,6 +42,17 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 	@JsonIgnore
 	public Iterable<ServiceConfig> getServices() {
 		return Iterables.unmodifiableIterable(deploymentPlan.getServices());
+	}
+	
+	@JsonIgnore
+	public Iterable<URI> getServiceIds() {
+		return Iterables.transform(deploymentPlan.getServices(), new Function<ServiceConfig,URI>(){
+
+			@Override
+			public URI apply(ServiceConfig serviceConfig) {
+				return serviceConfig.getServiceId();
+			}
+		});
 	}
 	
 	@JsonIgnore
@@ -78,5 +94,18 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 
 	public void setSyncedStateWithDeploymentBefore(boolean firstSyncStateWithDeployment) {
 		this.syncedStateWithDeploymentBefore = firstSyncStateWithDeployment;
+	}
+
+	@JsonIgnore
+	public void addOrphanServiceIds(Iterable<URI> serviceIds) {
+		Iterables.addAll(this.orphanServiceIds, serviceIds);
+	}
+
+	public Set<URI> getOrphanServiceIds() {
+		return orphanServiceIds;
+	}
+
+	public void setOrphanServiceIds(Set<URI> orphanServiceIds) {
+		this.orphanServiceIds = orphanServiceIds;
 	}
 }

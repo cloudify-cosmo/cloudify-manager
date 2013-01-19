@@ -3,6 +3,7 @@ package org.openspaces.servicegrid.service;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Set;
 
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
@@ -14,15 +15,18 @@ import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
+import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class ServiceGridDeploymentPlanner {
 
@@ -57,12 +61,21 @@ public class ServiceGridDeploymentPlanner {
 		final ServiceConfig serviceConfig = task.getServiceConfig();
 		Preconditions.checkNotNull(serviceConfig);
 		final URI serviceId = serviceConfig.getServiceId();
-		Preconditions.checkArgument(serviceId.toString().endsWith("/"), "%s must end with /", serviceId);
+		checkServiceId(serviceId);
 		boolean installed = isServiceInstalled(serviceId);
 		Preconditions.checkState(!installed);
 		state.addService(serviceConfig);
 	}
 
+	@TaskConsumer(persistTask = true)
+	public void uninstallService(UninstallServiceTask task) {
+		URI serviceId = task.getServiceId();
+		checkServiceId(serviceId);
+		boolean installed = isServiceInstalled(serviceId);
+		Preconditions.checkState(installed);
+		state.removeService(serviceId);
+	}
+	
 	@TaskProducer	
 	public Iterable<Task> deploymentPlan() {
 		
@@ -99,26 +112,34 @@ public class ServiceGridDeploymentPlanner {
 				deploymentPlan.addServiceInstance(serviceId, agentId, instanceId);
 			}
 		}
+		
+		Function<ServiceConfig,URI> getServiceIdFunc = new Function<ServiceConfig,URI>() {
+
+			@Override
+			public URI apply(ServiceConfig serviceConfig) {
+				return serviceConfig.getServiceId();
+			}
+		};
+		
+		Set<URI> plannedServiceIds = Sets.newHashSet(Iterables.transform(state.getDeploymentPlan().getServices(), getServiceIdFunc));
+		Set<URI> installedServiceIds = Sets.newHashSet(Iterables.transform(state.getServices(), getServiceIdFunc));
+		Set<URI> uninstalledServiceIds = Sets.difference(plannedServiceIds, installedServiceIds);
+		
+		for (URI uninstalledServiceId : uninstalledServiceIds) {
+			state.getDeploymentPlan().removeService(uninstalledServiceId);
+		}
 		return deploymentPlan;
 	}
 
 	private void deploymentPlanUpdateService(ServiceGridDeploymentPlan deploymentPlan, ServiceConfig oldService, ServiceConfig newService) {
 		
+		final ServiceConfig newServiceClone = StreamUtils.cloneElement(mapper, newService);
 		if (oldService == null) {
-			deploymentPlanAddServiceClone(deploymentPlan, newService);
+			deploymentPlan.addService(newServiceClone);
 		}
 		else if (!StreamUtils.elementEquals(mapper, newService,oldService)) {
-			deploymentPlan.removeService(oldService);
-			deploymentPlanAddServiceClone(deploymentPlan, newService);
+			deploymentPlan.replaceService(oldService, newServiceClone);
 		}
-	}
-
-	private void deploymentPlanAddServiceClone(
-			ServiceGridDeploymentPlan deploymentPlan,
-			ServiceConfig service) {
-		
-		final ServiceConfig serviceClone = StreamUtils.cloneElement(mapper, service);
-		deploymentPlan.addService(serviceClone);
 	}
 
 	private boolean isServiceInstalled(final URI serviceId) {
@@ -155,5 +176,10 @@ public class ServiceGridDeploymentPlanner {
 
 	private static void addNewTask(List<Task> newTasks, final Task task) {
 		newTasks.add(task);
+	}
+	
+
+	private void checkServiceId(final URI serviceId) {
+		Preconditions.checkArgument(serviceId.toString().endsWith("/"), "%s must end with /", serviceId);
 	}
 }

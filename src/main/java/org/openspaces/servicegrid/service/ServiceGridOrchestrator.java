@@ -15,31 +15,42 @@ import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.PlanAgentTask;
-import org.openspaces.servicegrid.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
+import org.openspaces.servicegrid.agent.tasks.StopAgentTask;
+import org.openspaces.servicegrid.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
+import org.openspaces.servicegrid.agent.tasks.TerminateMachineTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.MarkAgentAsStoppingTask;
+import org.openspaces.servicegrid.service.tasks.ServiceUninstallingTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.PlanServiceTask;
 import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
+import org.openspaces.servicegrid.service.tasks.RemoveServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.ServiceInstalledTask;
+import org.openspaces.servicegrid.service.tasks.ServiceInstallingTask;
+import org.openspaces.servicegrid.service.tasks.ServiceUninstalledTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.StopServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
-import com.beust.jcommander.internal.Sets;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
-public class ServiceGridOrchestrator<x> {
+public class ServiceGridOrchestrator {
 
 	private static final long NOT_RESPONDING_DETECTION_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
@@ -74,7 +85,7 @@ public class ServiceGridOrchestrator<x> {
 			if (ready) {
 				//start orchestrating according to current state
 				final Iterable<URI> healthyAgents = orchestrateAgents(newTasks);
-				orchestrateService(newTasks, healthyAgents);
+				orchestrateServices(newTasks, healthyAgents);
 			}
 	
 			pingAgents(newTasks);
@@ -84,7 +95,15 @@ public class ServiceGridOrchestrator<x> {
 
 	@TaskConsumer
 	public void updateDeploymentPlan(UpdateDeploymentPlanTask task) {
-		state.setDeploymentPlan(task.getDeploymentPlan());
+		if (state.getDeploymentPlan() == null) {
+			state.setDeploymentPlan(task.getDeploymentPlan());
+		}
+		else {
+			final Iterable<URI> oldServiceIds = state.getServiceIds();
+			state.setDeploymentPlan(task.getDeploymentPlan());
+			final Iterable<URI> newServiceIds = state.getServiceIds();
+			state.addOrphanServiceIds(difference(oldServiceIds, newServiceIds));
+		}
 	}
 
 	@ImpersonatingTaskConsumer
@@ -106,13 +125,21 @@ public class ServiceGridOrchestrator<x> {
 	public void planService(PlanServiceTask task,
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		
-		final PlanServiceTask planServiceTask = (PlanServiceTask) task;
 		ServiceState serviceState = impersonatedStateModifier.getState();
 		if (serviceState == null) {
 			serviceState = new ServiceState();
 		}
-		serviceState.setServiceConfig(planServiceTask.getServiceConfig());	
-		serviceState.setInstanceIds(planServiceTask.getServiceInstanceIds());
+		serviceState.setServiceConfig(task.getServiceConfig());	
+		serviceState.setInstanceIds(task.getServiceInstanceIds());
+		serviceState.setProgress(ServiceState.Progress.INSTALLING_SERVICE);
+		impersonatedStateModifier.updateState(serviceState);
+	}
+	
+	@ImpersonatingTaskConsumer
+	public void serviceUninstalling(ServiceUninstallingTask task,
+			TaskExecutorStateModifier impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState();
+		serviceState.setProgress(ServiceState.Progress.UNINSTALLING_SERVICE);
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
@@ -125,6 +152,24 @@ public class ServiceGridOrchestrator<x> {
 		instanceState.setAgentId(planInstanceTask.getAgentId());
 		instanceState.setServiceId(planInstanceTask.getServiceId());
 		impersonatedStateModifier.updateState(instanceState);
+	}
+	
+	@ImpersonatingTaskConsumer
+	public void removeServiceInstanceFromService (
+			final RemoveServiceInstanceTask task,
+			final TaskExecutorStateModifier impersonatedStateModifier) {
+		
+		ServiceState serviceState = (ServiceState) impersonatedStateModifier.getState();
+		serviceState.removeInstance(task.getInstanceId());
+		impersonatedStateModifier.updateState(serviceState);
+	}
+	
+	@ImpersonatingTaskConsumer
+	public void serviceInstalled(final ServiceInstalledTask task,
+			final TaskExecutorStateModifier impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState();
+		serviceState.setProgress(ServiceState.Progress.SERVICE_INSTALLED);
+		impersonatedStateModifier.updateState(serviceState);
 	}
 	
 	private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {	
@@ -184,7 +229,7 @@ public class ServiceGridOrchestrator<x> {
 			}
 		}
 		
-		for (ServiceConfig service : state.getServices()) {
+		for (final ServiceConfig service : state.getServices()) {
 			URI serviceId = service.getServiceId();
 			ServiceState serviceState = getServiceState(serviceId);
 			Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
@@ -200,28 +245,174 @@ public class ServiceGridOrchestrator<x> {
 			}
 		}
 		
+		for (final URI serviceId : state.getOrphanServiceIds()) {
+			ServiceUninstallingTask task = new ServiceUninstallingTask();
+			task.setImpersonatedTarget(serviceId);
+			task.setTarget(orchestratorId);
+			addNewTaskIfNotExists(newTasks, task);
+		}
+		
 		if (syncComplete) {
 			state.setSyncedStateWithDeploymentBefore(true);
 		}
 		return syncComplete;
 	}
 
-	private void orchestrateService(
-			List<Task> newTasks,
+	private Iterable<URI> getOrphanAgentIds() {
+		
+		final Function<URI, URI> instanceIdToAgentIdFunction = new Function<URI, URI>() {
+
+			@Override
+			public URI apply(URI instanceId) {
+				return getServiceInstanceState(instanceId).getAgentId();
+			}
+		};
+		
+		final Function<URI, Iterable<URI>> serviceIdToInstanceIdsFunction = new Function<URI,Iterable<URI>>() {
+
+			@Override
+			public Iterable<URI> apply(URI serviceId) {
+				return getServiceState(serviceId).getInstanceIds();
+			}
+		};
+		
+		final Iterable<URI> instanceIds = 
+				Iterables.concat(Iterables.transform(
+					state.getServiceIds(), serviceIdToInstanceIdsFunction));
+		final Iterable<URI> actualAgentIds = Iterables.transform(instanceIds, instanceIdToAgentIdFunction);
+		final Iterable<URI> plannedAgentIds = state.getAgentIds();
+		final Iterable<URI> orphanAgentIds = difference(actualAgentIds, plannedAgentIds);
+		
+		return orphanAgentIds;
+	}
+
+	private void orchestrateServices(
+			final List<Task> newTasks,
 			final Iterable<URI> healthyAgents) {
 		
-		for (final ServiceConfig serviceConfig : state.getServices()) {
-			
-			URI serviceId = serviceConfig.getServiceId();
-			for (final URI instanceId : state.getServiceInstanceIdsOfService(serviceId)) {
-				
+		for (final URI serviceId : state.getServiceIds()) {
+			orchestrateServiceInstanceInstallation(newTasks, healthyAgents, serviceId);
+			orchestrateServiceInstanceUninstall(newTasks, serviceId);
+			orchestrateServiceProgress(newTasks, serviceId);
+		}
+	}
+
+	private void orchestrateServiceInstanceUninstall(final List<Task> newTasks,
+			final URI serviceId) {
+		final ServiceState serviceState = getServiceState(serviceId);
+		final Iterable<URI> actualInstanceIds = serviceState.getInstanceIds();
+		final Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+		final Iterable<URI> instanceIdsToStop = difference(actualInstanceIds, plannedInstanceIds);
+		for (final URI instanceId : instanceIdsToStop) {
+			final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+			final String instanceProgress = instanceState.getProgress();
+			Preconditions.checkNotNull(instanceProgress);
+			if (!instanceProgress.equals(ServiceInstanceState.Progress.STOPPING_INSTANCE) &&
+				!instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STOPPED)) {
 				final URI agentId = state.getAgentIdOfServiceInstance(instanceId);
-				if (!Iterables.contains(healthyAgents,agentId)) {
-					//no agent yet
-					continue;
-				}
-				
-				orchestrateServiceInstance(newTasks, instanceId, agentId);
+				final StopServiceInstanceTask task = new StopServiceInstanceTask();
+				task.setTarget(agentId);
+				task.setImpersonatedTarget(instanceId);
+				addNewTaskIfNotExists(newTasks, task);					
+			}
+			else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STOPPED)) {
+				final RemoveServiceInstanceTask task = new RemoveServiceInstanceTask();
+				task.setTarget(orchestratorId);
+				task.setImpersonatedTarget(instanceId);
+				task.setInstanceId(instanceId);
+				addNewTaskIfNotExists(newTasks, task);
+			}
+		}
+	}
+
+	private void orchestrateServiceProgress(List<Task> newTasks, URI serviceId) {
+		final ServiceState serviceState = getServiceState(serviceId);
+		final String serviceProgress = serviceState.getProgress();
+		Preconditions.checkNotNull(serviceProgress);
+		final Predicate<URI> findInstanceNotStartedPredicate = new Predicate<URI>(){
+
+			@Override
+			public boolean apply(final URI instanceId) {
+				return !getServiceInstanceState(instanceId).getProgress().equals(ServiceInstanceState.Progress.INSTANCE_STARTED);
+			}
+		};
+		final Predicate<URI> findNotStoppedInstanceOrAgentPredicate = new Predicate<URI>() {
+
+			@Override
+			public boolean apply(final URI instanceId) {
+				final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+				return !instanceState.getProgress().equals(ServiceInstanceState.Progress.INSTANCE_STOPPED) || 
+					   getAgentState(instanceState.getAgentId()).equals(AgentState.Progress.STOPPING_AGENT);
+			}
+		};
+
+		if (serviceProgress.equals(ServiceState.Progress.INSTALLING_SERVICE)) {
+			final boolean foundNonStartedInstance = 
+				Iterables.tryFind(serviceState.getInstanceIds(), findInstanceNotStartedPredicate).isPresent();
+			final boolean foundNonStoppedInstance = false; //TODO: scaleIn use case
+			final boolean isServiceInstalling = foundNonStartedInstance || foundNonStoppedInstance;
+			if (!isServiceInstalling) {
+				ServiceInstalledTask task = new ServiceInstalledTask();
+				task.setTarget(orchestratorId);
+				task.setImpersonatedTarget(serviceId);
+				addNewTaskIfNotExists(newTasks, task);
+			}
+		}
+		else if (serviceProgress.equals(ServiceState.Progress.SERVICE_INSTALLED)) {
+			final boolean foundNonStartedInstance = 
+					Iterables.tryFind(serviceState.getInstanceIds(), findInstanceNotStartedPredicate).isPresent();
+			final boolean foundNonStoppedInstance = false; //TODO: scaleIn use case
+			final boolean isServiceInstalling = foundNonStartedInstance || foundNonStoppedInstance;
+			if (isServiceInstalling) {
+				ServiceInstallingTask task = new ServiceInstallingTask();
+				task.setTarget(orchestratorId);
+				task.setImpersonatedTarget(serviceId);
+				addNewTaskIfNotExists(newTasks, task);
+			}
+		}
+		else if (serviceProgress.equals(ServiceState.Progress.UNINSTALLING_SERVICE)) {
+			final boolean foundNotStoppedInstanceOrAgent =
+					Iterables.tryFind(serviceState.getInstanceIds(), findNotStoppedInstanceOrAgentPredicate).isPresent();
+			if (!foundNotStoppedInstanceOrAgent) {
+				ServiceUninstalledTask task = new ServiceUninstalledTask();
+				task.setTarget(orchestratorId);
+				task.setImpersonatedTarget(serviceId);
+				addNewTaskIfNotExists(newTasks, task);
+			}
+		}
+		else if (serviceProgress.equals(ServiceState.Progress.SERVICE_UNINSTALLED)) {
+			// do nothing
+		}
+		else {
+			Preconditions.checkState(false, "Unknown service state " + serviceProgress);
+		}
+	}
+
+	private void orchestrateServiceInstanceInstallation(List<Task> newTasks,
+			final Iterable<URI> healthyAgents, final URI serviceId) {
+		final Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+		for (final URI instanceId : plannedInstanceIds) {
+			
+			final URI agentId = state.getAgentIdOfServiceInstance(instanceId);
+			if (!Iterables.contains(healthyAgents,agentId)) {
+				//no agent yet
+				continue;
+			}
+			
+			orchestrateServiceInstanceInstallation(newTasks, instanceId, agentId);
+		}
+		
+		final List<URI> existingInstanceIds = getServiceState(serviceId).getInstanceIds();
+		final Iterable<URI> instanceIdsToStop = difference(existingInstanceIds, plannedInstanceIds);
+		for (URI instanceIdToStop : instanceIdsToStop) {
+			ServiceInstanceState serviceInstanceState = getServiceInstanceState(instanceIdToStop);
+			if (!serviceInstanceState.getProgress().equals(ServiceInstanceState.Progress.INSTANCE_STOPPED)) {
+				final URI agentId = serviceInstanceState.getAgentId();
+				Preconditions.checkState(Iterables.contains(healthyAgents, agentId));
+				final StopServiceInstanceTask task = new StopServiceInstanceTask();
+				task.setTarget(agentId);
+				task.setImpersonatedTarget(instanceIdToStop);
+				addNewTaskIfNotExists(newTasks, task);
 			}
 		}
 	}
@@ -249,8 +440,8 @@ public class ServiceGridOrchestrator<x> {
 	
 	}
 
-	private void orchestrateServiceInstance(List<Task> newTasks, URI instanceId, URI agentId) {
-		ServiceInstanceState instanceState = stateReader.getElement(stateReader.getLastElementId(instanceId), ServiceInstanceState.class);
+	private void orchestrateServiceInstanceInstallation(List<Task> newTasks, URI instanceId, URI agentId) {
+		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 		final String instanceProgress = instanceState.getProgress();
 		Preconditions.checkNotNull(instanceProgress);
 		
@@ -287,7 +478,7 @@ public class ServiceGridOrchestrator<x> {
 				continue;
 			}
 			
-			AgentState agentState = getAgentState(agentId);
+			final AgentState agentState = getAgentState(agentId);
 			final String agentProgress = agentState.getProgress();
 			Preconditions.checkNotNull(agentProgress);
 			
@@ -316,7 +507,55 @@ public class ServiceGridOrchestrator<x> {
 				Preconditions.checkState(false, "Unrecognized agent state " + agentProgress);
 			}
 		}
+		
+		for (URI agentId : getOrphanAgentIds()) {
+			final AgentState agentState = getAgentState(agentId);
+			String agentProgress = agentState.getProgress();
+			if (agentProgress.equals(AgentState.Progress.AGENT_STARTED)) {	
+				MarkAgentAsStoppingTask task = new MarkAgentAsStoppingTask();
+				task.setTarget(agentId);
+				addNewTaskIfNotExists(newTasks, task);
+			}
+			else if (agentProgress.equals(AgentState.Progress.STOPPING_AGENT)) {
+				boolean isAllInstancesStopped = Iterables.isEmpty(getNonStoppedInstances(agentState.getServiceInstanceIds()));
+				if (isAllInstancesStopped) {			
+					StopAgentTask task = new StopAgentTask();
+					task.setTarget(agentId);
+					addNewTaskIfNotExists(newTasks, task);
+				}
+			}
+			else if (agentProgress.equals(AgentState.Progress.AGENT_STOPPED) ||
+					 agentProgress.equals(AgentState.Progress.STARTING_MACHINE) || 
+					 agentProgress.equals(AgentState.Progress.MACHINE_STARTED) ||
+					 agentProgress.equals(AgentState.Progress.PLANNED)) {
+				TerminateMachineTask task = new TerminateMachineTask();
+				task.setImpersonatedTarget(agentId);
+				task.setTarget(machineProvisionerId);
+				addNewTaskIfNotExists(newTasks, task);
+			}
+			else if (agentProgress.equals(AgentState.Progress.MACHINE_TERMINATED)) {
+				//do nothing
+			}
+			else {
+				Preconditions.checkState(false, "Unknwon agent progress " + agentProgress);
+			}
+		}
+		
 		return Iterables.unmodifiableIterable(healthyAgents);
+	}
+
+	private Iterable<URI> getNonStoppedInstances(Iterable<URI> serviceInstanceIds) {
+		
+		return Iterables.filter(serviceInstanceIds, new Predicate<URI>(){
+
+			@Override
+			public boolean apply(URI instanceId) {
+				ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+				final String instanceProgress = instanceState.getProgress();
+				Preconditions.checkNotNull(instanceProgress);
+				return !instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STOPPED);
+			}
+		});
 	}
 
 	private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
@@ -463,4 +702,20 @@ public class ServiceGridOrchestrator<x> {
 		return serviceState;
 	}
 
+
+	/**
+	 * @return old ids that are not in the newIds, maintaining order 
+	 */
+	private Iterable<URI> difference(final Iterable<URI> oldIds, final Iterable<URI> newIds) {
+		final Set<URI> idsToFilter = Sets.newHashSet(newIds);
+		final Iterable<URI> diffWithDuplicates =
+			Iterables.filter(oldIds, new Predicate<URI>(){
+	
+				@Override
+				public boolean apply(URI id) {
+					return !idsToFilter.contains(id);
+				}
+			});
+		return ImmutableSet.copyOf(diffWithDuplicates);
+	}
 }

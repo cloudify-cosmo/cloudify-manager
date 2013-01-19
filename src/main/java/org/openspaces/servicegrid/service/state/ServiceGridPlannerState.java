@@ -40,7 +40,20 @@ public class ServiceGridPlannerState extends TaskConsumerState {
 		
 		setDeploymentPlanningRequired(true);
 	}
+	
+	@JsonIgnore
+	public void removeService(final URI serviceId) {
+		Iterables.removeIf(servicesConfig, new Predicate<ServiceConfig>() {
 
+			@Override
+			public boolean apply(ServiceConfig serviceConfig) {
+				return serviceConfig.getServiceId().equals(serviceId);
+			}
+		});
+		
+		setDeploymentPlanningRequired(true);
+	}
+	
 	public void setDeploymentPlanningRequired(boolean deploymentPlanningRequired) {
 		this.deploymentPlanningRequired = deploymentPlanningRequired;
 	}
@@ -102,6 +115,4 @@ public class ServiceGridPlannerState extends TaskConsumerState {
 		}, 
 		serviceNotFound);
 	}
-	
-	
 }
