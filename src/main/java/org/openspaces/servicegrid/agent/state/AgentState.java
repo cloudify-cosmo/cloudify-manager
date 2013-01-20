@@ -16,7 +16,7 @@ public class AgentState extends TaskConsumerState {
 		public static final String MACHINE_STARTED = "MACHINE_STARTED";
 		public static final String AGENT_STARTED = "AGENT_STARTED";
 		public static final String STOPPING_AGENT = "STOPPING_AGENT";
-		public static final String AGENT_STOPPED = "AGENT_STOPPED";
+		public static final String TERMINATING_MACHINE = "TERMINATING_MACHINE";
 		public static final String MACHINE_TERMINATED = "MACHINE_TERMINATED";
 	}
 

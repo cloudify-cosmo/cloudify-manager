@@ -9,7 +9,6 @@ import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
-import org.openspaces.servicegrid.agent.tasks.StopAgentTask;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.MarkAgentAsStoppingTask;
@@ -115,14 +114,10 @@ public class MockAgent {
 	
 	@TaskConsumer
 	public void markAgentAsStopping(MarkAgentAsStoppingTask task) {
+		Preconditions.checkState(state.getProgress().equals(AgentState.Progress.AGENT_STARTED));
 		state.setProgress(AgentState.Progress.STOPPING_AGENT);
 	}
 	
-	@TaskConsumer
-	public void stopAgent(StopAgentTask task) {
-		state.setProgress(AgentState.Progress.AGENT_STOPPED);
-	}
-
 	@TaskConsumerStateHolder
 	public AgentState getState() {
 		return state;

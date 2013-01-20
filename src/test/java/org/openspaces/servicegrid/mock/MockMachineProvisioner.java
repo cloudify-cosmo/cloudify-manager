@@ -50,12 +50,27 @@ public class MockMachineProvisioner {
 	
 	@ImpersonatingTaskConsumer
 	public void terminateMachine(TerminateMachineTask task, TaskExecutorStateModifier impersonatedStateModifier) {
-		final AgentState impersonatedState = impersonatedStateModifier.getState();
-		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.AGENT_STOPPED));
+		final AgentState agentState = impersonatedStateModifier.getState();
+		final String agentProgress = agentState.getProgress();
+		Preconditions.checkState(
+				agentProgress.equals(AgentState.Progress.STOPPING_AGENT) ||
+				agentProgress.equals(AgentState.Progress.STARTING_MACHINE) ||
+				agentProgress.equals(AgentState.Progress.MACHINE_STARTED) ||
+				agentProgress.equals(AgentState.Progress.PLANNED));
+		
+		// code that makes sure the agent is no longer running and 
+		// cannot change its own state comes here
 		final URI agentId = task.getImpersonatedTarget();
 		taskConsumerRegistrar.unregisterTaskConsumer(agentId);
-		impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
-		impersonatedStateModifier.updateState(impersonatedState);
+			
+		agentState.setProgress(AgentState.Progress.TERMINATING_MACHINE);
+		impersonatedStateModifier.updateState(agentState);
+		
+		//actual code that terminates machine comes here
+		
+		agentState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
+		impersonatedStateModifier.updateState(agentState);
+
 	}
 	
 	@ImpersonatingTaskConsumer

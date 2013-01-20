@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,7 +64,7 @@ public class ServiceGridOrchestrationTest {
 	public void before(Method method) {
 		
 		timeProvider = new MockCurrentTimeProvider();
-		containers = Sets.newCopyOnWriteArraySet();
+		containers =  Sets.newSetFromMap(new ConcurrentHashMap<MockTaskContainer, Boolean>());
 		taskConsumerRegistrar = new TaskConsumerRegistrar() {
 			
 			@Override
@@ -171,7 +172,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests uninstalling tomcat service
 	 */
-	@Test(enabled=false)
+	@Test(enabled=true)
 	public void uninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
@@ -415,6 +416,7 @@ public class ServiceGridOrchestrationTest {
 			}
 			
 			for (MockTaskContainer container : containers) {
+				Preconditions.checkState(containers.contains(container));
 				Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");
 				Task task = null;
 				
@@ -520,13 +522,16 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private MockTaskContainer findContainer(final URI agentId) {
-		return Iterables.find(containers, new Predicate<MockTaskContainer>() {
+		MockTaskContainer container = Iterables.tryFind(containers, new Predicate<MockTaskContainer>() {
 
 			@Override
 			public boolean apply(MockTaskContainer container) {
 				return agentId.equals(container.getTaskConsumerId());
 			}
-		});
+		}).orNull();
+		
+		Preconditions.checkNotNull(container, "Cannot find container for %s", agentId);
+		return container;
 	}
 
 	private Iterable<Task> getSortedTasks() {
