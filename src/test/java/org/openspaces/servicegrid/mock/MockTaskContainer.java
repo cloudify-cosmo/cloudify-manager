@@ -160,7 +160,8 @@ public class MockTaskContainer {
 				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getTarget());
 		
 		final TaskConsumerState state = getTaskConsumerState();
-		stateWriter.addElement(getTaskConsumerId(), state);
+		Preconditions.checkState(state.getCompletedTasks().size() < 1000, "%s completed task list is bigger than 1000, probably span out of control.", taskConsumer.getClass());
+		stateWriter.addElement(getTaskConsumerId(), state);	
 	}
 
 	/**
