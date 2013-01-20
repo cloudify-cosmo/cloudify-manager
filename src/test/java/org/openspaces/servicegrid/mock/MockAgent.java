@@ -109,7 +109,7 @@ public class MockAgent {
 	}
 	
 	@TaskConsumer
-	public void execute(PingAgentTask task) {
+	public void ping(PingAgentTask task) {
 		//do nothing
 	}
 	
