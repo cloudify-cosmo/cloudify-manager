@@ -18,6 +18,7 @@ import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
 import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
+import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
@@ -39,6 +40,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -395,7 +397,7 @@ public class ServiceGridOrchestrationTest {
 	private void execute() {
 		
 		int consecutiveEmptyCycles = 0;
-		for (; timeProvider.currentTimeMillis() < 1000000; timeProvider.increaseBy(1000)) {
+		for (; timeProvider.currentTimeMillis() < 1000000; timeProvider.increaseBy(1000 - (timeProvider.currentTimeMillis() % 1000))) {
 
 			boolean emptyCycle = true;
 			{
@@ -404,6 +406,7 @@ public class ServiceGridOrchestrationTest {
 			submitTask(management.getDeploymentPlannerId(), producerTask);
 			}
 			{
+			timeProvider.increaseBy(1);
 			TaskProducerTask producerTask = new TaskProducerTask();
 			producerTask.setMaxNumberOfSteps(100);
 			submitTask(management.getOrchestratorId(), producerTask);
@@ -412,7 +415,8 @@ public class ServiceGridOrchestrationTest {
 			for (MockTaskContainer container : containers) {
 				Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");
 				Task task = null;
-				while ((task = container.consumeNextTask()) != null) {
+				
+				for(timeProvider.increaseBy(1); (task = container.consumeNextTask()) != null; timeProvider.increaseBy(1)) {
 					if (!(task instanceof TaskProducerTask) && !(task instanceof PingAgentTask)) {
 						emptyCycle = false;
 					}
@@ -528,10 +532,13 @@ public class ServiceGridOrchestrationTest {
 		List<Task> tasks = Lists.newArrayList(); 
 		final Iterable<URI> taskConsumerIds = getTaskIdsStartingWith(newURI("http://localhost/"));
 		StreamReader<Task> taskReader = management.getTaskReader();
-		for (final URI executorId : taskConsumerIds) {
-			for (URI taskId = taskReader.getFirstElementId(executorId); taskId != null ; taskId = taskReader.getNextElementId(taskId)) {
-				final Task task = taskReader.getElement(taskId, Task.class);
-				tasks.add(task);
+		for (final URI taskConsumerId : taskConsumerIds) {
+			Set<URI> ignore = ImmutableSet.copyOf(ServiceUtils.getExecutingAndPendingTasks(management.getStateReader(), taskReader, taskConsumerId));
+			for (URI taskId = taskReader.getFirstElementId(taskConsumerId); taskId != null ; taskId = taskReader.getNextElementId(taskId)) {
+				if (!ignore.contains(taskId)) {
+					final Task task = taskReader.getElement(taskId, Task.class);
+					tasks.add(task);
+				}
 			}
 		}
 
