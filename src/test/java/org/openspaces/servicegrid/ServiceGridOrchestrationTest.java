@@ -159,7 +159,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests change in plan from 1 instance to 2 instances
 	 */
-	//@Test
+	@Test
 	public void scaleInServiceTest() {
 		installService("tomcat", 2);
 		execute();
@@ -171,7 +171,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests uninstalling tomcat service
 	 */
-	//@Test
+	@Test
 	public void uninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
@@ -183,7 +183,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests uninstalling tomcat service when machine hosting service instance failed.
 	 */
-	//@Test
+	@Test
 	public void killMachineUninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
@@ -198,8 +198,10 @@ public class ServiceGridOrchestrationTest {
 		final ServiceState serviceState = getServiceState(getServiceId("tomcat"));
 		Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
 		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_UNINSTALLED);
-		Assert.assertEquals(getServiceInstanceState(Iterables.getOnlyElement(getServiceInstanceIds("tomcat"))), ServiceInstanceState.Progress.INSTANCE_STOPPED);
-		Assert.assertEquals(getAgentState(Iterables.getOnlyElement(getAgentIds())).getProgress(), AgentState.Progress.MACHINE_TERMINATED);
+		ServiceInstanceState instanceState = getServiceInstanceState(Iterables.getOnlyElement(getServiceInstanceIds("tomcat")));
+		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
+		AgentState agentState = getAgentState(Iterables.getOnlyElement(getAgentIds()));
+		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.MACHINE_TERMINATED);
 	}
 	
 	/**

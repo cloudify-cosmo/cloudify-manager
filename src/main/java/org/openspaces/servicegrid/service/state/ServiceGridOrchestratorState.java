@@ -19,7 +19,7 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 
 	private ServiceGridDeploymentPlan deploymentPlan;
 	private boolean syncedStateWithDeploymentBefore;
-	private Set<URI> orphanServiceIds = Sets.<URI>newHashSet();
+	private Set<URI> serviceIdsToUninstall = Sets.<URI>newHashSet();
 
 	public ServiceGridDeploymentPlan getDeploymentPlan() {
 		return deploymentPlan;
@@ -97,15 +97,15 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 	}
 
 	@JsonIgnore
-	public void addOrphanServiceIds(Iterable<URI> serviceIds) {
-		Iterables.addAll(this.orphanServiceIds, serviceIds);
+	public void addServiceIdsToUninstall(Iterable<URI> serviceIds) {
+		Iterables.addAll(this.serviceIdsToUninstall, serviceIds);
 	}
 
-	public Set<URI> getOrphanServiceIds() {
-		return orphanServiceIds;
+	public Set<URI> getServiceIdsToUninstall() {
+		return serviceIdsToUninstall;
 	}
 
-	public void setOrphanServiceIds(Set<URI> orphanServiceIds) {
-		this.orphanServiceIds = orphanServiceIds;
+	public void setServiceIdsToUninstall(Set<URI> serviceIds) {
+		this.serviceIdsToUninstall = serviceIds;
 	}
 }
