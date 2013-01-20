@@ -31,6 +31,7 @@ import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
 import org.openspaces.servicegrid.service.tasks.RemoveServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.ServiceInstalledTask;
 import org.openspaces.servicegrid.service.tasks.ServiceInstallingTask;
+import org.openspaces.servicegrid.service.tasks.ServiceInstanceUnreachableTask;
 import org.openspaces.servicegrid.service.tasks.ServiceUninstalledTask;
 import org.openspaces.servicegrid.service.tasks.ServiceUninstallingTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
@@ -49,7 +50,7 @@ import com.google.common.collect.Sets;
 
 public class ServiceGridOrchestrator {
 
-	private static final long NOT_RESPONDING_DETECTION_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
+	private static final long AGENT_UNREACHABLE_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
 	private final ServiceGridOrchestratorState state;
 
@@ -183,6 +184,14 @@ public class ServiceGridOrchestrator {
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
+	@ImpersonatingTaskConsumer
+	public void serviceInstanceUnreachable(final ServiceInstanceUnreachableTask task,
+			final TaskExecutorStateModifier impersonatedStateModifier) {
+		ServiceInstanceState serviceState = impersonatedStateModifier.getState();
+		serviceState.setProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
+		impersonatedStateModifier.updateState(serviceState);
+	}
+	
 	private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {	
 		boolean syncComplete = true;
 		final long nowTimestamp = timeProvider.currentTimeMillis();
@@ -193,9 +202,9 @@ public class ServiceGridOrchestrator {
 			if (agentNotStarted && state.isSyncedStateWithDeploymentBefore() && pingHealth == AgentPingHealth.UNDETERMINED) {
 				//If this agent were started, we would have resolved it as AGENT_STARTED in the previous sync
 				//The agent probably never even started
-				pingHealth = AgentPingHealth.AGENT_NOT_RESPONDING;
+				pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
 			}
-			if (pingHealth == AgentPingHealth.AGENT_RESPONDING) {
+			if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
 				Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
 				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
 					if (getServiceInstanceState(instanceId) == null) {
@@ -209,7 +218,7 @@ public class ServiceGridOrchestrator {
 					}
 				}
 			}
-			else if (pingHealth == AgentPingHealth.AGENT_NOT_RESPONDING) {
+			else if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
 				Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfAgent(agentId);
 				if (agentState == null ||
 					agentState.getProgress().equals(AgentState.Progress.MACHINE_TERMINATED)) {
@@ -375,10 +384,26 @@ public class ServiceGridOrchestrator {
 		final List<URI> existingInstanceIds = getServiceState(serviceId).getInstanceIds();
 		final Iterable<URI> instanceIdsToStop = StreamUtils.diff(existingInstanceIds, plannedInstanceIds);
 		for (URI instanceIdToStop : instanceIdsToStop) {
-			final ServiceInstanceState serviceInstanceState = getServiceInstanceState(instanceIdToStop);
-			final URI agentId = serviceInstanceState.getAgentId();
-			Preconditions.checkState(Iterables.contains(healthyAgents, agentId), "Uninstalling instances whos machine failed. This scenario is still unsupported");
-			orchestrateServiceInstanceUninstallation(newTasks, instanceIdToStop, agentId);
+			final ServiceInstanceState instanceState = getServiceInstanceState(instanceIdToStop);
+			final URI agentId = instanceState.getAgentId();
+			if (Iterables.contains(healthyAgents, agentId)) {
+				orchestrateServiceInstanceUninstallation(newTasks, instanceIdToStop, agentId);
+			}
+			else {
+				{
+				final ServiceInstanceUnreachableTask task = new ServiceInstanceUnreachableTask();
+				task.setTarget(orchestratorId);
+				task.setImpersonatedTarget(instanceIdToStop);
+				addNewTaskIfNotExists(newTasks, task);
+				}
+				{
+				final RemoveServiceInstanceTask task = new RemoveServiceInstanceTask();
+				task.setTarget(orchestratorId);
+				task.setImpersonatedTarget(instanceState.getServiceId());
+				task.setInstanceId(instanceIdToStop);
+				addNewTaskIfNotExists(newTasks, task);
+				}
+			}
 		}
 	}
 
@@ -478,7 +503,7 @@ public class ServiceGridOrchestrator {
 			final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
 			AgentState agentState = getAgentState(agentId);
 			Preconditions.checkNotNull(agentState);
-			if (pingHealth == AgentPingHealth.AGENT_RESPONDING) {
+			if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
 				healthyAgents.add(agentId);
 				continue;
 			}
@@ -498,12 +523,15 @@ public class ServiceGridOrchestrator {
 				addNewTaskIfNotExists(newTasks, task);
 			}
 			else if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
-				if (pingHealth == AgentPingHealth.AGENT_NOT_RESPONDING) {
+				if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
 					final TerminateMachineOfNonResponsiveAgentTask task = new TerminateMachineOfNonResponsiveAgentTask();
 					task.setImpersonatedTarget(agentId);	
 					task.setTarget(machineProvisionerId);
 					addNewTaskIfNotExists(newTasks, task);
 				}
+			}
+			else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
+				// move along. nothing to see here.
 			}
 			else {
 				Preconditions.checkState(false, "Unrecognized agent state " + agentState.getProgress());
@@ -579,8 +607,8 @@ public class ServiceGridOrchestrator {
 						// agent started after ping sent. Wait for next ping
 					}
 					else {
-						// agent not responding because it was not started yet
-						health = AgentPingHealth.AGENT_NOT_RESPONDING;
+						// agent not reachable because it was not started yet
+						health = AgentPingHealth.AGENT_UNREACHABLE;
 					}
 				}
 				else if (expectedNumberOfAgentRestartsInAgentState != null && 
@@ -598,9 +626,9 @@ public class ServiceGridOrchestrator {
 				else {
 					final long taskTimestamp = task.getSourceTimestamp();
 					final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
-					if ( notRespondingMilliseconds > NOT_RESPONDING_DETECTION_MILLISECONDS ) {
+					if ( notRespondingMilliseconds > AGENT_UNREACHABLE_MILLISECONDS ) {
 						// ping should have been consumed by now
-						health = AgentPingHealth.AGENT_NOT_RESPONDING;
+						health = AgentPingHealth.AGENT_UNREACHABLE;
 					}
 				}
 			}
@@ -620,10 +648,10 @@ public class ServiceGridOrchestrator {
 						if (expectedNumberOfRestartsInAgentState != null && 
 							expectedNumberOfRestartsInAgentState == agentState.getNumberOfAgentRestarts()) {
 							final long taskTimestamp = task.getSourceTimestamp();
-							final long respondingMilliseconds = nowTimestamp - taskTimestamp;
-							if ( respondingMilliseconds <= NOT_RESPONDING_DETECTION_MILLISECONDS ) {
+							final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
+							if ( sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS ) {
 								// ping was consumed just recently
-								health = AgentPingHealth.AGENT_RESPONDING;
+								health = AgentPingHealth.AGENT_REACHABLE;
 								break;
 							}
 						}
@@ -635,7 +663,7 @@ public class ServiceGridOrchestrator {
 		return health;
 	}
 	public enum AgentPingHealth {
-		UNDETERMINED, AGENT_NOT_RESPONDING, AGENT_RESPONDING
+		UNDETERMINED, AGENT_UNREACHABLE, AGENT_REACHABLE
 	}
 
 	/**
