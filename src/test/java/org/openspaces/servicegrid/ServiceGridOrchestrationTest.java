@@ -159,7 +159,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests change in plan from 1 instance to 2 instances
 	 */
-	@Test
+	@Test(enabled=false)
 	public void scaleInServiceTest() {
 		installService("tomcat", 2);
 		execute();
@@ -171,7 +171,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests uninstalling tomcat service
 	 */
-	@Test
+	@Test(enabled=false)
 	public void uninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
@@ -183,7 +183,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests uninstalling tomcat service when machine hosting service instance failed.
 	 */
-	@Test
+	@Test(enabled=false)
 	public void killMachineUninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
