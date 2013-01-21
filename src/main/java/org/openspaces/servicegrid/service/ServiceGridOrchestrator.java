@@ -420,6 +420,10 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
+	private ServiceState getServiceState(final URI serviceId) {
+		return ServiceUtils.getServiceState(stateReader, serviceId);
+	}
+
 	private void orchestrateServiceInstanceUninstallation(
 			final List<Task> newTasks,
 			final URI instanceIdToStop, 
@@ -447,7 +451,7 @@ public class ServiceGridOrchestrator {
 	}
 
 	private ServiceInstanceState getServiceInstanceState(URI instanceId) {
-		return StreamUtils.getLastElement(stateReader, instanceId, ServiceInstanceState.class);
+		return ServiceUtils.getServiceInstanceState(stateReader, instanceId);
 	}
 	
 	/**
@@ -660,6 +664,10 @@ public class ServiceGridOrchestrator {
 		
 		return health;
 	}
+
+	private AgentState getAgentState(URI agentId) {
+		return ServiceUtils.getAgentState(stateReader, agentId);
+	}
 	public enum AgentPingHealth {
 		UNDETERMINED, AGENT_UNREACHABLE, AGENT_REACHABLE
 	}
@@ -667,67 +675,24 @@ public class ServiceGridOrchestrator {
 	/**
 	 * Adds a new task only if it has not been added recently.
 	 */
-	
-	private void addNewTaskIfNotExists(
+	public void addNewTaskIfNotExists(
 			final List<Task> newTasks,
 			final Task newTask) {
 		
-		if (getExistingTaskId(newTask) == null) {
+		if (ServiceUtils.getExistingTaskId(mapper, stateReader, taskReader, newTask) == null) {
 			addNewTask(newTasks, newTask);
 		}
-	}
-
-	private URI getExistingTaskId(final Task newTask) {
-		final URI agentId = newTask.getTarget();
-		final URI existingTaskId = 
-			Iterables.find(getExecutingAndPendingTasks(agentId),
-				new Predicate<URI>() {
-					@Override
-					public boolean apply(final URI existingTaskId) {
-						final Task existingTask = taskReader.getElement(existingTaskId, Task.class);
-						Preconditions.checkArgument(agentId.equals(existingTask.getTarget()),"Expected target " + agentId + " actual target " + existingTask.getTarget());
-						return tasksEqualsIgnoreTimestampIgnoreSource(existingTask,newTask);
-				}},
-				null
-			);
-		return existingTaskId;
-	}
+	}	
 	
-	private Iterable<URI> getExecutingAndPendingTasks(URI agentId) {
-		return ServiceUtils.getExecutingAndPendingTasks(stateReader, taskReader, agentId);
-	}
-
-	private boolean tasksEqualsIgnoreTimestampIgnoreSource(final Task task1, final Task task2) {
-		if (!task1.getClass().equals(task2.getClass())) {
-			return false;
-		}
-		final Task task1Clone = StreamUtils.cloneElement(mapper, task1);
-		final Task task2Clone = StreamUtils.cloneElement(mapper, task2);
-		task1Clone.setSourceTimestamp(null);
-		task2Clone.setSourceTimestamp(null);
-		task1Clone.setSource(null);
-		task2Clone.setSource(null);
-		return StreamUtils.elementEquals(mapper, task1Clone, task2Clone);
-	
-	}
-
 	private static void addNewTask(List<Task> newTasks, final Task task) {
 		newTasks.add(task);
 	}
-
-	private AgentState getAgentState(URI agentId) {
-		return StreamUtils.getLastElement(stateReader, agentId, AgentState.class);
-	}
-
+	
 	@TaskConsumerStateHolder
 	public ServiceGridOrchestratorState getState() {
 		return state;
 	}
 
-	private ServiceState getServiceState(URI serviceId) {
-		ServiceState serviceState = StreamUtils.getLastElement(stateReader, serviceId, ServiceState.class);
-		return serviceState;
-	}
 
 	private Iterable<URI> getPlannedServiceIds() {
 		return state.getServiceIds();
