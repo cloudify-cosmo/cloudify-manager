@@ -111,9 +111,6 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	
 	private T getByIndex(URI streamId, int index) {
 		final Collection<T> stream = getStreamById(streamId);
-		if (index >= stream.size()) {
-			return null;
-		}
 		return Iterables.get(stream,index);
 	}
 
@@ -171,10 +168,6 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		});
 	}
 	
-	public Iterable<URI> getElementIds() {
-		return Iterables.unmodifiableIterable(streamById.keySet());
-	}
-
 	public void clear() {
 		this.streamById.clear();
 	}

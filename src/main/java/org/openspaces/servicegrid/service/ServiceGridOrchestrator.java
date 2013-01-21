@@ -564,7 +564,7 @@ public class ServiceGridOrchestrator {
 					AgentState.Progress.STARTING_MACHINE, 
 					AgentState.Progress.MACHINE_STARTED, 
 					AgentState.Progress.PLANNED)) {
-				boolean isAllInstancesStopped = Iterables.isEmpty(getStartedOrStartingInstances(agentState.getServiceInstanceIds()));
+				boolean isAllInstancesStopped = Iterables.isEmpty(agentState.getServiceInstanceIds());
 				if (isAllInstancesStopped) {			
 					TerminateMachineTask task = new TerminateMachineTask();
 					task.setImpersonatedTarget(agentId);
@@ -583,21 +583,6 @@ public class ServiceGridOrchestrator {
 		}
 		
 		return Iterables.unmodifiableIterable(healthyAgents);
-	}
-
-	private Iterable<URI> getStartedOrStartingInstances(Iterable<URI> serviceInstanceIds) {
-		
-		return Iterables.filter(serviceInstanceIds, new Predicate<URI>(){
-
-			@Override
-			public boolean apply(URI instanceId) {
-				ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-				final String instanceProgress = instanceState.getProgress();
-				Preconditions.checkNotNull(instanceProgress);
-				return instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED) || 
-					   instanceProgress.equals(ServiceInstanceState.Progress.STARTING_INSTANCE);
-			}
-		});
 	}
 
 	private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {

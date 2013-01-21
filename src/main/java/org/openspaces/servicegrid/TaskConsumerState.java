@@ -3,9 +3,7 @@ package org.openspaces.servicegrid;
 import java.net.URI;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class TaskConsumerState {
@@ -23,16 +21,6 @@ public class TaskConsumerState {
 		boolean remove = getExecutingTasks().remove(taskId);
 		Preconditions.checkState(remove,"task " + taskId + " is not executing");
 		getCompletedTasks().add(taskId);
-	}
-		
-	@JsonIgnore
-	public URI getLastCompletedTaskId() {
-		return Iterables.getLast(getCompletedTasks(), null);
-	}
-	
-	@JsonIgnore
-	public boolean isExecutingTask() {
-		return !Iterables.isEmpty(getExecutingTasks());
 	}
 
 	public List<URI> getExecutingTasks() {

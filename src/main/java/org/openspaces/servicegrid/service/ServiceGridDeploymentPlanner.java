@@ -51,7 +51,6 @@ public class ServiceGridDeploymentPlanner {
 		if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
 			serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
 			state.updateService(serviceConfig);
-			return;
 		}
 	}
 

@@ -89,10 +89,7 @@ public class MockTaskContainer {
 					Class<? extends ImpersonatingTask> taskType = (Class<? extends ImpersonatingTask>) parameterTypes[0];
 					Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"method second parameter type must be " + TaskExecutorStateModifier.class);
 					impersonatedTaskConsumerMethodByType.put(taskType, method);
-					
-					if (impersonatingTaskConsumerAnnotation.persistTask()) {
-						taskConsumersToPersist.add(method);
-					}
+
 			} else if (taskProducerAnnotation != null) {
 					Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), "%s return type must be Iterable<Task>",method);
 					Preconditions.checkArgument(parameterTypes.length == 0, "%s method must not have any parameters", method);				
@@ -115,18 +112,6 @@ public class MockTaskContainer {
 			Preconditions.checkNotNull(task);
 			taskWriter.addElement(taskConsumerId, task);
 		}
-	}
-
-	private Method getMethodByName(String methodName, Class<?> ... parameterTypes) {
-		Method method;
-		try {
-			method = taskConsumer.getClass().getMethod(methodName,parameterTypes);
-		} catch (final NoSuchMethodException e) {
-			return null;
-		} catch (final SecurityException e) {
-			throw Throwables.propagate(e);
-		}
-		return method;
 	}
 
 	private void afterExecute(URI taskId, Task task) {
@@ -276,9 +261,6 @@ public class MockTaskContainer {
 
 			};
 			invokeMethod(executorMethod, task, impersonatedStateModifier);
-			if (taskConsumersToPersist.contains(executorMethod)) {
-				persistentTaskWriter.addElement(taskConsumerId, task);
-			}
 		}
 	}
 	
