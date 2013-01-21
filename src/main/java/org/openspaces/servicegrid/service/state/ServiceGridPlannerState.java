@@ -90,9 +90,18 @@ public class ServiceGridPlannerState extends TaskConsumerState {
 	@JsonIgnore
 	public int getAndIncrementNextServiceInstanceIndex(URI serviceId) {
 		int index = nextServiceInstanceIndex.get(serviceId);
-		return nextServiceInstanceIndex.put(serviceId, index+1);
+		nextServiceInstanceIndex.put(serviceId, index+1);
+		return index;
 	}
 
+	@JsonIgnore
+	public int getAndDecrementNextServiceInstanceIndex(URI serviceId) {
+		int lastIndex = nextServiceInstanceIndex.get(serviceId)-1;
+		Preconditions.checkState(lastIndex > 0, "cannot decrement service instance index");
+		nextServiceInstanceIndex.put(serviceId, lastIndex);
+		return lastIndex;
+	}
+	
 	@JsonIgnore
 	public int getAndIncrementNextAgentIndex() {
 		return nextAgentId++;

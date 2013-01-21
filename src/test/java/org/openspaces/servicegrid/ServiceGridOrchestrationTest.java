@@ -160,19 +160,23 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests change in plan from 1 instance to 2 instances
 	 */
-	@Test(enabled=false)
+	@Test
 	public void scaleInServiceTest() {
 		installService("tomcat", 2);
 		execute();
 		scaleService("tomcat",1);
 		execute();
-		assertSingleServiceInstance("tomcat");
+		assertServiceInstalledWithOneInstance("tomcat");
+		Assert.assertEquals(getAgentState(getAgentId(0)).getProgress(), AgentState.Progress.AGENT_STARTED);
+		Assert.assertEquals(getAgentState(getAgentId(1)).getProgress(), AgentState.Progress.MACHINE_TERMINATED);
+		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
 	}
 	
 	/**
 	 * Tests uninstalling tomcat service
 	 */
-	@Test(enabled=true)
+	@Test
 	public void uninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
@@ -184,7 +188,7 @@ public class ServiceGridOrchestrationTest {
 	/**
 	 * Tests uninstalling tomcat service when machine hosting service instance failed.
 	 */
-	@Test(enabled=true)
+	@Test
 	public void killMachineUninstallServiceTest() {
 		installService("tomcat",1);
 		execute();
@@ -243,7 +247,7 @@ public class ServiceGridOrchestrationTest {
 		installService("tomcat", 2);
 		execute();
 		logAllTasks();
-		restartAgent(newURI("http://localhost/agent/1/"));
+		restartAgent(getAgentId(1));
 		restartManagement();
 		execute();
 		 
@@ -260,6 +264,8 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		assertServiceInstalledWithOneInstance("tomcat");
 		assertServiceInstalledWithOneInstance("cassandra");
+		Assert.assertEquals(Iterables.size(getServiceInstanceIds("tomcat")),1);
+		Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")),1);
 	}
 	
 	private void assertServiceInstalledWithOneInstance(String serviceName) {
@@ -277,7 +283,7 @@ public class ServiceGridOrchestrationTest {
 	private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
 		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 1);
 		Assert.assertEquals(Iterables.size(getAgentIds()), 1);
-		
+		Assert.assertEquals(Iterables.size(getServiceInstanceIds(serviceName)),1);
 		assertServiceInstalledWithOneInstance(serviceName, numberOfAgentRestarts, numberOfMachineRestarts);
 	}
 
@@ -288,7 +294,6 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_INSTALLED);
 		final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
 		final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-		Assert.assertEquals(getOnlyServiceInstanceId(serviceName), instanceId);
 		final URI agentId = instanceState.getAgentId();
 		Assert.assertEquals(instanceState.getServiceId(), serviceId);
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
@@ -475,16 +480,12 @@ public class ServiceGridOrchestrationTest {
 		Assert.fail("Executing too many cycles progress=" + sb);
 	}
 	
-	private URI getOnlyServiceInstanceId(String serviceName) {
-		final Iterable<URI> instanceIds = getServiceInstanceIds(serviceName);
-		Assert.assertEquals(Iterables.size(instanceIds),1);
-		
-		final URI serviceInstanceId = Iterables.getOnlyElement(instanceIds);
-		return serviceInstanceId;
-	}
-
 	private Iterable<URI> getServiceInstanceIds(String serviceName) {
 		return getStateIdsStartingWith(newURI("http://localhost/services/"+serviceName+"/instances/"));
+	}
+	
+	private URI getServiceInstanceId(final String serviceName, final int index) {
+		return newURI("http://localhost/services/"+serviceName+"/instances/"+index+"/");
 	}
 
 	private Iterable<URI> getStateIdsStartingWith(URI uri) {
@@ -499,6 +500,10 @@ public class ServiceGridOrchestrationTest {
 
 	private Iterable<URI> getAgentIds() {
 		return getStateIdsStartingWith(newURI("http://localhost/agent/"));
+	}
+	
+	private URI getAgentId(final int index) {
+		return newURI("http://localhost/agent/"+index+"/");
 	}
 
 	private void killOnlyMachine() {
@@ -655,22 +660,22 @@ public class ServiceGridOrchestrationTest {
 
 	private ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted() {
 		return ImmutableMap.<URI,Integer>builder()
-				 .put(newURI("http://localhost/agent/0/"), 0)
-				 .put(newURI("http://localhost/agent/1/"), 0)
+				 .put(getAgentId(0), 0)
+				 .put(getAgentId(1), 0)
 				 .build();
 	}
 	
 	private ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted() {
 		return ImmutableMap.<URI,Integer>builder()
-				 .put(newURI("http://localhost/agent/0/"), 0)
-				 .put(newURI("http://localhost/agent/1/"), 0)
+				 .put(getAgentId(0), 0)
+				 .put(getAgentId(1), 0)
 				 .build();
 	}
 
 	private ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted() {
 		return ImmutableMap.<URI,Integer>builder()
-		 .put(newURI("http://localhost/agent/0/"), 0)
-		 .put(newURI("http://localhost/agent/1/"), 1)
+		 .put(getAgentId(0), 0)
+		 .put(getAgentId(1), 1)
 		 .build();
 	}
 }

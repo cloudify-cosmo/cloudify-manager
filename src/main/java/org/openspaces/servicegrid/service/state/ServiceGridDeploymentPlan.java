@@ -42,6 +42,27 @@ public class ServiceGridDeploymentPlan {
 	}
 
 	@JsonIgnore
+	public void removeServiceInstance(final URI instanceId) {
+		final Predicate<Entry<URI,URI>> findInstanceIdPredicate = 
+			new Predicate<Entry<URI,URI>>() {
+	
+				@Override
+				public boolean apply(Entry<URI, URI> entry) {
+					final URI thisInstanceId = entry.getValue();
+					return instanceId.equals(thisInstanceId);
+				}
+			};
+			
+		boolean removedFromServicesMap = 
+				Iterables.removeIf(instanceIdsByServiceId.entries(), findInstanceIdPredicate);
+		boolean removedFromAgentsMap = 
+				Iterables.removeIf(instanceIdsByAgentId.entries(), findInstanceIdPredicate);
+		
+		Preconditions.checkArgument(removedFromServicesMap, "Cannot find instance %s in services map", instanceId);
+		Preconditions.checkArgument(removedFromAgentsMap, "Cannot find instance %s in agents map", instanceId);
+	}
+	
+	@JsonIgnore
 	public boolean isServiceExists(URI serviceId) {
 		return getServiceById(serviceId) != null;
 	}

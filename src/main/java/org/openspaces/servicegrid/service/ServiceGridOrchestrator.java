@@ -145,6 +145,14 @@ public class ServiceGridOrchestrator {
 	}
 	
 	@ImpersonatingTaskConsumer
+	public void serviceInstalling(ServiceInstallingTask task,
+			TaskExecutorStateModifier impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState();
+		serviceState.setProgress(ServiceState.Progress.INSTALLING_SERVICE);
+		impersonatedStateModifier.updateState(serviceState);
+	}
+	
+	@ImpersonatingTaskConsumer
 	public void serviceUninstalled(ServiceUninstalledTask task, 
 			TaskExecutorStateModifier impersonatedStateModifier) {
 		ServiceState serviceState = impersonatedStateModifier.getState();
@@ -253,13 +261,18 @@ public class ServiceGridOrchestrator {
 			final URI serviceId = service.getServiceId();
 			final ServiceState serviceState = getServiceState(serviceId);
 			final Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+			Iterable<URI> actualInstanceIds = (serviceState == null ? Lists.<URI>newArrayList() : serviceState.getInstanceIds());
+			final Iterable<URI> allInstanceIds = StreamUtils.concat(actualInstanceIds, plannedInstanceIds);
 			if (serviceState == null ||
-				!Iterables.elementsEqual(serviceState.getInstanceIds(),plannedInstanceIds)) {
+				!Iterables.elementsEqual(actualInstanceIds, allInstanceIds)) {
+				
 				syncComplete = false;
 				final PlanServiceTask planServiceTask = new PlanServiceTask();
 				planServiceTask.setImpersonatedTarget(serviceId);
 				planServiceTask.setTarget(orchestratorId);
-				planServiceTask.setServiceInstanceIds(Lists.newArrayList(plannedInstanceIds));
+				// when scaling out, the service state should include the new planned instances.
+				// when scaling in,  the service state should still include the old instances until they are removed.
+				planServiceTask.setServiceInstanceIds(Lists.newArrayList(allInstanceIds));
 				planServiceTask.setServiceConfig(service);
 				addNewTaskIfNotExists(newTasks, planServiceTask);
 			}

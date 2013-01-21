@@ -41,7 +41,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	@TaskConsumer(persistTask = true)
-	public void scaleOutService(ScaleServiceTask task) {
+	public void scaleService(ScaleServiceTask task) {
 		
 		URI serviceId = task.getServiceId();
 		ServiceConfig serviceConfig = state.getServiceById(serviceId);
@@ -98,6 +98,7 @@ public class ServiceGridDeploymentPlanner {
 		ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
 		
 		for (final ServiceConfig newService : state.getServices()) {
+			
 			final ServiceConfig oldService = deploymentPlan.getServiceById(newService.getServiceId());
 			deploymentPlanUpdateService(deploymentPlan, oldService, newService);
 				
@@ -105,15 +106,24 @@ public class ServiceGridDeploymentPlanner {
 			
 			int oldNumberOfInstances = oldService == null ? 0 : oldService.getPlannedNumberOfInstances();
 			int newNumberOfInstances = newService.getPlannedNumberOfInstances();
-			for (int i = newNumberOfInstances - oldNumberOfInstances; i > 0; i--) {
-				
-				final URI instanceId = newInstanceId(serviceId);
-				final URI agentId = newAgentExecutorId();
-				deploymentPlan.addServiceInstance(serviceId, agentId, instanceId);
+			if (newNumberOfInstances > oldNumberOfInstances) {
+				for (int i = newNumberOfInstances - oldNumberOfInstances; i > 0; i--) {
+					
+					final URI instanceId = newInstanceId(serviceId);
+					final URI agentId = newAgentExecutorId();
+					deploymentPlan.addServiceInstance(serviceId, agentId, instanceId);
+				}
+			}
+			else if (newNumberOfInstances < oldNumberOfInstances) {
+				for (int i = oldNumberOfInstances - newNumberOfInstances; i > 0; i--) {
+					final int index = state.getAndDecrementNextServiceInstanceIndex(serviceId);
+					final URI instanceId = newInstanceId(serviceId, index);
+					deploymentPlan.removeServiceInstance(instanceId);
+				}
 			}
 		}
 		
-		Function<ServiceConfig,URI> getServiceIdFunc = new Function<ServiceConfig,URI>() {
+		final Function<ServiceConfig,URI> getServiceIdFunc = new Function<ServiceConfig,URI>() {
 
 			@Override
 			public URI apply(ServiceConfig serviceConfig) {
@@ -153,8 +163,13 @@ public class ServiceGridDeploymentPlanner {
 	}
 	
 	private URI newInstanceId(URI serviceId) {
-		Preconditions.checkArgument(serviceId.toString().endsWith("/"),"service id " + serviceId + " must end with slash");
-		return newURI(serviceId.toString() + "instances/" + state.getAndIncrementNextServiceInstanceIndex(serviceId) +"/");
+		final int index = state.getAndIncrementNextServiceInstanceIndex(serviceId);
+		return newInstanceId(serviceId, index);
+	}
+
+	private URI newInstanceId(URI serviceId, final int index) {
+		Preconditions.checkArgument(serviceId.toString().endsWith("/"), "service id %s must end with slash", serviceId);
+		return newURI(serviceId.toString() + "instances/" + index +"/");
 	}
 
 	private URI newAgentExecutorId() {
