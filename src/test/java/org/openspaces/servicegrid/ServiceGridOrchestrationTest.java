@@ -197,34 +197,7 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		assertTomcatUninstalledUnreachable();
 	}
-	
-	private void assertTomcatUninstalledGracefully() {
-		boolean instanceUnreachable = false;
-		assertTomcatUninstalled(instanceUnreachable);
-	}
-	
-	private void assertTomcatUninstalledUnreachable() {
-		boolean instanceUnreachable = true;
-		assertTomcatUninstalled(instanceUnreachable);
-	}
-	
-	private void assertTomcatUninstalled(boolean instanceUnreachable) {
-		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 0);
-		final ServiceState serviceState = getServiceState(getServiceId("tomcat"));
-		Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
-		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_UNINSTALLED);
-		
-		ServiceInstanceState instanceState = getServiceInstanceState(Iterables.getOnlyElement(getServiceInstanceIds("tomcat")));
-		if (instanceUnreachable) {
-			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
-		}
-		else {
-			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
-		}
-		AgentState agentState = getAgentState(Iterables.getOnlyElement(getAgentIds()));
-		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.MACHINE_TERMINATED);
-	}
-	
+
 	/**
 	 * Tests management state recovery from crash
 	 */
@@ -266,6 +239,34 @@ public class ServiceGridOrchestrationTest {
 		assertServiceInstalledWithOneInstance("cassandra");
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("tomcat")),1);
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")),1);
+	}
+	
+	
+	private void assertTomcatUninstalledGracefully() {
+		boolean instanceUnreachable = false;
+		assertTomcatUninstalled(instanceUnreachable);
+	}
+	
+	private void assertTomcatUninstalledUnreachable() {
+		boolean instanceUnreachable = true;
+		assertTomcatUninstalled(instanceUnreachable);
+	}
+	
+	private void assertTomcatUninstalled(boolean instanceUnreachable) {
+		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 0);
+		final ServiceState serviceState = getServiceState(getServiceId("tomcat"));
+		Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
+		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_UNINSTALLED);
+		
+		ServiceInstanceState instanceState = getServiceInstanceState(Iterables.getOnlyElement(getServiceInstanceIds("tomcat")));
+		if (instanceUnreachable) {
+			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
+		}
+		else {
+			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
+		}
+		AgentState agentState = getAgentState(Iterables.getOnlyElement(getAgentIds()));
+		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.MACHINE_TERMINATED);
 	}
 	
 	private void assertServiceInstalledWithOneInstance(String serviceName) {
