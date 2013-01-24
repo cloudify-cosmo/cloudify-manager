@@ -8,7 +8,7 @@ import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.service.ServiceGridDeploymentPlanner;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
-import org.openspaces.servicegrid.service.ServiceGridPlannerParameter;
+import org.openspaces.servicegrid.service.ServiceGridDeploymentPlannerParameter;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamWriter;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
@@ -99,7 +99,7 @@ public class MockManagement {
 
 	private ServiceGridDeploymentPlanner newServiceGridDeploymentPlanner(CurrentTimeProvider timeProvider) {
 		
-		final ServiceGridPlannerParameter servicePlannerParameter = new ServiceGridPlannerParameter();
+		final ServiceGridDeploymentPlannerParameter servicePlannerParameter = new ServiceGridDeploymentPlannerParameter();
 		servicePlannerParameter.setOrchestratorId(orchestratorId);
 		return new ServiceGridDeploymentPlanner(servicePlannerParameter);
 		

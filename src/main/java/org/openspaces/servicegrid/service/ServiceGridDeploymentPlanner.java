@@ -34,7 +34,7 @@ public class ServiceGridDeploymentPlanner {
 	private final URI orchestratorId;
 	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 		
-	public ServiceGridDeploymentPlanner(ServiceGridPlannerParameter parameterObject) {
+	public ServiceGridDeploymentPlanner(ServiceGridDeploymentPlannerParameter parameterObject) {
 		this.orchestratorId = parameterObject.getOrchestratorId();
 		this.state = new ServiceGridPlannerState();
 		this.state.setDeploymentPlan(new ServiceGridDeploymentPlan());

@@ -2,7 +2,7 @@ package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 
-public class ServiceGridPlannerParameter {
+public class ServiceGridDeploymentPlannerParameter {
 	
 	private URI orchestratorId;
 

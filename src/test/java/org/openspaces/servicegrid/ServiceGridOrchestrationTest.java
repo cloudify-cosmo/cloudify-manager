@@ -241,6 +241,16 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")),1);
 	}
 	
+	@Test
+	public void automaticScalingOutTest() {
+		installService("tomcat", 1);
+		autoscaling("tomcat");
+		execute();
+		hitTomcatWebserver();
+		execute();
+		assertTwoTomcatInstances();
+		
+	}
 	
 	private void assertTomcatUninstalledGracefully() {
 		boolean instanceUnreachable = false;
