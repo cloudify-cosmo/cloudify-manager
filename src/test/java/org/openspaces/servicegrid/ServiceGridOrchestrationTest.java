@@ -27,6 +27,7 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
+import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
@@ -54,6 +55,7 @@ public class ServiceGridOrchestrationTest {
 	private Set<MockTaskContainer> containers;
 	private MockCurrentTimeProvider timeProvider;
 	private TaskConsumerRegistrar taskConsumerRegistrar;
+	private boolean webClientStarted;
 	
 	public ServiceGridOrchestrationTest() {
 		logger = Logger.getLogger(this.getClass().getName());
@@ -92,6 +94,7 @@ public class ServiceGridOrchestrationTest {
 	
 	@AfterMethod
 	public void after() {
+		stopWebClient();
 		logAllTasks();
 	}
 	
@@ -102,7 +105,7 @@ public class ServiceGridOrchestrationTest {
 	public void installSingleInstanceServiceTest() {
 		installService("tomcat", 1);
 		execute();
-		assertSingleServiceInstance("tomcat");
+		assertOneTomcatInstance();
 	}
 
 	/**
@@ -166,13 +169,9 @@ public class ServiceGridOrchestrationTest {
 		execute();
 		scaleService("tomcat",1);
 		execute();
-		assertServiceInstalledWithOneInstance("tomcat");
-		Assert.assertEquals(getAgentState(getAgentId(0)).getProgress(), AgentState.Progress.AGENT_STARTED);
-		Assert.assertEquals(getAgentState(getAgentId(1)).getProgress(), AgentState.Progress.MACHINE_TERMINATED);
-		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
+		assertTomcatScaledInFrom2To1();
 	}
-	
+
 	/**
 	 * Tests uninstalling tomcat service
 	 */
@@ -208,7 +207,7 @@ public class ServiceGridOrchestrationTest {
 		logAllTasks();
 		restartManagement();
 		execute();
-		assertSingleServiceInstance("tomcat");
+		assertOneTomcatInstance();
 	}
 	
 	/**
@@ -241,17 +240,48 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")),1);
 	}
 	
-	@Test
-	public void automaticScalingOutTest() {
+	@Test(enabled = false)
+	public void scalingRulesTest() {
 		installService("tomcat", 1);
-		autoscaling("tomcat");
+		scalingrules("tomcat");
 		execute();
-		hitTomcatWebserver();
+		assertOneTomcatInstance();
+		startWebClient();
 		execute();
 		assertTwoTomcatInstances();
+		stopWebClient();
+		execute();
+		assertTomcatScaledInFrom2To1();
 		
 	}
 	
+	private void stopWebClient() {
+		this.webClientStarted = true;
+	}
+	
+	private void startWebClient() {
+		this.webClientStarted = false;		
+	}
+
+	private void assertOneTomcatInstance() {
+		assertSingleServiceInstance("tomcat");
+	}
+	
+	private void assertTomcatScaledInFrom2To1() {
+		assertServiceInstalledWithOneInstance("tomcat");
+		Assert.assertEquals(getAgentState(getAgentId(0)).getProgress(), AgentState.Progress.AGENT_STARTED);
+		Assert.assertEquals(getAgentState(getAgentId(1)).getProgress(), AgentState.Progress.MACHINE_TERMINATED);
+		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
+	}
+
+	private void scalingrules(String serviceName) {
+		ScalingRulesTask task = new ScalingRulesTask();
+		task.setValueName("request-throughput");
+		task.setValueThreshold(10);
+		submitTask(management.getCapacityPlannerId(), task);
+	}
+
 	private void assertTomcatUninstalledGracefully() {
 		boolean instanceUnreachable = false;
 		assertTomcatUninstalled(instanceUnreachable);
