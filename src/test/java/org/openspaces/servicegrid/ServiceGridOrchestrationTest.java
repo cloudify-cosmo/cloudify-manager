@@ -22,7 +22,7 @@ import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
 import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
-import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
@@ -345,7 +345,7 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
 		Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
 		
-		final ServiceGridPlannerState plannerState = getDeploymentPlannerState();
+		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), instanceId);
@@ -353,8 +353,8 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
 	}
 
-	private ServiceGridPlannerState getDeploymentPlannerState() {
-		return StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridPlannerState.class);
+	private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
+		return StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class);
 	}
 
 	private URI getOnlyAgentId() {
@@ -374,7 +374,7 @@ public class ServiceGridOrchestrationTest {
 		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
-		final ServiceGridPlannerState plannerState = getDeploymentPlannerState();
+		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceId(), serviceId);
 		Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), 2);

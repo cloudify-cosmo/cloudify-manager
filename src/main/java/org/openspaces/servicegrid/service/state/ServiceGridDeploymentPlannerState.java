@@ -13,7 +13,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-public class ServiceGridPlannerState extends TaskConsumerState {
+public class ServiceGridDeploymentPlannerState extends TaskConsumerState {
 
 	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
 	private boolean deploymentPlanningRequired;

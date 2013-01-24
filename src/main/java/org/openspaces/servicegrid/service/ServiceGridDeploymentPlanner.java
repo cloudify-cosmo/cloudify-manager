@@ -12,7 +12,7 @@ import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
-import org.openspaces.servicegrid.service.state.ServiceGridPlannerState;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
@@ -30,13 +30,13 @@ import com.google.common.collect.Sets;
 
 public class ServiceGridDeploymentPlanner {
 
-	private final ServiceGridPlannerState state;
+	private final ServiceGridDeploymentPlannerState state;
 	private final URI orchestratorId;
 	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 		
 	public ServiceGridDeploymentPlanner(ServiceGridDeploymentPlannerParameter parameterObject) {
 		this.orchestratorId = parameterObject.getOrchestratorId();
-		this.state = new ServiceGridPlannerState();
+		this.state = new ServiceGridDeploymentPlannerState();
 		this.state.setDeploymentPlan(new ServiceGridDeploymentPlan());
 	}
 
