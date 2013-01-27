@@ -465,17 +465,12 @@ public class ServiceGridOrchestrationTest {
 		for (; timeProvider.currentTimeMillis() < 1000000; timeProvider.increaseBy(1000 - (timeProvider.currentTimeMillis() % 1000))) {
 
 			boolean emptyCycle = true;
-			{
-			TaskProducerTask producerTask = new TaskProducerTask();
-			producerTask.setMaxNumberOfSteps(100);
-			submitTask(management.getDeploymentPlannerId(), producerTask);
-			}
-			{
+			
+			submitTaskProducerTask(management.getCapacityPlannerId());
 			timeProvider.increaseBy(1);
-			TaskProducerTask producerTask = new TaskProducerTask();
-			producerTask.setMaxNumberOfSteps(100);
-			submitTask(management.getOrchestratorId(), producerTask);
-			}
+			submitTaskProducerTask(management.getDeploymentPlannerId());
+			timeProvider.increaseBy(1);
+			submitTaskProducerTask(management.getOrchestratorId());			
 			
 			for (MockTaskContainer container : containers) {
 				Preconditions.checkState(containers.contains(container));
@@ -519,6 +514,12 @@ public class ServiceGridOrchestrationTest {
 		}
 		
 		Assert.fail("Executing too many cycles progress=" + sb);
+	}
+
+	private void submitTaskProducerTask(final URI taskProducerId) {
+		final TaskProducerTask producerTask = new TaskProducerTask();
+		producerTask.setMaxNumberOfSteps(100);
+		submitTask(taskProducerId, producerTask);
 	}
 	
 	private Iterable<URI> getServiceInstanceIds(String serviceName) {
