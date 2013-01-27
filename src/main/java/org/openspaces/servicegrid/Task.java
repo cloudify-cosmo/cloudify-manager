@@ -1,7 +1,6 @@
 package org.openspaces.servicegrid;
 
 import java.net.URI;
-import java.util.List;
 
 public class Task {
 
@@ -10,8 +9,6 @@ public class Task {
 	private URI source;
 
 	private Long sourceTimestamp;
-
-	private List<URI> serviceInstanceIds;
 
 	public URI getSource() {
 		return source;
@@ -35,13 +32,5 @@ public class Task {
 
 	public void setSourceTimestamp(Long sourceTimestamp) {
 		this.sourceTimestamp = sourceTimestamp;
-	}
-
-	public List<URI> getServiceInstanceIds() {
-		return this.serviceInstanceIds;
-	}
-
-	public void setServiceInstanceIds(List<URI> serviceInstanceIds) {
-		this.serviceInstanceIds = serviceInstanceIds;
 	}
 }
