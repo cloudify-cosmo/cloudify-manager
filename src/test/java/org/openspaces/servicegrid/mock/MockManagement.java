@@ -114,6 +114,8 @@ public class MockManagement {
 		
 		final ServiceGridCapacityPlannerParameter servicePlannerParameter = new ServiceGridCapacityPlannerParameter();
 		servicePlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
+		servicePlannerParameter.setTaskReader(taskBroker);
+		servicePlannerParameter.setStateReader(state);
 		return new ServiceGridCapacityPlanner(servicePlannerParameter);
 		
 	}

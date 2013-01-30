@@ -1,25 +1,28 @@
 package org.openspaces.servicegrid.service.tasks;
 
+import java.net.URI;
+
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.service.state.ServiceScalingRule;
 
 public class ScalingRulesTask extends Task {
 
-	private String valueName;
-	private Object valueThreshold;
-
-	public void setValueName(String valueName) {
-		this.valueName = valueName;
+	private ServiceScalingRule scalingRule;
+	private URI serviceId;
+	
+	public ServiceScalingRule getScalingRule() {
+		return scalingRule;
 	}
 	
-	public String getValueName() {
-		return valueName;
-	}
-
-	public void setValueThreshold(Object valueThreshold) {
-		this.valueThreshold = valueThreshold;
+	public void setScalingRule(ServiceScalingRule scalingRule) {
+		this.scalingRule = scalingRule;
 	}
 	
-	public Object getValueThreshold() {
-		return valueThreshold;
+	public URI getServiceId() {
+		return serviceId;
+	}
+	
+	public void setServiceId(URI serviceId) {
+		this.serviceId = serviceId;
 	}
 }

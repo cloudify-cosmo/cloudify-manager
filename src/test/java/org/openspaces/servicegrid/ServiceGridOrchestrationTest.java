@@ -24,6 +24,7 @@ import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
+import org.openspaces.servicegrid.service.state.ServiceScalingRule;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
@@ -56,8 +57,7 @@ public class ServiceGridOrchestrationTest {
 	private Set<MockTaskContainer> containers;
 	private MockCurrentTimeProvider timeProvider;
 	private TaskConsumerRegistrar taskConsumerRegistrar;
-	private boolean webClientStarted;
-	
+		
 	public ServiceGridOrchestrationTest() {
 		logger = Logger.getLogger(this.getClass().getName());
 		setSimpleLoggerFormatter(logger);
@@ -95,7 +95,6 @@ public class ServiceGridOrchestrationTest {
 	
 	@AfterMethod
 	public void after() {
-		stopWebClient();
 		logAllTasks();
 	}
 	
@@ -240,20 +239,28 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("tomcat")),1);
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")),1);
 	}
-	
-	@Test(enabled = false)
+
+	@Test
 	public void scalingRulesTest() {
+		
 		installService("tomcat", 1);
-		scalingrules("tomcat");
+		final ServiceScalingRule rule = new ServiceScalingRule();
+		rule.setPropertyName("request-throughput");
+		rule.setLowThreshold(1);
+		rule.setHighThreshold(10);
+		scalingrule("tomcat", rule);
 		execute();
+		
 		assertOneTomcatInstance();
-		startWebClient();
+		final URI instanceId0 = getServiceInstanceId("tomcat", 0);
+		setServiceInstanceProperty(instanceId0, "request-throughput", 100);
 		execute();
 		assertTwoTomcatInstances();
-		stopWebClient();
+		final URI instanceId1 = getServiceInstanceId("tomcat", 1);
+		setServiceInstanceProperty(instanceId0, "request-throughput", 0);
+		setServiceInstanceProperty(instanceId1, "request-throughput", 0);
 		execute();
 		assertTomcatScaledInFrom2To1();
-		
 	}
 
 	@Test
@@ -268,9 +275,9 @@ public class ServiceGridOrchestrationTest {
 		URI instanceId = getServiceInstanceId("tomcat", 0);
 		setServiceInstanceProperty(instanceId, propertyName, propertyValue);
 		execute();
-		Assert.assertEquals(ServiceUtils.getServiceInstanceState(getStateReader(), instanceId).getProperty(propertyName), propertyValue);
+		Assert.assertEquals(getServiceInstanceState(instanceId).getProperty(propertyName), propertyValue);
 	}
-	
+
 	private void setServiceInstanceProperty(
 			URI instanceId,
 			String propertyName, 
@@ -285,14 +292,6 @@ public class ServiceGridOrchestrationTest {
 		submitTask(agentId, task);
 	}
 
-	private void stopWebClient() {
-		this.webClientStarted = true;
-	}
-	
-	private void startWebClient() {
-		this.webClientStarted = false;		
-	}
-
 	private void assertOneTomcatInstance() {
 		assertSingleServiceInstance("tomcat");
 	}
@@ -305,10 +304,10 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
 	}
 
-	private void scalingrules(String serviceName) {
+	private void scalingrule(String serviceName, ServiceScalingRule rule) {
 		ScalingRulesTask task = new ScalingRulesTask();
-		task.setValueName("request-throughput");
-		task.setValueThreshold(10);
+		task.setScalingRule(rule);
+		task.setServiceId(getServiceId(serviceName));
 		submitTask(management.getCapacityPlannerId(), task);
 	}
 
@@ -471,12 +470,12 @@ public class ServiceGridOrchestrationTest {
 		submitTask(management.getDeploymentPlannerId(), uninstallServiceTask);
 	}
 	
-	private void submitTask(final URI target, final Task installServiceTask) {
-		installServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
+	private void submitTask(final URI target, final Task task) {
+		task.setSourceTimestamp(timeProvider.currentTimeMillis());
 		Preconditions.checkNotNull(target);
-		Preconditions.checkNotNull(installServiceTask);
-		installServiceTask.setTarget(target);
-		((MockStreams<Task>)management.getTaskReader()).addElement(target, installServiceTask);
+		Preconditions.checkNotNull(task);
+		task.setTarget(target);
+		management.getTaskWriter().addElement(target, task);
 	}
 
 	private void scaleService(String serviceName, int plannedNumberOfInstances) {
