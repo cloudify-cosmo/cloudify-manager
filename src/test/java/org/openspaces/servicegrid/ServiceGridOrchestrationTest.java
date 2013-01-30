@@ -28,6 +28,7 @@ import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
+import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
@@ -254,7 +255,36 @@ public class ServiceGridOrchestrationTest {
 		assertTomcatScaledInFrom2To1();
 		
 	}
+
+	@Test
+	public void setInstancePropertyTest() {
+		
+		final String propertyName = "hellow";
+		final String propertyValue = "world";
+		
+		installService("tomcat", 1);
+		execute();
+		assertOneTomcatInstance();
+		URI instanceId = getServiceInstanceId("tomcat", 0);
+		setServiceInstanceProperty(instanceId, propertyName, propertyValue);
+		execute();
+		Assert.assertEquals(ServiceUtils.getServiceInstanceState(getStateReader(), instanceId).getProperty(propertyName), propertyValue);
+	}
 	
+	private void setServiceInstanceProperty(
+			URI instanceId,
+			String propertyName, 
+			Object propertyValue) {
+		
+		SetInstancePropertyTask task = new SetInstancePropertyTask();
+		task.setImpersonatedTarget(instanceId);
+		task.setPropertyName(propertyName);
+		task.setPropertyValue(propertyValue);
+		
+		final URI agentId = getServiceInstanceState(instanceId).getAgentId();
+		submitTask(agentId, task);
+	}
+
 	private void stopWebClient() {
 		this.webClientStarted = true;
 	}

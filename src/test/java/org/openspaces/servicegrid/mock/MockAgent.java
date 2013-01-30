@@ -13,6 +13,7 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.MarkAgentAsStoppingTask;
 import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
+import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.StopServiceInstanceTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
@@ -104,7 +105,15 @@ public class MockAgent {
 			Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
 		}
 		impersonatedStateModifier.updateState(instanceState);
-		
+	}
+	
+	@ImpersonatingTaskConsumer
+	public void injectPropertyToInstance(SetInstancePropertyTask task, TaskExecutorStateModifier impersonatedStateModifier) {
+		final URI instanceId = task.getImpersonatedTarget();
+		Preconditions.checkArgument(instancesState.containsKey(instanceId), "Unknown instance %s", instanceId);
+		ServiceInstanceState instanceState = instancesState.get(instanceId);
+		instanceState.setProperty(task.getPropertyName(), task.getPropertyValue());
+		impersonatedStateModifier.updateState(instanceState);
 	}
 	
 	@TaskConsumer
