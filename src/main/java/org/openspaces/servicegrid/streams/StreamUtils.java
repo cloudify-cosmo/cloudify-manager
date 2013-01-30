@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
@@ -48,6 +49,7 @@ public class StreamUtils {
 	}
 	
 	public static <T> T getLastElement(StreamReader<? super T> stateReader, URI id, Class<T> clazz) {
+		Preconditions.checkNotNull(stateReader);
 		T state = null;
 		URI lastAgentStateId = stateReader.getLastElementId(id);
 		if (lastAgentStateId != null) {
