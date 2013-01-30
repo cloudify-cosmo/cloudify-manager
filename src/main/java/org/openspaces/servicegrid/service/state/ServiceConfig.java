@@ -6,6 +6,8 @@ public class ServiceConfig {
 
 	private String displayName;
 	private int plannedNumberOfInstances;
+	private int maxNumberOfInstances;
+	private int minNumberOfInstances;
 	private URI id;
 
 	public void setDisplayName(String displayName) {
@@ -30,6 +32,22 @@ public class ServiceConfig {
 
 	public void setServiceId(URI id) {
 		this.id = id;
+	}
+
+	public int getMaxNumberOfInstances() {
+		return maxNumberOfInstances;
+	}
+
+	public void setMaxNumberOfInstances(int maxNumberOfInstances) {
+		this.maxNumberOfInstances = maxNumberOfInstances;
+	}
+
+	public int getMinNumberOfInstances() {
+		return minNumberOfInstances;
+	}
+
+	public void setMinNumberOfInstances(int minNumberOfInstances) {
+		this.minNumberOfInstances = minNumberOfInstances;
 	}
 
 }

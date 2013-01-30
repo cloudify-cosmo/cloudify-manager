@@ -47,7 +47,16 @@ public class ServiceGridDeploymentPlanner {
 		ServiceConfig serviceConfig = state.getServiceById(serviceId);
 		Preconditions.checkNotNull(serviceConfig, "Cannot find service %s", serviceId);
 		
-		int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
+		final int newPlannedNumberOfInstances = task.getPlannedNumberOfInstances();
+		final int maxNumberOfInstances = serviceConfig.getMaxNumberOfInstances();
+		Preconditions.checkArgument(
+				newPlannedNumberOfInstances <= maxNumberOfInstances, 
+				"Cannot scale above max number of instances %s", maxNumberOfInstances);
+		final int minNumberOfInstances = serviceConfig.getMinNumberOfInstances();
+		Preconditions.checkArgument(
+				newPlannedNumberOfInstances >= minNumberOfInstances, 
+				"Cannot scale above min number of instances %s", minNumberOfInstances);
+		
 		if (serviceConfig.getPlannedNumberOfInstances() != newPlannedNumberOfInstances) {
 			serviceConfig.setPlannedNumberOfInstances(newPlannedNumberOfInstances);
 			state.updateService(serviceConfig);
@@ -59,6 +68,13 @@ public class ServiceGridDeploymentPlanner {
 		
 		final ServiceConfig serviceConfig = task.getServiceConfig();
 		Preconditions.checkNotNull(serviceConfig);
+		Preconditions.checkArgument(
+				serviceConfig.getPlannedNumberOfInstances() <= serviceConfig.getMaxNumberOfInstances(), 
+				"Cannot scale above max number of instances %s", serviceConfig.getMaxNumberOfInstances());
+		Preconditions.checkArgument(
+				serviceConfig.getPlannedNumberOfInstances() >= serviceConfig.getMinNumberOfInstances(), 
+				"Cannot scale below min number of instances %s", serviceConfig.getMinNumberOfInstances());
+		
 		final URI serviceId = serviceConfig.getServiceId();
 		checkServiceId(serviceId);
 		boolean installed = isServiceInstalled(serviceId);

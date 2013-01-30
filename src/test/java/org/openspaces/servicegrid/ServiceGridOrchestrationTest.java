@@ -421,9 +421,13 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	private void installService(String name, int numberOfInstances) {
+		final int minNumberOfInstances = 1;
+		final int maxNumberOfInstances = 2;
 		ServiceConfig serviceConfig = new ServiceConfig();
 		serviceConfig.setDisplayName(name);
 		serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
+		serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
+		serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
 		serviceConfig.setServiceId(getServiceId(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
