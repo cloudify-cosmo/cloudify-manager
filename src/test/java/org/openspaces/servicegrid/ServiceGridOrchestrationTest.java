@@ -275,7 +275,11 @@ public class ServiceGridOrchestrationTest {
 		URI instanceId = getServiceInstanceId("tomcat", 0);
 		setServiceInstanceProperty(instanceId, propertyName, propertyValue);
 		execute();
-		Assert.assertEquals(getServiceInstanceState(instanceId).getProperty(propertyName), propertyValue);
+		Assert.assertEquals(getServiceInstanceProperty(propertyName, instanceId), propertyValue);
+	}
+
+	private Object getServiceInstanceProperty(final String propertyName, URI instanceId) {
+		return getServiceInstanceState(instanceId).getProperty(propertyName);
 	}
 
 	private void setServiceInstanceProperty(
