@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
@@ -19,10 +20,24 @@ import com.google.common.collect.Sets;
 public class StreamUtils {
 
 	public static <T> T cloneElement(ObjectMapper mapper, T state) {
+	
+		@SuppressWarnings("unchecked")
+		Class<? extends T> clazz = (Class<? extends T>) state.getClass();
+		return (T) fromJson(mapper,toJson(mapper, state), clazz);
+	}
+	
+	public static String toJson(ObjectMapper mapper, Object state) {
 		try {
-			@SuppressWarnings("unchecked")
-			Class<? extends T> clazz = (Class<? extends T>) state.getClass();
-			return (T) mapper.readValue(mapper.writeValueAsBytes(state), clazz);
+			return mapper.writeValueAsString(state);
+		} catch (JsonProcessingException e) {
+			throw Throwables.propagate(e);
+		}
+	}
+	
+
+	public static <T> T fromJson(ObjectMapper mapper, String json, Class<T> clazz) {
+		try {
+			return (T) mapper.readValue(json, clazz);
 		} catch (JsonParseException e) {
 			throw Throwables.propagate(e);
 		} catch (JsonMappingException e) {

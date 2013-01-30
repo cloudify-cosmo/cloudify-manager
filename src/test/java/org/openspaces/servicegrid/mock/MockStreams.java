@@ -23,7 +23,7 @@ import com.google.common.collect.Multimap;
     
 public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 
-	final private Multimap<URI,T> streamById;
+	final private Multimap<URI,String> streamById;
 	final private ObjectMapper mapper;
 	final Logger logger;
 	private boolean loggingEnabled;
@@ -41,8 +41,8 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	@Override
 	public URI addElement(URI streamId, T element) {
 		
-		final Collection<T> stream = getStreamById(streamId);
-		stream.add(StreamUtils.cloneElement(mapper, element));
+		final Collection<String> stream = getStreamById(streamId);
+		stream.add(StreamUtils.toJson(mapper, element));
 		final URI elementId = getElementURIByIndex(streamId, stream.size() -1);
 		
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
@@ -59,7 +59,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		
 		Preconditions.checkNotNull(streamId);
 		String fixedStreamURI = streamIdToExternalForm(streamId);
-		final Collection<T> stream = getStreamById(newURI(fixedStreamURI));
+		final Collection<?> stream = getStreamById(newURI(fixedStreamURI));
 		String lastTaskURI = elementId == null ? null : elementId.toString();
 		
 		Preconditions.checkArgument(
@@ -117,7 +117,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		Preconditions.checkNotNull(index);
 		
 		@SuppressWarnings("unchecked")
-		G task = (G) getByIndex(streamId, index);
+		G task = (G) getByIndex(streamId, index, clazz);
 		Preconditions.checkNotNull(task);
 		G clonedTask = StreamUtils.cloneElement(mapper, task);
 		return clonedTask;
@@ -131,9 +131,9 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		return newURI(string.substring(0,seperator+1));
 	}
 	
-	private T getByIndex(URI streamId, int index) {
-		final Collection<T> stream = getStreamById(streamId);
-		return Iterables.get(stream,index);
+	private T getByIndex(URI streamId, int index, Class<? extends T> clazz) {
+		final Collection<String> stream = getStreamById(streamId);
+		return StreamUtils.fromJson(mapper, Iterables.get(stream,index), clazz);
 	}
 
 	@Override
@@ -143,7 +143,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		URI streamId = getStreamId(elementId);
 		Integer index = getIndex(elementId,streamId);
 		Preconditions.checkNotNull(index);
-		Collection<T> stream = getStreamById(streamId);
+		Collection<?> stream = getStreamById(streamId);
 		int nextIndex = index+1;
 		if (nextIndex < stream.size() ) {
 			nextId = getElementURIByIndex(streamId, nextIndex);
@@ -151,7 +151,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		return nextId;
 	}
 	
-	private Collection<T> getStreamById(URI streamId) {
+	private Collection<String> getStreamById(URI streamId) {
 		URI fixedStreamId = newURI(streamIdToExternalForm(streamId));
 		return streamById.get(fixedStreamId);
 	}
@@ -159,7 +159,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	@Override
 	public URI getFirstElementId(URI streamId) {
 		Preconditions.checkNotNull(streamId);
-		Collection<T> stream = getStreamById(streamId);
+		Collection<?> stream = getStreamById(streamId);
 		Preconditions.checkNotNull(stream);
 		if (stream.isEmpty()) {
 			return null;
@@ -170,7 +170,7 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	@Override
 	public URI getLastElementId(URI streamId) {
 		Preconditions.checkNotNull(streamId);
-		Collection<T> stream = getStreamById(streamId);
+		Collection<?> stream = getStreamById(streamId);
 		Preconditions.checkNotNull(stream);
 		if (stream.isEmpty()) {
 			return null;

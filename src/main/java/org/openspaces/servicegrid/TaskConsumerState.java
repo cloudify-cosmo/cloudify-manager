@@ -1,11 +1,15 @@
 package org.openspaces.servicegrid;
 
 import java.net.URI;
+
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
+//TODO: Use @JsonTypeIdResolver 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@type")
 public class TaskConsumerState {
 
 	//Should serialize to List<URI> which is the taskid URIs
