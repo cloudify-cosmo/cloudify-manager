@@ -35,14 +35,15 @@ public class MockManagement {
 		this.timeProvider = timeProvider;
 		try {
 			orchestratorId = new URI("http://localhost/services/orchestrator/");
-			deploymentPlannerId = new URI("http://localhost/services/deploymentPlanner/");
-			capacityPlannerId = new URI("http://localhost/services/capacityPlanner/");
+			deploymentPlannerId = new URI("http://localhost/services/deployment_planner/");
+			capacityPlannerId = new URI("http://localhost/services/capacity_planner/");
 			machineProvisionerId = new URI("http://localhost/services/provisioner/");
 		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
 		state = new MockStreams<TaskConsumerState>();
 		taskBroker = new MockStreams<Task>();
+		taskBroker.setLoggingEnabled(true);
 		persistentTaskBroker = new MockStreams<Task>();
 	}
 	

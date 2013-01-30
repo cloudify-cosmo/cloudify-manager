@@ -56,6 +56,7 @@ public class ServiceGridOrchestrationTest {
 	private MockManagement management;
 	private Set<MockTaskContainer> containers;
 	private MockCurrentTimeProvider timeProvider;
+	private long startTimestamp;
 	private TaskConsumerRegistrar taskConsumerRegistrar;
 		
 	public ServiceGridOrchestrationTest() {
@@ -66,7 +67,8 @@ public class ServiceGridOrchestrationTest {
 	@BeforeMethod
 	public void before(Method method) {
 		
-		timeProvider = new MockCurrentTimeProvider();
+		startTimestamp = System.currentTimeMillis();
+		timeProvider = new MockCurrentTimeProvider(startTimestamp);
 		containers =  Sets.newSetFromMap(new ConcurrentHashMap<MockTaskContainer, Boolean>());
 		taskConsumerRegistrar = new TaskConsumerRegistrar() {
 			
@@ -499,7 +501,7 @@ public class ServiceGridOrchestrationTest {
 	private void execute() {
 		
 		int consecutiveEmptyCycles = 0;
-		for (; timeProvider.currentTimeMillis() < 1000000; timeProvider.increaseBy(1000 - (timeProvider.currentTimeMillis() % 1000))) {
+		for (; timeProvider.currentTimeMillis() < startTimestamp + 1000000; timeProvider.increaseBy(1000 - (timeProvider.currentTimeMillis() % 1000))) {
 
 			boolean emptyCycle = true;
 			

@@ -7,20 +7,34 @@ import java.util.Collection;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.streams.StreamWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
-
+    
 public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 
-	final private Multimap<URI,T> streamById = ArrayListMultimap.create();
-	final private ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
+	final private Multimap<URI,T> streamById;
+	final private ObjectMapper mapper;
+	final Logger logger;
+	private boolean loggingEnabled;
 	
+	MockStreams() {
+		logger = LoggerFactory.getLogger(this.getClass());
+		streamById = ArrayListMultimap.create();
+		mapper = StreamUtils.newJsonObjectMapper();
+		mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+	}
 	/**
 	 * HTTP POST
 	 */
@@ -30,6 +44,14 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		final Collection<T> stream = getStreamById(streamId);
 		stream.add(StreamUtils.cloneElement(mapper, element));
 		final URI elementId = getElementURIByIndex(streamId, stream.size() -1);
+		
+		if (isLoggingEnabled() && logger.isInfoEnabled()) {
+			try {
+				logger.info("HTTP POST " + streamId + "\n"+ mapper.writeValueAsString(element));
+			} catch (JsonProcessingException e) {
+				logger.warn("HTTP POST " + streamId,e);
+			}
+		}
 		return elementId;
 	}
 
@@ -170,5 +192,13 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	
 	public void clear() {
 		this.streamById.clear();
+	}
+
+	public boolean isLoggingEnabled() {
+		return loggingEnabled;
+	}
+
+	public void setLoggingEnabled(boolean loggingEnabled) {
+		this.loggingEnabled = loggingEnabled;
 	}
 }
