@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.streams.StreamWriter;
@@ -45,14 +46,20 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 	public URI addElement(URI streamId, T element) {
 		
 		final Collection<String> stream = getStreamById(streamId);
-		stream.add(StreamUtils.toJson(mapper, element));
 		final URI elementId = getElementURIByIndex(streamId, stream.size() -1);
+		if (element instanceof Task) {
+			Task task = (Task) element;
+			task.setTarget(streamId);
+		}
+		stream.add(StreamUtils.toJson(mapper, element));
 		
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
+			String header = "POST "+ streamId.getPath() + " HTTP 1.1";
 			try {
-				logger.info("HTTP POST " + streamId + "\n"+ mapper.writeValueAsString(element));
+				String body = mapper.writeValueAsString(element);
+				logger.info(header +"\n"+ body);
 			} catch (JsonProcessingException e) {
-				logger.warn("HTTP POST " + streamId,e);
+				logger.warn(header,e);
 			}
 		}
 		return elementId;
@@ -121,9 +128,8 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		
 		@SuppressWarnings("unchecked")
 		G task = (G) getByIndex(streamId, index, clazz);
-		Preconditions.checkNotNull(task);
-		G clonedTask = StreamUtils.cloneElement(mapper, task);
-		return clonedTask;
+		
+		return task;
 	}
 
 	private URI getStreamId(URI elementId) {

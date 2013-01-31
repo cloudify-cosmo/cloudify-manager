@@ -26,14 +26,15 @@ The SG management contains three components
 
 Install Service
 ---------------
-```
-HTTP POST http://localhost/service/deployment_planner/_tasks
-
 request:
+```
+POST /service/deployment_planner/tasks HTTP/1.1
+
+Content-Type: application/json
+Host: localhost
+
 {
     "task" : "install_service_task"
-    "target": "http://localhost/services/deployment_planner/",
-    "source_timestamp": 1359553599680,
     "service_config": {
         "display_name": "tomcat",
         "planned_number_of_instances": 1,
@@ -42,7 +43,10 @@ request:
         "service_id": "http://localhost/services/tomcat/"
     }
 }
+```
 
 response:
-"http://localhost/service/deployment_planner/_tasks/0"
+```
+HTTP/1.1 201 Created
+Location : "http://localhost/services/deployment_planner/tasks/0"
 ```

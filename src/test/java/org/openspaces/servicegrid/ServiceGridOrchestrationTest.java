@@ -480,7 +480,6 @@ public class ServiceGridOrchestrationTest {
 		task.setSourceTimestamp(timeProvider.currentTimeMillis());
 		Preconditions.checkNotNull(target);
 		Preconditions.checkNotNull(task);
-		task.setTarget(target);
 		management.getTaskWriter().addElement(target, task);
 	}
 
