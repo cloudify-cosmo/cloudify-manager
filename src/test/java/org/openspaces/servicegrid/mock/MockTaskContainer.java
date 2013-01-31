@@ -109,7 +109,8 @@ public class MockTaskContainer {
 		//recover persisted tasks
 		StreamReader<Task> persistentTaskReader = parameterObject.getPersistentTaskReader();
 		for (Task task : ServiceUtils.allTasksIterator(persistentTaskReader, taskConsumerId)) {
-			 ServiceUtils.addTask(taskWriter, taskConsumerId, task);
+			Preconditions.checkState(task.getTarget().equals(taskConsumerId)); 
+			ServiceUtils.addTask(taskWriter, task);
 		}
 	}
 
@@ -179,12 +180,13 @@ public class MockTaskContainer {
 		return task;
 	}
 
-	private void submitTasks(long nowTimestamp,
-			Iterable<? extends Task> newTasks) {
+	private void submitTasks(
+			final long nowTimestamp,
+			final Iterable<? extends Task> newTasks) {
 		for (final Task newTask : newTasks) {
 			newTask.setSource(taskConsumerId);
 			newTask.setSourceTimestamp(nowTimestamp);
-			ServiceUtils.addTask(taskWriter, newTask.getTarget(), newTask);
+			ServiceUtils.addTask(taskWriter, newTask);
 		}
 	}
 
@@ -211,7 +213,7 @@ public class MockTaskContainer {
 					"%s cannot consume task %s", taskConsumer.getClass(), task.getClass());
 			invokeMethod(executorMethod, task);
 			if (taskConsumersToPersist.contains(executorMethod)) {
-				ServiceUtils.addTask(persistentTaskWriter, taskConsumerId, task);
+				ServiceUtils.addTask(persistentTaskWriter, task);
 			}
 		} else {
 			Method executorMethod = impersonatedTaskConsumerMethodByType.get(task.getClass());

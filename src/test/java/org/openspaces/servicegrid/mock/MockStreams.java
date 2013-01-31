@@ -4,7 +4,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
-import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.streams.StreamWriter;
@@ -47,10 +46,6 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		
 		final Collection<String> stream = getStreamById(streamId);
 		final URI elementId = getElementURIByIndex(streamId, stream.size() -1);
-		if (element instanceof Task) {
-			Task task = (Task) element;
-			task.setTarget(streamId);
-		}
 		stream.add(StreamUtils.toJson(mapper, element));
 		
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {

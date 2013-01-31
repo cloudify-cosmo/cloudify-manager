@@ -357,6 +357,7 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
+		Assert.assertNotNull(getDeploymentPlannerState());
 		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 1);
 		Assert.assertEquals(Iterables.size(getAgentIds()), 1);
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds(serviceName)),1);
@@ -478,7 +479,8 @@ public class ServiceGridOrchestrationTest {
 	
 	private void submitTask(final URI target, final Task task) {
 		task.setSourceTimestamp(timeProvider.currentTimeMillis());
-		ServiceUtils.addTask(management.getTaskWriter(), target, task);
+		task.setTarget(target);
+		ServiceUtils.addTask(management.getTaskWriter(), task);
 	}
 
 	private void scaleService(String serviceName, int plannedNumberOfInstances) {

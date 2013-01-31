@@ -1,6 +1,7 @@
 package org.openspaces.servicegrid.service;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import org.openspaces.servicegrid.streams.StreamWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -28,8 +30,8 @@ public class ServiceUtils {
 				 getPendingTasks(stateReader, taskReader, executorId));
 	}
 	
-	public static Iterable<URI> getExecutingTasks(StreamReader<TaskConsumerState> stateReader, URI executorId) {
-		TaskConsumerState taskConsumerState = StreamUtils.getLastElement(stateReader, executorId, TaskConsumerState.class);
+	public static Iterable<URI> getExecutingTasks(StreamReader<TaskConsumerState> stateReader, URI taskConsumerId) {
+		TaskConsumerState taskConsumerState = StreamUtils.getLastElement(stateReader, taskConsumerId, TaskConsumerState.class);
 		if (taskConsumerState == null) {
 			return Lists.newArrayList();
 		}
@@ -47,17 +49,17 @@ public class ServiceUtils {
 		return tasks;
 	}
 	
-	public static URI getNextTaskToConsume(StreamReader<TaskConsumerState> stateReader, StreamReader<Task> taskReader, URI executorId) {
+	public static URI getNextTaskToConsume(StreamReader<TaskConsumerState> stateReader, StreamReader<Task> taskReader, URI taskConsumerId) {
 		URI lastTask = null;
 		
-		final TaskConsumerState state = StreamUtils.getLastElement(stateReader, executorId, TaskConsumerState.class);
+		final TaskConsumerState state = StreamUtils.getLastElement(stateReader, taskConsumerId, TaskConsumerState.class);
 		if (state != null) {
 			lastTask = Iterables.getLast(state.getCompletedTasks(),null);
 		}
 		
 		URI nextTask = null;
 		if (lastTask == null) {
-			nextTask = taskReader.getFirstElementId(executorId);
+			nextTask = taskReader.getFirstElementId(toTasksURI(taskConsumerId));
 		}
 		else {
 			nextTask = taskReader.getNextElementId(lastTask); 
@@ -72,14 +74,14 @@ public class ServiceUtils {
 			final Task newTask) {
 		
 		final ObjectMapper taskMapper = ((MockStreams<?>)taskReader).getMapper();
-		final URI agentId = newTask.getTarget();
+		final URI taskConsumerTasksId = newTask.getTarget();
 		final URI existingTaskId = 
-			Iterables.find(getExecutingAndPendingTasks(stateReader, taskReader, agentId),
+			Iterables.find(getExecutingAndPendingTasks(stateReader, taskReader, taskConsumerTasksId),
 				new Predicate<URI>() {
 					@Override
 					public boolean apply(final URI existingTaskId) {
 						final Task existingTask = taskReader.getElement(existingTaskId, Task.class);
-						Preconditions.checkArgument(agentId.equals(existingTask.getTarget()),"Expected target " + agentId + " actual target " + existingTask.getTarget());
+						Preconditions.checkArgument(taskConsumerTasksId.equals(existingTask.getTarget()),"Expected target " + taskConsumerTasksId + " actual target " + existingTask.getTarget());
 						return tasksEqualsIgnoreTimestampIgnoreSource(taskMapper, existingTask, newTask);
 				}},
 				null
@@ -133,7 +135,7 @@ public class ServiceUtils {
 		final URI lastTaskId = getLastTaskIdOrNull(state);
 		URI taskId;
 		if (lastTaskId == null) {
-			taskId = taskReader.getFirstElementId(taskConsumerId);
+			taskId = taskReader.getFirstElementId(toTasksURI(taskConsumerId));
 		}
 		else {
 			taskId = taskReader.getNextElementId(lastTaskId);
@@ -147,14 +149,20 @@ public class ServiceUtils {
 
 	public static void addTask(
 			final StreamWriter<Task> taskWriter,
-			final URI taskConsumerId, 
 			final Task task) {
 		
 		Preconditions.checkNotNull(taskWriter);
-		Preconditions.checkNotNull(taskConsumerId);
 		Preconditions.checkNotNull(task);
+		Preconditions.checkNotNull(task.getTarget());
+		taskWriter.addElement(toTasksURI(task.getTarget()), task);		
+	}
 
-		taskWriter.addElement(taskConsumerId, task);
+	public static URI toTasksURI(final URI taskConsumerId) {
+		try {
+			return new URI(taskConsumerId.toString() + "tasks/");
+		} catch (URISyntaxException e) {
+			throw Throwables.propagate(e);
+		}
 	}
 	
 	public static Iterable<Task> allTasksIterator(final StreamReader<Task> taskReader, final URI taskConsumerId) {
@@ -165,7 +173,7 @@ public class ServiceUtils {
 			public Iterator<Task> iterator() {
 				return new Iterator<Task>() {
 					
-					URI nextTaskId = taskReader.getFirstElementId(taskConsumerId);
+					URI nextTaskId = taskReader.getFirstElementId(toTasksURI(taskConsumerId));
 
 					@Override
 					public boolean hasNext() {
