@@ -51,6 +51,8 @@ public class ServiceGridOrchestrator {
 
 	private static final long AGENT_UNREACHABLE_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
+	private static final long AGENT_REACHABLE_RENEW_MILLISECONDS = AGENT_UNREACHABLE_MILLISECONDS /2;
+
 	private final ServiceGridOrchestratorState state;
 
 	private final StreamReader<Task> taskReader;
@@ -59,7 +61,7 @@ public class ServiceGridOrchestrator {
 	private final StreamReader<TaskConsumerState> stateReader;
 
 	private CurrentTimeProvider timeProvider;
-	
+
 	public ServiceGridOrchestrator(ServiceGridOrchestratorParameter parameterObject) {
 		this.orchestratorId = parameterObject.getOrchestratorId();
 		this.taskReader = parameterObject.getTaskReader();
@@ -457,9 +459,20 @@ public class ServiceGridOrchestrator {
 	 */
 	private void pingAgents(List<Task> newTasks) {
 		
+		long nowTimestamp = timeProvider.currentTimeMillis();
 		for (final URI agentId : getAllAgentIds()) {
-					
+
 			final AgentState agentState = getAgentState(agentId);
+			
+			AgentPingHealth agentPingHealth = getAgentPingHealth(agentId, nowTimestamp);
+			if (agentPingHealth.equals(AgentPingHealth.AGENT_REACHABLE)) {
+				final long taskTimestamp = agentState.getLastPingSourceTimestamp();
+				final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
+				if ( sincePingMilliseconds < AGENT_REACHABLE_RENEW_MILLISECONDS ) {
+					continue;
+				}
+			}
+			
 			final PingAgentTask pingTask = new PingAgentTask();
 			pingTask.setTarget(agentId);
 			if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED, AgentState.Progress.STOPPING_AGENT)) {
