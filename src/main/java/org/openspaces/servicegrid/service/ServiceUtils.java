@@ -1,6 +1,7 @@
 package org.openspaces.servicegrid.service;
 
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 
 import org.openspaces.servicegrid.Task;
@@ -154,5 +155,38 @@ public class ServiceUtils {
 		Preconditions.checkNotNull(task);
 
 		taskWriter.addElement(taskConsumerId, task);
+	}
+	
+	public static Iterable<Task> allTasksIterator(final StreamReader<Task> taskReader, final URI taskConsumerId) {
+				
+		return new Iterable<Task>() {
+			
+			@Override
+			public Iterator<Task> iterator() {
+				return new Iterator<Task>() {
+					
+					URI nextTaskId = taskReader.getFirstElementId(taskConsumerId);
+
+					@Override
+					public boolean hasNext() {
+						return nextTaskId != null;
+					}
+
+					@Override
+					public Task next() {
+						final Task element = taskReader.getElement(nextTaskId, Task.class);
+						nextTaskId = taskReader.getNextElementId(nextTaskId); 		
+						return element;
+						
+					}
+
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+						
+					}
+				};
+			}
+		};
 	}
 }

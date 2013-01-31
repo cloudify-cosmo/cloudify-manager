@@ -108,13 +108,8 @@ public class MockTaskContainer {
 		
 		//recover persisted tasks
 		StreamReader<Task> persistentTaskReader = parameterObject.getPersistentTaskReader();
-		for (URI recoveredTaskId = persistentTaskReader.getFirstElementId(taskConsumerId);
-			 recoveredTaskId != null;
-			 recoveredTaskId = persistentTaskReader.getNextElementId(recoveredTaskId)) {
-			
-			Task task = persistentTaskReader.getElement(recoveredTaskId, Task.class);
-			Preconditions.checkNotNull(task);
-			ServiceUtils.addTask(taskWriter, taskConsumerId, task);
+		for (Task task : ServiceUtils.allTasksIterator(persistentTaskReader, taskConsumerId)) {
+			 ServiceUtils.addTask(taskWriter, taskConsumerId, task);
 		}
 	}
 
