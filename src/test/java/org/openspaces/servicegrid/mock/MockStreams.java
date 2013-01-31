@@ -127,9 +127,18 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 		Preconditions.checkNotNull(index);
 		
 		@SuppressWarnings("unchecked")
-		G task = (G) getByIndex(streamId, index, clazz);
+		G element = (G) getByIndex(streamId, index, clazz);
 		
-		return task;
+		if (isLoggingEnabled() && logger.isInfoEnabled()) {
+			String request = "GET "+ elementId.getPath() + " HTTP 1.1";
+			try {
+				String response = mapper.writeValueAsString(element);
+				logger.info(request +"\n"+ response);
+			} catch (JsonProcessingException e) {
+				logger.warn(request,e);
+			}
+		}
+		return element;
 	}
 
 	private URI getStreamId(URI elementId) {
