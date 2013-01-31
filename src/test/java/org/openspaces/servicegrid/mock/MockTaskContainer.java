@@ -17,6 +17,7 @@ import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskExecutorStateModifier;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.TaskProducerTask;
+import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamWriter;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
@@ -113,7 +114,7 @@ public class MockTaskContainer {
 			
 			Task task = persistentTaskReader.getElement(recoveredTaskId, Task.class);
 			Preconditions.checkNotNull(task);
-			taskWriter.addElement(taskConsumerId, task);
+			ServiceUtils.addTask(taskWriter, taskConsumerId, task);
 		}
 	}
 
@@ -163,13 +164,13 @@ public class MockTaskContainer {
 			URI taskId;
 			TaskConsumerState state = getTaskConsumerState();
 			try {
-				taskId = getNextTaskId(state);
+				taskId = ServiceUtils.getNextTaskId(state, taskReader, taskConsumerId);
 			}
 			catch (IndexOutOfBoundsException e) {
 				// remote state had failover 
 				state.getCompletedTasks().clear();
 				Preconditions.checkState(state.getExecutingTasks().isEmpty());
-				taskId = getNextTaskId(state);
+				taskId = ServiceUtils.getNextTaskId(state, taskReader, taskConsumerId);
 			}
 			
 			if (taskId != null) {
@@ -183,30 +184,12 @@ public class MockTaskContainer {
 		return task;
 	}
 
-	private URI getNextTaskId(final TaskConsumerState state) {
-		Preconditions.checkNotNull(state);
-		final URI lastTaskId = getLastTaskIdOrNull(state);
-		URI taskId;
-		if (lastTaskId == null) {
-			taskId = taskReader.getFirstElementId(taskConsumerId);
-		}
-		else {
-			taskId = taskReader.getNextElementId(lastTaskId);
-		}
-		return taskId;
-	}
-
-	private URI getLastTaskIdOrNull(final TaskConsumerState state) {
-		return Iterables.getLast(Iterables.concat(state.getCompletedTasks(),state.getExecutingTasks()), null);
-	}
-
 	private void submitTasks(long nowTimestamp,
 			Iterable<? extends Task> newTasks) {
 		for (final Task newTask : newTasks) {
 			newTask.setSource(taskConsumerId);
 			newTask.setSourceTimestamp(nowTimestamp);
-			Preconditions.checkNotNull(newTask.getTarget());
-			taskWriter.addElement(newTask.getTarget(), newTask);
+			ServiceUtils.addTask(taskWriter, newTask.getTarget(), newTask);
 		}
 	}
 
@@ -233,7 +216,7 @@ public class MockTaskContainer {
 					"%s cannot consume task %s", taskConsumer.getClass(), task.getClass());
 			invokeMethod(executorMethod, task);
 			if (taskConsumersToPersist.contains(executorMethod)) {
-				persistentTaskWriter.addElement(taskConsumerId, task);
+				ServiceUtils.addTask(persistentTaskWriter, taskConsumerId, task);
 			}
 		} else {
 			Method executorMethod = impersonatedTaskConsumerMethodByType.get(task.getClass());

@@ -478,9 +478,7 @@ public class ServiceGridOrchestrationTest {
 	
 	private void submitTask(final URI target, final Task task) {
 		task.setSourceTimestamp(timeProvider.currentTimeMillis());
-		Preconditions.checkNotNull(target);
-		Preconditions.checkNotNull(task);
-		management.getTaskWriter().addElement(target, task);
+		ServiceUtils.addTask(management.getTaskWriter(), target, task);
 	}
 
 	private void scaleService(String serviceName, int plannedNumberOfInstances) {

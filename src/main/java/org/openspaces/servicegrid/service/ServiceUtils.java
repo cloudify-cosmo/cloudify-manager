@@ -11,6 +11,7 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
+import org.openspaces.servicegrid.streams.StreamWriter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -120,5 +121,38 @@ public class ServiceUtils {
 			final StreamReader<TaskConsumerState> stateReader, 
 			final URI instanceId) {
 		return StreamUtils.getLastElement(stateReader, instanceId, ServiceInstanceState.class);
+	}
+	
+	public static URI getNextTaskId(
+			final TaskConsumerState state, 
+			final StreamReader<Task> taskReader, 
+			final URI taskConsumerId) {
+		
+		Preconditions.checkNotNull(state);
+		final URI lastTaskId = getLastTaskIdOrNull(state);
+		URI taskId;
+		if (lastTaskId == null) {
+			taskId = taskReader.getFirstElementId(taskConsumerId);
+		}
+		else {
+			taskId = taskReader.getNextElementId(lastTaskId);
+		}
+		return taskId;
+	}
+
+	private static URI getLastTaskIdOrNull(final TaskConsumerState state) {
+		return Iterables.getLast(Iterables.concat(state.getCompletedTasks(),state.getExecutingTasks()), null);
+	}
+
+	public static void addTask(
+			final StreamWriter<Task> taskWriter,
+			final URI taskConsumerId, 
+			final Task task) {
+		
+		Preconditions.checkNotNull(taskWriter);
+		Preconditions.checkNotNull(taskConsumerId);
+		Preconditions.checkNotNull(task);
+
+		taskWriter.addElement(taskConsumerId, task);
 	}
 }
