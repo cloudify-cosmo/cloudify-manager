@@ -25,6 +25,7 @@ public class AgentState extends TaskConsumerState {
 	private List<URI> serviceInstanceIds;
 	private int numberOfAgentRestarts;
 	private int numberOfMachineRestarts;
+	private long lastPingSourceTimestamp;
 
 	public String getProgress() {
 		return progress;
@@ -70,5 +71,13 @@ public class AgentState extends TaskConsumerState {
 	public void removeServiceInstanceId(final URI instanceId) {
 		boolean removed = serviceInstanceIds.remove(instanceId);
 		Preconditions.checkArgument(removed, "Cannot remove instance %s",instanceId);
+	}
+
+	public long getLastPingSourceTimestamp() {
+		return lastPingSourceTimestamp;
+	}
+
+	public void setLastPingSourceTimestamp(long lastPingSourceTimestamp) {
+		this.lastPingSourceTimestamp = lastPingSourceTimestamp;
 	}
 }

@@ -115,7 +115,7 @@ public class MockAgent {
 	
 	@TaskConsumer
 	public void ping(PingAgentTask task) {
-		//do nothing
+		state.setLastPingSourceTimestamp(task.getSourceTimestamp());
 	}
 	
 	@TaskConsumer

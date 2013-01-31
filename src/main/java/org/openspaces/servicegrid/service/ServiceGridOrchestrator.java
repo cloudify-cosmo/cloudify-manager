@@ -638,24 +638,11 @@ public class ServiceGridOrchestrator {
 			// look for ping that was consumed just recently --> AGENT_RESPONDING
 			AgentState agentState = getAgentState(agentId);
 			if (agentState != null) {
-				List<URI> completedTasks = agentState.getCompletedTasks();
-				
-				for (URI completedTaskId : completedTasks) {
-					Task task = taskReader.getElement(completedTaskId, Task.class);
-					if (task instanceof PingAgentTask) {
-						PingAgentTask pingAgentTask = (PingAgentTask) task;
-						Integer expectedNumberOfRestartsInAgentState = pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
-						if (expectedNumberOfRestartsInAgentState != null && 
-							expectedNumberOfRestartsInAgentState == agentState.getNumberOfAgentRestarts()) {
-							final long taskTimestamp = task.getSourceTimestamp();
-							final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
-							if ( sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS ) {
-								// ping was consumed just recently
-								health = AgentPingHealth.AGENT_REACHABLE;
-								break;
-							}
-						}
-					}
+				final long taskTimestamp = agentState.getLastPingSourceTimestamp();
+				final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
+				if ( sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS ) {
+					// ping was consumed just recently
+					health = AgentPingHealth.AGENT_REACHABLE;
 				}
 			}
 		}
