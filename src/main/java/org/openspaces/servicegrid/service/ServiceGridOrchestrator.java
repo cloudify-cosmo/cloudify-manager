@@ -41,7 +41,6 @@ import org.openspaces.servicegrid.streams.StreamReader;
 import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -54,7 +53,6 @@ public class ServiceGridOrchestrator {
 
 	private final ServiceGridOrchestratorState state;
 
-	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 	private final StreamReader<Task> taskReader;
 	private final URI machineProvisionerId;
 	private final URI orchestratorId;
@@ -109,8 +107,8 @@ public class ServiceGridOrchestrator {
 
 	@ImpersonatingTaskConsumer
 	public void planAgent(PlanAgentTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
-		AgentState oldState = impersonatedStateModifier.getState();
+			TaskExecutorStateModifier<AgentState> impersonatedStateModifier) {
+		AgentState oldState = impersonatedStateModifier.getState(AgentState.class);
 		int numberOfMachineRestarts = 0;
 		if (oldState != null) {
 			numberOfMachineRestarts = oldState.getNumberOfMachineRestarts() + 1;
@@ -124,9 +122,9 @@ public class ServiceGridOrchestrator {
 
 	@ImpersonatingTaskConsumer
 	public void planService(PlanServiceTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
+			TaskExecutorStateModifier<ServiceState> impersonatedStateModifier) {
 		
-		ServiceState serviceState = impersonatedStateModifier.getState();
+		ServiceState serviceState = impersonatedStateModifier.getState(ServiceState.class);
 		if (serviceState == null) {
 			serviceState = new ServiceState();
 		}
@@ -138,24 +136,24 @@ public class ServiceGridOrchestrator {
 	
 	@ImpersonatingTaskConsumer
 	public void serviceUninstalling(ServiceUninstallingTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.getState();
+			TaskExecutorStateModifier<ServiceState> impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState(ServiceState.class);
 		serviceState.setProgress(ServiceState.Progress.UNINSTALLING_SERVICE);
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
 	@ImpersonatingTaskConsumer
 	public void serviceInstalling(ServiceInstallingTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.getState();
+			TaskExecutorStateModifier<ServiceState> impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState(ServiceState.class);
 		serviceState.setProgress(ServiceState.Progress.INSTALLING_SERVICE);
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
 	@ImpersonatingTaskConsumer
 	public void serviceUninstalled(ServiceUninstalledTask task, 
-			TaskExecutorStateModifier impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.getState();
+			TaskExecutorStateModifier<ServiceState> impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState(ServiceState.class);
 		serviceState.setProgress(ServiceState.Progress.SERVICE_UNINSTALLED);
 		impersonatedStateModifier.updateState(serviceState);
 		
@@ -177,25 +175,25 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void removeServiceInstanceFromService(
 			final RemoveServiceInstanceTask task,
-			final TaskExecutorStateModifier impersonatedStateModifier) {
+			final TaskExecutorStateModifier<ServiceState> impersonatedStateModifier) {
 		
-		final ServiceState serviceState = (ServiceState) impersonatedStateModifier.getState();
+		final ServiceState serviceState = (ServiceState) impersonatedStateModifier.getState(ServiceState.class);
 		serviceState.removeInstance(task.getInstanceId());
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
 	@ImpersonatingTaskConsumer
 	public void serviceInstalled(final ServiceInstalledTask task,
-			final TaskExecutorStateModifier impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.getState();
+			final TaskExecutorStateModifier<ServiceState> impersonatedStateModifier) {
+		ServiceState serviceState = impersonatedStateModifier.getState(ServiceState.class);
 		serviceState.setProgress(ServiceState.Progress.SERVICE_INSTALLED);
 		impersonatedStateModifier.updateState(serviceState);
 	}
 	
 	@ImpersonatingTaskConsumer
 	public void serviceInstanceUnreachable(final ServiceInstanceUnreachableTask task,
-			final TaskExecutorStateModifier impersonatedStateModifier) {
-		ServiceInstanceState serviceState = impersonatedStateModifier.getState();
+			final TaskExecutorStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+		ServiceInstanceState serviceState = impersonatedStateModifier.getState(ServiceInstanceState.class);
 		serviceState.setProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
 		impersonatedStateModifier.updateState(serviceState);
 	}

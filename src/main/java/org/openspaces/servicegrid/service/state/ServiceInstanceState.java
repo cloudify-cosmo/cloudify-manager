@@ -1,13 +1,8 @@
 package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
-import java.util.Map;
 
 import org.openspaces.servicegrid.TaskConsumerState;
-
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.google.common.collect.Maps;
 
 public class ServiceInstanceState extends TaskConsumerState {
 
@@ -26,22 +21,6 @@ public class ServiceInstanceState extends TaskConsumerState {
 	private URI agentId;
 	private URI serviceId;
 	
-    private Map<String, Object> properties = Maps.newLinkedHashMap();
-
-    @JsonAnySetter 
-    public void setProperty(String key, Object value) {
-      properties.put(key, value);
-    }
-
-    @JsonAnyGetter 
-    public Map<String,Object> getProperties() {
-      return properties;
-    }
-    
-    public Object getProperty(String key) {
-    	return properties.get(key);
-    }
-    
 	public String getProgress() {
 		return progress;
 	}

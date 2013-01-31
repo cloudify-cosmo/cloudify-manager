@@ -1,9 +1,9 @@
 package org.openspaces.servicegrid;
 
 
-public interface TaskExecutorStateModifier {
+public interface TaskExecutorStateModifier<T extends TaskConsumerState> {
 
-	void updateState(TaskConsumerState impersonatedState);
+	void updateState(T impersonatedState);
 
-	<T extends TaskConsumerState> T getState();
+	T getState(Class<? extends T> clazz);
 }

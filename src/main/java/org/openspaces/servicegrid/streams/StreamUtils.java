@@ -9,7 +9,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -71,12 +70,6 @@ public class StreamUtils {
 			state = stateReader.getElement(lastAgentStateId, clazz);
 		}
 		return state;
-	}
-
-	public static ObjectMapper newJsonObjectMapper() {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.registerModule(new GuavaModule());
-		return mapper;
 	}
 	
 	/**

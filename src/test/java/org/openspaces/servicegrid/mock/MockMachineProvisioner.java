@@ -25,22 +25,22 @@ public class MockMachineProvisioner {
 	
 	@ImpersonatingTaskConsumer
 	public void startMachine(StartMachineTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
+			TaskExecutorStateModifier<AgentState> impersonatedStateModifier) {
 	
 		//Simulate starting machine
-		final AgentState impersonatedState = impersonatedStateModifier.getState();
+		final AgentState impersonatedState = impersonatedStateModifier.getState(AgentState.class);
 		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.PLANNED));
 		impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
 		impersonatedStateModifier.updateState(impersonatedState);
 		//Immediately machine start 
-		impersonatedStateModifier.getState();
+		impersonatedStateModifier.getState(AgentState.class);
 		impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
 		impersonatedStateModifier.updateState(impersonatedState);
 	}
 
 	@ImpersonatingTaskConsumer
-	public void terminateMachineOfNonResponsiveAgent(TerminateMachineOfNonResponsiveAgentTask task, TaskExecutorStateModifier impersonatedStateModifier) {
-		final AgentState impersonatedState = impersonatedStateModifier.getState();
+	public void terminateMachineOfNonResponsiveAgent(TerminateMachineOfNonResponsiveAgentTask task, TaskExecutorStateModifier<AgentState> impersonatedStateModifier) {
+		final AgentState impersonatedState = impersonatedStateModifier.getState(AgentState.class);
 		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
 		final URI agentId = task.getImpersonatedTarget();
 		taskConsumerRegistrar.unregisterTaskConsumer(agentId);
@@ -49,8 +49,8 @@ public class MockMachineProvisioner {
 	}
 	
 	@ImpersonatingTaskConsumer
-	public void terminateMachine(TerminateMachineTask task, TaskExecutorStateModifier impersonatedStateModifier) {
-		final AgentState agentState = impersonatedStateModifier.getState();
+	public void terminateMachine(TerminateMachineTask task, TaskExecutorStateModifier<AgentState> impersonatedStateModifier) {
+		final AgentState agentState = impersonatedStateModifier.getState(AgentState.class);
 		final String agentProgress = agentState.getProgress();
 		Preconditions.checkState(
 				agentProgress.equals(AgentState.Progress.STOPPING_AGENT) ||
@@ -75,9 +75,9 @@ public class MockMachineProvisioner {
 	
 	@ImpersonatingTaskConsumer
 	public void startAgent(StartAgentTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
+			TaskExecutorStateModifier<AgentState> impersonatedStateModifier) {
 
-		final AgentState agentState = impersonatedStateModifier.getState();
+		final AgentState agentState = impersonatedStateModifier.getState(AgentState.class);
 		Preconditions.checkNotNull(agentState);
 		Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.MACHINE_STARTED));
 		final URI agentId = task.getImpersonatedTarget();

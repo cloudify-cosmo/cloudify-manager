@@ -82,6 +82,7 @@ public class MockTaskContainer {
 				if (taskConsumerAnnotation.persistTask()) {
 					taskConsumersToPersist.add(method);
 				}
+			
 			} else if (impersonatingTaskConsumerAnnotation != null) {
 					Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
 					Preconditions.checkArgument(parameterTypes.length == 2, "Impersonating task executor method must have two parameters");
@@ -95,8 +96,10 @@ public class MockTaskContainer {
 					Preconditions.checkArgument(parameterTypes.length == 0, "%s method must not have any parameters", method);				
 					Preconditions.checkArgument(taskProducerMethod == null, "%s can have at most one @" + TaskProducer.class.getSimpleName()+" method", taskConsumer.getClass());
 					taskProducerMethod = method;
+					
 			} else if (taskConsumerStateHolderAnnotation != null) {
 				taskConsumerStateHolderMethod = method;
+				final TaskConsumerState state = (TaskConsumerState) invokeMethod(taskConsumerStateHolderMethod);
 			}
 		}
 		this.taskProducerMethod = taskProducerMethod;
@@ -237,7 +240,7 @@ public class MockTaskContainer {
 			Preconditions.checkArgument(
 					executorMethod != null, 
 					"%s cannot consume impersonating task %s", taskConsumer.getClass(), task.getClass());
-			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier() {
+			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier<TaskConsumerState>() {
 				
 				@Override
 				public void updateState(final TaskConsumerState impersonatedState) {
@@ -248,17 +251,16 @@ public class MockTaskContainer {
 				}
 
 				@Override
-				public TaskConsumerState getState() {
+				public TaskConsumerState getState(Class<? extends TaskConsumerState> clazz) {
 					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
 					Preconditions.checkNotNull(impersonatedTargetId);
 					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
 					URI lastElementId = stateReader.getLastElementId(impersonatedTargetId);
 					if (lastElementId != null) {
-						return stateReader.getElement(lastElementId, TaskConsumerState.class);
+						return stateReader.getElement(lastElementId, clazz);
 					}
 					return null;
 				}
-
 			};
 			invokeMethod(executorMethod, task, impersonatedStateModifier);
 		}

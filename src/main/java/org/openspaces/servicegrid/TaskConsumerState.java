@@ -1,21 +1,36 @@
 package org.openspaces.servicegrid;
 
 import java.net.URI;
-
 import java.util.List;
+import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
-//TODO: Use @JsonTypeIdResolver 
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@type")
 public class TaskConsumerState {
 
 	//Should serialize to List<URI> which is the taskid URIs
 	private List<URI> executingTasks = Lists.newArrayList();
 	private List<URI> completedTasks = Lists.newArrayList();
-	
+    private Map<String, Object> properties = Maps.newLinkedHashMap();
+
+    @JsonAnySetter 
+    public void setProperty(String key, Object value) {
+      properties.put(key, value);
+    }
+
+    @JsonAnyGetter 
+    public Map<String,Object> getProperties() {
+      return properties;
+    }
+    
+    public Object getProperty(String key) {
+    	return properties.get(key);
+    }
+
 	public void executeTask(URI taskId) {
 		Preconditions.checkNotNull(taskId);
 		getExecutingTasks().add(taskId);
