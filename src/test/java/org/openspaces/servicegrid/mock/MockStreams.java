@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -23,18 +24,20 @@ import com.google.common.collect.Multimap;
     
 public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 
-	final private Multimap<URI,String> streamById;
-	final private ObjectMapper mapper;
-	final Logger logger;
+	private final Multimap<URI,String> streamById;
+	private final ObjectMapper mapper;
+	private final Logger logger;
 	private boolean loggingEnabled;
 	
 	MockStreams() {
 		logger = LoggerFactory.getLogger(this.getClass());
 		streamById = ArrayListMultimap.create();
-		mapper = StreamUtils.newJsonObjectMapper();
+		mapper = new ObjectMapper();
+		mapper.registerModule(new GuavaModule());
 		mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 	}
+	
 	/**
 	 * HTTP POST
 	 */
@@ -200,5 +203,9 @@ public class MockStreams<T> implements StreamWriter<T>, StreamReader<T> {
 
 	public void setLoggingEnabled(boolean loggingEnabled) {
 		this.loggingEnabled = loggingEnabled;
+	}
+
+	public ObjectMapper getMapper() {
+		return mapper;
 	}
 }

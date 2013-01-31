@@ -6,6 +6,7 @@ import java.util.List;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.agent.state.AgentState;
+import org.openspaces.servicegrid.mock.MockStreams;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.streams.StreamReader;
@@ -63,12 +64,12 @@ public class ServiceUtils {
 		return nextTask;
 	}
 
-	public static URI getExistingTaskId(
-			final ObjectMapper mapper, 
+	public static URI getExistingTaskId( 
 			final StreamReader<TaskConsumerState> stateReader, 
 			final StreamReader<Task> taskReader, 
 			final Task newTask) {
 		
+		final ObjectMapper taskMapper = ((MockStreams<?>)taskReader).getMapper();
 		final URI agentId = newTask.getTarget();
 		final URI existingTaskId = 
 			Iterables.find(getExecutingAndPendingTasks(stateReader, taskReader, agentId),
@@ -77,7 +78,7 @@ public class ServiceUtils {
 					public boolean apply(final URI existingTaskId) {
 						final Task existingTask = taskReader.getElement(existingTaskId, Task.class);
 						Preconditions.checkArgument(agentId.equals(existingTask.getTarget()),"Expected target " + agentId + " actual target " + existingTask.getTarget());
-						return tasksEqualsIgnoreTimestampIgnoreSource(mapper, existingTask, newTask);
+						return tasksEqualsIgnoreTimestampIgnoreSource(taskMapper, existingTask, newTask);
 				}},
 				null
 			);

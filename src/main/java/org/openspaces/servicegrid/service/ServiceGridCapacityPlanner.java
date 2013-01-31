@@ -17,15 +17,12 @@ import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
 import org.openspaces.servicegrid.streams.StreamReader;
-import org.openspaces.servicegrid.streams.StreamUtils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 public class ServiceGridCapacityPlanner {
 
-	private final ObjectMapper mapper = StreamUtils.newJsonObjectMapper();
 	private final ServiceGridCapacityPlannerState state;
 	private final StreamReader<Task> taskReader;
 	private final URI deploymentPlannerId;
@@ -173,7 +170,7 @@ public class ServiceGridCapacityPlanner {
 			final List<Task> newTasks,
 			final Task newTask) {
 		
-		if (ServiceUtils.getExistingTaskId(mapper, stateReader, taskReader, newTask) == null) {
+		if (ServiceUtils.getExistingTaskId(stateReader, taskReader, newTask) == null) {
 			addNewTask(newTasks, newTask);
 		}
 	}

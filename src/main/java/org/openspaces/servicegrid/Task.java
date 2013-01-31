@@ -5,8 +5,8 @@ import java.net.URI;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
-@JsonTypeIdResolver(TaskResolver.class)
-@JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="task")
+@JsonTypeIdResolver(TaskTypeIdResolver.class)
+@JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="task", visible=false)
 public class Task {
 
 	private URI target;

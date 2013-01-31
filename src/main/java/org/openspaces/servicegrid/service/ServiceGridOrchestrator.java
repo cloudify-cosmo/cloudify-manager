@@ -679,7 +679,7 @@ public class ServiceGridOrchestrator {
 			final List<Task> newTasks,
 			final Task newTask) {
 		
-		if (ServiceUtils.getExistingTaskId(mapper, stateReader, taskReader, newTask) == null) {
+		if (ServiceUtils.getExistingTaskId(stateReader, taskReader, newTask) == null) {
 			addNewTask(newTasks, newTask);
 		}
 	}	
