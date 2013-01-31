@@ -26,12 +26,12 @@ The SG management contains three components
 
 Install Service
 ---------------
-
+```
 HTTP POST http://localhost/service/deployment_planner/_tasks
 
 request:
 {
-    "task" : "install_service"
+    "task" : "install_service_task"
     "target": "http://localhost/services/deployment_planner/",
     "source_timestamp": 1359553599680,
     "service_config": {
@@ -45,3 +45,4 @@ request:
 
 response:
 "http://localhost/service/deployment_planner/_tasks/0"
+```
