@@ -3,16 +3,16 @@ package org.openspaces.servicegrid.mock;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.TaskReader;
+import org.openspaces.servicegrid.TaskWriter;
 import org.openspaces.servicegrid.service.ServiceGridCapacityPlanner;
 import org.openspaces.servicegrid.service.ServiceGridCapacityPlannerParameter;
 import org.openspaces.servicegrid.service.ServiceGridDeploymentPlanner;
 import org.openspaces.servicegrid.service.ServiceGridDeploymentPlannerParameter;
 import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
-import org.openspaces.servicegrid.streams.StreamReader;
-import org.openspaces.servicegrid.streams.StreamWriter;
+import org.openspaces.servicegrid.state.StateReader;
+import org.openspaces.servicegrid.state.StateWriter;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 import com.google.common.base.Throwables;
@@ -23,11 +23,11 @@ public class MockManagement {
 	private final URI deploymentPlannerId;
 	private final URI capacityPlannerId;
 	private final URI machineProvisionerId;
-	private final MockStreams<TaskConsumerState> state;
-	private final MockStreams<Task> taskBroker;
+	private final MockState state;
+	private final MockTaskBroker taskBroker;
 	private final CurrentTimeProvider timeProvider;
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
-	private final MockStreams<Task> persistentTaskBroker;
+	private final MockTaskBroker persistentTaskBroker;
 	
 	
 	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
@@ -41,10 +41,11 @@ public class MockManagement {
 		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
-		state = new MockStreams<TaskConsumerState>();
-		taskBroker = new MockStreams<Task>();
-		taskBroker.setLoggingEnabled(true);
-		persistentTaskBroker = new MockStreams<Task>();
+		state = new MockState();
+		state.setLoggingEnabled(true);
+		taskBroker = new MockTaskBroker();
+		taskBroker.setLoggingEnabled(false);
+		persistentTaskBroker = new MockTaskBroker();
 	}
 	
 	public URI getDeploymentPlannerId() {
@@ -55,19 +56,19 @@ public class MockManagement {
 		return orchestratorId;
 	}
 
-	public StreamReader<Task> getTaskReader() {
+	public TaskReader getTaskReader() {
 		return taskBroker;
 	}
 
-	public StreamWriter<Task> getTaskWriter() {
+	public TaskWriter getTaskWriter() {
 		return taskBroker;
 	}
 	
-	public StreamReader<TaskConsumerState> getStateReader() {
+	public StateReader getStateReader() {
 		return state;
 	}
 	
-	public StreamWriter<TaskConsumerState> getStateWriter() {
+	public StateWriter getStateWriter() {
 		return state;
 	}
 
@@ -97,7 +98,7 @@ public class MockManagement {
 		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
 		serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
-		serviceOrchestratorParameter.setTaskConsumer(taskBroker);
+		serviceOrchestratorParameter.setTaskReader(taskBroker);
 		serviceOrchestratorParameter.setStateReader(state);
 		serviceOrchestratorParameter.setTimeProvider(timeProvider);
 	
@@ -125,11 +126,11 @@ public class MockManagement {
 		return new MockMachineProvisioner(taskConsumerRegistrar); 
 	}
 
-	public StreamReader<Task> getPersistentTaskReader() {
+	public TaskReader getPersistentTaskReader() {
 		return persistentTaskBroker;
 	}
 
-	public StreamWriter<Task> getPersistentTaskWriter() {
+	public TaskWriter getPersistentTaskWriter() {
 		return persistentTaskBroker;
 	}
 

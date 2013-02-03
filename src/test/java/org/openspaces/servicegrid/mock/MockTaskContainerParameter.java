@@ -2,31 +2,31 @@ package org.openspaces.servicegrid.mock;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskConsumerState;
-import org.openspaces.servicegrid.streams.StreamReader;
-import org.openspaces.servicegrid.streams.StreamWriter;
+import org.openspaces.servicegrid.TaskReader;
+import org.openspaces.servicegrid.TaskWriter;
+import org.openspaces.servicegrid.state.StateReader;
+import org.openspaces.servicegrid.state.StateWriter;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 public class MockTaskContainerParameter {
 	private URI executorId;
-	private StreamReader<TaskConsumerState> stateReader;
-	private StreamWriter<TaskConsumerState> stateWriter;
-	private StreamReader<Task> taskReader;
-	private StreamWriter<Task> taskWriter;
+	private StateReader stateReader;
+	private StateWriter stateWriter;
+	private TaskReader taskReader;
+	private TaskWriter taskWriter;
 	private Object taskConsumer;
 	private CurrentTimeProvider timeProvider;
-	private StreamReader<Task> persistentTaskReader;
-	private StreamWriter<Task> persistentTaskWriter;
+	private TaskReader persistentTaskReader;
+	private TaskWriter persistentTaskWriter;
 
 	public MockTaskContainerParameter() {
 	}
 
-	public StreamReader<TaskConsumerState> getStateReader() {
+	public StateReader getStateReader() {
 		return stateReader;
 	}
 
-	public void setStateReader(StreamReader<TaskConsumerState> stateReader) {
+	public void setStateReader(StateReader stateReader) {
 		this.stateReader = stateReader;
 	}
 
@@ -38,19 +38,19 @@ public class MockTaskContainerParameter {
 		this.executorId = executorId;
 	}
 
-	public StreamWriter<TaskConsumerState> getStateWriter() {
+	public StateWriter getStateWriter() {
 		return stateWriter;
 	}
 
-	public void setStateWriter(StreamWriter<TaskConsumerState> stateWriter) {
+	public void setStateWriter(StateWriter stateWriter) {
 		this.stateWriter = stateWriter;
 	}
 
-	public StreamWriter<Task> getTaskWriter() {
+	public TaskWriter getTaskWriter() {
 		return taskWriter;
 	}
 
-	public void setTaskWriter(StreamWriter<Task> taskWriter) {
+	public void setTaskWriter(TaskWriter taskWriter) {
 		this.taskWriter = taskWriter;
 	}
 
@@ -62,11 +62,11 @@ public class MockTaskContainerParameter {
 		this.taskConsumer = taskConsumer;
 	}
 
-	public StreamReader<Task> getTaskReader() {
+	public TaskReader getTaskReader() {
 		return taskReader;
 	}
 
-	public void setTaskReader(StreamReader<Task> taskReader) {
+	public void setTaskReader(TaskReader taskReader) {
 		this.taskReader = taskReader;
 	}
 
@@ -78,19 +78,19 @@ public class MockTaskContainerParameter {
 		this.timeProvider = timeProvider;
 	}
 
-	public StreamReader<Task> getPersistentTaskReader() {
+	public TaskReader getPersistentTaskReader() {
 		return persistentTaskReader;
 	}
 
-	public void setPersistentTaskReader(StreamReader<Task> persistentTaskReader) {
+	public void setPersistentTaskReader(TaskReader persistentTaskReader) {
 		this.persistentTaskReader = persistentTaskReader;
 	}
 
-	public StreamWriter<Task> getPersistentTaskWriter() {
+	public TaskWriter getPersistentTaskWriter() {
 		return persistentTaskWriter;
 	}
 
-	public void setPersistentTaskWriter(StreamWriter<Task> persistentTaskWriter) {
+	public void setPersistentTaskWriter(TaskWriter persistentTaskWriter) {
 		this.persistentTaskWriter = persistentTaskWriter;
 	}
 }

@@ -6,7 +6,7 @@ import java.util.Map;
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.TaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
-import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.TaskConsumerStateModifier;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
@@ -32,62 +32,62 @@ public class MockAgent {
 
 	@ImpersonatingTaskConsumer
 	public void startServiceInstance(StartServiceInstanceTask task,
-			TaskExecutorStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
-		ServiceInstanceState instanceState = impersonatedStateModifier.getState(ServiceInstanceState.class);
+		ServiceInstanceState instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
 		
 		instanceState.setProgress(ServiceInstanceState.Progress.STARTING_INSTANCE);
-		impersonatedStateModifier.updateState(instanceState);
+		impersonatedStateModifier.put(instanceState);
 		
 		// the code that actually starts the instance goes here
 		
-		instanceState = impersonatedStateModifier.getState(ServiceInstanceState.class);
+		instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_STARTED);
-		impersonatedStateModifier.updateState(instanceState);
-		instancesState.put(task.getImpersonatedTarget(), instanceState);
+		impersonatedStateModifier.put(instanceState);
+		instancesState.put(task.getStateId(), instanceState);
 
 	}
 
 	@ImpersonatingTaskConsumer
 	public void stopServiceInstance(StopServiceInstanceTask task, 
-			TaskExecutorStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
-		final URI instanceId = task.getImpersonatedTarget();
-		final ServiceInstanceState instanceState = impersonatedStateModifier.getState(ServiceInstanceState.class);
+		final URI instanceId = task.getStateId();
+		final ServiceInstanceState instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
 		instanceState.setProgress(ServiceInstanceState.Progress.STOPPING_INSTANCE);
-		impersonatedStateModifier.updateState(instanceState);
+		impersonatedStateModifier.put(instanceState);
 		
 		// the code that actually stops the instance goes here
 		instancesState.remove(instanceId);
 		
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_STOPPED);
-		impersonatedStateModifier.updateState(instanceState);
+		impersonatedStateModifier.put(instanceState);
 		
 		state.removeServiceInstanceId(instanceId);
 	}
 	
 	@ImpersonatingTaskConsumer
 	public void installServiceInstance(InstallServiceInstanceTask task,
-			TaskExecutorStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
-		Preconditions.checkState(!instancesState.containsKey(task.getImpersonatedTarget()));
+		Preconditions.checkState(!instancesState.containsKey(task.getStateId()));
 		
-		ServiceInstanceState instanceState = impersonatedStateModifier.getState(ServiceInstanceState.class);
+		ServiceInstanceState instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTALLING_INSTANCE);
-		impersonatedStateModifier.updateState(instanceState);
-		instanceState = impersonatedStateModifier.getState(ServiceInstanceState.class);
+		impersonatedStateModifier.put(instanceState);
+		instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_INSTALLED);
-		impersonatedStateModifier.updateState(instanceState);
+		impersonatedStateModifier.put(instanceState);
 		
-		instancesState.put(task.getImpersonatedTarget(), instanceState);
+		instancesState.put(task.getStateId(), instanceState);
 	}
 
 	@ImpersonatingTaskConsumer
 	public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
-			TaskExecutorStateModifier impersonatedStateModifier) {
+			TaskConsumerStateModifier impersonatedStateModifier) {
 		
-		URI instanceId = task.getImpersonatedTarget();
-		URI agentId = task.getTarget();
+		URI instanceId = task.getStateId();
+		URI agentId = task.getConsumerId();
 		URI serviceId = task.getServiceId();
 		Preconditions.checkArgument(state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
 		ServiceInstanceState instanceState = instancesState.get(instanceId);
@@ -101,21 +101,21 @@ public class MockAgent {
 			Preconditions.checkState(instanceState.getAgentId().equals(agentId));
 			Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
 		}
-		impersonatedStateModifier.updateState(instanceState);
+		impersonatedStateModifier.put(instanceState);
 	}
 	
 	@ImpersonatingTaskConsumer
-	public void injectPropertyToInstance(SetInstancePropertyTask task, TaskExecutorStateModifier impersonatedStateModifier) {
-		final URI instanceId = task.getImpersonatedTarget();
+	public void injectPropertyToInstance(SetInstancePropertyTask task, TaskConsumerStateModifier impersonatedStateModifier) {
+		final URI instanceId = task.getStateId();
 		Preconditions.checkArgument(instancesState.containsKey(instanceId), "Unknown instance %s", instanceId);
 		ServiceInstanceState instanceState = instancesState.get(instanceId);
 		instanceState.setProperty(task.getPropertyName(), task.getPropertyValue());
-		impersonatedStateModifier.updateState(instanceState);
+		impersonatedStateModifier.put(instanceState);
 	}
 	
 	@TaskConsumer
 	public void ping(PingAgentTask task) {
-		state.setLastPingSourceTimestamp(task.getSourceTimestamp());
+		state.setLastPingSourceTimestamp(task.getProducerTimestamp());
 	}
 	
 	@TaskConsumer

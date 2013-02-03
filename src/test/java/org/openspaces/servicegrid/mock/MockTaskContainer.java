@@ -6,23 +6,26 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
-import junit.framework.Assert;
-
 import org.openspaces.servicegrid.ImpersonatingTask;
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
-import org.openspaces.servicegrid.TaskExecutorStateModifier;
+import org.openspaces.servicegrid.TaskConsumerStateModifier;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.TaskProducerTask;
-import org.openspaces.servicegrid.service.ServiceUtils;
-import org.openspaces.servicegrid.streams.StreamReader;
-import org.openspaces.servicegrid.streams.StreamWriter;
+import org.openspaces.servicegrid.TaskReader;
+import org.openspaces.servicegrid.TaskWriter;
+import org.openspaces.servicegrid.state.Etag;
+import org.openspaces.servicegrid.state.EtagState;
+import org.openspaces.servicegrid.state.StateReader;
+import org.openspaces.servicegrid.state.StateWriter;
+import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 import com.beust.jcommander.internal.Sets;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -30,14 +33,14 @@ import com.google.common.collect.Maps;
 
 public class MockTaskContainer {
 
-	private final StreamWriter<TaskConsumerState> stateWriter;
 	private final Object taskConsumer;
 	private final URI taskConsumerId;
-	private final StreamReader<Task> taskReader;
-	private final StreamWriter<Task> taskWriter;
-	private final StreamWriter<Task> persistentTaskWriter;
-	private final StreamReader<TaskConsumerState> stateReader;
+	private final TaskReader taskReader;
+	private final TaskWriter taskWriter;
+	private final TaskWriter persistentTaskWriter;
 	private final Method taskConsumerStateHolderMethod;
+	private final StateReader stateReader;
+	private final StateWriter stateWriter;
 	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
 	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
 	private final Set<Method> taskConsumersToPersist;
@@ -47,11 +50,17 @@ public class MockTaskContainer {
 	// state objects that mocks process termination 
 	private boolean killed;
 	
+	// last task is used to detect inconsistencies in management machine providing tasks
+	private Task lastTask;
+	private ObjectMapper mapper;
+	private TaskConsumerStateModifier<TaskConsumerState> stateModifier;
+
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
 		this.taskConsumerId = parameterObject.getExecutorId();
-		this.stateReader = parameterObject.getStateReader();
+		this.stateModifier = newStateModifier(parameterObject.getStateReader(), parameterObject.getStateWriter(), taskConsumerId);
 		this.stateWriter = parameterObject.getStateWriter();
+		this.stateReader = parameterObject.getStateReader();
 		this.taskReader = parameterObject.getTaskReader();
 		this.taskWriter = parameterObject.getTaskWriter();
 		this.taskConsumer = parameterObject.getTaskConsumer();
@@ -61,7 +70,7 @@ public class MockTaskContainer {
 		this.impersonatedTaskConsumerMethodByType = Maps.newHashMap();
 		this.taskConsumersToPersist = Sets.newHashSet();
 		this.persistentTaskWriter = parameterObject.getPersistentTaskWriter();
-		
+		this.mapper = StreamUtils.newObjectMapper();
 		//Reflect on @TaskProducer and @TaskConsumer methods
 		Method taskProducerMethod = null;
 		Method taskConsumerStateHolderMethod = null;
@@ -89,7 +98,7 @@ public class MockTaskContainer {
 					Preconditions.checkArgument(parameterTypes.length == 2, "Impersonating task executor method must have two parameters");
 					Preconditions.checkArgument(ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "method first parameter %s is not an impersonating task in %s",parameterTypes[0], taskConsumer.getClass());
 					Class<? extends ImpersonatingTask> taskType = (Class<? extends ImpersonatingTask>) parameterTypes[0];
-					Preconditions.checkArgument(TaskExecutorStateModifier.class.equals(parameterTypes[1]),"method second parameter type must be " + TaskExecutorStateModifier.class);
+					Preconditions.checkArgument(TaskConsumerStateModifier.class.equals(parameterTypes[1]),"method second parameter type must be " + TaskConsumerStateModifier.class);
 					impersonatedTaskConsumerMethodByType.put(taskType, method);
 
 			} else if (taskProducerAnnotation != null) {
@@ -107,20 +116,40 @@ public class MockTaskContainer {
 		this.taskConsumerStateHolderMethod = taskConsumerStateHolderMethod;
 		
 		//recover persisted tasks
-		StreamReader<Task> persistentTaskReader = parameterObject.getPersistentTaskReader();
-		for (Task task : ServiceUtils.allTasksIterator(persistentTaskReader, taskConsumerId)) {
-			Preconditions.checkState(task.getTarget().equals(taskConsumerId)); 
-			ServiceUtils.addTask(taskWriter, task);
+		recoverPersistedTasks(parameterObject.getPersistentTaskReader());
+	}
+
+	private void recoverPersistedTasks(TaskReader persistentTaskReader) {
+		
+		while(true) {
+			final Task task = persistentTaskReader.removeNextTask(taskConsumerId);
+			if (task == null) {
+				break;
+			}
+			Preconditions.checkState(task.getConsumerId().equals(taskConsumerId)); 
+			taskWriter.postNewTask(task);
 		}
 	}
 
-	private void afterExecute(URI taskId, Task task) {
+	private void afterTaskExecute(Task task, TaskConsumerState prevState) {
 
 		final TaskConsumerState state = getTaskConsumerState();
-		state.completeExecutingTask(taskId);
-		stateWriter.addElement(getTaskConsumerId(), state);
+		state.setExecutingTask(null);
+		if (!StreamUtils.elementEquals(mapper, prevState, state)) {
+			state.addTaskHistory(task);
+		}
+		stateModifier.put(state);
 	}
 
+	private void afterImpersonatingTask(ImpersonatingTask task, TaskConsumerState prevState, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
+		final TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
+		state.setExecutingTask(null);
+		if (!StreamUtils.elementEquals(mapper, prevState, state)) {
+			state.addTaskHistory(task);
+		}
+		stateModifier.put(state);
+	}
+	
 	private TaskConsumerState getTaskConsumerState() {
 		Preconditions.checkState(taskConsumerStateHolderMethod != null, taskConsumer.getClass() + " does not have any method annotated with @" + TaskConsumerStateHolder.class.getSimpleName());
 		return (TaskConsumerState) invokeMethod(taskConsumerStateHolderMethod);
@@ -139,14 +168,33 @@ public class MockTaskContainer {
 	}
 
 	private void beforeExecute(Task task) {
-		Preconditions.checkNotNull(task.getTarget());
+		Preconditions.checkNotNull(task.getConsumerId());
 		Preconditions.checkArgument(
-				task.getTarget().equals(getTaskConsumerId()),
-				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getTarget());
+				task.getConsumerId().equals(getTaskConsumerId()),
+				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getConsumerId());
 		
-		final TaskConsumerState state = getTaskConsumerState();
-		Preconditions.checkState(state.getCompletedTasks().size() < 1000, "%s completed task list is bigger than 1000, probably span out of control.", taskConsumer.getClass());
-		stateWriter.addElement(getTaskConsumerId(), state);	
+		TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
+		if (state == null) {
+			state = getTaskConsumerState();
+		}
+		Preconditions.checkState(state.getExecutingTask() == null, "Task Consumer cannot consume more than one task at a time. Currently executing "+ state.getExecutingTask());
+		state.setExecutingTask(task);
+		
+		stateModifier.put(state);	
+	}
+	
+	private void beforeExecute(Task task, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
+		Preconditions.checkNotNull(task.getConsumerId());
+		Preconditions.checkArgument(
+				task.getConsumerId().equals(getTaskConsumerId()),
+				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getConsumerId());
+		
+		final TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
+		if (state != null) {
+			Preconditions.checkState(state.getExecutingTask() == null, "Task Consumer cannot consume more than one task at a time. Currently executing "+ state.getExecutingTask());
+			state.setExecutingTask(task);
+			stateModifier.put(state);
+		}
 	}
 
 	/**
@@ -157,92 +205,156 @@ public class MockTaskContainer {
 		Task task = null;
 		if (!killed) {
 			
-			URI taskId;
-			TaskConsumerState state = getTaskConsumerState();
-			try {
-				taskId = ServiceUtils.getNextTaskId(state, taskReader, taskConsumerId);
-			}
-			catch (IndexOutOfBoundsException e) {
-				// remote state had failover 
-				state.getCompletedTasks().clear();
-				Preconditions.checkState(state.getExecutingTasks().isEmpty());
-				taskId = ServiceUtils.getNextTaskId(state, taskReader, taskConsumerId);
-			}
-			
-			if (taskId != null) {
-				task = taskReader.getElement(taskId, Task.class);
-				state.executeTask(taskId);
-				beforeExecute(task);
+			task = taskReader.removeNextTask(taskConsumerId);
+			if (task != null) {
 				execute(task);
-				afterExecute(taskId, task);
 			}
 		}
 		return task;
 	}
 
+	
 	private void submitTasks(
 			final long nowTimestamp,
 			final Iterable<? extends Task> newTasks) {
 		for (final Task newTask : newTasks) {
 			newTask.setSource(taskConsumerId);
-			newTask.setSourceTimestamp(nowTimestamp);
-			ServiceUtils.addTask(taskWriter, newTask);
+			newTask.setProducerTimestamp(nowTimestamp);
+			taskWriter.postNewTask(newTask);
 		}
 	}
 
 	private void execute(final Task task) {
+		Preconditions.checkNotNull(task);
 		if (task instanceof TaskProducerTask) {
-			Preconditions.checkArgument(
-					taskProducerMethod != null, 
-					"%s cannot consume task %s", taskConsumer.getClass(), task);
-			
-			TaskProducerTask taskProducerTask = (TaskProducerTask) task;
-			long nowTimestamp = timeProvider.currentTimeMillis();
-			for (int i = 0 ; i < taskProducerTask.getMaxNumberOfSteps(); i++) {
-				final Iterable<? extends Task> newTasks = (Iterable<? extends Task>) invokeMethod(taskProducerMethod);
-				if (Iterables.isEmpty(newTasks)) {
-					break;
-				}
-				submitTasks(nowTimestamp, newTasks);
-			}		
+			executeTaskProducerTask(task);
 		}
-		else if (!(task instanceof ImpersonatingTask)) {
-			Method executorMethod = taskConsumerMethodByType.get(task.getClass());
-			Preconditions.checkArgument(
-					executorMethod != null, 
-					"%s cannot consume task %s", taskConsumer.getClass(), task.getClass());
-			invokeMethod(executorMethod, task);
-			if (taskConsumersToPersist.contains(executorMethod)) {
-				ServiceUtils.addTask(persistentTaskWriter, task);
-			}
+		else if (task instanceof ImpersonatingTask) {
+			executeImpersonatingTask((ImpersonatingTask)task);
 		} else {
-			Method executorMethod = impersonatedTaskConsumerMethodByType.get(task.getClass());
-			Preconditions.checkArgument(
-					executorMethod != null, 
-					"%s cannot consume impersonating task %s", taskConsumer.getClass(), task.getClass());
-			final TaskExecutorStateModifier impersonatedStateModifier = new TaskExecutorStateModifier<TaskConsumerState>() {
-				
-				@Override
-				public void updateState(final TaskConsumerState impersonatedState) {
-					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
-					Preconditions.checkNotNull(impersonatedTargetId);
-					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
-					stateWriter.addElement(impersonatedTargetId, impersonatedState);
-				}
+			executeTask(task);
+		}
+	}
 
-				@Override
-				public TaskConsumerState getState(Class<? extends TaskConsumerState> clazz) {
-					URI impersonatedTargetId = ((ImpersonatingTask)task).getImpersonatedTarget();
-					Preconditions.checkNotNull(impersonatedTargetId);
-					Assert.assertEquals(impersonatedTargetId.getHost(), "localhost");
-					URI lastElementId = stateReader.getLastElementId(impersonatedTargetId);
-					if (lastElementId != null) {
-						return stateReader.getElement(lastElementId, clazz);
-					}
+	private void executeTaskProducerTask(final Task task) {
+		final TaskConsumerState prevState = StreamUtils.cloneElement(mapper, getTaskConsumerState());
+		beforeExecute(task);
+		try {
+			produceTasks((TaskProducerTask)task);		
+		}
+		finally {
+			afterTaskExecute(task, prevState);
+		}
+	}
+
+	private void executeTask(final Task task) {
+		final TaskConsumerState prevState = StreamUtils.cloneElement(mapper, getTaskConsumerState());
+		beforeExecute(task);
+		try {
+			consumeTask(task);
+		}
+		finally {
+			afterTaskExecute(task, prevState);
+		}
+	}
+
+	private void executeImpersonatingTask(final ImpersonatingTask task) {
+		final TaskConsumerStateModifier<TaskConsumerState> impersonatingStateModifier = newImpersonatingStateModifier(task);
+		final TaskConsumerState state = impersonatingStateModifier.get(TaskConsumerState.class);
+		final TaskConsumerState prevState = state == null ? null : StreamUtils.cloneElement(mapper, state);
+		beforeExecute(task, impersonatingStateModifier);
+		try {
+			consumeImpersonatingTask(task, impersonatingStateModifier);
+		}
+		finally {
+			afterImpersonatingTask(task, prevState, impersonatingStateModifier);
+		}
+	}
+
+	private void consumeImpersonatingTask(final ImpersonatingTask task, final TaskConsumerStateModifier<?> impersonatedStateModifier) {
+		final Method executorMethod = impersonatedTaskConsumerMethodByType.get(task.getClass());
+		Preconditions.checkArgument(
+				executorMethod != null, 
+				"%s cannot consume impersonating task %s", taskConsumer.getClass(), task.getClass());
+		invokeMethod(executorMethod, task, impersonatedStateModifier);
+	}
+
+	private TaskConsumerStateModifier<TaskConsumerState> newImpersonatingStateModifier(
+			final ImpersonatingTask task) {
+		final TaskConsumerStateModifier<TaskConsumerState> impersonatedStateModifier = new TaskConsumerStateModifier<TaskConsumerState>() {
+			
+			Etag lastEtag = Etag.EMPTY;
+			
+			@Override
+			public void put(final TaskConsumerState impersonatedState) {
+				final URI impersonatedTargetId = task.getStateId();
+				Preconditions.checkNotNull(impersonatedTargetId);
+				lastEtag = stateWriter.put(impersonatedTargetId, impersonatedState, lastEtag);
+			}
+
+			@Override
+			public TaskConsumerState get(final Class<? extends TaskConsumerState> clazz) {
+				final URI impersonatedTargetId = task.getStateId();
+				Preconditions.checkNotNull(impersonatedTargetId);
+				EtagState<TaskConsumerState> etagState = stateReader.get(impersonatedTargetId, clazz);
+				if (etagState == null) {
+					lastEtag = Etag.EMPTY;
 					return null;
 				}
-			};
-			invokeMethod(executorMethod, task, impersonatedStateModifier);
+				lastEtag = etagState.getEtag();
+				return etagState.getState();
+			}
+		};
+		return impersonatedStateModifier;
+	}
+	
+	private static TaskConsumerStateModifier<TaskConsumerState> newStateModifier(final StateReader stateReader,final StateWriter stateWriter, final URI taskConsumerId) {
+		final TaskConsumerStateModifier<TaskConsumerState> stateModifier = new TaskConsumerStateModifier<TaskConsumerState>() {
+			
+			Etag lastEtag = Etag.EMPTY;
+			
+			@Override
+			public void put(final TaskConsumerState state) {
+				lastEtag = stateWriter.put(taskConsumerId, state, lastEtag);
+			}
+
+			@Override
+			public TaskConsumerState get(final Class<? extends TaskConsumerState> clazz) {
+				EtagState<TaskConsumerState> etagState = stateReader.get(taskConsumerId, clazz);
+				if (etagState == null) {
+					lastEtag = Etag.EMPTY;
+					return null;
+				}
+				lastEtag = etagState.getEtag();
+				return etagState.getState();
+			}
+		};
+		return stateModifier;
+	}
+	
+	private void consumeTask(final Task task) {
+		Method executorMethod = taskConsumerMethodByType.get(task.getClass());
+		Preconditions.checkArgument(
+				executorMethod != null, 
+				"%s cannot consume task %s", taskConsumer.getClass(), task.getClass());
+		invokeMethod(executorMethod, task);
+		if (taskConsumersToPersist.contains(executorMethod)) {
+			persistentTaskWriter.postNewTask(task);
+		}
+	}
+
+	private void produceTasks(final TaskProducerTask taskProducerTask) {
+		Preconditions.checkArgument(
+				taskProducerMethod != null, 
+				"%s cannot consume task %s", taskConsumer.getClass(), taskProducerTask);
+		
+		final long nowTimestamp = timeProvider.currentTimeMillis();
+		for (int i = 0 ; i < taskProducerTask.getMaxNumberOfSteps(); i++) {
+			final Iterable<? extends Task> newTasks = (Iterable<? extends Task>) invokeMethod(taskProducerMethod);
+			if (Iterables.isEmpty(newTasks)) {
+				break;
+			}
+			submitTasks(nowTimestamp, newTasks);
 		}
 	}
 	

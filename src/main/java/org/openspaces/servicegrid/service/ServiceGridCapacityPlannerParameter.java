@@ -2,15 +2,14 @@ package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskConsumerState;
-import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.TaskReader;
+import org.openspaces.servicegrid.state.StateReader;
 
 public class ServiceGridCapacityPlannerParameter {
 
 	private URI deploymentPlannerId;
-	private StreamReader<Task> taskReader;
-	private StreamReader<TaskConsumerState> stateReader;
+	private TaskReader taskReader;
+	private StateReader stateReader;
 
 	public void setDeploymentPlannerId(final URI deploymentPlannerId) {
 		this.deploymentPlannerId = deploymentPlannerId;
@@ -20,19 +19,19 @@ public class ServiceGridCapacityPlannerParameter {
 		return deploymentPlannerId;
 	}
 
-	public StreamReader<TaskConsumerState> getStateReader() {
+	public StateReader getStateReader() {
 		return stateReader;
 	}
 
-	public StreamReader<Task> getTaskReader() {
+	public TaskReader getTaskReader() {
 		return taskReader;
 	}
 
-	public void setTaskReader(StreamReader<Task> taskReader) {
+	public void setTaskReader(TaskReader taskReader) {
 		this.taskReader = taskReader;
 	}
 
-	public void setStateReader(StreamReader<TaskConsumerState> stateReader) {
+	public void setStateReader(StateReader stateReader) {
 		this.stateReader = stateReader;
 	}
 }

@@ -3,23 +3,19 @@ package org.openspaces.servicegrid;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DecimalFormat;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.mock.MockAgent;
 import org.openspaces.servicegrid.mock.MockManagement;
-import org.openspaces.servicegrid.mock.MockStreams;
+import org.openspaces.servicegrid.mock.MockState;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
 import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
-import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
@@ -31,11 +27,9 @@ import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
 import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
-import org.openspaces.servicegrid.streams.StreamReader;
-import org.openspaces.servicegrid.streams.StreamUtils;
+import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.testng.log.TextFormatter;
@@ -44,10 +38,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 public class ServiceGridOrchestrationTest {
@@ -93,11 +84,6 @@ public class ServiceGridOrchestrationTest {
 		management = new MockManagement(taskConsumerRegistrar, timeProvider);
 		management.registerTaskConsumers();
 		logger.info("Starting " + method.getName());
-	}
-	
-	@AfterMethod
-	public void after() {
-		logAllTasks();
 	}
 	
 	/**
@@ -206,7 +192,6 @@ public class ServiceGridOrchestrationTest {
 	public void managementRestartTest() {
 		installService("tomcat", 1);
 		execute();
-		logAllTasks();
 		restartManagement();
 		execute();
 		assertOneTomcatInstance();
@@ -220,7 +205,6 @@ public class ServiceGridOrchestrationTest {
 	public void managementRestartAndOneAgentRestartTest() {
 		installService("tomcat", 2);
 		execute();
-		logAllTasks();
 		restartAgent(getAgentId(1));
 		restartManagement();
 		execute();
@@ -290,7 +274,7 @@ public class ServiceGridOrchestrationTest {
 			Object propertyValue) {
 		
 		SetInstancePropertyTask task = new SetInstancePropertyTask();
-		task.setImpersonatedTarget(instanceId);
+		task.setStateId(instanceId);
 		task.setPropertyName(propertyName);
 		task.setPropertyValue(propertyValue);
 		
@@ -390,7 +374,7 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
-		return StreamUtils.getLastElement(getStateReader(), management.getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class);
+		return getStateReader().get(management.getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
 	}
 
 	private URI getOnlyAgentId() {
@@ -437,7 +421,7 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	private ServiceState getServiceState(final URI serviceId) {
-		ServiceState serviceState = StreamUtils.getLastElement(getStateReader(), serviceId, ServiceState.class);
+		ServiceState serviceState = getStateReader().get(serviceId, ServiceState.class).getState();
 		Assert.assertNotNull(serviceState, "No state for " + serviceId);
 		return serviceState;
 	}
@@ -450,8 +434,8 @@ public class ServiceGridOrchestrationTest {
 		return getLastState(instanceId, ServiceInstanceState.class);
 	}
 	
-	private <T extends TaskConsumerState> T getLastState(URI executorId, Class<T> stateClass) {
-		T lastState = StreamUtils.getLastElement(getStateReader(), executorId, stateClass);
+	private <T extends TaskConsumerState> T getLastState(URI taskConsumerId, Class<T> stateClass) {
+		T lastState = getStateReader().get(taskConsumerId, stateClass).getState();
 		Assert.assertNotNull(lastState);
 		return lastState;
 	}
@@ -478,9 +462,9 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private void submitTask(final URI target, final Task task) {
-		task.setSourceTimestamp(timeProvider.currentTimeMillis());
-		task.setTarget(target);
-		ServiceUtils.addTask(management.getTaskWriter(), task);
+		task.setProducerTimestamp(timeProvider.currentTimeMillis());
+		task.setConsumerId(target);
+		management.getTaskWriter().postNewTask(task);
 	}
 
 	private void scaleService(String serviceName, int plannedNumberOfInstances) {
@@ -488,7 +472,7 @@ public class ServiceGridOrchestrationTest {
 		URI serviceId = getServiceId(serviceName);
 		scaleServiceTask.setServiceId(serviceId);
 		scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
-		scaleServiceTask.setSourceTimestamp(timeProvider.currentTimeMillis());
+		scaleServiceTask.setProducerTimestamp(timeProvider.currentTimeMillis());
 		submitTask(management.getDeploymentPlannerId(), scaleServiceTask);
 	}
 
@@ -569,14 +553,10 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	private Iterable<URI> getStateIdsStartingWith(URI uri) {
-		final Iterable<URI> instanceIds = ((MockStreams<TaskConsumerState>)getStateReader()).getElementIdsStartingWith(uri);
+		final Iterable<URI> instanceIds = ((MockState)getStateReader()).getElementIdsStartingWith(uri);
 		return instanceIds;
 	}
 	
-	private Iterable<URI> getTaskIdsStartingWith(URI uri) {
-		final Iterable<URI> instanceIds = ((MockStreams<Task>)management.getTaskReader()).getElementIdsStartingWith(uri);
-		return instanceIds;
-	}
 
 	private Iterable<URI> getAgentIds() {
 		return getStateIdsStartingWith(newURI("http://localhost/agent/"));
@@ -635,37 +615,6 @@ public class ServiceGridOrchestrationTest {
 		return container;
 	}
 
-	private Iterable<Task> getSortedTasks() {
-	
-		List<Task> tasks = Lists.newArrayList(); 
-		final Iterable<URI> taskConsumerIds = getTaskIdsStartingWith(newURI("http://localhost/"));
-		StreamReader<Task> taskReader = management.getTaskReader();
-		for (final URI taskConsumerId : taskConsumerIds) {
-			Set<URI> ignore = ImmutableSet.copyOf(ServiceUtils.getExecutingAndPendingTasks(management.getStateReader(), taskReader, taskConsumerId));
-			for (URI taskId = taskReader.getFirstElementId(taskConsumerId); taskId != null ; taskId = taskReader.getNextElementId(taskId)) {
-				if (!ignore.contains(taskId)) {
-					final Task task = taskReader.getElement(taskId, Task.class);
-					tasks.add(task);
-				}
-			}
-		}
-
-		Ordering<Task> ordering = new Ordering<Task>() {
-			@Override
-			public int compare(Task o1, Task o2) {
-				int c;
-				if (o1.getSourceTimestamp() == null) c = 1;
-				else if (o2.getSourceTimestamp() == null) c = -1;
-				else {
-					c = o1.getSourceTimestamp().compareTo(o2.getSourceTimestamp());
-				}
-				return c;
-			}
-		};
-
-		return ordering.sortedCopy(tasks);
-	}
-	
 	private URI newURI(String uri) {
 		try {
 			return new URI(uri);
@@ -689,25 +638,6 @@ public class ServiceGridOrchestrationTest {
 			}}, null);
 	}
 
-	private void logAllTasks() {
-		final Iterable<Task> tasks = getSortedTasks();
-		for (final Task task : tasks) {
-			final DecimalFormat timestampFormatter = new DecimalFormat("###,###");
-			final Long sourceTimestamp = task.getSourceTimestamp();
-			String timestamp = "";
-			if (sourceTimestamp != null) {
-				timestamp = timestampFormatter.format(sourceTimestamp);
-			}
-			if (logger.isLoggable(Level.INFO)) {
-				String impersonatedTarget = "";
-				if (task instanceof ImpersonatingTask) {
-					ImpersonatingTask impersonatingTask = (ImpersonatingTask) task;
-					impersonatedTarget = "impersonated: " + impersonatingTask.getImpersonatedTarget();
-				}
-				logger.info(String.format("%-8s%-32starget: %-50s%-50s",timestamp,task.getClass().getSimpleName(),task.getTarget(), impersonatedTarget));
-			}
-		}
-	}
 	
 	private static void setSimpleLoggerFormatter(final Logger logger) {
 		Logger parentLogger = logger;
@@ -734,7 +664,7 @@ public class ServiceGridOrchestrationTest {
 		return new MockTaskContainer(containerParameter);
 	}
 
-	public StreamReader<TaskConsumerState> getStateReader() {
+	public StateReader getStateReader() {
 		return management.getStateReader();
 	}
 

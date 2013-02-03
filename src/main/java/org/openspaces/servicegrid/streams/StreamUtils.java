@@ -2,13 +2,18 @@ package org.openspaces.servicegrid.streams;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -34,7 +39,7 @@ public class StreamUtils {
 	}
 	
 
-	public static <T> T fromJson(ObjectMapper mapper, String json, Class<T> clazz) {
+	public static <T> T fromJson(ObjectMapper mapper, String json, Class<? extends T> clazz) {
 		try {
 			return (T) mapper.readValue(json, clazz);
 		} catch (JsonParseException e) {
@@ -62,16 +67,6 @@ public class StreamUtils {
 		}
 	}
 	
-	public static <T> T getLastElement(StreamReader<? super T> stateReader, URI id, Class<T> clazz) {
-		Preconditions.checkNotNull(stateReader);
-		T state = null;
-		URI lastAgentStateId = stateReader.getLastElementId(id);
-		if (lastAgentStateId != null) {
-			state = stateReader.getElement(lastAgentStateId, clazz);
-		}
-		return state;
-	}
-	
 	/**
 	 * @return joined list of ids maintaining order, removing duplicates
 	 */
@@ -93,5 +88,33 @@ public class StreamUtils {
 				}
 			});
 		return ImmutableSet.copyOf(diffWithDuplicates);
+	}
+	
+	public static URI newURI(String URI) {
+		try {
+			return new URI(URI);
+		} catch (final URISyntaxException e) {
+			throw Throwables.propagate(e);
+		}
+	}
+	
+	public static URI fixSlash(URI id) {
+		Preconditions.checkNotNull(id);
+		String externalForm = id.toString();
+		if (!externalForm.endsWith("/")) {
+			externalForm += "/";
+		}
+		return StreamUtils.newURI(externalForm);
+	}
+
+	public static ObjectMapper newObjectMapper() {
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.registerModule(new GuavaModule());
+		mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+		
+		//getDeserializationConfig().with(DeserializationFeature.)
+		return mapper;
 	}
 }

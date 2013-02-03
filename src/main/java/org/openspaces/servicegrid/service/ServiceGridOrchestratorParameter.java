@@ -2,32 +2,31 @@ package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.Task;
-import org.openspaces.servicegrid.TaskConsumerState;
-import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.TaskReader;
+import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 public class ServiceGridOrchestratorParameter {
 	
 	private URI orchestratorId;
 	private URI machineProvisionerId;
-	private StreamReader<Task> taskReader;
-	private StreamReader<TaskConsumerState> stateReader;
+	private TaskReader taskReader;
+	private StateReader stateReader;
 	private CurrentTimeProvider timeProvider;
 	
-	public StreamReader<Task> getTaskReader() {
+	public TaskReader getTaskReader() {
 		return taskReader;
 	}
 
-	public void setTaskConsumer(StreamReader<Task> taskReader) {
+	public void setTaskReader(TaskReader taskReader) {
 		this.taskReader = taskReader;
 	}
 
-	public StreamReader<TaskConsumerState> getStateReader() {
+	public StateReader getStateReader() {
 		return stateReader;
 	}
 
-	public void setStateReader(StreamReader<TaskConsumerState> stateReader) {
+	public void setStateReader(StateReader stateReader) {
 		this.stateReader = stateReader;
 	}
 

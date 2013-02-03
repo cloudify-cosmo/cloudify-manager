@@ -2,20 +2,19 @@ package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Iterator;
 import java.util.List;
 
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumerState;
+import org.openspaces.servicegrid.TaskReader;
+import org.openspaces.servicegrid.TaskWriter;
 import org.openspaces.servicegrid.agent.state.AgentState;
-import org.openspaces.servicegrid.mock.MockStreams;
+import org.openspaces.servicegrid.mock.MockTaskBroker;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
-import org.openspaces.servicegrid.streams.StreamReader;
-import org.openspaces.servicegrid.streams.StreamUtils;
-import org.openspaces.servicegrid.streams.StreamWriter;
+import org.openspaces.servicegrid.state.EtagState;
+import org.openspaces.servicegrid.state.StateReader;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -24,137 +23,78 @@ import com.google.common.collect.Lists;
 
 public class ServiceUtils {
 	
-	public static Iterable<URI> getExecutingAndPendingTasks(StreamReader<TaskConsumerState> stateReader, StreamReader<Task> taskReader, URI executorId) {
-		 return Iterables.concat(
-				 getExecutingTasks(stateReader, executorId), 
-				 getPendingTasks(stateReader, taskReader, executorId));
-	}
-	
-	public static Iterable<URI> getExecutingTasks(StreamReader<TaskConsumerState> stateReader, URI taskConsumerId) {
-		TaskConsumerState taskConsumerState = StreamUtils.getLastElement(stateReader, taskConsumerId, TaskConsumerState.class);
-		if (taskConsumerState == null) {
-			return Lists.newArrayList();
-		}
-		return taskConsumerState.getExecutingTasks();
-	}
-	
-	public static Iterable<URI> getPendingTasks(StreamReader<TaskConsumerState> stateReader, StreamReader<Task> taskReader,URI id) {
-
-		List<URI> tasks = Lists.newArrayList();
-		URI pendingTaskId = getNextTaskToConsume(stateReader, taskReader, id);
-		while (pendingTaskId != null) {
-			tasks.add(pendingTaskId);
-			pendingTaskId = taskReader.getNextElementId(pendingTaskId);
-		}
-		return tasks;
-	}
-	
-	public static URI getNextTaskToConsume(StreamReader<TaskConsumerState> stateReader, StreamReader<Task> taskReader, URI taskConsumerId) {
-		URI lastTask = null;
+	public static Iterable<Task> getExecutingAndPendingTasks(
+			final StateReader stateReader, 
+			final TaskReader taskReader, 
+			final URI taskConsumerId) {
 		
-		final TaskConsumerState state = StreamUtils.getLastElement(stateReader, taskConsumerId, TaskConsumerState.class);
-		if (state != null) {
-			lastTask = Iterables.getLast(state.getCompletedTasks(),null);
-		}
-		
-		URI nextTask = null;
-		if (lastTask == null) {
-			nextTask = taskReader.getFirstElementId(toTasksURI(taskConsumerId));
-		}
-		else {
-			nextTask = taskReader.getNextElementId(lastTask); 
-		}
-		
-		return nextTask;
+		return Iterables.concat(
+				getExecutingTasks(stateReader, taskConsumerId), 
+				taskReader.getPendingTasks(taskConsumerId));
 	}
 
-	public static URI getExistingTaskId( 
-			final StreamReader<TaskConsumerState> stateReader, 
-			final StreamReader<Task> taskReader, 
+	private static Iterable<Task> getExecutingTasks(final StateReader stateReader,
+			final URI taskConsumerId) {
+		List<Task> executingTasks = Lists.newArrayList();
+		EtagState<TaskConsumerState> etagState = stateReader.get(taskConsumerId, TaskConsumerState.class);
+		if (etagState != null) {
+			final Task executingTask = etagState.getState().getExecutingTask();
+			if (executingTask != null) {
+				executingTasks.add(executingTask);
+			}
+		}
+		return executingTasks;
+	}
+
+	public static boolean isTaskExecutingOrPending(
+			final StateReader stateReader, 
+			final TaskReader taskReader, 
 			final Task newTask) {
-		
-		final ObjectMapper taskMapper = ((MockStreams<?>)taskReader).getMapper();
-		final URI taskConsumerTasksId = newTask.getTarget();
-		final URI existingTaskId = 
-			Iterables.find(getExecutingAndPendingTasks(stateReader, taskReader, taskConsumerTasksId),
-				new Predicate<URI>() {
+			
+		final MockTaskBroker taskBroker = (MockTaskBroker)taskReader;
+		final URI taskConsumerId = newTask.getConsumerId();
+		return 
+			Iterables.tryFind(getExecutingAndPendingTasks(stateReader, taskReader, taskConsumerId),
+				new Predicate<Task>() {
 					@Override
-					public boolean apply(final URI existingTaskId) {
-						final Task existingTask = taskReader.getElement(existingTaskId, Task.class);
-						Preconditions.checkArgument(taskConsumerTasksId.equals(existingTask.getTarget()),"Expected target " + taskConsumerTasksId + " actual target " + existingTask.getTarget());
-						return tasksEqualsIgnoreTimestampIgnoreSource(taskMapper, existingTask, newTask);
-				}},
-				null
-			);
-		return existingTaskId;
-	}
-	
-	private static boolean tasksEqualsIgnoreTimestampIgnoreSource(
-			final ObjectMapper mapper, 
-			final Task task1, 
-			final Task task2) {
+					public boolean apply(final Task existingTask) {
+						Preconditions.checkNotNull(existingTask);
+						Preconditions.checkArgument(taskConsumerId.equals(existingTask.getConsumerId()),"Expected target " + taskConsumerId + " actual target " + existingTask.getConsumerId());
+						return taskBroker.tasksEqualsIgnoreTimestampIgnoreSource(existingTask, newTask);
+				}}
+			).isPresent();
 		
-		if (!task1.getClass().equals(task2.getClass())) {
-			return false;
-		}
-		final Task task1Clone = StreamUtils.cloneElement(mapper, task1);
-		final Task task2Clone = StreamUtils.cloneElement(mapper, task2);
-		task1Clone.setSourceTimestamp(null);
-		task2Clone.setSourceTimestamp(null);
-		task1Clone.setSource(null);
-		task2Clone.setSource(null);
-		return StreamUtils.elementEquals(mapper, task1Clone, task2Clone);
-	
 	}
 	
 	public static AgentState getAgentState(
-			final StreamReader<TaskConsumerState> stateReader, 
+			final StateReader stateReader, 
 			final URI agentId) {
-		return StreamUtils.getLastElement(stateReader, agentId, AgentState.class);
+		EtagState<AgentState> etagState = stateReader.get(agentId, AgentState.class);
+		return etagState == null ? null : etagState.getState();
 	}
 
 	public static ServiceState getServiceState(
-			final StreamReader<TaskConsumerState> stateReader,
+			final StateReader stateReader,
 			final URI serviceId) {
-		ServiceState serviceState = StreamUtils.getLastElement(stateReader, serviceId, ServiceState.class);
-		return serviceState;
+		EtagState<ServiceState> etagState = stateReader.get(serviceId, ServiceState.class);
+		return etagState == null ? null : etagState.getState();
 	}
 	
 	public static ServiceInstanceState getServiceInstanceState(
-			final StreamReader<TaskConsumerState> stateReader, 
+			final StateReader stateReader, 
 			final URI instanceId) {
-		return StreamUtils.getLastElement(stateReader, instanceId, ServiceInstanceState.class);
+		EtagState<ServiceInstanceState> etagState = stateReader.get(instanceId, ServiceInstanceState.class);
+		return etagState == null ? null : etagState.getState();
 	}
 	
-	public static URI getNextTaskId(
-			final TaskConsumerState state, 
-			final StreamReader<Task> taskReader, 
-			final URI taskConsumerId) {
-		
-		Preconditions.checkNotNull(state);
-		final URI lastTaskId = getLastTaskIdOrNull(state);
-		URI taskId;
-		if (lastTaskId == null) {
-			taskId = taskReader.getFirstElementId(toTasksURI(taskConsumerId));
-		}
-		else {
-			taskId = taskReader.getNextElementId(lastTaskId);
-		}
-		return taskId;
-	}
-
-	private static URI getLastTaskIdOrNull(final TaskConsumerState state) {
-		return Iterables.getLast(Iterables.concat(state.getCompletedTasks(),state.getExecutingTasks()), null);
-	}
-
 	public static void addTask(
-			final StreamWriter<Task> taskWriter,
+			final TaskWriter taskWriter,
 			final Task task) {
 		
 		Preconditions.checkNotNull(taskWriter);
 		Preconditions.checkNotNull(task);
-		Preconditions.checkNotNull(task.getTarget());
-		taskWriter.addElement(toTasksURI(task.getTarget()), task);		
+		Preconditions.checkNotNull(task.getConsumerId());
+		taskWriter.postNewTask(task);		
 	}
 
 	public static URI toTasksURI(final URI taskConsumerId) {
@@ -164,37 +104,32 @@ public class ServiceUtils {
 			throw Throwables.propagate(e);
 		}
 	}
-	
-	public static Iterable<Task> allTasksIterator(final StreamReader<Task> taskReader, final URI taskConsumerId) {
-				
-		return new Iterable<Task>() {
-			
-			@Override
-			public Iterator<Task> iterator() {
-				return new Iterator<Task>() {
-					
-					URI nextTaskId = taskReader.getFirstElementId(toTasksURI(taskConsumerId));
+		
+	public static URI newTasksId(URI tasks, Integer start, Integer end) {
+		Preconditions.checkArgument(start != null || end != null);
+		StringBuilder uri = new StringBuilder();
+		uri.append(tasks.toString());
+		if (start != null) {
+			uri.append(start);
+		}
+		uri.append("..");
+		if (end != null) {
+			uri.append(end);
+		}
+		try {
+			return new URI(uri.toString());
+		} catch (URISyntaxException e) {
+			throw Throwables.propagate(e);
+		}
+	}
 
-					@Override
-					public boolean hasNext() {
-						return nextTaskId != null;
-					}
-
-					@Override
-					public Task next() {
-						final Task element = taskReader.getElement(nextTaskId, Task.class);
-						nextTaskId = taskReader.getNextElementId(nextTaskId); 		
-						return element;
-						
-					}
-
-					@Override
-					public void remove() {
-						throw new UnsupportedOperationException();
-						
-					}
-				};
-			}
-		};
+	public static URI newTaskId(URI postNewTask, int taskIndex) {
+		StringBuilder uri = new StringBuilder();
+		uri.append(postNewTask.toString()).append(taskIndex);
+		try {
+			return new URI(uri.toString());
+		} catch (URISyntaxException e) {
+			throw Throwables.propagate(e);
+		}
 	}
 }

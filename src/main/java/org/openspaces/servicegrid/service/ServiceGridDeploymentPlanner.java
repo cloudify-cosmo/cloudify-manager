@@ -102,7 +102,7 @@ public class ServiceGridDeploymentPlanner {
 			updateDeploymentPlan();
 			
 			UpdateDeploymentPlanTask enforceTask = new UpdateDeploymentPlanTask();
-			enforceTask.setTarget(orchestratorId);
+			enforceTask.setConsumerId(orchestratorId);
 			enforceTask.setDeploymentPlan(state.getDeploymentPlan());
 			addNewTask(newTasks, enforceTask);
 			

@@ -6,9 +6,9 @@ import java.util.Map.Entry;
 
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
-import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskProducer;
+import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridCapacityPlannerState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
@@ -16,7 +16,7 @@ import org.openspaces.servicegrid.service.state.ServiceScalingRule;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
-import org.openspaces.servicegrid.streams.StreamReader;
+import org.openspaces.servicegrid.state.StateReader;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -24,9 +24,9 @@ import com.google.common.collect.Lists;
 public class ServiceGridCapacityPlanner {
 
 	private final ServiceGridCapacityPlannerState state;
-	private final StreamReader<Task> taskReader;
+	private final TaskReader taskReader;
 	private final URI deploymentPlannerId;
-	private final StreamReader<TaskConsumerState> stateReader;
+	private final StateReader stateReader;
 
 	public ServiceGridCapacityPlanner(ServiceGridCapacityPlannerParameter parameterObject) {
 		this.deploymentPlannerId = parameterObject.getDeploymentPlannerId();
@@ -83,7 +83,7 @@ public class ServiceGridCapacityPlanner {
 			final ScaleServiceTask task = new ScaleServiceTask();
 			task.setServiceId(serviceConfig.getServiceId());
 			task.setPlannedNumberOfInstances(plannedNumberOfInstances);
-			task.setTarget(deploymentPlannerId);
+			task.setConsumerId(deploymentPlannerId);
 			addNewTaskIfNotExists(newTasks, task);
 		}
 	}
@@ -170,7 +170,7 @@ public class ServiceGridCapacityPlanner {
 			final List<Task> newTasks,
 			final Task newTask) {
 		
-		if (ServiceUtils.getExistingTaskId(stateReader, taskReader, newTask) == null) {
+		if (!ServiceUtils.isTaskExecutingOrPending(stateReader, taskReader, newTask)) {
 			addNewTask(newTasks, newTask);
 		}
 	}

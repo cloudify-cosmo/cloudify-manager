@@ -1,21 +1,21 @@
 package org.openspaces.servicegrid;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import com.beust.jcommander.internal.Lists;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.Maps;
 
 public class TaskConsumerState {
 
 	//Should serialize to List<URI> which is the taskid URIs
-	private List<URI> executingTasks = Lists.newArrayList();
-	private List<URI> completedTasks = Lists.newArrayList();
-    private Map<String, Object> properties = Maps.newLinkedHashMap();
+	private Task executingTask;
+	private List<Task> tasksHistory = Lists.newArrayList();
+	
+	private Map<String, Object> properties = Maps.newLinkedHashMap();
 
     @JsonAnySetter 
     public void setProperty(String key, Object value) {
@@ -31,30 +31,24 @@ public class TaskConsumerState {
     	return properties.get(key);
     }
 
-	public void executeTask(URI taskId) {
-		Preconditions.checkNotNull(taskId);
-		getExecutingTasks().add(taskId);
-	}
-	
-	public void completeExecutingTask(URI taskId) {
-		boolean remove = getExecutingTasks().remove(taskId);
-		Preconditions.checkState(remove,"task " + taskId + " is not executing");
-		getCompletedTasks().add(taskId);
+	public Task getExecutingTask() {
+		return executingTask;
 	}
 
-	public List<URI> getExecutingTasks() {
-		return executingTasks;
+	public void setExecutingTask(final Task executingTask) {
+		this.executingTask = executingTask;
 	}
 
-	public void setExecutingTasks(List<URI> executingTasks) {
-		this.executingTasks = executingTasks;
+	public List<Task> getTasksHistory() {
+		return tasksHistory;
 	}
 
-	public List<URI> getCompletedTasks() {
-		return completedTasks;
+	public void setTasksHistory(List<Task> tasksHistory) {
+		this.tasksHistory = tasksHistory;
 	}
 
-	public void setCompletedTasks(List<URI> completedTasks) {
-		this.completedTasks = completedTasks;
+	@JsonIgnore
+	public void addTaskHistory(Task task) {
+		tasksHistory.add(task);
 	}
 }

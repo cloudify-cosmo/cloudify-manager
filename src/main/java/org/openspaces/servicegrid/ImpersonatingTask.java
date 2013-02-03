@@ -4,13 +4,13 @@ import java.net.URI;
 
 public class ImpersonatingTask extends Task {
 
-	private URI impersonatedTarget;
+	private URI stateId;
 
-	public URI getImpersonatedTarget() {
-		return impersonatedTarget;
+	public URI getStateId() {
+		return stateId;
 	}
 
-	public void setImpersonatedTarget(URI impersonatedTarget) {
-		this.impersonatedTarget = impersonatedTarget;
+	public void setStateId(URI stateId) {
+		this.stateId = stateId;
 	}
 }

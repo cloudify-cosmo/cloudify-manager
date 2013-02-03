@@ -9,33 +9,33 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 @JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="task", visible=false)
 public class Task {
 
-	private URI target;
+	private URI consumerId;
 
-	private URI source;
+	private URI producerId;
 
-	private Long sourceTimestamp;
+	private Long producerTimestamp;
 
-	public URI getSource() {
-		return source;
+	public URI getProducerId() {
+		return producerId;
 	}
 
-	public void setTarget(URI target) {
-		this.target = target;
+	public void setConsumerId(URI consumerId) {
+		this.consumerId = consumerId;
 	}
 	
-	public URI getTarget() {
-		return target;
+	public URI getConsumerId() {
+		return consumerId;
 	}
 
 	public void setSource(URI source) {
-		this.source = source;
+		this.producerId = source;
 	}
 
-	public Long getSourceTimestamp() {
-		return sourceTimestamp;
+	public Long getProducerTimestamp() {
+		return producerTimestamp;
 	}
 
-	public void setSourceTimestamp(Long sourceTimestamp) {
-		this.sourceTimestamp = sourceTimestamp;
+	public void setProducerTimestamp(Long sourceTimestamp) {
+		this.producerTimestamp = sourceTimestamp;
 	}
 }
