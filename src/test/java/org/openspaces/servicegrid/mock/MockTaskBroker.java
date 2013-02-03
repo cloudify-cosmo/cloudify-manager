@@ -57,7 +57,7 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		final String removed = tasks.remove(0);
 		final T task = (T) StreamUtils.fromJson(mapper, removed, Task.class);
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
-			String request = "DELETE "+ taskConsumerId.getPath() + "/_first HTTP 1.1";
+			String request = "DELETE "+ taskConsumerId.getPath() + "_first HTTP 1.1";
 			String response = "HTTP/1.1 200 OK\n"+removed;
 			logger.info(request +"\n"+ response);
 		}
@@ -88,7 +88,7 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		final URI key = StreamUtils.fixSlash(taskConsumerId);
 		final List<String> jsonTasks = streamById.get(key);
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
-			String request = "GET "+ taskConsumerId.getPath() + "/ HTTP 1.1";
+			String request = "GET "+ taskConsumerId.getPath() + " HTTP 1.1";
 			String response = "HTTP/1.1 200 OK\n"+StreamUtils.toJson(mapper, jsonTasks);
 			logger.info(request +"\n"+ response+"\n");
 		}
