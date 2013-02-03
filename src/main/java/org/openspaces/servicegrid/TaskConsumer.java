@@ -10,5 +10,5 @@ import java.lang.annotation.Target;
 public @interface TaskConsumer {
 
 	boolean persistTask() default false;
-
+	boolean noHistory() default false;
 }

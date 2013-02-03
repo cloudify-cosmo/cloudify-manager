@@ -67,7 +67,6 @@ public class MockState implements StateReader, StateWriter {
 
 	@Override
 	public <T> EtagState<T> get(URI id, Class<? extends T> clazz) {
-	
 		final URI key = StreamUtils.fixSlash(id);
 		final EtagState<String> etagState = stateById.get(key);
 		if (etagState == null) {

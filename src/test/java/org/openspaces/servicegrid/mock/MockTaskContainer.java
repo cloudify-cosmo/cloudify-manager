@@ -43,7 +43,8 @@ public class MockTaskContainer {
 	private final StateWriter stateWriter;
 	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
 	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
-	private final Set<Method> taskConsumersToPersist;
+	private final Set<Class<? extends Task>> tasksToPersist;
+	private final Set<Class<? extends Task>> tasksToAddHistory;
 	private final Method taskProducerMethod;
 	private final CurrentTimeProvider timeProvider;
 
@@ -68,7 +69,8 @@ public class MockTaskContainer {
 		this.timeProvider = parameterObject.getTimeProvider();
 		this.taskConsumerMethodByType = Maps.newHashMap();
 		this.impersonatedTaskConsumerMethodByType = Maps.newHashMap();
-		this.taskConsumersToPersist = Sets.newHashSet();
+		this.tasksToPersist = Sets.newHashSet();
+		this.tasksToAddHistory = Sets.newHashSet();
 		this.persistentTaskWriter = parameterObject.getPersistentTaskWriter();
 		this.mapper = StreamUtils.newObjectMapper();
 		//Reflect on @TaskProducer and @TaskConsumer methods
@@ -90,7 +92,11 @@ public class MockTaskContainer {
 				taskConsumerMethodByType.put(taskType, method);
 				
 				if (taskConsumerAnnotation.persistTask()) {
-					taskConsumersToPersist.add(method);
+					tasksToPersist.add(taskType);
+				}
+				
+				if (!taskConsumerAnnotation.noHistory()) {
+					tasksToAddHistory.add(taskType);
 				}
 			
 			} else if (impersonatingTaskConsumerAnnotation != null) {
@@ -100,6 +106,10 @@ public class MockTaskContainer {
 					Class<? extends ImpersonatingTask> taskType = (Class<? extends ImpersonatingTask>) parameterTypes[0];
 					Preconditions.checkArgument(TaskConsumerStateModifier.class.equals(parameterTypes[1]),"method second parameter type must be " + TaskConsumerStateModifier.class);
 					impersonatedTaskConsumerMethodByType.put(taskType, method);
+					
+					if (!impersonatingTaskConsumerAnnotation.noHistory()) {
+						tasksToAddHistory.add(taskType);
+					}
 
 			} else if (taskProducerAnnotation != null) {
 					Preconditions.checkArgument(Iterable.class.equals(method.getReturnType()), "%s return type must be Iterable<Task>",method);
@@ -131,20 +141,20 @@ public class MockTaskContainer {
 		}
 	}
 
-	private void afterTaskExecute(Task task, TaskConsumerState prevState) {
+	private void afterTaskExecute(Task task) {
 
 		final TaskConsumerState state = getTaskConsumerState();
 		state.setExecutingTask(null);
-		if (prevState != null && !StreamUtils.elementEquals(mapper, prevState, state)) {
+		if (tasksToAddHistory.contains(task.getClass())) {
 			state.addTaskHistory(task);
 		}
 		stateModifier.put(state);
 	}
 
-	private void afterImpersonatingTask(ImpersonatingTask task, TaskConsumerState prevState, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
+	private void afterImpersonatingTask(ImpersonatingTask task, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
 		final TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
 		state.setExecutingTask(null);
-		if (!StreamUtils.elementEquals(mapper, prevState, state)) {
+		if (tasksToAddHistory.contains(task.getClass())) {
 			state.addTaskHistory(task);
 		}
 		stateModifier.put(state);
@@ -242,31 +252,29 @@ public class MockTaskContainer {
 			produceTasks((TaskProducerTask)task);		
 		}
 		finally {
-			afterTaskExecute(task, null);
+			afterTaskExecute(task);
 		}
 	}
 
 	private void executeTask(final Task task) {
-		final TaskConsumerState prevState = StreamUtils.cloneElement(mapper, getTaskConsumerState());
 		beforeExecute(task);
 		try {
 			consumeTask(task);
 		}
 		finally {
-			afterTaskExecute(task, prevState);
+			afterTaskExecute(task);
 		}
 	}
 
 	private void executeImpersonatingTask(final ImpersonatingTask task) {
 		final TaskConsumerStateModifier<TaskConsumerState> impersonatingStateModifier = newImpersonatingStateModifier(task);
 		final TaskConsumerState state = impersonatingStateModifier.get(TaskConsumerState.class);
-		final TaskConsumerState prevState = state == null ? null : StreamUtils.cloneElement(mapper, state);
 		beforeExecute(task, impersonatingStateModifier);
 		try {
 			consumeImpersonatingTask(task, impersonatingStateModifier);
 		}
 		finally {
-			afterImpersonatingTask(task, prevState, impersonatingStateModifier);
+			afterImpersonatingTask(task, impersonatingStateModifier);
 		}
 	}
 
@@ -337,7 +345,7 @@ public class MockTaskContainer {
 				executorMethod != null, 
 				"%s cannot consume task %s", taskConsumer.getClass(), task.getClass());
 		invokeMethod(executorMethod, task);
-		if (taskConsumersToPersist.contains(executorMethod)) {
+		if (tasksToPersist.contains(task.getClass())) {
 			persistentTaskWriter.postNewTask(task);
 		}
 	}

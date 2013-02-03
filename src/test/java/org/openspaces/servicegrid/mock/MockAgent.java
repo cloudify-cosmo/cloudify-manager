@@ -113,7 +113,7 @@ public class MockAgent {
 		impersonatedStateModifier.put(instanceState);
 	}
 	
-	@TaskConsumer
+	@TaskConsumer(noHistory = true)
 	public void ping(PingAgentTask task) {
 		state.setLastPingSourceTimestamp(task.getProducerTimestamp());
 	}
