@@ -10,6 +10,8 @@ import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
+import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
+import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.mock.MockAgent;
 import org.openspaces.servicegrid.mock.MockManagement;
 import org.openspaces.servicegrid.mock.MockState;
@@ -362,6 +364,8 @@ public class ServiceGridOrchestrationTest {
 		final AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
+		Assert.assertEquals(Iterables.size(Iterables.filter(agentState.getTasksHistory(),StartMachineTask.class)),1);
+		Assert.assertEquals(Iterables.size(Iterables.filter(agentState.getTasksHistory(),StartAgentTask.class)),1);
 		Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
 		Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
 		

@@ -5,5 +5,5 @@ public interface TaskConsumerStateModifier<T extends TaskConsumerState> {
 
 	void put(T state);
 
-	T get(Class<? extends T> clazz);
+	T get();
 }

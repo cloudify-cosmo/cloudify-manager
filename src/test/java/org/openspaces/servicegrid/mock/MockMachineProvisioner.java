@@ -28,19 +28,19 @@ public class MockMachineProvisioner {
 			TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
 	
 		//Simulate starting machine
-		final AgentState impersonatedState = impersonatedStateModifier.get(AgentState.class);
+		final AgentState impersonatedState = impersonatedStateModifier.get();
 		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.PLANNED));
 		impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
 		impersonatedStateModifier.put(impersonatedState);
 		//Immediately machine start 
-		impersonatedStateModifier.get(AgentState.class);
+
 		impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
 		impersonatedStateModifier.put(impersonatedState);
 	}
 
 	@ImpersonatingTaskConsumer
 	public void terminateMachineOfNonResponsiveAgent(TerminateMachineOfNonResponsiveAgentTask task, TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
-		final AgentState impersonatedState = impersonatedStateModifier.get(AgentState.class);
+		final AgentState impersonatedState = impersonatedStateModifier.get();
 		Preconditions.checkState(impersonatedState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
 		final URI agentId = task.getStateId();
 		taskConsumerRegistrar.unregisterTaskConsumer(agentId);
@@ -50,7 +50,7 @@ public class MockMachineProvisioner {
 	
 	@ImpersonatingTaskConsumer
 	public void terminateMachine(TerminateMachineTask task, TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
-		final AgentState agentState = impersonatedStateModifier.get(AgentState.class);
+		final AgentState agentState = impersonatedStateModifier.get();
 		final String agentProgress = agentState.getProgress();
 		Preconditions.checkState(
 				agentProgress.equals(AgentState.Progress.STOPPING_AGENT) ||
@@ -77,7 +77,7 @@ public class MockMachineProvisioner {
 	public void startAgent(StartAgentTask task,
 			TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
 
-		final AgentState agentState = impersonatedStateModifier.get(AgentState.class);
+		final AgentState agentState = impersonatedStateModifier.get();
 		Preconditions.checkNotNull(agentState);
 		Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.MACHINE_STARTED));
 		final URI agentId = task.getStateId();

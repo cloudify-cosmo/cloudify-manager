@@ -4,8 +4,13 @@ import java.net.URI;
 import java.util.List;
 
 import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.agent.state.AgentState;
 
 public class PlanAgentTask  extends ImpersonatingTask {
+
+	public PlanAgentTask() {
+		super(AgentState.class);
+	}
 
 	private List<URI> serviceInstanceIds;
 	public List<URI> getServiceInstanceIds() {

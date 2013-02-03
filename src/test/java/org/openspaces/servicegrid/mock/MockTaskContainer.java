@@ -35,6 +35,7 @@ public class MockTaskContainer {
 
 	private final Object taskConsumer;
 	private final URI taskConsumerId;
+	private Class<? extends TaskConsumerState> taskConsumerStateClass;
 	private final TaskReader taskReader;
 	private final TaskWriter taskWriter;
 	private final TaskWriter persistentTaskWriter;
@@ -59,7 +60,6 @@ public class MockTaskContainer {
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
 		this.taskConsumerId = parameterObject.getExecutorId();
-		this.stateModifier = newStateModifier(parameterObject.getStateReader(), parameterObject.getStateWriter(), taskConsumerId);
 		this.stateWriter = parameterObject.getStateWriter();
 		this.stateReader = parameterObject.getStateReader();
 		this.taskReader = parameterObject.getTaskReader();
@@ -120,11 +120,12 @@ public class MockTaskContainer {
 			} else if (taskConsumerStateHolderAnnotation != null) {
 				taskConsumerStateHolderMethod = method;
 				final TaskConsumerState state = (TaskConsumerState) invokeMethod(taskConsumerStateHolderMethod);
+				taskConsumerStateClass = state.getClass();
 			}
 		}
 		this.taskProducerMethod = taskProducerMethod;
 		this.taskConsumerStateHolderMethod = taskConsumerStateHolderMethod;
-		
+		this.stateModifier = newStateModifier();
 		//recover persisted tasks
 		recoverPersistedTasks(parameterObject.getPersistentTaskReader());
 	}
@@ -152,7 +153,7 @@ public class MockTaskContainer {
 	}
 
 	private void afterImpersonatingTask(ImpersonatingTask task, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
-		final TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
+		final TaskConsumerState state = stateModifier.get();
 		state.setExecutingTask(null);
 		if (tasksToAddHistory.contains(task.getClass())) {
 			state.addTaskHistory(task);
@@ -183,7 +184,7 @@ public class MockTaskContainer {
 				task.getConsumerId().equals(getTaskConsumerId()),
 				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getConsumerId());
 		
-		TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
+		TaskConsumerState state = stateModifier.get();
 		if (state == null) {
 			state = getTaskConsumerState();
 		}
@@ -199,7 +200,7 @@ public class MockTaskContainer {
 				task.getConsumerId().equals(getTaskConsumerId()),
 				"Expected task target is %s instead found %s", getTaskConsumerId() , task.getConsumerId());
 		
-		final TaskConsumerState state = stateModifier.get(TaskConsumerState.class);
+		final TaskConsumerState state = stateModifier.get();
 		if (state != null) {
 			Preconditions.checkState(state.getExecutingTask() == null, "Task Consumer cannot consume more than one task at a time. Currently executing "+ state.getExecutingTask());
 			state.setExecutingTask(task);
@@ -268,7 +269,6 @@ public class MockTaskContainer {
 
 	private void executeImpersonatingTask(final ImpersonatingTask task) {
 		final TaskConsumerStateModifier<TaskConsumerState> impersonatingStateModifier = newImpersonatingStateModifier(task);
-		final TaskConsumerState state = impersonatingStateModifier.get(TaskConsumerState.class);
 		beforeExecute(task, impersonatingStateModifier);
 		try {
 			consumeImpersonatingTask(task, impersonatingStateModifier);
@@ -290,50 +290,85 @@ public class MockTaskContainer {
 			final ImpersonatingTask task) {
 		final TaskConsumerStateModifier<TaskConsumerState> impersonatedStateModifier = new TaskConsumerStateModifier<TaskConsumerState>() {
 			
-			Etag lastEtag = Etag.EMPTY;
+			Etag lastEtag = null;
+			TaskConsumerState impersonatedState;
 			
 			@Override
-			public void put(final TaskConsumerState impersonatedState) {
+			public void put(final TaskConsumerState newImpersonatedState) {
 				final URI impersonatedTargetId = task.getStateId();
 				Preconditions.checkNotNull(impersonatedTargetId);
-				lastEtag = stateWriter.put(impersonatedTargetId, impersonatedState, lastEtag);
+				Preconditions.checkNotNull(lastEtag);
+				lastEtag = stateWriter.put(impersonatedTargetId, newImpersonatedState, lastEtag);
+				impersonatedState = newImpersonatedState;
 			}
 
 			@Override
-			public TaskConsumerState get(final Class<? extends TaskConsumerState> clazz) {
-				final URI impersonatedTargetId = task.getStateId();
-				Preconditions.checkNotNull(impersonatedTargetId);
-				EtagState<TaskConsumerState> etagState = stateReader.get(impersonatedTargetId, clazz);
-				if (etagState == null) {
-					lastEtag = Etag.EMPTY;
-					return null;
+			public TaskConsumerState get() {
+				if (lastEtag == null) {
+					//first time get - goto the remote storage
+					final URI impersonatedTargetId = task.getStateId();
+					Preconditions.checkNotNull(impersonatedTargetId);
+					EtagState<TaskConsumerState> etagState = stateReader.get(impersonatedTargetId, task.getImpersonatedStateClass());
+					if (etagState == null) {
+						lastEtag = Etag.EMPTY;
+						impersonatedState = null;
+					}
+					else {
+						lastEtag = etagState.getEtag();
+						impersonatedState = etagState.getState();
+					}
 				}
-				lastEtag = etagState.getEtag();
-				return etagState.getState();
+				else {
+					// do not go to remote storage, since we must make sure that for the lifetime
+					// of this object, there isn't anyone else writing to the remote storage
+					// by handling the lastEtag ourselves - we ensure we are the only ones writing to the storage
+					//this is so we make sure we are the only ones writing to the state right now - no conflicts at all.
+				}
+				return impersonatedState;
 			}
 		};
 		return impersonatedStateModifier;
 	}
 	
-	private static TaskConsumerStateModifier<TaskConsumerState> newStateModifier(final StateReader stateReader,final StateWriter stateWriter, final URI taskConsumerId) {
+	private TaskConsumerStateModifier<TaskConsumerState> newStateModifier() {
 		final TaskConsumerStateModifier<TaskConsumerState> stateModifier = new TaskConsumerStateModifier<TaskConsumerState>() {
 			
-			Etag lastEtag = Etag.EMPTY;
-			
+			Etag lastEtag = null;
+			TaskConsumerState state = null;
+
 			@Override
-			public void put(final TaskConsumerState state) {
-				lastEtag = stateWriter.put(taskConsumerId, state, lastEtag);
+			public void put(final TaskConsumerState newState) {
+				Preconditions.checkNotNull(lastEtag);
+				try {
+					lastEtag = stateWriter.put(taskConsumerId, newState, lastEtag);
+					state = newState;
+				}
+				catch (IllegalArgumentException e) {
+					//wrong etag
+					if (null != stateReader.get(taskConsumerId, taskConsumerStateClass)) {
+						throw e;
+					}
+				
+					//remote server suffered a restart, need to update it with last state
+					lastEtag = stateWriter.put(taskConsumerId, newState, Etag.EMPTY);
+					state = newState;
+				}
 			}
 
 			@Override
-			public TaskConsumerState get(final Class<? extends TaskConsumerState> clazz) {
-				EtagState<TaskConsumerState> etagState = stateReader.get(taskConsumerId, clazz);
-				if (etagState == null) {
-					lastEtag = Etag.EMPTY;
-					return null;
+			public TaskConsumerState get() {
+				if (lastEtag == null) {
+					EtagState<TaskConsumerState> etagState = stateReader.get(taskConsumerId, taskConsumerStateClass);
+					if (etagState == null) {
+						lastEtag = Etag.EMPTY;
+						state = null;
+					}
+					else {
+						lastEtag = etagState.getEtag();
+						state = etagState.getState();
+					}
 				}
-				lastEtag = etagState.getEtag();
-				return etagState.getState();
+				return state;
 			}
 		};
 		return stateModifier;

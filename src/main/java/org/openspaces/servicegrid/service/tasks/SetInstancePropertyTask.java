@@ -1,12 +1,17 @@
 package org.openspaces.servicegrid.service.tasks;
 
 import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
 public class SetInstancePropertyTask extends ImpersonatingTask{
-
+	
 	private String propertyName;
 	private Object propertyValue;
 
+	public SetInstancePropertyTask() {
+		super(ServiceInstanceState.class);
+	}
+	
 	public String getPropertyName() {
 		return propertyName;
 	}

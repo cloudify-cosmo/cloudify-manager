@@ -34,14 +34,14 @@ public class MockAgent {
 	public void startServiceInstance(StartServiceInstanceTask task,
 			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
-		ServiceInstanceState instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
+		ServiceInstanceState instanceState = impersonatedStateModifier.get();
 		
 		instanceState.setProgress(ServiceInstanceState.Progress.STARTING_INSTANCE);
 		impersonatedStateModifier.put(instanceState);
 		
 		// the code that actually starts the instance goes here
 		
-		instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
+		instanceState = impersonatedStateModifier.get();
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_STARTED);
 		impersonatedStateModifier.put(instanceState);
 		instancesState.put(task.getStateId(), instanceState);
@@ -53,7 +53,7 @@ public class MockAgent {
 			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
 		final URI instanceId = task.getStateId();
-		final ServiceInstanceState instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
+		final ServiceInstanceState instanceState = impersonatedStateModifier.get();
 		instanceState.setProgress(ServiceInstanceState.Progress.STOPPING_INSTANCE);
 		impersonatedStateModifier.put(instanceState);
 		
@@ -72,10 +72,10 @@ public class MockAgent {
 		
 		Preconditions.checkState(!instancesState.containsKey(task.getStateId()));
 		
-		ServiceInstanceState instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
+		ServiceInstanceState instanceState = impersonatedStateModifier.get();
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTALLING_INSTANCE);
 		impersonatedStateModifier.put(instanceState);
-		instanceState = impersonatedStateModifier.get(ServiceInstanceState.class);
+		instanceState = impersonatedStateModifier.get();
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_INSTALLED);
 		impersonatedStateModifier.put(instanceState);
 		
@@ -84,7 +84,7 @@ public class MockAgent {
 
 	@ImpersonatingTaskConsumer
 	public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
-			TaskConsumerStateModifier impersonatedStateModifier) {
+			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
 		URI instanceId = task.getStateId();
 		URI agentId = task.getConsumerId();

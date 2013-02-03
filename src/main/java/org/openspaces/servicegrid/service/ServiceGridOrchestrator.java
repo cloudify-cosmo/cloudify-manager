@@ -110,7 +110,7 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void planAgent(PlanAgentTask task,
 			TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
-		AgentState oldState = impersonatedStateModifier.get(AgentState.class);
+		AgentState oldState = impersonatedStateModifier.get();
 		int numberOfMachineRestarts = 0;
 		if (oldState != null) {
 			numberOfMachineRestarts = oldState.getNumberOfMachineRestarts() + 1;
@@ -126,7 +126,7 @@ public class ServiceGridOrchestrator {
 	public void planService(PlanServiceTask task,
 			TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
 		
-		ServiceState serviceState = impersonatedStateModifier.get(ServiceState.class);
+		ServiceState serviceState = impersonatedStateModifier.get();
 		if (serviceState == null) {
 			serviceState = new ServiceState();
 		}
@@ -139,7 +139,7 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void serviceUninstalling(ServiceUninstallingTask task,
 			TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.get(ServiceState.class);
+		ServiceState serviceState = impersonatedStateModifier.get();
 		serviceState.setProgress(ServiceState.Progress.UNINSTALLING_SERVICE);
 		impersonatedStateModifier.put(serviceState);
 	}
@@ -147,7 +147,7 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void serviceInstalling(ServiceInstallingTask task,
 			TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.get(ServiceState.class);
+		ServiceState serviceState = impersonatedStateModifier.get();
 		serviceState.setProgress(ServiceState.Progress.INSTALLING_SERVICE);
 		impersonatedStateModifier.put(serviceState);
 	}
@@ -155,7 +155,7 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void serviceUninstalled(ServiceUninstalledTask task, 
 			TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.get(ServiceState.class);
+		ServiceState serviceState = impersonatedStateModifier.get();
 		serviceState.setProgress(ServiceState.Progress.SERVICE_UNINSTALLED);
 		impersonatedStateModifier.put(serviceState);
 		
@@ -179,7 +179,7 @@ public class ServiceGridOrchestrator {
 			final RemoveServiceInstanceTask task,
 			final TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
 		
-		final ServiceState serviceState = (ServiceState) impersonatedStateModifier.get(ServiceState.class);
+		final ServiceState serviceState = (ServiceState) impersonatedStateModifier.get();
 		serviceState.removeInstance(task.getInstanceId());
 		impersonatedStateModifier.put(serviceState);
 	}
@@ -187,7 +187,7 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void serviceInstalled(final ServiceInstalledTask task,
 			final TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
-		ServiceState serviceState = impersonatedStateModifier.get(ServiceState.class);
+		ServiceState serviceState = impersonatedStateModifier.get();
 		serviceState.setProgress(ServiceState.Progress.SERVICE_INSTALLED);
 		impersonatedStateModifier.put(serviceState);
 	}
@@ -195,7 +195,7 @@ public class ServiceGridOrchestrator {
 	@ImpersonatingTaskConsumer
 	public void serviceInstanceUnreachable(final ServiceInstanceUnreachableTask task,
 			final TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
-		ServiceInstanceState serviceState = impersonatedStateModifier.get(ServiceInstanceState.class);
+		ServiceInstanceState serviceState = impersonatedStateModifier.get();
 		serviceState.setProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
 		impersonatedStateModifier.put(serviceState);
 	}

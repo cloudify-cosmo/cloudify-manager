@@ -5,8 +5,13 @@ import java.util.List;
 
 import org.openspaces.servicegrid.ImpersonatingTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
+import org.openspaces.servicegrid.service.state.ServiceState;
 
 public class PlanServiceTask extends ImpersonatingTask {
+
+	public PlanServiceTask() {
+		super(ServiceState.class);
+	}
 
 	private ServiceConfig serviceConfig;
 	private List<URI> serviceInstanceIds;
