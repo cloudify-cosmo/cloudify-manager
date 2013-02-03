@@ -22,13 +22,13 @@ Flow Diagram:
      (monitoring)                                      (state)                                 |
           |                                               |                                    |
           V                                               V                                    |
-      capacity -(cap.plan)-> deployment -(dep.plan)-> orchestrator -(start service)-> agents --+
-      planner                 planner                        |                          ^
+      CAPACITY -(cap.plan)-> DEPLOYMENT -(dep.plan)-> ORCHESTRATOR -(start service)-> AGENTS --+
+      PLANNER                 PLANNER                        |                          ^
                                                              |                          |
-                                                             |                    (creates agent)
+                                                             |                      (installs)
                                                              |                          |
-                                                             |                       machine
-                                                             +-------------------->  provisioner
+                                                             |                       MACHINE
+                                                             +-------------------->  PROVISIONER
 
 Install Service
 ---------------
