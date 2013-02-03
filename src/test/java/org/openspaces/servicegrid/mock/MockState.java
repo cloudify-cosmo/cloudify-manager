@@ -39,7 +39,7 @@ public class MockState implements StateReader, StateWriter {
 		final Etag oldEtag = oldState == null ? Etag.EMPTY : oldState.getEtag();
 		if (!ifMatchHeader.equals(oldEtag)) {
 			if (isLoggingEnabled() && logger.isInfoEnabled()) {
-				final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader;
+				final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader+"\n"+StreamUtils.toJson(mapper,state);
 				final String response = "HTTP/1.1 412 Precondition Failed";
 				logger.info(request +"\n"+ response+"\n");
 			}
@@ -49,7 +49,7 @@ public class MockState implements StateReader, StateWriter {
 		EtagState<String> etagState = createEtagState(state);
 		stateById.put(key, etagState);
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
-			final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader;
+			final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader+"\n"+etagState.getState();
 			final String response = "HTTP/1.1 200 Ok\nETag: "+etagState.getEtag() ;
 			logger.info(request +"\n"+ response+"\n");
 		}

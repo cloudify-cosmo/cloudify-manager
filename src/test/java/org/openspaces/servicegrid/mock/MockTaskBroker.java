@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.TaskProducerTask;
 import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.TaskWriter;
 import org.openspaces.servicegrid.streams.StreamUtils;
@@ -33,7 +34,7 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		final URI key = StreamUtils.fixSlash(task.getConsumerId());
 		final String json = StreamUtils.toJson(mapper,task);
 		streamById.put(key, json);
-		if (isLoggingEnabled() && logger.isInfoEnabled()) {
+		if (isLoggingEnabled() && logger.isInfoEnabled() && !(task instanceof TaskProducerTask)) {
 			String request = "POST "+ key + " HTTP 1.1\n"+json;
 			String response = "HTTP/1.1 202 Accepted";
 			logger.info(request +"\n"+ response+"\n");

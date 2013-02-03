@@ -44,7 +44,7 @@ public class MockManagement {
 		state = new MockState();
 		state.setLoggingEnabled(true);
 		taskBroker = new MockTaskBroker();
-		taskBroker.setLoggingEnabled(false);
+		taskBroker.setLoggingEnabled(true);
 		persistentTaskBroker = new MockTaskBroker();
 	}
 	
