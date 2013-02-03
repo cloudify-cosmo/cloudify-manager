@@ -100,7 +100,7 @@ response:
     ETag: 7aa2ce4d898c43403ce64ed7ccb20aa6
     {
       "progress" : "INSTANCE_STARTED",
-      "agent_id" : "http://localhost/agent/0/",
+      "agent_id" : "http://localhost/agents/0/",
       "service_id" : "http://localhost/services/tomcat/",
       "tasks_history" : [ {
         "task" : "plan_service_instance_task",
@@ -109,16 +109,16 @@ response:
         "producer_timestamp" : 1359883197005,
         "state_id" : "http://localhost/services/tomcat/instances/0/",
         "service_id" : "http://localhost/services/tomcat/",
-        "agent_id" : "http://localhost/agent/0/"
+        "agent_id" : "http://localhost/agents/0/"
       }, {
         "task" : "install_service_instance_task",
-        "consumer_id" : "http://localhost/agent/0/",
+        "consumer_id" : "http://localhost/agents/0/",
         "producer_id" : "http://localhost/services/orchestrator/",
         "producer_timestamp" : 1359883201007,
         "state_id" : "http://localhost/services/tomcat/instances/0/"
       }, {
         "task" : "start_service_instance_task",
-        "consumer_id" : "http://localhost/agent/0/",
+        "consumer_id" : "http://localhost/agents/0/",
         "producer_id" : "http://localhost/services/orchestrator/",
         "producer_timestamp" : 1359883202007,
         "state_id" : "http://localhost/services/tomcat/instances/0/"
@@ -127,3 +127,38 @@ response:
 
 Get Agent State
 ---------------
+request:
+
+    GET /agents/0/ HTTP 1.1
+
+response:
+
+    HTTP/1.1 200 Ok
+    ETag: f83dd0858ab524e07e7b5e1f770284c9
+    {
+      "progress" : "AGENT_STARTED",
+      "service_instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ],
+      "number_of_agent_restarts" : 0,
+      "number_of_machine_restarts" : 0,
+      "last_ping_source_timestamp" : 1359930594006,
+      "tasks_history" : [ {
+        "task" : "plan_agent_task",
+        "consumer_id" : "http://localhost/services/orchestrator/",
+        "producer_id" : "http://localhost/services/orchestrator/",
+        "producer_timestamp" : 1359930530005,
+        "state_id" : "http://localhost/agents/0/",
+        "service_instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ]
+      }, {
+        "task" : "start_machine_task",
+        "consumer_id" : "http://localhost/services/provisioner/",
+        "producer_id" : "http://localhost/services/orchestrator/",
+        "producer_timestamp" : 1359930531005,
+        "state_id" : "http://localhost/agents/0/"
+      }, {
+        "task" : "start_agent_task",
+        "consumer_id" : "http://localhost/services/provisioner/",
+        "producer_id" : "http://localhost/services/orchestrator/",
+        "producer_timestamp" : 1359930532005,
+        "state_id" : "http://localhost/agents/0/"
+      } ]
+    }

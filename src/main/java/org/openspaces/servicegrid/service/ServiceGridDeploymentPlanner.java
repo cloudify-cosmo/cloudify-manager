@@ -191,7 +191,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	private URI newAgentExecutorId() {
-		return newURI("http://localhost/agent/" + state.getAndIncrementNextAgentIndex()+"/");
+		return newURI("http://localhost/agents/" + state.getAndIncrementNextAgentIndex()+"/");
 	}
 	
 	private URI newURI(String URI) {
