@@ -4,24 +4,31 @@ Service Grid 2.0
 The Service Grid 2.0 project is a clean slate implementation for deployment and monitoring orchestration of services installed on the cloud.
 It is a clean rewrite of Service Grid 1.0 which is the heart of the Cloudify project.
 
-Service Grid Management Overview
+Service Grid Overview
 --------------------------------
-The SG management contains three components
+SG contains the following components:
 
-* Deployment Planner - Maps services to machines, based on the capacity requirements of each service.
-* Orchestrator - Deploys and monitors the services according to deployment plan.
 * Capacity Planner - Monitors the services and changes the capacity requirements of services
-* Agent - Uploads service deployment progress and service monitoring progress
+* Deployment Planner - Maps services to machines, based on the capacity requirements of each service.
+* Orchestrator - Sends command to start machines/agents/services according to deployment plan.
+* Machine Provisioner - Starts new machines and installs the agent on them.
+* Agent - Starts services and uploads service deployment state and service monitoring
+
 
 Flow Diagram:
 
-          +-----------------------------+-------------------+ 
-          |                             |                   |
-     (monitoring)                    (state)                |
-          |                             |                   |
-          V                             V                   |
-      capacity --> deployment --> orchestrator --> agents --+
-      planner      planner
+          +-----------------------------+------------------------------------------------------+ 
+          |                                               |                                    |
+     (monitoring)                                      (state)                                 |
+          |                                               |                                    |
+          V                                               V                                    |
+      capacity -(cap.plan)-> deployment -(dep.plan)-> orchestrator -(start service)-> agents --+
+      planner                 planner                        |                          ^
+                                                             |                          |
+                                                             |                    (creates agent)
+                                                             |                          |
+                                                             |                       machine
+                                                             +-------------------->  provisioner
 
 Install Service
 ---------------
