@@ -135,7 +135,7 @@ public class MockTaskContainer {
 
 		final TaskConsumerState state = getTaskConsumerState();
 		state.setExecutingTask(null);
-		if (!StreamUtils.elementEquals(mapper, prevState, state)) {
+		if (prevState != null && !StreamUtils.elementEquals(mapper, prevState, state)) {
 			state.addTaskHistory(task);
 		}
 		stateModifier.put(state);
@@ -237,13 +237,12 @@ public class MockTaskContainer {
 	}
 
 	private void executeTaskProducerTask(final Task task) {
-		final TaskConsumerState prevState = StreamUtils.cloneElement(mapper, getTaskConsumerState());
 		beforeExecute(task);
 		try {
 			produceTasks((TaskProducerTask)task);		
 		}
 		finally {
-			afterTaskExecute(task, prevState);
+			afterTaskExecute(task, null);
 		}
 	}
 
