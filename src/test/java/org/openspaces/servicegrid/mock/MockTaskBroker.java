@@ -31,12 +31,12 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 	@Override
 	public void postNewTask(Task task) {
 		final URI key = StreamUtils.fixSlash(task.getConsumerId());
-		final String value = StreamUtils.toJson(mapper,task);
-		streamById.put(key, value);
+		final String json = StreamUtils.toJson(mapper,task);
+		streamById.put(key, json);
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
-			String request = "POST "+ key + " HTTP 1.1";
+			String request = "POST "+ key + " HTTP 1.1\n"+json;
 			String response = "HTTP/1.1 202 Accepted";
-			logger.info(request +"\n"+ response);
+			logger.info(request +"\n"+ response+"\n");
 		}
 	}
 
@@ -48,7 +48,7 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 			if (isLoggingEnabled() && logger.isInfoEnabled()) {
 				String request = "DELETE "+ taskConsumerId.getPath() + "_first HTTP 1.1";
 				String response = "HTTP/1.1 404 Not Found";
-				logger.info(request +"\n"+ response);
+				logger.info(request +"\n"+ response+"\n");
 			}
 			return null;
 		}
@@ -89,7 +89,7 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
 			String request = "GET "+ taskConsumerId.getPath() + "/ HTTP 1.1";
 			String response = "HTTP/1.1 200 OK\n"+StreamUtils.toJson(mapper, jsonTasks);
-			logger.info(request +"\n"+ response);
+			logger.info(request +"\n"+ response+"\n");
 		}
 		final Iterable<Task> tasks = Iterables.unmodifiableIterable(Iterables.transform(jsonTasks, new Function<String, Task>(){
 

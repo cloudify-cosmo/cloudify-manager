@@ -41,7 +41,7 @@ public class MockState implements StateReader, StateWriter {
 			if (isLoggingEnabled() && logger.isInfoEnabled()) {
 				final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader;
 				final String response = "HTTP/1.1 412 Precondition Failed";
-				logger.info(request +"\n"+ response);
+				logger.info(request +"\n"+ response+"\n");
 			}
 			throw new IllegalArgumentException (String.format("Etag mismatch. Expected %s. Actual %s",ifMatchHeader, oldEtag));
 		} 
@@ -51,7 +51,7 @@ public class MockState implements StateReader, StateWriter {
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
 			final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader;
 			final String response = "HTTP/1.1 200 Ok\nETag: "+etagState.getEtag() ;
-			logger.info(request +"\n"+ response);
+			logger.info(request +"\n"+ response+"\n");
 		}
 		return etagState.getEtag();
 
@@ -74,7 +74,7 @@ public class MockState implements StateReader, StateWriter {
 			if (isLoggingEnabled() && logger.isInfoEnabled()) {
 				final String request = "GET "+ id.getPath() + " HTTP 1.1";
 				final String response = "HTTP/1.1 404 Not Found";
-				logger.info(request +"\n"+ response);
+				logger.info(request +"\n"+ response+"\n");
 			}
 			return null;
 		}
@@ -85,7 +85,7 @@ public class MockState implements StateReader, StateWriter {
 			final String request = "GET "+ id.getPath() + " HTTP 1.1";
 			try {
 				final String response = "HTTP/1.1 200 Ok\nETag: "+etagState.getEtag()+"\n" + mapper.writeValueAsString(state);
-				logger.info(request +"\n"+ response);
+				logger.info(request +"\n"+ response+"\n");
 			} catch (JsonProcessingException e) {
 				logger.warn(request,e);
 			}
