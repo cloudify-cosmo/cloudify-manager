@@ -7,6 +7,8 @@ import org.openspaces.servicegrid.ImpersonatingTask;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceState;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
 public class PlanServiceTask extends ImpersonatingTask {
 
 	public PlanServiceTask() {
@@ -25,6 +27,7 @@ public class PlanServiceTask extends ImpersonatingTask {
 		this.serviceInstanceIds = serviceInstanceIds;
 	}
 	
+	@JsonUnwrapped
 	public ServiceConfig getServiceConfig() {
 		return serviceConfig;
 	}

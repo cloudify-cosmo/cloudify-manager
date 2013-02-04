@@ -39,13 +39,11 @@ request:
       "task" : "install_service_task",
       "consumer_id" : "http://localhost/services/deployment_planner/",
       "producer_timestamp" : 1359883165467,
-      "service_config" : {
-        "display_name" : "tomcat",
-        "planned_number_of_instances" : 1,
-        "max_number_of_instances" : 2,
-        "min_number_of_instances" : 1,
-        "service_id" : "http://localhost/services/tomcat/"
-      }
+      "display_name" : "tomcat",
+      "planned_number_of_instances" : 1,
+      "max_number_of_instances" : 2,
+      "min_number_of_instances" : 1,
+	  "service_id" : "http://localhost/services/tomcat/"
     }
 
 response:
@@ -64,13 +62,11 @@ response:
     ETag: 050e0272361955766459a7beac9e0e41
     {
     "instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ],
-    "service_config" : {
-      "display_name" : "tomcat",
-      "planned_number_of_instances" : 1,
-      "max_number_of_instances" : 2,
-      "min_number_of_instances" : 1,
-      "service_id" : "http://localhost/services/tomcat/"
-    },
+    "display_name" : "tomcat",
+    "planned_number_of_instances" : 1,
+    "max_number_of_instances" : 2,
+    "min_number_of_instances" : 1,
+    "service_id" : "http://localhost/services/tomcat/",
     "progress" : "SERVICE_INSTALLED",
     "tasks_history" : [ {
       "task" : "plan_service_task",
@@ -78,13 +74,11 @@ response:
       "producer_id" : "http://localhost/services/orchestrator/",
       "producer_timestamp" : 1359883166006,
       "state_id" : "http://localhost/services/tomcat/",
-      "service_config" : {
-        "display_name" : "tomcat",
-        "planned_number_of_instances" : 1,
-        "max_number_of_instances" : 2,
-        "min_number_of_instances" : 1,
-        "service_id" : "http://localhost/services/tomcat/"
-      },
+      "display_name" : "tomcat",
+      "planned_number_of_instances" : 1,
+      "max_number_of_instances" : 2,
+      "min_number_of_instances" : 1,
+      "service_id" : "http://localhost/services/tomcat/",
       "service_instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ]
     }, {
       "task" : "service_installed_task",
