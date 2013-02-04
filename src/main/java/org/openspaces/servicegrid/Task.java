@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 @JsonTypeIdResolver(TaskTypeIdResolver.class)
 @JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="task", visible=false)
-public class Task {
+public abstract class Task {
 	
 	private TaskRouting routing;
 	private final Class<? extends TaskConsumerState> stateClass;

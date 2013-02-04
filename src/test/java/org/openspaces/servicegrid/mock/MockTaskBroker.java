@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
@@ -33,11 +34,14 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 	
 	@Override
 	public boolean postNewTask(final Task task) {
+		Preconditions.checkNotNull(task);
+		Preconditions.checkNotNull(task.getConsumerId());
+		Preconditions.checkNotNull(task.getProducerId());
 		task.setConsumerId(StreamUtils.fixSlash(task.getConsumerId()));
+		task.setProducerId(StreamUtils.fixSlash(task.getProducerId()));
 		if (task.getStateId() != null) {
 			task.setStateId(StreamUtils.fixSlash(task.getStateId()));
 		}
-		task.setProducerId(StreamUtils.fixSlash(task.getProducerId()));
 		
 		
 		if (task.getStateId() == null) {
