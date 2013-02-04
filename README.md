@@ -37,15 +37,16 @@ request:
     POST http://localhost/services/tasks/_new_task HTTP 1.1
     {
       "task" : "install_service_task",
-      "producer_timestamp" : 1359883165467,
-      "producer_id" : "http://localhost/webui/",
-      "consumer_id" : "http://localhost/services/deployment_planner/",
-      "state_id" : "http://localhost/services/deployment_planner/",
       "display_name" : "tomcat",
       "planned_number_of_instances" : 1,
       "max_number_of_instances" : 2,
       "min_number_of_instances" : 1,
-	  "service_id" : "http://localhost/services/tomcat/"
+	  "service_id" : "http://localhost/services/tomcat/",
+      "routing" : {
+            "producer_timestamp" : 1359883165467,
+            "producer_id" : "http://localhost/webui/",
+            "consumer_id" : "http://localhost/services/deployment_planner/",
+      }
     }
 
 response:
@@ -63,33 +64,37 @@ response:
     HTTP/1.1 200 Ok
     ETag: 050e0272361955766459a7beac9e0e41
     {
-    "instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ],
-    "display_name" : "tomcat",
-    "planned_number_of_instances" : 1,
-    "max_number_of_instances" : 2,
-    "min_number_of_instances" : 1,
-    "service_id" : "http://localhost/services/tomcat/",
-    "progress" : "SERVICE_INSTALLED",
-    "tasks_history" : [ {
-      "task" : "plan_service_task",
-      "consumer_id" : "http://localhost/services/orchestrator/",
-      "producer_id" : "http://localhost/services/orchestrator/",
-      "producer_timestamp" : 1359883166006,
-      "state_id" : "http://localhost/services/tomcat/",
       "display_name" : "tomcat",
       "planned_number_of_instances" : 1,
       "max_number_of_instances" : 2,
       "min_number_of_instances" : 1,
       "service_id" : "http://localhost/services/tomcat/",
-      "service_instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ]
-    }, {
-      "task" : "service_installed_task",
-      "consumer_id" : "http://localhost/services/orchestrator/",
-      "producer_id" : "http://localhost/services/orchestrator/",
-      "producer_timestamp" : 1359883203007,
-      "state_id" : "http://localhost/services/tomcat/"
-    } ]
-  }
+      "progress" : "SERVICE_INSTALLED",
+      "instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ],
+      "tasks_history" : [ {
+        "task" : "plan_service_task",
+        "state_id" : "http://localhost/services/tomcat/",
+        "display_name" : "tomcat",
+        "planned_number_of_instances" : 1,
+        "max_number_of_instances" : 2,
+        "min_number_of_instances" : 1,
+        "service_id" : "http://localhost/services/tomcat/",
+        "service_instance_ids" : [ "http://localhost/services/tomcat/instances/0/" ],
+        "routing" : {
+            "producer_timestamp" : 1359883166006,
+            "producer_id" : "http://localhost/services/orchestrator/",
+            "consumer_id" : "http://localhost/services/orchestrator/"
+        }
+      }, {
+        "task" : "service_installed_task",
+        "routing" : {
+            "producer_timestamp" : 1359883203007,
+            "producer_id" : "http://localhost/services/orchestrator/",
+            "consumer_id" : "http://localhost/services/orchestrator/",
+            "state_id" : "http://localhost/services/tomcat/"
+        }
+      } ]
+    }
 
 Get Service Instance State
 --------------------------
@@ -107,24 +112,31 @@ response:
       "service_id" : "http://localhost/services/tomcat/",
       "tasks_history" : [ {
         "task" : "plan_service_instance_task",
-        "consumer_id" : "http://localhost/services/orchestrator/",
-        "producer_id" : "http://localhost/services/orchestrator/",
-        "producer_timestamp" : 1359883197005,
-        "state_id" : "http://localhost/services/tomcat/instances/0/",
         "service_id" : "http://localhost/services/tomcat/",
-        "agent_id" : "http://localhost/agents/0/"
+        "agent_id" : "http://localhost/agents/0/",
+        "routing" : {
+            "producer_timestamp" : 1359883197005,
+            "producer_id" : "http://localhost/services/orchestrator/",
+            "consumer_id" : "http://localhost/services/orchestrator/",
+            "state_id" : "http://localhost/services/tomcat/instances/0/"
+        }
       }, {
         "task" : "install_service_instance_task",
-        "consumer_id" : "http://localhost/agents/0/",
-        "producer_id" : "http://localhost/services/orchestrator/",
-        "producer_timestamp" : 1359883201007,
-        "state_id" : "http://localhost/services/tomcat/instances/0/"
+        "routing" : {
+            "producer_timestamp" : 1359883201007
+            "producer_id" : "http://localhost/services/orchestrator/",
+            "consumer_id" : "http://localhost/agents/0/",
+            "state_id" : "http://localhost/services/tomcat/instances/0/"
+        }
+        
       }, {
         "task" : "start_service_instance_task",
-        "consumer_id" : "http://localhost/agents/0/",
-        "producer_id" : "http://localhost/services/orchestrator/",
-        "producer_timestamp" : 1359883202007,
-        "state_id" : "http://localhost/services/tomcat/instances/0/"
+		"routing" : {
+        	"producer_timestamp" : 1359883202007,
+			"producer_id" : "http://localhost/services/orchestrator/",
+			"consumer_id" : "http://localhost/agents/0/",	
+        	"state_id" : "http://localhost/services/tomcat/instances/0/"
+		}
       } ]
     }
 
