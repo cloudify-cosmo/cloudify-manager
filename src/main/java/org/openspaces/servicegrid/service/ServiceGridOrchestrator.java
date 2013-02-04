@@ -606,6 +606,19 @@ public class ServiceGridOrchestrator {
 		
 		// look for ping that should have been consumed by now --> AGENT_NOT_RESPONDING
 		AgentState agentState = getAgentState(agentId);
+		
+		// look for ping that was consumed just recently --> AGENT_REACHABLE
+		if (agentState != null) {
+			final long taskTimestamp = agentState.getLastPingSourceTimestamp();
+			final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
+			if ( sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS ) {
+				// ping was consumed just recently
+				health = AgentPingHealth.AGENT_REACHABLE;
+			}
+		}
+		
+		if (health == AgentPingHealth.UNDETERMINED) {
+		
 		Iterable<Task> pendingTasks = taskReader.getPendingTasks(agentId);
 		for (final Task task : pendingTasks) {
 			Preconditions.checkState(task.getProducerId().equals(orchestratorId), "All agent tasks are assumed to be from this orchestrator");
@@ -646,16 +659,6 @@ public class ServiceGridOrchestrator {
 			}
 		}
 		
-		if (health == AgentPingHealth.UNDETERMINED) {
-			// look for ping that was consumed just recently --> AGENT_RESPONDING
-			if (agentState != null) {
-				final long taskTimestamp = agentState.getLastPingSourceTimestamp();
-				final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
-				if ( sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS ) {
-					// ping was consumed just recently
-					health = AgentPingHealth.AGENT_REACHABLE;
-				}
-			}
 		}
 		
 		return health;
