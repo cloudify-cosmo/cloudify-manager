@@ -29,6 +29,7 @@ import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
 import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
+import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.Assert;
@@ -439,7 +440,9 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private <T extends TaskConsumerState> T getLastState(URI taskConsumerId, Class<T> stateClass) {
-		T lastState = getStateReader().get(taskConsumerId, stateClass).getState();
+		EtagState<T> etagState = getStateReader().get(taskConsumerId, stateClass);
+		Preconditions.checkNotNull(etagState);
+		T lastState = etagState.getState();
 		Assert.assertNotNull(lastState);
 		return lastState;
 	}
@@ -563,11 +566,11 @@ public class ServiceGridOrchestrationTest {
 	
 
 	private Iterable<URI> getAgentIds() {
-		return getStateIdsStartingWith(newURI("http://localhost/agent/"));
+		return getStateIdsStartingWith(newURI("http://localhost/agents/"));
 	}
 	
 	private URI getAgentId(final int index) {
-		return newURI("http://localhost/agent/"+index+"/");
+		return newURI("http://localhost/agents/"+index+"/");
 	}
 
 	private void killOnlyMachine() {
