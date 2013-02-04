@@ -10,58 +10,60 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 @JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="task", visible=false)
 public class Task {
 	
+	private TaskRouting routing;
 	private final Class<? extends TaskConsumerState> stateClass;
 
-	private URI stateId;
-
-	private URI consumerId;
-
-	private URI producerId;
-
-	private Long producerTimestamp;
-
 	public Task(Class<? extends TaskConsumerState> stateClass) {
+		routing = new TaskRouting();
 		this.stateClass = stateClass;
 	}
-
+	
 	@JsonIgnore
 	public Class<? extends TaskConsumerState> getStateClass() {
 		return stateClass;
 	}
 	
+	@JsonIgnore
 	public URI getStateId() {
-		return stateId;
+		return routing.getStateId();
 	}
 
 	public void setStateId(URI stateId) {
-		this.stateId = stateId;
+		this.routing.setStateId(stateId);
 	}
 
+	@JsonIgnore
 	public URI getProducerId() {
-		return producerId;
+		return routing.getProducerId();
 	}
 
 	public void setConsumerId(URI consumerId) {
-		this.consumerId = consumerId;
+		this.routing.setConsumerId(consumerId);
 	}
 	
+	@JsonIgnore
 	public URI getConsumerId() {
-		return consumerId;
+		return routing.getConsumerId();
 	}
 
-	public void setSource(URI source) {
-		this.setProducerId(source);
-	}
-
+	@JsonIgnore
 	public Long getProducerTimestamp() {
-		return producerTimestamp;
+		return routing.getProducerTimestamp();
 	}
 
 	public void setProducerTimestamp(Long sourceTimestamp) {
-		this.producerTimestamp = sourceTimestamp;
+		this.routing.setProducerTimestamp(sourceTimestamp);
 	}
 
 	public void setProducerId(URI producerId) {
-		this.producerId = producerId;
+		this.routing.setProducerId(producerId);
+	}
+
+	public TaskRouting getRouting() {
+		return routing;
+	}
+
+	public void setRouting(TaskRouting routing) {
+		this.routing = routing;
 	}
 }

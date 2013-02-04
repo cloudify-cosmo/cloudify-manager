@@ -674,14 +674,8 @@ public class ServiceGridOrchestrator {
 	public void addNewTaskIfNotExists(
 			final List<Task> newTasks,
 			final Task newTask) {
-	
-		if (newTask.getStateId() == null) {
-			newTask.setStateId(newTask.getConsumerId());
-		}
-		
-		if (!ServiceUtils.isTaskExecutingOrPending(stateReader, taskReader, newTask)) {
-			addNewTask(newTasks, newTask);
-		}
+			
+		addNewTask(newTasks, newTask);
 	}	
 	
 	private static void addNewTask(List<Task> newTasks, final Task task) {

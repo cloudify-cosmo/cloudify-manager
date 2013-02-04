@@ -3,6 +3,7 @@ package org.openspaces.servicegrid.mock;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,6 +23,7 @@ import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.state.StateWriter;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
+import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -217,14 +219,21 @@ public class MockTaskContainer {
 	}
 
 	
-	private void submitTasks(
+	private Iterable<Task> submitTasks(
 			final long nowTimestamp,
 			final Iterable<? extends Task> newTasks) {
+		
+		List<Task> submitted = Lists.newArrayList();
+		
 		for (final Task newTask : newTasks) {
-			newTask.setSource(taskConsumerId);
+			newTask.setProducerId(taskConsumerId);
 			newTask.setProducerTimestamp(nowTimestamp);
-			taskWriter.postNewTask(newTask);
+			if (taskWriter.postNewTask(newTask)) {
+				submitted.add(newTask);
+			}
 		}
+		
+		return submitted;
 	}
 
 	private void execute(final Task task) {
@@ -389,10 +398,11 @@ public class MockTaskContainer {
 		final long nowTimestamp = timeProvider.currentTimeMillis();
 		for (int i = 0 ; i < taskProducerTask.getMaxNumberOfSteps(); i++) {
 			final Iterable<? extends Task> newTasks = (Iterable<? extends Task>) invokeMethod(taskProducerMethod);
-			if (Iterables.isEmpty(newTasks)) {
+			Iterable<Task> submitted = submitTasks(nowTimestamp, newTasks);
+			if (Iterables.isEmpty(submitted)) {
 				break;
 			}
-			submitTasks(nowTimestamp, newTasks);
+			
 		}
 	}
 	

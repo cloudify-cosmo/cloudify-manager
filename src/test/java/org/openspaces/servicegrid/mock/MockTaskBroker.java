@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 
@@ -30,17 +32,55 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 	}
 	
 	@Override
-	public void postNewTask(final Task task) {
+	public boolean postNewTask(final Task task) {
 		task.setConsumerId(StreamUtils.fixSlash(task.getConsumerId()));
-		task.setStateId(StreamUtils.fixSlash(task.getStateId()));
+		if (task.getStateId() != null) {
+			task.setStateId(StreamUtils.fixSlash(task.getStateId()));
+		}
 		task.setProducerId(StreamUtils.fixSlash(task.getProducerId()));
-		final String json = StreamUtils.toJson(mapper,task);
-		streamById.put(task.getConsumerId(), json);
+		
+		
+		if (task.getStateId() == null) {
+			task.setStateId(task.getConsumerId());
+		}
+		
+		final URI key = task.getConsumerId();
+		
+		boolean foundDuplicate = containsTaskIgnoreProducerTimestamp(key, task);
+		
+		
+		if (!foundDuplicate) {
+			final String value = StreamUtils.toJson(mapper,task);
+			streamById.put(key, value);
+		}
+		
 		if (isLoggingEnabled() && logger.isInfoEnabled() && !(task instanceof TaskProducerTask)) {
-			String request = "POST http://services/tasks/_new_task HTTP 1.1\n"+json;
-			String response = "HTTP/1.1 202 Accepted";
+			String request = "POST http://services/tasks/_new_task HTTP 1.1\n"+StreamUtils.toJson(mapper,task);
+			String response = "HTTP/1.1 " + (foundDuplicate ? "409 Duplicate\nX-Status-Reason: Similar task already in queue": "200 OK")+"\n";
 			logger.info(request +"\n"+ response+"\n");
 		}
+		return !foundDuplicate;
+	
+	}
+
+	private boolean containsTaskIgnoreProducerTimestamp(final URI key,final Task task) {
+		
+		final String taskJson = StreamUtils.toJson(mapper, task);
+		final String taskJsonErased = eraseProducerTimestamp(taskJson);
+		
+		return Iterables.tryFind(streamById.get(key), new Predicate<String>(){
+
+			@Override
+			public boolean apply(String otherTaskJson) {
+				String otherTaskJsonErased = eraseProducerTimestamp(otherTaskJson);
+				return StreamUtils.elementEquals(mapper, taskJsonErased, otherTaskJsonErased);
+			}}).isPresent();
+	}
+
+	private String eraseProducerTimestamp(String taskJson) {
+		Task taskClone = StreamUtils.fromJson(mapper,taskJson, Task.class);
+		taskClone.setProducerTimestamp(null);
+		return StreamUtils.toJson(mapper,taskClone);
 	}
 
 	@Override
@@ -90,8 +130,13 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		final URI key = StreamUtils.fixSlash(taskConsumerId);
 		final List<String> jsonTasks = streamById.get(key);
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
-			String request = "GET "+ taskConsumerId.getPath() + " HTTP 1.1";
-			String response = "HTTP/1.1 200 OK\n"+StreamUtils.toJson(mapper, jsonTasks);
+			String request = "GET http://service/tasks/_list_tasks HTTP 1.1\n{\n\tconsumer_id : " +key.getPath() +"\n}\n";
+			Joiner joiner = Joiner.on(",\n");
+			String response = "HTTP/1.1 200 OK\n[";
+			if (!Iterables.isEmpty(jsonTasks)) {
+				response += joiner.join(jsonTasks)+"\n";
+			}
+			response += "]";
 			logger.info(request +"\n"+ response+"\n");
 		}
 		final Iterable<Task> tasks = Iterables.unmodifiableIterable(Iterables.transform(jsonTasks, new Function<String, Task>(){
@@ -120,8 +165,8 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		final Task task2Clone = StreamUtils.cloneElement(mapper, task2);
 		task1Clone.setProducerTimestamp(null);
 		task2Clone.setProducerTimestamp(null);
-		task1Clone.setSource(null);
-		task2Clone.setSource(null);
+		task1Clone.setProducerId(null);
+		task2Clone.setProducerId(null);
 		return StreamUtils.elementEquals(mapper, task1Clone, task2Clone);
 	
 	}

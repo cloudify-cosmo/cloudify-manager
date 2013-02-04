@@ -164,27 +164,16 @@ public class ServiceGridCapacityPlanner {
 	}
 	
 	/**
-	 * Adds a new task only if it has not been added recently.
+	 * Adds a new task, but it is actually submitted only if it has not been added recently.
 	 */
 	public void addNewTaskIfNotExists(
 			final List<Task> newTasks,
 			final Task newTask) {
 		
-		if (newTask.getStateId() == null) {
-			newTask.setStateId(newTask.getConsumerId());
-		}
-		
-		if (!ServiceUtils.isTaskExecutingOrPending(stateReader, taskReader, newTask)) {
-			addNewTask(newTasks, newTask);
-		}
-	}
-	
-
-	private static void addNewTask(List<Task> newTasks, final Task task) {
-		newTasks.add(task);
+		newTasks.add(newTask);
 	}
 
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
 	public static int compare(Object left, Object right) throws NumberFormatException {
 
     	Preconditions.checkNotNull(left);

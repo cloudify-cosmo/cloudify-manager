@@ -209,10 +209,6 @@ public class ServiceGridDeploymentPlanner {
 
 	private static void addNewTask(List<Task> newTasks, final Task task) {
 		
-		if (task.getStateId() == null) {
-			task.setStateId(task.getConsumerId());
-		}
-
 		newTasks.add(task);
 	}
 	
