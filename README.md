@@ -34,11 +34,13 @@ Install Service
 ---------------
 request:
 
-    POST http://localhost/services/deployment_planner/ HTTP 1.1
+    POST http://localhost/services/tasks/_new_task HTTP 1.1
     {
       "task" : "install_service_task",
-      "consumer_id" : "http://localhost/services/deployment_planner/",
       "producer_timestamp" : 1359883165467,
+      "producer_id" : "http://localhost/webui/",
+      "consumer_id" : "http://localhost/services/deployment_planner/",
+      "state_id" : "http://localhost/services/deployment_planner/",
       "display_name" : "tomcat",
       "planned_number_of_instances" : 1,
       "max_number_of_instances" : 2,

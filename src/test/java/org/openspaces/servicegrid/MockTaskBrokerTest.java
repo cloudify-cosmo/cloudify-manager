@@ -17,7 +17,7 @@ public class MockTaskBrokerTest {
 	@Test
 	public void getSingleTaskTest() {
 		MockTaskBroker broker = new MockTaskBroker();
-		final Task task = new Task();
+		final Task task = new Task(TaskConsumerState.class);
 		task.setProducerTimestamp(1L);
 		task.setConsumerId(taskConsumerId1);
 		broker.postNewTask(task);
@@ -38,12 +38,12 @@ public class MockTaskBrokerTest {
 	@Test
 	public void getTaskFifoTest() {
 		MockTaskBroker broker = new MockTaskBroker();
-		final Task firstTask = new Task();
+		final Task firstTask = new Task(TaskConsumerState.class);
 		firstTask.setProducerTimestamp(1L);
 		firstTask.setConsumerId(taskConsumerId1);
 		broker.postNewTask(firstTask);
 		
-		final Task secondTask = new Task();
+		final Task secondTask = new Task(TaskConsumerState.class);
 		secondTask.setProducerTimestamp(2L);
 		secondTask.setConsumerId(taskConsumerId1);
 		broker.postNewTask(secondTask);
@@ -55,12 +55,12 @@ public class MockTaskBrokerTest {
 	
 	public void getSingleTaskTwoConsumersTest() {
 		MockTaskBroker broker = new MockTaskBroker();
-		final Task task1 = new Task();
+		final Task task1 = new Task(TaskConsumerState.class);
 		task1.setProducerTimestamp(1L);
 		task1.setConsumerId(taskConsumerId1);
 		broker.postNewTask(task1);
 		
-		final Task task2 = new Task();
+		final Task task2 = new Task(TaskConsumerState.class);
 		task2.setProducerTimestamp(2L);
 		task2.setConsumerId(taskConsumerId2);
 		broker.postNewTask(task2);

@@ -2,10 +2,10 @@ package org.openspaces.servicegrid.service.tasks;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
-public class RecoverServiceInstanceStateTask extends ImpersonatingTask {
+public class RecoverServiceInstanceStateTask extends Task {
 
 	public RecoverServiceInstanceStateTask() {
 		super(ServiceInstanceState.class);

@@ -170,6 +170,10 @@ public class ServiceGridCapacityPlanner {
 			final List<Task> newTasks,
 			final Task newTask) {
 		
+		if (newTask.getStateId() == null) {
+			newTask.setStateId(newTask.getConsumerId());
+		}
+		
 		if (!ServiceUtils.isTaskExecutingOrPending(stateReader, taskReader, newTask)) {
 			addNewTask(newTasks, newTask);
 		}

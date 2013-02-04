@@ -3,10 +3,15 @@ package org.openspaces.servicegrid.service.tasks;
 import java.net.URI;
 
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.service.state.ServiceGridCapacityPlannerState;
 import org.openspaces.servicegrid.service.state.ServiceScalingRule;
 
 public class ScalingRulesTask extends Task {
 
+	public ScalingRulesTask() {
+		super(ServiceGridCapacityPlannerState.class);
+	}
+	
 	private ServiceScalingRule scalingRule;
 	private URI serviceId;
 	

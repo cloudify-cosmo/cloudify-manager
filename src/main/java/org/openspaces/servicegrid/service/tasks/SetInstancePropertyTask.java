@@ -1,9 +1,9 @@
 package org.openspaces.servicegrid.service.tasks;
 
-import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
-public class SetInstancePropertyTask extends ImpersonatingTask{
+public class SetInstancePropertyTask extends Task{
 	
 	private String propertyName;
 	private Object propertyValue;

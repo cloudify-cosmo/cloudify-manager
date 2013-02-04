@@ -3,10 +3,10 @@ package org.openspaces.servicegrid.agent.tasks;
 import java.net.URI;
 import java.util.List;
 
-import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.agent.state.AgentState;
 
-public class PlanAgentTask  extends ImpersonatingTask {
+public class PlanAgentTask  extends Task {
 
 	public PlanAgentTask() {
 		super(AgentState.class);

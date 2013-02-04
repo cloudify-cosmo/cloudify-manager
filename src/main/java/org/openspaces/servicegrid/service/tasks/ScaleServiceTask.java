@@ -3,9 +3,14 @@ package org.openspaces.servicegrid.service.tasks;
 import java.net.URI;
 
 import org.openspaces.servicegrid.Task;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
 
 public class ScaleServiceTask extends Task {
 
+	public ScaleServiceTask() {
+		super(ServiceGridDeploymentPlannerState.class);
+	}
+	
 	private int plannedNumberOfInstances;
 	private URI serviceId;
 

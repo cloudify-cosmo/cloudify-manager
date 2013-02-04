@@ -470,7 +470,11 @@ public class ServiceGridOrchestrationTest {
 	
 	private void submitTask(final URI target, final Task task) {
 		task.setProducerTimestamp(timeProvider.currentTimeMillis());
+		task.setProducerId(newURI("http://localhost/webui"));
 		task.setConsumerId(target);
+		if (task.getStateId() == null) {
+			task.setStateId(target);
+		}
 		management.getTaskWriter().postNewTask(task);
 	}
 

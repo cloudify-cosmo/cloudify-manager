@@ -30,24 +30,26 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 	}
 	
 	@Override
-	public void postNewTask(Task task) {
-		final URI key = StreamUtils.fixSlash(task.getConsumerId());
+	public void postNewTask(final Task task) {
+		task.setConsumerId(StreamUtils.fixSlash(task.getConsumerId()));
+		task.setStateId(StreamUtils.fixSlash(task.getStateId()));
+		task.setProducerId(StreamUtils.fixSlash(task.getProducerId()));
 		final String json = StreamUtils.toJson(mapper,task);
-		streamById.put(key, json);
+		streamById.put(task.getConsumerId(), json);
 		if (isLoggingEnabled() && logger.isInfoEnabled() && !(task instanceof TaskProducerTask)) {
-			String request = "POST "+ key + " HTTP 1.1\n"+json;
+			String request = "POST http://services/tasks/_new_task HTTP 1.1\n"+json;
 			String response = "HTTP/1.1 202 Accepted";
 			logger.info(request +"\n"+ response+"\n");
 		}
 	}
 
 	@Override
-	public <T extends Task> T removeNextTask(URI taskConsumerId) {
+	public <T extends Task> T removeNextTask(final URI taskConsumerId) {
 		final URI key = StreamUtils.fixSlash(taskConsumerId);
 		final List<String> tasks = streamById.get(key);
 		if (tasks.isEmpty()) {
 			if (isLoggingEnabled() && logger.isInfoEnabled()) {
-				String request = "DELETE "+ taskConsumerId.getPath() + "_first HTTP 1.1";
+				String request = "POST http://service/tasks/_remove__oldest_task HTTP 1.1\n{\n\tconsumer_id : " +key +"\n}\n";
 				String response = "HTTP/1.1 404 Not Found";
 				logger.info(request +"\n"+ response+"\n");
 			}
@@ -57,7 +59,7 @@ public class MockTaskBroker implements TaskReader, TaskWriter {
 		final String removed = tasks.remove(0);
 		final T task = (T) StreamUtils.fromJson(mapper, removed, Task.class);
 		if (isLoggingEnabled() && logger.isInfoEnabled()) {
-			String request = "DELETE "+ taskConsumerId.getPath() + "_first HTTP 1.1";
+			String request = "POST http://service/_remove_task HTTP 1.1\n{\n\tconsumer_id : " +key +"\n}\n";
 			String response = "HTTP/1.1 200 OK\n"+removed;
 			logger.info(request +"\n"+ response);
 		}

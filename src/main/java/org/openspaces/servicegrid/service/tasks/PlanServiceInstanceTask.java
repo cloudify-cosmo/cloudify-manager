@@ -2,10 +2,10 @@ package org.openspaces.servicegrid.service.tasks;
 
 import java.net.URI;
 
-import org.openspaces.servicegrid.ImpersonatingTask;
+import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 
-public class PlanServiceInstanceTask extends ImpersonatingTask {
+public class PlanServiceInstanceTask extends Task {
 	
 	public PlanServiceInstanceTask() {
 		super(ServiceInstanceState.class);

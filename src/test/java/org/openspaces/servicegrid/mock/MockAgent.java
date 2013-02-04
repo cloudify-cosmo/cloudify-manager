@@ -105,7 +105,7 @@ public class MockAgent {
 	}
 	
 	@ImpersonatingTaskConsumer
-	public void injectPropertyToInstance(SetInstancePropertyTask task, TaskConsumerStateModifier impersonatedStateModifier) {
+	public void injectPropertyToInstance(SetInstancePropertyTask task, TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		final URI instanceId = task.getStateId();
 		Preconditions.checkArgument(instancesState.containsKey(instanceId), "Unknown instance %s", instanceId);
 		ServiceInstanceState instanceState = instancesState.get(instanceId);

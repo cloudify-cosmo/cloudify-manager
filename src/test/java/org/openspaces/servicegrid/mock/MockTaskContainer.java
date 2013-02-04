@@ -6,7 +6,6 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
-import org.openspaces.servicegrid.ImpersonatingTask;
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
@@ -21,11 +20,9 @@ import org.openspaces.servicegrid.state.Etag;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.state.StateWriter;
-import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 import com.beust.jcommander.internal.Sets;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -42,7 +39,7 @@ public class MockTaskContainer {
 	private final Method taskConsumerStateHolderMethod;
 	private final StateReader stateReader;
 	private final StateWriter stateWriter;
-	private final Map<Class<? extends ImpersonatingTask>,Method> impersonatedTaskConsumerMethodByType;
+	private final Map<Class<? extends Task>,Method> impersonatedTaskConsumerMethodByType;
 	private final Map<Class<? extends Task>,Method> taskConsumerMethodByType;
 	private final Set<Class<? extends Task>> tasksToPersist;
 	private final Set<Class<? extends Task>> tasksToAddHistory;
@@ -52,9 +49,6 @@ public class MockTaskContainer {
 	// state objects that mocks process termination 
 	private boolean killed;
 	
-	// last task is used to detect inconsistencies in management machine providing tasks
-	private Task lastTask;
-	private ObjectMapper mapper;
 	private TaskConsumerStateModifier<TaskConsumerState> stateModifier;
 
 	
@@ -72,7 +66,6 @@ public class MockTaskContainer {
 		this.tasksToPersist = Sets.newHashSet();
 		this.tasksToAddHistory = Sets.newHashSet();
 		this.persistentTaskWriter = parameterObject.getPersistentTaskWriter();
-		this.mapper = StreamUtils.newObjectMapper();
 		//Reflect on @TaskProducer and @TaskConsumer methods
 		Method taskProducerMethod = null;
 		Method taskConsumerStateHolderMethod = null;
@@ -85,7 +78,6 @@ public class MockTaskContainer {
 			TaskConsumerStateHolder taskConsumerStateHolderAnnotation = method.getAnnotation(TaskConsumerStateHolder.class);
 			if (taskConsumerAnnotation != null) {
 				Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
-				Preconditions.checkArgument(parameterTypes.length >= 1 && !ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "execute method parameter " + parameterTypes[0] + " is an impersonating task. Use " + ImpersonatingTask.class.getSimpleName() + " annotation instead, in " + taskConsumer.getClass());
 				Preconditions.checkArgument(parameterTypes.length == 1, "method must have one parameter");
 				Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "method parameter " + parameterTypes[0] + " is not a task in " + taskConsumer.getClass());
 				Class<? extends Task> taskType = (Class<? extends Task>) parameterTypes[0];
@@ -102,8 +94,8 @@ public class MockTaskContainer {
 			} else if (impersonatingTaskConsumerAnnotation != null) {
 					Preconditions.checkArgument(method.getReturnType().equals(Void.TYPE), method + " return type must be void");
 					Preconditions.checkArgument(parameterTypes.length == 2, "Impersonating task executor method must have two parameters");
-					Preconditions.checkArgument(ImpersonatingTask.class.isAssignableFrom(parameterTypes[0]), "method first parameter %s is not an impersonating task in %s",parameterTypes[0], taskConsumer.getClass());
-					Class<? extends ImpersonatingTask> taskType = (Class<? extends ImpersonatingTask>) parameterTypes[0];
+					Preconditions.checkArgument(Task.class.isAssignableFrom(parameterTypes[0]), "method first parameter %s is not an impersonating task in %s",parameterTypes[0], taskConsumer.getClass());
+					Class<? extends Task> taskType = (Class<? extends Task>) parameterTypes[0];
 					Preconditions.checkArgument(TaskConsumerStateModifier.class.equals(parameterTypes[1]),"method second parameter type must be " + TaskConsumerStateModifier.class);
 					impersonatedTaskConsumerMethodByType.put(taskType, method);
 					
@@ -152,7 +144,7 @@ public class MockTaskContainer {
 		stateModifier.put(state);
 	}
 
-	private void afterImpersonatingTask(ImpersonatingTask task, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
+	private void afterImpersonatingTask(Task task, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
 		final TaskConsumerState state = stateModifier.get();
 		state.setExecutingTask(null);
 		if (tasksToAddHistory.contains(task.getClass())) {
@@ -240,8 +232,8 @@ public class MockTaskContainer {
 		if (task instanceof TaskProducerTask) {
 			executeTaskProducerTask(task);
 		}
-		else if (task instanceof ImpersonatingTask) {
-			executeImpersonatingTask((ImpersonatingTask)task);
+		else if (!task.getStateId().equals(this.taskConsumerId)) {
+			executeImpersonatingTask(task);
 		} else {
 			executeTask(task);
 		}
@@ -258,6 +250,10 @@ public class MockTaskContainer {
 	}
 
 	private void executeTask(final Task task) {
+		Preconditions.checkArgument(taskConsumerStateClass.equals(task.getStateClass()), 
+				"Task %s has the wrong stateClass. Expected:%s  Actual:%s",
+				task.getClass(), taskConsumerStateClass, task.getStateClass());
+		
 		beforeExecute(task);
 		try {
 			consumeTask(task);
@@ -267,7 +263,7 @@ public class MockTaskContainer {
 		}
 	}
 
-	private void executeImpersonatingTask(final ImpersonatingTask task) {
+	private void executeImpersonatingTask(final Task task) {
 		final TaskConsumerStateModifier<TaskConsumerState> impersonatingStateModifier = newImpersonatingStateModifier(task);
 		beforeExecute(task, impersonatingStateModifier);
 		try {
@@ -278,7 +274,7 @@ public class MockTaskContainer {
 		}
 	}
 
-	private void consumeImpersonatingTask(final ImpersonatingTask task, final TaskConsumerStateModifier<?> impersonatedStateModifier) {
+	private void consumeImpersonatingTask(final Task task, final TaskConsumerStateModifier<?> impersonatedStateModifier) {
 		final Method executorMethod = impersonatedTaskConsumerMethodByType.get(task.getClass());
 		Preconditions.checkArgument(
 				executorMethod != null, 
@@ -287,7 +283,7 @@ public class MockTaskContainer {
 	}
 
 	private TaskConsumerStateModifier<TaskConsumerState> newImpersonatingStateModifier(
-			final ImpersonatingTask task) {
+			final Task task) {
 		final TaskConsumerStateModifier<TaskConsumerState> impersonatedStateModifier = new TaskConsumerStateModifier<TaskConsumerState>() {
 			
 			Etag lastEtag = null;
@@ -308,7 +304,7 @@ public class MockTaskContainer {
 					//first time get - goto the remote storage
 					final URI impersonatedTargetId = task.getStateId();
 					Preconditions.checkNotNull(impersonatedTargetId);
-					EtagState<TaskConsumerState> etagState = stateReader.get(impersonatedTargetId, task.getImpersonatedStateClass());
+					EtagState<TaskConsumerState> etagState = stateReader.get(impersonatedTargetId, task.getStateClass());
 					if (etagState == null) {
 						lastEtag = Etag.EMPTY;
 						impersonatedState = null;
