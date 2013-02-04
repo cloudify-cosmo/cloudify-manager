@@ -7,7 +7,6 @@ import java.util.List;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskReader;
-import org.openspaces.servicegrid.TaskWriter;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.mock.MockTaskBroker;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
@@ -87,16 +86,6 @@ public class ServiceUtils {
 		return etagState == null ? null : etagState.getState();
 	}
 	
-	public static void addTask(
-			final TaskWriter taskWriter,
-			final Task task) {
-		
-		Preconditions.checkNotNull(taskWriter);
-		Preconditions.checkNotNull(task);
-		Preconditions.checkNotNull(task.getConsumerId());
-		taskWriter.postNewTask(task);		
-	}
-
 	public static URI toTasksURI(final URI taskConsumerId) {
 		try {
 			return new URI(taskConsumerId.toString() + "tasks/");
