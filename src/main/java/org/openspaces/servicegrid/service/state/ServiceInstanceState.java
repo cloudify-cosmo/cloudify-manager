@@ -23,10 +23,6 @@ public class ServiceInstanceState extends TaskConsumerState {
 	private URI agentId;
 	private URI serviceId;
 	
-	public String getProgress() {
-		return progress;
-	}
-	
 	public void setProgress(String progress) {
 		this.progress = progress;
 	}
@@ -47,4 +43,25 @@ public class ServiceInstanceState extends TaskConsumerState {
 		this.serviceId = serviceId;
 	}
 
+	/**
+	 * Use isProgress(x or y or z) instead. 
+	 * This is to encourage using the pattern of positive progress checks such as "isProgress(y)" 
+	 * instead of negative progress checks such as (!getProgress().equals(x)) 
+	 */
+	@Deprecated
+	public String getProgress() {
+		return progress;
+	}
+
+	/**
+	 * @return true if {@code #getProgress()} matches any of the specified options.
+	 */
+	public boolean isProgress(String ... expectedProgresses) {
+		for (String expectedProgress : expectedProgresses) {
+			if (progress != null && progress.equals(expectedProgress)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

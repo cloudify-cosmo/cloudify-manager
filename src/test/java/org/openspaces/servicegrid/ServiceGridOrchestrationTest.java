@@ -293,10 +293,10 @@ public class ServiceGridOrchestrationTest {
 	
 	private void assertTomcatScaledInFrom2To1() {
 		assertServiceInstalledWithOneInstance("tomcat");
-		Assert.assertEquals(getAgentState(getAgentId(0)).getProgress(), AgentState.Progress.AGENT_STARTED);
-		Assert.assertEquals(getAgentState(getAgentId(1)).getProgress(), AgentState.Progress.MACHINE_TERMINATED);
-		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_UNINSTALLED);
+		Assert.assertTrue(getAgentState(getAgentId(0)).isProgress(AgentState.Progress.AGENT_STARTED));
+		Assert.assertTrue(getAgentState(getAgentId(1)).isProgress(AgentState.Progress.MACHINE_TERMINATED));
+		Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
+		Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED));
 	}
 
 	private void scalingrule(String serviceName, ServiceScalingRule rule) {
@@ -320,17 +320,17 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 0);
 		final ServiceState serviceState = getServiceState(getServiceId("tomcat"));
 		Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
-		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_UNINSTALLED);
+		Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
 		
 		ServiceInstanceState instanceState = getServiceInstanceState(Iterables.getOnlyElement(getServiceInstanceIds("tomcat")));
 		if (instanceUnreachable) {
-			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
+			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE));
 		}
 		else {
-			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_UNINSTALLED);
+			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED));
 		}
 		AgentState agentState = getAgentState(Iterables.getOnlyElement(getAgentIds()));
-		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.MACHINE_TERMINATED);
+		Assert.assertTrue(agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
 	}
 	
 	private void assertServiceInstalledWithOneInstance(String serviceName) {
@@ -357,7 +357,7 @@ public class ServiceGridOrchestrationTest {
 			String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
 		final URI serviceId = getServiceId(serviceName);
 		final ServiceState serviceState = getServiceState(serviceId);
-		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_INSTALLED);
+		Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
 		final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
 		final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 		TaskConsumerHistory instanceTasksHistory = getTasksHistory(instanceId);
@@ -365,11 +365,11 @@ public class ServiceGridOrchestrationTest {
 		
 		final URI agentId = instanceState.getAgentId();
 		Assert.assertEquals(instanceState.getServiceId(), serviceId);
-		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+		Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
 		
 		final AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
-		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
+		Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
 		Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
 		Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
 
@@ -410,7 +410,7 @@ public class ServiceGridOrchestrationTest {
 		final URI serviceId = getServiceId("tomcat");
 		final ServiceState serviceState = getServiceState(serviceId);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
-		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_INSTALLED);
+		Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
 		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
@@ -426,7 +426,7 @@ public class ServiceGridOrchestrationTest {
 			
 			URI agentId = Iterables.get(agentIds, i);
 			AgentState agentState = getAgentState(agentId);
-			Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
+			Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
 			Assert.assertEquals(agentState.getNumberOfAgentRestarts(), (int) numberOfAgentRestartsPerAgent.get(agentId));
 			Assert.assertEquals(agentState.getNumberOfMachineRestarts(), (int) numberOfMachineRestartsPerAgent.get(agentId));
 			URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
@@ -434,7 +434,7 @@ public class ServiceGridOrchestrationTest {
 			ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 			Assert.assertEquals(instanceState.getServiceId(), serviceId);
 			Assert.assertEquals(instanceState.getAgentId(), agentId);
-			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
+			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
 			Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
 		}
 		
@@ -611,7 +611,7 @@ public class ServiceGridOrchestrationTest {
 		
 		MockAgent agent = (MockAgent) taskConsumerRegistrar.unregisterTaskConsumer(agentId);
 		AgentState agentState = agent.getState();
-		Preconditions.checkState(agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+		Preconditions.checkState(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
 		agentState.setNumberOfAgentRestarts(agentState.getNumberOfAgentRestarts() +1);
 		taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
 	}

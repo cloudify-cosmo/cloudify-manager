@@ -144,7 +144,7 @@ public class ServiceGridCapacityPlanner {
 	
 	private boolean isServiceInstalled(final ServiceState serviceState) {
 		return serviceState != null &&
-			serviceState.getProgress().equals(ServiceState.Progress.SERVICE_INSTALLED);
+			serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED);
 	}
 	
 	private boolean isAboveThreshold(Object threshold, Object value) {

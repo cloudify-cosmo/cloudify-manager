@@ -227,7 +227,7 @@ public class ServiceGridOrchestrator {
 				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
 					ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 					if (instanceState == null || 
-						instanceState.getProgress().equals(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE)) {
+						instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE)) {
 						
 						syncComplete = false;
 						final URI serviceId = state.getServiceIdOfServiceInstance(instanceId);
@@ -242,7 +242,7 @@ public class ServiceGridOrchestrator {
 			else if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
 				Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfAgent(agentId);
 				if (agentState == null ||
-					agentState.getProgress().equals(AgentState.Progress.MACHINE_TERMINATED) &&
+					agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED) &&
 					Iterables.isEmpty(agentState.getServiceInstanceIds())) {
 					syncComplete = false;
 					final PlanAgentTask planAgentTask = new PlanAgentTask();
@@ -323,8 +323,6 @@ public class ServiceGridOrchestrator {
 
 	private void orchestrateServiceProgress(List<Task> newTasks, URI serviceId) {
 		final ServiceState serviceState = getServiceState(serviceId);
-		final String serviceProgress = serviceState.getProgress();
-		Preconditions.checkNotNull(serviceProgress);
 		final Predicate<URI> findInstanceNotStartedPredicate = new Predicate<URI>(){
 
 			@Override
@@ -336,14 +334,13 @@ public class ServiceGridOrchestrator {
 		Set<URI> serviceIdsToUninstall = state.getServiceIdsToUninstall();
 			
 		if (serviceIdsToUninstall.contains(serviceId) &&
-			!serviceProgress.equals(ServiceState.Progress.UNINSTALLING_SERVICE) && 
-			!serviceProgress.equals(ServiceState.Progress.SERVICE_UNINSTALLED)) {
+			serviceState.isProgress(ServiceState.Progress.INSTALLING_SERVICE, ServiceState.Progress.SERVICE_INSTALLED)) {
 			ServiceUninstallingTask task = new ServiceUninstallingTask();
 			task.setStateId(serviceId);
 			task.setConsumerId(orchestratorId);
 			addNewTaskIfNotExists(newTasks, task);
 		}
-		else if (serviceProgress.equals(ServiceState.Progress.INSTALLING_SERVICE)) {
+		else if (serviceState.isProgress(ServiceState.Progress.INSTALLING_SERVICE)) {
 			final boolean isServiceInstalling = 
 					Iterables.tryFind(serviceState.getInstanceIds(), findInstanceNotStartedPredicate)
 					.isPresent();
@@ -354,7 +351,7 @@ public class ServiceGridOrchestrator {
 				addNewTaskIfNotExists(newTasks, task);
 			}
 		}
-		else if (serviceProgress.equals(ServiceState.Progress.SERVICE_INSTALLED)) {
+		else if (serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED)) {
 			final boolean isServiceInstalling = 
 					Iterables.tryFind(serviceState.getInstanceIds(), findInstanceNotStartedPredicate)
 					.isPresent();
@@ -365,7 +362,7 @@ public class ServiceGridOrchestrator {
 				addNewTaskIfNotExists(newTasks, task);
 			}
 		}
-		else if (serviceProgress.equals(ServiceState.Progress.UNINSTALLING_SERVICE)) {
+		else if (serviceState.isProgress(ServiceState.Progress.UNINSTALLING_SERVICE)) {
 			if (serviceState.getInstanceIds().isEmpty()) {
 				ServiceUninstalledTask task = new ServiceUninstalledTask();
 				task.setConsumerId(orchestratorId);
@@ -373,11 +370,11 @@ public class ServiceGridOrchestrator {
 				addNewTaskIfNotExists(newTasks, task);
 			}
 		}
-		else if (serviceProgress.equals(ServiceState.Progress.SERVICE_UNINSTALLED)) {
+		else if (serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED)) {
 			// do nothing
 		}
 		else {
-			Preconditions.checkState(false, "Unknown service state " + serviceProgress);
+			Preconditions.checkState(false, "Unknown service state" + serviceState.getProgress());
 		}
 	}
 
@@ -390,7 +387,7 @@ public class ServiceGridOrchestrator {
 			
 			final URI agentId = state.getAgentIdOfServiceInstance(instanceId);
 			final AgentState agentState = getAgentState(agentId);
-			if (!agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
+			if (!agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
 				//no agent yet
 				continue;
 			}
@@ -409,7 +406,6 @@ public class ServiceGridOrchestrator {
 			final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 			final URI agentId = instanceState.getAgentId();
 			final AgentState agentState = getAgentState(agentId);
-			final String instanceProgress = instanceState.getProgress();
 			
 			if (isAgentProgress(agentState,AgentState.Progress.MACHINE_TERMINATED) &&
 				agentState.getServiceInstanceIds().contains(instanceId)) {
@@ -437,8 +433,7 @@ public class ServiceGridOrchestrator {
 			else if (!Iterables.contains(plannedInstanceIds, instanceId) &&
 					 isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED, AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION) ) {
 				
-				if (instanceProgress.equals(ServiceInstanceState.Progress.STARTING_INSTANCE) ||
-					instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)) {
+				if (instanceState.isProgress(ServiceInstanceState.Progress.STARTING_INSTANCE, ServiceInstanceState.Progress.INSTANCE_STARTED)) {
 				
 					final StopServiceInstanceTask task = new StopServiceInstanceTask();
 					task.setConsumerId(agentId);
@@ -446,14 +441,14 @@ public class ServiceGridOrchestrator {
 					addNewTaskIfNotExists(newTasks, task);
 				}
 				
-				else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STOPPED)) {
+				else if (instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STOPPED)) {
 					final UninstallServiceInstanceTask task = new UninstallServiceInstanceTask();
 					task.setConsumerId(agentId);
 					task.setStateId(instanceId);
 					addNewTaskIfNotExists(newTasks, task);
 				}
 			
-				else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED)) {
+				else if (instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED)) {
 					{
 					//TODO: Remove this task and merge with uninstall implementation on mockagent
 					final RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
@@ -469,10 +464,15 @@ public class ServiceGridOrchestrator {
 					addNewTaskIfNotExists(newTasks, task);
 				}
 				else {
-					Preconditions.checkState(false, "Unhandled service instance progress: " + instanceProgress);
+					Preconditions.checkState(false, "Unhandled service instance progress: " + instanceState.getProgress());
 				}
 			}
 		}
+	}
+
+	private boolean isAgentProgress(AgentState agentState,
+			String ... expectedProgresses) {
+		return agentState != null && agentState.isProgress(expectedProgresses);
 	}
 
 	private ServiceState getServiceState(final URI serviceId) {
@@ -512,47 +512,31 @@ public class ServiceGridOrchestrator {
 		}
 	}
 
-	/**
-	 * @return true if the specified agentState.progress matches any of the specified progresses options.
-	 */
-	private boolean isAgentProgress(AgentState agentState, String ... expectedProgresses) {
-		if (agentState != null) {
-			for (String expectedProgress : expectedProgresses) {
-				String agentProgress = agentState.getProgress();
-				if (agentProgress != null && agentProgress.equals(expectedProgress)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
 	private void orchestrateServiceInstanceInstallation(List<Task> newTasks, URI instanceId, URI agentId) {
 		ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-		final String instanceProgress = instanceState.getProgress();
-		Preconditions.checkNotNull(instanceProgress);
 		
-		if (instanceProgress.equals(ServiceInstanceState.Progress.PLANNED)) {
+		if (instanceState.isProgress(ServiceInstanceState.Progress.PLANNED)) {
 			
 				final InstallServiceInstanceTask task = new InstallServiceInstanceTask();
 				task.setStateId(instanceId);	
 				task.setConsumerId(agentId);
 				addNewTaskIfNotExists(newTasks, task);
 		}
-		else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
+		else if (instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_INSTALLED)) {
 			//Ask for start service instance
 			final StartServiceInstanceTask task = new StartServiceInstanceTask();
 			task.setStateId(instanceId);	
 			task.setConsumerId(agentId);
 			addNewTaskIfNotExists(newTasks, task);
 		}
-		else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_STARTED)){
+		else if (instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED)){
 			//Do nothing, instance is installed
 		}
-		else if (instanceProgress.equals(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE)) {
+		else if (instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE)) {
 			//Too bad :) Nothing we can do about it
 		}
 		else {
-			Preconditions.checkState(false, "Unknown service instance progress " + instanceProgress);
+			Preconditions.checkState(false, "Unknown service instance progress " + instanceState.getProgress());
 		}
 	}
 
@@ -659,7 +643,7 @@ public class ServiceGridOrchestrator {
 				Integer expectedNumberOfMachineRestartsInAgentState = pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
 				if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
 					Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
-					if (agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED)) {
+					if (agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
 						// agent started after ping sent. Wait for next ping
 					}
 					else {
