@@ -13,9 +13,11 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.MarkAgentAsStoppingTask;
 import org.openspaces.servicegrid.service.tasks.RecoverServiceInstanceStateTask;
+import org.openspaces.servicegrid.service.tasks.RemoveServiceInstanceFromAgentTask;
 import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
 import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.StopServiceInstanceTask;
+import org.openspaces.servicegrid.service.tasks.UninstallServiceInstanceTask;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -58,12 +60,31 @@ public class MockAgent {
 		impersonatedStateModifier.put(instanceState);
 		
 		// the code that actually stops the instance goes here
-		instancesState.remove(instanceId);
 		
 		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_STOPPED);
 		impersonatedStateModifier.put(instanceState);
+	}
+
+	@ImpersonatingTaskConsumer
+	public void uninstallServiceInstance(UninstallServiceInstanceTask task, 
+			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 		
-		state.removeServiceInstanceId(instanceId);
+		final ServiceInstanceState instanceState = impersonatedStateModifier.get();
+		instanceState.setProgress(ServiceInstanceState.Progress.UNINSTALLING_INSTANCE);
+		impersonatedStateModifier.put(instanceState);
+		
+		// the code that actually uninstalls the instance goes here
+		
+		instanceState.setProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED);
+		impersonatedStateModifier.put(instanceState);
+	}
+	
+	@TaskConsumer
+	public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) {
+		
+		final URI instanceId = task.getInstanceId();
+		this.state.removeServiceInstanceId(instanceId);
+		this.instancesState.remove(instanceId);
 	}
 	
 	@ImpersonatingTaskConsumer
@@ -121,7 +142,7 @@ public class MockAgent {
 	@TaskConsumer
 	public void markAgentAsStopping(MarkAgentAsStoppingTask task) {
 		Preconditions.checkState(state.getProgress().equals(AgentState.Progress.AGENT_STARTED));
-		state.setProgress(AgentState.Progress.STOPPING_AGENT);
+		state.setProgress(AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION);
 	}
 	
 	@TaskConsumerStateHolder

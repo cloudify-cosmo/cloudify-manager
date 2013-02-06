@@ -8,6 +8,7 @@ import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
+import org.openspaces.servicegrid.streams.StreamUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -69,5 +70,9 @@ public class ServiceUtils {
 		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
+	}
+
+	public static URI toTasksHistoryId(URI stateId) {
+		return StreamUtils.newURI(stateId.toString()+"_tasks_history");
 	}
 }

@@ -18,6 +18,7 @@ import org.openspaces.servicegrid.mock.MockState;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
 import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
+import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
@@ -28,6 +29,7 @@ import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
 import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
+import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
@@ -294,7 +296,7 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(getAgentState(getAgentId(0)).getProgress(), AgentState.Progress.AGENT_STARTED);
 		Assert.assertEquals(getAgentState(getAgentId(1)).getProgress(), AgentState.Progress.MACHINE_TERMINATED);
 		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
-		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
+		Assert.assertEquals(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).getProgress(), ServiceInstanceState.Progress.INSTANCE_UNINSTALLED);
 	}
 
 	private void scalingrule(String serviceName, ServiceScalingRule rule) {
@@ -325,7 +327,7 @@ public class ServiceGridOrchestrationTest {
 			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_UNREACHABLE);
 		}
 		else {
-			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STOPPED);
+			Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_UNINSTALLED);
 		}
 		AgentState agentState = getAgentState(Iterables.getOnlyElement(getAgentIds()));
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.MACHINE_TERMINATED);
@@ -346,7 +348,7 @@ public class ServiceGridOrchestrationTest {
 	private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
 		Assert.assertNotNull(getDeploymentPlannerState());
 		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 1);
-		Assert.assertEquals(Iterables.size(getAgentIds()), 1);
+		Assert.assertEquals(Iterables.size(getAgentIds()), 1, "Expected 1 agent id, instead found: "+ getAgentIds());
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds(serviceName)),1);
 		assertServiceInstalledWithOneInstance(serviceName, numberOfAgentRestarts, numberOfMachineRestarts);
 	}
@@ -358,6 +360,9 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_INSTALLED);
 		final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
 		final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+		TaskConsumerHistory instanceTasksHistory = getTasksHistory(instanceId);
+		Assert.assertEquals(Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(),StartServiceInstanceTask.class)),1+numberOfMachineRestarts);
+		
 		final URI agentId = instanceState.getAgentId();
 		Assert.assertEquals(instanceState.getServiceId(), serviceId);
 		Assert.assertEquals(instanceState.getProgress(), ServiceInstanceState.Progress.INSTANCE_STARTED);
@@ -365,10 +370,13 @@ public class ServiceGridOrchestrationTest {
 		final AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
 		Assert.assertEquals(agentState.getProgress(), AgentState.Progress.AGENT_STARTED);
-		Assert.assertEquals(Iterables.size(Iterables.filter(agentState.getTasksHistory(),StartMachineTask.class)),1);
-		Assert.assertEquals(Iterables.size(Iterables.filter(agentState.getTasksHistory(),StartAgentTask.class)),1);
 		Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
 		Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
+
+		TaskConsumerHistory agentTasksHistory = getTasksHistory(agentId);
+		Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartMachineTask.class)),1+numberOfMachineRestarts);
+		Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartAgentTask.class)),1+numberOfMachineRestarts);
+
 		
 		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
@@ -376,6 +384,13 @@ public class ServiceGridOrchestrationTest {
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), instanceId);
 		final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId); 
 		Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
+	}
+
+	private TaskConsumerHistory getTasksHistory(final URI stateId) {
+		final URI tasksHistoryId = ServiceUtils.toTasksHistoryId(stateId);
+		EtagState<TaskConsumerHistory> etagState = getStateReader().get(tasksHistoryId, TaskConsumerHistory.class);
+		Preconditions.checkNotNull(etagState);
+		return etagState.getState(); 
 	}
 
 	private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
@@ -560,9 +575,15 @@ public class ServiceGridOrchestrationTest {
 		return newURI("http://localhost/services/"+serviceName+"/instances/"+index+"/");
 	}
 
-	private Iterable<URI> getStateIdsStartingWith(URI uri) {
-		final Iterable<URI> instanceIds = ((MockState)getStateReader()).getElementIdsStartingWith(uri);
-		return instanceIds;
+	private Iterable<URI> getStateIdsStartingWith(final URI uri) {
+		return Iterables.filter(
+				((MockState)getStateReader()).getElementIdsStartingWith(uri), 
+				new Predicate<URI>(){
+
+					@Override
+					public boolean apply(URI stateId) {
+						return stateId.toString().endsWith("/");
+					}});
 	}
 	
 

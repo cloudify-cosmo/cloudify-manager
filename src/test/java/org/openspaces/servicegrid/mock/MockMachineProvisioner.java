@@ -53,7 +53,7 @@ public class MockMachineProvisioner {
 		final AgentState agentState = impersonatedStateModifier.get();
 		final String agentProgress = agentState.getProgress();
 		Preconditions.checkState(
-				agentProgress.equals(AgentState.Progress.STOPPING_AGENT) ||
+				agentProgress.equals(AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION) ||
 				agentProgress.equals(AgentState.Progress.STARTING_MACHINE) ||
 				agentProgress.equals(AgentState.Progress.MACHINE_STARTED) ||
 				agentProgress.equals(AgentState.Progress.PLANNED));

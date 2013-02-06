@@ -14,6 +14,8 @@ public class ServiceInstanceState extends TaskConsumerState {
 		public static final String INSTANCE_STARTED = "INSTANCE_STARTED";
 		public static final String STOPPING_INSTANCE = "STOPPING_INSTANCE";
 		public static final String INSTANCE_STOPPED = "INSTANCE_STOPPED";
+		public static final String UNINSTALLING_INSTANCE = "UNINSTALLING_INSTANCE";
+		public static final String INSTANCE_UNINSTALLED = "INSTANCE_UNINSTALLED";
 		public static final String INSTANCE_UNREACHABLE = "INSTANCE_UNREACHABLE";
 	}
 	

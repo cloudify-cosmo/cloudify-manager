@@ -102,7 +102,9 @@ public class StreamUtils {
 		Preconditions.checkNotNull(id);
 		String externalForm = id.toString();
 		if (!externalForm.endsWith("/")) {
-			externalForm += "/";
+			if (!externalForm.substring(externalForm.lastIndexOf("/")+1).startsWith("_")) {
+				externalForm += "/";
+			}
 		}
 		return StreamUtils.newURI(externalForm);
 	}

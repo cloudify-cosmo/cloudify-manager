@@ -10,6 +10,8 @@ import java.util.Set;
 import org.openspaces.servicegrid.ImpersonatingTaskConsumer;
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
+import org.openspaces.servicegrid.TaskConsumerHistory;
+import org.openspaces.servicegrid.TaskConsumerHistoryModifier;
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskConsumerStateModifier;
@@ -17,6 +19,7 @@ import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.TaskProducerTask;
 import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.TaskWriter;
+import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.state.Etag;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
@@ -47,11 +50,13 @@ public class MockTaskContainer {
 	private final Set<Class<? extends Task>> tasksToAddHistory;
 	private final Method taskProducerMethod;
 	private final CurrentTimeProvider timeProvider;
+	private final TaskConsumerHistoryModifier taskConsumerHistoryModifier;
 
 	// state objects that mocks process termination 
 	private boolean killed;
 	
 	private TaskConsumerStateModifier<TaskConsumerState> stateModifier;
+	private Map<URI, MockTaskConsumerHistoryModifier> historyModifiers;
 
 	
 	public MockTaskContainer(MockTaskContainerParameter parameterObject) {
@@ -68,10 +73,12 @@ public class MockTaskContainer {
 		this.tasksToPersist = Sets.newHashSet();
 		this.tasksToAddHistory = Sets.newHashSet();
 		this.persistentTaskWriter = parameterObject.getPersistentTaskWriter();
+		this.historyModifiers = Maps.newLinkedHashMap();
+		
 		//Reflect on @TaskProducer and @TaskConsumer methods
 		Method taskProducerMethod = null;
 		Method taskConsumerStateHolderMethod = null;
-
+		taskConsumerHistoryModifier = newTaskConsumerHistoryModifier(taskConsumerId);
 		for (Method method : taskConsumer.getClass().getMethods()) {
 			Class<?>[] parameterTypes = method.getParameterTypes();
 			TaskConsumer taskConsumerAnnotation = method.getAnnotation(TaskConsumer.class);
@@ -124,6 +131,16 @@ public class MockTaskContainer {
 		recoverPersistedTasks(parameterObject.getPersistentTaskReader());
 	}
 
+	private TaskConsumerHistoryModifier newTaskConsumerHistoryModifier(URI stateId) {
+		final URI historyId = ServiceUtils.toTasksHistoryId(stateId);
+		MockTaskConsumerHistoryModifier historyModifier = historyModifiers.get(historyId);
+		if (historyModifier == null) {
+			historyModifier = new MockTaskConsumerHistoryModifier(historyId);
+			historyModifiers.put(stateId, historyModifier);
+		}
+		return historyModifier;
+	}
+
 	private void recoverPersistedTasks(TaskReader persistentTaskReader) {
 		
 		while(true) {
@@ -140,18 +157,15 @@ public class MockTaskContainer {
 
 		final TaskConsumerState state = getTaskConsumerState();
 		state.setExecutingTask(null);
-		if (tasksToAddHistory.contains(task.getClass())) {
-			state.addTaskHistory(task);
-		}
 		stateModifier.put(state);
+		
+		taskConsumerHistoryModifier.addTaskToHistory(task);
 	}
 
-	private void afterImpersonatingTask(Task task, TaskConsumerStateModifier<TaskConsumerState> stateModifier) {
+	private void afterImpersonatingTask(Task task, TaskConsumerStateModifier<TaskConsumerState> stateModifier, TaskConsumerHistoryModifier historyModifier) {
 		final TaskConsumerState state = stateModifier.get();
 		state.setExecutingTask(null);
-		if (tasksToAddHistory.contains(task.getClass())) {
-			state.addTaskHistory(task);
-		}
+		historyModifier.addTaskToHistory(task);
 		stateModifier.put(state);
 	}
 	
@@ -273,13 +287,14 @@ public class MockTaskContainer {
 	}
 
 	private void executeImpersonatingTask(final Task task) {
-		final TaskConsumerStateModifier<TaskConsumerState> impersonatingStateModifier = newImpersonatingStateModifier(task);
+		final TaskConsumerStateModifier<TaskConsumerState> impersonatingStateModifier = newImpersonatingStateModifier(task.getStateId(), task.getStateClass());
+		final TaskConsumerHistoryModifier impersonatingHistoryModifier = newTaskConsumerHistoryModifier(task.getStateId());
 		beforeExecute(task, impersonatingStateModifier);
 		try {
 			consumeImpersonatingTask(task, impersonatingStateModifier);
 		}
 		finally {
-			afterImpersonatingTask(task, impersonatingStateModifier);
+			afterImpersonatingTask(task, impersonatingStateModifier, impersonatingHistoryModifier);
 		}
 	}
 
@@ -292,7 +307,11 @@ public class MockTaskContainer {
 	}
 
 	private TaskConsumerStateModifier<TaskConsumerState> newImpersonatingStateModifier(
-			final Task task) {
+			final URI stateId, final Class<? extends TaskConsumerState> stateClass) {
+		
+		Preconditions.checkNotNull(stateId);
+		Preconditions.checkNotNull(stateClass);
+		
 		final TaskConsumerStateModifier<TaskConsumerState> impersonatedStateModifier = new TaskConsumerStateModifier<TaskConsumerState>() {
 			
 			Etag lastEtag = null;
@@ -300,20 +319,17 @@ public class MockTaskContainer {
 			
 			@Override
 			public void put(final TaskConsumerState newImpersonatedState) {
-				final URI impersonatedTargetId = task.getStateId();
-				Preconditions.checkNotNull(impersonatedTargetId);
+				Preconditions.checkNotNull(stateId);
 				Preconditions.checkNotNull(lastEtag);
-				lastEtag = stateWriter.put(impersonatedTargetId, newImpersonatedState, lastEtag);
+				lastEtag = stateWriter.put(stateId, newImpersonatedState, lastEtag);
 				impersonatedState = newImpersonatedState;
 			}
 
 			@Override
 			public TaskConsumerState get() {
 				if (lastEtag == null) {
-					//first time get - goto the remote storage
-					final URI impersonatedTargetId = task.getStateId();
-					Preconditions.checkNotNull(impersonatedTargetId);
-					EtagState<TaskConsumerState> etagState = stateReader.get(impersonatedTargetId, task.getStateClass());
+					
+					EtagState<TaskConsumerState> etagState = stateReader.get(stateId, stateClass);
 					if (etagState == null) {
 						lastEtag = Etag.EMPTY;
 						impersonatedState = null;
@@ -401,8 +417,7 @@ public class MockTaskContainer {
 			Iterable<Task> submitted = submitTasks(nowTimestamp, newTasks);
 			if (Iterables.isEmpty(submitted)) {
 				break;
-			}
-			
+			}			
 		}
 	}
 	
@@ -448,6 +463,58 @@ public class MockTaskContainer {
 
 	public Object getTaskConsumer() {
 		return taskConsumer;
+	}
+	
+	public class MockTaskConsumerHistoryModifier implements TaskConsumerHistoryModifier {
+				
+		private final URI historyId;
+		private TaskConsumerHistory history;
+		private Etag lastEtag;
+		
+		public MockTaskConsumerHistoryModifier(final URI historyId) {
+			this.historyId = historyId;
+		}
+		
+		@Override
+		public void addTaskToHistory(Task task) {
+			if (history == null) {
+				init(historyId);
+			}
+			if (tasksToAddHistory.contains(task.getClass())) {
+				history.getTasksHistory().add(task);
+			}
+			try {
+				lastEtag = stateWriter.put(historyId, history, lastEtag);
+			} catch (IllegalArgumentException e) {
+				//wrong etag
+				EtagState<TaskConsumerHistory> etagState = stateReader.get(historyId, TaskConsumerHistory.class);
+				if (etagState != null) {
+					throw e;
+				}
+				// management had a failover which caused a severe memory loss
+				// upload all histories related to this task consumer
+				for (MockTaskConsumerHistoryModifier historyModifier: historyModifiers.values()) {
+					historyModifier.onManagementFailure();
+				}
+			}
+		}
+		
+		private void init(final URI historyId) {
+			final EtagState<TaskConsumerHistory> etagState = stateReader.get(historyId, TaskConsumerHistory.class);
+			if (etagState == null) {
+				history = new TaskConsumerHistory();
+				lastEtag = Etag.EMPTY;
+			}
+			else {
+				history = etagState.getState();
+				lastEtag = etagState.getEtag();
+			}
+		}
+		
+		private void onManagementFailure() {
+			//remote server suffered a restart, need to update it with last state
+			lastEtag = stateWriter.put(historyId, history, Etag.EMPTY);
+		}
 	}
 	
 }
