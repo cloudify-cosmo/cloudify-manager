@@ -5,10 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MockCurrentTimeProvider implements CurrentTimeProvider {
 
 	private AtomicLong currentTime = new AtomicLong();
-	
-	public MockCurrentTimeProvider() {
-	}
-	
+		
 	public MockCurrentTimeProvider(long currentTime) {
 		this.currentTime.set(currentTime);
 	}
