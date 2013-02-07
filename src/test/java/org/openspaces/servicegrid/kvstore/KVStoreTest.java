@@ -1,11 +1,7 @@
 package org.openspaces.servicegrid.kvstore;
 
-import javax.servlet.Servlet;
 import javax.ws.rs.core.EntityTag;
 
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -20,17 +16,12 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 public class KVStoreTest {
 
-	private static Server server;
-	
 	private static String restUri;
-	
-	private static ServletContainer servletContainer;
-	
 	private static WebResource webResource;
+	private static KVStoreServer server;
 	
 	@Parameters({"port"})
 	@BeforeClass
@@ -42,25 +33,14 @@ public class KVStoreTest {
 	  final Client client = Client.create(clientConfig);
 	  webResource = client.resource(restUri);
 	  
-	  server = new Server(port);
-      servletContainer = new ServletContainer();
-	  server.setHandler(createWebAppContext(servletContainer));
-	  server.start();
+	  server = new KVStoreServer();
+	  server.start(port);
 	}
 
 	@BeforeMethod
 	public void restartServlet() {
-		servletContainer.reload();
+		server.reload();
 		KVStoreHolder.clear();
-	}
-	
-	private static ServletContextHandler createWebAppContext(Servlet servlet) {
-		ServletContextHandler handler = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        handler.setContextPath("/");
-		ServletHolder servletHolder = new ServletHolder(servlet);
-		servletHolder.setInitParameter("com.sun.jersey.config.property.packages", KVStoreServlet.class.getPackage().getName());
-		handler.addServlet(servletHolder, "/rest/*");
-		return handler;
 	}
 
 	@AfterClass
