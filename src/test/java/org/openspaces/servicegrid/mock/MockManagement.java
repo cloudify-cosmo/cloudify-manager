@@ -29,7 +29,6 @@ public class MockManagement {
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
 	private final MockTaskBroker persistentTaskBroker;
 	
-	
 	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
 		this.taskConsumerRegistrar = taskConsumerRegistrar;
 		this.timeProvider = timeProvider;
@@ -79,14 +78,21 @@ public class MockManagement {
 		registerTaskConsumers();
 	}
 
-	private void unregisterTaskConsumers() {
+	public void start() {
+		state.clear();
+		taskBroker.clear();
+		persistentTaskBroker.clear();
+		registerTaskConsumers();
+	}
+
+	public void unregisterTaskConsumers() {
 		taskConsumerRegistrar.unregisterTaskConsumer(orchestratorId);
 		taskConsumerRegistrar.unregisterTaskConsumer(deploymentPlannerId);
 		taskConsumerRegistrar.unregisterTaskConsumer(capacityPlannerId);
 		taskConsumerRegistrar.unregisterTaskConsumer(machineProvisionerId);
 	}
 	
-	public void registerTaskConsumers() {
+	private void registerTaskConsumers() {
 		taskConsumerRegistrar.registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
 		taskConsumerRegistrar.registerTaskConsumer(newServiceGridDeploymentPlanner(timeProvider), deploymentPlannerId);
 		taskConsumerRegistrar.registerTaskConsumer(newServiceGridCapacityPlanner(timeProvider), capacityPlannerId);

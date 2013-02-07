@@ -35,10 +35,13 @@ import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.time.MockCurrentTimeProvider;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.testng.log.TextFormatter;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -60,12 +63,11 @@ public class ServiceGridOrchestrationTest {
 		setSimpleLoggerFormatter(logger);
 	}
 
-	@BeforeMethod
-	public void before(Method method) {
-		
-		startTimestamp = System.currentTimeMillis();
-		timeProvider = new MockCurrentTimeProvider(startTimestamp);
+	@BeforeClass
+	public void beforeClass() {
+
 		containers =  Sets.newSetFromMap(new ConcurrentHashMap<MockTaskContainer, Boolean>());
+		timeProvider = new MockCurrentTimeProvider(startTimestamp);
 		taskConsumerRegistrar = new TaskConsumerRegistrar() {
 			
 			@Override
@@ -85,10 +87,40 @@ public class ServiceGridOrchestrationTest {
 			}
 
 		};
-		
+
 		management = new MockManagement(taskConsumerRegistrar, timeProvider);
-		management.registerTaskConsumers();
+	}
+	
+	@BeforeMethod
+	public void beforeMethod(Method method) {
+		
+		startTimestamp = System.currentTimeMillis();
+		timeProvider.setCurrentTimeMillis(startTimestamp);
+		management.start();
+
 		logger.info("Starting " + method.getName());
+	}
+	
+	@AfterMethod(alwaysRun=true)
+	public void afterMethod(Method method) {
+		
+		try {
+			
+			management.unregisterTaskConsumers();
+			final Function<MockTaskContainer, URI> getContainerIdFunc = new Function<MockTaskContainer, URI>() {
+	
+				@Override
+				public URI apply(MockTaskContainer input) {
+					return input.getTaskConsumerId();
+				}
+			};
+			
+			Assert.assertEquals(containers.size(), 0, "Cleanup failure in test " + method.getName() + ":"+ Iterables.toString(Iterables.transform(containers, getContainerIdFunc)));
+			
+		}
+		finally {
+			containers.clear();
+		}
 	}
 	
 	/**
@@ -96,9 +128,13 @@ public class ServiceGridOrchestrationTest {
 	 */
 	@Test
 	public void installSingleInstanceServiceTest() {
+		Assert.assertTrue(Iterables.isEmpty(getAgentIds()));
 		installService("tomcat", 1);
 		execute();
 		assertOneTomcatInstance();
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 
 	/**
@@ -109,6 +145,9 @@ public class ServiceGridOrchestrationTest {
 		installService("tomcat", 2);
 		execute();
 		assertTwoTomcatInstances();
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 	
 	
@@ -124,6 +163,9 @@ public class ServiceGridOrchestrationTest {
 		final int numberOfAgentRestarts = 0;
 		final int numberOfMachineRestarts = 1;
 		assertSingleServiceInstance("tomcat", numberOfAgentRestarts, numberOfMachineRestarts);
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 	
 	/**
@@ -139,6 +181,9 @@ public class ServiceGridOrchestrationTest {
 		final int numberOfAgentRestarts = 1;
 		final int numberOfMachineRestarts = 0;
 		assertSingleServiceInstance("tomcat", numberOfAgentRestarts,numberOfMachineRestarts);
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 	
 	/**
@@ -151,6 +196,9 @@ public class ServiceGridOrchestrationTest {
 		scaleService("tomcat",2);
 		execute();
 		assertTwoTomcatInstances();
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 	
 	/**
@@ -163,15 +211,6 @@ public class ServiceGridOrchestrationTest {
 		scaleService("tomcat",1);
 		execute();
 		assertTomcatScaledInFrom2To1();
-	}
-
-	/**
-	 * Tests uninstalling tomcat service
-	 */
-	@Test
-	public void uninstallServiceTest() {
-		installService("tomcat",1);
-		execute();
 		uninstallService("tomcat");
 		execute();
 		assertTomcatUninstalledGracefully();
@@ -200,6 +239,9 @@ public class ServiceGridOrchestrationTest {
 		restartManagement();
 		execute();
 		assertOneTomcatInstance();
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 	
 	/**
@@ -210,11 +252,14 @@ public class ServiceGridOrchestrationTest {
 	public void managementRestartAndOneAgentRestartTest() {
 		installService("tomcat", 2);
 		execute();
+		assertTwoTomcatInstances();
 		restartAgent(getAgentId(1));
 		restartManagement();
 		execute();
-		 
 		assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 	
 	/**
@@ -229,6 +274,10 @@ public class ServiceGridOrchestrationTest {
 		assertServiceInstalledWithOneInstance("cassandra");
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("tomcat")),1);
 		Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")),1);
+		uninstallService("tomcat");
+		uninstallService("cassandra");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 
 	@Test
@@ -252,6 +301,9 @@ public class ServiceGridOrchestrationTest {
 		setServiceInstanceProperty(instanceId1, "request-throughput", 0);
 		execute();
 		assertTomcatScaledInFrom2To1();
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 
 	@Test
@@ -267,6 +319,9 @@ public class ServiceGridOrchestrationTest {
 		setServiceInstanceProperty(instanceId, propertyName, propertyValue);
 		execute();
 		Assert.assertEquals(getServiceInstanceProperty(propertyName, instanceId), propertyValue);
+		uninstallService("tomcat");
+		execute();
+		assertTomcatUninstalledGracefully();
 	}
 
 	private Object getServiceInstanceProperty(final String propertyName, URI instanceId) {
@@ -317,20 +372,24 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private void assertTomcatUninstalled(boolean instanceUnreachable) {
-		Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 0);
-		final ServiceState serviceState = getServiceState(getServiceId("tomcat"));
+		final URI serviceId = getServiceId("tomcat");
+		Assert.assertFalse(getDeploymentPlannerState().getDeploymentPlan().isServiceExists(serviceId));
+		final ServiceState serviceState = getServiceState(serviceId);
 		Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
 		Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
 		
-		ServiceInstanceState instanceState = getServiceInstanceState(Iterables.getOnlyElement(getServiceInstanceIds("tomcat")));
-		if (instanceUnreachable) {
-			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE));
+		for (URI instanceId: getServiceInstanceIds("tomcat")) {
+			ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+			if (instanceUnreachable) {
+				Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE));
+			}
+			else {
+				Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED));
+			}
+			URI agentId = instanceState.getAgentId();
+			AgentState agentState = getAgentState(agentId);
+			Assert.assertTrue(agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
 		}
-		else {
-			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED));
-		}
-		AgentState agentState = getAgentState(Iterables.getOnlyElement(getAgentIds()));
-		Assert.assertTrue(agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
 	}
 	
 	private void assertServiceInstalledWithOneInstance(String serviceName) {

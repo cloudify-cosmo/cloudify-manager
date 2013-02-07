@@ -45,6 +45,7 @@ import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -581,7 +582,7 @@ public class ServiceGridOrchestrator {
 			}
 		}
 		
-		for (URI agentId : getAgentIdsToTerminate()) {
+		for (URI agentId : ImmutableList.copyOf(getAgentIdsToTerminate())) {
 			final AgentState agentState = getAgentState(agentId);
 			
 			if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {	

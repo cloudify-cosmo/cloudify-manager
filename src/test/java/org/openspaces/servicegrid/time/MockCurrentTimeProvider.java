@@ -18,4 +18,8 @@ public class MockCurrentTimeProvider implements CurrentTimeProvider {
 	public long currentTimeMillis() {
 		return currentTime.get();
 	}
+
+	public void setCurrentTimeMillis(long startTimestamp) {
+		currentTime.set(startTimestamp);
+	}
 }
