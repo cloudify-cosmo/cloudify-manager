@@ -69,7 +69,7 @@ public class KVStoreTest {
 	
 	@Test
 	public void helloEtag() {
-		webResource.path("test").put("1");
+		webResource.path("test").header("If-None-Match", "*").put("1");
 		ClientResponse response = webResource.path("test").get(ClientResponse.class);
 		EntityTag etag = response.getEntityTag();
 		Assert.assertEquals(response.getEntity(String.class), "1");
@@ -78,8 +78,8 @@ public class KVStoreTest {
 	}
 	
 	@Test
-	public void helloWrongEtag() {
-		webResource.path("test").put("1");
+	public void helloWrongIfMatchEtag() {
+		webResource.path("test").header("If-None-Match", "*").put("1");
 		ClientResponse response = webResource.path("test").get(ClientResponse.class);
 		Assert.assertEquals(response.getEntity(String.class), "1");
 		    		

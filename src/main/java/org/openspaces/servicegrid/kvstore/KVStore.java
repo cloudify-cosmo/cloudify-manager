@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.ws.rs.core.EntityTag;
 
 import com.beust.jcommander.internal.Maps;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -16,28 +17,23 @@ public class KVStore implements KVReader, KVWriter {
 	final Map<URI, EntityTagState<String>> store = Maps.newLinkedHashMap();
 	
 	@Override
-	public String getState(URI key) {
+	public Optional<EntityTagState<String>> getState(URI key) {
 		synchronized (store) {
 		
-			String state = null;
 			EntityTagState<String> value = store.get(key);
-			if (value != null) {
-				state = value.getState();
-			}
-			return state;
+			return Optional.fromNullable(value);
 		}
 	}
 
 	@Override
-	public EntityTag getEntityTag(URI key) {
+	public Optional<EntityTag> getEntityTag(URI key) {
 		synchronized (store) {
-			
-			EntityTag etag = KVEntityTag.EMPTY;
+			EntityTag etag = null;
 			final EntityTagState<String> value = store.get(key);
 			if (value != null) {
 				etag = value.getEntityTag();
 			}
-			return etag;
+			return Optional.fromNullable(etag);
 		}
 	}
 	

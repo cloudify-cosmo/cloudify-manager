@@ -15,6 +15,9 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
+import org.openspaces.servicegrid.kvstore.KVStore.EntityTagState;
+
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.sun.jersey.api.Responses;
@@ -38,17 +41,15 @@ public class KVStoreServlet {
 	}
 
 	private Response get(final URI key) {
-		final EntityTag etag = KVStoreHolder.getStore().getEntityTag(key);
 		
-		if (etag.equals(KVEntityTag.EMPTY)) {
+		final Optional<EntityTagState<String>> value = KVStoreHolder.getStore().getState(key);
+		if (!value.isPresent()) {
 			return Response.status(Responses.NOT_FOUND).build();
 		}
 		
-		final String state = KVStoreHolder.getStore().getState(key);
-		
 		return Response.ok()
-			   .tag(etag)
-			   .entity(state)
+			   .tag(value.get().getEntityTag())
+			   .entity(value.get().getState())
 			   .build();
 	}
 	
@@ -68,22 +69,41 @@ public class KVStoreServlet {
 
 	@PUT
 	 @Path("{any:.*}")
-	 public Response putContainer(String state, @Context UriInfo uriInfo, @Context Request request) {
+	 public Response put(String state, @Context UriInfo uriInfo, @Context Request request) {
 	     
 	    final URI key =  uriInfo.getAbsolutePath();
-	    if (key.toString().endsWith(LIST_ALL_POSTFIX)) {
+	    return put(state, key, request);
+	 }
+
+	private Response put(String state, final URI key, Request request) {
+		if (key.toString().endsWith(LIST_ALL_POSTFIX)) {
 	    	return Response.status(Status.BAD_REQUEST).entity("{\"error\":\"URI must not end with" + LIST_ALL_POSTFIX +"\"}").build();
 	    }
-	    final EntityTag lastEtag = KVStoreHolder.getStore().getEntityTag(key);
-		ResponseBuilder rb = request.evaluatePreconditions(lastEtag);
-	     if (rb != null) {
-	    	 return rb.build();
-	     }
+	    
+		Response r = evaluatePreconditions(key, request);
+		if (r != null) {
+			return r;
+		}
 	     
-	     EntityTag etag = KVStoreHolder.getStore().put(key, state);
+	     final EntityTag etag = KVStoreHolder.getStore().put(key, state);
 	     
 	    return Response.ok()
 	    	   .tag(etag)
 	    	   .build();
-	 }
+	}
+
+	private Response evaluatePreconditions(final URI key, Request request) {
+		final Optional<EntityTag> lastEtag = KVStoreHolder.getStore().getEntityTag(key);
+	    ResponseBuilder rb;
+	    if (!lastEtag.isPresent()) {
+			rb = request.evaluatePreconditions();
+		}
+		else {
+			rb = request.evaluatePreconditions(lastEtag.get());
+		}
+	     if (rb != null) {
+	    	 return rb.build();
+	     }
+	     return null;
+	}
 }
