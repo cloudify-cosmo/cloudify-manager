@@ -28,7 +28,7 @@ public class KVStoreTest {
 	public static void startWebapp(
 		@Optional("8081") int port) throws Exception {
 	
-	  restUri = "http://localhost:"+port+"/rest/";
+	  restUri = "http://localhost:"+port+"/";
 	  final ClientConfig clientConfig = new DefaultClientConfig();
 	  final Client client = Client.create(clientConfig);
 	  webResource = client.resource(restUri);

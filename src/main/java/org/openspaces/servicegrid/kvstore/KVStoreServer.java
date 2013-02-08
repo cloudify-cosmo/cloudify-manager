@@ -44,7 +44,7 @@ public class KVStoreServer {
 		handler.setContextPath("/");
 		ServletHolder servletHolder = new ServletHolder(servlet);
 		servletHolder.setInitParameter("com.sun.jersey.config.property.packages", KVStoreServlet.class.getPackage().getName());
-		handler.addServlet(servletHolder, "/rest/*");
+		handler.addServlet(servletHolder, "/*");
 		return handler;
 	}
 }
