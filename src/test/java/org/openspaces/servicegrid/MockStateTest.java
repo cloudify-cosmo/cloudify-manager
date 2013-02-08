@@ -1,13 +1,16 @@
 package org.openspaces.servicegrid;
 
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.logging.Logger;
 
 import junit.framework.Assert;
 
 import org.openspaces.servicegrid.mock.MockState;
 import org.openspaces.servicegrid.state.Etag;
 import org.openspaces.servicegrid.streams.StreamUtils;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,10 +19,18 @@ public class MockStateTest {
 
 	final URI id = StreamUtils.newURI("http://localhost/services/tomcat");
 	final ObjectMapper mapper = StreamUtils.newObjectMapper();
+	private final Logger logger = Logger.getLogger(this.getClass().getName());
 	
+	MockState state;
+	
+	@BeforeMethod
+	public void beforeMethod(Method method) {
+		state = new MockState();
+		logger.info("Starting " + method.getName());
+	}
+
 	@Test
 	public void testFirstPut() throws URISyntaxException {
-		final MockState state = new MockState();
 		final TaskConsumerState taskConsumerState = new TaskConsumerState();
 		final Etag etag = state.put(id, taskConsumerState, Etag.EMPTY);
 		Assert.assertFalse(Etag.EMPTY.equals(etag));
@@ -29,7 +40,6 @@ public class MockStateTest {
 
 	@Test
 	public void testSecondPut() throws URISyntaxException {
-		final MockState state = new MockState();
 		final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
 		final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
 		taskConsumerState2.setProperty("kuku", "loko");
@@ -42,7 +52,6 @@ public class MockStateTest {
 
 	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void testSecondPutBadEtag() throws URISyntaxException {
-		final MockState state = new MockState();
 		final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
 		final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
 		taskConsumerState2.setProperty("kuku", "loko");
@@ -58,7 +67,6 @@ public class MockStateTest {
 	
 	@Test
 	public void testEmptyGet() throws URISyntaxException {
-		final MockState state = new MockState();
 		Assert.assertEquals(null, state.get(id, TaskConsumerState.class));
 	}
 }
