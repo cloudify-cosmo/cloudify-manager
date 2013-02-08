@@ -7,6 +7,8 @@ import javax.ws.rs.core.EntityTag;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 
 public class KVStore implements KVReader, KVWriter {
@@ -50,6 +52,20 @@ public class KVStore implements KVReader, KVWriter {
 		}
 	}
 
+	@Override
+	public Iterable<URI> listKeysStartsWith(final URI keyPrefix) {
+		synchronized (store) {
+			return Iterables.filter(store.keySet(), new Predicate<URI>() {
+
+				@Override
+				public boolean apply(URI key) {
+					return key.toString().startsWith(keyPrefix.toString());
+				}
+			});
+		}
+	}
+
+	
 	public void clear() {
 		synchronized (store) {
 			store.clear();
@@ -77,5 +93,4 @@ public class KVStore implements KVReader, KVWriter {
 		return state;
 	}
 }
-
 }

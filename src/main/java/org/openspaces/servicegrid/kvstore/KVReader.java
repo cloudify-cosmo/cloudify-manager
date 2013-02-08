@@ -8,4 +8,6 @@ public interface KVReader {
 
 	String getState(URI key);
 	EntityTag getEntityTag(URI key);
+	Iterable<URI> listKeysStartsWith(URI newURI);
+
 }
