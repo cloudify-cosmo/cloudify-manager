@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.state.Etag;
+import org.openspaces.servicegrid.state.EtagPreconditionNotMetException;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.state.StateWriter;
@@ -43,7 +44,7 @@ public class MockState implements StateReader, StateWriter {
 				final String response = "HTTP/1.1 412 Precondition Failed";
 				logger.info(request +"\n"+ response+"\n");
 			}
-			throw new IllegalArgumentException (String.format("Etag mismatch. Expected %s. Actual %s",ifMatchHeader, oldEtag));
+			throw new EtagPreconditionNotMetException(oldEtag, ifMatchHeader);
 		} 
 
 		EtagState<String> etagState = createEtagState(state);

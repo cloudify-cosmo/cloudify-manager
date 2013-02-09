@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+import org.junit.AfterClass;
 import org.openspaces.servicegrid.agent.state.AgentState;
 import org.openspaces.servicegrid.agent.tasks.PingAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
@@ -85,7 +86,6 @@ public class ServiceGridOrchestrationTest {
 				Preconditions.checkState(removed, "Failed to remove container " + taskConsumerId);
 				return mockTaskContainer.getTaskConsumer();
 			}
-
 		};
 
 		management = new MockManagement(taskConsumerRegistrar, timeProvider);
@@ -105,7 +105,6 @@ public class ServiceGridOrchestrationTest {
 	public void afterMethod(Method method) {
 		
 		try {
-			
 			management.unregisterTaskConsumers();
 			final Function<MockTaskContainer, URI> getContainerIdFunc = new Function<MockTaskContainer, URI>() {
 	
@@ -121,6 +120,11 @@ public class ServiceGridOrchestrationTest {
 		finally {
 			containers.clear();
 		}
+	}
+	
+	@AfterClass
+	public void afterClass() {
+		management.close();
 	}
 	
 	/**

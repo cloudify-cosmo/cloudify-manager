@@ -108,6 +108,16 @@ public class StreamUtils {
 		}
 		return StreamUtils.newURI(externalForm);
 	}
+	
+	public static String fixSlash(String id) {
+		Preconditions.checkNotNull(id);
+		if (!id.endsWith("/")) {
+			if (!id.substring(id.lastIndexOf("/")+1).startsWith("_")) {
+				id += "/";
+			}
+		}
+		return id;
+	}
 
 	public static ObjectMapper newObjectMapper() {
 		ObjectMapper mapper = new ObjectMapper();

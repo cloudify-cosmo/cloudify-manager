@@ -5,31 +5,67 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
-import junit.framework.Assert;
 
+import org.openspaces.servicegrid.kvstore.KVStoreServer;
 import org.openspaces.servicegrid.mock.MockState;
 import org.openspaces.servicegrid.state.Etag;
+import org.openspaces.servicegrid.state.EtagPreconditionNotMetException;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.state.StateWriter;
 import org.openspaces.servicegrid.streams.StreamUtils;
+import org.testng.Assert;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MockStateTest {
-
-	final URI id = StreamUtils.newURI("http://localhost/services/tomcat");
+	
+	private static final int PORT = 8080;
+	private static final URI STATE_SERVER_URI = StreamUtils.newURI("http://localhost:"+PORT+"/");
+	
+	final URI id = StreamUtils.newURI("http://localhost:"+PORT+"/services/tomcat");
 	final ObjectMapper mapper = StreamUtils.newObjectMapper();
 	private final Logger logger = Logger.getLogger(this.getClass().getName());
+	
+	private final boolean useMock = false;
+	
+	private KVStoreServer stateServer;
 	
 	StateReader stateReader;
 	StateWriter stateWriter;
 	
+	@BeforeClass
+	public void beforeClass() {
+		if (useMock) {
+			stateReader = new MockState();
+			stateWriter = (StateWriter) stateReader;
+		}
+		else {
+			stateReader = new StateClient(STATE_SERVER_URI);
+			stateWriter = (StateWriter) stateReader;
+			stateServer = new KVStoreServer();
+			stateServer.start(PORT);
+		}
+	}
+	
+	@AfterClass
+	public void afterClass() {
+		if (!useMock) {
+			stateServer.stop();
+		}
+	}
+	
 	@BeforeMethod
 	public void beforeMethod(Method method) {
-		stateReader = new MockState();
-		stateWriter = (StateWriter) stateReader;
+		if (useMock) {
+			((MockState)stateWriter).clear();
+		}
+		else {
+			stateServer.reload();
+		}
 		logger.info("Starting " + method.getName());
 	}
 
@@ -54,13 +90,20 @@ public class MockStateTest {
 		assertEqualsState(taskConsumerState2, stateReader.get(id, TaskConsumerState.class).getState());
 	}
 
-	@Test(expectedExceptions = IllegalArgumentException.class)
+	@Test
 	public void testSecondPutBadEtag() throws URISyntaxException {
 		final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
 		final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
 		taskConsumerState2.setProperty("kuku", "loko");
-		stateWriter.put(id, taskConsumerState1, Etag.EMPTY);
-		stateWriter.put(id, taskConsumerState2, Etag.EMPTY);
+		Etag etag1 = stateWriter.put(id, taskConsumerState1, Etag.EMPTY);
+		try {
+			stateWriter.put(id, taskConsumerState2, Etag.EMPTY);
+			Assert.fail("Expected exception");
+		}
+		catch (EtagPreconditionNotMetException e) {
+			Assert.assertEquals(e.getActualEtag(), etag1);
+			Assert.assertEquals(e.getExpectedEtag(), Etag.EMPTY);
+		}
 	}
 	
 	private void assertEqualsState(

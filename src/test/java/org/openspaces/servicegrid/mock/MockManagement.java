@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 
 import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.TaskWriter;
+import org.openspaces.servicegrid.kvstore.KVStoreServer;
 import org.openspaces.servicegrid.service.ServiceGridCapacityPlanner;
 import org.openspaces.servicegrid.service.ServiceGridCapacityPlannerParameter;
 import org.openspaces.servicegrid.service.ServiceGridDeploymentPlanner;
@@ -19,6 +20,7 @@ import com.google.common.base.Throwables;
 
 public class MockManagement {
 
+	private static final int STATE_SERVER_PORT = 8080;
 	private final URI orchestratorId;
 	private final URI deploymentPlannerId;
 	private final URI capacityPlannerId;
@@ -28,6 +30,7 @@ public class MockManagement {
 	private final CurrentTimeProvider timeProvider;
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
 	private final MockTaskBroker persistentTaskBroker;
+	private final KVStoreServer stateServer;
 	
 	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
 		this.taskConsumerRegistrar = taskConsumerRegistrar;
@@ -45,6 +48,8 @@ public class MockManagement {
 		taskBroker = new MockTaskBroker();
 		taskBroker.setLoggingEnabled(false);
 		persistentTaskBroker = new MockTaskBroker();
+		stateServer = new KVStoreServer();
+		stateServer.start(STATE_SERVER_PORT);
 	}
 	
 	public URI getDeploymentPlannerId() {
@@ -73,15 +78,19 @@ public class MockManagement {
 
 	public void restart() {
 		unregisterTaskConsumers();
+		
 		state.clear();
 		taskBroker.clear();
+		stateServer.reload();
 		registerTaskConsumers();
 	}
 
 	public void start() {
-		state.clear();
 		taskBroker.clear();
+		
+		state.clear();
 		persistentTaskBroker.clear();
+		stateServer.reload();
 		registerTaskConsumers();
 	}
 
@@ -142,5 +151,9 @@ public class MockManagement {
 
 	public URI getCapacityPlannerId() {
 		return capacityPlannerId;
+	}
+
+	public void close() {
+		stateServer.stop();
 	}
 }

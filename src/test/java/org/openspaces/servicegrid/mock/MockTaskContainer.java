@@ -21,6 +21,7 @@ import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.TaskWriter;
 import org.openspaces.servicegrid.service.ServiceUtils;
 import org.openspaces.servicegrid.state.Etag;
+import org.openspaces.servicegrid.state.EtagPreconditionNotMetException;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.state.StateWriter;
@@ -364,7 +365,7 @@ public class MockTaskContainer {
 					lastEtag = stateWriter.put(taskConsumerId, newState, lastEtag);
 					state = newState;
 				}
-				catch (IllegalArgumentException e) {
+				catch (EtagPreconditionNotMetException e) {
 					//wrong etag
 					if (null != stateReader.get(taskConsumerId, taskConsumerStateClass)) {
 						throw e;
@@ -485,7 +486,7 @@ public class MockTaskContainer {
 			}
 			try {
 				lastEtag = stateWriter.put(historyId, history, lastEtag);
-			} catch (IllegalArgumentException e) {
+			} catch (EtagPreconditionNotMetException e) {
 				//wrong etag
 				EtagState<TaskConsumerHistory> etagState = stateReader.get(historyId, TaskConsumerHistory.class);
 				if (etagState != null) {
