@@ -1,6 +1,7 @@
 package org.openspaces.servicegrid.kvstore;
 
 import java.net.URI;
+
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
@@ -23,7 +24,9 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.sun.jersey.api.Responses;
+import com.sun.jersey.spi.resource.Singleton;
 
+@Singleton
 @Path("/")
 public class KVStoreServlet {
  
