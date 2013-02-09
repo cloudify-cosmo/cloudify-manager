@@ -108,7 +108,7 @@ public class KVStoreTest {
 	@Test
 	public void helloWrongKey() {
 		try {
-			webResource.path("test/*/_list").put("1");
+			webResource.path("test/_list").put("1");
 		}
 		catch (UniformInterfaceException e) {
 			Assert.assertEquals(e.getResponse().getStatus(),ClientResponse.Status.BAD_REQUEST.getStatusCode());
@@ -119,7 +119,7 @@ public class KVStoreTest {
 	public void list() {
 		webResource.path("test/1").put("1");
 		webResource.path("test/2").put("2");
-		String response = webResource.path("test/*/_list").get(String.class);
+		String response = webResource.path("test/_list").get(String.class);
 		String trimmed = response.replaceAll("(\\r|\\n|\\s)", "");
 		Assert.assertEquals(trimmed, "[\""+restUri+"test/1\",\""+restUri+"test/2\"]");
 	}

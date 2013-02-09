@@ -30,7 +30,7 @@ import com.sun.jersey.spi.resource.Singleton;
 @Path("/")
 public class KVStoreServlet {
  
-	private static final String LIST_ALL_POSTFIX = "/*/_list";
+	private static final String LIST_ALL_POSTFIX = "/_list";
 
 	@Context KVStore store;
 	
@@ -55,6 +55,7 @@ public class KVStoreServlet {
 		return Response.ok()
 			   .tag(value.get().getEntityTag())
 			   .entity(value.get().getState())
+			   .type(MediaType.APPLICATION_JSON)
 			   .build();
 	}
 	
