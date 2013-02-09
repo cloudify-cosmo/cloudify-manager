@@ -32,7 +32,9 @@ public class StreamUtils {
 	
 	public static String toJson(ObjectMapper mapper, Object state) {
 		try {
-			return mapper.writeValueAsString(state);
+			String json = mapper.writeValueAsString(state);
+			Preconditions.checkState(json.length() > 0);
+			return json;
 		} catch (JsonProcessingException e) {
 			throw Throwables.propagate(e);
 		}
@@ -41,6 +43,7 @@ public class StreamUtils {
 
 	public static <T> T fromJson(ObjectMapper mapper, String json, Class<? extends T> clazz) {
 		try {
+			Preconditions.checkArgument(json.length() > 0);
 			return (T) mapper.readValue(json, clazz);
 		} catch (JsonParseException e) {
 			throw Throwables.propagate(e);
@@ -54,6 +57,7 @@ public class StreamUtils {
 	}
 	
 	public static <T> boolean elementEquals(ObjectMapper mapper, T state1, T state2) {
+		Preconditions.checkArgument(state1.getClass().equals(state2.getClass()));
 		try {
 			final String state1String = mapper.writeValueAsString(state1);
 			final String state2String = mapper.writeValueAsString(state2);

@@ -19,7 +19,8 @@ import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
 import org.openspaces.servicegrid.agent.tasks.TerminateMachineTask;
-import org.openspaces.servicegrid.service.state.ServiceConfig;
+import org.openspaces.servicegrid.service.state.ServiceDeploymentPlan;
+import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridOrchestratorState;
 import org.openspaces.servicegrid.service.state.ServiceInstanceState;
 import org.openspaces.servicegrid.service.state.ServiceState;
@@ -71,6 +72,7 @@ public class ServiceGridOrchestrator {
 		this.stateReader = parameterObject.getStateReader();
 		this.timeProvider = parameterObject.getTimeProvider();
 		this.state = new ServiceGridOrchestratorState();
+		this.state.setTasksHistory(ServiceUtils.toTasksHistoryId(orchestratorId));
 	}
 
 	@TaskProducer
@@ -95,13 +97,19 @@ public class ServiceGridOrchestrator {
 
 	@TaskConsumer
 	public void updateDeploymentPlan(UpdateDeploymentPlanTask task) {
+		ServiceGridDeploymentPlan deploymentPlan = task.getDeploymentPlan();
+		for (ServiceDeploymentPlan servicePlan : deploymentPlan.getServices()) {
+			int plannedInstancesSize = Iterables.size(servicePlan.getInstanceIds());
+			int numberOfPlannedInstances = servicePlan.getServiceConfig().getPlannedNumberOfInstances();
+			Preconditions.checkArgument(numberOfPlannedInstances == plannedInstancesSize);
+		}
 		if (state.getDeploymentPlan() == null) {
-			state.setDeploymentPlan(task.getDeploymentPlan());
+			state.setDeploymentPlan(deploymentPlan);
 		}
 		else {
 			final Iterable<URI> oldServiceIds = getPlannedServiceIds();
 			final Iterable<URI> oldAgentIds = getPlannedAgentIds();
-			state.setDeploymentPlan(task.getDeploymentPlan());
+			state.setDeploymentPlan(deploymentPlan);
 			final Iterable<URI> newServiceIds = getPlannedServiceIds();
 			final Iterable<URI> newAgentIds = getPlannedAgentIds();
 			state.addServiceIdsToUninstall(StreamUtils.diff(oldServiceIds, newServiceIds));
@@ -121,6 +129,7 @@ public class ServiceGridOrchestrator {
 		impersonatedAgentState.setProgress(AgentState.Progress.PLANNED);
 		impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
 		impersonatedAgentState.setNumberOfMachineRestarts(numberOfMachineRestarts);
+		impersonatedAgentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
 		impersonatedStateModifier.put(impersonatedAgentState);
 	}
 
@@ -135,6 +144,7 @@ public class ServiceGridOrchestrator {
 		serviceState.setServiceConfig(task.getServiceConfig());	
 		serviceState.setInstanceIds(task.getServiceInstanceIds());
 		serviceState.setProgress(ServiceState.Progress.INSTALLING_SERVICE);
+		serviceState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
 		impersonatedStateModifier.put(serviceState);
 	}
 	
@@ -173,6 +183,7 @@ public class ServiceGridOrchestrator {
 		instanceState.setProgress(ServiceInstanceState.Progress.PLANNED);
 		instanceState.setAgentId(planInstanceTask.getAgentId());
 		instanceState.setServiceId(planInstanceTask.getServiceId());
+		instanceState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
 		impersonatedStateModifier.put(instanceState);
 	}
 	
@@ -225,13 +236,13 @@ public class ServiceGridOrchestrator {
 			}
 			if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
 				Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
-				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
+				for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
 					ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 					if (instanceState == null || 
 						instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE)) {
 						
 						syncComplete = false;
-						final URI serviceId = state.getServiceIdOfServiceInstance(instanceId);
+						final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId);
 						final RecoverServiceInstanceStateTask recoverInstanceStateTask = new RecoverServiceInstanceStateTask();
 						recoverInstanceStateTask.setStateId(instanceId);	
 						recoverInstanceStateTask.setConsumerId(agentId);
@@ -241,7 +252,7 @@ public class ServiceGridOrchestrator {
 				}
 			}
 			else if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-				Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfAgent(agentId);
+				Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
 				if (agentState == null ||
 					agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED) &&
 					Iterables.isEmpty(agentState.getServiceInstanceIds())) {
@@ -252,10 +263,10 @@ public class ServiceGridOrchestrator {
 					planAgentTask.setServiceInstanceIds(Lists.newArrayList(plannedInstanceIds));
 					addNewTaskIfNotExists(newTasks, planAgentTask);
 				}				
-				for (URI instanceId : state.getServiceInstanceIdsOfAgent(agentId)) {
+				for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
 					if (getServiceInstanceState(instanceId) == null) {
 						syncComplete = false;
-						final URI serviceId = state.getServiceIdOfServiceInstance(instanceId);
+						final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId);
 						final PlanServiceInstanceTask planInstanceTask = new PlanServiceInstanceTask();
 						planInstanceTask.setStateId(instanceId);
 						planInstanceTask.setAgentId(agentId);
@@ -272,10 +283,10 @@ public class ServiceGridOrchestrator {
 			}
 		}
 		
-		for (final ServiceConfig service : state.getServices()) {
-			final URI serviceId = service.getServiceId();
+		for (final ServiceDeploymentPlan servicePlan : state.getDeploymentPlan().getServices()) {
+			final URI serviceId = servicePlan.getServiceConfig().getServiceId();
 			final ServiceState serviceState = getServiceState(serviceId);
-			final Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+			final Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByServiceId(serviceId);
 			Iterable<URI> actualInstanceIds = (serviceState == null ? Lists.<URI>newArrayList() : serviceState.getInstanceIds());
 			final Iterable<URI> allInstanceIds = StreamUtils.concat(actualInstanceIds, plannedInstanceIds);
 			if (serviceState == null ||
@@ -288,7 +299,7 @@ public class ServiceGridOrchestrator {
 				// when scaling out, the service state should include the new planned instances.
 				// when scaling in,  the service state should still include the old instances until they are removed.
 				planServiceTask.setServiceInstanceIds(Lists.newArrayList(allInstanceIds));
-				planServiceTask.setServiceConfig(service);
+				planServiceTask.setServiceConfig(servicePlan.getServiceConfig());
 				addNewTaskIfNotExists(newTasks, planServiceTask);
 			}
 		}
@@ -309,7 +320,7 @@ public class ServiceGridOrchestrator {
 	}
 
 	private Iterable<URI> getPlannedAgentIds() {
-		return state.getAgentIds();
+		return state.getDeploymentPlan().getAgentIds();
 	}
 
 	private void orchestrateServices(
@@ -383,10 +394,10 @@ public class ServiceGridOrchestrator {
 			List<Task> newTasks, 
 			final URI serviceId) {
 		
-		final Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+		final Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByServiceId(serviceId);
 		for (final URI instanceId : plannedInstanceIds) {
 			
-			final URI agentId = state.getAgentIdOfServiceInstance(instanceId);
+			final URI agentId = state.getDeploymentPlan().getAgentIdByInstanceId(instanceId);
 			final AgentState agentState = getAgentState(agentId);
 			if (!agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
 				//no agent yet
@@ -401,7 +412,7 @@ public class ServiceGridOrchestrator {
 			List<Task> newTasks, 
 			final URI serviceId) {
 	
-		final Iterable<URI> plannedInstanceIds = state.getServiceInstanceIdsOfService(serviceId);
+		final Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByServiceId(serviceId);
 		final List<URI> existingInstanceIds = getServiceState(serviceId).getInstanceIds();
 		for (URI instanceId : existingInstanceIds) {
 			final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
@@ -708,6 +719,6 @@ public class ServiceGridOrchestrator {
 
 
 	private Iterable<URI> getPlannedServiceIds() {
-		return state.getServiceIds();
+		return state.getDeploymentPlan().getServiceIds();
 	}
 }

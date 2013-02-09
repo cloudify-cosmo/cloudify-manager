@@ -6,6 +6,7 @@ public class ServiceGridDeploymentPlannerParameter {
 	
 	private URI orchestratorId;
 	private URI agentsId;
+	private URI deploymentPlannerId;
 	
 	public URI getOrchestratorId() {
 		return orchestratorId;
@@ -22,5 +23,12 @@ public class ServiceGridDeploymentPlannerParameter {
 	public void setAgentsId(URI agentsId) {
 		this.agentsId = agentsId;
 	}
-	
+
+	public void setDeploymentPlannerId(URI deploymentPlannerId) {
+		this.deploymentPlannerId = deploymentPlannerId;
+	}
+
+	public URI getDeploymentPlannerId() {
+		return deploymentPlannerId;
+	}
 }

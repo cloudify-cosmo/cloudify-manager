@@ -24,7 +24,7 @@ public class MockManagement {
 
 	private static final int STATE_SERVER_PORT = 8080;
 	private static final String STATE_SERVER_URI = "http://localhost:"+STATE_SERVER_PORT+"/";
-	private static final boolean useMock = false;
+	private static final boolean useMock = true;
 	private final URI orchestratorId;
 	private final URI deploymentPlannerId;
 	private final URI capacityPlannerId;
@@ -35,7 +35,7 @@ public class MockManagement {
 	private final CurrentTimeProvider timeProvider;
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
 	private final MockTaskBroker persistentTaskBroker;
-	private final KVStoreServer stateServer;
+	private KVStoreServer stateServer;
 	
 	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
 		this.taskConsumerRegistrar = taskConsumerRegistrar;
@@ -141,20 +141,22 @@ public class MockManagement {
 
 	private ServiceGridDeploymentPlanner newServiceGridDeploymentPlanner(CurrentTimeProvider timeProvider) {
 		
-		final ServiceGridDeploymentPlannerParameter servicePlannerParameter = new ServiceGridDeploymentPlannerParameter();
-		servicePlannerParameter.setOrchestratorId(orchestratorId);
-		servicePlannerParameter.setAgentsId(StreamUtils.newURI(STATE_SERVER_URI + "agents/"));
-		return new ServiceGridDeploymentPlanner(servicePlannerParameter);
+		final ServiceGridDeploymentPlannerParameter deploymentPlannerParameter = new ServiceGridDeploymentPlannerParameter();
+		deploymentPlannerParameter.setOrchestratorId(orchestratorId);
+		deploymentPlannerParameter.setAgentsId(StreamUtils.newURI(STATE_SERVER_URI + "agents/"));
+		deploymentPlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
+		return new ServiceGridDeploymentPlanner(deploymentPlannerParameter);
 		
 	}
 	
 	private ServiceGridCapacityPlanner newServiceGridCapacityPlanner(CurrentTimeProvider timeProvider) {
 		
-		final ServiceGridCapacityPlannerParameter servicePlannerParameter = new ServiceGridCapacityPlannerParameter();
-		servicePlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
-		servicePlannerParameter.setTaskReader(taskBroker);
-		servicePlannerParameter.setStateReader(stateReader);
-		return new ServiceGridCapacityPlanner(servicePlannerParameter);
+		final ServiceGridCapacityPlannerParameter capacityPlannerParameter = new ServiceGridCapacityPlannerParameter();
+		capacityPlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
+		capacityPlannerParameter.setTaskReader(taskBroker);
+		capacityPlannerParameter.setStateReader(stateReader);
+		capacityPlannerParameter.setCapacityPlannerId(capacityPlannerId);
+		return new ServiceGridCapacityPlanner(capacityPlannerParameter);
 		
 	}
 

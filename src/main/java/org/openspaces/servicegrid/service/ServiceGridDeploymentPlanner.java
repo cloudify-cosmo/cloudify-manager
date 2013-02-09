@@ -11,6 +11,7 @@ import org.openspaces.servicegrid.TaskConsumerState;
 import org.openspaces.servicegrid.TaskConsumerStateHolder;
 import org.openspaces.servicegrid.TaskProducer;
 import org.openspaces.servicegrid.service.state.ServiceConfig;
+import org.openspaces.servicegrid.service.state.ServiceDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlan;
 import org.openspaces.servicegrid.service.state.ServiceGridDeploymentPlannerState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
@@ -23,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -40,7 +40,7 @@ public class ServiceGridDeploymentPlanner {
 		this.orchestratorId = parameterObject.getOrchestratorId();
 		this.agentsId = parameterObject.getAgentsId();
 		this.state = new ServiceGridDeploymentPlannerState();
-		this.state.setDeploymentPlan(new ServiceGridDeploymentPlan());
+		this.state.setTasksHistory(ServiceUtils.toTasksHistoryId(parameterObject.getDeploymentPlannerId()));
 		mapper = new ObjectMapper();
 		mapper.registerModule(new GuavaModule());
 	}
@@ -84,7 +84,7 @@ public class ServiceGridDeploymentPlanner {
 		checkServiceId(serviceId);
 		boolean installed = isServiceInstalled(serviceId);
 		Preconditions.checkState(!installed);
-		state.addService(serviceConfig);
+		state.updateCapacityPlan(serviceConfig);
 	}
 
 	@TaskConsumer(persistTask = true)
@@ -117,15 +117,15 @@ public class ServiceGridDeploymentPlanner {
 		
 		ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
 		
-		for (final ServiceConfig newService : state.getServices()) {
+		for (final ServiceConfig newServiceConfig : state.getCapacityPlan().getServices()) {
 			
-			final ServiceConfig oldService = deploymentPlan.getServiceById(newService.getServiceId());
-			deploymentPlanUpdateService(deploymentPlan, oldService, newService);
+			final ServiceDeploymentPlan oldServicePlan = deploymentPlan.getServiceById(newServiceConfig.getServiceId());
+			deploymentPlanUpdateService(deploymentPlan, oldServicePlan, newServiceConfig);
 				
-			final URI serviceId = newService.getServiceId();
-			
-			int oldNumberOfInstances = oldService == null ? 0 : oldService.getPlannedNumberOfInstances();
-			int newNumberOfInstances = newService.getPlannedNumberOfInstances();
+			final URI serviceId = newServiceConfig.getServiceId();
+			final ServiceConfig oldServiceConfig = oldServicePlan == null ? null : oldServicePlan.getServiceConfig();
+			int oldNumberOfInstances = oldServiceConfig == null ? 0 : oldServiceConfig.getPlannedNumberOfInstances();
+			int newNumberOfInstances = newServiceConfig.getPlannedNumberOfInstances();
 			if (newNumberOfInstances > oldNumberOfInstances) {
 				for (int i = newNumberOfInstances - oldNumberOfInstances; i > 0; i--) {
 					
@@ -138,21 +138,29 @@ public class ServiceGridDeploymentPlanner {
 				for (int i = oldNumberOfInstances - newNumberOfInstances; i > 0; i--) {
 					final int index = state.getAndDecrementNextServiceInstanceIndex(serviceId);
 					final URI instanceId = newInstanceId(serviceId, index);
-					deploymentPlan.removeServiceInstance(instanceId);
+					boolean removed = deploymentPlan.removeServiceInstance(instanceId);
+					Preconditions.checkState(removed);
 				}
 			}
 		}
 		
-		final Function<ServiceConfig,URI> getServiceIdFunc = new Function<ServiceConfig,URI>() {
+		final Function<Object,URI> getServiceIdFunc = new Function<Object,URI>() {
 
 			@Override
-			public URI apply(ServiceConfig serviceConfig) {
-				return serviceConfig.getServiceId();
+			public URI apply(Object serviceConfig) {
+				if (serviceConfig instanceof ServiceConfig) {
+					return ((ServiceConfig) serviceConfig).getServiceId();
+				}
+				if (serviceConfig instanceof ServiceDeploymentPlan) {
+					return ((ServiceDeploymentPlan)serviceConfig).getServiceConfig().getServiceId();
+				}
+				Preconditions.checkArgument(false,"Unsupported type " + serviceConfig.getClass());
+				return null;
 			}
 		};
 		
 		Set<URI> plannedServiceIds = Sets.newHashSet(Iterables.transform(state.getDeploymentPlan().getServices(), getServiceIdFunc));
-		Set<URI> installedServiceIds = Sets.newHashSet(Iterables.transform(state.getServices(), getServiceIdFunc));
+		Set<URI> installedServiceIds = Sets.newHashSet(Iterables.transform(state.getCapacityPlan().getServices(), getServiceIdFunc));
 		Set<URI> uninstalledServiceIds = Sets.difference(plannedServiceIds, installedServiceIds);
 		
 		for (URI uninstalledServiceId : uninstalledServiceIds) {
@@ -161,25 +169,24 @@ public class ServiceGridDeploymentPlanner {
 		return deploymentPlan;
 	}
 
-	private void deploymentPlanUpdateService(ServiceGridDeploymentPlan deploymentPlan, ServiceConfig oldService, ServiceConfig newService) {
+	private void deploymentPlanUpdateService(
+			ServiceGridDeploymentPlan deploymentPlan, 
+			ServiceDeploymentPlan oldServicePlan, 
+			ServiceConfig newServiceConfig) {
 		
-		final ServiceConfig newServiceClone = StreamUtils.cloneElement(mapper, newService);
-		if (oldService == null) {
-			deploymentPlan.addService(newServiceClone);
+		final ServiceDeploymentPlan newServicePlan = new ServiceDeploymentPlan();
+		newServicePlan.setServiceConfig(StreamUtils.cloneElement(mapper, newServiceConfig));
+		if (oldServicePlan == null) {
+			deploymentPlan.addService(newServicePlan);
 		}
-		else if (!StreamUtils.elementEquals(mapper, newService,oldService)) {
-			deploymentPlan.replaceService(oldService, newServiceClone);
+		else if (!StreamUtils.elementEquals(mapper, newServiceConfig, oldServicePlan.getServiceConfig())) {
+			newServicePlan.setInstances(oldServicePlan.getInstances());
+			deploymentPlan.replaceServiceById(oldServicePlan.getServiceConfig().getServiceId(), newServicePlan);
 		}
 	}
 
 	private boolean isServiceInstalled(final URI serviceId) {
-		return Iterables.tryFind(state.getServices(), new Predicate<ServiceConfig>() {
-
-			@Override
-			public boolean apply(ServiceConfig serviceConfig) {
-				return serviceConfig.getServiceId().equals(serviceId);
-			}
-		}).isPresent();
+		return state.getCapacityPlan().getServiceById(serviceId) != null;
 	}
 	
 	private URI newInstanceId(URI serviceId) {

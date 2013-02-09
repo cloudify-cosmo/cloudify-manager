@@ -60,7 +60,14 @@ public class StateClient implements StateReader, StateWriter {
 					.put(ClientResponse.class, json);
 		}
 		if (response.getClientResponseStatus() == ClientResponse.Status.OK) {
-			return Etag.create(response);
+			Preconditions.checkState(json.equals(response.getEntity(String.class)));
+			Etag etag2 = Etag.create(response);
+			EtagState<Object> etagStateVerify = get(id, state.getClass());
+			Preconditions.checkState(etagStateVerify.getEtag().equals(etag2));
+			if (!StreamUtils.elementEquals(mapper, etagStateVerify.getState(), state)) {
+				Preconditions.checkState(StreamUtils.elementEquals(mapper, etagStateVerify.getState(), state));
+			}
+			return etag2;
 		}
 		else if (response.getClientResponseStatus()== ClientResponse.Status.PRECONDITION_FAILED) {
 			throw new EtagPreconditionNotMetException(Etag.create(response), etag);
@@ -94,6 +101,7 @@ public class StateClient implements StateReader, StateWriter {
 		final Status status = response.getClientResponseStatus();
 		if (status == ClientResponse.Status.OK) {
 			final String json = response.getEntity(String.class);
+			Preconditions.checkState(json.length() > 0, "Retrieved empty string value for path " + path);
 			final Etag etag = Etag.create(response);
 			final T state = StreamUtils.fromJson(mapper, json, clazz);
 			return new EtagState<T>(etag, state);
@@ -117,7 +125,7 @@ public class StateClient implements StateReader, StateWriter {
 
 	@Override
 	public Iterable<URI> getElementIdsStartingWith(final URI idPrefix) {
-		final String path = getPathFromId(idPrefix)+"*/_list";
+		final String path = getPathFromId(idPrefix)+"_list";
 		final String json = webResource.path(path).get(String.class);
 		@SuppressWarnings("unchecked")
 		final List<String> uris = StreamUtils.fromJson(mapper, json, List.class);

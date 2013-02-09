@@ -96,7 +96,6 @@ public class ServiceGridOrchestrationTest {
 		startTimestamp = System.currentTimeMillis();
 		timeProvider.setCurrentTimeMillis(startTimestamp);
 		management.start();
-
 		logger.info("Starting " + method.getName());
 	}
 	
@@ -442,9 +441,9 @@ public class ServiceGridOrchestrationTest {
 		
 		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
-		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
-		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), instanceId);
-		final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId); 
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId(serviceId)), instanceId);
+		final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId).getServiceConfig(); 
 		Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
 	}
 
@@ -478,8 +477,8 @@ public class ServiceGridOrchestrationTest {
 		
 		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
 		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
-		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceId(), serviceId);
-		Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId().get(serviceId)), 2);
+		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
+		Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId(serviceId)), 2);
 		
 		Iterable<URI> agentIds = getAgentIds();
 		int numberOfAgents = Iterables.size(agentIds);
@@ -497,7 +496,7 @@ public class ServiceGridOrchestrationTest {
 			Assert.assertEquals(instanceState.getServiceId(), serviceId);
 			Assert.assertEquals(instanceState.getAgentId(), agentId);
 			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
-			Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId().get(agentId)), instanceId);
+			Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
 		}
 		
 	}

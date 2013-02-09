@@ -165,6 +165,7 @@ public class MockTaskContainer {
 
 	private void afterImpersonatingTask(Task task, TaskConsumerStateModifier<TaskConsumerState> stateModifier, TaskConsumerHistoryModifier historyModifier) {
 		final TaskConsumerState state = stateModifier.get();
+		Preconditions.checkNotNull(state);
 		state.setExecutingTask(null);
 		historyModifier.addTaskToHistory(task);
 		stateModifier.put(state);

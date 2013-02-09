@@ -33,6 +33,7 @@ public class ServiceGridCapacityPlanner {
 		this.stateReader = parameterObject.getStateReader();
 		this.taskReader = parameterObject.getTaskReader();
 		this.state = new ServiceGridCapacityPlannerState();
+		state.setTasksHistory(ServiceUtils.toTasksHistoryId(parameterObject.getCapacityPlannerId()));
 	}
 	
 	@TaskConsumerStateHolder

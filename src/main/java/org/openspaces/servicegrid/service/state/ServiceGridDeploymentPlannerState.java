@@ -2,37 +2,38 @@ package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
 import java.util.Map;
-import java.util.Set;
 
 import org.openspaces.servicegrid.TaskConsumerState;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 public class ServiceGridDeploymentPlannerState extends TaskConsumerState {
 
-	private Set<ServiceConfig> servicesConfig = Sets.newLinkedHashSet();
+	private ServiceGridCapacityPlan capacityPlan;
 	private boolean deploymentPlanningRequired;
 	private ServiceGridDeploymentPlan deploymentPlan;
 	private int nextAgentId;
 	private Map<URI, Integer> nextServiceInstanceIndexByServiceId;
 	private Map<URI, Integer> nextServiceInstanceIndex;
 	
-	public Set<ServiceConfig> getServices() {
-		return servicesConfig;
+	public ServiceGridDeploymentPlannerState() {
+		capacityPlan = new ServiceGridCapacityPlan();
+		deploymentPlan = new ServiceGridDeploymentPlan();
 	}
 	
-	public void setServices(Set<ServiceConfig> services) {
-		this.servicesConfig = services;
+	public ServiceGridCapacityPlan getCapacityPlan() {
+		return capacityPlan;
+	}
+	
+	public void setCapacityPlan(ServiceGridCapacityPlan services) {
+		this.capacityPlan = services;
 	}
 	
 	@JsonIgnore
-	public void addService(ServiceConfig serviceConfig) {
-		servicesConfig.add(serviceConfig);
+	public void updateCapacityPlan(ServiceConfig serviceConfig) {
+		capacityPlan.addService(serviceConfig);
 		if (nextServiceInstanceIndex == null) {
 			nextServiceInstanceIndex = Maps.newHashMap();
 		}
@@ -43,14 +44,7 @@ public class ServiceGridDeploymentPlannerState extends TaskConsumerState {
 	
 	@JsonIgnore
 	public void removeService(final URI serviceId) {
-		Iterables.removeIf(servicesConfig, new Predicate<ServiceConfig>() {
-
-			@Override
-			public boolean apply(ServiceConfig serviceConfig) {
-				return serviceConfig.getServiceId().equals(serviceId);
-			}
-		});
-		
+		capacityPlan.removeServiceById(serviceId);		
 		setDeploymentPlanningRequired(true);
 	}
 	
@@ -113,15 +107,6 @@ public class ServiceGridDeploymentPlannerState extends TaskConsumerState {
 	}
 
 	public ServiceConfig getServiceById(final URI serviceId) {
-		Preconditions.checkNotNull(serviceId);
-		final ServiceConfig serviceNotFound = null;
-		return Iterables.find(getServices(), new Predicate<ServiceConfig>(){
-
-			@Override
-			public boolean apply(ServiceConfig service) {
-				return serviceId.equals(service.getServiceId());
-			}
-		}, 
-		serviceNotFound);
+		return capacityPlan.getServiceById(serviceId);
 	}
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import org.openspaces.servicegrid.TaskConsumerState;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.base.Preconditions;
 
 public class ServiceState extends TaskConsumerState {
@@ -28,7 +27,7 @@ public class ServiceState extends TaskConsumerState {
 		this.serviceConfig = serviceConfig;
 	}
 	
-	@JsonUnwrapped
+	//@JsonUnwrapped
 	public ServiceConfig getServiceConfig() {
 		return serviceConfig;
 	}

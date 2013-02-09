@@ -1,5 +1,6 @@
 package org.openspaces.servicegrid;
 
+import java.net.URI;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
@@ -13,6 +14,8 @@ public class TaskConsumerState {
 
 	private Map<String, Object> properties = Maps.newLinkedHashMap();
 
+	private URI tasksHistory;
+	
     @JsonAnySetter 
     public void setProperty(String key, Object value) {
       properties.put(key, value);
@@ -33,5 +36,13 @@ public class TaskConsumerState {
 
 	public void setExecutingTask(final Task executingTask) {
 		this.executingTask = executingTask;
+	}
+
+	public URI getTasksHistory() {
+		return tasksHistory;
+	}
+
+	public void setTasksHistory(URI tasksHistory) {
+		this.tasksHistory = tasksHistory;
 	}
 }
