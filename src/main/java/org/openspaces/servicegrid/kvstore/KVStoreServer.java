@@ -15,8 +15,9 @@ public class KVStoreServer {
 	private static ServletContainer servletContainer;
 	
 	public void start(int port) {
+
 		server = new Server(port);
-	    servletContainer = new ServletContainer();
+	    servletContainer = new ServletContainer(new KVStoreResourceConfig());
 		server.setHandler(createWebAppContext(servletContainer));
 		try {
 			server.start();

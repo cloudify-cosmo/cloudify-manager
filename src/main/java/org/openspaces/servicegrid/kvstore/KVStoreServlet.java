@@ -21,14 +21,14 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.sun.jersey.api.Responses;
-import com.sun.jersey.spi.resource.Singleton;
 
 @Path("/")
-@Singleton
 public class KVStoreServlet {
  
 	private static final String LIST_ALL_POSTFIX = "/*/_list";
 
+	@Context KVStore store;
+	
 	@GET
 	@Path("{any:.*}")
 	public Response get(@Context UriInfo uriInfo, @Context Request request) {
@@ -42,7 +42,7 @@ public class KVStoreServlet {
 
 	private Response get(final URI key) {
 		
-		final Optional<EntityTagState<String>> value = KVStoreHolder.getStore().getState(key);
+		final Optional<EntityTagState<String>> value = store.getState(key);
 		if (!value.isPresent()) {
 			return Response.status(Responses.NOT_FOUND).build();
 		}
@@ -55,7 +55,7 @@ public class KVStoreServlet {
 	
 	 private Response list(URI keyPrefix, Request request) {
 		
-		 final Iterable<URI> list = KVStoreHolder.getStore().listKeysStartsWith(keyPrefix);
+		 final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
 		 return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(Iterables.toString(list)).build();
 	}
 
@@ -85,7 +85,7 @@ public class KVStoreServlet {
 			return r;
 		}
 	     
-	     final EntityTag etag = KVStoreHolder.getStore().put(key, state);
+	     final EntityTag etag = store.put(key, state);
 	     
 	    return Response.ok()
 	    	   .tag(etag)
@@ -93,7 +93,7 @@ public class KVStoreServlet {
 	}
 
 	private Response evaluatePreconditions(final URI key, Request request) {
-		final Optional<EntityTag> lastEtag = KVStoreHolder.getStore().getEntityTag(key);
+		final Optional<EntityTag> lastEtag = store.getEntityTag(key);
 	    ResponseBuilder rb;
 	    if (!lastEtag.isPresent()) {
 			rb = request.evaluatePreconditions();

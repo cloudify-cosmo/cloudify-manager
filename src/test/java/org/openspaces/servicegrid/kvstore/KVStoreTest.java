@@ -40,7 +40,6 @@ public class KVStoreTest {
 	@BeforeMethod
 	public void restartServlet() {
 		server.reload();
-		KVStoreHolder.clear();
 	}
 
 	@AfterClass
