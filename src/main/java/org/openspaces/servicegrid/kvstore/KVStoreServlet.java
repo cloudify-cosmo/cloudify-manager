@@ -99,7 +99,11 @@ public class KVStoreServlet {
 			rb = request.evaluatePreconditions();
 		}
 		else {
-			rb = request.evaluatePreconditions(lastEtag.get());
+			final EntityTag eTag = lastEtag.get();
+			rb = request.evaluatePreconditions(eTag);
+			if (rb != null) {
+				rb.tag(eTag);
+			}
 		}
 	     if (rb != null) {
 	    	 return rb.build();

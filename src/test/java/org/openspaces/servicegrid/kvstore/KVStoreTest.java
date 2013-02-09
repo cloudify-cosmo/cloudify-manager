@@ -68,10 +68,11 @@ public class KVStoreTest {
 	
 	@Test
 	public void helloEtag() {
-		webResource.path("test").header("If-None-Match", "*").put("1");
-		ClientResponse response = webResource.path("test").get(ClientResponse.class);
-		EntityTag etag = response.getEntityTag();
-		Assert.assertEquals(response.getEntity(String.class), "1");
+		ClientResponse putResponse = webResource.path("test").header("If-None-Match", "*").put(ClientResponse.class, "1");
+		ClientResponse getResponse = webResource.path("test").get(ClientResponse.class);
+		EntityTag etag = getResponse.getEntityTag();
+		Assert.assertEquals(getResponse.getEntity(String.class), "1");
+		Assert.assertEquals(etag, putResponse.getEntityTag());
 		webResource.path("test").header("If-Match", etag).put("2");
 		Assert.assertEquals(webResource.path("test").get(String.class),"2");
 	}
@@ -79,18 +80,14 @@ public class KVStoreTest {
 	@Test
 	public void helloWrongIfMatchEtag() {
 		webResource.path("test").header("If-None-Match", "*").put("1");
-		ClientResponse response = webResource.path("test").get(ClientResponse.class);
-		Assert.assertEquals(response.getEntity(String.class), "1");
-		    		
-		try {
-			final EntityTag wrongEtag = KVEntityTag.create("0");
-			webResource.path("test").header("If-Match", wrongEtag).put("2");
-			Assert.fail("Expected exception");
-		}
-		catch (UniformInterfaceException e) {
-			Assert.assertEquals(e.getResponse().getStatus(),ClientResponse.Status.PRECONDITION_FAILED.getStatusCode());
-		}
+		ClientResponse getResponse = webResource.path("test").get(ClientResponse.class);
+		Assert.assertEquals(getResponse.getEntity(String.class), "1");    		
+		final EntityTag wrongEtag = KVEntityTag.create("0");
+		ClientResponse putResponse = webResource.path("test").header("If-Match", wrongEtag).put(ClientResponse.class, "2");
+		Assert.assertEquals(putResponse.getStatus(),ClientResponse.Status.PRECONDITION_FAILED.getStatusCode());
+		Assert.assertEquals(putResponse.getEntityTag(), getResponse.getEntityTag());
 	}
+	
 	
 	@Test
 	public void helloWrongKey() {
