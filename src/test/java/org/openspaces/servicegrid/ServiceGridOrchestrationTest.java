@@ -15,7 +15,6 @@ import org.openspaces.servicegrid.agent.tasks.StartAgentTask;
 import org.openspaces.servicegrid.agent.tasks.StartMachineTask;
 import org.openspaces.servicegrid.mock.MockAgent;
 import org.openspaces.servicegrid.mock.MockManagement;
-import org.openspaces.servicegrid.mock.MockState;
 import org.openspaces.servicegrid.mock.MockTaskContainer;
 import org.openspaces.servicegrid.mock.MockTaskContainerParameter;
 import org.openspaces.servicegrid.mock.TaskConsumerRegistrar;
@@ -474,7 +473,7 @@ public class ServiceGridOrchestrationTest {
 		final ServiceState serviceState = getServiceState(serviceId);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
 		Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
-		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI("http://localhost/services/tomcat/instances/"));
+		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI(management.getStateServerUri()+"services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
 		
 		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
@@ -548,7 +547,7 @@ public class ServiceGridOrchestrationTest {
 	
 	private void submitTask(final URI target, final Task task) {
 		task.setProducerTimestamp(timeProvider.currentTimeMillis());
-		task.setProducerId(newURI("http://localhost/webui"));
+		task.setProducerId(newURI(management.getStateServerUri()+"webui"));
 		task.setConsumerId(target);
 		management.getTaskWriter().postNewTask(task);
 	}
@@ -564,7 +563,7 @@ public class ServiceGridOrchestrationTest {
 
 	
 	private URI getServiceId(String name) {
-		return newURI("http://localhost/services/" + name + "/");
+		return newURI(management.getStateServerUri()+"services/" + name + "/");
 	}
 	
 	private void execute() {
@@ -631,16 +630,16 @@ public class ServiceGridOrchestrationTest {
 	}
 	
 	private Iterable<URI> getServiceInstanceIds(String serviceName) {
-		return getStateIdsStartingWith(newURI("http://localhost/services/"+serviceName+"/instances/"));
+		return getStateIdsStartingWith(newURI(management.getStateServerUri()+"services/"+serviceName+"/instances/"));
 	}
 	
 	private URI getServiceInstanceId(final String serviceName, final int index) {
-		return newURI("http://localhost/services/"+serviceName+"/instances/"+index+"/");
+		return newURI(management.getStateServerUri()+"services/"+serviceName+"/instances/"+index+"/");
 	}
 
 	private Iterable<URI> getStateIdsStartingWith(final URI uri) {
 		return Iterables.filter(
-				((MockState)getStateReader()).getElementIdsStartingWith(uri), 
+				getStateReader().getElementIdsStartingWith(uri), 
 				new Predicate<URI>(){
 
 					@Override
@@ -651,11 +650,11 @@ public class ServiceGridOrchestrationTest {
 	
 
 	private Iterable<URI> getAgentIds() {
-		return getStateIdsStartingWith(newURI("http://localhost/agents/"));
+		return getStateIdsStartingWith(newURI(management.getStateServerUri()+"agents/"));
 	}
 	
 	private URI getAgentId(final int index) {
-		return newURI("http://localhost/agents/"+index+"/");
+		return newURI(management.getStateServerUri()+"agents/"+index+"/");
 	}
 
 	private void killOnlyMachine() {

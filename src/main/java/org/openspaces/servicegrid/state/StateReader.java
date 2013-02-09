@@ -5,4 +5,6 @@ import java.net.URI;
 public interface StateReader {
 
 	<T> EtagState<T> get(URI id, Class<? extends T> clazz);
+
+	Iterable<URI> getElementIdsStartingWith(URI idPrefix);
 }

@@ -41,7 +41,7 @@ public class StateClient implements StateReader, StateWriter {
 		final String path = getPathFromId(id);
 		final String json = StreamUtils.toJson(mapper,state);
 		ClientResponse response;
-		if (etag.equals(Etag.EMPTY)) {
+		if (etag.equals(Etag.empty())) {
 			response = 
 				webResource
 					.path(path)
@@ -56,14 +56,13 @@ public class StateClient implements StateReader, StateWriter {
 					.put(ClientResponse.class, json);
 		}
 		if (response.getClientResponseStatus() == ClientResponse.Status.OK) {
-			return new Etag(response.getEntityTag());
+			return Etag.create(response);
 		}
 		else if (response.getClientResponseStatus()== ClientResponse.Status.PRECONDITION_FAILED) {
-			throw new EtagPreconditionNotMetException(new Etag(response.getEntityTag()), etag);
+			throw new EtagPreconditionNotMetException(Etag.create(response), etag);
 		}
 		throw new UniformInterfaceException(response);
 	}
-
 
 	@Override
 	public <T> EtagState<T> get(URI id, Class<? extends T> clazz) {
@@ -73,7 +72,7 @@ public class StateClient implements StateReader, StateWriter {
 		Status status = response.getClientResponseStatus();
 		if (status == ClientResponse.Status.OK) {
 			String json = response.getEntity(String.class);
-			Etag etag = new Etag(response.getEntityTag());
+			Etag etag = Etag.create(response);
 			final T state = StreamUtils.fromJson(mapper, json, clazz);
 			return new EtagState<T>(etag, state);
 		}
@@ -94,6 +93,7 @@ public class StateClient implements StateReader, StateWriter {
 		return StreamUtils.elementEquals(mapper, state1, state2);
 	}
 
+	@Override
 	public Iterable<URI> getElementIdsStartingWith(final URI idPrefix) {
 		final String path = getPathFromId(idPrefix)+"*/_list";
 		final String json = webResource.path(path).get(String.class);

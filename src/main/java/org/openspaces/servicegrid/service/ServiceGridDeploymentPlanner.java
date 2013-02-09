@@ -34,9 +34,11 @@ public class ServiceGridDeploymentPlanner {
 	private final ServiceGridDeploymentPlannerState state;
 	private final URI orchestratorId;
 	private final ObjectMapper mapper;
-		
+	private final URI agentsId; 	
+	
 	public ServiceGridDeploymentPlanner(ServiceGridDeploymentPlannerParameter parameterObject) {
 		this.orchestratorId = parameterObject.getOrchestratorId();
+		this.agentsId = parameterObject.getAgentsId();
 		this.state = new ServiceGridDeploymentPlannerState();
 		this.state.setDeploymentPlan(new ServiceGridDeploymentPlan());
 		mapper = new ObjectMapper();
@@ -191,7 +193,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	private URI newAgentExecutorId() {
-		return newURI("http://localhost/agents/" + state.getAndIncrementNextAgentIndex()+"/");
+		return newURI(agentsId.toString()+ state.getAndIncrementNextAgentIndex()+"/");
 	}
 	
 	private URI newURI(String URI) {

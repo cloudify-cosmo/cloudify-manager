@@ -5,6 +5,7 @@ import javax.ws.rs.core.EntityTag;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
+import com.sun.jersey.api.client.ClientResponse;
 
 public class Etag {
 
@@ -15,14 +16,14 @@ public class Etag {
 	/**
 	 * For mocking
 	 */
-	protected Etag(HashCode hash) {
+	private Etag(HashCode hash) {
 		this.entityTag = new EntityTag(hash.toString());
 	}
 
 	/**
 	 * For responses
 	 */
-	public Etag(EntityTag entityTag) {
+	private Etag(EntityTag entityTag) {
 		Preconditions.checkNotNull(entityTag);
 		this.entityTag = entityTag;
 	}
@@ -53,4 +54,14 @@ public class Etag {
 		return entityTag.toString();
 	}
 
+	public static Etag create(ClientResponse response) {
+		if (response.getEntityTag() == null) {
+			return Etag.EMPTY;
+		}
+		return new Etag(response.getEntityTag());
+	}
+	
+	public static Etag empty() {
+		return Etag.EMPTY;
+	}
 }

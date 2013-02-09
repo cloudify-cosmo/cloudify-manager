@@ -3,6 +3,7 @@ package org.openspaces.servicegrid.mock;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.openspaces.servicegrid.StateClient;
 import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.TaskWriter;
 import org.openspaces.servicegrid.kvstore.KVStoreServer;
@@ -14,6 +15,7 @@ import org.openspaces.servicegrid.service.ServiceGridOrchestrator;
 import org.openspaces.servicegrid.service.ServiceGridOrchestratorParameter;
 import org.openspaces.servicegrid.state.StateReader;
 import org.openspaces.servicegrid.state.StateWriter;
+import org.openspaces.servicegrid.streams.StreamUtils;
 import org.openspaces.servicegrid.time.CurrentTimeProvider;
 
 import com.google.common.base.Throwables;
@@ -21,11 +23,14 @@ import com.google.common.base.Throwables;
 public class MockManagement {
 
 	private static final int STATE_SERVER_PORT = 8080;
+	private static final String STATE_SERVER_URI = "http://localhost:"+STATE_SERVER_PORT+"/";
+	private static final boolean useMock = false;
 	private final URI orchestratorId;
 	private final URI deploymentPlannerId;
 	private final URI capacityPlannerId;
 	private final URI machineProvisionerId;
-	private final MockState state;
+	private final StateReader stateReader;
+	private final StateWriter stateWriter;
 	private final MockTaskBroker taskBroker;
 	private final CurrentTimeProvider timeProvider;
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
@@ -36,20 +41,28 @@ public class MockManagement {
 		this.taskConsumerRegistrar = taskConsumerRegistrar;
 		this.timeProvider = timeProvider;
 		try {
-			orchestratorId = new URI("http://localhost/services/orchestrator/");
-			deploymentPlannerId = new URI("http://localhost/services/deployment_planner/");
-			capacityPlannerId = new URI("http://localhost/services/capacity_planner/");
-			machineProvisionerId = new URI("http://localhost/services/provisioner/");
+			orchestratorId = new URI(STATE_SERVER_URI+"services/orchestrator/");
+			deploymentPlannerId = new URI(STATE_SERVER_URI+"services/deployment_planner/");
+			capacityPlannerId = new URI(STATE_SERVER_URI+"services/capacity_planner/");
+			machineProvisionerId = new URI(STATE_SERVER_URI+"services/provisioner/");
 		} catch (URISyntaxException e) {
 			throw Throwables.propagate(e);
 		}
-		state = new MockState();
-		state.setLoggingEnabled(true);
+		if (useMock) {
+			stateReader = new MockState();
+			stateWriter = (StateWriter) stateReader;
+			((MockState)stateReader).setLoggingEnabled(true);
+		}
+		else {
+			stateReader = new StateClient(StreamUtils.newURI(STATE_SERVER_URI));
+			stateWriter = (StateWriter) stateReader;
+			stateServer = new KVStoreServer();
+			stateServer.start(STATE_SERVER_PORT);
+		}
 		taskBroker = new MockTaskBroker();
 		taskBroker.setLoggingEnabled(false);
 		persistentTaskBroker = new MockTaskBroker();
-		stateServer = new KVStoreServer();
-		stateServer.start(STATE_SERVER_PORT);
+		
 	}
 	
 	public URI getDeploymentPlannerId() {
@@ -69,28 +82,34 @@ public class MockManagement {
 	}
 	
 	public StateReader getStateReader() {
-		return state;
+		return stateReader;
 	}
 	
 	public StateWriter getStateWriter() {
-		return state;
+		return stateWriter;
 	}
 
 	public void restart() {
 		unregisterTaskConsumers();
-		
-		state.clear();
+		clearState();
 		taskBroker.clear();
-		stateServer.reload();
 		registerTaskConsumers();
 	}
 
+	private void clearState() {
+		if (useMock) {
+			((MockState)stateReader).clear();
+		}
+		else {
+			stateServer.reload();			
+		}
+	}
+
 	public void start() {
+
+		clearState();
 		taskBroker.clear();
-		
-		state.clear();
 		persistentTaskBroker.clear();
-		stateServer.reload();
 		registerTaskConsumers();
 	}
 
@@ -114,7 +133,7 @@ public class MockManagement {
 		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
 		serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
 		serviceOrchestratorParameter.setTaskReader(taskBroker);
-		serviceOrchestratorParameter.setStateReader(state);
+		serviceOrchestratorParameter.setStateReader(stateReader);
 		serviceOrchestratorParameter.setTimeProvider(timeProvider);
 	
 		return new ServiceGridOrchestrator(serviceOrchestratorParameter);
@@ -124,7 +143,9 @@ public class MockManagement {
 		
 		final ServiceGridDeploymentPlannerParameter servicePlannerParameter = new ServiceGridDeploymentPlannerParameter();
 		servicePlannerParameter.setOrchestratorId(orchestratorId);
+		servicePlannerParameter.setAgentsId(StreamUtils.newURI(STATE_SERVER_URI + "agents/"));
 		return new ServiceGridDeploymentPlanner(servicePlannerParameter);
+		
 	}
 	
 	private ServiceGridCapacityPlanner newServiceGridCapacityPlanner(CurrentTimeProvider timeProvider) {
@@ -132,7 +153,7 @@ public class MockManagement {
 		final ServiceGridCapacityPlannerParameter servicePlannerParameter = new ServiceGridCapacityPlannerParameter();
 		servicePlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
 		servicePlannerParameter.setTaskReader(taskBroker);
-		servicePlannerParameter.setStateReader(state);
+		servicePlannerParameter.setStateReader(stateReader);
 		return new ServiceGridCapacityPlanner(servicePlannerParameter);
 		
 	}
@@ -155,5 +176,9 @@ public class MockManagement {
 
 	public void close() {
 		stateServer.stop();
+	}
+	
+	public String getStateServerUri() {
+		return STATE_SERVER_URI;
 	}
 }
