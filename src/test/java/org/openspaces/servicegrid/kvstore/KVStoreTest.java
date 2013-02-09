@@ -88,6 +88,22 @@ public class KVStoreTest {
 		Assert.assertEquals(putResponse.getEntityTag(), getResponse.getEntityTag());
 	}
 	
+	@Test
+	public void helloWrongIfNoneMatchEtag() {
+		ClientResponse putResponse1 = webResource.path("test").header("If-None-Match", "*").put(ClientResponse.class, "1");
+		Assert.assertEquals(putResponse1.getStatus(),ClientResponse.Status.OK.getStatusCode());
+		ClientResponse putResponse2 =webResource.path("test").header("If-None-Match", "*").put(ClientResponse.class, "2");
+		Assert.assertEquals(putResponse2.getStatus(),ClientResponse.Status.PRECONDITION_FAILED.getStatusCode());
+		Assert.assertEquals(putResponse1.getEntityTag(), putResponse2.getEntityTag());
+	}
+	
+	@Test
+	public void helloWrongIfMatchEtagWhenEmpty() {
+		final EntityTag wrongEtag = KVEntityTag.create("0");
+		ClientResponse putResponse = webResource.path("test").header("If-Match", wrongEtag).put(ClientResponse.class, "1");
+		Assert.assertEquals(putResponse.getStatus(),ClientResponse.Status.PRECONDITION_FAILED.getStatusCode());
+		Assert.assertEquals(putResponse.getEntityTag(), null);
+	}
 	
 	@Test
 	public void helloWrongKey() {
