@@ -2,6 +2,8 @@ package org.openspaces.servicegrid;
 
 import java.net.URI;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.openspaces.servicegrid.state.Etag;
 import org.openspaces.servicegrid.state.EtagPreconditionNotMetException;
@@ -13,6 +15,7 @@ import org.openspaces.servicegrid.streams.StreamUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -27,6 +30,7 @@ public class StateClient implements StateReader, StateWriter {
 	private final ObjectMapper mapper;
 	private final URI restUri;
 	private WebResource webResource;
+	private final Logger logger = Logger.getLogger(this.getClass().getName());
 	
 	public StateClient(URI restUri) {
 		this.restUri = restUri;
@@ -67,12 +71,30 @@ public class StateClient implements StateReader, StateWriter {
 	@Override
 	public <T> EtagState<T> get(URI id, Class<? extends T> clazz) {
 		final String path = getPathFromId(id);
-		
-		ClientResponse response = webResource.path(path).get(ClientResponse.class);
-		Status status = response.getClientResponseStatus();
+		final int maxRetries = 30;
+
+        for(int i =0 ; ; i++) {
+
+            try {
+            	return get(path, clazz);
+            } catch (Exception e) {
+            	int numberOfRetriesLeft = maxRetries - i -1;
+            	if (numberOfRetriesLeft > 0) {
+            		logger.log(Level.INFO, "GET failed. will try " + numberOfRetriesLeft + " more time(s).", e);
+            	}
+            	else {
+            		throw Throwables.propagate(e);    		
+            	}
+            }
+        }
+	}
+
+	private <T> EtagState<T> get(final String path, Class<? extends T> clazz) {
+		final ClientResponse response = webResource.path(path).get(ClientResponse.class);
+		final Status status = response.getClientResponseStatus();
 		if (status == ClientResponse.Status.OK) {
-			String json = response.getEntity(String.class);
-			Etag etag = Etag.create(response);
+			final String json = response.getEntity(String.class);
+			final Etag etag = Etag.create(response);
 			final T state = StreamUtils.fromJson(mapper, json, clazz);
 			return new EtagState<T>(etag, state);
 		}
