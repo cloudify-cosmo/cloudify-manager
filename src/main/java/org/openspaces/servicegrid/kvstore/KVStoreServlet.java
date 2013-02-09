@@ -2,6 +2,7 @@ package org.openspaces.servicegrid.kvstore;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
@@ -17,6 +18,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.openspaces.servicegrid.kvstore.KVStore.EntityTagState;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -56,7 +58,18 @@ public class KVStoreServlet {
 	 private Response list(URI keyPrefix, Request request) {
 		
 		 final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
-		 return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(Iterables.toString(list)).build();
+		 return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
+	}
+
+	private String toJson(Iterable<URI> uris) {
+		return Arrays.toString(
+			Iterables.toArray(Iterables.transform(uris, new Function<URI, String>() {
+		
+			@Override
+			public String apply(URI input) {
+				return "\"" + input +"\"";
+			}
+		}), String.class));
 	}
 
 	private URI newURI(String uri) {
