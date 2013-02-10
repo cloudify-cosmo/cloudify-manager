@@ -1,35 +1,50 @@
 package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
-import java.util.Map;
+import java.util.List;
 
 import org.openspaces.servicegrid.TaskConsumerState;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class ServiceGridCapacityPlannerState extends TaskConsumerState {
 
-	private Map<URI, ServiceScalingRule> scalingRuleByService = Maps.newLinkedHashMap();
+	private List<ServiceScalingRule> scalingRules = Lists.newArrayList();
 
-	public Map<URI, ServiceScalingRule> getScalingRuleByService() {
-		return scalingRuleByService;
+	public List<ServiceScalingRule> getScalingRules() {
+		return scalingRules;
 	}
 	
-	public void setScalingRuleByService(Map<URI, ServiceScalingRule> scalingRuleByService) {
-		this.scalingRuleByService = Maps.newLinkedHashMap();
-		scalingRuleByService.putAll(scalingRuleByService);
+	public void setScalingRules(List<ServiceScalingRule> scalingRules) {
+		this.scalingRules = scalingRules;
 	}
 
 	@JsonIgnore
-	public void addServiceScalingRule(URI serviceId, ServiceScalingRule scalingRule) {
-		scalingRuleByService.put(serviceId, scalingRule);
+	public void addServiceScalingRule(ServiceScalingRule scalingRule) {
+		removeServiceScalingRule(scalingRule.getServiceId());
+		scalingRules.add(scalingRule);
 	}
 	
 	@JsonIgnore
-	public void removeServiceScalingRule(URI serviceId) {
-		Preconditions.checkArgument(scalingRuleByService.containsKey(serviceId));
-		scalingRuleByService.remove(serviceId);
+	public boolean removeServiceScalingRule(URI serviceId) {
+		return Iterables.removeIf(scalingRules, findServiceIdPredicate(serviceId));
 	}
+
+	private Predicate<ServiceScalingRule> findServiceIdPredicate(final URI serviceId) {
+		Preconditions.checkNotNull(serviceId);
+		
+		return new Predicate<ServiceScalingRule>() {
+
+			@Override
+			public boolean apply(ServiceScalingRule rule) {
+				return serviceId.equals(rule.getServiceId());
+			}
+		};
+	}
+
+
 }

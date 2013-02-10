@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -125,12 +124,9 @@ public class StreamUtils {
 
 	public static ObjectMapper newObjectMapper() {
 		ObjectMapper mapper = new ObjectMapper();
-		mapper.registerModule(new GuavaModule());
 		mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-		
-		//getDeserializationConfig().with(DeserializationFeature.)
 		return mapper;
 	}
 }

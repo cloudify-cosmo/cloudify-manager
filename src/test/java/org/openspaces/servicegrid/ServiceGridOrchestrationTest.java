@@ -357,9 +357,9 @@ public class ServiceGridOrchestrationTest {
 	}
 
 	private void scalingrule(String serviceName, ServiceScalingRule rule) {
+		rule.setServiceId(getServiceId(serviceName));
 		ScalingRulesTask task = new ScalingRulesTask();
 		task.setScalingRule(rule);
-		task.setServiceId(getServiceId(serviceName));
 		submitTask(management.getCapacityPlannerId(), task);
 	}
 

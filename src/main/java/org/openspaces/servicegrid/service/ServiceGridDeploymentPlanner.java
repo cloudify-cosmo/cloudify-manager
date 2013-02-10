@@ -21,7 +21,6 @@ import org.openspaces.servicegrid.service.tasks.UpdateDeploymentPlanTask;
 import org.openspaces.servicegrid.streams.StreamUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -41,8 +40,7 @@ public class ServiceGridDeploymentPlanner {
 		this.agentsId = parameterObject.getAgentsId();
 		this.state = new ServiceGridDeploymentPlannerState();
 		this.state.setTasksHistory(ServiceUtils.toTasksHistoryId(parameterObject.getDeploymentPlannerId()));
-		mapper = new ObjectMapper();
-		mapper.registerModule(new GuavaModule());
+		mapper = StreamUtils.newObjectMapper();
 	}
 
 	@TaskConsumer(persistTask = true)

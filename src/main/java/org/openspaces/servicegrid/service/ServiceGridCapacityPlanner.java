@@ -2,7 +2,6 @@ package org.openspaces.servicegrid.service;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map.Entry;
 
 import org.openspaces.servicegrid.Task;
 import org.openspaces.servicegrid.TaskConsumer;
@@ -43,7 +42,7 @@ public class ServiceGridCapacityPlanner {
 	
 	@TaskConsumer
 	public void scalingRules(ScalingRulesTask task) {
-		state.addServiceScalingRule(task.getServiceId(), task.getScalingRule());
+		state.addServiceScalingRule(task.getScalingRule());
 	}
 	
 	@TaskProducer
@@ -51,18 +50,16 @@ public class ServiceGridCapacityPlanner {
 		
 		final List<Task> newTasks = Lists.newArrayList();
 		
-		for (Entry<URI, ServiceScalingRule>  entry : state.getScalingRuleByService().entrySet()) {
-			final URI serviceId = entry.getKey();
-			final ServiceScalingRule scalingRule = entry.getValue();
-			enforceScalingRule(newTasks, serviceId, scalingRule);
+		for (ServiceScalingRule scalingRule : state.getScalingRules()) {
+			enforceScalingRule(newTasks, scalingRule);
 		}
 		
 		return newTasks;
 	}
 
-	private void enforceScalingRule(List<Task> newTasks, URI serviceId, ServiceScalingRule scalingRule) {
-		
-		ServiceState serviceState = getServiceState(serviceId);
+	private void enforceScalingRule(List<Task> newTasks, ServiceScalingRule scalingRule) {
+		final URI serviceId = scalingRule.getServiceId();
+		final ServiceState serviceState = getServiceState(serviceId);
 		if (shouldScaleOut(scalingRule, serviceState)) {
 		
 			final int plannedNumberOfInstances = serviceState.getInstanceIds().size() + 1;
