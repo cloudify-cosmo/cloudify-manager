@@ -101,8 +101,8 @@ public class MockStateTest {
 			Assert.fail("Expected exception");
 		}
 		catch (EtagPreconditionNotMetException e) {
-			Assert.assertEquals(e.getActualEtag(), etag1);
-			Assert.assertEquals(e.getExpectedEtag(), Etag.EMPTY);
+			Assert.assertEquals(e.getResponseEtag(), etag1);
+			Assert.assertEquals(e.getRequestEtag(), Etag.EMPTY);
 		}
 	}
 	

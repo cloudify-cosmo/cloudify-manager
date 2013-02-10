@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.ws.rs.core.MediaType;
+
 import org.openspaces.servicegrid.state.Etag;
 import org.openspaces.servicegrid.state.EtagPreconditionNotMetException;
 import org.openspaces.servicegrid.state.EtagState;
@@ -24,6 +26,7 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.api.client.filter.LoggingFilter;
 
 public class StateClient implements StateReader, StateWriter {
 	
@@ -31,12 +34,16 @@ public class StateClient implements StateReader, StateWriter {
 	private final URI restUri;
 	private WebResource webResource;
 	private final Logger logger = Logger.getLogger(this.getClass().getName());
+	private boolean enableHttpLogging = false;
 	
 	public StateClient(URI restUri) {
 		this.restUri = restUri;
 		mapper = StreamUtils.newObjectMapper();
 		final ClientConfig clientConfig = new DefaultClientConfig();
 		final Client client = Client.create(clientConfig);
+		if (enableHttpLogging) {
+			client.addFilter(new LoggingFilter(logger));
+		}
 		webResource = client.resource(restUri);		  
 	}
 	
@@ -44,12 +51,15 @@ public class StateClient implements StateReader, StateWriter {
 	public Etag put(URI id, Object state, Etag etag) {
 		final String path = getPathFromId(id);
 		final String json = StreamUtils.toJson(mapper,state);
+		Preconditions.checkState(json.length() > 0);
 		ClientResponse response;
 		if (etag.equals(Etag.empty())) {
 			response = 
 				webResource
 					.path(path)
 					.header("If-None-Match", "*")
+					.header("Content-Length", json.length())
+					.type(MediaType.APPLICATION_JSON)
 					.put(ClientResponse.class, json);
 		}
 		else {
@@ -57,9 +67,12 @@ public class StateClient implements StateReader, StateWriter {
 				webResource
 					.path(path)
 					.header("If-Match", etag.toString())
+					.header("Content-Length", json.length())
+					.type(MediaType.APPLICATION_JSON)
 					.put(ClientResponse.class, json);
 		}
 		if (response.getClientResponseStatus() == ClientResponse.Status.OK) {
+			response.bufferEntity();
 			Preconditions.checkState(json.equals(response.getEntity(String.class)));
 			Etag etag2 = Etag.create(response);
 			EtagState<Object> etagStateVerify = get(id, state.getClass());
@@ -70,7 +83,7 @@ public class StateClient implements StateReader, StateWriter {
 			return etag2;
 		}
 		else if (response.getClientResponseStatus()== ClientResponse.Status.PRECONDITION_FAILED) {
-			throw new EtagPreconditionNotMetException(Etag.create(response), etag);
+			throw new EtagPreconditionNotMetException(id, Etag.create(response), etag);
 		}
 		throw new UniformInterfaceException(response);
 	}
@@ -101,7 +114,9 @@ public class StateClient implements StateReader, StateWriter {
 		final Status status = response.getClientResponseStatus();
 		if (status == ClientResponse.Status.OK) {
 			final String json = response.getEntity(String.class);
-			Preconditions.checkState(json.length() > 0, "Retrieved empty string value for path " + path);
+			if (json.length() == 0) {
+				Preconditions.checkState(json.length() > 0, "Retrieved empty string value for path " + path);
+			}
 			final Etag etag = Etag.create(response);
 			final T state = StreamUtils.fromJson(mapper, json, clazz);
 			return new EtagState<T>(etag, state);

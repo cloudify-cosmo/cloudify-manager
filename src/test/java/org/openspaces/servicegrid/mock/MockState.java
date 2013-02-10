@@ -44,7 +44,7 @@ public class MockState implements StateReader, StateWriter {
 				final String response = "HTTP/1.1 412 Precondition Failed";
 				logger.info(request +"\n"+ response+"\n");
 			}
-			throw new EtagPreconditionNotMetException(oldEtag, ifMatchHeader);
+			throw new EtagPreconditionNotMetException(id ,oldEtag, ifMatchHeader);
 		} 
 
 		EtagState<String> etagState = createEtagState(state);

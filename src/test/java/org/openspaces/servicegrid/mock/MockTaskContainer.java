@@ -368,7 +368,7 @@ public class MockTaskContainer {
 				}
 				catch (EtagPreconditionNotMetException e) {
 					//wrong etag
-					if (null != stateReader.get(taskConsumerId, taskConsumerStateClass)) {
+					if (!Etag.EMPTY.equals(e.getResponseEtag())) {
 						throw e;
 					}
 				
@@ -489,8 +489,7 @@ public class MockTaskContainer {
 				lastEtag = stateWriter.put(historyId, history, lastEtag);
 			} catch (EtagPreconditionNotMetException e) {
 				//wrong etag
-				EtagState<TaskConsumerHistory> etagState = stateReader.get(historyId, TaskConsumerHistory.class);
-				if (etagState != null) {
+				if (!Etag.EMPTY.equals(e.getResponseEtag())) {
 					throw e;
 				}
 				// management had a failover which caused a severe memory loss
