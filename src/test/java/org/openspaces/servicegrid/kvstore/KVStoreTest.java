@@ -123,4 +123,10 @@ public class KVStoreTest {
 		String trimmed = response.replaceAll("(\\r|\\n|\\s)", "");
 		Assert.assertEquals(trimmed, "[\""+restUri+"test/1\",\""+restUri+"test/2\"]");
 	}
+	
+	@Test
+	public void emptyList() {
+		String response = webResource.path("test/_list").get(String.class);
+		Assert.assertEquals(response, "[]");
+	}
 }
