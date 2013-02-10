@@ -55,10 +55,11 @@ public class Etag {
 	}
 
 	public static Etag create(ClientResponse response) {
-		if (response.getEntityTag() == null) {
+		EntityTag responseEtag = response.getEntityTag();
+		if (responseEtag == null) {
 			return Etag.EMPTY;
 		}
-		return new Etag(response.getEntityTag());
+		return new Etag(responseEtag);
 	}
 	
 	public static Etag empty() {
