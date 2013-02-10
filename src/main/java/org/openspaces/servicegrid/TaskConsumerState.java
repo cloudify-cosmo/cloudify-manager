@@ -3,8 +3,6 @@ package org.openspaces.servicegrid;
 import java.net.URI;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.google.common.collect.Maps;
 
 public class TaskConsumerState {
@@ -16,12 +14,12 @@ public class TaskConsumerState {
 
 	private URI tasksHistory;
 	
-    @JsonAnySetter 
+    //@JsonAnySetter 
     public void setProperty(String key, Object value) {
       properties.put(key, value);
     }
 
-    @JsonAnyGetter 
+    //@JsonAnyGetter 
     public Map<String,Object> getProperties() {
       return properties;
     }
