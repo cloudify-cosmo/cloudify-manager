@@ -27,38 +27,35 @@ public class KVStore implements KVReader, KVWriter {
 
 	@Override
 	public Optional<EntityTag> getEntityTag(URI key) {
-		synchronized (store) {
-			EntityTag etag = null;
-			final EntityTagState<String> value = store.get(key);
-			if (value != null) {
-				etag = value.getEntityTag();
-			}
-			return Optional.fromNullable(etag);
+		EntityTag etag = null;
+		final EntityTagState<String> value = store.get(key);
+		if (value != null) {
+			etag = value.getEntityTag();
 		}
+		return Optional.fromNullable(etag);
 	}
 	
 	@Override
 	public EntityTag put(URI key, String state) {
-		synchronized (store) {
+		Preconditions.checkNotNull(key);
+		Preconditions.checkNotNull(state);
 		
-			final EntityTag etag = KVEntityTag.create(state);
-			final EntityTagState<String> value = new EntityTagState<String>(etag, state);
-			store.put(key, value);
-			return etag;
-		}
+		final EntityTag etag = KVEntityTag.create(state);
+		final EntityTagState<String> value = new EntityTagState<String>(etag, state);
+		store.put(key, value);
+		return etag;
+	
 	}
 
 	@Override
 	public Iterable<URI> listKeysStartsWith(final URI keyPrefix) {
-		synchronized (store) {
-			return Iterables.filter(store.keySet(), new Predicate<URI>() {
+		return Iterables.filter(store.keySet(), new Predicate<URI>() {
 
-				@Override
-				public boolean apply(URI key) {
-					return key.toString().startsWith(keyPrefix.toString());
-				}
-			});
-		}
+			@Override
+			public boolean apply(URI key) {
+				return key.toString().startsWith(keyPrefix.toString());
+			}
+		});
 	}
 
 	

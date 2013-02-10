@@ -1,7 +1,6 @@
 package org.openspaces.servicegrid.kvstore;
 
 import java.net.URI;
-
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
@@ -10,6 +9,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.EntityTag;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
@@ -18,18 +18,21 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
 import org.openspaces.servicegrid.kvstore.KVStore.EntityTagState;
+import org.testng.log4testng.Logger;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.sun.jersey.api.Responses;
-import com.sun.jersey.spi.resource.Singleton;
 
-@Singleton
+//@Singleton
 @Path("/")
 public class KVStoreServlet {
- 
+
+	private final Logger logger = Logger.getLogger(this.getClass());
+	
 	private static final String LIST_ALL_POSTFIX = "/_list";
 
 	@Context KVStore store;
@@ -47,22 +50,25 @@ public class KVStoreServlet {
 
 	private Response get(final URI key) {
 		
-		final Optional<EntityTagState<String>> value = store.getState(key);
-		if (!value.isPresent()) {
-			return Response.status(Responses.NOT_FOUND).build();
+		synchronized (store) {
+			final Optional<EntityTagState<String>> value = store.getState(key);
+			if (!value.isPresent()) {
+				return Response.status(Responses.NOT_FOUND).build();
+			}
+			
+			return Response.ok()
+					.tag(value.get().getEntityTag())
+					.entity(value.get().getState())
+					.type(MediaType.APPLICATION_JSON)
+					.build();
 		}
-		
-		return Response.ok()
-			   .tag(value.get().getEntityTag())
-			   .entity(value.get().getState())
-			   .type(MediaType.APPLICATION_JSON)
-			   .build();
 	}
 	
 	 private Response list(URI keyPrefix, Request request) {
-		
-		 final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
-		 return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
+		 synchronized (store) {
+			 final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
+			 return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
+		 }
 	}
 
 	private String toJson(Iterable<URI> uris) {
@@ -84,29 +90,38 @@ public class KVStoreServlet {
 		}
 	}
 
-	@PUT
+	 @PUT
 	 @Path("{any:.*}")
-	 public Response put(String state, @Context UriInfo uriInfo, @Context Request request) {
-	     
+	 public Response put(String state, @Context HttpHeaders headers, @Context UriInfo uriInfo, @Context Request request) {
+		
+		final Integer contentLength = Integer.valueOf(Iterables.getOnlyElement(headers.getRequestHeader("Content-Length")));
+		if (state.length() != contentLength) {
+ 			 final String error = "body length is " + state.length() +" instead of " + contentLength;
+			 logger.warn(error);
+			 return Response.status(Status.BAD_REQUEST).entity("{\"error\":\""+error+"\"}").build();		 
+		}
 	    final URI key =  uriInfo.getAbsolutePath();
 	    return put(state, key, request);
 	 }
-
+	
 	private Response put(String state, final URI key, Request request) {
 		if (key.toString().endsWith(LIST_ALL_POSTFIX)) {
 	    	return Response.status(Status.BAD_REQUEST).entity("{\"error\":\"URI must not end with" + LIST_ALL_POSTFIX +"\"}").build();
 	    }
+		
+		synchronized (store) {
 	    
-		Response r = evaluatePreconditions(key, request);
-		if (r != null) {
-			return r;
+			Response r = evaluatePreconditions(key, request);
+			if (r != null) {
+				Preconditions.checkState(r.getStatus() != Status.OK.getStatusCode());
+				return r;
+			}
+		     final EntityTag etag = store.put(key, state);
+		     
+		    return Response.ok()
+		    	   .tag(etag)
+		    	   .build();
 		}
-	     
-	     final EntityTag etag = store.put(key, state);
-	     
-	    return Response.ok()
-	    	   .tag(etag)
-	    	   .build();
 	}
 
 	private Response evaluatePreconditions(final URI key, Request request) {
