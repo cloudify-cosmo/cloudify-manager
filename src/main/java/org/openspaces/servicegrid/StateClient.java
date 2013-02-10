@@ -52,6 +52,26 @@ public class StateClient implements StateReader, StateWriter {
 		final String path = getPathFromId(id);
 		final String json = StreamUtils.toJson(mapper,state);
 		Preconditions.checkState(json.length() > 0);
+		
+		final int retries = 30;
+		for (int i = 0 ;  ; i ++) {
+			final ClientResponse response = put(path, json, etag);
+			if (response.getClientResponseStatus() == ClientResponse.Status.OK) {
+				return Etag.create(response);
+			}
+			else if ((i < (retries-1)) && response.getClientResponseStatus()== ClientResponse.Status.BAD_REQUEST) {
+				//retry
+				logger.warning("received error " + response.getEntity(String.class));
+				continue;
+			}
+			else if (response.getClientResponseStatus()== ClientResponse.Status.PRECONDITION_FAILED) {
+				throw new EtagPreconditionNotMetException(id, Etag.create(response), etag);
+			}
+			throw new UniformInterfaceException(response);
+		}
+	}
+
+	private ClientResponse put(final String path, final String json, Etag etag) {
 		ClientResponse response;
 		if (etag.equals(Etag.empty())) {
 			response = 
@@ -71,21 +91,7 @@ public class StateClient implements StateReader, StateWriter {
 					.type(MediaType.APPLICATION_JSON)
 					.put(ClientResponse.class, json);
 		}
-		if (response.getClientResponseStatus() == ClientResponse.Status.OK) {
-			response.bufferEntity();
-			Preconditions.checkState(json.equals(response.getEntity(String.class)));
-			Etag etag2 = Etag.create(response);
-			EtagState<Object> etagStateVerify = get(id, state.getClass());
-			Preconditions.checkState(etagStateVerify.getEtag().equals(etag2));
-			if (!StreamUtils.elementEquals(mapper, etagStateVerify.getState(), state)) {
-				Preconditions.checkState(StreamUtils.elementEquals(mapper, etagStateVerify.getState(), state));
-			}
-			return etag2;
-		}
-		else if (response.getClientResponseStatus()== ClientResponse.Status.PRECONDITION_FAILED) {
-			throw new EtagPreconditionNotMetException(id, Etag.create(response), etag);
-		}
-		throw new UniformInterfaceException(response);
+		return response;
 	}
 
 	@Override
