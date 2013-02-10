@@ -15,7 +15,6 @@ public class KVStoreServer {
 	private static ServletContainer servletContainer;
 	
 	public void start(int port) {
-
 		server = new Server(port);
 	    servletContainer = new ServletContainer(new KVStoreResourceConfig());
 		server.setHandler(createWebAppContext(servletContainer));
@@ -45,6 +44,7 @@ public class KVStoreServer {
 		handler.setContextPath("/");
 		ServletHolder servletHolder = new ServletHolder(servlet);
 		servletHolder.setInitParameter("com.sun.jersey.config.property.packages", KVStoreServlet.class.getPackage().getName());
+		servletHolder.setInitParameter("cacheControl","max-age=0,public");
 		handler.addServlet(servletHolder, "/*");
 		return handler;
 	}
