@@ -28,8 +28,8 @@ import org.openspaces.servicegrid.service.state.ServiceState;
 import org.openspaces.servicegrid.service.tasks.InstallServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScaleServiceTask;
 import org.openspaces.servicegrid.service.tasks.ScalingRulesTask;
+import org.openspaces.servicegrid.service.tasks.ServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.SetInstancePropertyTask;
-import org.openspaces.servicegrid.service.tasks.StartServiceInstanceTask;
 import org.openspaces.servicegrid.service.tasks.UninstallServiceTask;
 import org.openspaces.servicegrid.state.EtagState;
 import org.openspaces.servicegrid.state.StateReader;
@@ -352,8 +352,8 @@ public class ServiceGridOrchestrationTest {
 		assertServiceInstalledWithOneInstance("tomcat");
 		Assert.assertTrue(getAgentState(getAgentId(0)).isProgress(AgentState.Progress.AGENT_STARTED));
 		Assert.assertTrue(getAgentState(getAgentId(1)).isProgress(AgentState.Progress.MACHINE_TERMINATED));
-		Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
-		Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED));
+		Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).isProgress("service_started"));
+		Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).isProgress("service_uninstalled"));
 	}
 
 	private void scalingrule(String serviceName, ServiceScalingRule rule) {
@@ -383,10 +383,10 @@ public class ServiceGridOrchestrationTest {
 		for (URI instanceId: getServiceInstanceIds("tomcat")) {
 			ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 			if (instanceUnreachable) {
-				Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNREACHABLE));
+				Assert.assertTrue(instanceState.isUnreachable());
 			}
 			else {
-				Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_UNINSTALLED));
+				Assert.assertTrue(instanceState.isProgress("service_uninstalled"));
 			}
 			URI agentId = instanceState.getAgentId();
 			AgentState agentState = getAgentState(agentId);
@@ -422,11 +422,21 @@ public class ServiceGridOrchestrationTest {
 		final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
 		final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 		TaskConsumerHistory instanceTasksHistory = getTasksHistory(instanceId);
-		Assert.assertEquals(Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(),StartServiceInstanceTask.class)),1+numberOfMachineRestarts);
+		Assert.assertEquals(Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(), new Predicate<Task>() {
+
+			@Override
+			public boolean apply(Task task) {
+				if (task instanceof ServiceInstanceTask) {
+					return ((ServiceInstanceTask)task).getLifecycle().equals("service_started");
+				}
+				return false;
+			}
+		}))
+		,1+numberOfMachineRestarts);
 		
 		final URI agentId = instanceState.getAgentId();
 		Assert.assertEquals(instanceState.getServiceId(), serviceId);
-		Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
+		Assert.assertTrue(instanceState.isProgress("service_started"));
 		
 		final AgentState agentState = getAgentState(agentId);
 		Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
@@ -495,7 +505,7 @@ public class ServiceGridOrchestrationTest {
 			ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 			Assert.assertEquals(instanceState.getServiceId(), serviceId);
 			Assert.assertEquals(instanceState.getAgentId(), agentId);
-			Assert.assertTrue(instanceState.isProgress(ServiceInstanceState.Progress.INSTANCE_STARTED));
+			Assert.assertTrue(instanceState.isProgress("service_started"));
 			Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
 		}
 		
