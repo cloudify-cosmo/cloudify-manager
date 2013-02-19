@@ -33,7 +33,9 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
 import org.openspaces.servicegrid.kvstore.KVStore.EntityTagState;
-import org.testng.log4testng.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -46,7 +48,7 @@ import com.sun.jersey.api.Responses;
 @Path("/")
 public class KVStoreServlet {
 
-	private final Logger logger = Logger.getLogger(this.getClass());
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	
 	private static final String LIST_ALL_POSTFIX = "/_list";
 
