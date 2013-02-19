@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.cloudifysource.cosmo</groupId>
 	<artifactId>rest-kvstore</artifactId>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<version>0.1-SNAPSHOT</version>
 	<properties>
 		<jetty.version>8.1.5.v20120716</jetty.version>
