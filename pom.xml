@@ -4,7 +4,7 @@
 	<groupId>servicegrid</groupId>
 	<artifactId>rest-kvstore</artifactId>
 	<packaging>war</packaging>
-	<version>1.0-SNAPSHOT</version>
+	<version>0.1-SNAPSHOT</version>
 	<properties>
 		<jetty.version>8.1.5.v20120716</jetty.version>
 		<testng.version>6.8</testng.version>
