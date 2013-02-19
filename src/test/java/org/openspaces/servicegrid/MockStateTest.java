@@ -21,7 +21,7 @@ import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
 
-import org.openspaces.servicegrid.kvstore.KVStoreServer;
+import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.openspaces.servicegrid.mock.MockState;
 import org.openspaces.servicegrid.state.Etag;
 import org.openspaces.servicegrid.state.EtagPreconditionNotMetException;

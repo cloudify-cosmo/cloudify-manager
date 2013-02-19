@@ -21,7 +21,7 @@ import java.net.URISyntaxException;
 import org.openspaces.servicegrid.StateClient;
 import org.openspaces.servicegrid.TaskReader;
 import org.openspaces.servicegrid.TaskWriter;
-import org.openspaces.servicegrid.kvstore.KVStoreServer;
+import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.openspaces.servicegrid.service.ServiceGridCapacityPlanner;
 import org.openspaces.servicegrid.service.ServiceGridCapacityPlannerParameter;
 import org.openspaces.servicegrid.service.ServiceGridDeploymentPlanner;
@@ -66,7 +66,7 @@ public class MockManagement {
 		if (useMock) {
 			stateReader = new MockState();
 			stateWriter = (StateWriter) stateReader;
-			((MockState)stateReader).setLoggingEnabled(true);
+			((MockState)stateReader).setLoggingEnabled(false);
 		}
 		else {
 			stateReader = new StateClient(StreamUtils.newURI(STATE_SERVER_URI));
