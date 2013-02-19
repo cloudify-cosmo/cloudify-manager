@@ -17,8 +17,7 @@ package org.openspaces.servicegrid.service.state;
 
 import java.net.URI;
 import java.util.List;
-
-import com.beust.jcommander.internal.Lists;
+import com.google.common.collect.Lists;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.base.Function;
