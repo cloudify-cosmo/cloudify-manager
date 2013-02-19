@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.openspaces.servicegrid.kvstore;
-
-import java.net.URI;
+package org.cloudifysource.cosmo.kvstore;
 
 import javax.ws.rs.core.EntityTag;
 
-import org.openspaces.servicegrid.kvstore.KVStore.EntityTagState;
+import com.google.common.hash.Hashing;
 
-import com.google.common.base.Optional;
-
-public interface KVReader {
-
-	Optional<EntityTagState<String>> getState(URI key);
-	Optional<EntityTag> getEntityTag(URI key);
-	Iterable<URI> listKeysStartsWith(URI newURI);
-
+public class KVEntityTag {
+	
+	public static EntityTag create(String input) {
+		return new EntityTag(Hashing.md5().hashString(input).toString());
+	}
+	
 }

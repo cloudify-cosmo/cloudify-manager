@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.openspaces.servicegrid.kvstore;
+package org.cloudifysource.cosmo.kvstore;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -32,7 +32,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
-import org.openspaces.servicegrid.kvstore.KVStore.EntityTagState;
+import org.cloudifysource.cosmo.kvstore.KVStore.EntityTagState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
