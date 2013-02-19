@@ -21,8 +21,13 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 import java.net.URI;
 
+/**
+ * Base class for tasks being consumed by {@link TaskConsumer}
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 @JsonTypeIdResolver(TaskTypeIdResolver.class)
-@JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="task", visible=false)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, include = JsonTypeInfo.As.PROPERTY, property = "task", visible = false)
 public abstract class Task {
 	
 	private TaskRouting routing;
@@ -32,12 +37,12 @@ public abstract class Task {
 		routing = new TaskRouting();
 		this.stateClass = stateClass;
 	}
-	
+
 	@JsonIgnore
 	public Class<? extends TaskConsumerState> getStateClass() {
 		return stateClass;
 	}
-	
+
 	@JsonIgnore
 	public URI getStateId() {
 		return routing.getStateId();
@@ -55,7 +60,7 @@ public abstract class Task {
 	public void setConsumerId(URI consumerId) {
 		this.routing.setConsumerId(consumerId);
 	}
-	
+
 	@JsonIgnore
 	public URI getConsumerId() {
 		return routing.getConsumerId();
