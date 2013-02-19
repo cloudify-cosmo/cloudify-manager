@@ -30,7 +30,7 @@ import java.util.List;
 public class AgentState extends TaskConsumerState {
 
     /**
-     * Possible values for {@link AgentState#setProgress(String)}
+     * Possible values for {@link AgentState#setProgress(String)}.
      */
     public static class Progress {
         public static final String PLANNED = "PLANNED";

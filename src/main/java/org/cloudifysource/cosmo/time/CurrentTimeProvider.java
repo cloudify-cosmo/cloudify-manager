@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,7 +15,14 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.time;
 
+/**
+ * An interface used to abstract {@link System#currentTimeMillis()}
+ * Reasons include test mocking and ability to use Windows specific implementation that uses relative time.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public interface CurrentTimeProvider {
 
-	long currentTimeMillis();
+    long currentTimeMillis();
 }

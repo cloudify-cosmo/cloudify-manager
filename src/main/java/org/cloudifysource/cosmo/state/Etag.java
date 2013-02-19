@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,62 +22,69 @@ import com.sun.jersey.api.client.ClientResponse;
 
 import javax.ws.rs.core.EntityTag;
 
+/**
+ * A wrapper for HTTP etag headers.
+ * Used also for mocking.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class Etag {
 
-	public static Etag EMPTY = create("EMPTY");
+    public static final Etag EMPTY = create("EMPTY");
 
-	private final EntityTag entityTag;
-	
-	/**
-	 * For mocking
-	 */
-	private Etag(HashCode hash) {
-		this.entityTag = new EntityTag(hash.toString());
-	}
+    private final EntityTag entityTag;
 
-	/**
-	 * For responses
-	 */
-	private Etag(EntityTag entityTag) {
-		Preconditions.checkNotNull(entityTag);
-		this.entityTag = entityTag;
-	}
+    /**
+     * For mocking.
+     */
+    private Etag(HashCode hash) {
+        this.entityTag = new EntityTag(hash.toString());
+    }
 
-	/**
-	 * For mocking
-	 */
-	public static Etag create(String input) {
-		return new Etag(Hashing.md5().hashString(input));
-	}
-	
-	@Override
-	public int hashCode() {
-		return entityTag.hashCode();
-	}
+    /**
+     * For responses.
+     */
+    private Etag(EntityTag entityTag) {
+        Preconditions.checkNotNull(entityTag);
+        this.entityTag = entityTag;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof Etag) {
-			Etag etag = (Etag) obj;
-			return entityTag.equals(etag.entityTag);	
-		}
-		return false;
-	}
+    /**
+     * For mocking.
+     */
+    public static Etag create(String input) {
+        return new Etag(Hashing.md5().hashString(input));
+    }
 
-	@Override
-	public String toString() {
-		return entityTag.toString();
-	}
+    @Override
+    public int hashCode() {
+        return entityTag.hashCode();
+    }
 
-	public static Etag create(ClientResponse response) {
-		EntityTag responseEtag = response.getEntityTag();
-		if (responseEtag == null) {
-			return Etag.EMPTY;
-		}
-		return new Etag(responseEtag);
-	}
-	
-	public static Etag empty() {
-		return Etag.EMPTY;
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Etag) {
+            Etag etag = (Etag) obj;
+            return entityTag.equals(etag.entityTag);
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return entityTag.toString();
+    }
+
+    public static Etag create(ClientResponse response) {
+        EntityTag responseEtag = response.getEntityTag();
+        if (responseEtag == null) {
+            return Etag.EMPTY;
+        }
+        return new Etag(responseEtag);
+    }
+
+    public static Etag empty() {
+        return Etag.EMPTY;
+    }
 }
+
