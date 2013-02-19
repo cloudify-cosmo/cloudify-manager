@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,68 +22,68 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import java.net.URI;
 
 /**
- * Base class for tasks being consumed by {@link TaskConsumer}
+ * Base class for tasks being consumed by {@link TaskConsumer}.
  * @author Itai Frenkel
  * @since 0.1
  */
 @JsonTypeIdResolver(TaskTypeIdResolver.class)
 @JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, include = JsonTypeInfo.As.PROPERTY, property = "task", visible = false)
 public abstract class Task {
-	
-	private TaskRouting routing;
-	private final Class<? extends TaskConsumerState> stateClass;
 
-	public Task(Class<? extends TaskConsumerState> stateClass) {
-		routing = new TaskRouting();
-		this.stateClass = stateClass;
-	}
+    private TaskRouting routing;
+    private final Class<? extends TaskConsumerState> stateClass;
 
-	@JsonIgnore
-	public Class<? extends TaskConsumerState> getStateClass() {
-		return stateClass;
-	}
+    public Task(Class<? extends TaskConsumerState> stateClass) {
+        routing = new TaskRouting();
+        this.stateClass = stateClass;
+    }
 
-	@JsonIgnore
-	public URI getStateId() {
-		return routing.getStateId();
-	}
+    @JsonIgnore
+    public Class<? extends TaskConsumerState> getStateClass() {
+        return stateClass;
+    }
 
-	public void setStateId(URI stateId) {
-		this.routing.setStateId(stateId);
-	}
+    @JsonIgnore
+    public URI getStateId() {
+        return routing.getStateId();
+    }
 
-	@JsonIgnore
-	public URI getProducerId() {
-		return routing.getProducerId();
-	}
+    public void setStateId(URI stateId) {
+        this.routing.setStateId(stateId);
+    }
 
-	public void setConsumerId(URI consumerId) {
-		this.routing.setConsumerId(consumerId);
-	}
+    @JsonIgnore
+    public URI getProducerId() {
+        return routing.getProducerId();
+    }
 
-	@JsonIgnore
-	public URI getConsumerId() {
-		return routing.getConsumerId();
-	}
+    public void setConsumerId(URI consumerId) {
+        this.routing.setConsumerId(consumerId);
+    }
 
-	@JsonIgnore
-	public Long getProducerTimestamp() {
-		return routing.getProducerTimestamp();
-	}
+    @JsonIgnore
+    public URI getConsumerId() {
+        return routing.getConsumerId();
+    }
 
-	public void setProducerTimestamp(Long sourceTimestamp) {
-		this.routing.setProducerTimestamp(sourceTimestamp);
-	}
+    @JsonIgnore
+    public Long getProducerTimestamp() {
+        return routing.getProducerTimestamp();
+    }
 
-	public void setProducerId(URI producerId) {
-		this.routing.setProducerId(producerId);
-	}
+    public void setProducerTimestamp(Long sourceTimestamp) {
+        this.routing.setProducerTimestamp(sourceTimestamp);
+    }
 
-	public TaskRouting getRouting() {
-		return routing;
-	}
+    public void setProducerId(URI producerId) {
+        this.routing.setProducerId(producerId);
+    }
 
-	public void setRouting(TaskRouting routing) {
-		this.routing = routing;
-	}
+    public TaskRouting getRouting() {
+        return routing;
+    }
+
+    public void setRouting(TaskRouting routing) {
+        this.routing = routing;
+    }
 }
