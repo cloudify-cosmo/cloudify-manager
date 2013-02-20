@@ -24,8 +24,9 @@
 
     <!-- Checks whether files end with a new line.                        -->
     <!-- See http://checkstyle.sf.net/config_misc.html#NewlineAtEndOfFile -->
-    <!--<module name="NewlineAtEndOfFile"/>-->
-
+    <module name="NewlineAtEndOfFile">
+        <property name="lineSeparator" value="lf"/>
+    </module>
     <!-- Checks that property files contain the same keys.         -->
     <!-- See http://checkstyle.sf.net/config_misc.html#Translation -->
     <module name="Translation"/>
@@ -45,6 +46,10 @@
         <property name="minimum" value="0"/>
         <property name="maximum" value="0"/>
         <property name="message" value="Line has trailing spaces."/>
+    </module>
+
+    <module name="RegexpHeader">
+        <property name="header" value="^.*$\n.*Copyright.*" />
     </module>
 
     <module name="TreeWalker">
@@ -74,7 +79,6 @@
         <module name="StaticVariableName"/>
         <module name="TypeName"/>
 
-
         <!-- Checks for Headers                                -->
         <!-- See http://checkstyle.sf.net/config_header.html   -->
         <!-- <module name="Header">                            -->
@@ -90,8 +94,7 @@
         <!-- </module> -->
 
         <!-- Following interprets the header file as regular expressions. -->
-        <!-- <module name="RegexpHeader"/>                                -->
-
+        <!--<module name="RegexpHeader">-->
 
         <!-- Checks for imports                              -->
         <!-- See http://checkstyle.sf.net/config_import.html -->
