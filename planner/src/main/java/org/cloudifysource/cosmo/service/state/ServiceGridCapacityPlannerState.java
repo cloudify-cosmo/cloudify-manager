@@ -38,7 +38,7 @@ public class ServiceGridCapacityPlannerState extends TaskConsumerState {
 	}
 
 	@JsonIgnore
-	public void addServiceScalingRule(ServiceScalingRule scalingRule) {
+	public void addServiceScalingRule(final ServiceScalingRule scalingRule) {
 		removeServiceScalingRule(scalingRule.getServiceId());
 		scalingRules.add(scalingRule);
 	}

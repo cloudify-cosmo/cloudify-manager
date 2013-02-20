@@ -16,10 +16,10 @@
 package org.cloudifysource.cosmo.mock;
 
 import com.google.common.base.Throwables;
-import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.StateClient;
 import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.TaskWriter;
+import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.service.*;
 import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.state.StateWriter;

@@ -22,7 +22,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.cloudifysource.cosmo.*;
+import org.cloudifysource.cosmo.Task;
+import org.cloudifysource.cosmo.TaskConsumer;
+import org.cloudifysource.cosmo.TaskConsumerState;
+import org.cloudifysource.cosmo.TaskConsumerStateHolder;
+import org.cloudifysource.cosmo.TaskProducer;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
@@ -54,7 +58,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	@TaskConsumer(persistTask = true)
-	public void scaleService(ScaleServiceTask task) {
+	public void scaleService(final ScaleServiceTask task) {
 		
 		URI serviceId = task.getServiceId();
 		ServiceConfig serviceConfig = state.getServiceById(serviceId);
@@ -77,7 +81,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	@TaskConsumer(persistTask = true)
-	public void installService(InstallServiceTask task) {
+	public void installService(final InstallServiceTask task) {
 		
 		final ServiceConfig serviceConfig = task.getServiceConfig();
 		Preconditions.checkNotNull(serviceConfig);
@@ -96,7 +100,7 @@ public class ServiceGridDeploymentPlanner {
 	}
 
 	@TaskConsumer(persistTask = true)
-	public void uninstallService(UninstallServiceTask task) {
+	public void uninstallService(final UninstallServiceTask task) {
 		URI serviceId = task.getServiceId();
 		checkServiceId(serviceId);
 		boolean installed = isServiceInstalled(serviceId);
@@ -104,7 +108,7 @@ public class ServiceGridDeploymentPlanner {
 		state.removeService(serviceId);
 	}
 	
-	@TaskProducer	
+	@TaskProducer
 	public Iterable<Task> deploymentPlan() {
 		
 		List<Task> newTasks = Lists.newArrayList();
