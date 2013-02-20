@@ -35,13 +35,11 @@ public class MockManagement {
 	private static final String STATE_SERVER_URI = "http://localhost:"+STATE_SERVER_PORT+"/";
 	private static final boolean useMock = true;
 	private final URI orchestratorId;
-	private final URI deploymentPlannerId;
-	private final URI capacityPlannerId;
 	private final URI machineProvisionerId;
 	private final StateReader stateReader;
 	private final StateWriter stateWriter;
 	private final MockTaskBroker taskBroker;
-	private final CurrentTimeProvider timeProvider;
+    private final CurrentTimeProvider timeProvider;
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
 	private final MockTaskBroker persistentTaskBroker;
 	private KVStoreServer stateServer;
@@ -49,14 +47,10 @@ public class MockManagement {
 	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
 		this.taskConsumerRegistrar = taskConsumerRegistrar;
 		this.timeProvider = timeProvider;
-		try {
-			orchestratorId = new URI(STATE_SERVER_URI+"services/orchestrator/");
-			deploymentPlannerId = new URI(STATE_SERVER_URI+"services/deployment_planner/");
-			capacityPlannerId = new URI(STATE_SERVER_URI+"services/capacity_planner/");
-			machineProvisionerId = new URI(STATE_SERVER_URI+"services/provisioner/");
-		} catch (URISyntaxException e) {
-			throw Throwables.propagate(e);
-		}
+
+        orchestratorId = createUri("services/orchestrator/");
+        machineProvisionerId = createUri("services/provisioner/");
+
 		if (useMock) {
 			stateReader = new MockState();
 			stateWriter = (StateWriter) stateReader;
@@ -73,10 +67,14 @@ public class MockManagement {
 		persistentTaskBroker = new MockTaskBroker();
 		
 	}
-	
-	public URI getDeploymentPlannerId() {
-		return deploymentPlannerId;
-	}
+
+    protected URI createUri(String relativeId) {
+        try {
+            return new URI(STATE_SERVER_URI+ relativeId);
+        } catch (URISyntaxException e) {
+            throw Throwables.propagate(e);
+        }
+    }
 
 	public URI getOrchestratorId() {
 		return orchestratorId;
@@ -123,20 +121,24 @@ public class MockManagement {
 	}
 
 	public void unregisterTaskConsumers() {
-		taskConsumerRegistrar.unregisterTaskConsumer(orchestratorId);
-		taskConsumerRegistrar.unregisterTaskConsumer(deploymentPlannerId);
-		taskConsumerRegistrar.unregisterTaskConsumer(capacityPlannerId);
-		taskConsumerRegistrar.unregisterTaskConsumer(machineProvisionerId);
+		unregisterTaskConsumer(orchestratorId);
+		unregisterTaskConsumer(machineProvisionerId);
 	}
-	
-	private void registerTaskConsumers() {
-		taskConsumerRegistrar.registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
-		taskConsumerRegistrar.registerTaskConsumer(newServiceGridDeploymentPlanner(timeProvider), deploymentPlannerId);
-		taskConsumerRegistrar.registerTaskConsumer(newServiceGridCapacityPlanner(timeProvider), capacityPlannerId);
-		taskConsumerRegistrar.registerTaskConsumer(newMachineProvisionerContainer(taskConsumerRegistrar), machineProvisionerId);
+
+	protected void registerTaskConsumers() {
+		registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
+		registerTaskConsumer(newMachineProvisionerContainer(taskConsumerRegistrar), machineProvisionerId);
 	}
-	
-	private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider) {
+
+    protected void registerTaskConsumer(Object taskConsumer, URI taskConsumerId) {
+        taskConsumerRegistrar.registerTaskConsumer(taskConsumer, taskConsumerId);
+    }
+
+    protected void unregisterTaskConsumer(URI taskConsumerId) {
+        taskConsumerRegistrar.unregisterTaskConsumer(taskConsumerId);
+    }
+
+    private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider) {
 		
 		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
 		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
@@ -146,27 +148,6 @@ public class MockManagement {
 		serviceOrchestratorParameter.setTimeProvider(timeProvider);
 	
 		return new ServiceGridOrchestrator(serviceOrchestratorParameter);
-	}
-
-	private ServiceGridDeploymentPlanner newServiceGridDeploymentPlanner(CurrentTimeProvider timeProvider) {
-		
-		final ServiceGridDeploymentPlannerParameter deploymentPlannerParameter = new ServiceGridDeploymentPlannerParameter();
-		deploymentPlannerParameter.setOrchestratorId(orchestratorId);
-		deploymentPlannerParameter.setAgentsId(StreamUtils.newURI(STATE_SERVER_URI + "agents/"));
-		deploymentPlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
-		return new ServiceGridDeploymentPlanner(deploymentPlannerParameter);
-		
-	}
-	
-	private ServiceGridCapacityPlanner newServiceGridCapacityPlanner(CurrentTimeProvider timeProvider) {
-		
-		final ServiceGridCapacityPlannerParameter capacityPlannerParameter = new ServiceGridCapacityPlannerParameter();
-		capacityPlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
-		capacityPlannerParameter.setTaskReader(taskBroker);
-		capacityPlannerParameter.setStateReader(stateReader);
-		capacityPlannerParameter.setCapacityPlannerId(capacityPlannerId);
-		return new ServiceGridCapacityPlanner(capacityPlannerParameter);
-		
 	}
 
 	private MockMachineProvisioner newMachineProvisionerContainer(TaskConsumerRegistrar taskConsumerRegistrar) {
@@ -181,10 +162,6 @@ public class MockManagement {
 		return persistentTaskBroker;
 	}
 
-	public URI getCapacityPlannerId() {
-		return capacityPlannerId;
-	}
-
 	public void close() {
 		stateServer.stop();
 	}
@@ -192,4 +169,8 @@ public class MockManagement {
 	public String getStateServerUri() {
 		return STATE_SERVER_URI;
 	}
+
+    protected CurrentTimeProvider getTimeProvider() {
+        return timeProvider;
+    }
 }

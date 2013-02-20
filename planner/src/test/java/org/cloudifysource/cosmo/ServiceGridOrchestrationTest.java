@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
+import org.cloudifysource.cosmo.mock.MockPlannerManagement;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
 import org.cloudifysource.cosmo.mock.MockTaskContainerParameter;
 import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
@@ -56,7 +57,7 @@ import java.util.logging.Logger;
 public class ServiceGridOrchestrationTest {
 	
 	private final Logger logger;
-	private MockManagement management;
+	private MockPlannerManagement management;
 	private Set<MockTaskContainer> containers;
 	private MockCurrentTimeProvider timeProvider;
 	private long startTimestamp;
@@ -91,7 +92,7 @@ public class ServiceGridOrchestrationTest {
 			}
 		};
 
-		management = new MockManagement(taskConsumerRegistrar, timeProvider);
+		management = new MockPlannerManagement(taskConsumerRegistrar, timeProvider);
 	}
 	
 	@BeforeMethod
