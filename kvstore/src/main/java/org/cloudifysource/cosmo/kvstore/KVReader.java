@@ -21,10 +21,15 @@ import javax.ws.rs.core.EntityTag;
 
 import com.google.common.base.Optional;
 
+/**
+ * Interface to read directly from the KVStore.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public interface KVReader {
 
-	Optional<KVStore.EntityTagState<String>> getState(URI key);
-	Optional<EntityTag> getEntityTag(URI key);
-	Iterable<URI> listKeysStartsWith(URI newURI);
+    Optional<KVStore.EntityTagState<String>> getState(URI key);
+    Optional<EntityTag> getEntityTag(URI key);
+    Iterable<URI> listKeysStartsWith(URI newURI);
 
 }

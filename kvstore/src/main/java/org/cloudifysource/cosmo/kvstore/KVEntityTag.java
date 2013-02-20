@@ -19,10 +19,16 @@ import javax.ws.rs.core.EntityTag;
 
 import com.google.common.hash.Hashing;
 
+/**
+ * Utility method for generating etags from strings.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class KVEntityTag {
-	
-	public static EntityTag create(String input) {
-		return new EntityTag(Hashing.md5().hashString(input).toString());
-	}
-	
+
+    private KVEntityTag() { }
+
+    public static EntityTag create(String input) {
+        return new EntityTag(Hashing.md5().hashString(input).toString());
+    }
 }

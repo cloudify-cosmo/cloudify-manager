@@ -19,7 +19,12 @@ import java.net.URI;
 
 import javax.ws.rs.core.EntityTag;
 
+/**
+ * Interface to write directly to the KVStore.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public interface KVWriter {
 
-	EntityTag put(URI key, String state);
+    EntityTag put(URI key, String state);
 }
