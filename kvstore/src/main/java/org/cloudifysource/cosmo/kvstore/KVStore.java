@@ -39,10 +39,8 @@ public class KVStore implements KVReader, KVWriter {
 
     @Override
     public Optional<EntityTagState<String>> getState(URI key) {
-        synchronized (store) {
-            EntityTagState<String> value = store.get(key);
-            return Optional.fromNullable(value);
-        }
+        EntityTagState<String> value = store.get(key);
+        return Optional.fromNullable(value);
     }
 
     @Override
@@ -76,13 +74,6 @@ public class KVStore implements KVReader, KVWriter {
                 return key.toString().startsWith(keyPrefix.toString());
             }
         });
-    }
-
-
-    public void clear() {
-        synchronized (store) {
-            store.clear();
-        }
     }
 
     static class EntityTagState<T> {
