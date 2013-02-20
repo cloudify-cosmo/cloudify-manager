@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,11 @@ package org.cloudifysource.cosmo.service.state;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.google.common.base.*;
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -25,115 +29,123 @@ import com.google.common.collect.Lists;
 import java.net.URI;
 import java.util.List;
 
+/**
+ * The placement of instances on agents for a specific service. Sent from planner to orchestrator.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceDeploymentPlan {
 
-	private ServiceConfig serviceConfig;
-	private List<ServiceInstanceDeploymentPlan> instances;
-	
-	public ServiceDeploymentPlan() {
-		instances = Lists.newArrayList();
-	}
+    private ServiceConfig serviceConfig;
+    private List<ServiceInstanceDeploymentPlan> instances;
 
-	@JsonUnwrapped
-	public ServiceConfig getServiceConfig() {
-		return serviceConfig;
-	}
+    public ServiceDeploymentPlan() {
+        instances = Lists.newArrayList();
+    }
 
-	public void setServiceConfig(ServiceConfig service) {
-		this.serviceConfig = service;
-	}
+    @JsonUnwrapped
+    public ServiceConfig getServiceConfig() {
+        return serviceConfig;
+    }
 
-	public List<ServiceInstanceDeploymentPlan> getInstances() {
-		return instances;
-	}
+    public void setServiceConfig(ServiceConfig service) {
+        this.serviceConfig = service;
+    }
 
-	public void setInstances(List<ServiceInstanceDeploymentPlan> instances) {
-		this.instances = instances;
-	}
+    public List<ServiceInstanceDeploymentPlan> getInstances() {
+        return instances;
+    }
 
-	@JsonIgnore
-	public boolean removeInstanceById(URI instanceId) {
-		return Iterables.removeIf(instances, findInstanceIdPredicate(instanceId));
-	}
+    public void setInstances(List<ServiceInstanceDeploymentPlan> instances) {
+        this.instances = instances;
+    }
 
-	private Predicate<ServiceInstanceDeploymentPlan> findInstanceIdPredicate(
-			final URI instanceId) {
+    @JsonIgnore
+    public boolean removeInstanceById(URI instanceId) {
+        return Iterables.removeIf(instances, findInstanceIdPredicate(instanceId));
+    }
 
-		return new Predicate<ServiceInstanceDeploymentPlan>() {
+    private Predicate<ServiceInstanceDeploymentPlan> findInstanceIdPredicate(
+            final URI instanceId) {
 
-			@Override
-			public boolean apply(ServiceInstanceDeploymentPlan instancePlan) {
-				return instancePlan.getInstanceId().equals(instanceId);
-			}
-		};
-	}
+        return new Predicate<ServiceInstanceDeploymentPlan>() {
 
-	@JsonIgnore
-	public void addInstance(URI instanceId, URI agentId) {
-		Preconditions.checkNotNull(instanceId);
-		Preconditions.checkNotNull(agentId);
-		Preconditions.checkArgument(!Iterables.tryFind(instances, findInstanceIdPredicate(instanceId)).isPresent());
-		ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
-		instancePlan.setInstanceId(instanceId);
-		instancePlan.setAgentId(agentId);
-		instances.add(instancePlan);
-	}
+            @Override
+            public boolean apply(ServiceInstanceDeploymentPlan instancePlan) {
+                return instancePlan.getInstanceId().equals(instanceId);
+            }
+        };
+    }
 
-	@JsonIgnore
-	public Iterable<URI> getInstancesByAgentId(final URI agentId) {
-		Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction = new Function<ServiceInstanceDeploymentPlan, URI>() {
+    @JsonIgnore
+    public void addInstance(URI instanceId, URI agentId) {
+        Preconditions.checkNotNull(instanceId);
+        Preconditions.checkNotNull(agentId);
+        Preconditions.checkArgument(!Iterables.tryFind(instances, findInstanceIdPredicate(instanceId)).isPresent());
+        ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
+        instancePlan.setInstanceId(instanceId);
+        instancePlan.setAgentId(agentId);
+        instances.add(instancePlan);
+    }
 
-			@Override
-			public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
-				if (instancePlan.getAgentId().equals(agentId)) {
-					return instancePlan.getInstanceId();
-				}
-				return null;
-			}
-		};
-		return Iterables.unmodifiableIterable(
-				Iterables.filter(
-				Iterables.transform(instances, toInstanceIdFunction),
-				Predicates.notNull()));
-	}
+    @JsonIgnore
+    public Iterable<URI> getInstancesByAgentId(final URI agentId) {
+        Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction =
+            new Function<ServiceInstanceDeploymentPlan, URI>() {
 
-	@JsonIgnore
-	public Iterable<URI> getInstanceIds() {
-		Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction = new Function<ServiceInstanceDeploymentPlan, URI>() {
+            @Override
+            public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
+                if (instancePlan.getAgentId().equals(agentId)) {
+                    return instancePlan.getInstanceId();
+                }
+                return null;
+            }
+        };
+        return Iterables.unmodifiableIterable(
+                Iterables.filter(
+                Iterables.transform(instances, toInstanceIdFunction),
+                Predicates.notNull()));
+    }
 
-			@Override
-			public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
-				return instancePlan.getInstanceId();
-			}
-		};
-		return Iterables.unmodifiableIterable(Iterables.transform(instances, toInstanceIdFunction));
-	}
+    @JsonIgnore
+    public Iterable<URI> getInstanceIds() {
+        Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction =
+                new Function<ServiceInstanceDeploymentPlan, URI>() {
 
-	@JsonIgnore
-	public Iterable<URI> getAgentIds() {
-		Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction = new Function<ServiceInstanceDeploymentPlan, URI>() {
+            @Override
+            public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
+                return instancePlan.getInstanceId();
+            }
+        };
+        return Iterables.unmodifiableIterable(Iterables.transform(instances, toInstanceIdFunction));
+    }
 
-			@Override
-			public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
-				return instancePlan.getAgentId();
-			}
-		};
-		return ImmutableSet.copyOf(Iterables.transform(instances, toInstanceIdFunction));
-	}
+    @JsonIgnore
+    public Iterable<URI> getAgentIds() {
+        Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction =
+                new Function<ServiceInstanceDeploymentPlan, URI>() {
 
-	@JsonIgnore
-	public URI getAgentIdByInstanceId(URI instanceId) {
-		Optional<ServiceInstanceDeploymentPlan> instancePlan = Iterables.tryFind(instances, findInstanceIdPredicate(instanceId));
-		if (!instancePlan.isPresent()) {
-			return null;
-		}
-		
-		return instancePlan.get().getAgentId();
-	}
+            @Override
+            public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
+                return instancePlan.getAgentId();
+            }
+        };
+        return ImmutableSet.copyOf(Iterables.transform(instances, toInstanceIdFunction));
+    }
 
-	@JsonIgnore
-	public boolean containsInstanceId(URI instanceId) {
-		return Iterables.tryFind(instances, findInstanceIdPredicate(instanceId)).isPresent();
-	}
-	
+    @JsonIgnore
+    public URI getAgentIdByInstanceId(URI instanceId) {
+        Optional<ServiceInstanceDeploymentPlan> instancePlan =
+                Iterables.tryFind(instances, findInstanceIdPredicate(instanceId));
+        if (!instancePlan.isPresent()) {
+            return null;
+        }
+        return instancePlan.get().getAgentId();
+    }
+
+    @JsonIgnore
+    public boolean containsInstanceId(URI instanceId) {
+        return Iterables.tryFind(instances, findInstanceIdPredicate(instanceId)).isPresent();
+    }
 }
+

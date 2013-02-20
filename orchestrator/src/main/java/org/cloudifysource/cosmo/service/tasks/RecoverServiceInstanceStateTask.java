@@ -21,23 +21,25 @@ import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import java.net.URI;
 
 /**
- *
+ * This task is send to the agent in order for it to upload the latest service instance state.
+ * @author Itai Frenkel
+ * @since 0.1
  */
 public class RecoverServiceInstanceStateTask extends Task {
 
-	public RecoverServiceInstanceStateTask() {
-		super(ServiceInstanceState.class);
-	}
-	
-	private URI serviceId;
+    public RecoverServiceInstanceStateTask() {
+        super(ServiceInstanceState.class);
+    }
 
-	public URI getServiceId() {
-		return serviceId;
-	}
+    private URI serviceId;
 
-	public void setServiceId(URI serviceId) {
-		this.serviceId = serviceId;
-	}
-		
+    public URI getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(URI serviceId) {
+        this.serviceId = serviceId;
+    }
+
 
 }

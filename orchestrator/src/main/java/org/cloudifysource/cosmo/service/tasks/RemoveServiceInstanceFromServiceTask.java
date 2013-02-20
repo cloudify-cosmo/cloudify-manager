@@ -20,20 +20,25 @@ import org.cloudifysource.cosmo.service.state.ServiceState;
 
 import java.net.URI;
 
+/**
+ * This task removes the reference to the service instance from the service state.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class RemoveServiceInstanceFromServiceTask extends Task {
 
-	public RemoveServiceInstanceFromServiceTask() {
-		super(ServiceState.class);
-	}
+    public RemoveServiceInstanceFromServiceTask() {
+        super(ServiceState.class);
+    }
 
-	private URI instanceId;
+    private URI instanceId;
 
-	public URI getInstanceId() {
-		return instanceId;
-	}
+    public URI getInstanceId() {
+        return instanceId;
+    }
 
-	public void setInstanceId(URI instanceId) {
-		this.instanceId = instanceId;
-	}
+    public void setInstanceId(URI instanceId) {
+        this.instanceId = instanceId;
+    }
 
 }
