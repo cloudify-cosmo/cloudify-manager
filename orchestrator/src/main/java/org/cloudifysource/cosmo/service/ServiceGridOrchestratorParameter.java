@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,50 +22,50 @@ import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 import java.net.URI;
 
 public class ServiceGridOrchestratorParameter {
-	
-	private URI orchestratorId;
-	private URI machineProvisionerId;
-	private TaskReader taskReader;
-	private StateReader stateReader;
-	private CurrentTimeProvider timeProvider;
-	
-	public TaskReader getTaskReader() {
-		return taskReader;
-	}
 
-	public void setTaskReader(TaskReader taskReader) {
-		this.taskReader = taskReader;
-	}
+    private URI orchestratorId;
+    private URI machineProvisionerId;
+    private TaskReader taskReader;
+    private StateReader stateReader;
+    private CurrentTimeProvider timeProvider;
 
-	public StateReader getStateReader() {
-		return stateReader;
-	}
+    public TaskReader getTaskReader() {
+        return taskReader;
+    }
 
-	public void setStateReader(StateReader stateReader) {
-		this.stateReader = stateReader;
-	}
+    public void setTaskReader(TaskReader taskReader) {
+        this.taskReader = taskReader;
+    }
 
-	public URI getOrchestratorId() {
-		return orchestratorId;
-	}
+    public StateReader getStateReader() {
+        return stateReader;
+    }
 
-	public void setOrchestratorId(URI id) {
-		this.orchestratorId = id;
-	}
+    public void setStateReader(StateReader stateReader) {
+        this.stateReader = stateReader;
+    }
 
-	public URI getMachineProvisionerId() {
-		return machineProvisionerId;
-	}
+    public URI getOrchestratorId() {
+        return orchestratorId;
+    }
 
-	public void setMachineProvisionerId(URI cloudExecutorId) {
-		this.machineProvisionerId = cloudExecutorId;
-	}
+    public void setOrchestratorId(URI id) {
+        this.orchestratorId = id;
+    }
 
-	public CurrentTimeProvider getTimeProvider() {
-		return timeProvider;
-	}
+    public URI getMachineProvisionerId() {
+        return machineProvisionerId;
+    }
 
-	public void setTimeProvider(CurrentTimeProvider timeProvider) {
-		this.timeProvider = timeProvider;
-	}
+    public void setMachineProvisionerId(URI cloudExecutorId) {
+        this.machineProvisionerId = cloudExecutorId;
+    }
+
+    public CurrentTimeProvider getTimeProvider() {
+        return timeProvider;
+    }
+
+    public void setTimeProvider(CurrentTimeProvider timeProvider) {
+        this.timeProvider = timeProvider;
+    }
 }
