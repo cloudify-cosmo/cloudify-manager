@@ -1,12 +1,9 @@
-Cloudify Cosmo Management
-=========================
+# Cloudify Cosmo Management #
 
 The Cloudify Cosmo project is a clean slate implementation for deployment and monitoring orchestration of services 
 installed on the cloud.
 It is a clean rewrite of Service Grid 1.0 which is the heart of the Cloudify project.
 
-Service Grid Overview
---------------------------------
 SG contains the following components:
 
 * Capacity Planner - Monitors the services and scales the services based on scaling rules. Provides the deployment planner with the desired service capacity.
