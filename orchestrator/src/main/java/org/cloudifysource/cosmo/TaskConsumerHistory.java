@@ -20,8 +20,8 @@ import com.google.common.collect.Lists;
 import java.util.List;
 
 /**
- * A list of tasks representing all tasks that were consumed by a {@link TaskConsumer},
- * and that shaped the {@link TaskConsumerState}
+ * A list of tasks representing all tasks that were consumed by a {@link TaskConsumer}.
+ * This list of tasks shaped the value {@link TaskConsumerState}.
  *
  * @author Itai Frenkel
  * @since 0.1

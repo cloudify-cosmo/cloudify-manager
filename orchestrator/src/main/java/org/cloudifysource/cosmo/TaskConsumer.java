@@ -22,9 +22,12 @@ import java.lang.annotation.Target;
 
 /**
  * Annotates a {@link TaskConsumer} method that consumes a single task.
- * That task {@link org.cloudifysource.cosmo.Task#getStateId()} equals {@link org.cloudifysource.cosmo.Task#getConsumerId()}
+ * That task {@link org.cloudifysource.cosmo.Task#getStateId()} equals
+ * {@link org.cloudifysource.cosmo.Task#getConsumerId()}
  *
  * @see ImpersonatingTaskConsumer
+ * @author Itai Frenkel
+ * @since 0.1
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
