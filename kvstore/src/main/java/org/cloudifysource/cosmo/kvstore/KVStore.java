@@ -76,6 +76,10 @@ public class KVStore implements KVReader, KVWriter {
         });
     }
 
+    /**
+     * A touple of a state and its etag.
+     * @param <T> - the state type
+     */
     static class EntityTagState<T> {
 
     private final EntityTag etag;

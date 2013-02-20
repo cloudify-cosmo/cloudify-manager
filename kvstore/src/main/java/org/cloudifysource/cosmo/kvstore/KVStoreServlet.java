@@ -44,119 +44,130 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.sun.jersey.api.Responses;
 
+/**
+ * A REST servlet that exposes put/get commands of the KVStore.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 //@Singleton
 @Path("/")
 public class KVStoreServlet {
 
-	private final Logger logger = LoggerFactory.getLogger(this.getClass());
-	
-	private static final String LIST_ALL_POSTFIX = "/_list";
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	@Context KVStore store;
-	
-	@GET
-	@Path("{any:.*}")
-	public Response get(@Context UriInfo uriInfo, @Context Request request) {
-		final URI key =  uriInfo.getAbsolutePath();
-		String keyString = key.toString();
-		if (keyString.endsWith(LIST_ALL_POSTFIX)) {
-			return list(newURI(keyString.substring(0, keyString.length()-LIST_ALL_POSTFIX.length()+1)), request);
-		}
-		return get(key);
-	}
+    private static final String LIST_ALL_POSTFIX = "/_list";
 
-	private Response get(final URI key) {
-		
-		synchronized (store) {
-			final Optional<EntityTagState<String>> value = store.getState(key);
-			if (!value.isPresent()) {
-				return Response.status(Responses.NOT_FOUND).build();
-			}
-			
-			return Response.ok()
-					.tag(value.get().getEntityTag())
-					.entity(value.get().getState())
-					.type(MediaType.APPLICATION_JSON)
-					.build();
-		}
-	}
-	
-	 private Response list(URI keyPrefix, Request request) {
-		 synchronized (store) {
-			 final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
-			 return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
-		 }
-	}
+    @Context KVStore store;
 
-	private String toJson(Iterable<URI> uris) {
-		return Arrays.toString(
-			Iterables.toArray(Iterables.transform(uris, new Function<URI, String>() {
-		
-			@Override
-			public String apply(URI input) {
-				return "\"" + input +"\"";
-			}
-		}), String.class));
-	}
+    @GET
+    @Path("{any:.*}")
+    public Response get(@Context UriInfo uriInfo, @Context Request request) {
+        final URI key =  uriInfo.getAbsolutePath();
+        String keyString = key.toString();
+        if (keyString.endsWith(LIST_ALL_POSTFIX)) {
+            return list(newURI(keyString.substring(0, keyString.length() - LIST_ALL_POSTFIX.length() + 1)), request);
+        }
+        return get(key);
+    }
 
-	private URI newURI(String uri) {
-		try {
-			return new URI(uri);
-		} catch (URISyntaxException e) {
-			throw Throwables.propagate(e);
-		}
-	}
+    private Response get(final URI key) {
 
-	 @PUT
-	 @Path("{any:.*}")
-	 public Response put(String state, @Context HttpHeaders headers, @Context UriInfo uriInfo, @Context Request request) {
-		
-		final Integer contentLength = Integer.valueOf(Iterables.getOnlyElement(headers.getRequestHeader("Content-Length")));
-		if (state.length() != contentLength) {
- 			 final String error = "body length is " + state.length() +" instead of " + contentLength;
-			 logger.warn(error);
-			 return Response.status(Status.BAD_REQUEST).entity("{\"error\":\""+error+"\"}").build();		 
-		}
-	    final URI key =  uriInfo.getAbsolutePath();
-	    return put(state, key, request);
-	 }
-	
-	private Response put(String state, final URI key, Request request) {
-		if (key.toString().endsWith(LIST_ALL_POSTFIX)) {
-	    	return Response.status(Status.BAD_REQUEST).entity("{\"error\":\"URI must not end with" + LIST_ALL_POSTFIX +"\"}").build();
-	    }
-		
-		synchronized (store) {
-	    
-			Response r = evaluatePreconditions(key, request);
-			if (r != null) {
-				Preconditions.checkState(r.getStatus() != Status.OK.getStatusCode());
-				return r;
-			}
-		     final EntityTag etag = store.put(key, state);
-		     
-		    return Response.ok()
-		    	   .tag(etag)
-		    	   .build();
-		}
-	}
+        synchronized (store) {
+            final Optional<EntityTagState<String>> value = store.getState(key);
+            if (!value.isPresent()) {
+                return Response.status(Responses.NOT_FOUND).build();
+            }
 
-	private Response evaluatePreconditions(final URI key, Request request) {
-		final Optional<EntityTag> lastEtag = store.getEntityTag(key);
-	    ResponseBuilder rb;
-	    if (!lastEtag.isPresent()) {
-			rb = request.evaluatePreconditions();
-		}
-		else {
-			final EntityTag eTag = lastEtag.get();
-			rb = request.evaluatePreconditions(eTag);
-			if (rb != null) {
-				rb.tag(eTag);
-			}
-		}
-	     if (rb != null) {
-	    	 return rb.build();
-	     }
-	     return null;
-	}
+            return Response.ok()
+                    .tag(value.get().getEntityTag())
+                    .entity(value.get().getState())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
+
+     private Response list(URI keyPrefix, Request request) {
+         synchronized (store) {
+             final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
+             return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
+         }
+    }
+
+    private String toJson(Iterable<URI> uris) {
+        return Arrays.toString(
+            Iterables.toArray(Iterables.transform(uris, new Function<URI, String>() {
+
+            @Override
+            public String apply(URI input) {
+                return "\"" + input + "\"";
+            }
+        }), String.class));
+    }
+
+    private URI newURI(String uri) {
+        try {
+            return new URI(uri);
+        } catch (URISyntaxException e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+     @PUT
+     @Path("{any:.*}")
+     public Response put(String state,
+                         @Context HttpHeaders headers,
+                         @Context UriInfo uriInfo,
+                         @Context Request request) {
+
+        final Integer contentLength =
+                Integer.valueOf(Iterables.getOnlyElement(headers.getRequestHeader("Content-Length")));
+        if (state.length() != contentLength) {
+             final String error = "body length is " + state.length() + " instead of " + contentLength;
+             logger.warn(error);
+             return Response.status(Status.BAD_REQUEST).entity("{\"error\":\"" + error + "\"}").build();
+        }
+        final URI key =  uriInfo.getAbsolutePath();
+        return put(state, key, request);
+     }
+
+    private Response put(String state, final URI key, Request request) {
+        if (key.toString().endsWith(LIST_ALL_POSTFIX)) {
+            return Response.status(
+                    Status.BAD_REQUEST)
+                    .entity("{\"error\":\"URI must not end with" + LIST_ALL_POSTFIX  + "\"}")
+                    .build();
+        }
+
+        synchronized (store) {
+
+            Response r = evaluatePreconditions(key, request);
+            if (r != null) {
+                Preconditions.checkState(r.getStatus() != Status.OK.getStatusCode());
+                return r;
+            }
+             final EntityTag etag = store.put(key, state);
+
+            return Response.ok()
+                   .tag(etag)
+                   .build();
+        }
+    }
+
+    private Response evaluatePreconditions(final URI key, Request request) {
+        final Optional<EntityTag> lastEtag = store.getEntityTag(key);
+        ResponseBuilder rb;
+        if (!lastEtag.isPresent()) {
+            rb = request.evaluatePreconditions();
+        } else {
+            final EntityTag eTag = lastEtag.get();
+            rb = request.evaluatePreconditions(eTag);
+            if (rb != null) {
+                rb.tag(eTag);
+            }
+        }
+        if (rb != null) {
+           return rb.build();
+        }
+        return null;
+    }
 }

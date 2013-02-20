@@ -24,43 +24,48 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import com.google.common.base.Throwables;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+/**
+ * Starts a jetty server, with jersey servlet container running the {@link KVStoreServlet}.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class KVStoreServer {
 
-	private static Server server;
-	private static ServletContainer servletContainer;
-	
-	public void start(int port) {
-		server = new Server(port);
-	    servletContainer = new ServletContainer(new KVStoreResourceConfig());
-		server.setHandler(createWebAppContext(servletContainer));
-		try {
-			server.start();
-		}
-		catch (Exception e) {
-			throw Throwables.propagate(e);
-		}
-	}
-	
-	public void reload() {
-		servletContainer.reload();
-	}
-	
-	public void stop() {
-		try {
-			server.stop();
-		}
-		catch (Exception e) {
-			throw Throwables.propagate(e);
-		}
-	}
-	
-	private static ServletContextHandler createWebAppContext(Servlet servlet) {
-		ServletContextHandler handler = new ServletContextHandler(ServletContextHandler.SESSIONS);
-		handler.setContextPath("/");
-		ServletHolder servletHolder = new ServletHolder(servlet);
-		servletHolder.setInitParameter("com.sun.jersey.config.property.packages", KVStoreServlet.class.getPackage().getName());
-		servletHolder.setInitParameter("cacheControl","max-age=0,public");
-		handler.addServlet(servletHolder, "/*");
-		return handler;
-	}
+    private static Server server;
+    private static ServletContainer servletContainer;
+
+    public void start(int port) {
+        server = new Server(port);
+        servletContainer = new ServletContainer(new KVStoreResourceConfig());
+        server.setHandler(createWebAppContext(servletContainer));
+        try {
+            server.start();
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    public void reload() {
+        servletContainer.reload();
+    }
+
+    public void stop() {
+        try {
+            server.stop();
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    private static ServletContextHandler createWebAppContext(Servlet servlet) {
+        ServletContextHandler handler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        handler.setContextPath("/");
+        ServletHolder servletHolder = new ServletHolder(servlet);
+        servletHolder.setInitParameter(
+                "com.sun.jersey.config.property.packages",
+                KVStoreServlet.class.getPackage().getName());
+        servletHolder.setInitParameter("cacheControl", "max-age=0,public");
+        handler.addServlet(servletHolder, "/*");
+        return handler;
+    }
 }
