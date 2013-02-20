@@ -21,6 +21,12 @@ import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 
 import java.net.URI;
 
+/**
+ * The input for {@link ServiceGridOrchestrator#ServiceGridOrchestrator(ServiceGridOrchestratorParameter)}.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceGridOrchestratorParameter {
 
     private URI orchestratorId;

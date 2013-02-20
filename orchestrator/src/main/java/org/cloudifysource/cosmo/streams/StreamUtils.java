@@ -35,6 +35,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
 
+/**
+ * A temporary placeholder for json manipulation related static methods.
+ * Need to encapsulate in another class.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class StreamUtils {
 
     private StreamUtils() { }

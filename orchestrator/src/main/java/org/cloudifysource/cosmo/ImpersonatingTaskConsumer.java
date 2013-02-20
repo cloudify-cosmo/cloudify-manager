@@ -25,6 +25,8 @@ import java.lang.annotation.Target;
  * {@link org.cloudifysource.cosmo.Task#getConsumerId()} is
  * different than {@link org.cloudifysource.cosmo.Task#getStateId()}.
  *
+ * @see TaskConsumer
+ *
  * @author Itai Frenkel
  * @since 0.1
  */

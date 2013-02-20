@@ -25,6 +25,13 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.reflections.Reflections;
 
+/**
+ * A plugin for Jackson JSON serializer/deserializer that converts {@link Task} class
+ * to "task" property in the serialized JSON.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class TaskTypeIdResolver implements TypeIdResolver {
 
     private static BiMap<String, Class<?>> idResolver = HashBiMap.create();

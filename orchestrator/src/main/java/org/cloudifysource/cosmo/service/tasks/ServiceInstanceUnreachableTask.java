@@ -18,6 +18,12 @@ package org.cloudifysource.cosmo.service.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
+/**
+ * A task that marks the instance as running on an unreachable agent.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceInstanceUnreachableTask extends Task {
 
     public ServiceInstanceUnreachableTask() {

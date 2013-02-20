@@ -24,9 +24,17 @@ import org.cloudifysource.cosmo.streams.StreamUtils;
 
 import java.net.URI;
 
+/**
+ * A temporary placeholder for service related static methods.
+ * Need to encapsulate in another class.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceUtils {
 
     private ServiceUtils() {   }
+
     public static AgentState getAgentState(
             final StateReader stateReader,
             final URI agentId) {

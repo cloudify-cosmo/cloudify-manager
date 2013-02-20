@@ -18,6 +18,13 @@ package org.cloudifysource.cosmo.service.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceState;
 
+/**
+ * A task to change the service state that one or more service instances are installing (in the broader sense - not
+ * just unzip files sense).
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceInstallingTask extends Task {
 
     public ServiceInstallingTask() {

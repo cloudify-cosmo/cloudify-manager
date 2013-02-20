@@ -17,6 +17,11 @@ package org.cloudifysource.cosmo.state;
 
 import java.net.URI;
 
+/**
+ * Java interface for reading values from the kvstore.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public interface StateReader {
 
     <T> EtagState<T> get(URI id, Class<? extends T> clazz);

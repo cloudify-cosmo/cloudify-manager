@@ -18,6 +18,13 @@ package org.cloudifysource.cosmo.service.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceState;
 
+/**
+ * A task to change the service state after all service installation (in the broader sense - not just unzip files
+ * sense) is complete.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceInstalledTask extends Task {
 
     public ServiceInstalledTask() {

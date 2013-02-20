@@ -474,19 +474,18 @@ public class ServiceGridOrchestrator {
                     task.setStateId(instanceId);
                     addNewTaskIfNotExists(newTasks, task);
                 } else if (instanceState.isProgress("service_uninstalled")) {
-                    {
-                    //TODO: Remove this task and merge with uninstall implementation on mockagent
-                    final RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
-                    task.setConsumerId(agentId);
-                    task.setInstanceId(instanceId);
-                    addNewTaskIfNotExists(newTasks, task);
-                    }
 
-                    final RemoveServiceInstanceFromServiceTask task = new RemoveServiceInstanceFromServiceTask();
-                    task.setConsumerId(orchestratorId);
-                    task.setStateId(serviceId);
-                    task.setInstanceId(instanceId);
-                    addNewTaskIfNotExists(newTasks, task);
+                    //TODO: Remove this task and merge with uninstall implementation on mockagent
+                    final RemoveServiceInstanceFromAgentTask agentTask = new RemoveServiceInstanceFromAgentTask();
+                    agentTask.setConsumerId(agentId);
+                    agentTask.setInstanceId(instanceId);
+                    addNewTaskIfNotExists(newTasks, agentTask);
+
+                    final RemoveServiceInstanceFromServiceTask serviceTask = new RemoveServiceInstanceFromServiceTask();
+                    serviceTask.setConsumerId(orchestratorId);
+                    serviceTask.setStateId(serviceId);
+                    serviceTask.setInstanceId(instanceId);
+                    addNewTaskIfNotExists(newTasks, serviceTask);
                 } else {
                     Preconditions.checkState(false,
                             "Unhandled service instance progress: " + instanceState.getProgress());
@@ -704,6 +703,9 @@ public class ServiceGridOrchestrator {
         return ServiceUtils.getAgentState(stateReader, agentId);
     }
 
+    /**
+     * A three state enum that determines if the agent can process tasks.
+     */
     public enum AgentPingHealth {
         UNDETERMINED, AGENT_UNREACHABLE, AGENT_REACHABLE
     }

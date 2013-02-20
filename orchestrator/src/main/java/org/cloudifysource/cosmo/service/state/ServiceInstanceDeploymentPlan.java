@@ -17,6 +17,13 @@ package org.cloudifysource.cosmo.service.state;
 
 import java.net.URI;
 
+/**
+ * A touple of instanceId and the agentId that it resides on.
+ * @see ServiceDeploymentPlan
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceInstanceDeploymentPlan {
 
     private URI instanceId;

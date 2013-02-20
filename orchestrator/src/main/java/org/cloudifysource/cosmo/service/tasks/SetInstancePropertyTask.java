@@ -18,29 +18,35 @@ package org.cloudifysource.cosmo.service.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
-public class SetInstancePropertyTask extends Task{
+/**
+ * A task that modifies a state property of a single service instance.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
+public class SetInstancePropertyTask extends Task {
 
-	private String propertyName;
-	private Object propertyValue;
+    private String propertyName;
+    private Object propertyValue;
 
-	public SetInstancePropertyTask() {
-		super(ServiceInstanceState.class);
-	}
+    public SetInstancePropertyTask() {
+        super(ServiceInstanceState.class);
+    }
 
-	public String getPropertyName() {
-		return propertyName;
-	}
+    public String getPropertyName() {
+        return propertyName;
+    }
 
-	public void setPropertyName(String propertyName) {
-		this.propertyName = propertyName;
-	}
+    public void setPropertyName(String propertyName) {
+        this.propertyName = propertyName;
+    }
 
-	public Object getPropertyValue() {
-		return propertyValue;
-	}
+    public Object getPropertyValue() {
+        return propertyValue;
+    }
 
-	public void setPropertyValue(Object propertyValue) {
-		this.propertyValue = propertyValue;
-	}
+    public void setPropertyValue(Object propertyValue) {
+        this.propertyValue = propertyValue;
+    }
 
 }

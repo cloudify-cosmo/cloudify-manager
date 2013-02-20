@@ -23,8 +23,19 @@ import org.cloudifysource.cosmo.TaskConsumerState;
 import java.net.URI;
 import java.util.List;
 
+/**
+ * Describes the state of a service, as decided by the {@link org.cloudifysource.cosmo.service
+ * .ServiceGridOrchestrator}.
+ *
+ * @see ServiceInstanceState
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceState extends TaskConsumerState {
 
+    /**
+     * Describes the service state machine {@link #setProgress(String)}.
+     */
     public static class Progress {
         public static final String INSTALLING_SERVICE = "INSTALLING_SERVICE";
         public static final String SERVICE_INSTALLED = "SERVICE_INSTALLED";

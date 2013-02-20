@@ -19,15 +19,22 @@ import com.google.common.collect.Lists;
 
 import java.util.List;
 
+/**
+ * A list of tasks representing all tasks that were consumed by a {@link TaskConsumer},
+ * and that shaped the {@link TaskConsumerState}
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class TaskConsumerHistory {
 
-	private List<Task> tasksHistory = Lists.newArrayList();
+    private List<Task> tasksHistory = Lists.newArrayList();
 
-	public List<Task> getTasksHistory() {
-		return tasksHistory;
-	}
+    public List<Task> getTasksHistory() {
+        return tasksHistory;
+    }
 
-	public void setTasksHistory(List<Task> tasksHistory) {
-		this.tasksHistory = tasksHistory;
-	}
+    public void setTasksHistory(List<Task> tasksHistory) {
+        this.tasksHistory = tasksHistory;
+    }
 }

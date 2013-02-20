@@ -19,6 +19,11 @@ import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
 
+/**
+ * A task sent from planner to orchestrator that the plan has changed.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class UpdateDeploymentPlanTask extends Task {
 
     public UpdateDeploymentPlanTask() {

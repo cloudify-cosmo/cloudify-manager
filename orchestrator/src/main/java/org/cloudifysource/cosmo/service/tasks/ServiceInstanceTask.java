@@ -18,6 +18,15 @@ package org.cloudifysource.cosmo.service.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
+/**
+ * A task to change the desired service instance state.
+ * Sent to the agent.
+ *
+ * @see ServiceInstanceState
+ * @author Itai Frenkel
+ * @since 0.1
+ */
+
 public class ServiceInstanceTask extends Task {
 
     private String lifecycle;

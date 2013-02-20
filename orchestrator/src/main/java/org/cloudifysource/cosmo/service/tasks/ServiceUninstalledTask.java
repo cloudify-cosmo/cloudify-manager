@@ -18,6 +18,12 @@ package org.cloudifysource.cosmo.service.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceState;
 
+/**
+ * Changes the service state to uninstalled (after all instances were uninstalled).
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceUninstalledTask extends Task {
 
     public ServiceUninstalledTask() {

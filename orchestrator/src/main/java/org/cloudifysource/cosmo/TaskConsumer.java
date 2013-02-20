@@ -20,10 +20,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Annotates a {@link TaskConsumer} method that consumes a single task.
+ * That task {@link org.cloudifysource.cosmo.Task#getStateId()} equals {@link org.cloudifysource.cosmo.Task#getConsumerId()}
+ *
+ * @see ImpersonatingTaskConsumer
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface TaskConsumer {
 
-	boolean persistTask() default false;
-	boolean noHistory() default false;
+    boolean persistTask() default false;
+    boolean noHistory() default false;
 }

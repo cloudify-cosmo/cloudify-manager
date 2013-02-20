@@ -20,6 +20,12 @@ import org.cloudifysource.cosmo.TaskConsumerState;
 
 import java.net.URI;
 
+/**
+ * Descibes the state of a single service instance.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceInstanceState extends TaskConsumerState {
 
     private String progress;

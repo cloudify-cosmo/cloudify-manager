@@ -15,6 +15,13 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo;
 
+/**
+ * A task that tells a {@link TaskConsumer} to start producing tasks.
+ * @see TaskProducer
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class TaskProducerTask extends Task {
 
     public TaskProducerTask() {

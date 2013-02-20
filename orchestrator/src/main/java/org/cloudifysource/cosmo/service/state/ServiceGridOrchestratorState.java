@@ -25,6 +25,11 @@ import org.cloudifysource.cosmo.TaskConsumerState;
 import java.net.URI;
 import java.util.Set;
 
+/**
+ * The state object of {@link org.cloudifysource.cosmo.service.ServiceGridOrchestrator}.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
     private ServiceGridDeploymentPlan deploymentPlan;

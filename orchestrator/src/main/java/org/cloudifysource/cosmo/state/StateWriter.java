@@ -17,13 +17,20 @@ package org.cloudifysource.cosmo.state;
 
 import java.net.URI;
 
+/**
+ * Java interface for writing values to the kvstore.
+ *
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public interface StateWriter {
 
-	/**
-	 * Sets the state of the specified id to the specified state, if the current state matches the specified etag.
-	 * If there is no match, an exception is raised
-	 * If there is no current state, then ifMatches must be {@link Etag#EMPTY}
-	 * @return the etag if the new state
-	 */
-	Etag put(URI id, Object state, Etag ifMatchHeader) throws EtagPreconditionNotMetException;
+    /**
+     * Sets the state of the specified id to the specified state, if the current state matches the specified etag.
+     * If there is no match, an exception is raised
+     * If there is no current state, then ifMatches must be {@link Etag#EMPTY}
+     * @return the etag if the new state
+     * @throws EtagPreconditionNotMetException - if etag does not match the latest in the kvstore
+     */
+    Etag put(URI id, Object state, Etag ifMatchHeader);
 }

@@ -15,7 +15,12 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo;
 
-
+/**
+ * A handy interface for modifying a state of another {@link TaskConsumer}.
+ * @param <T> - the value type.
+ * @author  Itai Frenkel
+ * @since 0.1
+ */
 public interface TaskConsumerStateModifier<T extends TaskConsumerState> {
 
     void put(T state);
