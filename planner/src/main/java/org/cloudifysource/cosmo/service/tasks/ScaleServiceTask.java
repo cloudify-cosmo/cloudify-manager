@@ -20,28 +20,33 @@ import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
 
 import java.net.URI;
 
+/**
+ *  A task sent to the deployment planner to change the planned number of service instances.
+ *  @author Itai Frenkel
+ *  @since 0.1
+ */
 public class ScaleServiceTask extends Task {
 
-	public ScaleServiceTask() {
-		super(ServiceGridDeploymentPlannerState.class);
-	}
+    public ScaleServiceTask() {
+        super(ServiceGridDeploymentPlannerState.class);
+    }
 
-	private int plannedNumberOfInstances;
-	private URI serviceId;
+    private int plannedNumberOfInstances;
+    private URI serviceId;
 
-	public void setPlannedNumberOfInstances(int plannedNumberOfInstances) {
-		this.plannedNumberOfInstances = plannedNumberOfInstances;
-	}
+    public void setPlannedNumberOfInstances(int plannedNumberOfInstances) {
+        this.plannedNumberOfInstances = plannedNumberOfInstances;
+    }
 
-	public int getPlannedNumberOfInstances() {
-		return plannedNumberOfInstances;
-	}
+    public int getPlannedNumberOfInstances() {
+        return plannedNumberOfInstances;
+    }
 
-	public URI getServiceId() {
-		return serviceId;
-	}
-	
-	public void setServiceId(URI serviceId) {
-		this.serviceId = serviceId;
-	}
+    public URI getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(URI serviceId) {
+        this.serviceId = serviceId;
+    }
 }

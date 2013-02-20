@@ -23,6 +23,7 @@ import java.util.Map;
 /**
  * Base class for {@link TaskConsumer} state object.
  * @author Itai Frenkel
+ * @since 0.1
  */
 public class TaskConsumerState {
 

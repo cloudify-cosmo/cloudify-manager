@@ -22,7 +22,9 @@ import java.lang.annotation.Target;
 
 /**
  * Annotates the {@link TaskConsumer} getter method that returns an instance of {@link TaskConsumerState}.
+ *
  * @author Itai Frenkel
+ * @since 0.1
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

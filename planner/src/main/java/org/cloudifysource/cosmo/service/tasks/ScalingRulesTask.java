@@ -19,19 +19,24 @@ import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceGridCapacityPlannerState;
 import org.cloudifysource.cosmo.service.state.ServiceScalingRule;
 
+/**
+ * A task sent to the capacity planner to change the scaling rules.
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class ScalingRulesTask extends Task {
 
     private ServiceScalingRule scalingRule;
 
     public ScalingRulesTask() {
-		super(ServiceGridCapacityPlannerState.class);
-	}
+        super(ServiceGridCapacityPlannerState.class);
+    }
 
-	public ServiceScalingRule getScalingRule() {
-		return scalingRule;
-	}
-	
-	public void setScalingRule(ServiceScalingRule scalingRule) {
-		this.scalingRule = scalingRule;
-	}
+    public ServiceScalingRule getScalingRule() {
+        return scalingRule;
+    }
+
+    public void setScalingRule(ServiceScalingRule scalingRule) {
+        this.scalingRule = scalingRule;
+    }
 }
