@@ -34,8 +34,8 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 
     private ServiceGridDeploymentPlan deploymentPlan;
     private boolean syncedStateWithDeploymentBefore;
-    private Set<URI> serviceIdsToUninstall = Sets.<URI>newHashSet();
-    private Set<URI> agentIdsToTerminate = Sets.<URI>newHashSet();
+    private Set<URI> serviceIdsToUninstall = Sets.newHashSet();
+    private Set<URI> agentIdsToTerminate = Sets.newHashSet();
 
     public ServiceGridDeploymentPlan getDeploymentPlan() {
         return deploymentPlan;
