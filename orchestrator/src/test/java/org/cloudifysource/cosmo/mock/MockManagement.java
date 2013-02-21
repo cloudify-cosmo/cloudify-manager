@@ -170,8 +170,8 @@ public class MockManagement {
         }
     }
 
-    public String getStateServerUri() {
-        return STATE_SERVER_URI;
+    public URI getStateServerUri() {
+        return StreamUtils.newURI(STATE_SERVER_URI);
     }
 
     protected CurrentTimeProvider getTimeProvider() {

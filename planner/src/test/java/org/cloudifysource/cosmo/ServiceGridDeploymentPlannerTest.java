@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,32 +21,25 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.cloudifysource.cosmo.agent.state.AgentState;
-import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
+import org.cloudifysource.cosmo.mock.MockPlannerManagement;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
 import org.cloudifysource.cosmo.mock.MockTaskContainerParameter;
 import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
 import org.cloudifysource.cosmo.service.ServiceUtils;
-import org.cloudifysource.cosmo.service.state.ServiceConfig;
-import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
-import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
-import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
-import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
-import org.cloudifysource.cosmo.service.state.ServiceState;
-import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
-import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
-import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
+import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
+import org.junit.AfterClass;
+import org.cloudifysource.cosmo.agent.state.AgentState;
+import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
+import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
+import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
+import org.cloudifysource.cosmo.service.state.*;
+import org.cloudifysource.cosmo.service.tasks.*;
 import org.cloudifysource.cosmo.state.EtagState;
 import org.cloudifysource.cosmo.state.StateReader;
-import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -61,16 +54,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-public class ServiceGridOrchestrationTest {
+public class ServiceGridDeploymentPlannerTest {
 
     private final Logger logger;
-    private MockManagement management;
+    private MockPlannerManagement management;
     private Set<MockTaskContainer> containers;
     private MockCurrentTimeProvider timeProvider;
     private long startTimestamp;
     private TaskConsumerRegistrar taskConsumerRegistrar;
 
-    public ServiceGridOrchestrationTest() {
+    public ServiceGridDeploymentPlannerTest() {
         logger = Logger.getLogger(this.getClass().getName());
         setSimpleLoggerFormatter(logger);
     }
@@ -99,7 +92,7 @@ public class ServiceGridOrchestrationTest {
             }
         };
 
-        management = new MockManagement(taskConsumerRegistrar, timeProvider);
+        management = new MockPlannerManagement(taskConsumerRegistrar, timeProvider);
     }
 
     @BeforeMethod
@@ -146,7 +139,7 @@ public class ServiceGridOrchestrationTest {
         installService("tomcat", 1);
         execute();
         assertOneTomcatInstance();
-        uninstallAllServices();
+        uninstallService("tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -159,43 +152,7 @@ public class ServiceGridOrchestrationTest {
         installService("tomcat", 2);
         execute();
         assertTwoTomcatInstances();
-        uninstallAllServices();
-        execute();
-        assertTomcatUninstalledGracefully();
-    }
-
-
-    /**
-     * Tests machine failover, and restart by the orchestrator
-     */
-    @Test
-    public void machineFailoverTest() {
-        installService("tomcat", 1);
-        execute();
-        killOnlyMachine();
-        execute();
-        final int numberOfAgentRestarts = 0;
-        final int numberOfMachineRestarts = 1;
-        assertSingleServiceInstance("tomcat", numberOfAgentRestarts, numberOfMachineRestarts);
-        uninstallAllServices();
-        execute();
-        assertTomcatUninstalledGracefully();
-    }
-
-    /**
-     * Test agent process failed, and restarted automatically by
-     * reliable watchdog running on the same machine
-     */
-    @Test
-    public void agentRestartTest() {
-        installService("tomcat", 1);
-        execute();
-        restartOnlyAgent();
-        execute();
-        final int numberOfAgentRestarts = 1;
-        final int numberOfMachineRestarts = 0;
-        assertSingleServiceInstance("tomcat", numberOfAgentRestarts,numberOfMachineRestarts);
-        uninstallAllServices();
+        uninstallService("tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -210,7 +167,7 @@ public class ServiceGridOrchestrationTest {
         scaleService("tomcat",2);
         execute();
         assertTwoTomcatInstances();
-        uninstallAllServices();
+        uninstallService("tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -225,22 +182,9 @@ public class ServiceGridOrchestrationTest {
         scaleService("tomcat",1);
         execute();
         assertTomcatScaledInFrom2To1();
-        uninstallAllServices();
+        uninstallService("tomcat");
         execute();
         assertTomcatUninstalledGracefully();
-    }
-
-    /**
-     * Tests uninstalling tomcat service when machine hosting service instance failed.
-     */
-    @Test
-    public void killMachineUninstallServiceTest() {
-        installService("tomcat",1);
-        execute();
-        killOnlyMachine();
-        uninstallAllServices();
-        execute();
-        assertTomcatUninstalledUnreachable();
     }
 
     /**
@@ -250,35 +194,10 @@ public class ServiceGridOrchestrationTest {
     public void managementRestartTest() {
         installService("tomcat", 1);
         execute();
-
         restartManagement();
-        //simulates recovery of planner
-        installService("tomcat", 1);
-
         execute();
         assertOneTomcatInstance();
-        uninstallAllServices();
-        execute();
-        assertTomcatUninstalledGracefully();
-    }
-
-    /**
-     * Tests management state recovery from crash when one of the agents also failed.
-     * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
-     */
-    @Test
-    public void managementRestartAndOneAgentRestartTest() {
-        installService("tomcat", 2);
-        execute();
-        assertTwoTomcatInstances();
-        restartAgent(getAgentId(1));
-        restartManagement();
-        //simulates recovery of planner
-        installService("tomcat", 2);
-
-        execute();
-        assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
-        uninstallAllServices();
+        uninstallService("tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -288,37 +207,41 @@ public class ServiceGridOrchestrationTest {
      */
     @Test
     public void installTwoSingleInstanceServicesTest(){
-        installServices("tomcat", 1, "cassandra", 1);
+        installService("tomcat", 1);
+        installService("cassandra", 1);
         execute();
-        assertServiceInstalledWithOneInstance("tomcat");
-        assertServiceInstalledWithOneInstance("cassandra");
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds("tomcat")), 1);
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds("cassandra")), 1);
-        uninstallAllServices();
+        assertServiceInstalledWithOneInstance("tomcat", 0);
+        assertServiceInstalledWithOneInstance("cassandra", 1);
+        uninstallService("tomcat");
+        uninstallService("cassandra");
         execute();
         assertTomcatUninstalledGracefully();
     }
 
     @Test
-    public void setInstancePropertyTest() {
-
-        final String propertyName = "hellow";
-        final String propertyValue = "world";
+    public void scalingRulesTest() {
 
         installService("tomcat", 1);
+        final ServiceScalingRule rule = new ServiceScalingRule();
+        rule.setPropertyName("request-throughput");
+        rule.setLowThreshold(1);
+        rule.setHighThreshold(10);
+        scalingrule("tomcat", rule);
         execute();
+
         assertOneTomcatInstance();
-        URI instanceId = getServiceInstanceId("tomcat", 0);
-        setServiceInstanceProperty(instanceId, propertyName, propertyValue);
+        final URI instanceId0 = getServiceInstanceId("tomcat", 0);
+        setServiceInstanceProperty(instanceId0, "request-throughput", 100);
         execute();
-        Assert.assertEquals(getServiceInstanceProperty(propertyName, instanceId), propertyValue);
-        uninstallAllServices();
+        assertTwoTomcatInstances();
+        final URI instanceId1 = getServiceInstanceId("tomcat", 1);
+        setServiceInstanceProperty(instanceId0, "request-throughput", 0);
+        setServiceInstanceProperty(instanceId1, "request-throughput", 0);
+        execute();
+        assertTomcatScaledInFrom2To1();
+        uninstallService("tomcat");
         execute();
         assertTomcatUninstalledGracefully();
-    }
-
-    private Object getServiceInstanceProperty(final String propertyName, URI instanceId) {
-        return getServiceInstanceState(instanceId).getProperty(propertyName);
     }
 
     private void setServiceInstanceProperty(
@@ -341,47 +264,22 @@ public class ServiceGridOrchestrationTest {
 
     private void assertTomcatScaledInFrom2To1() {
         assertServiceInstalledWithOneInstance("tomcat");
-        Assert.assertTrue(getAgentState(getAgentId(0)).isProgress(AgentState.Progress.AGENT_STARTED));
-        Assert.assertTrue(getAgentState(getAgentId(1)).isProgress(AgentState.Progress.MACHINE_TERMINATED));
-        Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).isProgress("service_started"));
-        Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).isProgress("service_uninstalled"));
+    }
+
+    private void scalingrule(String serviceName, ServiceScalingRule rule) {
+        rule.setServiceId(getServiceId(serviceName));
+        ScalingRulesTask task = new ScalingRulesTask();
+        task.setScalingRule(rule);
+        submitTask(management.getCapacityPlannerId(), task);
     }
 
     private void assertTomcatUninstalledGracefully() {
-        boolean instanceUnreachable = false;
-        assertTomcatUninstalled(instanceUnreachable);
-    }
-
-    private void assertTomcatUninstalledUnreachable() {
-        boolean instanceUnreachable = true;
-        assertTomcatUninstalled(instanceUnreachable);
-    }
-
-    private void assertTomcatUninstalled(boolean instanceUnreachable) {
         final URI serviceId = getServiceId("tomcat");
-        Assert.assertFalse(getDeploymentPlan().isServiceExists(serviceId));
-        final ServiceState serviceState = getServiceState(serviceId);
-        Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
-        Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
-
-        for (URI instanceId: getServiceInstanceIds("tomcat")) {
-            ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-            if (instanceUnreachable) {
-                Assert.assertTrue(instanceState.isUnreachable());
-            }
-            else {
-                Assert.assertTrue(instanceState.isProgress("service_uninstalled"));
-            }
-            URI agentId = instanceState.getAgentId();
-            AgentState agentState = getAgentState(agentId);
-            Assert.assertTrue(agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
-        }
+        Assert.assertFalse(getDeploymentPlannerState().getDeploymentPlan().isServiceExists(serviceId));
     }
 
     private void assertServiceInstalledWithOneInstance(String serviceName) {
-        int zeroMachineRestarts = 0;
-        int zeroAgentRestarts = 0;
-        assertServiceInstalledWithOneInstance(serviceName, zeroAgentRestarts, zeroMachineRestarts);
+        assertServiceInstalledWithOneInstance(serviceName, 0);
     }
 
     private void assertSingleServiceInstance(String serviceName) {
@@ -391,65 +289,25 @@ public class ServiceGridOrchestrationTest {
     }
 
     private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
-        Assert.assertEquals(getDeploymentPlan().getServices().size(), 1);
-        Assert.assertEquals(Iterables.size(getAgentIds()), 1, "Expected 1 agent id, instead found: "+ getAgentIds());
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds(serviceName)),1);
-        assertServiceInstalledWithOneInstance(serviceName, numberOfAgentRestarts, numberOfMachineRestarts);
+        Assert.assertNotNull(getDeploymentPlannerState());
+        Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 1);
     }
 
     private void assertServiceInstalledWithOneInstance(
-            String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
+            String serviceName, int agentIndex) {
         final URI serviceId = getServiceId(serviceName);
-        final ServiceState serviceState = getServiceState(serviceId);
-        Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
-        final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
-        final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-        TaskConsumerHistory instanceTasksHistory = getTasksHistory(instanceId);
-        Assert.assertEquals(Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(), new Predicate<Task>() {
-
-            @Override
-            public boolean apply(Task task) {
-                if (task instanceof ServiceInstanceTask) {
-                    return ((ServiceInstanceTask)task).getLifecycle().equals("service_started");
-                }
-                return false;
-            }
-        }))
-        ,1+numberOfMachineRestarts);
-
-        final URI agentId = instanceState.getAgentId();
-        Assert.assertEquals(instanceState.getServiceId(), serviceId);
-        Assert.assertTrue(instanceState.isProgress("service_started"));
-
-        final AgentState agentState = getAgentState(agentId);
-        Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
-        Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
-        Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
-        Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
-
-        TaskConsumerHistory agentTasksHistory = getTasksHistory(agentId);
-        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartMachineTask.class)),1+numberOfMachineRestarts);
-        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartAgentTask.class)),1+numberOfMachineRestarts);
-
-        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlan();
+        final URI instanceId = ServiceUtils.newInstanceId(serviceId, 0);
+        final URI agentId = ServiceUtils.newAgentId(management.getAgentsId(), agentIndex);
+        final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
+        final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId(serviceId)), instanceId);
         final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId).getServiceConfig();
         Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
     }
 
-    private TaskConsumerHistory getTasksHistory(final URI stateId) {
-        final URI tasksHistoryId = ServiceUtils.toTasksHistoryId(stateId);
-        EtagState<TaskConsumerHistory> etagState = getStateReader().get(tasksHistoryId, TaskConsumerHistory.class);
-        Preconditions.checkNotNull(etagState);
-        return etagState.getState();
-    }
-
-    private ServiceGridDeploymentPlan getDeploymentPlan() {
-        return getStateReader()
-               .get(management.getOrchestratorId(), ServiceGridOrchestratorState.class)
-               .getState()
-               .getDeploymentPlan();
+    private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
+        return getStateReader().get(management.getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
     }
 
     private URI getOnlyAgentId() {
@@ -463,35 +321,11 @@ public class ServiceGridOrchestrationTest {
 
     private void assertTwoTomcatInstances(Map<URI,Integer> numberOfAgentRestartsPerAgent, Map<URI,Integer> numberOfMachineRestartsPerAgent) {
         final URI serviceId = getServiceId("tomcat");
-        final ServiceState serviceState = getServiceState(serviceId);
-        Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
-        Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
-        Iterable<URI> instanceIds = getStateIdsStartingWith(newURI(management.getStateServerUri()+"services/tomcat/instances/"));
-        Assert.assertEquals(Iterables.size(instanceIds),2);
 
-        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlan();
+        final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
+        final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
         Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId(serviceId)), 2);
-
-        Iterable<URI> agentIds = getAgentIds();
-        int numberOfAgents = Iterables.size(agentIds);
-        Assert.assertEquals(numberOfAgents, 2);
-        for (int i = 0 ; i < numberOfAgents; i++) {
-
-            URI agentId = Iterables.get(agentIds, i);
-            AgentState agentState = getAgentState(agentId);
-            Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
-            Assert.assertEquals(agentState.getNumberOfAgentRestarts(), (int) numberOfAgentRestartsPerAgent.get(agentId));
-            Assert.assertEquals(agentState.getNumberOfMachineRestarts(), (int) numberOfMachineRestartsPerAgent.get(agentId));
-            URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
-            Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
-            ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-            Assert.assertEquals(instanceState.getServiceId(), serviceId);
-            Assert.assertEquals(instanceState.getAgentId(), agentId);
-            Assert.assertTrue(instanceState.isProgress("service_started"));
-            Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
-        }
-
     }
 
     private ServiceState getServiceState(final URI serviceId) {
@@ -517,35 +351,6 @@ public class ServiceGridOrchestrationTest {
     }
 
     private void installService(String name, int numberOfInstances) {
-        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
-        task.setDeploymentPlan(newServiceGridDeploymentPlan(name, numberOfInstances));
-        submitTask(management.getOrchestratorId(), task);
-    }
-
-    private void installServices(String name1, int numberOfInstances1, String name2, int numberOfInstances2) {
-        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
-        ServiceDeploymentPlan serviceDeploymentPlan1 =
-                newServiceDeploymentPlan(name1, numberOfInstances1, /*offset=*/0);
-        ServiceDeploymentPlan serviceDeploymentPlan2 =
-                newServiceDeploymentPlan(name2, numberOfInstances2, /*offset=*/ numberOfInstances1);
-        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
-        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan1, serviceDeploymentPlan2));
-        task.setDeploymentPlan(servicesDeploymentPlan);
-        submitTask(management.getOrchestratorId(), task);
-    }
-
-    private void scaleService(String name, int numberOfInstances) {
-        installService(name, numberOfInstances);
-    }
-
-    private ServiceGridDeploymentPlan newServiceGridDeploymentPlan(String name, int numberOfInstances) {
-        ServiceDeploymentPlan serviceDeploymentPlan = newServiceDeploymentPlan(name, numberOfInstances, 0);
-        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
-        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan));
-        return servicesDeploymentPlan;
-    }
-
-    private ServiceDeploymentPlan newServiceDeploymentPlan(String name, int numberOfInstances, int offset) {
         final int minNumberOfInstances = 1;
         final int maxNumberOfInstances = 2;
         ServiceConfig serviceConfig = new ServiceConfig();
@@ -553,33 +358,38 @@ public class ServiceGridOrchestrationTest {
         serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
-        final URI serviceId = getServiceId(name);
-        serviceConfig.setServiceId(serviceId);
-        ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
-        serviceDeploymentPlan.setServiceConfig(serviceConfig);
-        for (int i = 0 ; i < numberOfInstances ; i++) {
-            final URI agentId = ServiceUtils.newAgentId(management.getAgentsId(), i + offset);
-            final URI instanceId = ServiceUtils.newInstanceId(serviceId,  i + offset);
-            serviceDeploymentPlan.addInstance(instanceId, agentId);
-        }
-        return serviceDeploymentPlan;
+        serviceConfig.setServiceId(getServiceId(name));
+        final InstallServiceTask installServiceTask = new InstallServiceTask();
+        installServiceTask.setServiceConfig(serviceConfig);
+        submitTask(management.getDeploymentPlannerId(), installServiceTask);
     }
 
-    private void uninstallAllServices() {
-        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
-        task.setDeploymentPlan(new ServiceGridDeploymentPlan());
-        submitTask(management.getOrchestratorId(), task);
+    private void uninstallService(String name) {
+        URI serviceId = getServiceId(name);
+        final UninstallServiceTask uninstallServiceTask = new UninstallServiceTask();
+        uninstallServiceTask.setServiceId(serviceId);
+        submitTask(management.getDeploymentPlannerId(), uninstallServiceTask);
     }
 
     private void submitTask(final URI target, final Task task) {
         task.setProducerTimestamp(timeProvider.currentTimeMillis());
-        task.setProducerId(newURI(management.getStateServerUri() + "webui"));
+        task.setProducerId(newURI(management.getStateServerUri()+"webui"));
         task.setConsumerId(target);
         management.getTaskWriter().postNewTask(task);
     }
 
+    private void scaleService(String serviceName, int plannedNumberOfInstances) {
+        final ScaleServiceTask scaleServiceTask = new ScaleServiceTask();
+        URI serviceId = getServiceId(serviceName);
+        scaleServiceTask.setServiceId(serviceId);
+        scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
+        scaleServiceTask.setProducerTimestamp(timeProvider.currentTimeMillis());
+        submitTask(management.getDeploymentPlannerId(), scaleServiceTask);
+    }
+
+
     private URI getServiceId(String name) {
-        return ServiceUtils.newServiceId(management.getStateServerUri(), name);
+        return newURI(management.getStateServerUri()+"services/" + name + "/");
     }
 
     private void execute() {
@@ -589,7 +399,9 @@ public class ServiceGridOrchestrationTest {
 
             boolean emptyCycle = true;
 
-            submitTaskProducerTask(management.getOrchestratorId());
+            submitTaskProducerTask(management.getCapacityPlannerId());
+            timeProvider.increaseBy(1);
+            submitTaskProducerTask(management.getDeploymentPlannerId());
 
             for (MockTaskContainer container : containers) {
                 Preconditions.checkState(containers.contains(container));
@@ -641,10 +453,6 @@ public class ServiceGridOrchestrationTest {
         submitTask(taskProducerId, producerTask);
     }
 
-    private Iterable<URI> getServiceInstanceIds(String serviceName) {
-        return getStateIdsStartingWith(newURI(management.getStateServerUri()+"services/"+serviceName+"/instances/"));
-    }
-
     private URI getServiceInstanceId(final String serviceName, final int index) {
         return newURI(management.getStateServerUri()+"services/"+serviceName+"/instances/"+index+"/");
     }
@@ -669,14 +477,6 @@ public class ServiceGridOrchestrationTest {
         return newURI(management.getStateServerUri()+"agents/"+index+"/");
     }
 
-    private void killOnlyMachine() {
-        killMachine(getOnlyAgentId());
-    }
-
-    private void restartOnlyAgent() {
-        restartAgent(getOnlyAgentId());
-    }
-
     /**
      * This method simulates failure of the agent, and immediate restart by a reliable watchdog
      * running on the same machine
@@ -688,13 +488,6 @@ public class ServiceGridOrchestrationTest {
         Preconditions.checkState(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
         agentState.setNumberOfAgentRestarts(agentState.getNumberOfAgentRestarts() +1);
         taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
-    }
-
-    /**
-     * This method simulates an unexpected crash of a machine
-     */
-    private void killMachine(URI agentId) {
-        findContainer(agentId).killMachine();
     }
 
     /**
@@ -773,24 +566,22 @@ public class ServiceGridOrchestrationTest {
 
     private ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted() {
         return ImmutableMap.<URI,Integer>builder()
-                 .put(getAgentId(0), 0)
-                 .put(getAgentId(1), 0)
-                 .build();
+                .put(getAgentId(0), 0)
+                .put(getAgentId(1), 0)
+                .build();
     }
 
     private ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted() {
         return ImmutableMap.<URI,Integer>builder()
-                 .put(getAgentId(0), 0)
-                 .put(getAgentId(1), 0)
-                 .build();
+                .put(getAgentId(0), 0)
+                .put(getAgentId(1), 0)
+                .build();
     }
 
     private ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted() {
         return ImmutableMap.<URI,Integer>builder()
-         .put(getAgentId(0), 0)
-         .put(getAgentId(1), 1)
-         .build();
+                .put(getAgentId(0), 0)
+                .put(getAgentId(1), 1)
+                .build();
     }
-
-
 }

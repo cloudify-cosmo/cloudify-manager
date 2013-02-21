@@ -69,4 +69,8 @@ public class ServiceUtils {
     public static URI newAgentId(URI agentsId, int agentIndex) {
         return StreamUtils.newURI(agentsId.toString() + agentIndex + "/");
     }
+
+    public static URI newServiceId(URI serverUri, String serviceName) {
+        return StreamUtils.newURI(serverUri+"services/" + serviceName + "/");
+    }
 }
