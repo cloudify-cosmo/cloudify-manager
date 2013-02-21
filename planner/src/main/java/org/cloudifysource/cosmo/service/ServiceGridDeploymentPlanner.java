@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -38,7 +37,6 @@ import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Set;
 
@@ -215,7 +213,7 @@ public class ServiceGridDeploymentPlanner {
     }
 
     private URI newAgentId() {
-        return ServiceUtils.newAgentId(agentsId,  state.getAndIncrementNextAgentIndex());
+        return ServiceUtils.newAgentId(agentsId, state.getAndIncrementNextAgentIndex());
     }
 
     @TaskConsumerStateHolder
