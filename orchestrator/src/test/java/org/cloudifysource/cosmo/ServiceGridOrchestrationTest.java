@@ -45,8 +45,8 @@ import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
 import org.cloudifysource.cosmo.state.EtagState;
 import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
-import org.junit.AfterClass;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -250,7 +250,11 @@ public class ServiceGridOrchestrationTest {
 	public void managementRestartTest() {
 		installService("tomcat", 1);
 		execute();
+
 		restartManagement();
+        //simulates recovery of planner
+        installService("tomcat", 1);
+
 		execute();
 		assertOneTomcatInstance();
 		uninstallAllServices();
@@ -269,7 +273,10 @@ public class ServiceGridOrchestrationTest {
 		assertTwoTomcatInstances();
 		restartAgent(getAgentId(1));
 		restartManagement();
-		execute();
+        //simulates recovery of planner
+        installService("tomcat", 2);
+
+        execute();
 		assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
 		uninstallAllServices();
 		execute();
@@ -281,8 +288,7 @@ public class ServiceGridOrchestrationTest {
 	 */
 	@Test
 	public void installTwoSingleInstanceServicesTest(){
-		installService("tomcat", 1);
-		installService("cassandra", 1);
+		installServices("tomcat", 1, "cassandra", 1);
 		execute();
 		assertServiceInstalledWithOneInstance("tomcat");
 		assertServiceInstalledWithOneInstance("cassandra");
@@ -516,11 +522,30 @@ public class ServiceGridOrchestrationTest {
 		submitTask(management.getOrchestratorId(), task);
 	}
 
+    private void installServices(String name1, int numberOfInstances1, String name2, int numberOfInstances2) {
+        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
+        ServiceDeploymentPlan serviceDeploymentPlan1 =
+                newServiceDeploymentPlan(name1, numberOfInstances1, /*offset=*/0);
+        ServiceDeploymentPlan serviceDeploymentPlan2 =
+                newServiceDeploymentPlan(name2, numberOfInstances2, /*offset=*/ numberOfInstances1);
+        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
+        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan1, serviceDeploymentPlan2));
+        task.setDeploymentPlan(servicesDeploymentPlan);
+        submitTask(management.getOrchestratorId(), task);
+    }
+
     private void scaleService(String name, int numberOfInstances) {
         installService(name, numberOfInstances);
     }
 
     private ServiceGridDeploymentPlan newServiceGridDeploymentPlan(String name, int numberOfInstances) {
+        ServiceDeploymentPlan serviceDeploymentPlan = newServiceDeploymentPlan(name, numberOfInstances, 0);
+        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
+        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan));
+        return servicesDeploymentPlan;
+    }
+
+    private ServiceDeploymentPlan newServiceDeploymentPlan(String name, int numberOfInstances, int offset) {
         final int minNumberOfInstances = 1;
         final int maxNumberOfInstances = 2;
         ServiceConfig serviceConfig = new ServiceConfig();
@@ -533,13 +558,11 @@ public class ServiceGridOrchestrationTest {
         ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
         serviceDeploymentPlan.setServiceConfig(serviceConfig);
         for (int i = 0 ; i < numberOfInstances ; i++) {
-            final URI agentId = ServiceUtils.newAgentId(management.getAgentsId(), i);
-            final URI instanceId = ServiceUtils.newInstanceId(serviceId,  i);
+            final URI agentId = ServiceUtils.newAgentId(management.getAgentsId(), i + offset);
+            final URI instanceId = ServiceUtils.newInstanceId(serviceId,  i + offset);
             serviceDeploymentPlan.addInstance(instanceId, agentId);
         }
-        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
-        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan));
-        return servicesDeploymentPlan;
+        return serviceDeploymentPlan;
     }
 
     private void uninstallAllServices() {
@@ -572,7 +595,7 @@ public class ServiceGridOrchestrationTest {
 				Preconditions.checkState(containers.contains(container));
 				Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");
 				Task task = null;
-				
+
 				for(timeProvider.increaseBy(1); (task = container.consumeNextTask()) != null; timeProvider.increaseBy(1)) {
 					if (!(task instanceof TaskProducerTask) && !(task instanceof PingAgentTask)) {
 						emptyCycle = false;

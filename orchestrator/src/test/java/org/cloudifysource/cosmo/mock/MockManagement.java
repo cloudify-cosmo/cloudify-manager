@@ -165,7 +165,9 @@ public class MockManagement {
 	}
 
 	public void close() {
-		stateServer.stop();
+		if (!useMock) {
+            stateServer.stop();
+        }
 	}
 	
 	public String getStateServerUri() {
