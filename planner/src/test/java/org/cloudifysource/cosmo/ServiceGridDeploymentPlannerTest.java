@@ -22,24 +22,30 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.cloudifysource.cosmo.agent.state.AgentState;
+import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.mock.MockAgent;
-import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.mock.MockPlannerManagement;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
 import org.cloudifysource.cosmo.mock.MockTaskContainerParameter;
 import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
 import org.cloudifysource.cosmo.service.ServiceUtils;
-import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
-import org.junit.AfterClass;
-import org.cloudifysource.cosmo.agent.state.AgentState;
-import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.service.state.*;
-import org.cloudifysource.cosmo.service.tasks.*;
+import org.cloudifysource.cosmo.service.state.ServiceConfig;
+import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
+import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
+import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
+import org.cloudifysource.cosmo.service.state.ServiceScalingRule;
+import org.cloudifysource.cosmo.service.state.ServiceState;
+import org.cloudifysource.cosmo.service.tasks.InstallServiceTask;
+import org.cloudifysource.cosmo.service.tasks.ScaleServiceTask;
+import org.cloudifysource.cosmo.service.tasks.ScalingRulesTask;
+import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
+import org.cloudifysource.cosmo.service.tasks.UninstallServiceTask;
 import org.cloudifysource.cosmo.state.EtagState;
 import org.cloudifysource.cosmo.state.StateReader;
+import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -218,59 +224,12 @@ public class ServiceGridDeploymentPlannerTest {
         assertTomcatUninstalledGracefully();
     }
 
-    @Test
-    public void scalingRulesTest() {
-
-        installService("tomcat", 1);
-        final ServiceScalingRule rule = new ServiceScalingRule();
-        rule.setPropertyName("request-throughput");
-        rule.setLowThreshold(1);
-        rule.setHighThreshold(10);
-        scalingrule("tomcat", rule);
-        execute();
-
-        assertOneTomcatInstance();
-        final URI instanceId0 = getServiceInstanceId("tomcat", 0);
-        setServiceInstanceProperty(instanceId0, "request-throughput", 100);
-        execute();
-        assertTwoTomcatInstances();
-        final URI instanceId1 = getServiceInstanceId("tomcat", 1);
-        setServiceInstanceProperty(instanceId0, "request-throughput", 0);
-        setServiceInstanceProperty(instanceId1, "request-throughput", 0);
-        execute();
-        assertTomcatScaledInFrom2To1();
-        uninstallService("tomcat");
-        execute();
-        assertTomcatUninstalledGracefully();
-    }
-
-    private void setServiceInstanceProperty(
-            URI instanceId,
-            String propertyName,
-            Object propertyValue) {
-
-        SetInstancePropertyTask task = new SetInstancePropertyTask();
-        task.setStateId(instanceId);
-        task.setPropertyName(propertyName);
-        task.setPropertyValue(propertyValue);
-
-        final URI agentId = getServiceInstanceState(instanceId).getAgentId();
-        submitTask(agentId, task);
-    }
-
     private void assertOneTomcatInstance() {
         assertSingleServiceInstance("tomcat");
     }
 
     private void assertTomcatScaledInFrom2To1() {
         assertServiceInstalledWithOneInstance("tomcat");
-    }
-
-    private void scalingrule(String serviceName, ServiceScalingRule rule) {
-        rule.setServiceId(getServiceId(serviceName));
-        ScalingRulesTask task = new ScalingRulesTask();
-        task.setScalingRule(rule);
-        submitTask(management.getCapacityPlannerId(), task);
     }
 
     private void assertTomcatUninstalledGracefully() {
@@ -308,10 +267,6 @@ public class ServiceGridDeploymentPlannerTest {
 
     private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
         return getStateReader().get(management.getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
-    }
-
-    private URI getOnlyAgentId() {
-        return Iterables.getOnlyElement(getAgentIds());
     }
 
     private void assertTwoTomcatInstances() {
@@ -387,9 +342,8 @@ public class ServiceGridDeploymentPlannerTest {
         submitTask(management.getDeploymentPlannerId(), scaleServiceTask);
     }
 
-
     private URI getServiceId(String name) {
-        return newURI(management.getStateServerUri()+"services/" + name + "/");
+        return ServiceUtils.newServiceId(management.getStateServerUri(), name);
     }
 
     private void execute() {
@@ -399,8 +353,6 @@ public class ServiceGridDeploymentPlannerTest {
 
             boolean emptyCycle = true;
 
-            submitTaskProducerTask(management.getCapacityPlannerId());
-            timeProvider.increaseBy(1);
             submitTaskProducerTask(management.getDeploymentPlannerId());
 
             for (MockTaskContainer container : containers) {
