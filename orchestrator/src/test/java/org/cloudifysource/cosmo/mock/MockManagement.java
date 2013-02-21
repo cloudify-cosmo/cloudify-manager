@@ -31,44 +31,44 @@ import java.net.URISyntaxException;
 
 public class MockManagement {
 
-	private static final int STATE_SERVER_PORT = 8080;
-	private static final String STATE_SERVER_URI = "http://localhost:"+STATE_SERVER_PORT+"/";
-	private static final boolean useMock = true;
-	private final URI orchestratorId;
-	private final URI machineProvisionerId;
-	private final StateReader stateReader;
-	private final StateWriter stateWriter;
-	private final MockTaskBroker taskBroker;
+    private static final int STATE_SERVER_PORT = 8080;
+    private static final String STATE_SERVER_URI = "http://localhost:"+STATE_SERVER_PORT+"/";
+    private static final boolean useMock = true;
+    private final URI orchestratorId;
+    private final URI machineProvisionerId;
+    private final StateReader stateReader;
+    private final StateWriter stateWriter;
+    private final MockTaskBroker taskBroker;
     private final CurrentTimeProvider timeProvider;
-	private final TaskConsumerRegistrar taskConsumerRegistrar;
-	private final MockTaskBroker persistentTaskBroker;
-	private KVStoreServer stateServer;
+    private final TaskConsumerRegistrar taskConsumerRegistrar;
+    private final MockTaskBroker persistentTaskBroker;
+    private KVStoreServer stateServer;
     private final URI agentsId;
 
     public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
-		this.taskConsumerRegistrar = taskConsumerRegistrar;
-		this.timeProvider = timeProvider;
+        this.taskConsumerRegistrar = taskConsumerRegistrar;
+        this.timeProvider = timeProvider;
 
         orchestratorId = createUri("services/orchestrator/");
         machineProvisionerId = createUri("services/provisioner/");
         agentsId = createUri("agents/");
 
-		if (useMock) {
-			stateReader = new MockState();
-			stateWriter = (StateWriter) stateReader;
-			((MockState)stateReader).setLoggingEnabled(false);
-		}
-		else {
-			stateReader = new StateClient(StreamUtils.newURI(STATE_SERVER_URI));
-			stateWriter = (StateWriter) stateReader;
-			stateServer = new KVStoreServer();
-			stateServer.start(STATE_SERVER_PORT);
-		}
-		taskBroker = new MockTaskBroker();
-		taskBroker.setLoggingEnabled(false);
-		persistentTaskBroker = new MockTaskBroker();
-		
-	}
+        if (useMock) {
+            stateReader = new MockState();
+            stateWriter = (StateWriter) stateReader;
+            ((MockState)stateReader).setLoggingEnabled(false);
+        }
+        else {
+            stateReader = new StateClient(StreamUtils.newURI(STATE_SERVER_URI));
+            stateWriter = (StateWriter) stateReader;
+            stateServer = new KVStoreServer();
+            stateServer.start(STATE_SERVER_PORT);
+        }
+        taskBroker = new MockTaskBroker();
+        taskBroker.setLoggingEnabled(false);
+        persistentTaskBroker = new MockTaskBroker();
+
+    }
 
     protected URI createUri(String relativeId) {
         try {
@@ -78,59 +78,59 @@ public class MockManagement {
         }
     }
 
-	public URI getOrchestratorId() {
-		return orchestratorId;
-	}
+    public URI getOrchestratorId() {
+        return orchestratorId;
+    }
 
-	public TaskReader getTaskReader() {
-		return taskBroker;
-	}
+    public TaskReader getTaskReader() {
+        return taskBroker;
+    }
 
-	public TaskWriter getTaskWriter() {
-		return taskBroker;
-	}
-	
-	public StateReader getStateReader() {
-		return stateReader;
-	}
-	
-	public StateWriter getStateWriter() {
-		return stateWriter;
-	}
+    public TaskWriter getTaskWriter() {
+        return taskBroker;
+    }
 
-	public void restart() {
-		unregisterTaskConsumers();
-		clearState();
-		taskBroker.clear();
-		registerTaskConsumers();
-	}
+    public StateReader getStateReader() {
+        return stateReader;
+    }
 
-	private void clearState() {
-		if (useMock) {
-			((MockState)stateReader).clear();
-		}
-		else {
-			stateServer.reload();			
-		}
-	}
+    public StateWriter getStateWriter() {
+        return stateWriter;
+    }
 
-	public void start() {
+    public void restart() {
+        unregisterTaskConsumers();
+        clearState();
+        taskBroker.clear();
+        registerTaskConsumers();
+    }
 
-		clearState();
-		taskBroker.clear();
-		persistentTaskBroker.clear();
-		registerTaskConsumers();
-	}
+    private void clearState() {
+        if (useMock) {
+            ((MockState)stateReader).clear();
+        }
+        else {
+            stateServer.reload();
+        }
+    }
 
-	public void unregisterTaskConsumers() {
-		unregisterTaskConsumer(orchestratorId);
-		unregisterTaskConsumer(machineProvisionerId);
-	}
+    public void start() {
 
-	protected void registerTaskConsumers() {
-		registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
-		registerTaskConsumer(newMachineProvisionerContainer(taskConsumerRegistrar), machineProvisionerId);
-	}
+        clearState();
+        taskBroker.clear();
+        persistentTaskBroker.clear();
+        registerTaskConsumers();
+    }
+
+    public void unregisterTaskConsumers() {
+        unregisterTaskConsumer(orchestratorId);
+        unregisterTaskConsumer(machineProvisionerId);
+    }
+
+    protected void registerTaskConsumers() {
+        registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
+        registerTaskConsumer(newMachineProvisionerContainer(taskConsumerRegistrar), machineProvisionerId);
+    }
 
     protected void registerTaskConsumer(Object taskConsumer, URI taskConsumerId) {
         taskConsumerRegistrar.registerTaskConsumer(taskConsumer, taskConsumerId);
@@ -141,38 +141,38 @@ public class MockManagement {
     }
 
     private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider) {
-		
-		final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
-		serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
-		serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
-		serviceOrchestratorParameter.setTaskReader(taskBroker);
-		serviceOrchestratorParameter.setStateReader(stateReader);
-		serviceOrchestratorParameter.setTimeProvider(timeProvider);
-	
-		return new ServiceGridOrchestrator(serviceOrchestratorParameter);
-	}
 
-	private MockMachineProvisioner newMachineProvisionerContainer(TaskConsumerRegistrar taskConsumerRegistrar) {
-		return new MockMachineProvisioner(taskConsumerRegistrar); 
-	}
+        final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
+        serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
+        serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
+        serviceOrchestratorParameter.setTaskReader(taskBroker);
+        serviceOrchestratorParameter.setStateReader(stateReader);
+        serviceOrchestratorParameter.setTimeProvider(timeProvider);
 
-	public TaskReader getPersistentTaskReader() {
-		return persistentTaskBroker;
-	}
+        return new ServiceGridOrchestrator(serviceOrchestratorParameter);
+    }
 
-	public TaskWriter getPersistentTaskWriter() {
-		return persistentTaskBroker;
-	}
+    private MockMachineProvisioner newMachineProvisionerContainer(TaskConsumerRegistrar taskConsumerRegistrar) {
+        return new MockMachineProvisioner(taskConsumerRegistrar);
+    }
 
-	public void close() {
-		if (!useMock) {
+    public TaskReader getPersistentTaskReader() {
+        return persistentTaskBroker;
+    }
+
+    public TaskWriter getPersistentTaskWriter() {
+        return persistentTaskBroker;
+    }
+
+    public void close() {
+        if (!useMock) {
             stateServer.stop();
         }
-	}
-	
-	public String getStateServerUri() {
-		return STATE_SERVER_URI;
-	}
+    }
+
+    public String getStateServerUri() {
+        return STATE_SERVER_URI;
+    }
 
     protected CurrentTimeProvider getTimeProvider() {
         return timeProvider;

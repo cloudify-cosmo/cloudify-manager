@@ -35,98 +35,98 @@ import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
 public class MockStateTest {
-	
-	private static final int PORT = 8080;
-	private static final URI STATE_SERVER_URI = StreamUtils.newURI("http://localhost:" + PORT + "/");
-	
-	final URI id = StreamUtils.newURI("http://localhost:"+PORT+"/services/tomcat");
-	final ObjectMapper mapper = StreamUtils.newObjectMapper();
-	private final Logger logger = Logger.getLogger(this.getClass().getName());
-	
-	private final boolean useMock = false;
-	
-	private KVStoreServer stateServer;
-	
-	StateReader stateReader;
-	StateWriter stateWriter;
-	
-	@BeforeClass
-	public void beforeClass() {
-		if (useMock) {
-			stateReader = new MockState();
-			stateWriter = (StateWriter) stateReader;
-		}
-		else {
-			stateReader = new StateClient(STATE_SERVER_URI);
-			stateWriter = (StateWriter) stateReader;
-			stateServer = new KVStoreServer();
-			stateServer.start(PORT);
-		}
-	}
-	
-	@AfterClass
-	public void afterClass() {
-		if (!useMock) {
-			stateServer.stop();
-		}
-	}
-	
-	@BeforeMethod
-	public void beforeMethod(Method method) {
-		if (useMock) {
-			((MockState)stateWriter).clear();
-		}
-		else {
-			stateServer.reload();
-		}
-		logger.info("Starting " + method.getName());
-	}
 
-	@Test
-	public void testFirstPut() throws URISyntaxException {
-		final TaskConsumerState taskConsumerState = new TaskConsumerState();
-		final Etag etag = stateWriter.put(id, taskConsumerState, Etag.EMPTY);
-		Assert.assertFalse(Etag.EMPTY.equals(etag));
-		
-		assertEqualsState(taskConsumerState, stateReader.get(id, TaskConsumerState.class).getState());
-	}
+    private static final int PORT = 8080;
+    private static final URI STATE_SERVER_URI = StreamUtils.newURI("http://localhost:" + PORT + "/");
 
-	@Test
-	public void testSecondPut() throws URISyntaxException {
-		final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
-		final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
-		taskConsumerState2.setProperty("kuku", "loko");
-		
-		final Etag etag1 = stateWriter.put(id, taskConsumerState1, Etag.EMPTY);
-		final Etag etag2 = stateWriter.put(id, taskConsumerState2, etag1);
-		Assert.assertFalse(etag1.equals(etag2));
-		assertEqualsState(taskConsumerState2, stateReader.get(id, TaskConsumerState.class).getState());
-	}
+    final URI id = StreamUtils.newURI("http://localhost:"+PORT+"/services/tomcat");
+    final ObjectMapper mapper = StreamUtils.newObjectMapper();
+    private final Logger logger = Logger.getLogger(this.getClass().getName());
 
-	@Test
-	public void testSecondPutBadEtag() throws URISyntaxException {
-		final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
-		final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
-		taskConsumerState2.setProperty("kuku", "loko");
-		Etag etag1 = stateWriter.put(id, taskConsumerState1, Etag.EMPTY);
-		try {
-			stateWriter.put(id, taskConsumerState2, Etag.EMPTY);
-			Assert.fail("Expected exception");
-		}
-		catch (EtagPreconditionNotMetException e) {
-			Assert.assertEquals(e.getResponseEtag(), etag1);
-			Assert.assertEquals(e.getRequestEtag(), Etag.EMPTY);
-		}
-	}
-	
-	private void assertEqualsState(
-			TaskConsumerState expectedState,
-			TaskConsumerState actualState) {
-		Assert.assertTrue(StreamUtils.elementEquals(mapper, expectedState, actualState));
-	}
-	
-	@Test
-	public void testEmptyGet() throws URISyntaxException {
-		Assert.assertEquals(null, stateReader.get(id, TaskConsumerState.class));
-	}
+    private final boolean useMock = false;
+
+    private KVStoreServer stateServer;
+
+    StateReader stateReader;
+    StateWriter stateWriter;
+
+    @BeforeClass
+    public void beforeClass() {
+        if (useMock) {
+            stateReader = new MockState();
+            stateWriter = (StateWriter) stateReader;
+        }
+        else {
+            stateReader = new StateClient(STATE_SERVER_URI);
+            stateWriter = (StateWriter) stateReader;
+            stateServer = new KVStoreServer();
+            stateServer.start(PORT);
+        }
+    }
+
+    @AfterClass
+    public void afterClass() {
+        if (!useMock) {
+            stateServer.stop();
+        }
+    }
+
+    @BeforeMethod
+    public void beforeMethod(Method method) {
+        if (useMock) {
+            ((MockState)stateWriter).clear();
+        }
+        else {
+            stateServer.reload();
+        }
+        logger.info("Starting " + method.getName());
+    }
+
+    @Test
+    public void testFirstPut() throws URISyntaxException {
+        final TaskConsumerState taskConsumerState = new TaskConsumerState();
+        final Etag etag = stateWriter.put(id, taskConsumerState, Etag.EMPTY);
+        Assert.assertFalse(Etag.EMPTY.equals(etag));
+
+        assertEqualsState(taskConsumerState, stateReader.get(id, TaskConsumerState.class).getState());
+    }
+
+    @Test
+    public void testSecondPut() throws URISyntaxException {
+        final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
+        final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
+        taskConsumerState2.setProperty("kuku", "loko");
+
+        final Etag etag1 = stateWriter.put(id, taskConsumerState1, Etag.EMPTY);
+        final Etag etag2 = stateWriter.put(id, taskConsumerState2, etag1);
+        Assert.assertFalse(etag1.equals(etag2));
+        assertEqualsState(taskConsumerState2, stateReader.get(id, TaskConsumerState.class).getState());
+    }
+
+    @Test
+    public void testSecondPutBadEtag() throws URISyntaxException {
+        final TaskConsumerState taskConsumerState1 = new TaskConsumerState();
+        final TaskConsumerState taskConsumerState2 = new TaskConsumerState();
+        taskConsumerState2.setProperty("kuku", "loko");
+        Etag etag1 = stateWriter.put(id, taskConsumerState1, Etag.EMPTY);
+        try {
+            stateWriter.put(id, taskConsumerState2, Etag.EMPTY);
+            Assert.fail("Expected exception");
+        }
+        catch (EtagPreconditionNotMetException e) {
+            Assert.assertEquals(e.getResponseEtag(), etag1);
+            Assert.assertEquals(e.getRequestEtag(), Etag.EMPTY);
+        }
+    }
+
+    private void assertEqualsState(
+            TaskConsumerState expectedState,
+            TaskConsumerState actualState) {
+        Assert.assertTrue(StreamUtils.elementEquals(mapper, expectedState, actualState));
+    }
+
+    @Test
+    public void testEmptyGet() throws URISyntaxException {
+        Assert.assertEquals(null, stateReader.get(id, TaskConsumerState.class));
+    }
 }

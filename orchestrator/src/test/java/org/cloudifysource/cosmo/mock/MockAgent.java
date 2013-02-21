@@ -31,80 +31,80 @@ import java.util.Map;
 
 public class MockAgent {
 
-	private final AgentState state;
-	private final Map<URI, ServiceInstanceState> instancesState;
-	
-	public MockAgent(AgentState state) {
-		this.state = state;
-		this.instancesState = Maps.newLinkedHashMap();
-	}
+    private final AgentState state;
+    private final Map<URI, ServiceInstanceState> instancesState;
 
-	@ImpersonatingTaskConsumer
-	public void serviceInstanceLifecycle(ServiceInstanceTask task,
-			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
-		
-		ServiceInstanceState instanceState = impersonatedStateModifier.get();
-		instanceState.setProgress(task.getLifecycle());
-		impersonatedStateModifier.put(instanceState);
-		instancesState.put(task.getStateId(), instanceState);
+    public MockAgent(AgentState state) {
+        this.state = state;
+        this.instancesState = Maps.newLinkedHashMap();
+    }
 
-	}
-	
-	@TaskConsumer
-	public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) {
-		
-		final URI instanceId = task.getInstanceId();
-		this.state.removeServiceInstanceId(instanceId);
-		this.instancesState.remove(instanceId);
-	}
-	
+    @ImpersonatingTaskConsumer
+    public void serviceInstanceLifecycle(ServiceInstanceTask task,
+            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 
-	@ImpersonatingTaskConsumer
-	public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
-			TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
-		
-		URI instanceId = task.getStateId();
-		URI agentId = task.getConsumerId();
-		URI serviceId = task.getServiceId();
-		Preconditions.checkArgument(state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
-		ServiceInstanceState instanceState = instancesState.get(instanceId);
-		if (instanceState == null) {
-			instanceState = new ServiceInstanceState();
-			instanceState.setAgentId(agentId);
-			instanceState.setServiceId(serviceId);
-		}
-		else {
-			Preconditions.checkState(instanceState.getAgentId().equals(agentId));
-			Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
-			instanceState.setUnreachable(false);
-		}
-		impersonatedStateModifier.put(instanceState);
-	}
-	
-	@ImpersonatingTaskConsumer
-	public void injectPropertyToInstance(SetInstancePropertyTask task, TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
-		final URI instanceId = task.getStateId();
-		Preconditions.checkArgument(instancesState.containsKey(instanceId), "Unknown instance %s", instanceId);
-		ServiceInstanceState instanceState = instancesState.get(instanceId);
-		instanceState.setProperty(task.getPropertyName(), task.getPropertyValue());
-		impersonatedStateModifier.put(instanceState);
-	}
-	
-	@TaskConsumer(noHistory = true)
-	public void ping(PingAgentTask task) {
-		state.setLastPingSourceTimestamp(task.getProducerTimestamp());
-	}
-	
-	@TaskConsumer
-	public void markAgentAsStopping(MarkAgentAsStoppingTask task) {
-		Preconditions.checkState(state.getProgress().equals(AgentState.Progress.AGENT_STARTED));
-		state.setProgress(AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION);
-	}
-	
-	@TaskConsumerStateHolder
-	public AgentState getState() {
-		return state;
-	}
+        ServiceInstanceState instanceState = impersonatedStateModifier.get();
+        instanceState.setProgress(task.getLifecycle());
+        impersonatedStateModifier.put(instanceState);
+        instancesState.put(task.getStateId(), instanceState);
+
+    }
+
+    @TaskConsumer
+    public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) {
+
+        final URI instanceId = task.getInstanceId();
+        this.state.removeServiceInstanceId(instanceId);
+        this.instancesState.remove(instanceId);
+    }
+
+
+    @ImpersonatingTaskConsumer
+    public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
+            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+
+        URI instanceId = task.getStateId();
+        URI agentId = task.getConsumerId();
+        URI serviceId = task.getServiceId();
+        Preconditions.checkArgument(state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
+        ServiceInstanceState instanceState = instancesState.get(instanceId);
+        if (instanceState == null) {
+            instanceState = new ServiceInstanceState();
+            instanceState.setAgentId(agentId);
+            instanceState.setServiceId(serviceId);
+        }
+        else {
+            Preconditions.checkState(instanceState.getAgentId().equals(agentId));
+            Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
+            instanceState.setUnreachable(false);
+        }
+        impersonatedStateModifier.put(instanceState);
+    }
+
+    @ImpersonatingTaskConsumer
+    public void injectPropertyToInstance(SetInstancePropertyTask task, TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+        final URI instanceId = task.getStateId();
+        Preconditions.checkArgument(instancesState.containsKey(instanceId), "Unknown instance %s", instanceId);
+        ServiceInstanceState instanceState = instancesState.get(instanceId);
+        instanceState.setProperty(task.getPropertyName(), task.getPropertyValue());
+        impersonatedStateModifier.put(instanceState);
+    }
+
+    @TaskConsumer(noHistory = true)
+    public void ping(PingAgentTask task) {
+        state.setLastPingSourceTimestamp(task.getProducerTimestamp());
+    }
+
+    @TaskConsumer
+    public void markAgentAsStopping(MarkAgentAsStoppingTask task) {
+        Preconditions.checkState(state.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+        state.setProgress(AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION);
+    }
+
+    @TaskConsumerStateHolder
+    public AgentState getState() {
+        return state;
+    }
 
 
 }
