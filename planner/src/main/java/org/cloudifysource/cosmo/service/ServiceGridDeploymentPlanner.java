@@ -149,13 +149,13 @@ public class ServiceGridDeploymentPlanner {
                 for (int i = newNumberOfInstances - oldNumberOfInstances; i > 0; i--) {
 
                     final URI instanceId = newInstanceId(serviceId);
-                    final URI agentId = newAgentExecutorId();
+                    final URI agentId = newAgentId();
                     deploymentPlan.addServiceInstance(serviceId, agentId, instanceId);
                 }
             } else if (newNumberOfInstances < oldNumberOfInstances) {
                 for (int i = oldNumberOfInstances - newNumberOfInstances; i > 0; i--) {
                     final int index = state.getAndDecrementNextServiceInstanceIndex(serviceId);
-                    final URI instanceId = newInstanceId(serviceId, index);
+                    final URI instanceId = ServiceUtils.newInstanceId(serviceId, index);
                     boolean removed = deploymentPlan.removeServiceInstance(instanceId);
                     Preconditions.checkState(removed);
                 }
@@ -211,24 +211,11 @@ public class ServiceGridDeploymentPlanner {
 
     private URI newInstanceId(URI serviceId) {
         final int index = state.getAndIncrementNextServiceInstanceIndex(serviceId);
-        return newInstanceId(serviceId, index);
+        return ServiceUtils.newInstanceId(serviceId, index);
     }
 
-    private URI newInstanceId(URI serviceId, final int index) {
-        Preconditions.checkArgument(serviceId.toString().endsWith("/"), "service id %s must end with slash", serviceId);
-        return newURI(serviceId.toString() + "instances/" + index + "/");
-    }
-
-    private URI newAgentExecutorId() {
-        return newURI(agentsId.toString() + state.getAndIncrementNextAgentIndex() + "/");
-    }
-
-    private URI newURI(String uri) {
-        try {
-            return new URI(uri);
-        } catch (final URISyntaxException e) {
-            throw Throwables.propagate(e);
-        }
+    private URI newAgentId() {
+        return ServiceUtils.newAgentId(agentsId,  state.getAndIncrementNextAgentIndex());
     }
 
     @TaskConsumerStateHolder

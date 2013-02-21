@@ -54,7 +54,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-public class ServiceGridOrchestrationTest {
+public class ServiceGridIntegrationTest {
 	
 	private final Logger logger;
 	private MockPlannerManagement management;
@@ -63,7 +63,7 @@ public class ServiceGridOrchestrationTest {
 	private long startTimestamp;
 	private TaskConsumerRegistrar taskConsumerRegistrar;
 		
-	public ServiceGridOrchestrationTest() {
+	public ServiceGridIntegrationTest() {
 		logger = Logger.getLogger(this.getClass().getName());
 		setSimpleLoggerFormatter(logger);
 	}
@@ -591,8 +591,8 @@ public class ServiceGridOrchestrationTest {
 			timeProvider.increaseBy(1);
 			submitTaskProducerTask(management.getDeploymentPlannerId());
 			timeProvider.increaseBy(1);
-			submitTaskProducerTask(management.getOrchestratorId());			
-			
+			submitTaskProducerTask(management.getOrchestratorId());
+
 			for (MockTaskContainer container : containers) {
 				Preconditions.checkState(containers.contains(container));
 				Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");

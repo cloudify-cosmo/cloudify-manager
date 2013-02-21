@@ -42,7 +42,7 @@ public class MockPlannerManagement extends MockManagement {
 
         final ServiceGridDeploymentPlannerParameter deploymentPlannerParameter = new ServiceGridDeploymentPlannerParameter();
         deploymentPlannerParameter.setOrchestratorId(getOrchestratorId());
-        deploymentPlannerParameter.setAgentsId(super.createUri("agents/"));
+        deploymentPlannerParameter.setAgentsId(getAgentsId());
         deploymentPlannerParameter.setDeploymentPlannerId(deploymentPlannerId);
         return new ServiceGridDeploymentPlanner(deploymentPlannerParameter);
 

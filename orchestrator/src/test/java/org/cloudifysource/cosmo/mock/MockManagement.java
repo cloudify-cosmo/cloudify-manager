@@ -43,13 +43,15 @@ public class MockManagement {
 	private final TaskConsumerRegistrar taskConsumerRegistrar;
 	private final MockTaskBroker persistentTaskBroker;
 	private KVStoreServer stateServer;
-	
-	public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
+    private final URI agentsId;
+
+    public MockManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider)  {
 		this.taskConsumerRegistrar = taskConsumerRegistrar;
 		this.timeProvider = timeProvider;
 
         orchestratorId = createUri("services/orchestrator/");
         machineProvisionerId = createUri("services/provisioner/");
+        agentsId = createUri("agents/");
 
 		if (useMock) {
 			stateReader = new MockState();
@@ -172,5 +174,9 @@ public class MockManagement {
 
     protected CurrentTimeProvider getTimeProvider() {
         return timeProvider;
+    }
+
+    public URI getAgentsId() {
+        return agentsId;
     }
 }

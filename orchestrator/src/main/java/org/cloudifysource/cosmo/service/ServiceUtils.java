@@ -15,6 +15,7 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service;
 
+import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.state.ServiceState;
@@ -58,5 +59,14 @@ public class ServiceUtils {
 
     public static URI toTasksHistoryId(URI stateId) {
         return StreamUtils.newURI(stateId.toString() + "_tasks_history");
+    }
+
+    public static URI newInstanceId(URI serviceId, final int index) {
+        Preconditions.checkArgument(serviceId.toString().endsWith("/"), "service id %s must end with slash", serviceId);
+        return StreamUtils.newURI(serviceId.toString() + "instances/" + index + "/");
+    }
+
+    public static URI newAgentId(URI agentsId, int agentIndex) {
+        return StreamUtils.newURI(agentsId.toString() + agentIndex + "/");
     }
 }
