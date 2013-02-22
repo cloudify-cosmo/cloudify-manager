@@ -164,7 +164,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     public void managementRestartTest() {
         installService("tomcat", 1);
         execute();
-        restartManagement();
+        getManagement().restart();
         execute();
         assertOneTomcatInstance();
         uninstallService("tomcat");
@@ -181,8 +181,8 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         installService("tomcat", 2);
         execute();
         assertTwoTomcatInstances();
-        restartAgent(getAgentId(1));
-        restartManagement();
+        restartAgent(getManagement().getAgentId(1));
+        getManagement().restart();
         execute();
         assertTwoTomcatInstances(expectedAgentZeroNotRestartedAgentOneRestarted(), expectedBothMachinesNotRestarted());
         uninstallService("tomcat");
@@ -220,11 +220,11 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         execute();
 
         assertOneTomcatInstance();
-        final URI instanceId0 = getServiceInstanceId("tomcat", 0);
+        final URI instanceId0 = getManagement().getServiceInstanceId("tomcat", 0);
         setServiceInstanceProperty(instanceId0, "request-throughput", 100);
         execute();
         assertTwoTomcatInstances();
-        final URI instanceId1 = getServiceInstanceId("tomcat", 1);
+        final URI instanceId1 = getManagement().getServiceInstanceId("tomcat", 1);
         setServiceInstanceProperty(instanceId0, "request-throughput", 0);
         setServiceInstanceProperty(instanceId1, "request-throughput", 0);
         execute();
@@ -243,7 +243,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         installService("tomcat", 1);
         execute();
         assertOneTomcatInstance();
-        URI instanceId = getServiceInstanceId("tomcat", 0);
+        URI instanceId = getManagement().getServiceInstanceId("tomcat", 0);
         setServiceInstanceProperty(instanceId, propertyName, propertyValue);
         execute();
         Assert.assertEquals(getServiceInstanceProperty(propertyName, instanceId), propertyValue);
@@ -276,14 +276,14 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
 
     private void assertTomcatScaledInFrom2To1() {
         assertServiceInstalledWithOneInstance("tomcat");
-        Assert.assertTrue(getAgentState(getAgentId(0)).isProgress(AgentState.Progress.AGENT_STARTED));
-        Assert.assertTrue(getAgentState(getAgentId(1)).isProgress(AgentState.Progress.MACHINE_TERMINATED));
-        Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 0)).isProgress("service_started"));
-        Assert.assertTrue(getServiceInstanceState(getServiceInstanceId("tomcat", 1)).isProgress("service_uninstalled"));
+        Assert.assertTrue(getAgentState(getManagement().getAgentId(0)).isProgress(AgentState.Progress.AGENT_STARTED));
+        Assert.assertTrue(getAgentState(getManagement().getAgentId(1)).isProgress(AgentState.Progress.MACHINE_TERMINATED));
+        Assert.assertTrue(getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 0)).isProgress("service_started"));
+        Assert.assertTrue(getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 1)).isProgress("service_uninstalled"));
     }
 
     private void scalingrule(String serviceName, ServiceScalingRule rule) {
-        rule.setServiceId(getServiceId(serviceName));
+        rule.setServiceId(getManagement().getServiceId(serviceName));
         ScalingRulesTask task = new ScalingRulesTask();
         task.setScalingRule(rule);
         submitTask(getManagement().getCapacityPlannerId(), task);
@@ -300,7 +300,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     }
 
     private void assertTomcatUninstalled(boolean instanceUnreachable) {
-        final URI serviceId = getServiceId("tomcat");
+        final URI serviceId = getManagement().getServiceId("tomcat");
         Assert.assertFalse(getDeploymentPlannerState().getDeploymentPlan().isServiceExists(serviceId));
         final ServiceState serviceState = getServiceState(serviceId);
         Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
@@ -342,7 +342,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
 
     private void assertServiceInstalledWithOneInstance(
             String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
-        final URI serviceId = getServiceId(serviceName);
+        final URI serviceId = getManagement().getServiceId(serviceName);
         final ServiceState serviceState = getServiceState(serviceId);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
         final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
@@ -406,7 +406,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     }
 
     private void assertTwoTomcatInstances(Map<URI,Integer> numberOfAgentRestartsPerAgent, Map<URI,Integer> numberOfMachineRestartsPerAgent) {
-        final URI serviceId = getServiceId("tomcat");
+        final URI serviceId = getManagement().getServiceId("tomcat");
         final ServiceState serviceState = getServiceState(serviceId);
         Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
@@ -446,14 +446,14 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
-        serviceConfig.setServiceId(getServiceId(name));
+        serviceConfig.setServiceId(getManagement().getServiceId(name));
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
         submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
     }
 
     private void uninstallService(String name) {
-        URI serviceId = getServiceId(name);
+        URI serviceId = getManagement().getServiceId(name);
         final UninstallServiceTask uninstallServiceTask = new UninstallServiceTask();
         uninstallServiceTask.setServiceId(serviceId);
         submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
@@ -461,7 +461,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
 
     private void scaleService(String serviceName, int plannedNumberOfInstances) {
         final ScaleServiceTask scaleServiceTask = new ScaleServiceTask();
-        URI serviceId = getServiceId(serviceName);
+        URI serviceId = getManagement().getServiceId(serviceName);
         scaleServiceTask.setServiceId(serviceId);
         scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
         scaleServiceTask.setProducerTimestamp(currentTimeMillis());
@@ -505,22 +505,22 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
 
     private ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted() {
         return ImmutableMap.<URI,Integer>builder()
-                 .put(getAgentId(0), 0)
-                 .put(getAgentId(1), 0)
+                 .put(getManagement().getAgentId(0), 0)
+                 .put(getManagement().getAgentId(1), 0)
                  .build();
     }
 
     private ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted() {
         return ImmutableMap.<URI,Integer>builder()
-                 .put(getAgentId(0), 0)
-                 .put(getAgentId(1), 0)
+                 .put(getManagement().getAgentId(0), 0)
+                 .put(getManagement().getAgentId(1), 0)
                  .build();
     }
 
     private ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted() {
         return ImmutableMap.<URI,Integer>builder()
-         .put(getAgentId(0), 0)
-         .put(getAgentId(1), 1)
+         .put(getManagement().getAgentId(0), 0)
+         .put(getManagement().getAgentId(1), 1)
          .build();
     }
 }

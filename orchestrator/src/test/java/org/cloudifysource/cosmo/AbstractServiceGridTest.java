@@ -114,10 +114,6 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         management.close();
     }
 
-    protected URI getAgentId(final int index) {
-        return ServiceUtils.newAgentId(getManagement().getAgentsId(), index);
-    }
-
     protected ServiceState getServiceState(final URI serviceId) {
         ServiceState serviceState = ServiceUtils.getServiceState(getStateReader(), serviceId);
         Assert.assertNotNull(serviceState, "No state for " + serviceId);
@@ -236,10 +232,6 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         Assert.fail("Executing too many cycles progress.");
     }
 
-    protected URI getServiceId(String name) {
-        return ServiceUtils.newServiceId(getManagement().getStateServerUri(), name);
-    }
-
     private void submitTaskProducerTask(final URI taskProducerId) {
         final TaskProducerTask producerTask = new TaskProducerTask();
         producerTask.setMaxNumberOfSteps(100);
@@ -276,17 +268,5 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void killMachine(URI agentId) {
         findContainer(agentId).killMachine();
-    }
-
-    protected URI getServiceInstanceId(final String serviceName, final int index) {
-        return ServiceUtils.newInstanceId(getServiceId(serviceName), index);
-    }
-
-    /**
-     * This method simulates the crash of all management processes
-     * and their automatic start by a reliable watchdog running on the same machine
-     */
-    protected void restartManagement() {
-        getManagement().restart();
     }
 }

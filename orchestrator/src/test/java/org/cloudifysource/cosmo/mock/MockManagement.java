@@ -188,4 +188,16 @@ public class MockManagement {
     public URI getAgentsId() {
         return agentsId;
     }
+
+    public URI getAgentId(int index) {
+        return ServiceUtils.newAgentId(getAgentsId(), index);
+    }
+
+    public URI getServiceId(String name) {
+        return ServiceUtils.newServiceId(getStateServerUri(), name);
+    }
+
+    public URI getServiceInstanceId(final String serviceName, final int index) {
+        return ServiceUtils.newInstanceId(getStateServerUri(), serviceName, index);
+    }
 }

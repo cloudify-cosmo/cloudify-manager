@@ -66,11 +66,16 @@ public class ServiceUtils {
         return StreamUtils.newURI(serviceId.toString() + "instances/" + index + "/");
     }
 
+    public static URI newInstanceId(final URI server, final String serviceName, final int index) {
+        final URI serviceId = newServiceId(server, serviceName);
+        return newInstanceId(serviceId, index);
+    }
+
     public static URI newAgentId(URI agentsId, int agentIndex) {
         return StreamUtils.newURI(agentsId.toString() + agentIndex + "/");
     }
 
-    public static URI newServiceId(URI serverUri, String serviceName) {
-        return StreamUtils.newURI(serverUri + "services/" + serviceName + "/");
+    public static URI newServiceId(URI server, String serviceName) {
+        return StreamUtils.newURI(server + "services/" + serviceName + "/");
     }
 }
