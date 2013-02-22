@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
@@ -453,6 +454,11 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
         serviceConfig.setServiceId(getManagement().getServiceId(name));
+        serviceConfig.setInstanceLifecycleStateMachine(Lists.newArrayList(
+                "service_cleaned",
+                "service_stopped",
+                "service_started"
+        ));
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
         getManagement().submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);

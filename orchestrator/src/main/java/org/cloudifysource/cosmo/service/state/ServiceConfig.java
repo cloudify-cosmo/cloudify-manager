@@ -15,7 +15,10 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
+import com.google.common.collect.Lists;
+
 import java.net.URI;
+import java.util.List;
 
 /**
  * The basic information the service requires.
@@ -29,6 +32,7 @@ public class ServiceConfig {
     private int maxNumberOfInstances;
     private int minNumberOfInstances;
     private URI id;
+    private List<String> instanceLifecycleStateMachine;
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
@@ -70,4 +74,11 @@ public class ServiceConfig {
         this.minNumberOfInstances = minNumberOfInstances;
     }
 
+    public List<String> getInstanceLifecycleStateMachine() {
+        return instanceLifecycleStateMachine;
+    }
+
+    public void setInstanceLifecycleStateMachine(List<String> instanceLifecycleStateMachine) {
+        this.instanceLifecycleStateMachine = instanceLifecycleStateMachine;
+    }
 }

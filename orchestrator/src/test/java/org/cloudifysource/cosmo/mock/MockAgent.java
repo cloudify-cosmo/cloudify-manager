@@ -72,6 +72,7 @@ public class MockAgent {
             instanceState = new ServiceInstanceState();
             instanceState.setAgentId(agentId);
             instanceState.setServiceId(serviceId);
+            instanceState.setLifecycle(task.getInitialLifecycle());
         }
         else {
             Preconditions.checkState(instanceState.getAgentId().equals(agentId));

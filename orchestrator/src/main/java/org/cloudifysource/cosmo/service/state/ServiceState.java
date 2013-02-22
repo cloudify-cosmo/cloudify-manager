@@ -33,6 +33,10 @@ import java.util.List;
  */
 public class ServiceState extends TaskConsumerState {
 
+    private List<URI> instanceIds;
+    private ServiceConfig serviceConfig;
+    private String progress;
+
     /**
      * Describes the service state machine {@link #setProgress(String)}.
      */
@@ -43,9 +47,45 @@ public class ServiceState extends TaskConsumerState {
         public static final String SERVICE_UNINSTALLED = "SERVICE_UNINSTALLED";
     }
 
-    private List<URI> instanceIds;
-    private ServiceConfig serviceConfig;
-    private String progress;
+    /**
+     * @return the initial state of the lifecycle state machine.
+     */
+    public String getInitialLifecycle() {
+        return getServiceConfig().getInstanceLifecycleStateMachine().get(0);
+    }
+
+    /**
+     * @param lifecycle - the current lifecycle
+     * @return - the next lifecycle state or null if at the last lifecycle in the state machine.
+     */
+    @JsonIgnore
+    public String getNextInstanceLifecycle(String lifecycle) {
+        int index = toInstanceLifecycleIndex(lifecycle);
+        if (index + 1 < getServiceConfig().getInstanceLifecycleStateMachine().size()) {
+            return getServiceConfig().getInstanceLifecycleStateMachine().get(index + 1);
+        }
+        return null;
+    }
+
+    /**
+     * @param lifecycle - the current instance lifecycle
+     * @return - the next instance lifecycle or null if at the first lifecycle.
+     */
+    @JsonIgnore
+    public String getPrevInstanceLifecycle(String lifecycle) {
+        int index = toInstanceLifecycleIndex(lifecycle);
+        if (index > 0) {
+            return getServiceConfig().getInstanceLifecycleStateMachine().get(index - 1);
+        }
+        return null;
+    }
+
+    private int toInstanceLifecycleIndex(String lifecycle) {
+        Preconditions.checkNotNull(lifecycle);
+        int index = this.getServiceConfig().getInstanceLifecycleStateMachine().indexOf(lifecycle);
+        Preconditions.checkArgument(index != -1);
+        return index;
+    }
 
     public void setServiceConfig(ServiceConfig serviceConfig) {
         this.serviceConfig = serviceConfig;

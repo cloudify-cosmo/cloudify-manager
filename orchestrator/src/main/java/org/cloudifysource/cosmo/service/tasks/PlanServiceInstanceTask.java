@@ -27,6 +27,8 @@ import java.net.URI;
  */
 public class PlanServiceInstanceTask extends Task {
 
+    private String lifecycle;
+
     public PlanServiceInstanceTask() {
         super(ServiceInstanceState.class);
     }
@@ -50,4 +52,11 @@ public class PlanServiceInstanceTask extends Task {
         this.agentId = agentId;
     }
 
+    public String getLifecycle() {
+        return lifecycle;
+    }
+
+    public void setLifecycle(String lifecycle) {
+        this.lifecycle = lifecycle;
+    }
 }

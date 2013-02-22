@@ -17,6 +17,7 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.mock.MockPlannerManagement;
 import org.cloudifysource.cosmo.service.ServiceUtils;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
@@ -190,6 +191,11 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
         serviceConfig.setServiceId(getManagement().getServiceId(name));
+        serviceConfig.setInstanceLifecycleStateMachine(Lists.newArrayList(
+                "service_cleaned",
+                "service_stopped",
+                "service_started"
+        ));
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
         getManagement().submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);

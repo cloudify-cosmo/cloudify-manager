@@ -27,6 +27,8 @@ import java.net.URI;
  */
 public class RecoverServiceInstanceStateTask extends Task {
 
+    private String initialLifecycle;
+
     public RecoverServiceInstanceStateTask() {
         super(ServiceInstanceState.class);
     }
@@ -41,5 +43,11 @@ public class RecoverServiceInstanceStateTask extends Task {
         this.serviceId = serviceId;
     }
 
+    public String getInitialLifecycle() {
+        return initialLifecycle;
+    }
 
+    public void setInitialLifecycle(String initialLifecycle) {
+        this.initialLifecycle = initialLifecycle;
+    }
 }
