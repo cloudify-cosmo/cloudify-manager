@@ -49,7 +49,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
             @Override
             public Object unregisterTaskConsumer(final URI taskConsumerId) {
-                MockTaskContainer mockTaskContainer = findContainer(taskConsumerId);
+                MockTaskContainer mockTaskContainer = containers.findContainer(taskConsumerId);
                 boolean removed = containers.removeContainer(mockTaskContainer);
                 Preconditions.checkState(removed, "Failed to remove container " + taskConsumerId);
                 return mockTaskContainer.getTaskConsumer();
@@ -100,10 +100,6 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         parentLogger.getHandlers()[0].setFormatter(new TextFormatter());
     }
 
-    private MockTaskContainer findContainer(final URI agentId) {
-        return containers.findContainer(agentId);
-    }
-
     protected T getManagement() {
         return this.management;
     }
@@ -138,6 +134,6 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      * This method simulates an unexpected crash of a machine
      */
     protected void killMachine(URI agentId) {
-        findContainer(agentId).killMachine();
+        containers.findContainer(agentId).killMachine();
     }
 }

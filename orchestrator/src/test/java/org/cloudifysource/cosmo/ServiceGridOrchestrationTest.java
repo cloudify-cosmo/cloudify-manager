@@ -453,8 +453,8 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
         serviceDeploymentPlan.setServiceConfig(serviceConfig);
         for (int i = 0 ; i < numberOfInstances ; i++) {
-            final URI agentId = ServiceUtils.newAgentId(getManagement().getAgentsId(), i + offset);
-            final URI instanceId = ServiceUtils.newInstanceId(serviceId,  i + offset);
+            final URI agentId = getManagement().getAgentId(i + offset);
+            final URI instanceId = getManagement().getServiceInstanceId(name, i + offset);
             serviceDeploymentPlan.addInstance(instanceId, agentId);
         }
         return serviceDeploymentPlan;
