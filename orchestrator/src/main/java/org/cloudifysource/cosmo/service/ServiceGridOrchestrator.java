@@ -468,9 +468,9 @@ public class ServiceGridOrchestrator {
                      && isAgentProgress(agentState,
                         AgentState.Progress.AGENT_STARTED, AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION)) {
 
-                if (instanceState.isLifecycle(serviceInstanceStateMachine.get(0))) {
+                int lifecycleIndex = toInstanceLifecycleIndex(instanceState.getLifecycle());
+                if (lifecycleIndex == 0) {
 
-                    //TODO: Remove this task and merge with uninstall implementation on mockagent
                     final RemoveServiceInstanceFromAgentTask agentTask = new RemoveServiceInstanceFromAgentTask();
                     agentTask.setConsumerId(agentId);
                     agentTask.setInstanceId(instanceId);
@@ -482,18 +482,9 @@ public class ServiceGridOrchestrator {
                     serviceTask.setInstanceId(instanceId);
                     addNewTaskIfNotExists(newTasks, serviceTask);
                } else {
-                    String nextLifecycle = null;
-                    if (instanceState.isLifecycle(serviceInstanceStateMachine.get(2))) {
-                        nextLifecycle = serviceInstanceStateMachine.get(1);
-                    } else if (instanceState.isLifecycle(serviceInstanceStateMachine.get(1))) {
-                        nextLifecycle = serviceInstanceStateMachine.get(0);
-                    }
-                    else {
-                        Preconditions.checkState(false,
-                                "Unhandled service instance progress: " + instanceState.getLifecycle());
-                    }
                     final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle(nextLifecycle);
+                    task.setLifecycle(
+                            serviceInstanceStateMachine.get(lifecycleIndex - 1));
                     task.setConsumerId(agentId);
                     task.setStateId(instanceId);
                     addNewTaskIfNotExists(newTasks, task);
@@ -547,26 +538,25 @@ public class ServiceGridOrchestrator {
     }
 
     private void orchestrateServiceInstanceInstallation(List<Task> newTasks, URI instanceId, URI agentId) {
-        ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-
-        if (instanceState.isProgressNull()) {
+        final int index =
+                toInstanceLifecycleIndex(
+                    getServiceInstanceState(instanceId).getLifecycle());
+        if (index + 1 < serviceInstanceStateMachine.size()) {
                 final ServiceInstanceTask task = new ServiceInstanceTask();
-                task.setLifecycle(this.serviceInstanceStateMachine.get(0));
+                task.setLifecycle(serviceInstanceStateMachine.get(index + 1));
                 task.setStateId(instanceId);
                 task.setConsumerId(agentId);
                 addNewTaskIfNotExists(newTasks, task);
-        } else if (instanceState.isLifecycle(this.serviceInstanceStateMachine.get(1))) {
-            //Ask for start service instance
-            final ServiceInstanceTask task = new ServiceInstanceTask();
-            task.setLifecycle(this.serviceInstanceStateMachine.get(2));
-            task.setStateId(instanceId);
-            task.setConsumerId(agentId);
-            addNewTaskIfNotExists(newTasks, task);
-        } else if (instanceState.isLifecycle(this.serviceInstanceStateMachine.get(2))) {
-            //Do nothing, instance is installed
-        } else {
-            Preconditions.checkState(false, "Unknown service instance progress " + instanceState.getLifecycle());
         }
+    }
+
+    private int toInstanceLifecycleIndex(String lifecycle) {
+        int index = 0;
+        if (lifecycle != null) {
+            index = this.serviceInstanceStateMachine.indexOf(lifecycle);
+            Preconditions.checkArgument(index != -1);
+        }
+        return index;
     }
 
     private void orchestrateAgents(List<Task> newTasks) {

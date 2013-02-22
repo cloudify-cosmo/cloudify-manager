@@ -84,7 +84,7 @@ public class ServiceInstanceState extends TaskConsumerState {
     }
 
     @JsonIgnore
-    public boolean isProgressNull() {
+    public boolean isLifecycleNull() {
         return lifecycle == null;
     }
 }
