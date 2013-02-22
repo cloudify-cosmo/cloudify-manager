@@ -15,121 +15,42 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import org.cloudifysource.cosmo.mock.MockAgent;
-import org.cloudifysource.cosmo.mock.MockManagement;
-import org.cloudifysource.cosmo.mock.MockPlannerManagement;
-import org.cloudifysource.cosmo.mock.MockTaskContainer;
-import org.cloudifysource.cosmo.mock.MockTaskContainerParameter;
-import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
-import org.cloudifysource.cosmo.service.ServiceUtils;
-import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
-import org.junit.AfterClass;
 import org.cloudifysource.cosmo.agent.state.AgentState;
-import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.service.state.*;
-import org.cloudifysource.cosmo.service.tasks.*;
+import org.cloudifysource.cosmo.mock.MockPlannerManagement;
+import org.cloudifysource.cosmo.service.ServiceUtils;
+import org.cloudifysource.cosmo.service.state.ServiceConfig;
+import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
+import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
+import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
+import org.cloudifysource.cosmo.service.state.ServiceScalingRule;
+import org.cloudifysource.cosmo.service.state.ServiceState;
+import org.cloudifysource.cosmo.service.tasks.InstallServiceTask;
+import org.cloudifysource.cosmo.service.tasks.ScaleServiceTask;
+import org.cloudifysource.cosmo.service.tasks.ScalingRulesTask;
+import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
+import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
+import org.cloudifysource.cosmo.service.tasks.UninstallServiceTask;
 import org.cloudifysource.cosmo.state.EtagState;
-import org.cloudifysource.cosmo.state.StateReader;
+import org.cloudifysource.cosmo.streams.StreamUtils;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.testng.log.TextFormatter;
 
-import java.lang.reflect.Method;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
-public class ServiceGridIntegrationTest {
+public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlannerManagement> {
 	
-	private final Logger logger;
-	private MockPlannerManagement management;
-	private Set<MockTaskContainer> containers;
-	private MockCurrentTimeProvider timeProvider;
-	private long startTimestamp;
-	private TaskConsumerRegistrar taskConsumerRegistrar;
-		
-	public ServiceGridIntegrationTest() {
-		logger = Logger.getLogger(this.getClass().getName());
-		setSimpleLoggerFormatter(logger);
-	}
-
-	@BeforeClass
-	public void beforeClass() {
-
-		containers =  Sets.newSetFromMap(new ConcurrentHashMap<MockTaskContainer, Boolean>());
-		timeProvider = new MockCurrentTimeProvider(startTimestamp);
-		taskConsumerRegistrar = new TaskConsumerRegistrar() {
-			
-			@Override
-			public void registerTaskConsumer(
-					final Object taskConsumer, final URI taskConsumerId) {
-				
-				MockTaskContainer container = newContainer(taskConsumerId, taskConsumer);
-				addContainer(container);
-			}
-
-			@Override
-			public Object unregisterTaskConsumer(final URI taskConsumerId) {
-				MockTaskContainer mockTaskContainer = findContainer(taskConsumerId);
-				boolean removed = containers.remove(mockTaskContainer);
-				Preconditions.checkState(removed, "Failed to remove container " + taskConsumerId);
-				return mockTaskContainer.getTaskConsumer();
-			}
-		};
-
-		management = new MockPlannerManagement(taskConsumerRegistrar, timeProvider);
-	}
-	
-	@BeforeMethod
-	public void beforeMethod(Method method) {
-		
-		startTimestamp = System.currentTimeMillis();
-		timeProvider.setCurrentTimeMillis(startTimestamp);
-		management.start();
-		logger.info("Starting " + method.getName());
-	}
-	
-	@AfterMethod(alwaysRun=true)
-	public void afterMethod(Method method) {
-		
-		try {
-			management.unregisterTaskConsumers();
-			final Function<MockTaskContainer, URI> getContainerIdFunc = new Function<MockTaskContainer, URI>() {
-	
-				@Override
-				public URI apply(MockTaskContainer input) {
-					return input.getTaskConsumerId();
-				}
-			};
-			
-			Assert.assertEquals(containers.size(), 0, "Cleanup failure in test " + method.getName() + ":"+ Iterables.toString(Iterables.transform(containers, getContainerIdFunc)));
-			
-		}
-		finally {
-			containers.clear();
-		}
-	}
-	
-	@AfterClass
-	public void afterClass() {
-		management.close();
-	}
-	
+    @Override
+    protected MockPlannerManagement createMockManagement() {
+        return new MockPlannerManagement();
+    }
+    
 	/**
 	 * Tests deployment of 1 instance
 	 */
@@ -365,7 +286,7 @@ public class ServiceGridIntegrationTest {
 		rule.setServiceId(getServiceId(serviceName));
 		ScalingRulesTask task = new ScalingRulesTask();
 		task.setScalingRule(rule);
-		submitTask(management.getCapacityPlannerId(), task);
+		submitTask(getManagement().getCapacityPlannerId(), task);
 	}
 
 	private void assertTomcatUninstalledGracefully() {
@@ -453,16 +374,19 @@ public class ServiceGridIntegrationTest {
 		Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartMachineTask.class)),1+numberOfMachineRestarts);
 		Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartAgentTask.class)),1+numberOfMachineRestarts);
 
-		
-		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
-		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
+
+        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlan();
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId(serviceId)), instanceId);
 		final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId).getServiceConfig(); 
 		Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
 	}
 
-	private TaskConsumerHistory getTasksHistory(final URI stateId) {
+    private ServiceGridDeploymentPlan getDeploymentPlan() {
+        return getDeploymentPlannerState().getDeploymentPlan();
+    }
+
+    private TaskConsumerHistory getTasksHistory(final URI stateId) {
 		final URI tasksHistoryId = ServiceUtils.toTasksHistoryId(stateId);
 		EtagState<TaskConsumerHistory> etagState = getStateReader().get(tasksHistoryId, TaskConsumerHistory.class);
 		Preconditions.checkNotNull(etagState);
@@ -470,7 +394,7 @@ public class ServiceGridIntegrationTest {
 	}
 
 	private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
-		return getStateReader().get(management.getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
+		return getStateReader().get(getManagement().getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
 	}
 
 	private URI getOnlyAgentId() {
@@ -478,7 +402,6 @@ public class ServiceGridIntegrationTest {
 	}
 	
 	private void assertTwoTomcatInstances() {
-		
 		assertTwoTomcatInstances(expectedBothAgentsNotRestarted(), expectedBothMachinesNotRestarted());
 	}
 	
@@ -487,11 +410,11 @@ public class ServiceGridIntegrationTest {
 		final ServiceState serviceState = getServiceState(serviceId);
 		Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()),2);
 		Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
-		Iterable<URI> instanceIds = getStateIdsStartingWith(newURI(management.getStateServerUri()+"services/tomcat/instances/"));
+		Iterable<URI> instanceIds = getStateIdsStartingWith(StreamUtils.newURI(getManagement().getStateServerUri()
+                + "services/tomcat/instances/"));
 		Assert.assertEquals(Iterables.size(instanceIds),2);
-		
-		final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
-		final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
+
+        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlan();
 		Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
 		Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId(serviceId)), 2);
 		
@@ -513,29 +436,6 @@ public class ServiceGridIntegrationTest {
 			Assert.assertTrue(instanceState.isProgress("service_started"));
 			Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
 		}
-		
-	}
-
-	private ServiceState getServiceState(final URI serviceId) {
-		ServiceState serviceState = getStateReader().get(serviceId, ServiceState.class).getState();
-		Assert.assertNotNull(serviceState, "No state for " + serviceId);
-		return serviceState;
-	}
-
-	private AgentState getAgentState(URI agentId) {
-		return getLastState(agentId, AgentState.class);
-	}
-	
-	private ServiceInstanceState getServiceInstanceState(URI instanceId) {
-		return getLastState(instanceId, ServiceInstanceState.class);
-	}
-	
-	private <T extends TaskConsumerState> T getLastState(URI taskConsumerId, Class<T> stateClass) {
-		EtagState<T> etagState = getStateReader().get(taskConsumerId, stateClass);
-		Preconditions.checkNotNull(etagState);
-		T lastState = etagState.getState();
-		Assert.assertNotNull(lastState);
-		return lastState;
 	}
 
 	private void installService(String name, int numberOfInstances) {
@@ -549,21 +449,14 @@ public class ServiceGridIntegrationTest {
 		serviceConfig.setServiceId(getServiceId(name));
 		final InstallServiceTask installServiceTask = new InstallServiceTask();
 		installServiceTask.setServiceConfig(serviceConfig);
-		submitTask(management.getDeploymentPlannerId(), installServiceTask);
+		submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
 	}
 
 	private void uninstallService(String name) {
 		URI serviceId = getServiceId(name);
 		final UninstallServiceTask uninstallServiceTask = new UninstallServiceTask();
 		uninstallServiceTask.setServiceId(serviceId);
-		submitTask(management.getDeploymentPlannerId(), uninstallServiceTask);
-	}
-	
-	private void submitTask(final URI target, final Task task) {
-		task.setProducerTimestamp(timeProvider.currentTimeMillis());
-		task.setProducerId(newURI(management.getStateServerUri()+"webui"));
-		task.setConsumerId(target);
-		management.getTaskWriter().postNewTask(task);
+		submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
 	}
 
 	private void scaleService(String serviceName, int plannedNumberOfInstances) {
@@ -571,84 +464,19 @@ public class ServiceGridIntegrationTest {
 		URI serviceId = getServiceId(serviceName);
 		scaleServiceTask.setServiceId(serviceId);
 		scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
-		scaleServiceTask.setProducerTimestamp(timeProvider.currentTimeMillis());
-		submitTask(management.getDeploymentPlannerId(), scaleServiceTask);
+		scaleServiceTask.setProducerTimestamp(currentTimeMillis());
+		submitTask(getManagement().getDeploymentPlannerId(), scaleServiceTask);
 	}
 
-	
-	private URI getServiceId(String name) {
-		return newURI(management.getStateServerUri()+"services/" + name + "/");
-	}
-	
-	private void execute() {
-		
-		int consecutiveEmptyCycles = 0;
-		for (; timeProvider.currentTimeMillis() < startTimestamp + 1000000; timeProvider.increaseBy(1000 - (timeProvider.currentTimeMillis() % 1000))) {
+    private void execute() {
+        execute(getManagement().getCapacityPlannerId(),
+                getManagement().getDeploymentPlannerId(),
+                getManagement().getOrchestratorId());
+    }
 
-			boolean emptyCycle = true;
-			
-			submitTaskProducerTask(management.getCapacityPlannerId());
-			timeProvider.increaseBy(1);
-			submitTaskProducerTask(management.getDeploymentPlannerId());
-			timeProvider.increaseBy(1);
-			submitTaskProducerTask(management.getOrchestratorId());
-
-			for (MockTaskContainer container : containers) {
-				Preconditions.checkState(containers.contains(container));
-				Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");
-				Task task = null;
-				
-				for(timeProvider.increaseBy(1); (task = container.consumeNextTask()) != null; timeProvider.increaseBy(1)) {
-					if (!(task instanceof TaskProducerTask) && !(task instanceof PingAgentTask)) {
-						emptyCycle = false;
-					}
-				}
-			}
-
-			if (emptyCycle) {
-				consecutiveEmptyCycles++;
-			}
-			else {
-				consecutiveEmptyCycles = 0;
-			}
-
-			if (consecutiveEmptyCycles > 60) {
-				return;
-			}
-		}
-		StringBuilder sb = new StringBuilder();
-		Iterable<URI> servicesIds;
-		try {
-			servicesIds = getStateIdsStartingWith(new URI("http://services/"));
-		} catch (URISyntaxException e) {
-			throw Throwables.propagate(e);
-		}
-		for (URI serviceId : servicesIds) {
-			ServiceState serviceState = getServiceState(serviceId);
-			sb.append("service: " + serviceState.getServiceConfig().getDisplayName());
-			sb.append(" - ");
-			for (URI instanceId : serviceState.getInstanceIds()) {
-				ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-				sb.append(instanceId).append("[").append(instanceState.getProgress()).append("] ");
-			}
-			
-		}
-		
-		Assert.fail("Executing too many cycles progress=" + sb);
-	}
-
-	private void submitTaskProducerTask(final URI taskProducerId) {
-		final TaskProducerTask producerTask = new TaskProducerTask();
-		producerTask.setMaxNumberOfSteps(100);
-		submitTask(taskProducerId, producerTask);
-	}
-	
 	private Iterable<URI> getServiceInstanceIds(String serviceName) {
-		return getStateIdsStartingWith(newURI(management.getStateServerUri()+"services/"+serviceName+"/instances/"));
-	}
-	
-	private URI getServiceInstanceId(final String serviceName, final int index) {
-		return newURI(management.getStateServerUri()+"services/"+serviceName+"/instances/"+index+"/");
+		return getStateIdsStartingWith(StreamUtils.newURI(getManagement().getStateServerUri()
+                + "services/" + serviceName + "/instances/"));
 	}
 
 	private Iterable<URI> getStateIdsStartingWith(final URI uri) {
@@ -664,113 +492,15 @@ public class ServiceGridIntegrationTest {
 	
 
 	private Iterable<URI> getAgentIds() {
-		return getStateIdsStartingWith(newURI(management.getStateServerUri()+"agents/"));
+		return getStateIdsStartingWith(getManagement().getAgentsId());
 	}
 	
-	private URI getAgentId(final int index) {
-		return newURI(management.getStateServerUri()+"agents/"+index+"/");
-	}
-
 	private void killOnlyMachine() {
 		killMachine(getOnlyAgentId());
 	}
 	
 	private void restartOnlyAgent() {
 		restartAgent(getOnlyAgentId());
-	}
-	
-	/**
-	 * This method simulates failure of the agent, and immediate restart by a reliable watchdog
-	 * running on the same machine
-	 */
-	private void restartAgent(URI agentId) {
-		
-		MockAgent agent = (MockAgent) taskConsumerRegistrar.unregisterTaskConsumer(agentId);
-		AgentState agentState = agent.getState();
-		Preconditions.checkState(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
-		agentState.setNumberOfAgentRestarts(agentState.getNumberOfAgentRestarts() +1);
-		taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
-	}
-
-	/**
-	 * This method simulates an unexpected crash of a machine 
-	 */
-	private void killMachine(URI agentId) {
-		findContainer(agentId).killMachine();
-	}
-	
-	/**
-	 * This method simulates the crash of all management processes
-	 * and their automatic start by a reliable watchdog running on the same machine
-	 */
-	private void restartManagement() {
-		management.restart();
-	}
-	
-	private MockTaskContainer findContainer(final URI agentId) {
-		MockTaskContainer container = Iterables.tryFind(containers, new Predicate<MockTaskContainer>() {
-
-			@Override
-			public boolean apply(MockTaskContainer container) {
-				return agentId.equals(container.getTaskConsumerId());
-			}
-		}).orNull();
-		
-		Preconditions.checkNotNull(container, "Cannot find container for %s", agentId);
-		return container;
-	}
-
-	private URI newURI(String uri) {
-		try {
-			return new URI(uri);
-		} catch (URISyntaxException e) {
-			throw Throwables.propagate(e);
-		}
-	}
-	
-	private void addContainer(MockTaskContainer container) {
-		//logger.info("Adding container for " + container.getExecutorId());
-		Preconditions.checkState(findContainserById(container.getTaskConsumerId()) == null, "Container " + container.getTaskConsumerId() + " was already added");
-		containers.add(container);
-	}
-	
-	private MockTaskContainer findContainserById(final URI id) {
-		return Iterables.find(containers, new Predicate<MockTaskContainer>(){
-
-			@Override
-			public boolean apply(MockTaskContainer container) {
-				return id.equals(container.getTaskConsumerId());
-			}}, null);
-	}
-
-	
-	private static void setSimpleLoggerFormatter(final Logger logger) {
-		Logger parentLogger = logger;
-		while (parentLogger.getHandlers().length == 0) {
-			parentLogger = logger.getParent();
-		}
-		
-		parentLogger.getHandlers()[0].setFormatter(new TextFormatter());
-	}
-	
-	private MockTaskContainer newContainer(
-			URI executorId,
-			Object taskConsumer) {
-		MockTaskContainerParameter containerParameter = new MockTaskContainerParameter();
-		containerParameter.setExecutorId(executorId);
-		containerParameter.setTaskConsumer(taskConsumer);
-		containerParameter.setStateReader(management.getStateReader());
-		containerParameter.setStateWriter(management.getStateWriter());
-		containerParameter.setTaskReader(management.getTaskReader());
-		containerParameter.setTaskWriter(management.getTaskWriter());
-		containerParameter.setPersistentTaskReader(management.getPersistentTaskReader());
-		containerParameter.setPersistentTaskWriter(management.getPersistentTaskWriter());
-		containerParameter.setTimeProvider(timeProvider);
-		return new MockTaskContainer(containerParameter);
-	}
-
-	public StateReader getStateReader() {
-		return management.getStateReader();
 	}
 
 	private ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted() {

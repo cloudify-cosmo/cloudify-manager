@@ -13,8 +13,8 @@ public class MockPlannerManagement extends MockManagement {
     private final URI deploymentPlannerId;
     private final URI capacityPlannerId;
 
-    public MockPlannerManagement(TaskConsumerRegistrar taskConsumerRegistrar, CurrentTimeProvider timeProvider) {
-        super(taskConsumerRegistrar, timeProvider);
+    public MockPlannerManagement() {
+        super();
         deploymentPlannerId = super.createUri("services/deployment_planner/");
         capacityPlannerId = super.createUri("services/capacity_planner/");
     }
