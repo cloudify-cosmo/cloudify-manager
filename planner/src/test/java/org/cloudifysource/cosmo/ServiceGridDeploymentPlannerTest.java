@@ -192,14 +192,14 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         serviceConfig.setServiceId(getManagement().getServiceId(name));
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
-        submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
+        getManagement().submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
     }
 
     private void uninstallService(String name) {
         URI serviceId = getManagement().getServiceId(name);
         final UninstallServiceTask uninstallServiceTask = new UninstallServiceTask();
         uninstallServiceTask.setServiceId(serviceId);
-        submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
+        getManagement().submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
     }
 
     private void scaleService(String serviceName, int plannedNumberOfInstances) {
@@ -208,7 +208,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         scaleServiceTask.setServiceId(serviceId);
         scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
         scaleServiceTask.setProducerTimestamp(currentTimeMillis());
-        submitTask(getManagement().getDeploymentPlannerId(), scaleServiceTask);
+        getManagement().submitTask(getManagement().getDeploymentPlannerId(), scaleServiceTask);
     }
 
     private void execute() {

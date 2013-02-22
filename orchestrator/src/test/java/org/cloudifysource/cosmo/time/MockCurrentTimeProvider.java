@@ -20,12 +20,17 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MockCurrentTimeProvider implements CurrentTimeProvider {
 
 	private AtomicLong currentTime = new AtomicLong();
-		
-	public MockCurrentTimeProvider(long currentTime) {
-		this.currentTime.set(currentTime);
+    private long resetTimeMillis;
+
+    public MockCurrentTimeProvider(long currentTime) {
+        reset(currentTime);
 	}
-	
-	public void increaseBy(long increaseTimeMillis) {
+
+    public long getResetTimeMillis() {
+        return resetTimeMillis;
+    }
+
+    public void increaseBy(long increaseTimeMillis) {
 		currentTime.addAndGet(increaseTimeMillis);
 	}
 
@@ -34,7 +39,8 @@ public class MockCurrentTimeProvider implements CurrentTimeProvider {
 		return currentTime.get();
 	}
 
-	public void setCurrentTimeMillis(long startTimestamp) {
-		currentTime.set(startTimestamp);
-	}
+    public void reset(long resetTimeMillis) {
+        this.resetTimeMillis = resetTimeMillis;
+        this.currentTime.set(resetTimeMillis);
+    }
 }

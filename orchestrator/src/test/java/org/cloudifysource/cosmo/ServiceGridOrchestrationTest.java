@@ -244,7 +244,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         task.setPropertyValue(propertyValue);
 
         final URI agentId = getManagement().getServiceInstanceState(instanceId).getAgentId();
-        submitTask(agentId, task);
+        getManagement().submitTask(agentId, task);
     }
 
     private void assertOneTomcatInstance() {
@@ -414,7 +414,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     private void installService(String name, int numberOfInstances) {
         final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
         task.setDeploymentPlan(newServiceGridDeploymentPlan(name, numberOfInstances));
-        submitTask(getManagement().getOrchestratorId(), task);
+        getManagement().submitTask(getManagement().getOrchestratorId(), task);
     }
 
     private void installServices(String name1, int numberOfInstances1, String name2, int numberOfInstances2) {
@@ -426,7 +426,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
         servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan1, serviceDeploymentPlan2));
         task.setDeploymentPlan(servicesDeploymentPlan);
-        submitTask(getManagement().getOrchestratorId(), task);
+        getManagement().submitTask(getManagement().getOrchestratorId(), task);
     }
 
     private void scaleService(String name, int numberOfInstances) {
@@ -463,7 +463,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     private void uninstallAllServices() {
         final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
         task.setDeploymentPlan(new ServiceGridDeploymentPlan());
-        submitTask(getManagement().getOrchestratorId(), task);
+        getManagement().submitTask(getManagement().getOrchestratorId(), task);
     }
 
     private void execute() {

@@ -267,7 +267,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         task.setPropertyValue(propertyValue);
 
         final URI agentId = getManagement().getServiceInstanceState(instanceId).getAgentId();
-        submitTask(agentId, task);
+        getManagement().submitTask(agentId, task);
     }
 
     private void assertOneTomcatInstance() {
@@ -290,7 +290,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         rule.setServiceId(getManagement().getServiceId(serviceName));
         ScalingRulesTask task = new ScalingRulesTask();
         task.setScalingRule(rule);
-        submitTask(getManagement().getCapacityPlannerId(), task);
+        getManagement().submitTask(getManagement().getCapacityPlannerId(), task);
     }
 
     private void assertTomcatUninstalledGracefully() {
@@ -455,14 +455,14 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         serviceConfig.setServiceId(getManagement().getServiceId(name));
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
-        submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
+        getManagement().submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
     }
 
     private void uninstallService(String name) {
         URI serviceId = getManagement().getServiceId(name);
         final UninstallServiceTask uninstallServiceTask = new UninstallServiceTask();
         uninstallServiceTask.setServiceId(serviceId);
-        submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
+        getManagement().submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
     }
 
     private void scaleService(String serviceName, int plannedNumberOfInstances) {
@@ -471,7 +471,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         scaleServiceTask.setServiceId(serviceId);
         scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
         scaleServiceTask.setProducerTimestamp(currentTimeMillis());
-        submitTask(getManagement().getDeploymentPlannerId(), scaleServiceTask);
+        getManagement().submitTask(getManagement().getDeploymentPlannerId(), scaleServiceTask);
     }
 
     private void execute() {

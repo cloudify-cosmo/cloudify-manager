@@ -17,6 +17,7 @@ package org.cloudifysource.cosmo.mock;
 
 import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.StateClient;
+import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.TaskWriter;
 import org.cloudifysource.cosmo.agent.state.AgentState;
@@ -28,6 +29,7 @@ import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.state.StateWriter;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 import org.cloudifysource.cosmo.time.CurrentTimeProvider;
+import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,13 +44,13 @@ public class MockManagement {
     private final StateReader stateReader;
     private final StateWriter stateWriter;
     private final MockTaskBroker taskBroker;
-    private CurrentTimeProvider timeProvider;
+    private MockCurrentTimeProvider timeProvider;
 
     public void setTaskConsumerRegistrar(TaskConsumerRegistrar taskConsumerRegistrar) {
         this.taskConsumerRegistrar = taskConsumerRegistrar;
     }
 
-    public void setTimeProvider(CurrentTimeProvider timeProvider) {
+    public void setTimeProvider(MockCurrentTimeProvider timeProvider) {
         this.timeProvider = timeProvider;
     }
 
@@ -184,7 +186,7 @@ public class MockManagement {
         return StreamUtils.newURI(STATE_SERVER_URI);
     }
 
-    protected CurrentTimeProvider getTimeProvider() {
+    protected MockCurrentTimeProvider getTimeProvider() {
         return timeProvider;
     }
 
@@ -215,4 +217,27 @@ public class MockManagement {
     public ServiceInstanceState getServiceInstanceState(URI instanceId) {
         return ServiceUtils.getServiceInstanceState(getStateReader(), instanceId);
     }
+
+    public void submitTask(URI target, Task task) {
+        task.setProducerTimestamp(timeProvider.currentTimeMillis());
+        task.setProducerId(getServiceId("webui"));
+        task.setConsumerId(target);
+        getTaskWriter().postNewTask(task);
+    }
+
+    public MockTaskContainer newContainer(URI executorId, Object taskConsumer) {
+
+        MockTaskContainerParameter containerParameter = new MockTaskContainerParameter();
+        containerParameter.setExecutorId(executorId);
+        containerParameter.setTaskConsumer(taskConsumer);
+        containerParameter.setStateReader(getStateReader());
+        containerParameter.setStateWriter(getStateWriter());
+        containerParameter.setTaskReader(getTaskReader());
+        containerParameter.setTaskWriter(getTaskWriter());
+        containerParameter.setPersistentTaskReader(getPersistentTaskReader());
+        containerParameter.setPersistentTaskWriter(getPersistentTaskWriter());
+        containerParameter.setTimeProvider(timeProvider);
+        return new MockTaskContainer(containerParameter);
+    }
 }
+
