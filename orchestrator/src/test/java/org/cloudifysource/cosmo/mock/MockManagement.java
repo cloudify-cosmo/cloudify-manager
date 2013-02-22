@@ -19,8 +19,11 @@ import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.StateClient;
 import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.TaskWriter;
+import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.service.*;
+import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
+import org.cloudifysource.cosmo.service.state.ServiceState;
 import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.state.StateWriter;
 import org.cloudifysource.cosmo.streams.StreamUtils;
@@ -199,5 +202,17 @@ public class MockManagement {
 
     public URI getServiceInstanceId(final String serviceName, final int index) {
         return ServiceUtils.newInstanceId(getStateServerUri(), serviceName, index);
+    }
+
+    public AgentState getAgentState(URI agentId) {
+        return ServiceUtils.getAgentState(getStateReader(), agentId);
+    }
+
+    public ServiceState getServiceState(URI serviceId) {
+        return ServiceUtils.getServiceState(getStateReader(), serviceId);
+    }
+
+    public ServiceInstanceState getServiceInstanceState(URI instanceId) {
+        return ServiceUtils.getServiceInstanceState(getStateReader(), instanceId);
     }
 }

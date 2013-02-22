@@ -230,7 +230,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     private Object getServiceInstanceProperty(final String propertyName, URI instanceId) {
-        return getServiceInstanceState(instanceId).getProperty(propertyName);
+        return getManagement().getServiceInstanceState(instanceId).getProperty(propertyName);
     }
 
     private void setServiceInstanceProperty(
@@ -243,7 +243,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         task.setPropertyName(propertyName);
         task.setPropertyValue(propertyValue);
 
-        final URI agentId = getServiceInstanceState(instanceId).getAgentId();
+        final URI agentId = getManagement().getServiceInstanceState(instanceId).getAgentId();
         submitTask(agentId, task);
     }
 
@@ -253,10 +253,14 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
     private void assertTomcatScaledInFrom2To1() {
         assertServiceInstalledWithOneInstance("tomcat");
-        Assert.assertTrue(getAgentState(getManagement().getAgentId(0)).isProgress(AgentState.Progress.AGENT_STARTED));
-        Assert.assertTrue(getAgentState(getManagement().getAgentId(1)).isProgress(AgentState.Progress.MACHINE_TERMINATED));
-        Assert.assertTrue(getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 0)).isProgress("service_started"));
-        Assert.assertTrue(getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 1)).isProgress("service_uninstalled"));
+        Assert.assertTrue(getManagement().getAgentState(getManagement().getAgentId(0))
+                .isProgress(AgentState.Progress.AGENT_STARTED));
+        Assert.assertTrue(getManagement().getAgentState(getManagement().getAgentId(1))
+                .isProgress(AgentState.Progress.MACHINE_TERMINATED));
+        Assert.assertTrue(getManagement().getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 0))
+                .isProgress("service_started"));
+        Assert.assertTrue(getManagement().getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 1))
+                .isProgress("service_uninstalled"));
     }
 
     private void assertTomcatUninstalledGracefully() {
@@ -272,12 +276,12 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     private void assertTomcatUninstalled(boolean instanceUnreachable) {
         final URI serviceId = getManagement().getServiceId("tomcat");
         Assert.assertFalse(getDeploymentPlan().isServiceExists(serviceId));
-        final ServiceState serviceState = getServiceState(serviceId);
+        final ServiceState serviceState = getManagement().getServiceState(serviceId);
         Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
 
         for (URI instanceId: getServiceInstanceIds("tomcat")) {
-            ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+            ServiceInstanceState instanceState = getManagement().getServiceInstanceState(instanceId);
             if (instanceUnreachable) {
                 Assert.assertTrue(instanceState.isUnreachable());
             }
@@ -285,7 +289,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
                 Assert.assertTrue(instanceState.isProgress("service_uninstalled"));
             }
             URI agentId = instanceState.getAgentId();
-            AgentState agentState = getAgentState(agentId);
+            AgentState agentState = getManagement().getAgentState(agentId);
             Assert.assertTrue(agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
         }
     }
@@ -312,10 +316,10 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     private void assertServiceInstalledWithOneInstance(
             String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
         final URI serviceId = getManagement().getServiceId(serviceName);
-        final ServiceState serviceState = getServiceState(serviceId);
+        final ServiceState serviceState = getManagement().getServiceState(serviceId);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
         final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
-        final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+        final ServiceInstanceState instanceState = getManagement().getServiceInstanceState(instanceId);
         TaskConsumerHistory instanceTasksHistory = getTasksHistory(instanceId);
         Assert.assertEquals(Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(), new Predicate<Task>() {
 
@@ -333,7 +337,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         Assert.assertEquals(instanceState.getServiceId(), serviceId);
         Assert.assertTrue(instanceState.isProgress("service_started"));
 
-        final AgentState agentState = getAgentState(agentId);
+        final AgentState agentState = getManagement().getAgentState(agentId);
         Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
         Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
         Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
@@ -352,13 +356,14 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
     private TaskConsumerHistory getTasksHistory(final URI stateId) {
         final URI tasksHistoryId = ServiceUtils.toTasksHistoryId(stateId);
-        EtagState<TaskConsumerHistory> etagState = getStateReader().get(tasksHistoryId, TaskConsumerHistory.class);
+        EtagState<TaskConsumerHistory> etagState = getManagement().getStateReader()
+                .get(tasksHistoryId, TaskConsumerHistory.class);
         Preconditions.checkNotNull(etagState);
         return etagState.getState();
     }
 
     private ServiceGridDeploymentPlan getDeploymentPlan() {
-        return getStateReader()
+        return getManagement().getStateReader()
                .get(getManagement().getOrchestratorId(), ServiceGridOrchestratorState.class)
                .getState()
                .getDeploymentPlan();
@@ -375,7 +380,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
     private void assertTwoTomcatInstances(Map<URI,Integer> numberOfAgentRestartsPerAgent, Map<URI,Integer> numberOfMachineRestartsPerAgent) {
         final URI serviceId = getManagement().getServiceId("tomcat");
-        final ServiceState serviceState = getServiceState(serviceId);
+        final ServiceState serviceState = getManagement().getServiceState(serviceId);
         Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()), 2);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
         Iterable<URI> instanceIds = getStateIdsStartingWith(StreamUtils.newURI(getManagement().getStateServerUri()
@@ -392,13 +397,13 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         for (int i = 0 ; i < numberOfAgents; i++) {
 
             URI agentId = Iterables.get(agentIds, i);
-            AgentState agentState = getAgentState(agentId);
+            AgentState agentState = getManagement().getAgentState(agentId);
             Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
             Assert.assertEquals(agentState.getNumberOfAgentRestarts(), (int) numberOfAgentRestartsPerAgent.get(agentId));
             Assert.assertEquals(agentState.getNumberOfMachineRestarts(), (int) numberOfMachineRestartsPerAgent.get(agentId));
             URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
             Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
-            ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+            ServiceInstanceState instanceState = getManagement().getServiceInstanceState(instanceId);
             Assert.assertEquals(instanceState.getServiceId(), serviceId);
             Assert.assertEquals(instanceState.getAgentId(), agentId);
             Assert.assertTrue(instanceState.isProgress("service_started"));
@@ -472,7 +477,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
     private Iterable<URI> getStateIdsStartingWith(final URI uri) {
         return Iterables.filter(
-                getStateReader().getElementIdsStartingWith(uri),
+                getManagement().getStateReader().getElementIdsStartingWith(uri),
                 new Predicate<URI>(){
 
                     @Override

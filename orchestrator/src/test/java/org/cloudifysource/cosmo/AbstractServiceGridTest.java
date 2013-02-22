@@ -3,7 +3,6 @@ package org.cloudifysource.cosmo;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.agent.state.AgentState;
@@ -16,7 +15,6 @@ import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
 import org.cloudifysource.cosmo.service.ServiceUtils;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.state.ServiceState;
-import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
 import org.junit.AfterClass;
@@ -28,7 +26,6 @@ import org.testng.log.TextFormatter;
 
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -114,25 +111,6 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         management.close();
     }
 
-    protected ServiceState getServiceState(final URI serviceId) {
-        ServiceState serviceState = ServiceUtils.getServiceState(getStateReader(), serviceId);
-        Assert.assertNotNull(serviceState, "No state for " + serviceId);
-        return serviceState;
-    }
-
-    protected AgentState getAgentState(URI agentId) {
-        final AgentState agentState = ServiceUtils.getAgentState(getStateReader(), agentId);
-        Assert.assertNotNull(agentState, "No state for " + agentId);
-        return agentState;
-    }
-
-    protected ServiceInstanceState getServiceInstanceState(URI instanceId) {
-        final ServiceInstanceState serviceInstanceState =
-                ServiceUtils.getServiceInstanceState(getStateReader(), instanceId);
-        Assert.assertNotNull(serviceInstanceState, "No state for " + instanceId);
-        return serviceInstanceState;
-    }
-
     private static void setSimpleLoggerFormatter(final Logger logger) {
         Logger parentLogger = logger;
         while (parentLogger.getHandlers().length == 0) {
@@ -171,10 +149,6 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         containerParameter.setPersistentTaskWriter(management.getPersistentTaskWriter());
         containerParameter.setTimeProvider(timeProvider);
         return new MockTaskContainer(containerParameter);
-    }
-
-    protected StateReader getStateReader() {
-        return management.getStateReader();
     }
 
     protected MockTaskContainer findContainer(final URI agentId) {
