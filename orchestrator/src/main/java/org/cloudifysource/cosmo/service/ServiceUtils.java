@@ -71,6 +71,6 @@ public class ServiceUtils {
     }
 
     public static URI newServiceId(URI serverUri, String serviceName) {
-        return StreamUtils.newURI(serverUri+"services/" + serviceName + "/");
+        return StreamUtils.newURI(serverUri + "services/" + serviceName + "/");
     }
 }

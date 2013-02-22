@@ -48,7 +48,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     protected MockManagement createMockManagement() {
         return new MockManagement();
     }
-    
+
     /**
      * Tests deployment of 1 instance
      */
