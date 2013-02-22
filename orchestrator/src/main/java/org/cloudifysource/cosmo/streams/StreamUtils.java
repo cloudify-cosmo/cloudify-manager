@@ -93,29 +93,6 @@ public class StreamUtils {
         }
     }
 
-    /**
-     * @return joined list of ids maintaining order, removing duplicates
-     */
-    public static Iterable<URI> concat(final Iterable<URI> ids1, final Iterable<URI> ids2) {
-        return ImmutableSet.copyOf(Iterables.concat(ids1, ids2));
-    }
-
-    /**
-     * @return old ids that are not in the newIds, maintaining order, removing duplicates.
-     */
-    public static Iterable<URI> diff(final Iterable<URI> oldIds, final Iterable<URI> newIds) {
-        final Set<URI> idsToFilter = Sets.newHashSet(newIds);
-        final Iterable<URI> diffWithDuplicates =
-            Iterables.filter(oldIds, new Predicate<URI>() {
-
-                @Override
-                public boolean apply(URI id) {
-                    return !idsToFilter.contains(id);
-                }
-            });
-        return ImmutableSet.copyOf(diffWithDuplicates);
-    }
-
     public static URI newURI(String uri) {
         try {
             return new URI(uri);

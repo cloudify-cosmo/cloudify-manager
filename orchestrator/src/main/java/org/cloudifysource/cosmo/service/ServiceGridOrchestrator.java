@@ -18,8 +18,10 @@ package org.cloudifysource.cosmo.service;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumer;
@@ -128,8 +130,8 @@ public class ServiceGridOrchestrator {
             state.setDeploymentPlan(deploymentPlan);
             final Iterable<URI> newServiceIds = getPlannedServiceIds();
             final Iterable<URI> newAgentIds = getPlannedAgentIds();
-            state.addServiceIdsToUninstall(StreamUtils.diff(oldServiceIds, newServiceIds));
-            state.addAgentIdsToTerminate(StreamUtils.diff(oldAgentIds, newAgentIds));
+            state.addServiceIdsToUninstall(diff(oldServiceIds, newServiceIds));
+            state.addAgentIdsToTerminate(diff(oldAgentIds, newAgentIds));
         }
     }
 
@@ -306,7 +308,8 @@ public class ServiceGridOrchestrator {
             final Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByServiceId(serviceId);
             Iterable<URI> actualInstanceIds =
                     (serviceState == null ? Lists.<URI>newArrayList() : serviceState.getInstanceIds());
-            final Iterable<URI> allInstanceIds = StreamUtils.concat(actualInstanceIds, plannedInstanceIds);
+            final Iterable<URI> allInstanceIds =
+                    ImmutableSet.copyOf(Iterables.concat(actualInstanceIds, plannedInstanceIds));
             if (serviceState == null
                 || !Iterables.elementsEqual(actualInstanceIds, allInstanceIds)) {
 
@@ -334,7 +337,7 @@ public class ServiceGridOrchestrator {
     }
 
     public Iterable<URI> getAllAgentIds() {
-        return StreamUtils.concat(getPlannedAgentIds(), getAgentIdsToTerminate());
+        return ImmutableSet.copyOf(Iterables.concat(getPlannedAgentIds(), getAgentIdsToTerminate()));
     }
 
     private Iterable<URI> getPlannedAgentIds() {
@@ -731,5 +734,21 @@ public class ServiceGridOrchestrator {
 
     private Iterable<URI> getPlannedServiceIds() {
         return state.getDeploymentPlan().getServiceIds();
+    }
+
+    /**
+     * @return old ids that are not in the newIds, maintaining order, removing duplicates.
+     */
+    public static Iterable<URI> diff(final Iterable<URI> oldIds, final Iterable<URI> newIds) {
+        final Set<URI> idsToFilter = Sets.newHashSet(newIds);
+        final Iterable<URI> diffWithDuplicates =
+                Iterables.filter(oldIds, new Predicate<URI>() {
+
+                    @Override
+                    public boolean apply(URI id) {
+                        return !idsToFilter.contains(id);
+                    }
+                });
+        return ImmutableSet.copyOf(diffWithDuplicates);
     }
 }
