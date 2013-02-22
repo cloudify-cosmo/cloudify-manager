@@ -283,7 +283,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         Assert.assertTrue(getManagement().getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 0))
                 .isProgress("service_started"));
         Assert.assertTrue(getManagement().getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 1))
-                .isProgress("service_uninstalled"));
+                .isProgress("service_cleaned"));
     }
 
     private void scalingrule(String serviceName, ServiceScalingRule rule) {
@@ -316,7 +316,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
                 Assert.assertTrue(instanceState.isUnreachable());
             }
             else {
-                Assert.assertTrue(instanceState.isProgress("service_uninstalled"));
+                Assert.assertTrue(instanceState.isProgress("service_cleaned"));
             }
             URI agentId = instanceState.getAgentId();
             AgentState agentState = getManagement().getAgentState(agentId);

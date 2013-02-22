@@ -83,6 +83,12 @@ public class ServiceGridOrchestrator {
 
     private CurrentTimeProvider timeProvider;
 
+    private final List<String> serviceInstanceStateMachine = Lists.newArrayList(
+                "service_cleaned",
+                "service_stopped",
+                "service_started"
+            );
+
     public ServiceGridOrchestrator(ServiceGridOrchestratorParameter parameterObject) {
         this.orchestratorId = parameterObject.getOrchestratorId();
         this.taskReader = parameterObject.getTaskReader();
@@ -462,20 +468,20 @@ public class ServiceGridOrchestrator {
                      && isAgentProgress(agentState,
                         AgentState.Progress.AGENT_STARTED, AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION)) {
 
-                if (instanceState.isProgress("service_started")) {
+                if (instanceState.isProgress(serviceInstanceStateMachine.get(2))) {
 
                     final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle("service_stopped");
+                    task.setLifecycle(serviceInstanceStateMachine.get(1));
                     task.setConsumerId(agentId);
                     task.setStateId(instanceId);
                     addNewTaskIfNotExists(newTasks, task);
-                } else if (instanceState.isProgress("service_stopped")) {
+                } else if (instanceState.isProgress(serviceInstanceStateMachine.get(1))) {
                     final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle("service_uninstalled");
+                    task.setLifecycle(serviceInstanceStateMachine.get(0));
                     task.setConsumerId(agentId);
                     task.setStateId(instanceId);
                     addNewTaskIfNotExists(newTasks, task);
-                } else if (instanceState.isProgress("service_uninstalled")) {
+                } else if (instanceState.isProgress(serviceInstanceStateMachine.get(0))) {
 
                     //TODO: Remove this task and merge with uninstall implementation on mockagent
                     final RemoveServiceInstanceFromAgentTask agentTask = new RemoveServiceInstanceFromAgentTask();
@@ -544,20 +550,19 @@ public class ServiceGridOrchestrator {
         ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
 
         if (instanceState.isProgressNull()) {
-
                 final ServiceInstanceTask task = new ServiceInstanceTask();
-                task.setLifecycle("service_installed");
+                task.setLifecycle(this.serviceInstanceStateMachine.get(0));
                 task.setStateId(instanceId);
                 task.setConsumerId(agentId);
                 addNewTaskIfNotExists(newTasks, task);
-        } else if (instanceState.isProgress("service_installed")) {
+        } else if (instanceState.isProgress(this.serviceInstanceStateMachine.get(1))) {
             //Ask for start service instance
             final ServiceInstanceTask task = new ServiceInstanceTask();
-            task.setLifecycle("service_started");
+            task.setLifecycle(this.serviceInstanceStateMachine.get(2));
             task.setStateId(instanceId);
             task.setConsumerId(agentId);
             addNewTaskIfNotExists(newTasks, task);
-        } else if (instanceState.isProgress("service_started")) {
+        } else if (instanceState.isProgress(this.serviceInstanceStateMachine.get(2))) {
             //Do nothing, instance is installed
         } else {
             Preconditions.checkState(false, "Unknown service instance progress " + instanceState.getProgress());
