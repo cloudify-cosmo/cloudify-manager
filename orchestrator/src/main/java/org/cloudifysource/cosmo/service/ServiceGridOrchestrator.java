@@ -365,7 +365,7 @@ public class ServiceGridOrchestrator {
 
             @Override
             public boolean apply(final URI instanceId) {
-                String lifecycle = getServiceInstanceState(instanceId).getProgress();
+                String lifecycle = getServiceInstanceState(instanceId).getLifecycle();
                 return lifecycle == null || !lifecycle.equals("service_started");
             }
         };
@@ -468,20 +468,7 @@ public class ServiceGridOrchestrator {
                      && isAgentProgress(agentState,
                         AgentState.Progress.AGENT_STARTED, AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION)) {
 
-                if (instanceState.isProgress(serviceInstanceStateMachine.get(2))) {
-
-                    final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle(serviceInstanceStateMachine.get(1));
-                    task.setConsumerId(agentId);
-                    task.setStateId(instanceId);
-                    addNewTaskIfNotExists(newTasks, task);
-                } else if (instanceState.isProgress(serviceInstanceStateMachine.get(1))) {
-                    final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle(serviceInstanceStateMachine.get(0));
-                    task.setConsumerId(agentId);
-                    task.setStateId(instanceId);
-                    addNewTaskIfNotExists(newTasks, task);
-                } else if (instanceState.isProgress(serviceInstanceStateMachine.get(0))) {
+                if (instanceState.isLifecycle(serviceInstanceStateMachine.get(0))) {
 
                     //TODO: Remove this task and merge with uninstall implementation on mockagent
                     final RemoveServiceInstanceFromAgentTask agentTask = new RemoveServiceInstanceFromAgentTask();
@@ -494,9 +481,22 @@ public class ServiceGridOrchestrator {
                     serviceTask.setStateId(serviceId);
                     serviceTask.setInstanceId(instanceId);
                     addNewTaskIfNotExists(newTasks, serviceTask);
-                } else {
-                    Preconditions.checkState(false,
-                            "Unhandled service instance progress: " + instanceState.getProgress());
+               } else {
+                    String nextLifecycle = null;
+                    if (instanceState.isLifecycle(serviceInstanceStateMachine.get(2))) {
+                        nextLifecycle = serviceInstanceStateMachine.get(1);
+                    } else if (instanceState.isLifecycle(serviceInstanceStateMachine.get(1))) {
+                        nextLifecycle = serviceInstanceStateMachine.get(0);
+                    }
+                    else {
+                        Preconditions.checkState(false,
+                                "Unhandled service instance progress: " + instanceState.getLifecycle());
+                    }
+                    final ServiceInstanceTask task = new ServiceInstanceTask();
+                    task.setLifecycle(nextLifecycle);
+                    task.setConsumerId(agentId);
+                    task.setStateId(instanceId);
+                    addNewTaskIfNotExists(newTasks, task);
                 }
             }
         }
@@ -555,17 +555,17 @@ public class ServiceGridOrchestrator {
                 task.setStateId(instanceId);
                 task.setConsumerId(agentId);
                 addNewTaskIfNotExists(newTasks, task);
-        } else if (instanceState.isProgress(this.serviceInstanceStateMachine.get(1))) {
+        } else if (instanceState.isLifecycle(this.serviceInstanceStateMachine.get(1))) {
             //Ask for start service instance
             final ServiceInstanceTask task = new ServiceInstanceTask();
             task.setLifecycle(this.serviceInstanceStateMachine.get(2));
             task.setStateId(instanceId);
             task.setConsumerId(agentId);
             addNewTaskIfNotExists(newTasks, task);
-        } else if (instanceState.isProgress(this.serviceInstanceStateMachine.get(2))) {
+        } else if (instanceState.isLifecycle(this.serviceInstanceStateMachine.get(2))) {
             //Do nothing, instance is installed
         } else {
-            Preconditions.checkState(false, "Unknown service instance progress " + instanceState.getProgress());
+            Preconditions.checkState(false, "Unknown service instance progress " + instanceState.getLifecycle());
         }
     }
 

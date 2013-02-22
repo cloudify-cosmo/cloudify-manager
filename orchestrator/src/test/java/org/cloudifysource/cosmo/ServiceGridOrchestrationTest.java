@@ -258,9 +258,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         Assert.assertTrue(getManagement().getAgentState(getManagement().getAgentId(1))
                 .isProgress(AgentState.Progress.MACHINE_TERMINATED));
         Assert.assertTrue(getManagement().getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 0))
-                .isProgress("service_started"));
+                .isLifecycle("service_started"));
         Assert.assertTrue(getManagement().getServiceInstanceState(getManagement().getServiceInstanceId("tomcat", 1))
-                .isProgress("service_cleaned"));
+                .isLifecycle("service_cleaned"));
     }
 
     private void assertTomcatUninstalledGracefully() {
@@ -286,7 +286,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
                 Assert.assertTrue(instanceState.isUnreachable());
             }
             else {
-                Assert.assertTrue(instanceState.isProgress("service_cleaned"));
+                Assert.assertTrue(instanceState.isLifecycle("service_cleaned"));
             }
             URI agentId = instanceState.getAgentId();
             AgentState agentState = getManagement().getAgentState(agentId);
@@ -335,7 +335,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
         final URI agentId = instanceState.getAgentId();
         Assert.assertEquals(instanceState.getServiceId(), serviceId);
-        Assert.assertTrue(instanceState.isProgress("service_started"));
+        Assert.assertTrue(instanceState.isLifecycle("service_started"));
 
         final AgentState agentState = getManagement().getAgentState(agentId);
         Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
@@ -406,7 +406,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
             ServiceInstanceState instanceState = getManagement().getServiceInstanceState(instanceId);
             Assert.assertEquals(instanceState.getServiceId(), serviceId);
             Assert.assertEquals(instanceState.getAgentId(), agentId);
-            Assert.assertTrue(instanceState.isProgress("service_started"));
+            Assert.assertTrue(instanceState.isLifecycle("service_started"));
             Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
         }
     }

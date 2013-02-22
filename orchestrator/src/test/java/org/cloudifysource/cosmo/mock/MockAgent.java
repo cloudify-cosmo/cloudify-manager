@@ -44,7 +44,7 @@ public class MockAgent {
             TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 
         ServiceInstanceState instanceState = impersonatedStateModifier.get();
-        instanceState.setProgress(task.getLifecycle());
+        instanceState.setLifecycle(task.getLifecycle());
         impersonatedStateModifier.put(instanceState);
         instancesState.put(task.getStateId(), instanceState);
 
