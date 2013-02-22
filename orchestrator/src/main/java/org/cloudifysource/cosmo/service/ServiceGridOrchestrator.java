@@ -55,7 +55,6 @@ import org.cloudifysource.cosmo.service.tasks.ServiceUninstalledTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceUninstallingTask;
 import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
 import org.cloudifysource.cosmo.state.StateReader;
-import org.cloudifysource.cosmo.streams.StreamUtils;
 import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 
 import java.net.URI;
@@ -209,7 +208,7 @@ public class ServiceGridOrchestrator {
             final RemoveServiceInstanceFromServiceTask task,
             final TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
 
-        final ServiceState serviceState = (ServiceState) impersonatedStateModifier.get();
+        final ServiceState serviceState = impersonatedStateModifier.get();
         serviceState.removeInstance(task.getInstanceId());
         impersonatedStateModifier.put(serviceState);
     }
@@ -627,11 +626,9 @@ public class ServiceGridOrchestrator {
                     state.removeAgentIdToTerminate(agentId);
                 }
             } else {
-                Preconditions.checkState(false, "Unknwon agent progress " + agentState.getProgress());
+                Preconditions.checkState(false, "Unknown agent progress " + agentState.getProgress());
             }
         }
-
-        //return Collections.unmodifiableMap(agentsPingHealth);
     }
 
     private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
