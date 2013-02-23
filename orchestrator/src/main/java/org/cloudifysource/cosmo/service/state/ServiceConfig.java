@@ -15,8 +15,6 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
-import com.google.common.collect.Lists;
-
 import java.net.URI;
 import java.util.List;
 
