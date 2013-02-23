@@ -47,6 +47,8 @@ public class MockMachineProvisioner {
         //Immediately machine start
 
         impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
+        impersonatedState.incrementNumberOfMachineStarts();
+        impersonatedState.resetNumberOfAgentStarts();
         impersonatedStateModifier.put(impersonatedState);
     }
 
@@ -57,7 +59,6 @@ public class MockMachineProvisioner {
         final URI agentId = task.getStateId();
         taskConsumerRegistrar.unregisterTaskConsumer(agentId);
         impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
-        impersonatedState.incrementNumberOfMachineRestarts();
         impersonatedStateModifier.put(impersonatedState);
     }
 
@@ -91,6 +92,7 @@ public class MockMachineProvisioner {
         final URI agentId = task.getStateId();
         Preconditions.checkState(agentId.toString().endsWith("/"));
         agentState.setProgress(AgentState.Progress.AGENT_STARTED);
+        agentState.incrementNumberOfAgentStarts();
         taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
         impersonatedStateModifier.put(agentState);
     }

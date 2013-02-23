@@ -84,11 +84,11 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         execute();
         killOnlyMachine();
         execute();
-        final int numberOfAgentRestarts = 0;
-        final int numberOfMachineRestarts = 1;
+        final int numberOfAgentStarts = 1;
+        final int numberOfMachineStarts = 2;
         assertSingleServiceInstance(
                 getManagement(), "tomcat",
-                numberOfAgentRestarts, numberOfMachineRestarts);
+                numberOfAgentStarts, numberOfMachineStarts);
         uninstallAllServices();
         execute();
         assertTomcatUninstalledGracefully(getManagement());
@@ -104,11 +104,11 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         execute();
         restartOnlyAgent();
         execute();
-        final int numberOfAgentRestarts = 1;
-        final int numberOfMachineRestarts = 0;
+        final int numberOfAgentStarts = 2;
+        final int numberOfMachineStarts = 1;
         assertSingleServiceInstance(
                 getManagement(), "tomcat",
-                numberOfAgentRestarts, numberOfMachineRestarts);
+                numberOfAgentStarts, numberOfMachineStarts);
         uninstallAllServices();
         execute();
         assertTomcatUninstalledGracefully(getManagement());

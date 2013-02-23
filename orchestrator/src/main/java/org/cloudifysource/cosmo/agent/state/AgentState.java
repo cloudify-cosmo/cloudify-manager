@@ -41,8 +41,8 @@ public class AgentState extends TaskConsumerState {
     private String progress;
     private String ipAddress;
     private List<URI> serviceInstanceIds;
-    private int numberOfAgentRestarts;
-    private int numberOfMachineRestarts;
+    private int numberOfAgentStarts;
+    private int numberOfMachineStarts;
     private long lastPingSourceTimestamp;
 
     /**
@@ -87,20 +87,20 @@ public class AgentState extends TaskConsumerState {
         return serviceInstanceIds;
     }
 
-    public int getNumberOfAgentRestarts() {
-        return numberOfAgentRestarts;
+    public int getNumberOfAgentStarts() {
+        return numberOfAgentStarts;
     }
 
-    public void setNumberOfAgentRestarts(int numberOfAgentRestarts) {
-        this.numberOfAgentRestarts = numberOfAgentRestarts;
+    public void setNumberOfAgentStarts(int numberOfAgentStarts) {
+        this.numberOfAgentStarts = numberOfAgentStarts;
     }
 
-    public int getNumberOfMachineRestarts() {
-        return numberOfMachineRestarts;
+    public int getNumberOfMachineStarts() {
+        return numberOfMachineStarts;
     }
 
-    public void setNumberOfMachineRestarts(int numberOfMachineRestarts) {
-        this.numberOfMachineRestarts = numberOfMachineRestarts;
+    public void setNumberOfMachineStarts(int numberOfMachineStarts) {
+        this.numberOfMachineStarts = numberOfMachineStarts;
     }
 
     @JsonIgnore
@@ -118,12 +118,17 @@ public class AgentState extends TaskConsumerState {
     }
 
     @JsonIgnore
-    public void incrementNumberOfMachineRestarts() {
-       numberOfMachineRestarts++;
+    public void incrementNumberOfMachineStarts() {
+       numberOfMachineStarts++;
     }
 
     @JsonIgnore
-    public void incrementNumberOfAgentRestarts() {
-        numberOfAgentRestarts++;
+    public void incrementNumberOfAgentStarts() {
+        numberOfAgentStarts++;
+    }
+
+    @JsonIgnore
+    public void resetNumberOfAgentStarts() {
+        numberOfAgentStarts = 0;
     }
 }

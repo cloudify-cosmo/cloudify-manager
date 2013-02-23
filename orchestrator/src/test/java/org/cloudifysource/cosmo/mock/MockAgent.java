@@ -45,6 +45,7 @@ public class MockAgent {
 
         ServiceInstanceState instanceState = impersonatedStateModifier.get();
         instanceState.setLifecycle(task.getLifecycle());
+        instanceState.setUnreachable(false);
         impersonatedStateModifier.put(instanceState);
         instancesState.put(task.getStateId(), instanceState);
 
@@ -73,6 +74,7 @@ public class MockAgent {
             instanceState.setAgentId(agentId);
             instanceState.setServiceId(serviceId);
             instanceState.setLifecycle(task.getInitialLifecycle());
+            instanceState.setUnreachable(false);
         }
         else {
             Preconditions.checkState(instanceState.getAgentId().equals(agentId));

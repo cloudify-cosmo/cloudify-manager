@@ -21,27 +21,25 @@ import org.testng.Assert;
 import java.net.URI;
 import java.util.Map;
 
-import static org.cloudifysource.cosmo.AssertServiceState.assertServiceInstalledWithOneInstance;
-
 public class AssertServiceState {
 
     private AssertServiceState() { }
 
     public static void assertServiceInstalledWithOneInstance(MockManagement management, String serviceName) {
-        int zeroMachineRestarts = 0;
-        int zeroAgentRestarts = 0;
-        assertServiceInstalledWithOneInstance(management, serviceName, zeroAgentRestarts, zeroMachineRestarts);
+        final int machineStarts = 1;
+        final int agentStarts = 1;
+        assertServiceInstalledWithOneInstance(management, serviceName, agentStarts, machineStarts);
     }
 
     public static void assertSingleServiceInstance(MockManagement management, String serviceName) {
-        final int zeroAgentRestarts = 0;
-        final int zeroMachineRestarts = 0;
-        assertSingleServiceInstance(management, serviceName, zeroAgentRestarts, zeroMachineRestarts);
+        final int machineStarts = 1;
+        final int agentStarts = 1;
+        assertSingleServiceInstance(management, serviceName, agentStarts, machineStarts);
     }
 
     public static void assertSingleServiceInstance(
             MockManagement management, String serviceName,
-            int numberOfAgentRestarts, int numberOfMachineRestarts) {
+            int numberOfAgentStarts, int numberOfMachineStarts) {
 
         Assert.assertEquals(management.getDeploymentPlan().getServices().size(), 1);
         Assert.assertEquals(
@@ -50,12 +48,12 @@ public class AssertServiceState {
         Assert.assertEquals(Iterables.size(getServiceInstanceIds(management, serviceName)),1);
         assertServiceInstalledWithOneInstance(
                 management, serviceName, 
-                numberOfAgentRestarts, numberOfMachineRestarts);
+                numberOfAgentStarts, numberOfMachineStarts);
     }
 
     private static void assertServiceInstalledWithOneInstance(
             MockManagement management, String serviceName,
-            int numberOfAgentRestarts, int numberOfMachineRestarts) {
+            int numberOfAgentStarts, int numberOfMachineStarts) {
         
         final URI serviceId = management.getServiceId(serviceName);
         final ServiceState serviceState = management.getServiceState(serviceId);
@@ -73,7 +71,7 @@ public class AssertServiceState {
                 return false;
             }
         }))
-                ,1+numberOfMachineRestarts);
+                ,numberOfMachineStarts);
 
         final URI agentId = instanceState.getAgentId();
         Assert.assertEquals(instanceState.getServiceId(), serviceId);
@@ -82,12 +80,12 @@ public class AssertServiceState {
         final AgentState agentState = management.getAgentState(agentId);
         Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
         Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
-        Assert.assertEquals(agentState.getNumberOfAgentRestarts(), numberOfAgentRestarts);
-        Assert.assertEquals(agentState.getNumberOfMachineRestarts(), numberOfMachineRestarts);
+        Assert.assertEquals(agentState.getNumberOfAgentStarts(), numberOfAgentStarts);
+        Assert.assertEquals(agentState.getNumberOfMachineStarts(), numberOfMachineStarts);
 
         TaskConsumerHistory agentTasksHistory = getTasksHistory(management, agentId);
-        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartMachineTask.class)),1+numberOfMachineRestarts);
-        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartAgentTask.class)),1+numberOfMachineRestarts);
+        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartMachineTask.class)),numberOfMachineStarts);
+        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartAgentTask.class)),numberOfMachineStarts);
 
         final ServiceGridDeploymentPlan deploymentPlan = management.getDeploymentPlan();
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
@@ -128,8 +126,8 @@ public class AssertServiceState {
 
     public static void assertTwoTomcatInstances(
             MockManagement management, 
-            Map<URI,Integer> numberOfAgentRestartsPerAgent, 
-            Map<URI,Integer> numberOfMachineRestartsPerAgent) {
+            Map<URI,Integer> numberOfAgentStartsPerAgent, 
+            Map<URI,Integer> numberOfMachineStartsPerAgent) {
         final URI serviceId = management.getServiceId("tomcat");
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()), 2);
@@ -151,8 +149,8 @@ public class AssertServiceState {
             URI agentId = Iterables.get(agentIds, i);
             AgentState agentState = management.getAgentState(agentId);
             Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
-            Assert.assertEquals(agentState.getNumberOfAgentRestarts(), (int) numberOfAgentRestartsPerAgent.get(agentId));
-            Assert.assertEquals(agentState.getNumberOfMachineRestarts(), (int) numberOfMachineRestartsPerAgent.get(agentId));
+            Assert.assertEquals(agentState.getNumberOfAgentStarts(), (int) numberOfAgentStartsPerAgent.get(agentId));
+            Assert.assertEquals(agentState.getNumberOfMachineStarts(), (int) numberOfMachineStartsPerAgent.get(agentId));
             URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
             Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
@@ -170,23 +168,23 @@ public class AssertServiceState {
 
     public static ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted(MockManagement management) {
         return ImmutableMap.<URI,Integer>builder()
-                .put(management.getAgentId(0), 0)
-                .put(management.getAgentId(1), 0)
+                .put(management.getAgentId(0), 1)
+                .put(management.getAgentId(1), 1)
                 .build();
     }
 
     public static ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted(MockManagement management) {
         return ImmutableMap.<URI,Integer>builder()
-                .put(management.getAgentId(0), 0)
-                .put(management.getAgentId(1), 0)
+                .put(management.getAgentId(0), 1)
+                .put(management.getAgentId(1), 1)
                 .build();
     }
 
     public static ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted(MockManagement 
                                                                                                     management) {
         return ImmutableMap.<URI,Integer>builder()
-                .put(management.getAgentId(0), 0)
-                .put(management.getAgentId(1), 1)
+                .put(management.getAgentId(0), 1)
+                .put(management.getAgentId(1), 2)
                 .build();
     }
 
