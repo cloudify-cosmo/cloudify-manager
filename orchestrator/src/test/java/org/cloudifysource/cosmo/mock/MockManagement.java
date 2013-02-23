@@ -23,6 +23,8 @@ import org.cloudifysource.cosmo.TaskWriter;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.service.*;
+import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
+import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.state.ServiceState;
 import org.cloudifysource.cosmo.state.StateReader;
@@ -238,6 +240,13 @@ public class MockManagement {
         containerParameter.setPersistentTaskWriter(getPersistentTaskWriter());
         containerParameter.setTimeProvider(timeProvider);
         return new MockTaskContainer(containerParameter);
+    }
+
+    public ServiceGridDeploymentPlan getDeploymentPlan() {
+        return getStateReader()
+                .get(getOrchestratorId(), ServiceGridOrchestratorState.class)
+                .getState()
+                .getDeploymentPlan();
     }
 }
 

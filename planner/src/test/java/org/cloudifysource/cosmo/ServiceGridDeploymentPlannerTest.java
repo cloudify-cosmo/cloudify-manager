@@ -26,7 +26,6 @@ import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
 import org.cloudifysource.cosmo.service.tasks.InstallServiceTask;
 import org.cloudifysource.cosmo.service.tasks.ScaleServiceTask;
 import org.cloudifysource.cosmo.service.tasks.UninstallServiceTask;
-import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -138,7 +137,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
 
     private void assertTomcatUninstalledGracefully() {
         final URI serviceId = getManagement().getServiceId("tomcat");
-        Assert.assertFalse(getDeploymentPlannerState().getDeploymentPlan().isServiceExists(serviceId));
+        Assert.assertFalse(getDeploymentPlan().isServiceExists(serviceId));
     }
 
     private void assertServiceInstalledWithOneInstance(String serviceName) {
@@ -146,14 +145,10 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     private void assertSingleServiceInstance(String serviceName) {
-        final int zeroAgentRestarts = 0;
-        final int zeroMachineRestarts = 0;
-        assertSingleServiceInstance(serviceName, zeroAgentRestarts,zeroMachineRestarts);
-    }
-
-    private void assertSingleServiceInstance(String serviceName, int numberOfAgentRestarts, int numberOfMachineRestarts) {
         Assert.assertNotNull(getDeploymentPlannerState());
-        Assert.assertEquals(getDeploymentPlannerState().getDeploymentPlan().getServices().size(), 1);
+        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlannerState().getDeploymentPlan();
+        final ServiceConfig serviceConfig = Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig();
+        Assert.assertEquals(serviceConfig.getDisplayName(), serviceName);
     }
 
     private void assertServiceInstalledWithOneInstance(
@@ -161,8 +156,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         final URI serviceId = getManagement().getServiceId(serviceName);
         final URI instanceId = ServiceUtils.newInstanceId(serviceId, 0);
         final URI agentId = ServiceUtils.newAgentId(getManagement().getAgentsId(), agentIndex);
-        final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
-        final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
+        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlannerState().getDeploymentPlan();
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId(serviceId)), instanceId);
         final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId).getServiceConfig();
@@ -170,7 +164,8 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
-        return getStateReader().get(getManagement().getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
+        return getManagement().getStateReader()
+                .get(getManagement().getDeploymentPlannerId(), ServiceGridDeploymentPlannerState.class).getState();
     }
 
     private void assertTwoTomcatInstances() {
@@ -223,7 +218,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
 
     private Iterable<URI> getStateIdsStartingWith(final URI uri) {
         return Iterables.filter(
-                getStateReader().getElementIdsStartingWith(uri),
+                getManagement().getStateReader().getElementIdsStartingWith(uri),
                 new Predicate<URI>(){
 
                     @Override
@@ -237,7 +232,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         return getStateIdsStartingWith(StreamUtils.newURI(getManagement().getStateServerUri() + "agents/"));
     }
 
-    public StateReader getStateReader() {
-        return getManagement().getStateReader();
+    public ServiceGridDeploymentPlan getDeploymentPlan() {
+        return getDeploymentPlannerState().getDeploymentPlan();
     }
 }
