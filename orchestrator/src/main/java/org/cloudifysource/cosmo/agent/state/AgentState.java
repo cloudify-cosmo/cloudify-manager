@@ -33,11 +33,13 @@ public class AgentState extends TaskConsumerState {
      * Possible values for {@link AgentState#setProgress(String)}.
      */
     public static class Progress {
-        public static final String PLANNED = "PLANNED";
-        public static final String MACHINE_STARTED = "MACHINE_STARTED";
-        public static final String AGENT_STARTED = "AGENT_STARTED";
+        //TODO: Remove PLANNED state, remains here for backwards compatibility
+        public static final String PLANNED = "machine_terminated";
+
+        public static final String MACHINE_TERMINATED = "machine_terminated";
+        public static final String MACHINE_STARTED = "machine_started";
+        public static final String AGENT_STARTED = "agent_started";
         public static final String MACHINE_MARKED_FOR_TERMINATION = "MACHINE_MARKED_FOR_TERMINATION";
-        public static final String MACHINE_TERMINATED = "MACHINE_TERMINATED";
     }
 
     private String progress;
