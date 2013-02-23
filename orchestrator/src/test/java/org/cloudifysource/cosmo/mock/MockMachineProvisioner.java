@@ -44,8 +44,6 @@ public class MockMachineProvisioner {
         //Simulate starting machine
         final AgentState impersonatedState = impersonatedStateModifier.get();
         Preconditions.checkState(impersonatedState.isProgress(AgentState.Progress.PLANNED));
-        impersonatedState.setProgress(AgentState.Progress.STARTING_MACHINE);
-        impersonatedStateModifier.put(impersonatedState);
         //Immediately machine start
 
         impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
@@ -68,7 +66,6 @@ public class MockMachineProvisioner {
         Preconditions.checkState(
                 agentState.isProgress(
                         AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION,
-                        AgentState.Progress.STARTING_MACHINE,
                         AgentState.Progress.MACHINE_STARTED,
                         AgentState.Progress.PLANNED));
 
@@ -76,9 +73,6 @@ public class MockMachineProvisioner {
         // cannot change its own state comes here
         final URI agentId = task.getStateId();
         taskConsumerRegistrar.unregisterTaskConsumer(agentId);
-
-        agentState.setProgress(AgentState.Progress.TERMINATING_MACHINE);
-        impersonatedStateModifier.put(agentState);
 
         //actual code that terminates machine comes here
 

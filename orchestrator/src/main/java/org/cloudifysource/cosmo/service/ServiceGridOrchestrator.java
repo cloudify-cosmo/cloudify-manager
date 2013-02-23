@@ -582,7 +582,6 @@ public class ServiceGridOrchestrator {
                 }
             } else if (isAgentProgress(agentState,
                     AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION,
-                    AgentState.Progress.TERMINATING_MACHINE,
                     AgentState.Progress.MACHINE_TERMINATED)) {
                 // move along. nothing to see here.
             } else {
@@ -599,7 +598,6 @@ public class ServiceGridOrchestrator {
                 addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState,
                     AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION,
-                    AgentState.Progress.STARTING_MACHINE,
                     AgentState.Progress.MACHINE_STARTED,
                     AgentState.Progress.PLANNED)) {
                 boolean isAllInstancesStopped = Iterables.isEmpty(agentState.getServiceInstanceIds());
