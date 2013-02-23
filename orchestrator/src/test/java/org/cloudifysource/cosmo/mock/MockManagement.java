@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,13 +16,17 @@
 package org.cloudifysource.cosmo.mock;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.StateClient;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.TaskWriter;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
-import org.cloudifysource.cosmo.service.*;
+import org.cloudifysource.cosmo.service.ServiceGridOrchestrator;
+import org.cloudifysource.cosmo.service.ServiceGridOrchestratorParameter;
+import org.cloudifysource.cosmo.service.ServiceUtils;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
@@ -35,6 +39,7 @@ import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 public class MockManagement {
 
@@ -47,6 +52,7 @@ public class MockManagement {
     private final StateWriter stateWriter;
     private final MockTaskBroker taskBroker;
     private MockCurrentTimeProvider timeProvider;
+    private List<URI> taskConsumersToUnregisterOnClose;
 
     public void setTaskConsumerRegistrar(TaskConsumerRegistrar taskConsumerRegistrar) {
         this.taskConsumerRegistrar = taskConsumerRegistrar;
@@ -81,7 +87,6 @@ public class MockManagement {
         taskBroker = new MockTaskBroker();
         taskBroker.setLoggingEnabled(false);
         persistentTaskBroker = new MockTaskBroker();
-
     }
 
     protected URI createUri(String relativeId) {
@@ -113,7 +118,7 @@ public class MockManagement {
     }
 
     public void restart() {
-        unregisterTaskConsumers();
+        stop();
         clearState();
         taskBroker.clear();
         registerTaskConsumers();
@@ -130,6 +135,7 @@ public class MockManagement {
 
     public void start() {
 
+        taskConsumersToUnregisterOnClose = Lists.newArrayList();
         clearState();
         taskBroker.clear();
         persistentTaskBroker.clear();
@@ -147,11 +153,13 @@ public class MockManagement {
     }
 
     protected void registerTaskConsumer(Object taskConsumer, URI taskConsumerId) {
+        this.taskConsumersToUnregisterOnClose.add(taskConsumerId);
         taskConsumerRegistrar.registerTaskConsumer(taskConsumer, taskConsumerId);
     }
 
     protected void unregisterTaskConsumer(URI taskConsumerId) {
         taskConsumerRegistrar.unregisterTaskConsumer(taskConsumerId);
+        taskConsumersToUnregisterOnClose.remove(taskConsumerId);
     }
 
     private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider) {
@@ -247,6 +255,12 @@ public class MockManagement {
                 .get(getOrchestratorId(), ServiceGridOrchestratorState.class)
                 .getState()
                 .getDeploymentPlan();
+    }
+
+    public void stop() {
+        for (URI taskConsumerId : ImmutableSet.copyOf(taskConsumersToUnregisterOnClose)) {
+            unregisterTaskConsumer(taskConsumerId);
+        }
     }
 }
 

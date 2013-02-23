@@ -76,13 +76,19 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
     public void afterMethod(Method method) {
         logger.info("After " + method.getName());
         try {
-            management.unregisterTaskConsumers();
-            Assert.assertTrue(containers.isEmpty(),
-                    "Cleanup failure in test " + method.getName() + ":" +
-                            Iterables.toString(containers.getContainerIds()));
+            if (management != null) {
+                management.stop();
+            }
+            if (containers != null) {
+                Assert.assertTrue(containers.isEmpty(),
+                        "Cleanup failure in test " + method.getName() + ":" +
+                                Iterables.toString(containers.getContainerIds()));
+            }
         }
         finally {
-            containers.clear();
+            if (containers != null) {
+                containers.clear();
+            }
         }
     }
 
