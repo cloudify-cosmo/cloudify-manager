@@ -96,12 +96,6 @@ public class MockAgent {
         state.setLastPingSourceTimestamp(task.getProducerTimestamp());
     }
 
-    @TaskConsumer
-    public void markAgentAsStopping(MarkAgentAsStoppingTask task) {
-        Preconditions.checkState(state.getProgress().equals(AgentState.Progress.AGENT_STARTED));
-        state.setProgress(AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION);
-    }
-
     @TaskConsumerStateHolder
     public AgentState getState() {
         return state;

@@ -43,7 +43,7 @@ public class MockMachineProvisioner {
 
         //Simulate starting machine
         final AgentState impersonatedState = impersonatedStateModifier.get();
-        Preconditions.checkState(impersonatedState.isProgress(AgentState.Progress.PLANNED));
+        Preconditions.checkState(impersonatedState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
         //Immediately machine start
 
         impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
@@ -57,6 +57,7 @@ public class MockMachineProvisioner {
         final URI agentId = task.getStateId();
         taskConsumerRegistrar.unregisterTaskConsumer(agentId);
         impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
+        impersonatedState.incrementNumberOfMachineRestarts();
         impersonatedStateModifier.put(impersonatedState);
     }
 
@@ -65,9 +66,8 @@ public class MockMachineProvisioner {
         final AgentState agentState = impersonatedStateModifier.get();
         Preconditions.checkState(
                 agentState.isProgress(
-                        AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION,
-                        AgentState.Progress.MACHINE_STARTED,
-                        AgentState.Progress.PLANNED));
+                        AgentState.Progress.AGENT_STARTED,
+                        AgentState.Progress.MACHINE_STARTED));
 
         // code that makes sure the agent is no longer running and
         // cannot change its own state comes here

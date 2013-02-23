@@ -127,7 +127,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         MockAgent agent = (MockAgent) getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
         AgentState agentState = agent.getState();
         Preconditions.checkState(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
-        agentState.setNumberOfAgentRestarts(agentState.getNumberOfAgentRestarts() +1);
+        agentState.incrementNumberOfAgentRestarts();
         getTaskConsumerRegistrar().registerTaskConsumer(new MockAgent(agentState), agentId);
     }
 

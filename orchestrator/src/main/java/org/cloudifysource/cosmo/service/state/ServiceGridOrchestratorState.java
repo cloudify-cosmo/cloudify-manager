@@ -83,6 +83,11 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
         Preconditions.checkArgument(removed, "Cannot remove %s from services to uninstall list", agentId);
     }
 
+    @JsonIgnore
+    public boolean isAgentIdToTerminate(URI agentId) {
+        return agentIdsToTerminate.contains(agentId);
+    }
+
     public Set<URI> getAgentIdsToTerminate() {
         return agentIdsToTerminate;
     }

@@ -33,13 +33,9 @@ public class AgentState extends TaskConsumerState {
      * Possible values for {@link AgentState#setProgress(String)}.
      */
     public static class Progress {
-        //TODO: Remove PLANNED state, remains here for backwards compatibility
-        public static final String PLANNED = "machine_terminated";
-
         public static final String MACHINE_TERMINATED = "machine_terminated";
         public static final String MACHINE_STARTED = "machine_started";
         public static final String AGENT_STARTED = "agent_started";
-        public static final String MACHINE_MARKED_FOR_TERMINATION = "MACHINE_MARKED_FOR_TERMINATION";
     }
 
     private String progress;
@@ -119,5 +115,15 @@ public class AgentState extends TaskConsumerState {
 
     public void setLastPingSourceTimestamp(long lastPingSourceTimestamp) {
         this.lastPingSourceTimestamp = lastPingSourceTimestamp;
+    }
+
+    @JsonIgnore
+    public void incrementNumberOfMachineRestarts() {
+       numberOfMachineRestarts++;
+    }
+
+    @JsonIgnore
+    public void incrementNumberOfAgentRestarts() {
+        numberOfAgentRestarts++;
     }
 }
