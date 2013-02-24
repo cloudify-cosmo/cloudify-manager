@@ -66,7 +66,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Tests deployment of 2 instances
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void installMultipleInstanceServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -80,7 +80,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Tests machine failover, and restart by the orchestrator
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void machineFailoverTest() {
         installService("tomcat", 1);
         execute();
@@ -98,7 +98,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
      * Test agent process failed, and restarted automatically by
      * reliable watchdog running on the same machine
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void agentRestartTest() {
         installService("tomcat", 1);
         execute();
@@ -115,7 +115,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Tests change in plan from 1 instance to 2 instances
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void scaleOutServiceTest() {
         installService("tomcat", 1);
         execute();
@@ -130,7 +130,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Tests change in plan from 1 instance to 2 instances
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void scaleInServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -145,8 +145,8 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Tests uninstalling tomcat service when machine hosting service instance failed.
      */
-    @Test
-    public void killMachineUninstallServiceTest() {
+    @Test(dependsOnMethods = {"machineFailoverTest"})
+    public void machineFailoverUninstallServiceTest() {
         installService("tomcat", 1);
         execute();
         killOnlyMachine();
@@ -158,7 +158,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Tests management state recovery from crash
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void managementRestartTest() {
         installService("tomcat", 1);
         execute();
@@ -174,7 +174,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
      * Tests management state recovery from crash when one of the agents also failed.
      * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
      */
-    @Test
+    @Test(dependsOnMethods = {"managementRestartTest","agentRestartTest"})
     public void managementRestartAndOneAgentRestartTest() {
         installService("tomcat", 2);
         execute();
@@ -193,7 +193,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     /**
      * Install two services, each with one instance
      */
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void installTwoSingleInstanceServicesTest(){
         installService("tomcat", 1);
         installService("cassandra", 1);
@@ -208,7 +208,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         assertTomcatUninstalledGracefully(getManagement());
     }
 
-    @Test
+    @Test(dependsOnMethods = {"scaleOutServiceTest","scaleInServiceTest","setInstancePropertyTest"})
     public void scalingRulesTest() {
 
         installService("tomcat", 1);
@@ -234,7 +234,7 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         assertTomcatUninstalledGracefully(getManagement());
     }
 
-    @Test
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
     public void setInstancePropertyTest() {
 
         final String propertyName = "hello";

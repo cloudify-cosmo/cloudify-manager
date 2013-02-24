@@ -56,7 +56,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     /**
      * Tests deployment of 2 instances
      */
-    @Test
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
     public void installMultipleInstanceServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -69,7 +69,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     /**
      * Tests change in plan from 1 instance to 2 instances
      */
-    @Test
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
     public void scaleOutServiceTest() {
         installService("tomcat", 1);
         execute();
@@ -84,7 +84,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     /**
      * Tests change in plan from 1 instance to 2 instances
      */
-    @Test
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
     public void scaleInServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -99,7 +99,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     /**
      * Tests management state recovery from crash
      */
-    @Test
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
     public void managementRestartTest() {
         installService("tomcat", 1);
         execute();
@@ -114,7 +114,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     /**
      * Install two services, each with one instance
      */
-    @Test
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
     public void installTwoSingleInstanceServicesTest(){
         installService("tomcat", 1);
         installService("cassandra", 1);
