@@ -168,7 +168,8 @@ public class StateClient implements StateReader, StateWriter {
             @Override
             public URI apply(String uri) {
                 return StreamUtils.newURI(uri);
-            } });
+            }
+        });
     }
 }
 

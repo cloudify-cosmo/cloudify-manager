@@ -82,23 +82,22 @@ public class KVStore implements KVReader, KVWriter {
      */
     static class EntityTagState<T> {
 
-    private final EntityTag etag;
+        private final EntityTag etag;
+        private final T state;
 
-    private final T state;
+        public EntityTagState(EntityTag etag, T state) {
+            Preconditions.checkNotNull(state);
+            Preconditions.checkNotNull(etag);
+            this.etag = etag;
+            this.state = state;
+        }
 
-    public EntityTagState(EntityTag etag, T state) {
-        Preconditions.checkNotNull(state);
-        Preconditions.checkNotNull(etag);
-        this.etag = etag;
-        this.state = state;
+        public EntityTag getEntityTag() {
+            return etag;
+        }
+
+        public T getState() {
+            return state;
+        }
     }
-
-    public EntityTag getEntityTag() {
-        return etag;
-    }
-
-    public T getState() {
-        return state;
-    }
-}
 }

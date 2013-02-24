@@ -465,8 +465,9 @@ public class ServiceGridOrchestrator {
                     addNewTaskIfNotExists(newTasks, task);
                 }
             } else if (!Iterables.contains(plannedInstanceIds, instanceId)
-                     && isAgentProgress(agentState,
-                        AgentState.Progress.AGENT_STARTED, AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION)) {
+                       && isAgentProgress(agentState,
+                           AgentState.Progress.AGENT_STARTED,
+                           AgentState.Progress.MACHINE_MARKED_FOR_TERMINATION)) {
 
                 final String currentLifecycle = instanceState.getLifecycle();
                 Preconditions.checkNotNull(currentLifecycle);
@@ -482,7 +483,7 @@ public class ServiceGridOrchestrator {
                     serviceTask.setStateId(serviceId);
                     serviceTask.setInstanceId(instanceId);
                     addNewTaskIfNotExists(newTasks, serviceTask);
-               } else {
+                } else {
                     final ServiceInstanceTask task = new ServiceInstanceTask();
                     task.setLifecycle(prevLifecycle);
                     task.setConsumerId(agentId);
@@ -544,11 +545,11 @@ public class ServiceGridOrchestrator {
         Preconditions.checkNotNull(currentLifecycle);
         final String nextLifecycle = serviceState.getNextInstanceLifecycle(currentLifecycle);
         if (nextLifecycle != null) {
-                final ServiceInstanceTask task = new ServiceInstanceTask();
-                task.setLifecycle(nextLifecycle);
-                task.setStateId(instanceId);
-                task.setConsumerId(instanceState.getAgentId());
-                addNewTaskIfNotExists(newTasks, task);
+            final ServiceInstanceTask task = new ServiceInstanceTask();
+            task.setLifecycle(nextLifecycle);
+            task.setStateId(instanceId);
+            task.setConsumerId(instanceState.getAgentId());
+            addNewTaskIfNotExists(newTasks, task);
         }
     }
 
@@ -638,52 +639,50 @@ public class ServiceGridOrchestrator {
 
         if (health == AgentPingHealth.UNDETERMINED) {
 
-        Iterable<Task> pendingTasks = taskReader.getPendingTasks(agentId);
-        for (final Task task : pendingTasks) {
-            Preconditions.checkState(
-                    task.getProducerId().equals(orchestratorId),
-                    "All agent tasks are assumed to be from this orchestrator");
-            if (task instanceof PingAgentTask) {
-                PingAgentTask pingAgentTask = (PingAgentTask) task;
-                Integer expectedNumberOfAgentRestartsInAgentState =
-                        pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
-                Integer expectedNumberOfMachineRestartsInAgentState =
-                        pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
-                if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
-                    Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
-                    if (agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
-                        // agent started after ping sent. Wait for next ping
+            Iterable<Task> pendingTasks = taskReader.getPendingTasks(agentId);
+            for (final Task task : pendingTasks) {
+                Preconditions.checkState(
+                        task.getProducerId().equals(orchestratorId),
+                        "All agent tasks are assumed to be from this orchestrator");
+                if (task instanceof PingAgentTask) {
+                    PingAgentTask pingAgentTask = (PingAgentTask) task;
+                    Integer expectedNumberOfAgentRestartsInAgentState =
+                            pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
+                    Integer expectedNumberOfMachineRestartsInAgentState =
+                            pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
+                    if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
+                        Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
+                        if (agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
+                            // agent started after ping sent. Wait for next ping
+                        } else {
+                            // agent not reachable because it was not started yet
+                            health = AgentPingHealth.AGENT_UNREACHABLE;
+                        }
+                    } else if (expectedNumberOfAgentRestartsInAgentState != null
+                            && agentState != null
+                            && expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentRestarts()) {
+                        Preconditions.checkState(
+                                expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentRestarts(),
+                                "Could not have sent ping to an agent that was not restarted yet");
+                        // agent restarted after ping sent. Wait for next ping
+                    } else if (expectedNumberOfMachineRestartsInAgentState != null
+                            && agentState != null
+                            && expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineRestarts()) {
+                        Preconditions.checkState(
+                                expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineRestarts(),
+                                "Could not have sent ping to a machine that was not restarted yet");
+                        // machine restarted after ping sent. Wait for next ping
                     } else {
-                        // agent not reachable because it was not started yet
-                        health = AgentPingHealth.AGENT_UNREACHABLE;
-                    }
-                } else if (expectedNumberOfAgentRestartsInAgentState != null
-                           && agentState != null
-                           && expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentRestarts()) {
-                    Preconditions.checkState(
-                            expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentRestarts(),
-                            "Could not have sent ping to an agent that was not restarted yet");
-                    // agent restarted after ping sent. Wait for next ping
-                } else if (expectedNumberOfMachineRestartsInAgentState != null
-                           && agentState != null
-                           && expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineRestarts()) {
-                    Preconditions.checkState(
-                            expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineRestarts(),
-                            "Could not have sent ping to a machine that was not restarted yet");
-                    // machine restarted after ping sent. Wait for next ping
-                } else {
-                    final long taskTimestamp = task.getProducerTimestamp();
-                    final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
-                    if (notRespondingMilliseconds > AGENT_UNREACHABLE_MILLISECONDS) {
-                        // ping should have been consumed by now
-                        health = AgentPingHealth.AGENT_UNREACHABLE;
+                        final long taskTimestamp = task.getProducerTimestamp();
+                        final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
+                        if (notRespondingMilliseconds > AGENT_UNREACHABLE_MILLISECONDS) {
+                            // ping should have been consumed by now
+                            health = AgentPingHealth.AGENT_UNREACHABLE;
+                        }
                     }
                 }
             }
         }
-
-        }
-
         return health;
     }
 
