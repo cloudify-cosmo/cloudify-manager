@@ -91,32 +91,31 @@ public class ServiceDeploymentPlan {
     @JsonIgnore
     public Iterable<URI> getInstancesByAgentId(final URI agentId) {
         Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction =
-            new Function<ServiceInstanceDeploymentPlan, URI>() {
+                new Function<ServiceInstanceDeploymentPlan, URI>() {
 
-            @Override
-            public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
-                if (instancePlan.getAgentId().equals(agentId)) {
-                    return instancePlan.getInstanceId();
-                }
-                return null;
-            }
-        };
+                    @Override
+                    public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
+                        if (instancePlan.getAgentId().equals(agentId)) {
+                            return instancePlan.getInstanceId();
+                        }
+                        return null;
+                    }
+                };
         return Iterables.unmodifiableIterable(
                 Iterables.filter(
-                Iterables.transform(instances, toInstanceIdFunction),
-                Predicates.notNull()));
+                        Iterables.transform(instances, toInstanceIdFunction),
+                        Predicates.notNull()));
     }
 
     @JsonIgnore
     public Iterable<URI> getInstanceIds() {
         Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction =
                 new Function<ServiceInstanceDeploymentPlan, URI>() {
-
-            @Override
-            public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
-                return instancePlan.getInstanceId();
-            }
-        };
+                    @Override
+                    public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
+                        return instancePlan.getInstanceId();
+                    }
+                };
         return Iterables.unmodifiableIterable(Iterables.transform(instances, toInstanceIdFunction));
     }
 
@@ -125,11 +124,11 @@ public class ServiceDeploymentPlan {
         Function<ServiceInstanceDeploymentPlan, URI> toInstanceIdFunction =
                 new Function<ServiceInstanceDeploymentPlan, URI>() {
 
-            @Override
-            public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
-                return instancePlan.getAgentId();
-            }
-        };
+                    @Override
+                    public URI apply(ServiceInstanceDeploymentPlan instancePlan) {
+                        return instancePlan.getAgentId();
+                    }
+                };
         return ImmutableSet.copyOf(Iterables.transform(instances, toInstanceIdFunction));
     }
 

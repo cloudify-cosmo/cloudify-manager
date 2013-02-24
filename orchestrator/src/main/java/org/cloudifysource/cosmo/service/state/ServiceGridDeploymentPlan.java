@@ -122,10 +122,11 @@ public class ServiceGridDeploymentPlan {
         return Iterables.unmodifiableIterable(
                 Iterables.concat(Iterables.transform(services, new Function<ServiceDeploymentPlan, Iterable<URI>>() {
 
-            @Override
-            public Iterable<URI> apply(ServiceDeploymentPlan servicePlan) {
-                return servicePlan.getInstancesByAgentId(agentId);
-            } })));
+                    @Override
+                    public Iterable<URI> apply(ServiceDeploymentPlan servicePlan) {
+                        return servicePlan.getInstancesByAgentId(agentId);
+                    }
+                })));
     }
 
     @JsonIgnore
@@ -156,11 +157,11 @@ public class ServiceGridDeploymentPlan {
         Function<ServiceDeploymentPlan, Iterable<URI>> toAgentIdsFunc =
                 new Function<ServiceDeploymentPlan, Iterable<URI>>() {
 
-            @Override
-            public Iterable<URI> apply(ServiceDeploymentPlan servicePlan) {
-                return servicePlan.getAgentIds();
-            }
-        };
+                    @Override
+                    public Iterable<URI> apply(ServiceDeploymentPlan servicePlan) {
+                        return servicePlan.getAgentIds();
+                    }
+                };
 
         return ImmutableSet.copyOf(
                 Iterables.concat(

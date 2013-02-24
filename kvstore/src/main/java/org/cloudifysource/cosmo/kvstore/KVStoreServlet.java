@@ -46,6 +46,7 @@ import com.sun.jersey.api.Responses;
 
 /**
  * A REST servlet that exposes put/get commands of the KVStore.
+ *
  * @author Itai Frenkel
  * @since 0.1
  */
@@ -57,12 +58,13 @@ public class KVStoreServlet {
 
     private static final String LIST_ALL_POSTFIX = "/_list";
 
-    @Context KVStore store;
+    @Context
+    KVStore store;
 
     @GET
     @Path("{any:.*}")
     public Response get(@Context UriInfo uriInfo, @Context Request request) {
-        final URI key =  uriInfo.getAbsolutePath();
+        final URI key = uriInfo.getAbsolutePath();
         String keyString = key.toString();
         if (keyString.endsWith(LIST_ALL_POSTFIX)) {
             return list(newURI(keyString.substring(0, keyString.length() - LIST_ALL_POSTFIX.length() + 1)), request);
@@ -86,22 +88,22 @@ public class KVStoreServlet {
         }
     }
 
-     private Response list(URI keyPrefix, Request request) {
-         synchronized (store) {
-             final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
-             return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
-         }
+    private Response list(URI keyPrefix, Request request) {
+        synchronized (store) {
+            final Iterable<URI> list = store.listKeysStartsWith(keyPrefix);
+            return Response.ok().type(MediaType.APPLICATION_JSON_TYPE).entity(toJson(list)).build();
+        }
     }
 
     private String toJson(Iterable<URI> uris) {
         return Arrays.toString(
-            Iterables.toArray(Iterables.transform(uris, new Function<URI, String>() {
+                Iterables.toArray(Iterables.transform(uris, new Function<URI, String>() {
 
-            @Override
-            public String apply(URI input) {
-                return "\"" + input + "\"";
-            }
-        }), String.class));
+                    @Override
+                    public String apply(URI input) {
+                        return "\"" + input + "\"";
+                    }
+                }), String.class));
     }
 
     private URI newURI(String uri) {
@@ -112,29 +114,29 @@ public class KVStoreServlet {
         }
     }
 
-     @PUT
-     @Path("{any:.*}")
-     public Response put(String state,
-                         @Context HttpHeaders headers,
-                         @Context UriInfo uriInfo,
-                         @Context Request request) {
+    @PUT
+    @Path("{any:.*}")
+    public Response put(String state,
+                        @Context HttpHeaders headers,
+                        @Context UriInfo uriInfo,
+                        @Context Request request) {
 
         final Integer contentLength =
                 Integer.valueOf(Iterables.getOnlyElement(headers.getRequestHeader("Content-Length")));
         if (state.length() != contentLength) {
-             final String error = "body length is " + state.length() + " instead of " + contentLength;
-             logger.warn(error);
-             return Response.status(Status.BAD_REQUEST).entity("{\"error\":\"" + error + "\"}").build();
+            final String error = "body length is " + state.length() + " instead of " + contentLength;
+            logger.warn(error);
+            return Response.status(Status.BAD_REQUEST).entity("{\"error\":\"" + error + "\"}").build();
         }
-        final URI key =  uriInfo.getAbsolutePath();
+        final URI key = uriInfo.getAbsolutePath();
         return put(state, key, request);
-     }
+    }
 
     private Response put(String state, final URI key, Request request) {
         if (key.toString().endsWith(LIST_ALL_POSTFIX)) {
             return Response.status(
                     Status.BAD_REQUEST)
-                    .entity("{\"error\":\"URI must not end with" + LIST_ALL_POSTFIX  + "\"}")
+                    .entity("{\"error\":\"URI must not end with" + LIST_ALL_POSTFIX + "\"}")
                     .build();
         }
 
@@ -145,11 +147,11 @@ public class KVStoreServlet {
                 Preconditions.checkState(r.getStatus() != Status.OK.getStatusCode());
                 return r;
             }
-             final EntityTag etag = store.put(key, state);
+            final EntityTag etag = store.put(key, state);
 
             return Response.ok()
-                   .tag(etag)
-                   .build();
+                    .tag(etag)
+                    .build();
         }
     }
 
@@ -166,7 +168,7 @@ public class KVStoreServlet {
             }
         }
         if (rb != null) {
-           return rb.build();
+            return rb.build();
         }
         return null;
     }

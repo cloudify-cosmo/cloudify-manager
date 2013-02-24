@@ -35,11 +35,11 @@ public class TaskConsumerState {
     private URI tasksHistory;
 
     public void setProperty(String key, Object value) {
-      properties.put(key, value);
+        properties.put(key, value);
     }
 
     public Map<String, Object> getProperties() {
-      return properties;
+        return properties;
     }
 
     public Object getProperty(String key) {
