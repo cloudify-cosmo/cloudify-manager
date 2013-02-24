@@ -119,7 +119,7 @@ public class AgentState extends TaskConsumerState {
 
     @JsonIgnore
     public void incrementNumberOfMachineStarts() {
-       numberOfMachineStarts++;
+        numberOfMachineStarts++;
     }
 
     @JsonIgnore
