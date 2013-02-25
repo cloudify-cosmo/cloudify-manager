@@ -610,8 +610,8 @@ public class ServiceGridOrchestrator {
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
                 } else {
-                    boolean isAllInstancesStopped = Iterables.isEmpty(agentState.getServiceInstanceIds());
-                    if (isAllInstancesStopped) {
+                    final List<URI> instanceIds = agentState.getServiceInstanceIds();
+                    if (isInstancesLifecycleEquals(instanceIds, AgentState.Progress.AGENT_STARTED)) {
                         TerminateMachineTask task = new TerminateMachineTask();
                         task.setStateId(agentId);
                         task.setConsumerId(machineProvisionerId);
@@ -632,20 +632,26 @@ public class ServiceGridOrchestrator {
     }
 
     private void terminateUnreachableMachine(List<Task> newTasks, URI agentId, AgentState agentState) {
-        boolean reachableInstance = false;
-        for (URI instanceId : agentState.getServiceInstanceIds()) {
-            if (!getServiceInstanceState(instanceId).isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
-                reachableInstance = true;
-                break;
-            }
-        }
-        if (!reachableInstance) {
+        final List<URI> instanceIds = agentState.getServiceInstanceIds();
+        if (isInstancesLifecycleEquals(instanceIds, AgentState.Progress.MACHINE_UNREACHABLE)) {
             final TerminateMachineTask task =
                     new TerminateMachineTask();
             task.setStateId(agentId);
             task.setConsumerId(machineProvisionerId);
             addNewTaskIfNotExists(newTasks, task);
         }
+    }
+
+    private boolean isInstancesLifecycleEquals(final Iterable<URI> instanceIds, final String instanceLifecycle) {
+        boolean foundNotEquals =
+            Iterables.tryFind(instanceIds, new Predicate<URI>() {
+                @Override
+                public boolean apply(URI instanceId) {
+                    return !getServiceInstanceState(instanceId).isLifecycle(instanceLifecycle);
+                }
+            }).isPresent();
+
+        return !foundNotEquals;
     }
 
     private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
