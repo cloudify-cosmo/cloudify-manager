@@ -48,7 +48,7 @@ public class MockMachineProvisioner {
             machineTerminated(agentId);
         }
 
-        agentState.setProgress(lifecycle);
+        agentState.setLifecycle(lifecycle);
         impersonatedStateModifier.put(agentState);
     }
 

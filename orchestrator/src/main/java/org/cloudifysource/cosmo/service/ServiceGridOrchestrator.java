@@ -135,7 +135,7 @@ public class ServiceGridOrchestrator {
             TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
         int numberOfMachineRestarts = 0;
         AgentState impersonatedAgentState = new AgentState();
-        impersonatedAgentState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
+        impersonatedAgentState.setLifecycle(AgentState.Progress.MACHINE_TERMINATED);
         impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
         impersonatedAgentState.setNumberOfMachineStarts(numberOfMachineRestarts);
         impersonatedAgentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
@@ -242,7 +242,7 @@ public class ServiceGridOrchestrator {
             AgentState agentState = getAgentState(agentId);
             boolean agentNotStarted =
                     (agentState == null
-                     || !agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
+                     || !agentState.getLifecycle().equals(AgentState.Progress.AGENT_STARTED));
             if (agentNotStarted
                 && state.isSyncedStateWithDeploymentBefore()
                 && pingHealth == AgentPingHealth.UNDETERMINED) {
@@ -564,6 +564,8 @@ public class ServiceGridOrchestrator {
             AgentState agentState = getAgentState(agentId);
             Preconditions.checkNotNull(agentState);
             Preconditions.checkNotNull(agentState);
+            final String expectedLifecycle = AgentState.Progress.MACHINE_STARTED;
+
             if (isAgentProgress(agentState,AgentState.Progress.AGENT_STARTED) &&
                 pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();
@@ -575,16 +577,16 @@ public class ServiceGridOrchestrator {
                     AgentState.Progress.MACHINE_TERMINATED,
                     AgentState.Progress.MACHINE_STARTED)) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();
-                task.setLifecycle(AgentState.getNextAgentLifecycle(agentState.getProgress()));
+                task.setLifecycle(agentState.getNextAgentLifecycle(expectedLifecycle));
                 task.setStateId(agentId);
                 task.setConsumerId(machineProvisionerId);
                 addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
-                terminateMachine(newTasks, agentId, agentState);
+                changeMachineLifecycle(newTasks, agentId, agentState, expectedLifecycle);
             } else if (isAgentProgress(agentState,AgentState.Progress.AGENT_STARTED)) {
                 // move along. we reached our desired state.
             } else {
-                Preconditions.checkState(false, "Unrecognized agent state " + agentState.getProgress());
+                Preconditions.checkState(false, "Unrecognized agent state " + agentState.getLifecycle());
             }
         }
 
@@ -603,20 +605,22 @@ public class ServiceGridOrchestrator {
                     AgentState.Progress.AGENT_STARTED,
                     AgentState.Progress.MACHINE_STARTED,
                     AgentState.Progress.MACHINE_UNREACHABLE)) {
-                terminateMachine(newTasks, agentId, agentState);
+                final String expectedLifecycle = AgentState.Progress.MACHINE_TERMINATED;
+                changeMachineLifecycle(newTasks, agentId, agentState, expectedLifecycle);
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
                 state.removeAgentIdToTerminate(agentId);
             } else {
-                Preconditions.checkState(false, "Unknown agent progress " + agentState.getProgress());
+                Preconditions.checkState(false, "Unknown agent progress " + agentState.getLifecycle());
             }
         }
     }
 
-    private void terminateMachine(List<Task> newTasks, URI agentId, AgentState agentState) {
+    private void changeMachineLifecycle(List<Task> newTasks, URI agentId, AgentState agentState,
+                                        String expectedLifecycle) {
         final Iterable<URI> instanceIds = agentState.getServiceInstanceIds();
-        if (isInstancesLifecycleEquals(instanceIds, agentState.getProgress())) {
+        if (isInstancesLifecycleEquals(instanceIds, agentState.getLifecycle())) {
             final MachineLifecycleTask task = new MachineLifecycleTask();
-            task.setLifecycle(AgentState.Progress.MACHINE_TERMINATED);
+            task.setLifecycle(agentState.getNextAgentLifecycle(expectedLifecycle));
             task.setStateId(agentId);
             task.setConsumerId(machineProvisionerId);
             addNewTaskIfNotExists(newTasks, task);

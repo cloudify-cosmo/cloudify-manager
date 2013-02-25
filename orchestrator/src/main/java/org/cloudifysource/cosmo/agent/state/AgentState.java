@@ -30,7 +30,7 @@ import java.util.List;
 public class AgentState extends TaskConsumerState {
 
     /**
-     * Possible values for {@link AgentState#setProgress(String)}.
+     * Possible values for {@link AgentState#setLifecycle(String)}.
      */
     public static class Progress {
         public static final String MACHINE_TERMINATED = "machine_terminated";
@@ -39,7 +39,7 @@ public class AgentState extends TaskConsumerState {
         public static final String MACHINE_UNREACHABLE = "machine_unreachable";
     }
 
-    private String progress;
+    private String lifecycle;
     private String ipAddress;
     private List<URI> serviceInstanceIds;
     private int numberOfAgentStarts;
@@ -48,12 +48,12 @@ public class AgentState extends TaskConsumerState {
 
     /**
      * Use isLifecycle(x or y or z) instead.
-     * This is to encourage using the pattern of positive progress checks such as "isLifecycle(y)"
-     * instead of negative progress checks such as (!getLifecycle().equals(x))
+     * This is to encourage using the pattern of positive lifecycle checks such as "isLifecycle(y)"
+     * instead of negative lifecycle checks such as (!getLifecycle().equals(x))
      */
     @Deprecated
-    public String getProgress() {
-        return progress;
+    public String getLifecycle() {
+        return lifecycle;
     }
 
     /**
@@ -61,15 +61,15 @@ public class AgentState extends TaskConsumerState {
      */
     public boolean isProgress(String ... expectedProgresses) {
         for (String expectedProgress : expectedProgresses) {
-            if (progress != null && progress.equals(expectedProgress)) {
+            if (lifecycle != null && lifecycle.equals(expectedProgress)) {
                 return true;
             }
         }
         return false;
     }
 
-    public void setProgress(String progress) {
-        this.progress = progress;
+    public void setLifecycle(String lifecycle) {
+        this.lifecycle = lifecycle;
     }
 
     public void setIpAddress(String ipAddress) {
@@ -142,42 +142,40 @@ public class AgentState extends TaskConsumerState {
     }
 
     /**
-     * @param lifecycle - the current lifecycle
-     * @return - the next lifecycle state or null if at the last lifecycle in the state machine.
+     * @param expectedLifecycle - the expected lifecycle
+     * @return - the next lifecycle that should bring us one step closer to expectedLifecyle
+     *           null if the current lifecycle equals the expected lifecycle.
      */
     @JsonIgnore
-    public static String getNextAgentLifecycle(String lifecycle) {
-        if (lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
-            return Progress.MACHINE_TERMINATED;
-        }
-        if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
-            return Progress.MACHINE_STARTED;
-        }
-        if (lifecycle.equals(Progress.MACHINE_STARTED)) {
-            return Progress.AGENT_STARTED;
-        }
-        if (lifecycle.equals(Progress.AGENT_STARTED)) {
+    public String getNextAgentLifecycle(String expectedLifecycle) {
+        if (expectedLifecycle.equals(Progress.MACHINE_STARTED)) {
+            if (lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
+                return Progress.MACHINE_TERMINATED;
+            }
+            if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
+                return Progress.MACHINE_STARTED;
+            }
+            if (lifecycle.equals(Progress.MACHINE_STARTED)) {
+                return Progress.AGENT_STARTED;
+            }
+            if (lifecycle.equals(Progress.AGENT_STARTED)) {
+                return null;
+            }
+            Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
             return null;
         }
-        Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
+        if (expectedLifecycle.equals(Progress.MACHINE_TERMINATED)) {
+            if (lifecycle.equals(Progress.MACHINE_STARTED) ||
+                lifecycle.equals(Progress.AGENT_STARTED) ||
+                lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
+                return Progress.MACHINE_TERMINATED;
+            }
+            if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
+                return null;
+            }
+            Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
+        }
+        Preconditions.checkArgument(false, "expected machine lifecycle %s not supported", expectedLifecycle);
         return null; //never reached
     }
-
-    /**
-     * @param lifecycle - the current instance lifecycle
-     * @return - the next instance lifecycle or null if at the first lifecycle.
-     */
-    @JsonIgnore
-    public static String getPrevAgentLifecycle(String lifecycle) {
-        if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
-            return null;
-        }
-        if (lifecycle.equals(Progress.MACHINE_STARTED) ||
-            lifecycle.equals(Progress.AGENT_STARTED)) {
-            return Progress.MACHINE_TERMINATED;
-        }
-        Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
-        return null; //never reached
-    }
-
 }
