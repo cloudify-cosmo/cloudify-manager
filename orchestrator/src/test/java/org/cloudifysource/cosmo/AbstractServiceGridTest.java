@@ -66,13 +66,13 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
     @BeforeMethod
     public void beforeMethod(Method method) {
-
+        containers.clear();
         timeProvider.reset(System.currentTimeMillis());
         management.start();
         logger.info("Before " + method.getName());
     }
 
-    @AfterMethod(alwaysRun=true)
+    @AfterMethod(alwaysRun=false)
     public void afterMethod(Method method) {
         logger.info("After " + method.getName());
         try {

@@ -23,8 +23,9 @@ import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
+import org.cloudifysource.cosmo.agent.tasks.TerminateUnreachableMachineTask;
 import org.cloudifysource.cosmo.agent.tasks.TerminateMachineTask;
+import org.cloudifysource.cosmo.agent.tasks.UnreachableMachineTask;
 
 import java.net.URI;
 
@@ -53,9 +54,20 @@ public class MockMachineProvisioner {
     }
 
     @ImpersonatingTaskConsumer
-    public void terminateMachineOfNonResponsiveAgent(TerminateMachineOfNonResponsiveAgentTask task, TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
+    public void unreachableMachine(UnreachableMachineTask task, TaskConsumerStateModifier<AgentState>
+            impersonatedStateModifier) {
         final AgentState impersonatedState = impersonatedStateModifier.get();
         Preconditions.checkState(impersonatedState.isProgress(AgentState.Progress.AGENT_STARTED));
+        impersonatedState.setProgress(AgentState.Progress.MACHINE_UNREACHABLE);
+        impersonatedStateModifier.put(impersonatedState);
+    }
+
+    @ImpersonatingTaskConsumer
+    public void terminateMachineOfNonResponsiveAgent(TerminateUnreachableMachineTask task, TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
+        final AgentState impersonatedState = impersonatedStateModifier.get();
+        Preconditions.checkState(
+                impersonatedState.isProgress(AgentState.Progress.MACHINE_UNREACHABLE),
+                "Unexpected state " + impersonatedState.getProgress());
         final URI agentId = task.getStateId();
         taskConsumerRegistrar.unregisterTaskConsumer(agentId);
         impersonatedState.setProgress(AgentState.Progress.MACHINE_TERMINATED);

@@ -45,20 +45,16 @@ public class MockAgent {
 
         ServiceInstanceState instanceState = impersonatedStateModifier.get();
         instanceState.setLifecycle(task.getLifecycle());
-        instanceState.setUnreachable(false);
         impersonatedStateModifier.put(instanceState);
         instancesState.put(task.getStateId(), instanceState);
-
     }
 
     @TaskConsumer
     public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) {
-
         final URI instanceId = task.getInstanceId();
         this.state.removeServiceInstanceId(instanceId);
         this.instancesState.remove(instanceId);
     }
-
 
     @ImpersonatingTaskConsumer
     public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
@@ -74,12 +70,10 @@ public class MockAgent {
             instanceState.setAgentId(agentId);
             instanceState.setServiceId(serviceId);
             instanceState.setLifecycle(task.getInitialLifecycle());
-            instanceState.setUnreachable(false);
         }
         else {
             Preconditions.checkState(instanceState.getAgentId().equals(agentId));
             Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
-            instanceState.setUnreachable(false);
         }
         impersonatedStateModifier.put(instanceState);
     }

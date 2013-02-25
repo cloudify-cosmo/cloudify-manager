@@ -1,5 +1,7 @@
 package org.cloudifysource.cosmo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
@@ -16,6 +18,7 @@ import org.cloudifysource.cosmo.service.state.ServiceState;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.state.EtagState;
 import org.cloudifysource.cosmo.streams.StreamUtils;
+import org.junit.rules.ExpectedException;
 import org.testng.Assert;
 
 import java.net.URI;
@@ -61,17 +64,27 @@ public class AssertServiceState {
         final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
         final ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
         TaskConsumerHistory instanceTasksHistory = getTasksHistory(management, instanceId);
-        Assert.assertEquals(Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(), new Predicate<Task>() {
+        Assert.assertEquals(
+                Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(), new Predicate<Task>() {
 
-            @Override
-            public boolean apply(Task task) {
-                if (task instanceof ServiceInstanceTask) {
-                    return ((ServiceInstanceTask)task).getLifecycle().equals("service_started");
-                }
-                return false;
-            }
-        }))
-                ,numberOfMachineStarts);
+                    @Override
+                    public boolean apply(Task task) {
+                        if (task instanceof ServiceInstanceTask) {
+                            return ((ServiceInstanceTask) task).getLifecycle().equals("service_started");
+                        }
+                        return false;
+                    }
+                }))
+                , numberOfMachineStarts,
+                "History: " + Iterables.toString(
+                        Iterables.transform(instanceTasksHistory.getTasksHistory(), new Function<Task, String>() {
+                            final ObjectMapper mapper = StreamUtils.newObjectMapper();
+
+                            @Override
+                            public String apply(Task task) {
+                                return StreamUtils.toJson(mapper, task);
+                            }
+                        })));
 
         final URI agentId = instanceState.getAgentId();
         Assert.assertEquals(instanceState.getServiceId(), serviceId);
@@ -209,10 +222,10 @@ public class AssertServiceState {
         for (URI instanceId: getServiceInstanceIds(management, "tomcat")) {
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
             if (instanceUnreachable) {
-                Assert.assertTrue(instanceState.isUnreachable());
+                Assert.assertTrue(instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE));
             }
             else {
-                Assert.assertTrue(instanceState.isLifecycle("service_cleaned"));
+                Assert.assertEquals(instanceState.getLifecycle(), AgentState.Progress.AGENT_STARTED);
             }
             URI agentId = instanceState.getAgentId();
             AgentState agentState = management.getAgentState(agentId);
@@ -233,7 +246,6 @@ public class AssertServiceState {
         Assert.assertTrue(management.getServiceInstanceState(management.getServiceInstanceId("tomcat", 0))
                 .isLifecycle("service_started"));
         Assert.assertTrue(management.getServiceInstanceState(management.getServiceInstanceId("tomcat", 1))
-                .isLifecycle("service_cleaned"));
+                .isLifecycle(AgentState.Progress.AGENT_STARTED));
     }
-
 }

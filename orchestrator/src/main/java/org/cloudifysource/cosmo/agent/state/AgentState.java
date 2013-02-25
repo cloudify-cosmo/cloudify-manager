@@ -36,6 +36,7 @@ public class AgentState extends TaskConsumerState {
         public static final String MACHINE_TERMINATED = "machine_terminated";
         public static final String MACHINE_STARTED = "machine_started";
         public static final String AGENT_STARTED = "agent_started";
+        public static final String MACHINE_UNREACHABLE = "machine_unreachable";
     }
 
     private String progress;

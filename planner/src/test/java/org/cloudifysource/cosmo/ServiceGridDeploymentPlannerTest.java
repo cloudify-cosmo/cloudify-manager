@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.mock.MockPlannerManagement;
 import org.cloudifysource.cosmo.service.ServiceUtils;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
@@ -187,6 +188,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
         serviceConfig.setServiceId(getManagement().getServiceId(name));
         serviceConfig.setInstanceLifecycleStateMachine(Lists.newArrayList(
+                AgentState.Progress.AGENT_STARTED,
                 "service_cleaned",
                 "service_stopped",
                 "service_started"

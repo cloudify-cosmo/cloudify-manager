@@ -24,9 +24,9 @@ import org.cloudifysource.cosmo.agent.state.AgentState;
  * @author Itai Frenkel
  * @since 0.1
  */
-public class TerminateMachineOfNonResponsiveAgentTask extends Task {
+public class TerminateUnreachableMachineTask extends Task {
 
-    public TerminateMachineOfNonResponsiveAgentTask() {
+    public TerminateUnreachableMachineTask() {
         super(AgentState.class);
     }
 

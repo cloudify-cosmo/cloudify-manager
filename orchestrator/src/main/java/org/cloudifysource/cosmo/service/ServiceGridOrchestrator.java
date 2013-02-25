@@ -34,8 +34,9 @@ import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.TerminateMachineOfNonResponsiveAgentTask;
+import org.cloudifysource.cosmo.agent.tasks.TerminateUnreachableMachineTask;
 import org.cloudifysource.cosmo.agent.tasks.TerminateMachineTask;
+import org.cloudifysource.cosmo.agent.tasks.UnreachableMachineTask;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
@@ -223,8 +224,8 @@ public class ServiceGridOrchestrator {
         ServiceInstanceState serviceState = impersonatedStateModifier.get();
         Preconditions.checkState(
                 getAgentState(serviceState.getAgentId())
-                .isProgress(AgentState.Progress.MACHINE_TERMINATED));
-        serviceState.setUnreachable(true);
+                .isProgress(AgentState.Progress.MACHINE_UNREACHABLE));
+        serviceState.setLifecycle(AgentState.Progress.MACHINE_UNREACHABLE);
         impersonatedStateModifier.put(serviceState);
     }
 
@@ -258,7 +259,7 @@ public class ServiceGridOrchestrator {
                 for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
                     ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
                     if (instanceState == null
-                        || instanceState.isUnreachable()) {
+                        || instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
 
                         syncComplete = false;
                         final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId);
@@ -432,13 +433,9 @@ public class ServiceGridOrchestrator {
                     task.setConsumerId(instanceState.getAgentId());
                     addNewTaskIfNotExists(newTasks, task);
                 }
-            } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
+            } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
 
-                if (!instanceState.isUnreachable()) {
-                    //TODO: Replace this with simple instance state change to terminated?
-                    //TODO: Remove this when we can monitor instance is not running after machine restarts
-                    //in the meanwhile, we must mark the service instance as unreachable so it would be started when
-                    //machine restarts.
+                if (!instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
                     final ServiceInstanceUnreachableTask unreachableInstanceTask = new ServiceInstanceUnreachableTask();
                     unreachableInstanceTask.setConsumerId(orchestratorId);
                     unreachableInstanceTask.setStateId(instanceId);
@@ -464,8 +461,8 @@ public class ServiceGridOrchestrator {
                 continue;
             }
 
-            if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
-                if (!instanceState.isUnreachable()) {
+            if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
+                if (!instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
                     final ServiceInstanceUnreachableTask unreachableInstanceTask = new ServiceInstanceUnreachableTask();
                     unreachableInstanceTask.setConsumerId(orchestratorId);
                     unreachableInstanceTask.setStateId(instanceId);
@@ -584,8 +581,25 @@ public class ServiceGridOrchestrator {
                 addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
                 if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-                    final TerminateMachineOfNonResponsiveAgentTask task =
-                            new TerminateMachineOfNonResponsiveAgentTask();
+                    final UnreachableMachineTask task =
+                            new UnreachableMachineTask();
+                    task.setStateId(agentId);
+                    task.setConsumerId(machineProvisionerId);
+                    addNewTaskIfNotExists(newTasks, task);
+                }
+            } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
+
+                boolean reachableInstance = false;
+                for (URI instanceId : agentState.getServiceInstanceIds()) {
+                    if (!getServiceInstanceState(instanceId).isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
+                        reachableInstance = true;
+                        break;
+                    }
+                }
+
+                if (!reachableInstance) {
+                    final TerminateUnreachableMachineTask task =
+                            new TerminateUnreachableMachineTask();
                     task.setStateId(agentId);
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
@@ -606,8 +620,8 @@ public class ServiceGridOrchestrator {
                     AgentState.Progress.MACHINE_STARTED)) {
                 final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
                 if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-                    final TerminateMachineOfNonResponsiveAgentTask task =
-                            new TerminateMachineOfNonResponsiveAgentTask();
+                    final UnreachableMachineTask task =
+                            new UnreachableMachineTask();
                     task.setStateId(agentId);
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
@@ -620,6 +634,14 @@ public class ServiceGridOrchestrator {
                         addNewTaskIfNotExists(newTasks, task);
                     }
                 }
+            } else if (isAgentProgress(agentState,
+                AgentState.Progress.MACHINE_UNREACHABLE)) {
+
+                final TerminateUnreachableMachineTask task =
+                        new TerminateUnreachableMachineTask();
+                task.setStateId(agentId);
+                task.setConsumerId(machineProvisionerId);
+                addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
                 if (state.getAgentIdsToTerminate().contains(agentId)) {
                     state.removeAgentIdToTerminate(agentId);

@@ -15,7 +15,6 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.cloudifysource.cosmo.TaskConsumerState;
 
 import java.net.URI;
@@ -31,7 +30,6 @@ public class ServiceInstanceState extends TaskConsumerState {
     private String lifecycle;
     private URI agentId;
     private URI serviceId;
-    private boolean unreachable;
 
     public void setLifecycle(String lifecycle) {
         this.lifecycle = lifecycle;
@@ -54,11 +52,8 @@ public class ServiceInstanceState extends TaskConsumerState {
     }
 
     /**
-     * Use isLifecycle(x or y or z) instead.
-     * This is to encourage using the pattern of positive lifecycle checks such as "isLifecycle(y)"
-     * instead of negative lifecycle checks such as (!getLifecycle().equals(x))
+     * @return instance lifecycle state.
      */
-    @Deprecated
     public String getLifecycle() {
         return lifecycle;
     }
@@ -73,18 +68,5 @@ public class ServiceInstanceState extends TaskConsumerState {
             }
         }
         return false;
-    }
-
-    public void setUnreachable(boolean unreachable) {
-        this.unreachable = unreachable;
-    }
-
-    public boolean isUnreachable() {
-        return this.unreachable;
-    }
-
-    @JsonIgnore
-    public boolean isLifecycleNull() {
-        return lifecycle == null;
     }
 }

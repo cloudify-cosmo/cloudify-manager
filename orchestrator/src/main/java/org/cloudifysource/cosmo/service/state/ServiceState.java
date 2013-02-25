@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.TaskConsumerState;
+import org.cloudifysource.cosmo.agent.state.AgentState;
 
 import java.net.URI;
 import java.util.List;
@@ -60,6 +61,9 @@ public class ServiceState extends TaskConsumerState {
      */
     @JsonIgnore
     public String getNextInstanceLifecycle(String lifecycle) {
+        if (lifecycle.equals(AgentState.Progress.MACHINE_UNREACHABLE)) {
+            return getInitialLifecycle();
+        }
         int index = toInstanceLifecycleIndex(lifecycle);
         if (index + 1 < getServiceConfig().getInstanceLifecycleStateMachine().size()) {
             return getServiceConfig().getInstanceLifecycleStateMachine().get(index + 1);
@@ -83,7 +87,7 @@ public class ServiceState extends TaskConsumerState {
     private int toInstanceLifecycleIndex(String lifecycle) {
         Preconditions.checkNotNull(lifecycle);
         int index = this.getServiceConfig().getInstanceLifecycleStateMachine().indexOf(lifecycle);
-        Preconditions.checkArgument(index != -1);
+        Preconditions.checkArgument(index != -1, "Unknown lifecycle " + lifecycle);
         return index;
     }
 
