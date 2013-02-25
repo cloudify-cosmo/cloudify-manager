@@ -132,4 +132,52 @@ public class AgentState extends TaskConsumerState {
     public void resetNumberOfAgentStarts() {
         numberOfAgentStarts = 0;
     }
+
+    /**
+     * @return the initial state of the lifecycle state machine.
+     */
+    @JsonIgnore
+    public static String getInitialAgentLifecycle() {
+        return Progress.MACHINE_TERMINATED;
+    }
+
+    /**
+     * @param lifecycle - the current lifecycle
+     * @return - the next lifecycle state or null if at the last lifecycle in the state machine.
+     */
+    @JsonIgnore
+    public static String getNextAgentLifecycle(String lifecycle) {
+        if (lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
+            return Progress.MACHINE_TERMINATED;
+        }
+        if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
+            return Progress.MACHINE_STARTED;
+        }
+        if (lifecycle.equals(Progress.MACHINE_STARTED)) {
+            return Progress.AGENT_STARTED;
+        }
+        if (lifecycle.equals(Progress.AGENT_STARTED)) {
+            return null;
+        }
+        Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
+        return null; //never reached
+    }
+
+    /**
+     * @param lifecycle - the current instance lifecycle
+     * @return - the next instance lifecycle or null if at the first lifecycle.
+     */
+    @JsonIgnore
+    public static String getPrevAgentLifecycle(String lifecycle) {
+        if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
+            return null;
+        }
+        if (lifecycle.equals(Progress.MACHINE_STARTED) ||
+            lifecycle.equals(Progress.AGENT_STARTED)) {
+            return Progress.MACHINE_TERMINATED;
+        }
+        Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
+        return null; //never reached
+    }
+
 }
