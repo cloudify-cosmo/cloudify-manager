@@ -316,7 +316,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     private void execute() {
-        execute(getManagement().getOrchestratorId());
+        execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
     }
 
     private void killOnlyMachine() {
