@@ -587,7 +587,7 @@ public class ServiceGridOrchestrator {
                     addNewTaskIfNotExists(newTasks, task);
                 }
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
-                terminateUnreachableMachine(newTasks, agentId, agentState);
+                terminateMachine(newTasks, agentId, agentState);
             } else if (isAgentProgress(agentState,
                     AgentState.Progress.MACHINE_TERMINATED)) {
                 // move along. nothing to see here.
@@ -610,17 +610,11 @@ public class ServiceGridOrchestrator {
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
                 } else {
-                    final List<URI> instanceIds = agentState.getServiceInstanceIds();
-                    if (isInstancesLifecycleEquals(instanceIds, AgentState.Progress.AGENT_STARTED)) {
-                        TerminateMachineTask task = new TerminateMachineTask();
-                        task.setStateId(agentId);
-                        task.setConsumerId(machineProvisionerId);
-                        addNewTaskIfNotExists(newTasks, task);
-                    }
+                    terminateMachine(newTasks, agentId, agentState);
                 }
             } else if (isAgentProgress(agentState,
                 AgentState.Progress.MACHINE_UNREACHABLE)) {
-                terminateUnreachableMachine(newTasks, agentId, agentState);
+                terminateMachine(newTasks, agentId, agentState);
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
                 if (state.getAgentIdsToTerminate().contains(agentId)) {
                     state.removeAgentIdToTerminate(agentId);
@@ -631,9 +625,9 @@ public class ServiceGridOrchestrator {
         }
     }
 
-    private void terminateUnreachableMachine(List<Task> newTasks, URI agentId, AgentState agentState) {
+    private void terminateMachine(List<Task> newTasks, URI agentId, AgentState agentState) {
         final List<URI> instanceIds = agentState.getServiceInstanceIds();
-        if (isInstancesLifecycleEquals(instanceIds, AgentState.Progress.MACHINE_UNREACHABLE)) {
+        if (isInstancesLifecycleEquals(instanceIds, agentState.getProgress())) {
             final TerminateMachineTask task =
                     new TerminateMachineTask();
             task.setStateId(agentId);
