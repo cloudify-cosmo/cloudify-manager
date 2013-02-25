@@ -587,21 +587,7 @@ public class ServiceGridOrchestrator {
                     addNewTaskIfNotExists(newTasks, task);
                 }
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
-
-                boolean reachableInstance = false;
-                for (URI instanceId : agentState.getServiceInstanceIds()) {
-                    if (!getServiceInstanceState(instanceId).isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
-                        reachableInstance = true;
-                        break;
-                    }
-                }
-                if (!reachableInstance) {
-                    final TerminateMachineTask task =
-                            new TerminateMachineTask();
-                    task.setStateId(agentId);
-                    task.setConsumerId(machineProvisionerId);
-                    addNewTaskIfNotExists(newTasks, task);
-                }
+                terminateUnreachableMachine(newTasks, agentId, agentState);
             } else if (isAgentProgress(agentState,
                     AgentState.Progress.MACHINE_TERMINATED)) {
                 // move along. nothing to see here.
@@ -634,12 +620,7 @@ public class ServiceGridOrchestrator {
                 }
             } else if (isAgentProgress(agentState,
                 AgentState.Progress.MACHINE_UNREACHABLE)) {
-
-                final TerminateMachineTask task =
-                        new TerminateMachineTask();
-                task.setStateId(agentId);
-                task.setConsumerId(machineProvisionerId);
-                addNewTaskIfNotExists(newTasks, task);
+                terminateUnreachableMachine(newTasks, agentId, agentState);
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
                 if (state.getAgentIdsToTerminate().contains(agentId)) {
                     state.removeAgentIdToTerminate(agentId);
@@ -647,6 +628,23 @@ public class ServiceGridOrchestrator {
             } else {
                 Preconditions.checkState(false, "Unknown agent progress " + agentState.getProgress());
             }
+        }
+    }
+
+    private void terminateUnreachableMachine(List<Task> newTasks, URI agentId, AgentState agentState) {
+        boolean reachableInstance = false;
+        for (URI instanceId : agentState.getServiceInstanceIds()) {
+            if (!getServiceInstanceState(instanceId).isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
+                reachableInstance = true;
+                break;
+            }
+        }
+        if (!reachableInstance) {
+            final TerminateMachineTask task =
+                    new TerminateMachineTask();
+            task.setStateId(agentId);
+            task.setConsumerId(machineProvisionerId);
+            addNewTaskIfNotExists(newTasks, task);
         }
     }
 
