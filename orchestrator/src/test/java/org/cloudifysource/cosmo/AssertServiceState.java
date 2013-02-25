@@ -225,7 +225,7 @@ public class AssertServiceState {
                 Assert.assertTrue(instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE));
             }
             else {
-                Assert.assertEquals(instanceState.getLifecycle(), AgentState.Progress.AGENT_STARTED);
+                Assert.assertEquals(instanceState.getLifecycle(), "service_cleaned");
             }
             URI agentId = instanceState.getAgentId();
             AgentState agentState = management.getAgentState(agentId);
@@ -246,6 +246,6 @@ public class AssertServiceState {
         Assert.assertTrue(management.getServiceInstanceState(management.getServiceInstanceId("tomcat", 0))
                 .isLifecycle("service_started"));
         Assert.assertTrue(management.getServiceInstanceState(management.getServiceInstanceId("tomcat", 1))
-                .isLifecycle(AgentState.Progress.AGENT_STARTED));
+                .isLifecycle("service_cleaned"));
     }
 }

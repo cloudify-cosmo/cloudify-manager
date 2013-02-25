@@ -61,7 +61,8 @@ public class ServiceState extends TaskConsumerState {
      */
     @JsonIgnore
     public String getNextInstanceLifecycle(String lifecycle) {
-        if (lifecycle.equals(AgentState.Progress.MACHINE_UNREACHABLE)) {
+        if (lifecycle.equals(AgentState.Progress.MACHINE_UNREACHABLE) ||
+            lifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
             return getInitialLifecycle();
         }
         int index = toInstanceLifecycleIndex(lifecycle);

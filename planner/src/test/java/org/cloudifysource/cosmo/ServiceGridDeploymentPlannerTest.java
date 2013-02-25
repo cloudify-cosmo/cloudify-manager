@@ -188,7 +188,6 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
         serviceConfig.setServiceId(getManagement().getServiceId(name));
         serviceConfig.setInstanceLifecycleStateMachine(Lists.newArrayList(
-                AgentState.Progress.AGENT_STARTED,
                 "service_cleaned",
                 "service_stopped",
                 "service_started"
