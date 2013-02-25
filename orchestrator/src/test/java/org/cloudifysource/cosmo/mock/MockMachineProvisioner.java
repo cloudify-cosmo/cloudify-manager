@@ -15,16 +15,12 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.mock;
 
-import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumerState;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
-import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.TerminateMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.UnreachableMachineTask;
+import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 
 import java.net.URI;
 
@@ -38,63 +34,36 @@ public class MockMachineProvisioner {
     }
 
     @ImpersonatingTaskConsumer
-    public void startMachine(StartMachineTask task,
-            TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
+    public void machineLifecycle(MachineLifecycleTask task,
+                                 TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
 
-        //Simulate starting machine
-        final AgentState impersonatedState = impersonatedStateModifier.get();
-        Preconditions.checkState(impersonatedState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
-        //Immediately machine start
+        final AgentState agentState = impersonatedStateModifier.get();
+        final String lifecycle = task.getLifecycle();
+        final URI agentId = task.getStateId();
+        if (lifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
+            machineReachable(agentState, agentId);
+        } else if (lifecycle.equals(AgentState.Progress.MACHINE_STARTED)) {
+            machineStarted(agentState);
+        } else if (lifecycle.equals(AgentState.Progress.MACHINE_TERMINATED)) {
+            machineTerminated(agentId);
+        }
 
-        impersonatedState.setProgress(AgentState.Progress.MACHINE_STARTED);
+        agentState.setProgress(lifecycle);
+        impersonatedStateModifier.put(agentState);
+    }
+
+    private void machineTerminated(URI agentId) {
+        taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+    }
+
+    private void machineStarted(AgentState impersonatedState) {
         impersonatedState.incrementNumberOfMachineStarts();
         impersonatedState.resetNumberOfAgentStarts();
-        impersonatedStateModifier.put(impersonatedState);
     }
 
-    @ImpersonatingTaskConsumer
-    public void unreachableMachine(UnreachableMachineTask task, TaskConsumerStateModifier<AgentState>
-            impersonatedStateModifier) {
-        final AgentState impersonatedState = impersonatedStateModifier.get();
-        Preconditions.checkState(impersonatedState.isProgress(AgentState.Progress.AGENT_STARTED));
-        impersonatedState.setProgress(AgentState.Progress.MACHINE_UNREACHABLE);
-        impersonatedStateModifier.put(impersonatedState);
-    }
-
-    @ImpersonatingTaskConsumer
-    public void terminateMachine(TerminateMachineTask task, TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
-        final AgentState agentState = impersonatedStateModifier.get();
-        Preconditions.checkState(
-                agentState.isProgress(
-                        AgentState.Progress.MACHINE_UNREACHABLE,
-                        AgentState.Progress.AGENT_STARTED,
-                        AgentState.Progress.MACHINE_STARTED));
-
-        // code that makes sure the agent is no longer running and
-        // cannot change its own state comes here
-        final URI agentId = task.getStateId();
-        taskConsumerRegistrar.unregisterTaskConsumer(agentId);
-
-        //actual code that terminates machine comes here
-
-        agentState.setProgress(AgentState.Progress.MACHINE_TERMINATED);
-        impersonatedStateModifier.put(agentState);
-
-    }
-
-    @ImpersonatingTaskConsumer
-    public void startAgent(StartAgentTask task,
-            TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
-
-        final AgentState agentState = impersonatedStateModifier.get();
-        Preconditions.checkNotNull(agentState);
-        Preconditions.checkState(agentState.isProgress(AgentState.Progress.MACHINE_STARTED));
-        final URI agentId = task.getStateId();
-        Preconditions.checkState(agentId.toString().endsWith("/"));
-        agentState.setProgress(AgentState.Progress.AGENT_STARTED);
-        agentState.incrementNumberOfAgentStarts();
-        taskConsumerRegistrar.registerTaskConsumer(new MockAgent(agentState), agentId);
-        impersonatedStateModifier.put(agentState);
+    private void machineReachable(AgentState impersonatedState, URI agentId) {
+        impersonatedState.incrementNumberOfAgentStarts();
+        taskConsumerRegistrar.registerTaskConsumer(new MockAgent(impersonatedState), agentId);
     }
 
     @TaskConsumerStateHolder

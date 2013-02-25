@@ -7,8 +7,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.state.AgentState;
-import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
+import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.ServiceUtils;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
@@ -18,7 +17,6 @@ import org.cloudifysource.cosmo.service.state.ServiceState;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.state.EtagState;
 import org.cloudifysource.cosmo.streams.StreamUtils;
-import org.junit.rules.ExpectedException;
 import org.testng.Assert;
 
 import java.net.URI;
@@ -97,14 +95,31 @@ public class AssertServiceState {
         Assert.assertEquals(agentState.getNumberOfMachineStarts(), numberOfMachineStarts);
 
         TaskConsumerHistory agentTasksHistory = getTasksHistory(management, agentId);
-        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartMachineTask.class)),numberOfMachineStarts);
-        Assert.assertEquals(Iterables.size(Iterables.filter(agentTasksHistory.getTasksHistory(),StartAgentTask.class)),numberOfMachineStarts);
+        Assert.assertEquals(
+                countMachineLifecycleTasks(agentTasksHistory, AgentState.Progress.MACHINE_STARTED),
+                numberOfMachineStarts);
+        Assert.assertEquals(
+                countMachineLifecycleTasks(agentTasksHistory, AgentState.Progress.AGENT_STARTED),
+                numberOfMachineStarts);
 
         final ServiceGridDeploymentPlan deploymentPlan = management.getDeploymentPlan();
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId(serviceId)), instanceId);
         final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId).getServiceConfig();
         Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
+    }
+
+    private static int countMachineLifecycleTasks(TaskConsumerHistory instanceTasksHistory, final String lifecycle) {
+        return Iterables.size(Iterables.filter(instanceTasksHistory.getTasksHistory(), new Predicate<Task>() {
+
+            @Override
+            public boolean apply(Task task) {
+                if (task instanceof MachineLifecycleTask) {
+                    return ((MachineLifecycleTask) task).getLifecycle().equals(lifecycle);
+                }
+                return false;
+            }
+        }));
     }
 
     private static TaskConsumerHistory getTasksHistory(MockManagement management, final URI stateId) {

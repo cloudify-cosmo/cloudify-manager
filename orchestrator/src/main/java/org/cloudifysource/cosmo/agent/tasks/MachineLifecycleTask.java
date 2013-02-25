@@ -19,13 +19,23 @@ import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 
 /**
- * Task to terminate a cloud machine.
+ * Task to progress the machine lifecycle (start/stop/etc...)
  * @author Itai Frenkel
  * @since 0.1
  */
-public class TerminateMachineTask  extends Task {
+public class MachineLifecycleTask extends Task {
 
-    public TerminateMachineTask() {
+    private String lifecycle;
+
+    public MachineLifecycleTask() {
         super(AgentState.class);
+    }
+
+    public String getLifecycle() {
+        return lifecycle;
+    }
+
+    public void setLifecycle(String lifecycle) {
+        this.lifecycle = lifecycle;
     }
 }

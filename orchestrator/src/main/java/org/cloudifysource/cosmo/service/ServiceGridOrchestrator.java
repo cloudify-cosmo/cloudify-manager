@@ -30,12 +30,9 @@ import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.TaskProducer;
 import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.agent.state.AgentState;
+import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
-import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.TerminateMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.UnreachableMachineTask;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
@@ -568,20 +565,21 @@ public class ServiceGridOrchestrator {
             Preconditions.checkNotNull(agentState);
             Preconditions.checkNotNull(agentState);
             if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
-                final StartMachineTask task = new StartMachineTask();
+                final MachineLifecycleTask task = new MachineLifecycleTask();
+                task.setLifecycle(AgentState.Progress.MACHINE_STARTED);
                 task.setStateId(agentId);
                 task.setConsumerId(machineProvisionerId);
                 addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_STARTED)) {
-                final StartAgentTask task = new StartAgentTask();
+                final MachineLifecycleTask task = new MachineLifecycleTask();
+                task.setLifecycle(AgentState.Progress.AGENT_STARTED);
                 task.setStateId(agentId);
                 task.setConsumerId(machineProvisionerId);
-                task.setIpAddress(agentState.getIpAddress());
                 addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
                 if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-                    final UnreachableMachineTask task =
-                            new UnreachableMachineTask();
+                    final MachineLifecycleTask task = new MachineLifecycleTask();
+                    task.setLifecycle(AgentState.Progress.MACHINE_UNREACHABLE);
                     task.setStateId(agentId);
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
@@ -604,8 +602,8 @@ public class ServiceGridOrchestrator {
                     AgentState.Progress.MACHINE_STARTED)) {
                 final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
                 if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-                    final UnreachableMachineTask task =
-                            new UnreachableMachineTask();
+                    final MachineLifecycleTask task = new MachineLifecycleTask();
+                    task.setLifecycle(AgentState.Progress.MACHINE_UNREACHABLE);
                     task.setStateId(agentId);
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
@@ -628,8 +626,8 @@ public class ServiceGridOrchestrator {
     private void terminateMachine(List<Task> newTasks, URI agentId, AgentState agentState) {
         final List<URI> instanceIds = agentState.getServiceInstanceIds();
         if (isInstancesLifecycleEquals(instanceIds, agentState.getProgress())) {
-            final TerminateMachineTask task =
-                    new TerminateMachineTask();
+            final MachineLifecycleTask task = new MachineLifecycleTask();
+            task.setLifecycle(AgentState.Progress.MACHINE_TERMINATED);
             task.setStateId(agentId);
             task.setConsumerId(machineProvisionerId);
             addNewTaskIfNotExists(newTasks, task);
