@@ -19,7 +19,7 @@ import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 
 /**
- * Task to progress the machine lifecycle (start/stop/etc...)
+ * Task to progress the machine lifecycle (start/stop/etc...).
  * @author Itai Frenkel
  * @since 0.1
  */
