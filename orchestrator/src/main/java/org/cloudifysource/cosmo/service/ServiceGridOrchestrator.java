@@ -34,7 +34,6 @@ import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.StartMachineTask;
-import org.cloudifysource.cosmo.agent.tasks.TerminateUnreachableMachineTask;
 import org.cloudifysource.cosmo.agent.tasks.TerminateMachineTask;
 import org.cloudifysource.cosmo.agent.tasks.UnreachableMachineTask;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
@@ -596,10 +595,9 @@ public class ServiceGridOrchestrator {
                         break;
                     }
                 }
-
                 if (!reachableInstance) {
-                    final TerminateUnreachableMachineTask task =
-                            new TerminateUnreachableMachineTask();
+                    final TerminateMachineTask task =
+                            new TerminateMachineTask();
                     task.setStateId(agentId);
                     task.setConsumerId(machineProvisionerId);
                     addNewTaskIfNotExists(newTasks, task);
@@ -637,8 +635,8 @@ public class ServiceGridOrchestrator {
             } else if (isAgentProgress(agentState,
                 AgentState.Progress.MACHINE_UNREACHABLE)) {
 
-                final TerminateUnreachableMachineTask task =
-                        new TerminateUnreachableMachineTask();
+                final TerminateMachineTask task =
+                        new TerminateMachineTask();
                 task.setStateId(agentId);
                 task.setConsumerId(machineProvisionerId);
                 addNewTaskIfNotExists(newTasks, task);
