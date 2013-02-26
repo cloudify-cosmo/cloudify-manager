@@ -22,6 +22,7 @@ import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
+import org.cloudifysource.cosmo.service.state.ServiceInstanceDeploymentPlan;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
 import org.testng.Assert;
@@ -303,9 +304,11 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
         serviceDeploymentPlan.setServiceConfig(serviceConfig);
         for (int i = 0 ; i < numberOfInstances ; i++) {
-            final URI agentId = getManagement().getAgentId(i + offset);
-            final URI instanceId = getManagement().getServiceInstanceId(name, i + offset);
-            serviceDeploymentPlan.addInstance(instanceId, agentId);
+            final ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
+            instancePlan.setAgentId(getManagement().getAgentId(i + offset));
+            instancePlan.setInstanceId(getManagement().getServiceInstanceId(name, i + offset));
+            instancePlan.setDesiredLifecycle("service_started");
+            serviceDeploymentPlan.addInstance(instancePlan);
         }
         return serviceDeploymentPlan;
     }

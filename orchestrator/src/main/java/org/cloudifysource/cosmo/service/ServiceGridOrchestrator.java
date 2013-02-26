@@ -133,7 +133,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void planAgent(PlanAgentTask task,
-            TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
+                          TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
         int numberOfMachineRestarts = 0;
         AgentState impersonatedAgentState = new AgentState();
         impersonatedAgentState.setLifecycle(AgentState.Progress.MACHINE_TERMINATED);
@@ -145,7 +145,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void planService(PlanServiceTask task,
-            TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
+                            TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
 
         ServiceState serviceState = impersonatedStateModifier.get();
         if (serviceState == null) {
@@ -160,7 +160,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void serviceUninstalling(ServiceUninstallingTask task,
-            TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
+                                    TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
         ServiceState serviceState = impersonatedStateModifier.get();
         serviceState.setProgress(ServiceState.Progress.UNINSTALLING_SERVICE);
         impersonatedStateModifier.put(serviceState);
@@ -168,7 +168,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void serviceInstalling(ServiceInstallingTask task,
-            TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
+                                  TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
         ServiceState serviceState = impersonatedStateModifier.get();
         serviceState.setProgress(ServiceState.Progress.INSTALLING_SERVICE);
         impersonatedStateModifier.put(serviceState);
@@ -176,7 +176,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void serviceUninstalled(ServiceUninstalledTask task,
-            TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
+                                   TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
         ServiceState serviceState = impersonatedStateModifier.get();
         serviceState.setProgress(ServiceState.Progress.SERVICE_UNINSTALLED);
         impersonatedStateModifier.put(serviceState);
@@ -187,7 +187,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void planServiceInstance(PlanServiceInstanceTask task,
-            TaskConsumerStateModifier impersonatedStateModifier) {
+                                    TaskConsumerStateModifier impersonatedStateModifier) {
         PlanServiceInstanceTask planInstanceTask = (PlanServiceInstanceTask) task;
         ServiceInstanceState instanceState = new ServiceInstanceState();
         instanceState.setAgentId(planInstanceTask.getAgentId());
@@ -210,7 +210,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void serviceInstalled(final ServiceInstalledTask task,
-            final TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
+                                 final TaskConsumerStateModifier<ServiceState> impersonatedStateModifier) {
         ServiceState serviceState = impersonatedStateModifier.get();
         serviceState.setProgress(ServiceState.Progress.SERVICE_INSTALLED);
         impersonatedStateModifier.put(serviceState);
@@ -218,7 +218,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void serviceInstanceFollowsMachineLifecycle(final ServiceInstanceFollowsMachineLifecycleTask task,
-            final TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+                                                       final TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         ServiceInstanceState serviceState = impersonatedStateModifier.get();
         final String lifecycle = getAgentState(serviceState.getAgentId()).getLifecycle();
         serviceState.setLifecycle(lifecycle);
@@ -227,7 +227,7 @@ public class ServiceGridOrchestrator {
 
     @ImpersonatingTaskConsumer
     public void removeServiceInstanceFromAgent(final RemoveServiceInstanceFromAgentTask task,
-            final TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
+                                               final TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
 
         final AgentState agentState = impersonatedStateModifier.get();
         agentState.removeServiceInstanceId(task.getInstanceId());
@@ -242,10 +242,10 @@ public class ServiceGridOrchestrator {
             AgentState agentState = getAgentState(agentId);
             boolean agentNotStarted =
                     (agentState == null
-                     || !agentState.getLifecycle().equals(AgentState.Progress.AGENT_STARTED));
+                            || !agentState.getLifecycle().equals(AgentState.Progress.AGENT_STARTED));
             if (agentNotStarted
-                && state.isSyncedStateWithDeploymentBefore()
-                && pingHealth == AgentPingHealth.UNDETERMINED) {
+                    && state.isSyncedStateWithDeploymentBefore()
+                    && pingHealth == AgentPingHealth.UNDETERMINED) {
                 //If this agent were started, we would have resolved it as AGENT_STARTED in the previous sync
                 //The agent probably never even started
                 pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
@@ -255,7 +255,7 @@ public class ServiceGridOrchestrator {
                 for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
                     ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
                     if (instanceState == null
-                        || instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
+                            || instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
 
                         syncComplete = false;
                         final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId);
@@ -311,7 +311,7 @@ public class ServiceGridOrchestrator {
             final Iterable<URI> allInstanceIds =
                     ImmutableSet.copyOf(Iterables.concat(actualInstanceIds, plannedInstanceIds));
             if (serviceState == null
-                || !Iterables.elementsEqual(actualInstanceIds, allInstanceIds)) {
+                    || !Iterables.elementsEqual(actualInstanceIds, allInstanceIds)) {
 
                 syncComplete = false;
                 final PlanServiceTask planServiceTask = new PlanServiceTask();
@@ -363,9 +363,9 @@ public class ServiceGridOrchestrator {
                 String lifecycle = getServiceInstanceState(instanceId).getLifecycle();
                 String instanceStartedLifecycle =
                         serviceState
-                        .getServiceConfig()
-                        .getInstanceLifecycleStateMachine()
-                        .getFinalInstanceLifecycle();
+                                .getServiceConfig()
+                                .getInstanceLifecycleStateMachine()
+                                .getFinalInstanceLifecycle();
                 return !lifecycle.equals(instanceStartedLifecycle);
             }
         };
@@ -373,7 +373,7 @@ public class ServiceGridOrchestrator {
         Set<URI> serviceIdsToUninstall = state.getServiceIdsToUninstall();
 
         if (serviceIdsToUninstall.contains(serviceId)
-            && serviceState.isProgress(
+                && serviceState.isProgress(
                 ServiceState.Progress.INSTALLING_SERVICE,
                 ServiceState.Progress.SERVICE_INSTALLED)) {
             ServiceUninstallingTask task = new ServiceUninstallingTask();
@@ -427,10 +427,11 @@ public class ServiceGridOrchestrator {
             final String currentLifecycle = instanceState.getLifecycle();
             Preconditions.checkNotNull(currentLifecycle);
             final LifecycleStateMachine stateMachine = instanceState.getStateMachine();
+            final String desiredLifecycle = state.getDeploymentPlan().getInstanceDesiredLifecycle(instanceId);
             final String nextLifecycle =
                     stateMachine.getNextInstanceLifecycle(
-                        currentLifecycle,
-                        stateMachine.getFinalInstanceLifecycle());
+                            currentLifecycle,
+                            desiredLifecycle);
             final boolean isAgentStarted = agentState.isProgress(AgentState.Progress.AGENT_STARTED);
             final boolean isInstanceLifecycle = nextLifecycle != null;
 
@@ -480,7 +481,7 @@ public class ServiceGridOrchestrator {
                             stateMachine.getInitialLifecycle());
 
             if (instanceState.isLifecycle(stateMachine.getInitialLifecycle()) ||
-                instanceState.isLifecycle(agentState.getLifecycle())) {
+                    instanceState.isLifecycle(agentState.getLifecycle())) {
 
                 // remove instance from agent
                 if (agentState.getServiceInstanceIds().contains(instanceId)) {
@@ -528,7 +529,7 @@ public class ServiceGridOrchestrator {
     }
 
     private boolean isAgentProgress(AgentState agentState,
-            String ... expectedProgresses) {
+                                    String ... expectedProgresses) {
         return agentState != null && agentState.isProgress(expectedProgresses);
     }
 
@@ -622,19 +623,19 @@ public class ServiceGridOrchestrator {
         final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
 
         return isAgentProgress(agentState,AgentState.Progress.AGENT_STARTED) &&
-        pingHealth == AgentPingHealth.AGENT_UNREACHABLE;
+                pingHealth == AgentPingHealth.AGENT_UNREACHABLE;
     }
 
     private boolean isInstancesLifecycleEqualsAgentLifecycle(final AgentState agentState) {
         final Iterable<URI> instanceIds = agentState.getServiceInstanceIds();
         final String instanceLifecycle = agentState.getLifecycle();
         boolean foundNotEquals =
-            Iterables.tryFind(instanceIds, new Predicate<URI>() {
-                @Override
-                public boolean apply(URI instanceId) {
-                    return !getServiceInstanceState(instanceId).isLifecycle(instanceLifecycle);
-                }
-            }).isPresent();
+                Iterables.tryFind(instanceIds, new Predicate<URI>() {
+                    @Override
+                    public boolean apply(URI instanceId) {
+                        return !getServiceInstanceState(instanceId).isLifecycle(instanceLifecycle);
+                    }
+                }).isPresent();
 
         return !foundNotEquals;
     }

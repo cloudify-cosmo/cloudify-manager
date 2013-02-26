@@ -30,6 +30,7 @@ import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
+import org.cloudifysource.cosmo.service.state.ServiceInstanceDeploymentPlan;
 import org.cloudifysource.cosmo.service.tasks.InstallServiceTask;
 import org.cloudifysource.cosmo.service.tasks.ScaleServiceTask;
 import org.cloudifysource.cosmo.service.tasks.UninstallServiceTask;
@@ -148,7 +149,11 @@ public class ServiceGridDeploymentPlanner {
 
                     final URI instanceId = newInstanceId(serviceId);
                     final URI agentId = newAgentId();
-                    deploymentPlan.addServiceInstance(serviceId, agentId, instanceId);
+                    ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
+                    instancePlan.setAgentId(agentId);
+                    instancePlan.setInstanceId(instanceId);
+                    instancePlan.setDesiredLifecycle(newServiceConfig.getInstanceLifecycleStateMachine().getFinalInstanceLifecycle());
+                    deploymentPlan.addServiceInstance(serviceId, instancePlan);
                 }
             } else if (newNumberOfInstances < oldNumberOfInstances) {
                 for (int i = oldNumberOfInstances - newNumberOfInstances; i > 0; i--) {

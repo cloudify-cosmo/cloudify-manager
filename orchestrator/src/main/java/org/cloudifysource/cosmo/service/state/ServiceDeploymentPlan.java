@@ -78,13 +78,11 @@ public class ServiceDeploymentPlan {
     }
 
     @JsonIgnore
-    public void addInstance(URI instanceId, URI agentId) {
-        Preconditions.checkNotNull(instanceId);
-        Preconditions.checkNotNull(agentId);
-        Preconditions.checkArgument(!Iterables.tryFind(instances, findInstanceIdPredicate(instanceId)).isPresent());
-        ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
-        instancePlan.setInstanceId(instanceId);
-        instancePlan.setAgentId(agentId);
+    public void addInstance(ServiceInstanceDeploymentPlan instancePlan) {
+        Preconditions.checkNotNull(instancePlan.getInstanceId());
+        Preconditions.checkNotNull(instancePlan.getAgentId());
+        Preconditions.checkNotNull(instancePlan.getDesiredLifecycle());
+        Preconditions.checkArgument(!Iterables.tryFind(instances, findInstanceIdPredicate(instancePlan.getInstanceId())).isPresent());
         instances.add(instancePlan);
     }
 
@@ -144,7 +142,11 @@ public class ServiceDeploymentPlan {
 
     @JsonIgnore
     public boolean containsInstanceId(URI instanceId) {
-        return Iterables.tryFind(instances, findInstanceIdPredicate(instanceId)).isPresent();
+        return getInstanceDeploymentPlan(instanceId).isPresent();
+    }
+
+    public Optional<ServiceInstanceDeploymentPlan> getInstanceDeploymentPlan(URI instanceId) {
+        return Iterables.tryFind(instances, findInstanceIdPredicate(instanceId));
     }
 }
 

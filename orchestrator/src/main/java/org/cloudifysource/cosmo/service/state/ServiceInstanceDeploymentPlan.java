@@ -28,6 +28,7 @@ public class ServiceInstanceDeploymentPlan {
 
     private URI instanceId;
     private URI agentId;
+    private String desiredLifecycle;
 
     public URI getInstanceId() {
         return instanceId;
@@ -43,5 +44,13 @@ public class ServiceInstanceDeploymentPlan {
 
     public void setAgentId(URI agentId) {
         this.agentId = agentId;
+    }
+
+    public String getDesiredLifecycle() {
+        return desiredLifecycle;
+    }
+
+    public void setDesiredLifecycle(String desiredLifecycle) {
+        this.desiredLifecycle = desiredLifecycle;
     }
 }

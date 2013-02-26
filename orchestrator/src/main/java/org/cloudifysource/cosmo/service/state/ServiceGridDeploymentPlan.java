@@ -52,12 +52,10 @@ public class ServiceGridDeploymentPlan {
     }
 
     @JsonIgnore
-    public void addServiceInstance(URI serviceId, URI agentId, URI instanceId) {
+    public void addServiceInstance(URI serviceId, ServiceInstanceDeploymentPlan instancePlan) {
         Preconditions.checkNotNull(serviceId);
-        Preconditions.checkNotNull(instanceId);
-        Preconditions.checkNotNull(agentId);
         Preconditions.checkArgument(isServiceExists(serviceId), "Unknown service %s", serviceId);
-        getServiceById(serviceId).addInstance(instanceId, agentId);
+        getServiceById(serviceId).addInstance(instancePlan);
     }
 
     @JsonIgnore
@@ -186,8 +184,8 @@ public class ServiceGridDeploymentPlan {
         Predicate<ServiceDeploymentPlan> containsInstanceIdPreicate = new Predicate<ServiceDeploymentPlan>() {
 
             @Override
-            public boolean apply(ServiceDeploymentPlan servicePlan) {
-                return servicePlan.containsInstanceId(instanceId);
+            public boolean apply(ServiceDeploymentPlan servicePlan1) {
+                return servicePlan1.containsInstanceId(instanceId);
             }
         };
         Optional<ServiceDeploymentPlan> servicePlan = Iterables.tryFind(services, containsInstanceIdPreicate);
@@ -195,5 +193,21 @@ public class ServiceGridDeploymentPlan {
             return null;
         }
         return servicePlan.get().getServiceConfig().getServiceId();
+    }
+
+    @JsonIgnore
+    public String getInstanceDesiredLifecycle(final URI instanceId) {
+        Optional<ServiceInstanceDeploymentPlan> instancePlan =
+            Iterables.tryFind(Iterables.transform(services,
+                new Function<ServiceDeploymentPlan,ServiceInstanceDeploymentPlan>() {
+                    @Override
+                    public ServiceInstanceDeploymentPlan apply(
+                            ServiceDeploymentPlan servicePlan) {
+                        return servicePlan.getInstanceDeploymentPlan(instanceId).orNull();
+                    }
+                }),
+            Predicates.notNull());
+        Preconditions.checkState(instancePlan.isPresent());
+        return instancePlan.get().getDesiredLifecycle();
     }
 }
