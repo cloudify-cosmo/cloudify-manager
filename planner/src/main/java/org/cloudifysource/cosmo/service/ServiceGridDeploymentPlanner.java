@@ -152,7 +152,8 @@ public class ServiceGridDeploymentPlanner {
                     ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
                     instancePlan.setAgentId(agentId);
                     instancePlan.setInstanceId(instanceId);
-                    instancePlan.setDesiredLifecycle(newServiceConfig.getInstanceLifecycleStateMachine().getFinalInstanceLifecycle());
+                    instancePlan.setDesiredLifecycle(newServiceConfig.getInstanceLifecycleStateMachine()
+                            .getFinalLifecycle());
                     deploymentPlan.addServiceInstance(serviceId, instancePlan);
                 }
             } else if (newNumberOfInstances < oldNumberOfInstances) {

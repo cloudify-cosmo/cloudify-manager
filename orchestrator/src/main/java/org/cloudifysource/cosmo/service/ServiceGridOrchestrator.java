@@ -365,7 +365,7 @@ public class ServiceGridOrchestrator {
                         serviceState
                                 .getServiceConfig()
                                 .getInstanceLifecycleStateMachine()
-                                .getFinalInstanceLifecycle();
+                                .getFinalLifecycle();
                 return !lifecycle.equals(instanceStartedLifecycle);
             }
         };

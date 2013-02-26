@@ -2,6 +2,7 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
@@ -27,10 +28,18 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
     private T management;
     private MockCurrentTimeProvider timeProvider;
     private TaskConsumerRegistrar taskConsumerRegistrar;
+    private final LifecycleStateMachine serviceLifecycleStateMachine;
 
     public AbstractServiceGridTest() {
         logger = Logger.getLogger(this.getClass().getName());
         setSimpleLoggerFormatter(logger);
+
+        serviceLifecycleStateMachine = new LifecycleStateMachine
+            ("agent_started->service_cleaned<->service_stopped<->service_started");
+        serviceLifecycleStateMachine.setFinalLifecycle("service_started");
+        serviceLifecycleStateMachine.setInitialLifecycle("service_cleaned");
+        Assert.assertEquals(serviceLifecycleStateMachine.getNextInstanceLifecycle("service_cleaned",
+                "service_started"),"service_stopped");
     }
 
     @BeforeClass
@@ -141,5 +150,9 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void killMachine(URI agentId) {
         containers.findContainer(agentId).killMachine();
+    }
+
+    public LifecycleStateMachine getServiceLifecycleStateMachine() {
+        return serviceLifecycleStateMachine;
     }
 }
