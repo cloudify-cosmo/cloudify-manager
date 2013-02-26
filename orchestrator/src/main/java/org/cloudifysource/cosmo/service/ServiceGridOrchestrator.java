@@ -605,7 +605,8 @@ public class ServiceGridOrchestrator {
             addNewTaskIfNotExists(newTasks, task);
         } else if (!agentState.getLifecycle().equals(desiredLifecycle)) {
             final String nextAgentLifecycle = agentState.getNextAgentLifecycle(desiredLifecycle);
-            if (isInstancesLifecycleEqualsAgentLifecycle(agentState)) {
+            if (isInstancesLifecycleEqualsAgentLifecycle(agentState) &&
+                !agentState.isProgress(nextAgentLifecycle)) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();
                 task.setLifecycle(nextAgentLifecycle);
                 task.setStateId(agentId);

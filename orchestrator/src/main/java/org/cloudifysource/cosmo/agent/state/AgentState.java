@@ -17,6 +17,7 @@ package org.cloudifysource.cosmo.agent.state;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
+import org.cloudifysource.cosmo.LifecycleStateMachine;
 import org.cloudifysource.cosmo.TaskConsumerState;
 
 import java.net.URI;
@@ -29,6 +30,13 @@ import java.util.List;
  */
 public class AgentState extends TaskConsumerState {
 
+    public AgentState() {
+        stateMachine = new LifecycleStateMachine
+                ("machine_unreachable->machine_terminated<->machine_started->agent_started->machine_terminated");
+        stateMachine.setFinalLifecycle("agent_started");
+        stateMachine.setInitialLifecycle("machine_terminated");
+    }
+
     /**
      * Possible values for {@link AgentState#setLifecycle(String)}.
      */
@@ -38,6 +46,8 @@ public class AgentState extends TaskConsumerState {
         public static final String AGENT_STARTED = "agent_started";
         public static final String MACHINE_UNREACHABLE = "machine_unreachable";
     }
+
+    private LifecycleStateMachine stateMachine;
 
     private String lifecycle;
     private String ipAddress;
@@ -133,13 +143,6 @@ public class AgentState extends TaskConsumerState {
         numberOfAgentStarts = 0;
     }
 
-    /**
-     * @return the initial state of the lifecycle state machine.
-     */
-    @JsonIgnore
-    public static String getInitialAgentLifecycle() {
-        return Progress.MACHINE_TERMINATED;
-    }
 
     /**
      * @param expectedLifecycle - the expected lifecycle
@@ -159,7 +162,7 @@ public class AgentState extends TaskConsumerState {
                 return Progress.AGENT_STARTED;
             }
             if (lifecycle.equals(Progress.AGENT_STARTED)) {
-                return null;
+                return Progress.AGENT_STARTED;
             }
             Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
             return null;
@@ -171,7 +174,7 @@ public class AgentState extends TaskConsumerState {
                 return Progress.MACHINE_TERMINATED;
             }
             if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
-                return null;
+                return Progress.MACHINE_TERMINATED;
             }
             Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
         }
