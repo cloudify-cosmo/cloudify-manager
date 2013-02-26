@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
+import org.cloudifysource.cosmo.LifecycleStateMachine;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
@@ -264,7 +265,8 @@ public class ServiceGridOrchestrator {
                         recoverInstanceStateTask.setStateId(instanceId);
                         recoverInstanceStateTask.setConsumerId(agentId);
                         recoverInstanceStateTask.setServiceId(serviceId);
-                        recoverInstanceStateTask.setStateMachine(serviceState.getServiceConfig().getInstanceLifecycleStateMachine());
+                        recoverInstanceStateTask.setStateMachine(
+                                serviceState.getServiceConfig().getInstanceLifecycleStateMachine());
                         addNewTaskIfNotExists(newTasks, recoverInstanceStateTask);
                     }
                 }
@@ -422,10 +424,13 @@ public class ServiceGridOrchestrator {
             final URI agentId = state.getDeploymentPlan().getAgentIdByInstanceId(instanceId);
             final AgentState agentState = getAgentState(agentId);
             final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-            final ServiceState serviceState = getServiceState(instanceState.getServiceId());
             final String currentLifecycle = instanceState.getLifecycle();
             Preconditions.checkNotNull(currentLifecycle);
-            final String nextLifecycle = instanceState.getStateMachine().getNextInstanceLifecycle(currentLifecycle);
+            final LifecycleStateMachine stateMachine = instanceState.getStateMachine();
+            final String nextLifecycle =
+                    stateMachine.getNextInstanceLifecycle(
+                        currentLifecycle,
+                        stateMachine.getFinalInstanceLifecycle());
             final boolean isAgentStarted = agentState.isProgress(AgentState.Progress.AGENT_STARTED);
             final boolean isInstanceLifecycle = nextLifecycle != null;
             if (isAgentStarted && isInstanceLifecycle) {
@@ -467,7 +472,11 @@ public class ServiceGridOrchestrator {
 
             final String currentLifecycle = instanceState.getLifecycle();
             Preconditions.checkNotNull(currentLifecycle);
-            final String prevLifecycle = instanceState.getStateMachine().getPrevInstanceLifecycle(currentLifecycle);
+            final LifecycleStateMachine stateMachine = instanceState.getStateMachine();
+            final String prevLifecycle =
+                    stateMachine.getNextInstanceLifecycle(
+                            currentLifecycle,
+                            stateMachine.getInitialLifecycle());
             Preconditions.checkNotNull(prevLifecycle, "No prev for " + currentLifecycle);
             if (instanceState.isLifecycle(prevLifecycle)) {
                 // remove instance from agent

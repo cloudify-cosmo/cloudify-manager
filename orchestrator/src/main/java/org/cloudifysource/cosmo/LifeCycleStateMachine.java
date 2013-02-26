@@ -8,8 +8,14 @@ import org.cloudifysource.cosmo.agent.state.AgentState;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A state machine implementation.
+ * @author itaif
+ * @since 0.1
+ */
 public class LifecycleStateMachine {
 
+    //TODO: Reimplement using touples.
     private List<String> stateMachine;
 
     public LifecycleStateMachine() {
@@ -43,51 +49,55 @@ public class LifecycleStateMachine {
     }
 
     /**
-     * @param lifecycle - the current lifecycle
+     * @param currentLifecycle - the current lifecycle
+     * @param desiredLifecycle - the lifecycle state to eventually achieve.
      * @return - the next lifecycle state
-     *           or the specified lifecycle if this is the last lifecycle,
-     *           or null if the specified lifecycle is not part of the state machine.
+     *           or currentLifecycle if currentLifecycle equals desiredLifecycle
+     *           or null if the desired lifecycle cannot be reached.
      */
     @JsonIgnore
-    public String getNextInstanceLifecycle(String lifecycle) {
-        if (lifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
+    public String getNextInstanceLifecycle(String currentLifecycle, String desiredLifecycle) {
+        if (currentLifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
             return getInitialLifecycle();
         }
-        int index = toInstanceLifecycleIndex(lifecycle);
-        if (index < 0) {
+
+        if (desiredLifecycle.equals(getFinalInstanceLifecycle())) {
+            int index = toInstanceLifecycleIndex(currentLifecycle);
+            if (index < 0) {
+                return null;
+            }
+
+            final int lastIndex = stateMachine.size() - 1;
+            if (index  < lastIndex) {
+                index++;
+            }
+            return stateMachine.get(index);
+        }
+        else if (desiredLifecycle.equals(getInitialLifecycle())) {
+            if (currentLifecycle.equals(AgentState.Progress.MACHINE_UNREACHABLE)) {
+                return currentLifecycle;
+            }
+
+            int index = toInstanceLifecycleIndex(currentLifecycle);
+            if (index < 0) {
+                return null;
+            }
+
+            if (index == 0) {
+                return currentLifecycle;
+            }
+
+            return stateMachine.get(index - 1);
+
+        }
+        else {
+            Preconditions.checkState(false, "Unsupported yet.");
+            //never reached
             return null;
         }
-
-        final int lastIndex = stateMachine.size() - 1;
-        if (index  < lastIndex) {
-            index++;
-        }
-        return stateMachine.get(index);
     }
 
-    /**
-     * @param lifecycle - the current instance lifecycle
-     * @return - the prev lifecycle
-     *           or lifecycle if there is no previous lifecycle,
-     *           or null if the specified lifecycle is not part of the state machine
-     */
-    @JsonIgnore
-    public String getPrevInstanceLifecycle(String lifecycle) {
-        if (lifecycle.equals(AgentState.Progress.MACHINE_UNREACHABLE)) {
-            return lifecycle;
-        }
 
-        int index = toInstanceLifecycleIndex(lifecycle);
-        if (index < 0) {
-            return null;
-        }
-
-        if (index == 0) {
-            return lifecycle;
-        }
-
-        return stateMachine.get(index - 1);
-    }
 
     private int toInstanceLifecycleIndex(String lifecycle) {
         Preconditions.checkNotNull(lifecycle);
