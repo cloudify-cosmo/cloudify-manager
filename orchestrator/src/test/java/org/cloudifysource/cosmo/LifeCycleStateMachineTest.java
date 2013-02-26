@@ -8,7 +8,7 @@ public class LifeCycleStateMachineTest {
 
     @Test
     public void testEmptyStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine();
+        LifecycleStateMachine sm = new LifecycleStateMachine("");
         Assert.assertNull(sm.getInitialLifecycle());
         Assert.assertNull(sm.getFinalLifecycle());
         Assert.assertNull(sm.getNextInstanceLifecycle("s1","s1"));
@@ -82,8 +82,6 @@ public class LifeCycleStateMachineTest {
         LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2->s3");
         sm.setInitialLifecycle("s1");
         sm.setFinalLifecycle("s3");
-        //sm.addStateTransition("s1","s2");
-        //sm.addStateTransition("s2","s3");
         Assert.assertEquals(sm.getInitialLifecycle(), "s1");
         Assert.assertEquals(sm.getFinalLifecycle(), "s3");
         Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s2"),"s2");
@@ -92,6 +90,23 @@ public class LifeCycleStateMachineTest {
         Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s1"));
         Assert.assertNull(sm.getNextInstanceLifecycle("s3","s1"));
         Assert.assertNull(sm.getNextInstanceLifecycle("s3","s2"));
+    }
+
+    @Test
+    public void testTwoWayLongStateMachine() {
+        LifecycleStateMachine sm = new LifecycleStateMachine("s1<->s2<->s3");
+        sm.setInitialLifecycle("s1");
+        sm.setFinalLifecycle("s3");
+        //sm.addStateTransition("s1","s2");
+        //sm.addStateTransition("s2","s3");
+        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
+        Assert.assertEquals(sm.getFinalLifecycle(), "s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s2"),"s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s3"),"s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s3"),"s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s1"),"s1");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s1"),"s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s2"),"s2");
     }
 
     @Test

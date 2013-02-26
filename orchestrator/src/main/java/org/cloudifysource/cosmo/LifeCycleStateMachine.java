@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 public class LifecycleStateMachine {
 
     //Maps state into zero or more children states.
-    private Map<String,Set<String>> indexedStateMachine = Maps.newLinkedHashMap();
+    private Map<String,Set<String>> indexedStateMachine;
     private String initialLifecycle;
     private String finalLifecycle;
     //text based description of the state machine (e.g. "a-->b,b-->c" )
@@ -36,8 +36,11 @@ public class LifecycleStateMachine {
     final Pattern leftArrowPattern = Pattern.compile("(\\w+)\\s*<-*>?\\s*(?=(\\w+))");
     final Pattern singularPattern = Pattern.compile("(\\w+)");
 
+    /**
+     * Deserialization cotr
+     */
     public LifecycleStateMachine() {
-        //for backwards compat
+        this("");
     }
 
     /**
@@ -50,10 +53,14 @@ public class LifecycleStateMachine {
      *                               "a-->b,a-->c"
      */
     public LifecycleStateMachine(String lifecycles) {
-       this.lifecycles = lifecycles;
-       parseRightArrow();
-       parseLeftArrow();
-       parseSingulars();
+       setLifecycles(lifecycles);
+    }
+
+    private void parse() {
+        this.indexedStateMachine = Maps.newLinkedHashMap();
+        parseRightArrow();
+        parseLeftArrow();
+        parseSingulars();
     }
 
     private void parseRightArrow() {
@@ -109,6 +116,10 @@ public class LifecycleStateMachine {
      */
     @JsonIgnore
     public String getNextInstanceLifecycle(String currentLifecycle, String desiredLifecycle) {
+        if (indexedStateMachine == null) {
+            indexedStateMachine = Maps.newLinkedHashMap();
+            parse();
+        }
         if (indexedStateMachine.containsKey(currentLifecycle)) {
             //return findNextRecursive(currentLifecycle, desiredLifecycle, Sets.<String>newLinkedHashSet()).orNull();
             return findNext(currentLifecycle, desiredLifecycle).orNull();
@@ -146,6 +157,7 @@ public class LifecycleStateMachine {
         //stack to remember which parts we already scanned.
         final LinkedList<List<String>> childrenStack = Lists.newLinkedList();
         //inject children of initial state
+        visited.add(initState);
         childrenStack.add(Lists.newArrayList(indexedStateMachine.get(initState)));
 
         while (true) {
@@ -179,4 +191,14 @@ public class LifecycleStateMachine {
             childrenStack.add(Lists.newArrayList(children));
         }
     }
+
+    public String getLifecycles() {
+        return lifecycles;
+    }
+
+    public void setLifecycles(String lifecycles) {
+        this.lifecycles = lifecycles;
+        parse();
+    }
+
 }
