@@ -151,34 +151,6 @@ public class AgentState extends TaskConsumerState {
      */
     @JsonIgnore
     public String getNextAgentLifecycle(String expectedLifecycle) {
-        if (expectedLifecycle.equals(Progress.AGENT_STARTED)) {
-            if (lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
-                return Progress.MACHINE_TERMINATED;
-            }
-            if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
-                return Progress.MACHINE_STARTED;
-            }
-            if (lifecycle.equals(Progress.MACHINE_STARTED)) {
-                return Progress.AGENT_STARTED;
-            }
-            if (lifecycle.equals(Progress.AGENT_STARTED)) {
-                return Progress.AGENT_STARTED;
-            }
-            Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
-            return null;
-        }
-        if (expectedLifecycle.equals(Progress.MACHINE_TERMINATED)) {
-            if (lifecycle.equals(Progress.MACHINE_STARTED) ||
-                lifecycle.equals(Progress.AGENT_STARTED) ||
-                lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
-                return Progress.MACHINE_TERMINATED;
-            }
-            if (lifecycle.equals(Progress.MACHINE_TERMINATED)) {
-                return Progress.MACHINE_TERMINATED;
-            }
-            Preconditions.checkArgument(false, "machine lifecycle %s not supported", lifecycle);
-        }
-        Preconditions.checkArgument(false, "expected machine lifecycle %s not supported", expectedLifecycle);
-        return null; //never reached
+        return this.stateMachine.getNextInstanceLifecycle(lifecycle, expectedLifecycle);
     }
 }
