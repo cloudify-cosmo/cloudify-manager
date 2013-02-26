@@ -456,6 +456,7 @@ public class ServiceGridOrchestrator {
             final String prevLifecycle = serviceState.getPrevInstanceLifecycle(currentLifecycle);
 
             if (prevLifecycle == null || prevLifecycle.equals(currentLifecycle)) {
+                Preconditions.checkNotNull(prevLifecycle, "No prev for " + currentLifecycle);
                 if (agentState.getServiceInstanceIds().contains(instanceId)) {
                     RemoveServiceInstanceFromAgentTask removeFromAgentTask = new RemoveServiceInstanceFromAgentTask();
                     if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
