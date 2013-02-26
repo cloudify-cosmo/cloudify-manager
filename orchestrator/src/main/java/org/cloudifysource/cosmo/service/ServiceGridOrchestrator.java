@@ -433,6 +433,7 @@ public class ServiceGridOrchestrator {
                         stateMachine.getFinalInstanceLifecycle());
             final boolean isAgentStarted = agentState.isProgress(AgentState.Progress.AGENT_STARTED);
             final boolean isInstanceLifecycle = nextLifecycle != null;
+
             if (isAgentStarted && isInstanceLifecycle) {
                 if (!instanceState.isLifecycle(nextLifecycle)) {
                     //step to the next lifecycle state
@@ -473,12 +474,14 @@ public class ServiceGridOrchestrator {
             final String currentLifecycle = instanceState.getLifecycle();
             Preconditions.checkNotNull(currentLifecycle);
             final LifecycleStateMachine stateMachine = instanceState.getStateMachine();
-            final String prevLifecycle =
+            final String nextLifecycle =
                     stateMachine.getNextInstanceLifecycle(
                             currentLifecycle,
                             stateMachine.getInitialLifecycle());
-            Preconditions.checkNotNull(prevLifecycle, "No prev for " + currentLifecycle);
-            if (instanceState.isLifecycle(prevLifecycle)) {
+
+            if (instanceState.isLifecycle(stateMachine.getInitialLifecycle()) ||
+                instanceState.isLifecycle(agentState.getLifecycle())) {
+
                 // remove instance from agent
                 if (agentState.getServiceInstanceIds().contains(instanceId)) {
                     RemoveServiceInstanceFromAgentTask removeFromAgentTask = new RemoveServiceInstanceFromAgentTask();
@@ -502,16 +505,15 @@ public class ServiceGridOrchestrator {
                     addNewTaskIfNotExists(newTasks, task);
                 }
             } else if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
-
-                if (!instanceState.isLifecycle(prevLifecycle)) {
+                Preconditions.checkNotNull(nextLifecycle);
+                if (!instanceState.isLifecycle(nextLifecycle)) {
                     //step to the previous lifecycle step
                     final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle(prevLifecycle);
+                    task.setLifecycle(nextLifecycle);
                     task.setConsumerId(agentId);
                     task.setStateId(instanceId);
                     addNewTaskIfNotExists(newTasks, task);
                 }
-
             } else {
                 if (!instanceState.isLifecycle(agentState.getLifecycle())) {
                     //machine is not reachable, follow the machine lifecycle as it is going down.
