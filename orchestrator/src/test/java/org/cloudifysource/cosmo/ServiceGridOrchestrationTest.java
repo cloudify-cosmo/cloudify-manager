@@ -294,11 +294,11 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
         serviceConfig.setServiceId(getManagement().getServiceId(name));
-        serviceConfig.setInstanceLifecycleStateMachine(Lists.newArrayList(
+        serviceConfig.setInstanceLifecycleStateMachine(new LifecycleStateMachine(Lists.newArrayList(
                 "service_cleaned",
                 "service_stopped",
                 "service_started"
-        ));
+        )));
 
         ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
         serviceDeploymentPlan.setServiceConfig(serviceConfig);

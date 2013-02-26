@@ -291,11 +291,11 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
         serviceConfig.setServiceId(getManagement().getServiceId(name));
-        serviceConfig.setInstanceLifecycleStateMachine(Lists.newArrayList(
+        serviceConfig.setInstanceLifecycleStateMachine(new LifecycleStateMachine(Lists.newArrayList(
                 "service_cleaned",
                 "service_stopped",
                 "service_started"
-        ));
+        )));
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
         getManagement().submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);

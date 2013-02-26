@@ -15,6 +15,7 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.tasks;
 
+import org.cloudifysource.cosmo.LifecycleStateMachine;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
@@ -27,7 +28,7 @@ import java.net.URI;
  */
 public class PlanServiceInstanceTask extends Task {
 
-    private String lifecycle;
+    private LifecycleStateMachine stateMachine;
 
     public PlanServiceInstanceTask() {
         super(ServiceInstanceState.class);
@@ -52,11 +53,11 @@ public class PlanServiceInstanceTask extends Task {
         this.agentId = agentId;
     }
 
-    public String getLifecycle() {
-        return lifecycle;
+    public void setStateMachine(LifecycleStateMachine stateMachine) {
+        this.stateMachine = stateMachine;
     }
 
-    public void setLifecycle(String lifecycle) {
-        this.lifecycle = lifecycle;
+    public LifecycleStateMachine getStateMachine() {
+        return stateMachine;
     }
 }

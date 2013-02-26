@@ -191,8 +191,9 @@ public class ServiceGridOrchestrator {
         ServiceInstanceState instanceState = new ServiceInstanceState();
         instanceState.setAgentId(planInstanceTask.getAgentId());
         instanceState.setServiceId(planInstanceTask.getServiceId());
-        instanceState.setLifecycle(planInstanceTask.getLifecycle());
+        instanceState.setLifecycle(planInstanceTask.getStateMachine().getInitialLifecycle());
         instanceState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
+        instanceState.setStateMachine(planInstanceTask.getStateMachine());
         impersonatedStateModifier.put(instanceState);
     }
 
@@ -263,7 +264,7 @@ public class ServiceGridOrchestrator {
                         recoverInstanceStateTask.setStateId(instanceId);
                         recoverInstanceStateTask.setConsumerId(agentId);
                         recoverInstanceStateTask.setServiceId(serviceId);
-                        recoverInstanceStateTask.setInitialLifecycle(serviceState.getInitialLifecycle());
+                        recoverInstanceStateTask.setStateMachine(serviceState.getServiceConfig().getInstanceLifecycleStateMachine());
                         addNewTaskIfNotExists(newTasks, recoverInstanceStateTask);
                     }
                 }
@@ -287,7 +288,8 @@ public class ServiceGridOrchestrator {
                         planInstanceTask.setAgentId(agentId);
                         planInstanceTask.setServiceId(serviceId);
                         planInstanceTask.setConsumerId(orchestratorId);
-                        planInstanceTask.setLifecycle(serviceState.getInitialLifecycle());
+                        planInstanceTask.setStateMachine(serviceState.getServiceConfig()
+                                .getInstanceLifecycleStateMachine());
                         addNewTaskIfNotExists(newTasks, planInstanceTask);
                     }
                 }
@@ -357,7 +359,12 @@ public class ServiceGridOrchestrator {
             @Override
             public boolean apply(final URI instanceId) {
                 String lifecycle = getServiceInstanceState(instanceId).getLifecycle();
-                return !lifecycle.equals(serviceState.getFinalInstanceLifecycle());
+                String instanceStartedLifecycle =
+                        serviceState
+                        .getServiceConfig()
+                        .getInstanceLifecycleStateMachine()
+                        .getFinalInstanceLifecycle();
+                return !lifecycle.equals(instanceStartedLifecycle);
             }
         };
 
@@ -418,7 +425,7 @@ public class ServiceGridOrchestrator {
             final ServiceState serviceState = getServiceState(instanceState.getServiceId());
             final String currentLifecycle = instanceState.getLifecycle();
             Preconditions.checkNotNull(currentLifecycle);
-            final String nextLifecycle = serviceState.getNextInstanceLifecycle(currentLifecycle);
+            final String nextLifecycle = instanceState.getStateMachine().getNextInstanceLifecycle(currentLifecycle);
             final boolean isAgentStarted = agentState.isProgress(AgentState.Progress.AGENT_STARTED);
             final boolean isInstanceLifecycle = nextLifecycle != null;
             if (isAgentStarted && isInstanceLifecycle) {
@@ -460,7 +467,7 @@ public class ServiceGridOrchestrator {
 
             final String currentLifecycle = instanceState.getLifecycle();
             Preconditions.checkNotNull(currentLifecycle);
-            final String prevLifecycle = serviceState.getPrevInstanceLifecycle(currentLifecycle);
+            final String prevLifecycle = instanceState.getStateMachine().getPrevInstanceLifecycle(currentLifecycle);
             Preconditions.checkNotNull(prevLifecycle, "No prev for " + currentLifecycle);
             if (instanceState.isLifecycle(prevLifecycle)) {
                 // remove instance from agent
