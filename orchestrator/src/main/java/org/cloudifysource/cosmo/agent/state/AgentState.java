@@ -144,11 +144,11 @@ public class AgentState extends TaskConsumerState {
     /**
      * @param expectedLifecycle - the expected lifecycle
      * @return - the next lifecycle that should bring us one step closer to expectedLifecyle
-     *           null if the current lifecycle equals the expected lifecycle.
+     *           expectedLifecycle if the current lifecycle equals the expected lifecycle.
      */
     @JsonIgnore
     public String getNextAgentLifecycle(String expectedLifecycle) {
-        if (expectedLifecycle.equals(Progress.MACHINE_STARTED)) {
+        if (expectedLifecycle.equals(Progress.AGENT_STARTED)) {
             if (lifecycle.equals(Progress.MACHINE_UNREACHABLE)) {
                 return Progress.MACHINE_TERMINATED;
             }

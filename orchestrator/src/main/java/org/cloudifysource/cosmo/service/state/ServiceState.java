@@ -87,7 +87,8 @@ public class ServiceState extends TaskConsumerState {
     /**
      * @param lifecycle - the current instance lifecycle
      * @return - the prev lifecycle
-     *           or null if the specified lifecycle is not part of the state machine or does not have a prev lifecycle.
+     *           or lifecycle if there is no previous lifecycle,
+     *           or null if the specified lifecycle is not part of the state machine
      */
     @JsonIgnore
     public String getPrevInstanceLifecycle(String lifecycle) {
@@ -96,12 +97,11 @@ public class ServiceState extends TaskConsumerState {
             return null;
         }
 
-        if (index > 0) {
-            index--;
-            return getServiceConfig().getInstanceLifecycleStateMachine().get(index);
+        if (index == 0) {
+            return lifecycle;
         }
 
-        return null;
+        return getServiceConfig().getInstanceLifecycleStateMachine().get(index - 1);
     }
 
     private int toInstanceLifecycleIndex(String lifecycle) {
