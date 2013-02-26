@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.service.state;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.TaskConsumerState;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 
@@ -55,41 +56,57 @@ public class ServiceState extends TaskConsumerState {
         return getServiceConfig().getInstanceLifecycleStateMachine().get(0);
     }
 
+
+    public String getFinalInstanceLifecycle() {
+        return Iterables.getLast(getServiceConfig().getInstanceLifecycleStateMachine());
+    }
+
     /**
      * @param lifecycle - the current lifecycle
-     * @return - the next lifecycle state or null if at the last lifecycle in the state machine.
+     * @return - the next lifecycle state
+     *           or the specified lifecycle if this is the last lifecycle,
+     *           or null if the specified lifecycle is not part of the state machine.
      */
     @JsonIgnore
     public String getNextInstanceLifecycle(String lifecycle) {
-        if (lifecycle.equals(AgentState.Progress.MACHINE_UNREACHABLE) ||
-            lifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
+        if (lifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
             return getInitialLifecycle();
         }
         int index = toInstanceLifecycleIndex(lifecycle);
-        if (index + 1 < getServiceConfig().getInstanceLifecycleStateMachine().size()) {
-            return getServiceConfig().getInstanceLifecycleStateMachine().get(index + 1);
+        if (index < 0) {
+            return null;
         }
-        return null;
+
+        final int lastIndex = getServiceConfig().getInstanceLifecycleStateMachine().size() - 1;
+        if (index  < lastIndex) {
+            index++;
+        }
+        return getServiceConfig().getInstanceLifecycleStateMachine().get(index);
     }
 
     /**
      * @param lifecycle - the current instance lifecycle
-     * @return - the next instance lifecycle or null if at the first lifecycle.
+     * @return - the prev lifecycle
+     *           or null if the specified lifecycle is not part of the state machine or does not have a prev lifecycle.
      */
     @JsonIgnore
     public String getPrevInstanceLifecycle(String lifecycle) {
         int index = toInstanceLifecycleIndex(lifecycle);
-        if (index > 0) {
-            return getServiceConfig().getInstanceLifecycleStateMachine().get(index - 1);
+        if (index < 0) {
+            return null;
         }
+
+        if (index > 0) {
+            index--;
+            return getServiceConfig().getInstanceLifecycleStateMachine().get(index);
+        }
+
         return null;
     }
 
     private int toInstanceLifecycleIndex(String lifecycle) {
         Preconditions.checkNotNull(lifecycle);
-        int index = this.getServiceConfig().getInstanceLifecycleStateMachine().indexOf(lifecycle);
-        Preconditions.checkArgument(index != -1, "Unknown lifecycle " + lifecycle);
-        return index;
+        return this.getServiceConfig().getInstanceLifecycleStateMachine().indexOf(lifecycle);
     }
 
     public void setServiceConfig(ServiceConfig serviceConfig) {

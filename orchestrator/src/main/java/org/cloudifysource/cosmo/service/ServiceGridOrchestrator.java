@@ -45,8 +45,8 @@ import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromAgentTask
 import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromServiceTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstalledTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstallingTask;
+import org.cloudifysource.cosmo.service.tasks.ServiceInstanceFollowsMachineLifecycleTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
-import org.cloudifysource.cosmo.service.tasks.ServiceInstanceUnreachableTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceUninstalledTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceUninstallingTask;
 import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
@@ -215,13 +215,11 @@ public class ServiceGridOrchestrator {
     }
 
     @ImpersonatingTaskConsumer
-    public void serviceInstanceUnreachable(final ServiceInstanceUnreachableTask task,
+    public void serviceInstanceFollowsMachineLifecycle(final ServiceInstanceFollowsMachineLifecycleTask task,
             final TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         ServiceInstanceState serviceState = impersonatedStateModifier.get();
-        Preconditions.checkState(
-                getAgentState(serviceState.getAgentId())
-                .isProgress(AgentState.Progress.MACHINE_UNREACHABLE));
-        serviceState.setLifecycle(AgentState.Progress.MACHINE_UNREACHABLE);
+        final String lifecycle = getAgentState(serviceState.getAgentId()).getLifecycle();
+        serviceState.setLifecycle(lifecycle);
         impersonatedStateModifier.put(serviceState);
     }
 
@@ -359,7 +357,7 @@ public class ServiceGridOrchestrator {
             @Override
             public boolean apply(final URI instanceId) {
                 String lifecycle = getServiceInstanceState(instanceId).getLifecycle();
-                return lifecycle == null || serviceState.getNextInstanceLifecycle(lifecycle) != null;
+                return !lifecycle.equals(serviceState.getFinalInstanceLifecycle());
             }
         };
 
@@ -417,26 +415,26 @@ public class ServiceGridOrchestrator {
             final URI agentId = state.getDeploymentPlan().getAgentIdByInstanceId(instanceId);
             final AgentState agentState = getAgentState(agentId);
             final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-            if (agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
-                final ServiceState serviceState = getServiceState(instanceState.getServiceId());
-                final String currentLifecycle = instanceState.getLifecycle();
-                Preconditions.checkNotNull(currentLifecycle);
-                final String nextLifecycle = serviceState.getNextInstanceLifecycle(currentLifecycle);
-                if (nextLifecycle != null) {
+            final ServiceState serviceState = getServiceState(instanceState.getServiceId());
+            final String currentLifecycle = instanceState.getLifecycle();
+            Preconditions.checkNotNull(currentLifecycle);
+            final String nextLifecycle = serviceState.getNextInstanceLifecycle(currentLifecycle);
+            if (agentState.isProgress(AgentState.Progress.AGENT_STARTED) &&
+                nextLifecycle != null) {
+
+                if (!nextLifecycle.equals(currentLifecycle)) {
                     final ServiceInstanceTask task = new ServiceInstanceTask();
                     task.setLifecycle(nextLifecycle);
                     task.setStateId(instanceId);
                     task.setConsumerId(instanceState.getAgentId());
                     addNewTaskIfNotExists(newTasks, task);
                 }
-            } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
-
-                if (!instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
-                    final ServiceInstanceUnreachableTask unreachableInstanceTask = new ServiceInstanceUnreachableTask();
-                    unreachableInstanceTask.setConsumerId(orchestratorId);
-                    unreachableInstanceTask.setStateId(instanceId);
-                    addNewTaskIfNotExists(newTasks, unreachableInstanceTask);
-                }
+            } else if (!instanceState.isLifecycle(agentState.getLifecycle())) {
+                final ServiceInstanceFollowsMachineLifecycleTask
+                        unreachableInstanceTask = new ServiceInstanceFollowsMachineLifecycleTask();
+                unreachableInstanceTask.setConsumerId(orchestratorId);
+                unreachableInstanceTask.setStateId(instanceId);
+                addNewTaskIfNotExists(newTasks, unreachableInstanceTask);
             }
         }
     }
@@ -457,17 +455,19 @@ public class ServiceGridOrchestrator {
                 continue;
             }
 
-            if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
-                if (!instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
-                    final ServiceInstanceUnreachableTask unreachableInstanceTask = new ServiceInstanceUnreachableTask();
-                    unreachableInstanceTask.setConsumerId(orchestratorId);
-                    unreachableInstanceTask.setStateId(instanceId);
-                    addNewTaskIfNotExists(newTasks, unreachableInstanceTask);
-                }
+            final String currentLifecycle = instanceState.getLifecycle();
+            Preconditions.checkNotNull(currentLifecycle);
+            final String prevLifecycle = serviceState.getPrevInstanceLifecycle(currentLifecycle);
 
+            if (prevLifecycle == null) {
                 if (agentState.getServiceInstanceIds().contains(instanceId)) {
                     RemoveServiceInstanceFromAgentTask removeFromAgentTask = new RemoveServiceInstanceFromAgentTask();
-                    removeFromAgentTask.setConsumerId(orchestratorId);
+                    if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
+                        removeFromAgentTask.setConsumerId(agentId);
+                    }
+                    else {
+                        removeFromAgentTask.setConsumerId(orchestratorId);
+                    }
                     removeFromAgentTask.setStateId(agentId);
                     removeFromAgentTask.setInstanceId(instanceId);
                     addNewTaskIfNotExists(newTasks, removeFromAgentTask);
@@ -481,33 +481,18 @@ public class ServiceGridOrchestrator {
                     addNewTaskIfNotExists(newTasks, task);
                 }
             } else if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
-
-                final String currentLifecycle = instanceState.getLifecycle();
-                Preconditions.checkNotNull(currentLifecycle);
-                final String prevLifecycle = serviceState.getPrevInstanceLifecycle(currentLifecycle);
-                if (prevLifecycle == null) {
-                    if (agentState.getServiceInstanceIds().contains(instanceId)) {
-                        final RemoveServiceInstanceFromAgentTask agentTask = new RemoveServiceInstanceFromAgentTask();
-                        agentTask.setConsumerId(agentId);
-                        agentTask.setInstanceId(instanceId);
-                        addNewTaskIfNotExists(newTasks, agentTask);
-                    }
-
-                    if (serviceState.getInstanceIds().contains(instanceId)) {
-                        final RemoveServiceInstanceFromServiceTask serviceTask =
-                                new RemoveServiceInstanceFromServiceTask();
-                        serviceTask.setConsumerId(orchestratorId);
-                        serviceTask.setStateId(serviceId);
-                        serviceTask.setInstanceId(instanceId);
-                        addNewTaskIfNotExists(newTasks, serviceTask);
-                    }
-                } else {
-                    final ServiceInstanceTask task = new ServiceInstanceTask();
-                    task.setLifecycle(prevLifecycle);
-                    task.setConsumerId(agentId);
-                    task.setStateId(instanceId);
-                    addNewTaskIfNotExists(newTasks, task);
-                }
+                Preconditions.checkNotNull(prevLifecycle);
+                final ServiceInstanceTask task = new ServiceInstanceTask();
+                task.setLifecycle(prevLifecycle);
+                task.setConsumerId(agentId);
+                task.setStateId(instanceId);
+                addNewTaskIfNotExists(newTasks, task);
+            } else {
+                final ServiceInstanceFollowsMachineLifecycleTask
+                        unreachableInstanceTask = new ServiceInstanceFollowsMachineLifecycleTask();
+                unreachableInstanceTask.setConsumerId(orchestratorId);
+                unreachableInstanceTask.setStateId(instanceId);
+                addNewTaskIfNotExists(newTasks, unreachableInstanceTask);
             }
         }
     }
@@ -563,7 +548,6 @@ public class ServiceGridOrchestrator {
 
             AgentState agentState = getAgentState(agentId);
             Preconditions.checkNotNull(agentState);
-            Preconditions.checkNotNull(agentState);
             final String expectedLifecycle = AgentState.Progress.MACHINE_STARTED;
 
             if (isAgentProgress(agentState,AgentState.Progress.AGENT_STARTED) &&
@@ -575,14 +559,15 @@ public class ServiceGridOrchestrator {
                 addNewTaskIfNotExists(newTasks, task);
             } else if (isAgentProgress(agentState,
                     AgentState.Progress.MACHINE_TERMINATED,
-                    AgentState.Progress.MACHINE_STARTED)) {
-                final MachineLifecycleTask task = new MachineLifecycleTask();
-                task.setLifecycle(agentState.getNextAgentLifecycle(expectedLifecycle));
-                task.setStateId(agentId);
-                task.setConsumerId(machineProvisionerId);
-                addNewTaskIfNotExists(newTasks, task);
-            } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_UNREACHABLE)) {
-                changeMachineLifecycle(newTasks, agentId, agentState, expectedLifecycle);
+                    AgentState.Progress.MACHINE_STARTED,
+                    AgentState.Progress.MACHINE_UNREACHABLE)) {
+                if (isInstancesLifecycleEqualsAgentLifecycle(agentState)) {
+                    final MachineLifecycleTask task = new MachineLifecycleTask();
+                    task.setLifecycle(agentState.getNextAgentLifecycle(expectedLifecycle));
+                    task.setStateId(agentId);
+                    task.setConsumerId(machineProvisionerId);
+                    addNewTaskIfNotExists(newTasks, task);
+                }
             } else if (isAgentProgress(agentState,AgentState.Progress.AGENT_STARTED)) {
                 // move along. we reached our desired state.
             } else {
@@ -606,7 +591,14 @@ public class ServiceGridOrchestrator {
                     AgentState.Progress.MACHINE_STARTED,
                     AgentState.Progress.MACHINE_UNREACHABLE)) {
                 final String expectedLifecycle = AgentState.Progress.MACHINE_TERMINATED;
-                changeMachineLifecycle(newTasks, agentId, agentState, expectedLifecycle);
+                final Iterable<URI> instanceIds = agentState.getServiceInstanceIds();
+                if (agentState.getServiceInstanceIds().isEmpty()) {
+                    final MachineLifecycleTask task = new MachineLifecycleTask();
+                    task.setLifecycle(agentState.getNextAgentLifecycle(expectedLifecycle));
+                    task.setStateId(agentId);
+                    task.setConsumerId(machineProvisionerId);
+                    addNewTaskIfNotExists(newTasks, task);
+                }
             } else if (isAgentProgress(agentState, AgentState.Progress.MACHINE_TERMINATED)) {
                 state.removeAgentIdToTerminate(agentId);
             } else {
@@ -615,19 +607,9 @@ public class ServiceGridOrchestrator {
         }
     }
 
-    private void changeMachineLifecycle(List<Task> newTasks, URI agentId, AgentState agentState,
-                                        String expectedLifecycle) {
+    private boolean isInstancesLifecycleEqualsAgentLifecycle(final AgentState agentState) {
         final Iterable<URI> instanceIds = agentState.getServiceInstanceIds();
-        if (isInstancesLifecycleEquals(instanceIds, agentState.getLifecycle())) {
-            final MachineLifecycleTask task = new MachineLifecycleTask();
-            task.setLifecycle(agentState.getNextAgentLifecycle(expectedLifecycle));
-            task.setStateId(agentId);
-            task.setConsumerId(machineProvisionerId);
-            addNewTaskIfNotExists(newTasks, task);
-        }
-    }
-
-    private boolean isInstancesLifecycleEquals(final Iterable<URI> instanceIds, final String instanceLifecycle) {
+        final String instanceLifecycle = agentState.getLifecycle();
         boolean foundNotEquals =
             Iterables.tryFind(instanceIds, new Predicate<URI>() {
                 @Override
