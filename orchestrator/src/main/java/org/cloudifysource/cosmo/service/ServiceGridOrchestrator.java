@@ -136,7 +136,7 @@ public class ServiceGridOrchestrator {
                           TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
         int numberOfMachineRestarts = 0;
         AgentState impersonatedAgentState = new AgentState();
-        impersonatedAgentState.setLifecycle(AgentState.Progress.MACHINE_TERMINATED);
+        impersonatedAgentState.setLifecycle(impersonatedAgentState.getMachineTerminatedLifecycle());
         impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
         impersonatedAgentState.setNumberOfMachineStarts(numberOfMachineRestarts);
         impersonatedAgentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
@@ -241,8 +241,7 @@ public class ServiceGridOrchestrator {
             AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
             AgentState agentState = getAgentState(agentId);
             boolean agentNotStarted =
-                    (agentState == null
-                            || !agentState.getLifecycle().equals(AgentState.Progress.AGENT_STARTED));
+                    (agentState == null || !agentState.isMachineReachableLifecycle());
             if (agentNotStarted
                     && state.isSyncedStateWithDeploymentBefore()
                     && pingHealth == AgentPingHealth.UNDETERMINED) {
@@ -432,7 +431,7 @@ public class ServiceGridOrchestrator {
                     stateMachine.getNextInstanceLifecycle(
                             currentLifecycle,
                             desiredLifecycle);
-            final boolean isAgentStarted = agentState.isProgress(AgentState.Progress.AGENT_STARTED);
+            final boolean isAgentStarted = agentState.isMachineReachableLifecycle();
             final boolean isInstanceLifecycle = nextLifecycle != null;
 
             if (isAgentStarted && isInstanceLifecycle) {
@@ -486,7 +485,7 @@ public class ServiceGridOrchestrator {
                 // remove instance from agent
                 if (agentState.getServiceInstanceIds().contains(instanceId)) {
                     RemoveServiceInstanceFromAgentTask removeFromAgentTask = new RemoveServiceInstanceFromAgentTask();
-                    if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
+                    if (agentState.isMachineReachableLifecycle()) {
                         removeFromAgentTask.setConsumerId(agentId);
                     }
                     else {
@@ -505,7 +504,7 @@ public class ServiceGridOrchestrator {
                     task.setInstanceId(instanceId);
                     addNewTaskIfNotExists(newTasks, task);
                 }
-            } else if (isAgentProgress(agentState, AgentState.Progress.AGENT_STARTED)) {
+            } else if (agentState.isMachineReachableLifecycle()) {
                 Preconditions.checkNotNull(nextLifecycle);
                 if (!instanceState.isLifecycle(nextLifecycle)) {
                     //step to the previous lifecycle step
@@ -530,7 +529,7 @@ public class ServiceGridOrchestrator {
 
     private boolean isAgentProgress(AgentState agentState,
                                     String ... expectedProgresses) {
-        return agentState != null && agentState.isProgress(expectedProgresses);
+        return agentState != null && agentState.isLifecycle(expectedProgresses);
     }
 
     private ServiceState getServiceState(final URI serviceId) {
@@ -562,8 +561,7 @@ public class ServiceGridOrchestrator {
 
             final PingAgentTask pingTask = new PingAgentTask();
             pingTask.setConsumerId(agentId);
-            if (isAgentProgress(agentState,
-                    AgentState.Progress.AGENT_STARTED)) {
+            if (agentState != null && agentState.isMachineReachableLifecycle()) {
                 pingTask.setExpectedNumberOfAgentRestartsInAgentState(agentState.getNumberOfAgentStarts());
                 pingTask.setExpectedNumberOfMachineRestartsInAgentState(agentState.getNumberOfMachineStarts());
             }
@@ -574,9 +572,10 @@ public class ServiceGridOrchestrator {
     private void orchestrateAgents(List<Task> newTasks) {
         final long nowTimestamp = timeProvider.currentTimeMillis();
 
-        for (final URI agentId : getPlannedAgentIds()) {
 
-            final String desiredLifecycle = AgentState.Progress.AGENT_STARTED;
+        for (final URI agentId : getPlannedAgentIds()) {
+            final AgentState agentState = getAgentState(agentId);
+            final String desiredLifecycle = agentState.getMachineReachableLifecycle();
             boolean reachedDesiredLifecycle = orchestrateDesiredLifecycle(newTasks, nowTimestamp, agentId, desiredLifecycle);
             if (reachedDesiredLifecycle) {
                 // do nothing.
@@ -584,7 +583,8 @@ public class ServiceGridOrchestrator {
         }
 
         for (URI agentId : ImmutableList.copyOf(getAgentIdsToTerminate())) {
-            final String desiredLifecycle = AgentState.Progress.MACHINE_TERMINATED;
+            final AgentState agentState = getAgentState(agentId);
+            final String desiredLifecycle = agentState.getMachineTerminatedLifecycle();
             boolean reachedDesiredLifecycle = orchestrateDesiredLifecycle(newTasks, nowTimestamp, agentId, desiredLifecycle);
             if (reachedDesiredLifecycle) {
                 state.removeAgentIdToTerminate(agentId);
@@ -607,7 +607,7 @@ public class ServiceGridOrchestrator {
             final String nextAgentLifecycle = agentState.getNextAgentLifecycle(desiredLifecycle);
             Preconditions.checkNotNull(nextAgentLifecycle);
             if (isInstancesLifecycleEqualsAgentLifecycle(agentState) &&
-                !agentState.isProgress(nextAgentLifecycle)) {
+                !agentState.isLifecycle(nextAgentLifecycle)) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();
                 task.setLifecycle(nextAgentLifecycle);
                 task.setStateId(agentId);
@@ -624,8 +624,8 @@ public class ServiceGridOrchestrator {
         Preconditions.checkNotNull(agentState);
         final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
 
-        return isAgentProgress(agentState,AgentState.Progress.AGENT_STARTED) &&
-                pingHealth == AgentPingHealth.AGENT_UNREACHABLE;
+        return agentState.isMachineReachableLifecycle() &&
+               pingHealth == AgentPingHealth.AGENT_UNREACHABLE;
     }
 
     private boolean isInstancesLifecycleEqualsAgentLifecycle(final AgentState agentState) {
@@ -674,7 +674,7 @@ public class ServiceGridOrchestrator {
                             pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
                     if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
                         Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
-                        if (agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
+                        if (agentState.isMachineReachableLifecycle()) {
                             // agent started after ping sent. Wait for next ping
                         } else {
                             // agent not reachable because it was not started yet

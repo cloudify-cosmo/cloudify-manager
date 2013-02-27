@@ -2,7 +2,6 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
@@ -135,7 +134,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
         MockAgent agent = (MockAgent) getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
         AgentState agentState = agent.getState();
-        Preconditions.checkState(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
+        Preconditions.checkState(agentState.isMachineReachableLifecycle());
         agentState.incrementNumberOfAgentStarts();
         getTaskConsumerRegistrar().registerTaskConsumer(new MockAgent(agentState), agentId);
     }

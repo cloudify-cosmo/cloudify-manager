@@ -41,9 +41,7 @@ public class AgentState extends TaskConsumerState {
      * Possible values for {@link AgentState#setLifecycle(String)}.
      */
     public static class Progress {
-        public static final String MACHINE_TERMINATED = "machine_terminated";
         public static final String MACHINE_STARTED = "machine_started";
-        public static final String AGENT_STARTED = "agent_started";
         public static final String MACHINE_UNREACHABLE = "machine_unreachable";
     }
 
@@ -69,7 +67,7 @@ public class AgentState extends TaskConsumerState {
     /**
      * @return true if {@code #getLifecycle()} matches any of the specified options.
      */
-    public boolean isProgress(String ... expectedProgresses) {
+    public boolean isLifecycle(String... expectedProgresses) {
         for (String expectedProgress : expectedProgresses) {
             if (lifecycle != null && lifecycle.equals(expectedProgress)) {
                 return true;
@@ -151,6 +149,26 @@ public class AgentState extends TaskConsumerState {
      */
     @JsonIgnore
     public String getNextAgentLifecycle(String expectedLifecycle) {
-        return this.stateMachine.getNextInstanceLifecycle(lifecycle, expectedLifecycle);
+        return stateMachine.getNextInstanceLifecycle(lifecycle, expectedLifecycle);
+    }
+
+    @JsonIgnore
+    public String getMachineTerminatedLifecycle() {
+         return  stateMachine.getInitialLifecycle();
+    }
+
+    @JsonIgnore
+    public String getMachineReachableLifecycle() {
+        return  stateMachine.getFinalLifecycle();
+    }
+
+    @JsonIgnore
+    public boolean isMachineTerminatedLifecycle() {
+        return  isLifecycle(getMachineTerminatedLifecycle());
+    }
+
+    @JsonIgnore
+    public boolean isMachineReachableLifecycle() {
+        return  isLifecycle(getMachineReachableLifecycle());
     }
 }

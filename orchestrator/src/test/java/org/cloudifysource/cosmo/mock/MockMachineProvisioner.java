@@ -40,11 +40,11 @@ public class MockMachineProvisioner {
         final AgentState agentState = impersonatedStateModifier.get();
         final String lifecycle = task.getLifecycle();
         final URI agentId = task.getStateId();
-        if (lifecycle.equals(AgentState.Progress.AGENT_STARTED)) {
+        if (lifecycle.equals(agentState.getMachineReachableLifecycle())) {
             machineReachable(agentState, agentId);
         } else if (lifecycle.equals(AgentState.Progress.MACHINE_STARTED)) {
             machineStarted(agentState);
-        } else if (lifecycle.equals(AgentState.Progress.MACHINE_TERMINATED)) {
+        } else if (lifecycle.equals(agentState.getMachineTerminatedLifecycle())) {
             machineTerminated(agentId);
         }
 

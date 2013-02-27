@@ -90,7 +90,7 @@ public class AssertServiceState {
 
         final AgentState agentState = management.getAgentState(agentId);
         Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
-        Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
+        Assert.assertTrue(agentState.isMachineReachableLifecycle());
         Assert.assertEquals(agentState.getNumberOfAgentStarts(), numberOfAgentStarts);
         Assert.assertEquals(agentState.getNumberOfMachineStarts(), numberOfMachineStarts);
 
@@ -99,7 +99,7 @@ public class AssertServiceState {
                 countMachineLifecycleTasks(agentTasksHistory, AgentState.Progress.MACHINE_STARTED),
                 numberOfMachineStarts);
         Assert.assertEquals(
-                countMachineLifecycleTasks(agentTasksHistory, AgentState.Progress.AGENT_STARTED),
+                countMachineLifecycleTasks(agentTasksHistory, agentState.getMachineReachableLifecycle()),
                 numberOfMachineStarts);
 
         final ServiceGridDeploymentPlan deploymentPlan = management.getDeploymentPlan();
@@ -176,7 +176,7 @@ public class AssertServiceState {
 
             URI agentId = Iterables.get(agentIds, i);
             AgentState agentState = management.getAgentState(agentId);
-            Assert.assertTrue(agentState.isProgress(AgentState.Progress.AGENT_STARTED));
+            Assert.assertTrue(agentState.isLifecycle(agentState.getMachineReachableLifecycle()));
             Assert.assertEquals(agentState.getNumberOfAgentStarts(), (int) numberOfAgentStartsPerAgent.get(agentId));
             Assert.assertEquals(agentState.getNumberOfMachineStarts(), (int) numberOfMachineStartsPerAgent.get(agentId));
             URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
@@ -244,7 +244,7 @@ public class AssertServiceState {
             }
             URI agentId = instanceState.getAgentId();
             AgentState agentState = management.getAgentState(agentId);
-            Assert.assertTrue(agentState.isProgress(AgentState.Progress.MACHINE_TERMINATED));
+            Assert.assertTrue(agentState.isMachineTerminatedLifecycle());
         }
     }
 
@@ -254,10 +254,10 @@ public class AssertServiceState {
 
     public static void assertTomcatScaledInFrom2To1(MockManagement management) {
         assertServiceInstalledWithOneInstance(management, "tomcat");
-        Assert.assertTrue(management.getAgentState(management.getAgentId(0))
-                .isProgress(AgentState.Progress.AGENT_STARTED));
-        Assert.assertTrue(management.getAgentState(management.getAgentId(1))
-                .isProgress(AgentState.Progress.MACHINE_TERMINATED));
+        final AgentState agentState0 = management.getAgentState(management.getAgentId(0));
+        Assert.assertTrue(agentState0.isLifecycle(agentState0.getMachineReachableLifecycle()));
+        final AgentState agentState1 = management.getAgentState(management.getAgentId(1));
+        Assert.assertTrue(agentState1.isLifecycle(agentState1.getMachineTerminatedLifecycle()));
         Assert.assertTrue(management.getServiceInstanceState(management.getServiceInstanceId("tomcat", 0))
                 .isLifecycle("service_started"));
         Assert.assertTrue(management.getServiceInstanceState(management.getServiceInstanceId("tomcat", 1))
