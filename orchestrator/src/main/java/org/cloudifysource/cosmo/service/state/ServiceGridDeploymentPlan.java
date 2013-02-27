@@ -198,15 +198,15 @@ public class ServiceGridDeploymentPlan {
     @JsonIgnore
     public String getInstanceDesiredLifecycle(final URI instanceId) {
         Optional<ServiceInstanceDeploymentPlan> instancePlan =
-            Iterables.tryFind(Iterables.transform(services,
-                new Function<ServiceDeploymentPlan,ServiceInstanceDeploymentPlan>() {
-                    @Override
-                    public ServiceInstanceDeploymentPlan apply(
-                            ServiceDeploymentPlan servicePlan) {
-                        return servicePlan.getInstanceDeploymentPlan(instanceId).orNull();
-                    }
-                }),
-            Predicates.notNull());
+                Iterables.tryFind(Iterables.transform(services,
+                        new Function<ServiceDeploymentPlan, ServiceInstanceDeploymentPlan>() {
+                            @Override
+                            public ServiceInstanceDeploymentPlan apply(
+                                    ServiceDeploymentPlan servicePlan) {
+                                return servicePlan.getInstanceDeploymentPlan(instanceId).orNull();
+                            }
+                        }),
+                        Predicates.notNull());
         Preconditions.checkState(instancePlan.isPresent());
         return instancePlan.get().getDesiredLifecycle();
     }

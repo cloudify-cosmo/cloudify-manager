@@ -217,8 +217,9 @@ public class ServiceGridOrchestrator {
     }
 
     @ImpersonatingTaskConsumer
-    public void serviceInstanceFollowsMachineLifecycle(final ServiceInstanceFollowsMachineLifecycleTask task,
-                                                       final TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+    public void serviceInstanceFollowsMachineLifecycle(
+            final ServiceInstanceFollowsMachineLifecycleTask task,
+            final TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         ServiceInstanceState serviceState = impersonatedStateModifier.get();
         final String lifecycle = getAgentState(serviceState.getAgentId()).getLifecycle();
         serviceState.setLifecycle(lifecycle);
@@ -371,8 +372,8 @@ public class ServiceGridOrchestrator {
 
         Set<URI> serviceIdsToUninstall = state.getServiceIdsToUninstall();
 
-        if (serviceIdsToUninstall.contains(serviceId)
-                && serviceState.isProgress(
+        if (serviceIdsToUninstall.contains(serviceId) &&
+            serviceState.isProgress(
                 ServiceState.Progress.INSTALLING_SERVICE,
                 ServiceState.Progress.SERVICE_INSTALLED)) {
             ServiceUninstallingTask task = new ServiceUninstallingTask();
@@ -442,8 +443,7 @@ public class ServiceGridOrchestrator {
                     task.setStateId(instanceId);
                     task.setConsumerId(instanceState.getAgentId());
                     addNewTaskIfNotExists(newTasks, task);
-                }
-                else {
+                } else {
                     // do nothing, we're done
                 }
             } else {
@@ -487,8 +487,7 @@ public class ServiceGridOrchestrator {
                     RemoveServiceInstanceFromAgentTask removeFromAgentTask = new RemoveServiceInstanceFromAgentTask();
                     if (agentState.isMachineReachableLifecycle()) {
                         removeFromAgentTask.setConsumerId(agentId);
-                    }
-                    else {
+                    } else {
                         removeFromAgentTask.setConsumerId(orchestratorId);
                     }
                     removeFromAgentTask.setStateId(agentId);
@@ -576,7 +575,8 @@ public class ServiceGridOrchestrator {
         for (final URI agentId : getPlannedAgentIds()) {
             final AgentState agentState = getAgentState(agentId);
             final String desiredLifecycle = agentState.getMachineReachableLifecycle();
-            boolean reachedDesiredLifecycle = orchestrateDesiredLifecycle(newTasks, nowTimestamp, agentId, desiredLifecycle);
+            boolean reachedDesiredLifecycle =
+                    orchestrateDesiredLifecycle(newTasks, nowTimestamp, agentId, desiredLifecycle);
             if (reachedDesiredLifecycle) {
                 // do nothing.
             }
@@ -585,7 +585,8 @@ public class ServiceGridOrchestrator {
         for (URI agentId : ImmutableList.copyOf(getAgentIdsToTerminate())) {
             final AgentState agentState = getAgentState(agentId);
             final String desiredLifecycle = agentState.getMachineTerminatedLifecycle();
-            boolean reachedDesiredLifecycle = orchestrateDesiredLifecycle(newTasks, nowTimestamp, agentId, desiredLifecycle);
+            boolean reachedDesiredLifecycle =
+                    orchestrateDesiredLifecycle(newTasks, nowTimestamp, agentId, desiredLifecycle);
             if (reachedDesiredLifecycle) {
                 state.removeAgentIdToTerminate(agentId);
             }

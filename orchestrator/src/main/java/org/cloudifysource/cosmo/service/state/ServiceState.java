@@ -18,9 +18,7 @@ package org.cloudifysource.cosmo.service.state;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.TaskConsumerState;
-import org.cloudifysource.cosmo.agent.state.AgentState;
 
 import java.net.URI;
 import java.util.List;

@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package org.cloudifysource.cosmo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -23,7 +38,7 @@ import java.util.regex.Pattern;
 public class LifecycleStateMachine {
 
     //Maps state into zero or more children states.
-    private Map<String,Set<String>> indexedStateMachine;
+    private Map<String, Set<String>> indexedStateMachine;
     private String initialLifecycle;
     private String finalLifecycle;
     //text based description of the state machine (e.g. "a-->b,b-->c" )
@@ -37,7 +52,7 @@ public class LifecycleStateMachine {
     final Pattern singularPattern = Pattern.compile("(\\w+)");
 
     /**
-     * Deserialization cotr
+     * Deserialization cotr.
      */
     public LifecycleStateMachine() {
         this("");
@@ -53,7 +68,7 @@ public class LifecycleStateMachine {
      *                               "a-->b,a-->c"
      */
     public LifecycleStateMachine(String lifecycles) {
-       setLifecycles(lifecycles);
+        setLifecycles(lifecycles);
     }
 
     private void parse() {
@@ -66,14 +81,14 @@ public class LifecycleStateMachine {
     private void parseRightArrow() {
         Matcher matcher = rightArrowPattern.matcher(lifecycles);
         while (matcher.find()) {
-            addStateTransition(matcher.group(1),matcher.group(2));
+            addStateTransition(matcher.group(1), matcher.group(2));
         }
     }
 
     private void parseLeftArrow() {
         Matcher matcher = leftArrowPattern.matcher(lifecycles);
         while (matcher.find()) {
-            addStateTransition(matcher.group(2),matcher.group(1));
+            addStateTransition(matcher.group(2), matcher.group(1));
         }
     }
 

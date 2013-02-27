@@ -82,7 +82,8 @@ public class ServiceDeploymentPlan {
         Preconditions.checkNotNull(instancePlan.getInstanceId());
         Preconditions.checkNotNull(instancePlan.getAgentId());
         Preconditions.checkNotNull(instancePlan.getDesiredLifecycle());
-        Preconditions.checkArgument(!Iterables.tryFind(instances, findInstanceIdPredicate(instancePlan.getInstanceId())).isPresent());
+        Preconditions.checkArgument(
+                !Iterables.tryFind(instances, findInstanceIdPredicate(instancePlan.getInstanceId())).isPresent());
         instances.add(instancePlan);
     }
 

@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.service.state;
 import org.cloudifysource.cosmo.LifecycleStateMachine;
 
 import java.net.URI;
-import java.util.List;
 
 /**
  * The basic information the service requires.

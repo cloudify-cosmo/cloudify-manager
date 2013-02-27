@@ -36,9 +36,9 @@ public class AgentState extends TaskConsumerState {
     private static final String MACHINE_STARTED = "machine_started";
 
     public AgentState() {
-        stateMachine = new LifecycleStateMachine
-                (MACHINE_UNREACHABLE+"->"+MACHINE_TERMINATED+"<->"+MACHINE_STARTED+"->"+MACHINE_REACHABLE +
-                        "->"+MACHINE_TERMINATED);
+        stateMachine = new LifecycleStateMachine(
+                MACHINE_UNREACHABLE + "->" + MACHINE_TERMINATED + "<->" + MACHINE_STARTED + "->" +
+                MACHINE_REACHABLE + "->" + MACHINE_TERMINATED);
         stateMachine.setFinalLifecycle(MACHINE_REACHABLE);
         stateMachine.setInitialLifecycle(MACHINE_TERMINATED);
     }
@@ -151,7 +151,7 @@ public class AgentState extends TaskConsumerState {
 
     @JsonIgnore
     public String getMachineTerminatedLifecycle() {
-         return MACHINE_TERMINATED;
+        return MACHINE_TERMINATED;
     }
 
     @JsonIgnore
