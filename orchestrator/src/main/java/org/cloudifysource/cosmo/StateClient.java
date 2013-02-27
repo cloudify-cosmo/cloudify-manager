@@ -76,8 +76,8 @@ public class StateClient implements StateReader, StateWriter {
             final ClientResponse response = put(path, json, etag);
             if (response.getClientResponseStatus() == ClientResponse.Status.OK) {
                 return Etag.create(response);
-            } else if ((i < (retries - 1))
-                       && response.getClientResponseStatus() == ClientResponse.Status.BAD_REQUEST) {
+            } else if ((i < (retries - 1)) &&
+                       response.getClientResponseStatus() == ClientResponse.Status.BAD_REQUEST) {
                 //retry
                 logger.warning("received error " + response.getEntity(String.class));
                 continue;

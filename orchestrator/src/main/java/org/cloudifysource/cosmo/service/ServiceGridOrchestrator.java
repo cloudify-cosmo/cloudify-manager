@@ -243,9 +243,9 @@ public class ServiceGridOrchestrator {
             AgentState agentState = getAgentState(agentId);
             boolean agentNotStarted =
                     (agentState == null || !agentState.isMachineReachableLifecycle());
-            if (agentNotStarted
-                    && state.isSyncedStateWithDeploymentBefore()
-                    && pingHealth == AgentPingHealth.UNDETERMINED) {
+            if (agentNotStarted &&
+                state.isSyncedStateWithDeploymentBefore() &&
+                pingHealth == AgentPingHealth.UNDETERMINED) {
                 //If this agent were started, we would have resolved it as agent started in the previous sync
                 //The agent probably never even started
                 pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
@@ -254,8 +254,8 @@ public class ServiceGridOrchestrator {
                 Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
                 for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
                     ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-                    if (instanceState == null
-                        || instanceState.isLifecycle(agentState.getMachineUnreachableLifecycle())) {
+                    if (instanceState == null ||
+                        instanceState.isLifecycle(agentState.getMachineUnreachableLifecycle())) {
 
                         syncComplete = false;
                         final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId);
@@ -310,8 +310,8 @@ public class ServiceGridOrchestrator {
                     (serviceState == null ? Lists.<URI>newArrayList() : serviceState.getInstanceIds());
             final Iterable<URI> allInstanceIds =
                     ImmutableSet.copyOf(Iterables.concat(actualInstanceIds, plannedInstanceIds));
-            if (serviceState == null
-                    || !Iterables.elementsEqual(actualInstanceIds, allInstanceIds)) {
+            if (serviceState == null ||
+                !Iterables.elementsEqual(actualInstanceIds, allInstanceIds)) {
 
                 syncComplete = false;
                 final PlanServiceTask planServiceTask = new PlanServiceTask();
@@ -681,16 +681,16 @@ public class ServiceGridOrchestrator {
                             // agent not reachable because it was not started yet
                             health = AgentPingHealth.AGENT_UNREACHABLE;
                         }
-                    } else if (expectedNumberOfMachineRestartsInAgentState != null
-                            && agentState != null
-                            && expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineStarts()) {
+                    } else if (expectedNumberOfMachineRestartsInAgentState != null &&
+                               agentState != null &&
+                               expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineStarts()) {
                         Preconditions.checkState(
                                 expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineStarts(),
                                 "Could not have sent ping to a machine that was not restarted yet");
                         // machine restarted after ping sent. Wait for next ping
-                    } else if (expectedNumberOfAgentRestartsInAgentState != null
-                            && agentState != null
-                            && expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentStarts()) {
+                    } else if (expectedNumberOfAgentRestartsInAgentState != null &&
+                               agentState != null &&
+                               expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentStarts()) {
                         Preconditions.checkState(
                                 expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentStarts(),
                                 "Could not have sent ping to an agent that was not restarted yet");

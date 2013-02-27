@@ -91,8 +91,8 @@ public class ServiceGridCapacityPlanner {
     private void scale(List<Task> newTasks,
             ServiceConfig serviceConfig, final int plannedNumberOfInstances) {
 
-        if (plannedNumberOfInstances >= serviceConfig.getMinNumberOfInstances()
-            && plannedNumberOfInstances <= serviceConfig.getMaxNumberOfInstances()) {
+        if (plannedNumberOfInstances >= serviceConfig.getMinNumberOfInstances() &&
+            plannedNumberOfInstances <= serviceConfig.getMaxNumberOfInstances()) {
 
             final ScaleServiceTask task = new ScaleServiceTask();
             task.setServiceId(serviceConfig.getServiceId());
@@ -156,8 +156,8 @@ public class ServiceGridCapacityPlanner {
     }
 
     private boolean isServiceInstalled(final ServiceState serviceState) {
-        return serviceState != null
-               && serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED);
+        return serviceState != null &&
+               serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED);
     }
 
     private boolean isAboveThreshold(Object threshold, Object value) {
@@ -192,8 +192,8 @@ public class ServiceGridCapacityPlanner {
         Preconditions.checkNotNull(left);
         Preconditions.checkNotNull(right);
 
-        if (left.getClass().equals(right.getClass())
-            && left instanceof Comparable<?>) {
+        if (left.getClass().equals(right.getClass()) &&
+            left instanceof Comparable<?>) {
             return ((Comparable<Object>) left).compareTo(right);
         }
 

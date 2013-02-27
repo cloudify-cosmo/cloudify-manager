@@ -106,6 +106,24 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <consoleOutput>true</consoleOutput>
+                    <encoding>utf-8</encoding>
+                    <configLocation>https://raw.github.com/CloudifySource/cosmo-dev/master/cosmo_checkstyle.xml</configLocation>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>            
 	</plugins>
 	</build>
 </project>
