@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package org.cloudifysource.cosmo;
 
 import com.google.common.base.Preconditions;
@@ -20,6 +35,13 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.logging.Logger;
 
+/**
+ * Base class for Unit Tests that require management mock.
+ * @param <T> - The type of management mock used.
+ *
+ * @author itaif
+ * @since 0.1
+ */
 public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
     private MockTaskContainers containers;
@@ -33,12 +55,13 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         logger = Logger.getLogger(this.getClass().getName());
         setSimpleLoggerFormatter(logger);
 
-        serviceLifecycleStateMachine = new LifecycleStateMachine
-            ("machine_reachable->service_cleaned<->service_stopped<->service_started");
+        serviceLifecycleStateMachine = new LifecycleStateMachine(
+                "machine_reachable->service_cleaned<->service_stopped<->service_started");
         serviceLifecycleStateMachine.setFinalLifecycle("service_started");
         serviceLifecycleStateMachine.setInitialLifecycle("service_cleaned");
-        Assert.assertEquals(serviceLifecycleStateMachine.getNextInstanceLifecycle("service_cleaned",
-                "service_started"),"service_stopped");
+        Assert.assertEquals(
+                serviceLifecycleStateMachine.getNextInstanceLifecycle("service_cleaned", "service_started"),
+                "service_stopped");
     }
 
     @BeforeClass
@@ -80,7 +103,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         logger.info("Before " + method.getName());
     }
 
-    @AfterMethod(alwaysRun=false)
+    @AfterMethod(alwaysRun = false)
     public void afterMethod(Method method) {
         logger.info("After " + method.getName());
         try {
@@ -92,8 +115,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
                         "Cleanup failure in test " + method.getName() + ":" +
                                 Iterables.toString(containers.getContainerIds()));
             }
-        }
-        finally {
+        } finally {
             if (containers != null) {
                 containers.clear();
             }
@@ -127,8 +149,8 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
     }
 
     /**
-     * This method simulates failure of the agent, and immediate restart by a reliable watchdog
-     * running on the same machine
+     * This method simulates failure of the agent, and immediate restart by a reliable watchdog,
+     * running on the same machine.
      */
     protected void restartAgent(URI agentId) {
 
@@ -143,9 +165,8 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         return taskConsumerRegistrar;
     }
 
-
     /**
-     * This method simulates an unexpected crash of a machine
+     * This method simulates an unexpected crash of a machine.
      */
     protected void killMachine(URI agentId) {
         containers.findContainer(agentId).killMachine();

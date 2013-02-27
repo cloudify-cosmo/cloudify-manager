@@ -19,6 +19,12 @@ package org.cloudifysource.cosmo;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+/**
+ * Unit tests for {@link LifecycleStateMachine}.
+ *
+ * @author itaif
+ * @since 0.1
+ */
 public class LifeCycleStateMachineTest {
 
     @Test
@@ -26,7 +32,7 @@ public class LifeCycleStateMachineTest {
         LifecycleStateMachine sm = new LifecycleStateMachine("");
         Assert.assertNull(sm.getInitialLifecycle());
         Assert.assertNull(sm.getFinalLifecycle());
-        Assert.assertNull(sm.getNextInstanceLifecycle("s1","s1"));
+        Assert.assertNull(sm.getNextInstanceLifecycle("s1", "s1"));
     }
 
     @Test
@@ -53,7 +59,7 @@ public class LifeCycleStateMachineTest {
         sm.setFinalLifecycle("s2");
         Assert.assertEquals(sm.getInitialLifecycle(), "s1");
         Assert.assertEquals(sm.getFinalLifecycle(), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s2"),"s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
         Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s1"));
     }
 
@@ -99,12 +105,12 @@ public class LifeCycleStateMachineTest {
         sm.setFinalLifecycle("s3");
         Assert.assertEquals(sm.getInitialLifecycle(), "s1");
         Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s2"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s3"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s3"),"s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
         Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s1"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3","s1"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3","s2"));
+        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s1"));
+        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s2"));
     }
 
     @Test
@@ -116,12 +122,12 @@ public class LifeCycleStateMachineTest {
         //sm.addStateTransition("s2","s3");
         Assert.assertEquals(sm.getInitialLifecycle(), "s1");
         Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s2"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s3"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s3"),"s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s1"),"s1");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s1"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s2"),"s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s1"), "s1");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s1"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s2"), "s2");
     }
 
     @Test
@@ -131,15 +137,15 @@ public class LifeCycleStateMachineTest {
         sm.setFinalLifecycle("s3");
         Assert.assertEquals(sm.getInitialLifecycle(), "s1");
         Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"),"s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
         Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
         Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
         Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s4"), "s4");
         Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s1"));
         Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s2"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s4","s3"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s2","s4"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3","s4"));
+        Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s3"));
+        Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s4"));
+        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s4"));
     }
 
     @Test
@@ -152,7 +158,7 @@ public class LifeCycleStateMachineTest {
         Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
         Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
         Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s4","s3"),"s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s4", "s3"), "s3");
         Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s1"));
         Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s2"));
         Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s4"));
@@ -166,12 +172,12 @@ public class LifeCycleStateMachineTest {
         sm.setFinalLifecycle("s3");
         Assert.assertEquals(sm.getInitialLifecycle(), "s1");
         Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1","s3"),"s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s3"),"s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2","s1"),"s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s1"),"s1");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s2"),"s1");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s1"), "s3");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s1"), "s1");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s2"), "s1");
     }
 
     @Test()
@@ -187,6 +193,6 @@ public class LifeCycleStateMachineTest {
         LifecycleStateMachine sm = new LifecycleStateMachine("s3->s1<->s2");
         sm.setInitialLifecycle("s1");
         sm.setFinalLifecycle("s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3","s2"),"s1");
+        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s2"), "s1");
     }
 }

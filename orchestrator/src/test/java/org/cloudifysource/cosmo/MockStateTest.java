@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,12 +34,18 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
+/**
+ * Unit Tests for {@link MockState}.
+ *
+ * @author itaif
+ * @since 0.1
+ */
 public class MockStateTest {
 
     private static final int PORT = 8080;
     private static final URI STATE_SERVER_URI = StreamUtils.newURI("http://localhost:" + PORT + "/");
 
-    final URI id = StreamUtils.newURI("http://localhost:"+PORT+"/services/tomcat");
+    final URI id = StreamUtils.newURI("http://localhost:" + PORT + "/services/tomcat");
     final ObjectMapper mapper = StreamUtils.newObjectMapper();
     private final Logger logger = Logger.getLogger(this.getClass().getName());
 
@@ -55,8 +61,7 @@ public class MockStateTest {
         if (useMock) {
             stateReader = new MockState();
             stateWriter = (StateWriter) stateReader;
-        }
-        else {
+        } else {
             stateReader = new StateClient(STATE_SERVER_URI);
             stateWriter = (StateWriter) stateReader;
             stateServer = new KVStoreServer();
@@ -74,9 +79,8 @@ public class MockStateTest {
     @BeforeMethod
     public void beforeMethod(Method method) {
         if (useMock) {
-            ((MockState)stateWriter).clear();
-        }
-        else {
+            ((MockState) stateWriter).clear();
+        } else {
             stateServer.reload();
         }
         logger.info("Starting " + method.getName());
@@ -112,8 +116,7 @@ public class MockStateTest {
         try {
             stateWriter.put(id, taskConsumerState2, Etag.EMPTY);
             Assert.fail("Expected exception");
-        }
-        catch (EtagPreconditionNotMetException e) {
+        } catch (EtagPreconditionNotMetException e) {
             Assert.assertEquals(e.getResponseEtag(), etag1);
             Assert.assertEquals(e.getRequestEtag(), Etag.EMPTY);
         }

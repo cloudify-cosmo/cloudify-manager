@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,11 @@ import org.testng.annotations.Test;
 
 import java.net.URI;
 
+/**
+ * Unit tests for {@link MockTaskBroker}.
+ * @author itaif
+ * @since 0.1
+ */
 public class MockTaskBrokerTest {
 
     final URI taskConsumerId1 = StreamUtils.newURI("http://localhost/services/tomcat");
@@ -42,8 +47,8 @@ public class MockTaskBrokerTest {
         broker.postNewTask(task);
 
         Task pendingTask = Iterables.getOnlyElement(broker.getPendingTasks(taskConsumerId1));
-        Assert.assertTrue(broker.taskEquals(task,pendingTask));
-        Assert.assertTrue(broker.taskEquals(task,broker.removeNextTask(taskConsumerId1)));
+        Assert.assertTrue(broker.taskEquals(task, pendingTask));
+        Assert.assertTrue(broker.taskEquals(task, broker.removeNextTask(taskConsumerId1)));
         Assert.assertEquals(null, broker.removeNextTask(taskConsumerId1));
     }
 
@@ -77,7 +82,7 @@ public class MockTaskBrokerTest {
 
         broker.postNewTask(secondTask);
         Assert.assertEquals(Iterables.size(broker.getPendingTasks(taskConsumerId1)), 2);
-        Assert.assertTrue(broker.taskEquals(firstTask,broker.removeNextTask(taskConsumerId1)));
+        Assert.assertTrue(broker.taskEquals(firstTask, broker.removeNextTask(taskConsumerId1)));
         Assert.assertTrue(broker.taskEquals(secondTask, broker.removeNextTask(taskConsumerId1)));
         Assert.assertEquals(null, broker.removeNextTask(taskConsumerId1));
     }
@@ -104,7 +109,7 @@ public class MockTaskBrokerTest {
 
         broker.postNewTask(secondTask);
         Assert.assertEquals(Iterables.size(broker.getPendingTasks(taskConsumerId1)), 1);
-        Assert.assertTrue(broker.taskEquals(firstTask,broker.removeNextTask(taskConsumerId1)));
+        Assert.assertTrue(broker.taskEquals(firstTask, broker.removeNextTask(taskConsumerId1)));
         Assert.assertEquals(null, broker.removeNextTask(taskConsumerId1));
     }
 
@@ -120,9 +125,9 @@ public class MockTaskBrokerTest {
         task2.setConsumerId(taskConsumerId2);
         broker.postNewTask(task2);
 
-        Assert.assertTrue(broker.taskEquals(task1,broker.removeNextTask(taskConsumerId1)));
+        Assert.assertTrue(broker.taskEquals(task1, broker.removeNextTask(taskConsumerId1)));
         Assert.assertEquals(null, broker.removeNextTask(taskConsumerId1));
-        Assert.assertTrue(broker.taskEquals(task2,broker.removeNextTask(taskConsumerId2)));
+        Assert.assertTrue(broker.taskEquals(task2, broker.removeNextTask(taskConsumerId2)));
         Assert.assertEquals(null, broker.removeNextTask(taskConsumerId2));
     }
 }

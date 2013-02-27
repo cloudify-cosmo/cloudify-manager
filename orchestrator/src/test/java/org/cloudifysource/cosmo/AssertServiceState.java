@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package org.cloudifysource.cosmo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +37,11 @@ import org.testng.Assert;
 import java.net.URI;
 import java.util.Map;
 
+/**
+ * Unit test utility class for management assertions.
+ * @author itaif
+ * @since 0.1
+ */
 public class AssertServiceState {
 
     private AssertServiceState() { }
@@ -45,17 +65,17 @@ public class AssertServiceState {
         Assert.assertEquals(management.getDeploymentPlan().getServices().size(), 1);
         Assert.assertEquals(
                 Iterables.size(getAgentIds(management)), 1, "Expected 1 agent id, " +
-                "instead found: "+ getAgentIds(management));
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds(management, serviceName)),1);
+                "instead found: " + getAgentIds(management));
+        Assert.assertEquals(Iterables.size(getServiceInstanceIds(management, serviceName)), 1);
         assertServiceInstalledWithOneInstance(
-                management, serviceName, 
+                management, serviceName,
                 numberOfAgentStarts, numberOfMachineStarts);
     }
 
     private static void assertServiceInstalledWithOneInstance(
             MockManagement management, String serviceName,
             int numberOfAgentStarts, int numberOfMachineStarts) {
-        
+
         final URI serviceId = management.getServiceId(serviceName);
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
@@ -89,7 +109,7 @@ public class AssertServiceState {
         Assert.assertTrue(instanceState.isLifecycle("service_started"));
 
         final AgentState agentState = management.getAgentState(agentId);
-        Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()),instanceId);
+        Assert.assertEquals(Iterables.getOnlyElement(agentState.getServiceInstanceIds()), instanceId);
         Assert.assertTrue(agentState.isMachineReachableLifecycle());
         Assert.assertEquals(agentState.getNumberOfAgentStarts(), numberOfAgentStarts);
         Assert.assertEquals(agentState.getNumberOfMachineStarts(), numberOfMachineStarts);
@@ -131,19 +151,20 @@ public class AssertServiceState {
     }
 
     public static Iterable<URI> getServiceInstanceIds(MockManagement management, String serviceName) {
-        return getStateIdsStartingWith(management, StreamUtils.newURI(management.getStateServerUri()
-                + "services/" + serviceName + "/instances/"));
+        return getStateIdsStartingWith(management, StreamUtils.newURI(management.getStateServerUri() +
+                "services/" + serviceName + "/instances/"));
     }
 
     private static Iterable<URI> getStateIdsStartingWith(MockManagement management, final URI uri) {
         return Iterables.filter(
                 management.getStateReader().getElementIdsStartingWith(uri),
-                new Predicate<URI>(){
+                new Predicate<URI>() {
 
                     @Override
                     public boolean apply(URI stateId) {
                         return stateId.toString().endsWith("/");
-                    }});
+                    }
+                });
     }
 
 
@@ -153,32 +174,35 @@ public class AssertServiceState {
     }
 
     public static void assertTwoTomcatInstances(
-            MockManagement management, 
-            Map<URI,Integer> numberOfAgentStartsPerAgent, 
-            Map<URI,Integer> numberOfMachineStartsPerAgent) {
+            MockManagement management,
+            Map<URI, Integer> numberOfAgentStartsPerAgent,
+            Map<URI, Integer> numberOfMachineStartsPerAgent) {
         final URI serviceId = management.getServiceId("tomcat");
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()), 2);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
         Iterable<URI> instanceIds = getStateIdsStartingWith(management, StreamUtils.newURI(management
-                .getStateServerUri()
-                + "services/tomcat/instances/"));
-        Assert.assertEquals(Iterables.size(instanceIds),2);
+                .getStateServerUri() +
+                "services/tomcat/instances/"));
+        Assert.assertEquals(Iterables.size(instanceIds), 2);
 
         final ServiceGridDeploymentPlan deploymentPlan = management.getDeploymentPlan();
-        Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
+        Assert.assertEquals(
+                Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
         Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId(serviceId)), 2);
 
         Iterable<URI> agentIds = getAgentIds(management);
         int numberOfAgents = Iterables.size(agentIds);
         Assert.assertEquals(numberOfAgents, 2);
-        for (int i = 0 ; i < numberOfAgents; i++) {
+        for (int i = 0; i < numberOfAgents; i++) {
 
             URI agentId = Iterables.get(agentIds, i);
             AgentState agentState = management.getAgentState(agentId);
             Assert.assertTrue(agentState.isLifecycle(agentState.getMachineReachableLifecycle()));
             Assert.assertEquals(agentState.getNumberOfAgentStarts(), (int) numberOfAgentStartsPerAgent.get(agentId));
-            Assert.assertEquals(agentState.getNumberOfMachineStarts(), (int) numberOfMachineStartsPerAgent.get(agentId));
+            Assert.assertEquals(
+                    agentState.getNumberOfMachineStarts(),
+                    (int) numberOfMachineStartsPerAgent.get(agentId));
             URI instanceId = Iterables.getOnlyElement(agentState.getServiceInstanceIds());
             Assert.assertTrue(Iterables.contains(instanceIds, instanceId));
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
@@ -190,27 +214,27 @@ public class AssertServiceState {
     }
 
     public static void assertTwoTomcatInstances(MockManagement management) {
-        assertTwoTomcatInstances(management, expectedBothAgentsNotRestarted(management), 
+        assertTwoTomcatInstances(management, expectedBothAgentsNotRestarted(management),
                 expectedBothMachinesNotRestarted(management));
     }
 
     public static ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted(MockManagement management) {
-        return ImmutableMap.<URI,Integer>builder()
+        return ImmutableMap.<URI, Integer>builder()
                 .put(management.getAgentId(0), 1)
                 .put(management.getAgentId(1), 1)
                 .build();
     }
 
     public static ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted(MockManagement management) {
-        return ImmutableMap.<URI,Integer>builder()
+        return ImmutableMap.<URI, Integer>builder()
                 .put(management.getAgentId(0), 1)
                 .put(management.getAgentId(1), 1)
                 .build();
     }
 
-    public static ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted(MockManagement 
-                                                                                                    management) {
-        return ImmutableMap.<URI,Integer>builder()
+    public static ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted(
+            MockManagement management) {
+        return ImmutableMap.<URI, Integer>builder()
                 .put(management.getAgentId(0), 1)
                 .put(management.getAgentId(1), 2)
                 .build();
@@ -238,8 +262,7 @@ public class AssertServiceState {
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
             if (instanceUnreachable) {
                 Assert.assertTrue(instanceState.isLifecycle("machine_unreachable"));
-            }
-            else {
+            } else {
                 Assert.assertEquals(instanceState.getLifecycle(), "service_cleaned");
             }
             URI agentId = instanceState.getAgentId();

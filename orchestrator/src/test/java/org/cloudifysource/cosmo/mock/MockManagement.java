@@ -41,11 +41,16 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
+/**
+ * Creates the various management components needed for unit testing.
+ * @author itaif
+ * @since 0.1
+ */
 public class MockManagement {
 
     private static final int STATE_SERVER_PORT = 8080;
-    private static final String STATE_SERVER_URI = "http://localhost:"+STATE_SERVER_PORT+"/";
-    private static final boolean useMock = true;
+    private static final String STATE_SERVER_URI = "http://localhost:" + STATE_SERVER_PORT + "/";
+    private static final boolean USE_MOCK = true;
     private final URI orchestratorId;
     private final URI machineProvisionerId;
     private final StateReader stateReader;
@@ -73,12 +78,11 @@ public class MockManagement {
         machineProvisionerId = createUri("services/provisioner/");
         agentsId = createUri("agents/");
 
-        if (useMock) {
+        if (USE_MOCK) {
             stateReader = new MockState();
             stateWriter = (StateWriter) stateReader;
-            ((MockState)stateReader).setLoggingEnabled(false);
-        }
-        else {
+            ((MockState) stateReader).setLoggingEnabled(false);
+        } else {
             stateReader = new StateClient(StreamUtils.newURI(STATE_SERVER_URI));
             stateWriter = (StateWriter) stateReader;
             stateServer = new KVStoreServer();
@@ -91,7 +95,7 @@ public class MockManagement {
 
     protected URI createUri(String relativeId) {
         try {
-            return new URI(STATE_SERVER_URI+ relativeId);
+            return new URI(STATE_SERVER_URI + relativeId);
         } catch (URISyntaxException e) {
             throw Throwables.propagate(e);
         }
@@ -125,10 +129,9 @@ public class MockManagement {
     }
 
     private void clearState() {
-        if (useMock) {
-            ((MockState)stateReader).clear();
-        }
-        else {
+        if (USE_MOCK) {
+            ((MockState) stateReader).clear();
+        } else {
             stateServer.reload();
         }
     }
@@ -187,7 +190,7 @@ public class MockManagement {
     }
 
     public void close() {
-        if (!useMock) {
+        if (!USE_MOCK) {
             stateServer.stop();
         }
     }

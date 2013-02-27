@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,11 +24,19 @@ import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
-import org.cloudifysource.cosmo.service.tasks.*;
+import org.cloudifysource.cosmo.service.tasks.RecoverServiceInstanceStateTask;
+import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromAgentTask;
+import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
+import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 
 import java.net.URI;
 import java.util.Map;
 
+/**
+ * A mock that executes tasks that should be executed by an Agent in the real world.
+ * @author itaif
+ * @since 0.1
+ */
 public class MockAgent {
 
     private final AgentState state;
@@ -63,7 +71,8 @@ public class MockAgent {
         URI instanceId = task.getStateId();
         URI agentId = task.getConsumerId();
         URI serviceId = task.getServiceId();
-        Preconditions.checkArgument(state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
+        Preconditions.checkArgument(
+                state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
         ServiceInstanceState instanceState = instancesState.get(instanceId);
         if (instanceState == null) {
             instanceState = new ServiceInstanceState();
@@ -71,8 +80,7 @@ public class MockAgent {
             instanceState.setServiceId(serviceId);
             instanceState.setStateMachine(task.getStateMachine());
             instanceState.setLifecycle(task.getStateMachine().getInitialLifecycle());
-        }
-        else {
+        } else {
             Preconditions.checkState(instanceState.getAgentId().equals(agentId));
             Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
         }
@@ -80,7 +88,10 @@ public class MockAgent {
     }
 
     @ImpersonatingTaskConsumer
-    public void injectPropertyToInstance(SetInstancePropertyTask task, TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+    public void injectPropertyToInstance(
+            SetInstancePropertyTask task,
+            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
+
         final URI instanceId = task.getStateId();
         Preconditions.checkArgument(instancesState.containsKey(instanceId), "Unknown instance %s", instanceId);
         ServiceInstanceState instanceState = instancesState.get(instanceId);

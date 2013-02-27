@@ -17,8 +17,6 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.mock.MockPlannerManagement;
 import org.cloudifysource.cosmo.service.ServiceUtils;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
@@ -33,6 +31,11 @@ import org.testng.annotations.Test;
 
 import java.net.URI;
 
+/**
+ * Unit tests for {@link org.cloudifysource.cosmo.service.ServiceGridDeploymentPlanner}.
+ * @since 0.1
+ * @author itaif
+ */
 public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<MockPlannerManagement> {
 
     @Override
@@ -41,7 +44,7 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     /**
-     * Tests deployment of 1 instance
+     * Tests deployment of 1 instance.
      */
     @Test
     public void installSingleInstanceServiceTest() {
@@ -55,9 +58,9 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     /**
-     * Tests deployment of 2 instances
+     * Tests deployment of 2 instances.
      */
-    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void installMultipleInstanceServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -68,13 +71,13 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     /**
-     * Tests change in plan from 1 instance to 2 instances
+     * Tests change in plan from 1 instance to 2 instances.
      */
-    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void scaleOutServiceTest() {
         installService("tomcat", 1);
         execute();
-        scaleService("tomcat",2);
+        scaleService("tomcat", 2);
         execute();
         assertTwoTomcatInstances();
         uninstallService("tomcat");
@@ -83,13 +86,13 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     /**
-     * Tests change in plan from 1 instance to 2 instances
+     * Tests change in plan from 1 instance to 2 instances.
      */
-    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void scaleInServiceTest() {
         installService("tomcat", 2);
         execute();
-        scaleService("tomcat",1);
+        scaleService("tomcat", 1);
         execute();
         assertTomcatScaledInFrom2To1();
         uninstallService("tomcat");
@@ -98,9 +101,9 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     /**
-     * Tests management state recovery from crash
+     * Tests management state recovery from crash.
      */
-    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void managementRestartTest() {
         installService("tomcat", 1);
         execute();
@@ -113,10 +116,10 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     /**
-     * Install two services, each with one instance
+     * Install two services, each with one instance.
      */
-    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest"})
-    public void installTwoSingleInstanceServicesTest(){
+    @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
+    public void installTwoSingleInstanceServicesTest() {
         installService("tomcat", 1);
         installService("cassandra", 1);
         execute();
@@ -174,7 +177,8 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
 
         final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
         final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
-        Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
+        Assert.assertEquals(
+                Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
         Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId(serviceId)), 2);
     }
 
@@ -216,12 +220,13 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     private Iterable<URI> getStateIdsStartingWith(final URI uri) {
         return Iterables.filter(
                 getManagement().getStateReader().getElementIdsStartingWith(uri),
-                new Predicate<URI>(){
+                new Predicate<URI>() {
 
                     @Override
                     public boolean apply(URI stateId) {
                         return stateId.toString().endsWith("/");
-                    }});
+                    }
+                });
     }
 
 

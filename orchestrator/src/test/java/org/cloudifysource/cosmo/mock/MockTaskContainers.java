@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package org.cloudifysource.cosmo.mock;
 
 import com.google.common.base.Function;
@@ -18,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Aggregates one or more {@link MockTaskContainer} into one.
+ * @author itaif
+ * @since 0.1
  */
 public class MockTaskContainers implements Iterable<MockTaskContainer> {
 
@@ -34,7 +51,10 @@ public class MockTaskContainers implements Iterable<MockTaskContainer> {
     }
 
     public void addContainer(MockTaskContainer container) {
-        Preconditions.checkState(findContainserById(container.getTaskConsumerId()) == null, "Container " + container.getTaskConsumerId() + " was already added");
+        Preconditions.checkState(
+                findContainserById(container.getTaskConsumerId()) == null,
+                "Container %s was already added",
+                container.getTaskConsumerId());
         containers.add(container);
     }
 
@@ -102,10 +122,10 @@ public class MockTaskContainers implements Iterable<MockTaskContainer> {
 
             for (MockTaskContainer container : containers) {
                 Preconditions.checkNotNull(findContainer(container.getTaskConsumerId()));
-                Assert.assertEquals(container.getTaskConsumerId().getHost(),"localhost");
-                Task task = null;
-
-                for(; (task = container.consumeNextTask()) != null; timeProvider.increaseBy(1)) {
+                Assert.assertEquals(container.getTaskConsumerId().getHost(), "localhost");
+                for (Task task = container.consumeNextTask();
+                     task != null;
+                     task = container.consumeNextTask(), timeProvider.increaseBy(1)) {
                     if (!(task instanceof TaskProducerTask) && !(task instanceof PingAgentTask)) {
                         emptyCycle = false;
                     }
@@ -114,8 +134,7 @@ public class MockTaskContainers implements Iterable<MockTaskContainer> {
 
             if (emptyCycle) {
                 consecutiveEmptyCycles++;
-            }
-            else {
+            } else {
                 consecutiveEmptyCycles = 0;
             }
 

@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.TaskConsumerState;
-import org.cloudifysource.cosmo.state.*;
+import org.cloudifysource.cosmo.state.Etag;
+import org.cloudifysource.cosmo.state.EtagPreconditionNotMetException;
+import org.cloudifysource.cosmo.state.EtagState;
+import org.cloudifysource.cosmo.state.StateReader;
+import org.cloudifysource.cosmo.state.StateWriter;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +33,12 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.Map;
 
+/**
+ * A mock implementation of a kvstore that supports etag used for testing.
+ *
+ * @author itaif
+ * @since 0.1
+ */
 public class MockState implements StateReader, StateWriter {
 
     private final Logger logger;
@@ -50,26 +60,29 @@ public class MockState implements StateReader, StateWriter {
         final Etag oldEtag = oldState == null ? Etag.EMPTY : oldState.getEtag();
         if (!ifMatchHeader.equals(oldEtag)) {
             if (isLoggingEnabled() && logger.isInfoEnabled()) {
-                final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader+"\n"+StreamUtils.toJson(mapper,state);
+                final String request =
+                        "PUT " + id.getPath() + " HTTP 1.1\nIf-Match:" + ifMatchHeader + "\n" + StreamUtils
+                                .toJson(mapper, state);
                 final String response = "HTTP/1.1 412 Precondition Failed";
-                logger.info(request +"\n"+ response+"\n");
+                logger.info(request + "\n" + response + "\n");
             }
-            throw new EtagPreconditionNotMetException(id ,oldEtag, ifMatchHeader);
+            throw new EtagPreconditionNotMetException(id, oldEtag, ifMatchHeader);
         }
 
         EtagState<String> etagState = createEtagState(state);
         stateById.put(key, etagState);
         if (isLoggingEnabled() && logger.isInfoEnabled()) {
-            final String request = "PUT "+ id.getPath() + " HTTP 1.1\nIf-Match:"+ifMatchHeader+"\n"+etagState.getState();
-            final String response = "HTTP/1.1 200 Ok\nETag: "+etagState.getEtag() ;
-            logger.info(request +"\n"+ response+"\n");
+            final String request =
+                    "PUT " + id.getPath() + " HTTP 1.1\nIf-Match:" + ifMatchHeader + "\n" + etagState.getState();
+            final String response = "HTTP/1.1 200 Ok\nETag: " + etagState.getEtag();
+            logger.info(request + "\n" + response + "\n");
         }
         return etagState.getEtag();
 
     }
 
     private EtagState<String> createEtagState(Object state) {
-        final String json = StreamUtils.toJson(mapper,state);
+        final String json = StreamUtils.toJson(mapper, state);
         final Etag etag = Etag.create(json);
         final EtagState<String> etagState = new EtagState<String>(etag, json);
         return etagState;
@@ -82,9 +95,9 @@ public class MockState implements StateReader, StateWriter {
         final EtagState<String> etagState = stateById.get(key);
         if (etagState == null) {
             if (isLoggingEnabled() && logger.isInfoEnabled()) {
-                final String request = "GET "+ id.getPath() + " HTTP 1.1";
+                final String request = "GET " + id.getPath() + " HTTP 1.1";
                 final String response = "HTTP/1.1 404 Not Found";
-                logger.info(request +"\n"+ response+"\n");
+                logger.info(request + "\n" + response + "\n");
             }
             return null;
         }
@@ -92,12 +105,13 @@ public class MockState implements StateReader, StateWriter {
         final T state = StreamUtils.fromJson(mapper, etagState.getState(), clazz);
 
         if (isLoggingEnabled() && logger.isInfoEnabled()) {
-            final String request = "GET "+ id.getPath() + " HTTP 1.1";
+            final String request = "GET " + id.getPath() + " HTTP 1.1";
             try {
-                final String response = "HTTP/1.1 200 Ok\nETag: "+etagState.getEtag()+"\n" + mapper.writeValueAsString(state);
-                logger.info(request +"\n"+ response+"\n");
+                final String response =
+                        "HTTP/1.1 200 Ok\nETag: " + etagState.getEtag() + "\n" + mapper.writeValueAsString(state);
+                logger.info(request + "\n" + response + "\n");
             } catch (JsonProcessingException e) {
-                logger.warn(request,e);
+                logger.warn(request, e);
             }
         }
 
@@ -117,7 +131,7 @@ public class MockState implements StateReader, StateWriter {
     }
 
     /**
-     * Simulates process restart
+     * Simulates process restart.
      */
     public void clear() {
         stateById.clear();
@@ -125,12 +139,13 @@ public class MockState implements StateReader, StateWriter {
 
     @Override
     public Iterable<URI> getElementIdsStartingWith(final URI idPrefix) {
-        return Iterables.filter(stateById.keySet(), new Predicate<URI>(){
+        return Iterables.filter(stateById.keySet(), new Predicate<URI>() {
 
             @Override
             public boolean apply(URI id) {
                 return id.toString().startsWith(idPrefix.toString());
-            }});
+            }
+        });
     }
 
 }

@@ -114,6 +114,7 @@
                     <consoleOutput>true</consoleOutput>
                     <encoding>utf-8</encoding>
                     <configLocation>https://raw.github.com/CloudifySource/cosmo-dev/master/cosmo_checkstyle.xml</configLocation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
                 </configuration>
                 <executions>
                     <execution>

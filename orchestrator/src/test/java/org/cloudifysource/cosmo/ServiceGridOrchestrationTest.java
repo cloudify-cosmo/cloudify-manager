@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
@@ -42,6 +41,11 @@ import static org.cloudifysource.cosmo.AssertServiceState.expectedBothMachinesNo
 import static org.cloudifysource.cosmo.AssertServiceState.getAgentIds;
 import static org.cloudifysource.cosmo.AssertServiceState.getServiceInstanceIds;
 
+/**
+ * Unit Tests for {@link org.cloudifysource.cosmo.service.ServiceGridOrchestrator}.
+ * @author itaif
+ * @since 0.1
+ */
 public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockManagement> {
 
     @Override
@@ -50,7 +54,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Tests deployment of 1 instance
+     * Tests deployment of 1 instance.
      */
     @Test
     public void installSingleInstanceServiceTest() {
@@ -64,9 +68,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Tests deployment of 2 instances
+     * Tests deployment of 2 instances.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void installMultipleInstanceServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -77,9 +81,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Tests machine failover, and restart by the orchestrator
+     * Tests machine failover, and restart by the orchestrator.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void machineFailoverTest() {
         installService("tomcat", 1);
         execute();
@@ -97,9 +101,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
     /**
      * Test agent process failed, and restarted automatically by
-     * reliable watchdog running on the same machine
+     * reliable watchdog running on the same machine.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void agentRestartTest() {
         installService("tomcat", 1);
         execute();
@@ -116,9 +120,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Tests change in plan from 1 instance to 2 instances
+     * Tests change in plan from 1 instance to 2 instances.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void scaleOutServiceTest() {
         installService("tomcat", 1);
         execute();
@@ -131,9 +135,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Tests change in plan from 1 instance to 2 instances
+     * Tests change in plan from 1 instance to 2 instances.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void scaleInServiceTest() {
         installService("tomcat", 2);
         execute();
@@ -148,7 +152,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     /**
      * Tests uninstalling tomcat service when machine hosting service instance failed.
      */
-    @Test(dependsOnMethods = {"machineFailoverTest"})
+    @Test(dependsOnMethods = {"machineFailoverTest" })
     public void machineFailoverUninstallServiceTest() {
         installService("tomcat", 1);
         execute();
@@ -159,9 +163,9 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Tests management state recovery from crash
+     * Tests management state recovery from crash.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void managementRestartTest() {
         installService("tomcat", 1);
         execute();
@@ -181,7 +185,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      * Tests management state recovery from crash when one of the agents also failed.
      * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
      */
-    @Test(dependsOnMethods = {"managementRestartTest","agentRestartTest"})
+    @Test(dependsOnMethods = {"managementRestartTest", "agentRestartTest" })
     public void managementRestartAndOneAgentRestartTest() {
         installService("tomcat", 2);
         execute();
@@ -202,22 +206,22 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     /**
-     * Install two services, each with one instance
+     * Install two services, each with one instance.
      */
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
-    public void installTwoSingleInstanceServicesTest(){
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
+    public void installTwoSingleInstanceServicesTest() {
         installServices("tomcat", 1, "cassandra", 1);
         execute();
         assertServiceInstalledWithOneInstance(getManagement(), "tomcat");
         assertServiceInstalledWithOneInstance(getManagement(), "cassandra");
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds(getManagement(),"tomcat")), 1);
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds(getManagement(),"cassandra")), 1);
+        Assert.assertEquals(Iterables.size(getServiceInstanceIds(getManagement(), "tomcat")), 1);
+        Assert.assertEquals(Iterables.size(getServiceInstanceIds(getManagement(), "cassandra")), 1);
         uninstallAllServices();
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
 
-    @Test(dependsOnMethods = {"installSingleInstanceServiceTest"})
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void setInstancePropertyTest() {
 
         final String propertyName = "hellow";
@@ -299,7 +303,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
         ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
         serviceDeploymentPlan.setServiceConfig(serviceConfig);
-        for (int i = 0 ; i < numberOfInstances ; i++) {
+        for (int i = 0; i < numberOfInstances; i++) {
             final ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
             instancePlan.setAgentId(getManagement().getAgentId(i + offset));
             instancePlan.setInstanceId(getManagement().getServiceInstanceId(name, i + offset));
