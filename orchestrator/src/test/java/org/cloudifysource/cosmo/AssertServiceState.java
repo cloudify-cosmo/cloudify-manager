@@ -96,7 +96,7 @@ public class AssertServiceState {
 
         TaskConsumerHistory agentTasksHistory = getTasksHistory(management, agentId);
         Assert.assertEquals(
-                countMachineLifecycleTasks(agentTasksHistory, AgentState.Progress.MACHINE_STARTED),
+                countMachineLifecycleTasks(agentTasksHistory, agentState.getMachineStartedLifecycle()),
                 numberOfMachineStarts);
         Assert.assertEquals(
                 countMachineLifecycleTasks(agentTasksHistory, agentState.getMachineReachableLifecycle()),

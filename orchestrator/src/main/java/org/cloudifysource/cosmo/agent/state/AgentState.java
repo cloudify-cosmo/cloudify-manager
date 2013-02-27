@@ -41,7 +41,6 @@ public class AgentState extends TaskConsumerState {
      * Possible values for {@link AgentState#setLifecycle(String)}.
      */
     public static class Progress {
-        public static final String MACHINE_STARTED = "machine_started";
         public static final String MACHINE_UNREACHABLE = "machine_unreachable";
     }
 
@@ -141,7 +140,6 @@ public class AgentState extends TaskConsumerState {
         numberOfAgentStarts = 0;
     }
 
-
     /**
      * @param expectedLifecycle - the expected lifecycle
      * @return - the next lifecycle that should bring us one step closer to expectedLifecyle
@@ -160,6 +158,11 @@ public class AgentState extends TaskConsumerState {
     @JsonIgnore
     public String getMachineReachableLifecycle() {
         return  stateMachine.getFinalLifecycle();
+    }
+
+    @JsonIgnore
+    public String getMachineStartedLifecycle() {
+        return "machine_started";
     }
 
     @JsonIgnore
