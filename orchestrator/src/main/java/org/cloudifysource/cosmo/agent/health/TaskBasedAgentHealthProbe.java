@@ -17,7 +17,9 @@
 package org.cloudifysource.cosmo.agent.health;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskProducer;
@@ -53,7 +55,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     private final StateReader stateReader;
     private final URI agentProbeId;
 
-    private Iterable<URI> monitoredAgentsIds;
+    private Iterable<URI> monitoredAgentsIds = Sets.newLinkedHashSet();
 
 
     public TaskBasedAgentHealthProbe(CurrentTimeProvider timeProvider, TaskReader taskReader, StateReader stateReader,
@@ -138,9 +140,10 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     }
 
     @Override
-    public void agentsToMonitor(Iterable<URI> agentsIds) {
+    public void monitorAgents(Iterable<URI> agentsIds) {
         this.monitoredAgentsIds = agentsIds;
     }
+
 
     @TaskProducer
     public Iterable<Task> orchestrate() {
@@ -162,7 +165,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
 
             final AgentState agentState = getAgentState(agentId);
 
-            AgentPingHealth agentPingHealth = getAgentPingHealth(agentId, nowTimestamp);
+            AgentPingHealth agentPingHealth = getAgentHealthStatus(agentId, nowTimestamp);
             if (agentPingHealth.equals(AgentPingHealth.AGENT_REACHABLE)) {
                 final long taskTimestamp = agentState.getLastPingSourceTimestamp();
                 final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
@@ -180,73 +183,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
             }
             addNewTaskIfNotExists(newTasks, pingTask);
         }
-    }
 
-    private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
-
-        AgentPingHealth health = AgentPingHealth.UNDETERMINED;
-
-        // look for ping that should have been consumed by now --> AGENT_NOT_RESPONDING
-        AgentState agentState = getAgentState(agentId);
-
-        // look for ping that was consumed just recently --> AGENT_REACHABLE
-        if (agentState != null) {
-            final long taskTimestamp = agentState.getLastPingSourceTimestamp();
-            final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
-            if (sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS) {
-                // ping was consumed just recently
-                health = AgentPingHealth.AGENT_REACHABLE;
-            }
-        }
-
-        if (health == AgentPingHealth.UNDETERMINED) {
-
-            Iterable<Task> pendingTasks = taskReader.getPendingTasks(agentId);
-            for (final Task task : pendingTasks) {
-                if (task instanceof PingAgentTask) {
-                    Preconditions.checkState(
-                            task.getProducerId().equals(agentProbeId),
-                            "All ping tasks are assumed to be from this agent probe");
-                    PingAgentTask pingAgentTask = (PingAgentTask) task;
-                    Integer expectedNumberOfAgentRestartsInAgentState =
-                            pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
-                    Integer expectedNumberOfMachineRestartsInAgentState =
-                            pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
-                    if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
-                        Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
-                        if (agentState.isProgress(AgentState.Progress.AGENT_STARTED)) {
-                            // agent started after ping sent. Wait for next ping
-                        } else {
-                            // agent not reachable because it was not started yet
-                            health = AgentPingHealth.AGENT_UNREACHABLE;
-                        }
-                    } else if (expectedNumberOfMachineRestartsInAgentState != null
-                            && agentState != null
-                            && expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineStarts()) {
-                        Preconditions.checkState(
-                                expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineStarts(),
-                                "Could not have sent ping to a machine that was not restarted yet");
-                        // machine restarted after ping sent. Wait for next ping
-                    } else if (expectedNumberOfAgentRestartsInAgentState != null
-                            && agentState != null
-                            && expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentStarts()) {
-                        Preconditions.checkState(
-                                expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentStarts(),
-                                "Could not have sent ping to an agent that was not restarted yet");
-                        // agent restarted after ping sent. Wait for next ping
-                    } else {
-                        final long taskTimestamp = task.getProducerTimestamp();
-                        final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
-                        if (notRespondingMilliseconds > AGENT_UNREACHABLE_MILLISECONDS) {
-                            // ping should have been consumed by now
-                            health = AgentPingHealth.AGENT_UNREACHABLE;
-                        }
-                    }
-                }
-            }
-        }
-
-        return health;
     }
 
     private AgentState getAgentState(URI agentId) {

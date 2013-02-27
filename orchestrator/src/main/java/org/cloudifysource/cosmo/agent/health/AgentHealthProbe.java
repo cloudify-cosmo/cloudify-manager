@@ -40,5 +40,5 @@ public interface AgentHealthProbe {
      * monitored.
      * @param agentsIds the list of agents ids to monitor
      */
-    void agentsToMonitor(Iterable<URI> agentsIds);
+    void monitorAgents(Iterable<URI> agentsIds);
 }

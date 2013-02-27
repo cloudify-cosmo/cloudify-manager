@@ -238,23 +238,19 @@ public class ServiceGridOrchestrator {
 
     private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {
 
-        agentHealthProbe.agentsToMonitor(getAllAgentIds());
+        agentHealthProbe.monitorAgents(getAllAgentIds());
 
         boolean syncComplete = true;
         final long nowTimestamp = timeProvider.currentTimeMillis();
         for (final URI agentId : getPlannedAgentIds()) {
             AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
             AgentState agentState = getAgentState(agentId);
-            boolean agentNotStarted =
-                    (agentState == null
-                     || !agentState.getProgress().equals(AgentState.Progress.AGENT_STARTED));
-            if (agentNotStarted
-                && state.isSyncedStateWithDeploymentBefore()
-                && pingHealth == AgentPingHealth.UNDETERMINED) {
-                //If this agent were started, we would have resolved it as AGENT_STARTED in the previous sync
-                //The agent probably never even started
-                pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
-            }
+
+            //TODO when this probe is started from scratch on an existing system (management restart)
+            //it may return undetermined state for agents that are reachable simply because its stateReader is being
+            //updated behind the scenes, this may cause a delay in syncStateWithDeploymentPlan handling of tasks
+            //during that time period as the state will not be considered inSync until this is over.
+
             if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
                 Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
                 for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
@@ -328,9 +324,6 @@ public class ServiceGridOrchestrator {
             }
         }
 
-        if (syncComplete) {
-            state.setSyncedStateWithDeploymentBefore(true);
-        }
         return syncComplete;
     }
 

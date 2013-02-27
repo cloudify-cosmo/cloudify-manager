@@ -19,7 +19,7 @@ package org.cloudifysource.cosmo.agent.health;
 import org.cloudifysource.cosmo.TaskConsumerState;
 
 /**
- * A state holder for the {@link TaskBasedAgentHealthProbe}
+ * A state holder for the {@link TaskBasedAgentHealthProbe}.
  *
  * @author Eitan Yanovsky
  * @since 0.1
