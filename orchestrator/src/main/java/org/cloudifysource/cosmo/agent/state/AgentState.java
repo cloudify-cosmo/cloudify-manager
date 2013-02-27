@@ -30,18 +30,17 @@ import java.util.List;
  */
 public class AgentState extends TaskConsumerState {
 
+    private static final String MACHINE_UNREACHABLE = "machine_unreachable";
+    private static final String MACHINE_TERMINATED = "machine_terminated";
+    private static final String MACHINE_REACHABLE = "machine_reachable";
+    private static final String MACHINE_STARTED = "machine_started";
+
     public AgentState() {
         stateMachine = new LifecycleStateMachine
-                ("machine_unreachable->machine_terminated<->machine_started->agent_started->machine_terminated");
-        stateMachine.setFinalLifecycle("agent_started");
-        stateMachine.setInitialLifecycle("machine_terminated");
-    }
-
-    /**
-     * Possible values for {@link AgentState#setLifecycle(String)}.
-     */
-    public static class Progress {
-        public static final String MACHINE_UNREACHABLE = "machine_unreachable";
+                (MACHINE_UNREACHABLE+"->"+MACHINE_TERMINATED+"<->"+MACHINE_STARTED+"->"+MACHINE_REACHABLE +
+                        "->"+MACHINE_TERMINATED);
+        stateMachine.setFinalLifecycle(MACHINE_REACHABLE);
+        stateMachine.setInitialLifecycle(MACHINE_TERMINATED);
     }
 
     private LifecycleStateMachine stateMachine;
@@ -152,17 +151,17 @@ public class AgentState extends TaskConsumerState {
 
     @JsonIgnore
     public String getMachineTerminatedLifecycle() {
-         return  stateMachine.getInitialLifecycle();
+         return MACHINE_TERMINATED;
     }
 
     @JsonIgnore
     public String getMachineReachableLifecycle() {
-        return  stateMachine.getFinalLifecycle();
+        return MACHINE_REACHABLE;
     }
 
     @JsonIgnore
     public String getMachineStartedLifecycle() {
-        return "machine_started";
+        return MACHINE_STARTED;
     }
 
     @JsonIgnore
@@ -173,5 +172,10 @@ public class AgentState extends TaskConsumerState {
     @JsonIgnore
     public boolean isMachineReachableLifecycle() {
         return  isLifecycle(getMachineReachableLifecycle());
+    }
+
+    @JsonIgnore
+    public String getMachineUnreachableLifecycle() {
+        return MACHINE_UNREACHABLE;
     }
 }

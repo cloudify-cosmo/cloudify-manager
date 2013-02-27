@@ -34,7 +34,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
         setSimpleLoggerFormatter(logger);
 
         serviceLifecycleStateMachine = new LifecycleStateMachine
-            ("agent_started->service_cleaned<->service_stopped<->service_started");
+            ("machine_reachable->service_cleaned<->service_stopped<->service_started");
         serviceLifecycleStateMachine.setFinalLifecycle("service_started");
         serviceLifecycleStateMachine.setInitialLifecycle("service_cleaned");
         Assert.assertEquals(serviceLifecycleStateMachine.getNextInstanceLifecycle("service_cleaned",

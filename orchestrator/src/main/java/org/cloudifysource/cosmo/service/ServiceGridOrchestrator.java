@@ -245,7 +245,7 @@ public class ServiceGridOrchestrator {
             if (agentNotStarted
                     && state.isSyncedStateWithDeploymentBefore()
                     && pingHealth == AgentPingHealth.UNDETERMINED) {
-                //If this agent were started, we would have resolved it as AGENT_STARTED in the previous sync
+                //If this agent were started, we would have resolved it as agent started in the previous sync
                 //The agent probably never even started
                 pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
             }
@@ -254,7 +254,7 @@ public class ServiceGridOrchestrator {
                 for (URI instanceId : state.getDeploymentPlan().getInstanceIdsByAgentId(agentId)) {
                     ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
                     if (instanceState == null
-                            || instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE)) {
+                        || instanceState.isLifecycle(agentState.getMachineUnreachableLifecycle())) {
 
                         syncComplete = false;
                         final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId);
@@ -599,7 +599,7 @@ public class ServiceGridOrchestrator {
 
         if (isUnreachable(nowTimestamp, agentId, agentState)) {
             final MachineLifecycleTask task = new MachineLifecycleTask();
-            task.setLifecycle(AgentState.Progress.MACHINE_UNREACHABLE);
+            task.setLifecycle(agentState.getMachineUnreachableLifecycle());
             task.setStateId(agentId);
             task.setConsumerId(machineProvisionerId);
             addNewTaskIfNotExists(newTasks, task);

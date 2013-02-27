@@ -237,7 +237,7 @@ public class AssertServiceState {
         for (URI instanceId: getServiceInstanceIds(management, "tomcat")) {
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
             if (instanceUnreachable) {
-                Assert.assertTrue(instanceState.isLifecycle(AgentState.Progress.MACHINE_UNREACHABLE));
+                Assert.assertTrue(instanceState.isLifecycle("machine_unreachable"));
             }
             else {
                 Assert.assertEquals(instanceState.getLifecycle(), "service_cleaned");
