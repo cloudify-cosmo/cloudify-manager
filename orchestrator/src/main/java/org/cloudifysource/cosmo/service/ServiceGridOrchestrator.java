@@ -58,6 +58,7 @@ import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -75,8 +76,6 @@ public class ServiceGridOrchestrator {
     private final StateReader stateReader;
     private final AgentHealthProbe agentHealthProbe;
 
-    private final CurrentTimeProvider timeProvider;
-
     public ServiceGridOrchestrator(ServiceGridOrchestratorParameter parameterObject) {
         Preconditions.checkNotNull(parameterObject);
         Preconditions.checkNotNull(parameterObject.getOrchestratorId());
@@ -85,8 +84,6 @@ public class ServiceGridOrchestrator {
         this.machineProvisionerId = parameterObject.getMachineProvisionerId();
         Preconditions.checkNotNull(parameterObject.getStateReader());
         this.stateReader = parameterObject.getStateReader();
-        Preconditions.checkNotNull(parameterObject.getTimeProvider());
-        this.timeProvider = parameterObject.getTimeProvider();
         Preconditions.checkNotNull(parameterObject.getAgentHealthProbe());
         this.agentHealthProbe = parameterObject.getAgentHealthProbe();
         this.state = new ServiceGridOrchestratorState();
@@ -241,10 +238,11 @@ public class ServiceGridOrchestrator {
         agentHealthProbe.monitorAgents(getAllAgentIds());
 
         boolean syncComplete = true;
-        final long nowTimestamp = timeProvider.currentTimeMillis();
+        Map<URI, AgentPingHealth> agentsHealthStatus = agentHealthProbe.getAgentsHealthStatus();
         for (final URI agentId : getPlannedAgentIds()) {
-            AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
-            AgentState agentState = getAgentState(agentId);
+            final AgentPingHealth pingHealth = agentsHealthStatus.get(agentId);
+            Preconditions.checkNotNull(pingHealth);
+            final AgentState agentState = getAgentState(agentId);
 
             //TODO when this probe is started from scratch on an existing system (management restart)
             //it may return undetermined state for agents that are reachable simply because its stateReader is being
@@ -528,10 +526,11 @@ public class ServiceGridOrchestrator {
     }
 
     private void orchestrateAgents(List<Task> newTasks) {
-        final long nowTimestamp = timeProvider.currentTimeMillis();
 
+        final Map<URI, AgentPingHealth> agentHealthStatus = this.agentHealthProbe.getAgentsHealthStatus();
         for (final URI agentId : getPlannedAgentIds()) {
-            final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
+            final AgentPingHealth pingHealth = agentHealthStatus.get(agentId);
+            Preconditions.checkNotNull(pingHealth);
 
             AgentState agentState = getAgentState(agentId);
             Preconditions.checkNotNull(agentState);
@@ -569,7 +568,8 @@ public class ServiceGridOrchestrator {
             if (isAgentProgress(agentState,
                     AgentState.Progress.AGENT_STARTED,
                     AgentState.Progress.MACHINE_STARTED)) {
-                final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
+                final AgentPingHealth pingHealth = agentHealthStatus.get(agentId);
+                Preconditions.checkNotNull(pingHealth);
                 if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
                     final TerminateMachineOfNonResponsiveAgentTask task =
                             new TerminateMachineOfNonResponsiveAgentTask();
@@ -593,10 +593,6 @@ public class ServiceGridOrchestrator {
                 Preconditions.checkState(false, "Unknown agent progress " + agentState.getProgress());
             }
         }
-    }
-
-    private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
-        return agentHealthProbe.getAgentHealthStatus(agentId, nowTimestamp);
     }
 
     private AgentState getAgentState(URI agentId) {

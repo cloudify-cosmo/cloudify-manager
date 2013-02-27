@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.agent.health;
 
 import java.net.URI;
+import java.util.Map;
 
 /**
  * Acts as a health probe for agents.
@@ -25,15 +26,14 @@ import java.net.URI;
  * @since 0.1
  */
 public interface AgentHealthProbe {
+
     /**
-     * returns the agent health status, this method should not block on IO and return immediately,
+     * returns the monitored agents health status, this method should not block on IO and return immediately,
      * usually with a cached result which is refreshed frequently. It is up to the implementation to decide when this
      * result is updated.
-     * @param agentId The id of the agent to check its health
-     * @param nowTimestamp TODO remove this
-     * @return requested agent's health status
+     * @return monitored agents health status
      */
-    AgentPingHealth getAgentHealthStatus(URI agentId, long nowTimestamp);
+    Map<URI, AgentPingHealth> getAgentsHealthStatus();
 
     /**
      * Specify which agents needs to be monitored for health status

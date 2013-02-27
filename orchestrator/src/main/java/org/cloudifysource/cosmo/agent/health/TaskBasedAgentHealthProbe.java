@@ -17,8 +17,8 @@
 package org.cloudifysource.cosmo.agent.health;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
@@ -32,6 +32,7 @@ import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -72,8 +73,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
         return state;
     }
 
-    @Override
-    public AgentPingHealth getAgentHealthStatus(URI agentId, long nowTimestamp) {
+    private AgentPingHealth getAgentHealthStatus(URI agentId, long nowTimestamp) {
         AgentPingHealth health = AgentPingHealth.UNDETERMINED;
 
         // look for ping that should have been consumed by now --> AGENT_NOT_RESPONDING
@@ -137,6 +137,16 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
         }
 
         return health;
+    }
+
+    @Override
+    public Map<URI, AgentPingHealth> getAgentsHealthStatus() {
+        final Map<URI, AgentPingHealth> result = Maps.newHashMap();
+        final long nowTimestamp = timeProvider.currentTimeMillis();
+        for (URI monitoredAgentsId : monitoredAgentsIds) {
+            result.put(monitoredAgentsId, getAgentHealthStatus(monitoredAgentsId, nowTimestamp));
+        }
+        return result;
     }
 
     @Override

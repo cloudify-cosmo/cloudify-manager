@@ -32,7 +32,6 @@ public class ServiceGridOrchestratorParameter {
     private URI orchestratorId;
     private URI machineProvisionerId;
     private StateReader stateReader;
-    private CurrentTimeProvider timeProvider;
     private AgentHealthProbe agentHealthProbe;
 
     public StateReader getStateReader() {
@@ -59,12 +58,7 @@ public class ServiceGridOrchestratorParameter {
         this.machineProvisionerId = cloudExecutorId;
     }
 
-    public CurrentTimeProvider getTimeProvider() {
-        return timeProvider;
-    }
-
     public void setTimeProvider(CurrentTimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
     }
 
     public AgentHealthProbe getAgentHealthProbe() {
