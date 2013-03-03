@@ -21,6 +21,7 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 
 import java.net.URI;
 
@@ -43,32 +44,38 @@ public class MockMachineProvisioner {
                                  TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
 
         final AgentState agentState = impersonatedStateModifier.get();
-        final String lifecycle = task.getLifecycle();
+        final LifecycleState lifecycleState = task.getLifecycleState();
         final URI agentId = task.getStateId();
-        if (lifecycle.equals(agentState.getMachineReachableLifecycle())) {
+        if (lifecycleState.equals(agentState.getMachineReachableLifecycle())) {
             machineReachable(agentState, agentId);
-        } else if (lifecycle.equals(agentState.getMachineStartedLifecycle())) {
+        } else if (lifecycleState.equals(agentState.getMachineStartedLifecycle())) {
             machineStarted(agentState);
-        } else if (lifecycle.equals(agentState.getMachineTerminatedLifecycle())) {
-            machineTerminated(agentId);
+        } else if (lifecycleState.equals(agentState.getMachineTerminatedLifecycle())) {
+            machineTerminated(agentState, agentId);
         }
 
-        agentState.setLifecycle(lifecycle);
+        agentState.getStateMachine().setCurrentState(lifecycleState);
         impersonatedStateModifier.put(agentState);
     }
 
-    private void machineTerminated(URI agentId) {
-        taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+    private void machineTerminated(AgentState machineState, URI agentId) {
+        if (!machineState.isMachineTerminatedLifecycle()) {
+            taskConsumerRegistrar.unregisterTaskConsumer(agentId);
+        }
     }
 
-    private void machineStarted(AgentState impersonatedState) {
-        impersonatedState.incrementNumberOfMachineStarts();
-        impersonatedState.resetNumberOfAgentStarts();
+    private void machineStarted(AgentState machineState) {
+        if (!machineState.isMachineStartedLifecycle()) {
+            machineState.incrementNumberOfMachineStarts();
+            machineState.resetNumberOfAgentStarts();
+        }
     }
 
-    private void machineReachable(AgentState impersonatedState, URI agentId) {
-        impersonatedState.incrementNumberOfAgentStarts();
-        taskConsumerRegistrar.registerTaskConsumer(new MockAgent(impersonatedState), agentId);
+    private void machineReachable(AgentState machineState, URI agentId) {
+        if (!machineState.isMachineReachableLifecycle()) {
+            machineState.incrementNumberOfAgentStarts();
+            taskConsumerRegistrar.registerTaskConsumer(MockAgent.newAgentOnCleanMachine(machineState), agentId);
+        }
     }
 
     @TaskConsumerStateHolder

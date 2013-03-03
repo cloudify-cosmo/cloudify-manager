@@ -16,16 +16,13 @@
 package org.cloudifysource.cosmo;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.mock.MockManagement;
-import org.cloudifysource.cosmo.service.state.ServiceConfig;
-import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
-import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
-import org.cloudifysource.cosmo.service.state.ServiceInstanceDeploymentPlan;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
-import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
+import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask.cli;
 
 import java.net.URI;
 
@@ -58,11 +55,11 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test
     public void installSingleInstanceServiceTest() {
-        Assert.assertTrue(Iterables.isEmpty(getAgentIds(getManagement())));
-        installService("tomcat", 1);
+        Assert.assertTrue(Iterables.isEmpty(getAgentIds(getManagement(), "web")));
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertOneTomcatInstance(getManagement());
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -72,10 +69,10 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void installMultipleInstanceServiceTest() {
-        installService("tomcat", 2);
+        installService("web", new LifecycleName("tomcat"), 2);
         execute();
         assertTwoTomcatInstances(getManagement());
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 2);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -85,16 +82,16 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void machineFailoverTest() {
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
-        killOnlyMachine();
+        killOnlyMachine("web");
         execute();
         final int numberOfAgentStarts = 1;
         final int numberOfMachineStarts = 2;
         assertSingleServiceInstance(
-                getManagement(), "tomcat",
+                getManagement(), "web", new LifecycleName("tomcat"),
                 numberOfAgentStarts, numberOfMachineStarts);
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -105,16 +102,16 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void agentRestartTest() {
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
-        restartOnlyAgent();
+        restartOnlyAgent("web");
         execute();
         final int numberOfAgentStarts = 2;
         final int numberOfMachineStarts = 1;
         assertSingleServiceInstance(
-                getManagement(), "tomcat",
+                getManagement(), "web", new LifecycleName("tomcat"),
                 numberOfAgentStarts, numberOfMachineStarts);
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -124,12 +121,12 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void scaleOutServiceTest() {
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
-        scaleService("tomcat", 2);
+        scaleService("web", new LifecycleName("tomcat"), 1, 2);
         execute();
         assertTwoTomcatInstances(getManagement());
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 2);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -139,12 +136,12 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void scaleInServiceTest() {
-        installService("tomcat", 2);
+        installService("web", new LifecycleName("tomcat"), 2);
         execute();
-        scaleService("tomcat", 1);
+        scaleService("web", new LifecycleName("tomcat"), 2, 1);
         execute();
         assertTomcatScaledInFrom2To1(getManagement());
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -154,10 +151,10 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"machineFailoverTest" })
     public void machineFailoverUninstallServiceTest() {
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
-        killOnlyMachine();
-        uninstallAllServices();
+        killOnlyMachine("web");
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledUnreachable(getManagement());
     }
@@ -167,16 +164,16 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void managementRestartTest() {
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
 
         getManagement().restart();
         //simulates recovery of planner
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
 
         execute();
         assertOneTomcatInstance(getManagement());
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -185,22 +182,22 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      * Tests management state recovery from crash when one of the agents also failed.
      * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
      */
-    @Test(dependsOnMethods = {"managementRestartTest", "agentRestartTest" })
+    @Test//(dependsOnMethods = {"managementRestartTest", "agentRestartTest" })
     public void managementRestartAndOneAgentRestartTest() {
-        installService("tomcat", 2);
+        installService("web", new LifecycleName("tomcat"), 2);
         execute();
         assertTwoTomcatInstances(getManagement());
-        restartAgent(getManagement().getAgentId(1));
+        restartAgent(getManagement().getAgentId("web/2"));
         getManagement().restart();
         //simulates recovery of planner
-        installService("tomcat", 2);
+        installService("web", new LifecycleName("tomcat"), 2);
 
         execute();
         assertTwoTomcatInstances(
                 getManagement(),
                 expectedAgentZeroNotRestartedAgentOneRestarted(getManagement()),
                 expectedBothMachinesNotRestarted(getManagement()));
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 2);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -210,13 +207,21 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      */
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void installTwoSingleInstanceServicesTest() {
-        installServices("tomcat", 1, "cassandra", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
+        installService("db", new LifecycleName("cassandra"), 1);
         execute();
-        assertServiceInstalledWithOneInstance(getManagement(), "tomcat");
-        assertServiceInstalledWithOneInstance(getManagement(), "cassandra");
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds(getManagement(), "tomcat")), 1);
-        Assert.assertEquals(Iterables.size(getServiceInstanceIds(getManagement(), "cassandra")), 1);
-        uninstallAllServices();
+        assertServiceInstalledWithOneInstance(getManagement(), "web", new LifecycleName("tomcat"));
+        assertServiceInstalledWithOneInstance(getManagement(), "db", new LifecycleName("cassandra"));
+        Assert.assertEquals(
+                Iterables.size(
+                        getServiceInstanceIds(getManagement(), "web", new LifecycleName("tomcat"))),
+                1);
+        Assert.assertEquals(
+                Iterables.size(
+                        getServiceInstanceIds(getManagement(), "db", new LifecycleName("cassandra"))),
+                1);
+        uninstallService("web", new LifecycleName("tomcat"), 1);
+        uninstallService("db", new LifecycleName("cassandra"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -224,17 +229,17 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
     public void setInstancePropertyTest() {
 
-        final String propertyName = "hellow";
+        final String propertyName = "hello";
         final String propertyValue = "world";
 
-        installService("tomcat", 1);
+        installService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertOneTomcatInstance(getManagement());
-        URI instanceId = getManagement().getServiceInstanceId("tomcat", 0);
+        URI instanceId = getManagement().getServiceInstanceId("web/1", new LifecycleName("tomcat"));
         setServiceInstanceProperty(instanceId, propertyName, propertyValue);
         execute();
         Assert.assertEquals(getServiceInstanceProperty(propertyName, instanceId), propertyValue);
-        uninstallAllServices();
+        uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
     }
@@ -257,77 +262,90 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         getManagement().submitTask(agentId, task);
     }
 
-    private URI getOnlyAgentId() {
-        return Iterables.getOnlyElement(getAgentIds(getManagement()));
+    private URI getOnlyAgentId(String aliasGroup) {
+        return Iterables.getOnlyElement(getAgentIds(getManagement(), aliasGroup));
     }
 
-    private void installService(String name, int numberOfInstances) {
-        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
-        task.setDeploymentPlan(newServiceGridDeploymentPlan(name, numberOfInstances));
-        getManagement().submitTask(getManagement().getOrchestratorId(), task);
-    }
+    private void installService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
+        final UpdateDeploymentCommandlineTask planSet = cli(
+                aliasGroup + "/", "plan_set", lifecycleName.getName(),
+                "--instances", String.valueOf(numberOfInstances),
+                "--min_instances", "1",
+                "--max_instances", "2");
+        getManagement().submitTask(getManagement().getOrchestratorId(), planSet);
 
-    private void installServices(String name1, int numberOfInstances1, String name2, int numberOfInstances2) {
-        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
-        ServiceDeploymentPlan serviceDeploymentPlan1 =
-                newServiceDeploymentPlan(name1, numberOfInstances1, /*offset=*/0);
-        ServiceDeploymentPlan serviceDeploymentPlan2 =
-                newServiceDeploymentPlan(name2, numberOfInstances2, /*offset=*/ numberOfInstances1);
-        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
-        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan1, serviceDeploymentPlan2));
-        task.setDeploymentPlan(servicesDeploymentPlan);
-        getManagement().submitTask(getManagement().getOrchestratorId(), task);
-    }
-
-    private void scaleService(String name, int numberOfInstances) {
-        installService(name, numberOfInstances);
-    }
-
-    private ServiceGridDeploymentPlan newServiceGridDeploymentPlan(String name, int numberOfInstances) {
-        ServiceDeploymentPlan serviceDeploymentPlan = newServiceDeploymentPlan(name, numberOfInstances, 0);
-        ServiceGridDeploymentPlan servicesDeploymentPlan = new ServiceGridDeploymentPlan();
-        servicesDeploymentPlan.setServices(Lists.newArrayList(serviceDeploymentPlan));
-        return servicesDeploymentPlan;
-    }
-
-    private ServiceDeploymentPlan newServiceDeploymentPlan(String name, int numberOfInstances, int offset) {
-        final int minNumberOfInstances = 1;
-        final int maxNumberOfInstances = 2;
-        ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setDisplayName(name);
-        serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
-        serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
-        serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
-        serviceConfig.setServiceId(getManagement().getServiceId(name));
-        serviceConfig.setInstanceLifecycleStateMachine(super.getServiceLifecycleStateMachine());
-
-        ServiceDeploymentPlan serviceDeploymentPlan = new ServiceDeploymentPlan();
-        serviceDeploymentPlan.setServiceConfig(serviceConfig);
-        for (int i = 0; i < numberOfInstances; i++) {
-            final ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
-            instancePlan.setAgentId(getManagement().getAgentId(i + offset));
-            instancePlan.setInstanceId(getManagement().getServiceInstanceId(name, i + offset));
-            instancePlan.setDesiredLifecycle("service_started");
-            serviceDeploymentPlan.addInstance(instancePlan);
+        for (int i = 1; i <= numberOfInstances; i++) {
+            final String alias = aliasGroup + "/" + i + "/";
+            startServiceInstance(alias, lifecycleName);
         }
-        return serviceDeploymentPlan;
     }
 
-    private void uninstallAllServices() {
-        final UpdateDeploymentPlanTask task = new UpdateDeploymentPlanTask();
-        task.setDeploymentPlan(new ServiceGridDeploymentPlan());
-        getManagement().submitTask(getManagement().getOrchestratorId(), task);
+    private void uninstallService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
+        final Task planUnset = cli(aliasGroup + "/", "plan_unset", lifecycleName.getName());
+        getManagement().submitTask(getManagement().getOrchestratorId(), planUnset);
+
+        for (int i = 1; i <= numberOfInstances; i++) {
+            final String alias = aliasGroup + "/" + i + "/";
+            cleanServiceInstance(alias, lifecycleName);
+        }
+    }
+
+    private void startServiceInstance(String alias, LifecycleName lifecycleName) {
+
+        final String prefix = lifecycleName.getName() + "_";
+        final Task lifecycleDefined = cli(alias, "lifecycle_set", lifecycleName.getName(),
+                prefix + "cleaned<-->" + prefix + "installed<-->" + prefix + "configured->" + prefix + "started" +
+                        "," + prefix + "started->" + prefix + "stopped->" + prefix + "cleaned",
+                "--begin", prefix + "cleaned",
+                "--end", prefix + "started");
+
+        getManagement().submitTask(getManagement().getOrchestratorId(), lifecycleDefined);
+
+        final Task instanceStarted = cli(alias, prefix + "started");
+        getManagement().submitTask(getManagement().getOrchestratorId(), instanceStarted);
+
+        final Task cloudmachineReachable = cli(alias, "cloudmachine_reachable");
+        getManagement().submitTask(getManagement().getOrchestratorId(), cloudmachineReachable);
+    }
+
+    private void cleanServiceInstance(String alias, LifecycleName lifecycleName) {
+        final String prefix = lifecycleName.getName() + "_";
+
+        final Task instanceCleaned = cli(alias, prefix + "cleaned");
+        getManagement().submitTask(getManagement().getOrchestratorId(), instanceCleaned);
+
+        final Task cloudmachineTerminated = cli(alias, "cloudmachine_terminated");
+        getManagement().submitTask(getManagement().getOrchestratorId(), cloudmachineTerminated);
+    }
+
+    private void scaleService(
+            String aliasGroup,
+            LifecycleName lifecycleName,
+            int oldNumberOfInstances,
+            int newNumberOfInstances) {
+
+        for (int i = oldNumberOfInstances + 1; i <= newNumberOfInstances; i++) {
+
+            final String alias = aliasGroup + "/" + i + "/";
+            startServiceInstance(alias, lifecycleName);
+        }
+
+        for (int i = oldNumberOfInstances; i > newNumberOfInstances; i--) {
+
+            final String alias = aliasGroup + "/" + i + "/";
+            cleanServiceInstance(alias, lifecycleName);
+        }
     }
 
     private void execute() {
         execute(getManagement().getOrchestratorId());
     }
 
-    private void killOnlyMachine() {
-        killMachine(getOnlyAgentId());
+    private void killOnlyMachine(String aliasGroup) {
+        killMachine(getOnlyAgentId(aliasGroup));
     }
 
-    private void restartOnlyAgent() {
-        restartAgent(getOnlyAgentId());
+    private void restartOnlyAgent(String aliasGroup) {
+        restartAgent(getOnlyAgentId(aliasGroup));
     }
 }

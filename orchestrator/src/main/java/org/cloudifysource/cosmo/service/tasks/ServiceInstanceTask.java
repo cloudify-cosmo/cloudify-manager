@@ -16,6 +16,7 @@
 package org.cloudifysource.cosmo.service.tasks;
 
 import org.cloudifysource.cosmo.Task;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
 /**
@@ -29,17 +30,17 @@ import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
 public class ServiceInstanceTask extends Task {
 
-    private String lifecycle;
+    private LifecycleState lifecycleState;
 
     public ServiceInstanceTask() {
         super(ServiceInstanceState.class);
     }
 
-    public String getLifecycle() {
-        return lifecycle;
+    public LifecycleState getLifecycleState() {
+        return lifecycleState;
     }
 
-    public void setLifecycle(String lifecycle) {
-        this.lifecycle = lifecycle;
+    public void setLifecycleState(LifecycleState lifecycleState) {
+        this.lifecycleState = lifecycleState;
     }
 }

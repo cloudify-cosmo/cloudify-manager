@@ -211,10 +211,11 @@ public class MockTaskContainer {
             TaskConsumerStateModifier<TaskConsumerState> stateModifier,
             TaskConsumerHistoryModifier historyModifier) {
         final TaskConsumerState state = stateModifier.get();
-        Preconditions.checkNotNull(state);
-        state.setExecutingTask(null);
-        historyModifier.addTaskToHistory(task);
-        stateModifier.put(state);
+        if (state != null) {
+            state.setExecutingTask(null);
+            historyModifier.addTaskToHistory(task);
+            stateModifier.put(state);
+        }
     }
 
     private TaskConsumerState getTaskConsumerState() {
@@ -351,6 +352,10 @@ public class MockTaskContainer {
         beforeExecute(task, impersonatingStateModifier);
         try {
             consumeImpersonatingTask(task, impersonatingStateModifier);
+            Preconditions.checkNotNull(impersonatingStateModifier.get(),
+                    "Impersonating task %s did not initialize the state of %s",
+                    task,
+                    task.getStateId());
         } finally {
             afterImpersonatingTask(task, impersonatingStateModifier, impersonatingHistoryModifier);
         }

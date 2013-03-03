@@ -13,31 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.service.tasks;
+package org.cloudifysource.cosmo.service.state;
 
-import org.cloudifysource.cosmo.Task;
-import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
-import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
+
+import java.net.URI;
 
 /**
- * A task sent from planner to orchestrator that the plan has changed.
- * @author Itai Frenkel
+ * The id and the desired state of a planned agent.
+ * @author itaif
  * @since 0.1
+ *
  */
-public class UpdateDeploymentPlanTask extends Task {
+public class AgentPlan {
 
-    public UpdateDeploymentPlanTask() {
-        super(ServiceGridOrchestratorState.class);
+    private URI agentId;
+    private LifecycleState lifecycleState;
+
+    public URI getAgentId() {
+        return agentId;
     }
 
-    private ServiceGridDeploymentPlan deploymentPlan;
-
-    public ServiceGridDeploymentPlan getDeploymentPlan() {
-        return deploymentPlan;
+    public void setAgentId(URI agentId) {
+        this.agentId = agentId;
     }
 
-    public void setDeploymentPlan(ServiceGridDeploymentPlan deploymentPlan) {
-        this.deploymentPlan = deploymentPlan;
+    public LifecycleState getLifecycleState() {
+        return lifecycleState;
     }
 
+    public void setLifecycleState(LifecycleState lifecycleState) {
+        this.lifecycleState = lifecycleState;
+    }
 }

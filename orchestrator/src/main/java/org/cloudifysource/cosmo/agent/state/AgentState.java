@@ -16,9 +16,11 @@
 package org.cloudifysource.cosmo.agent.state;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.base.Preconditions;
-import org.cloudifysource.cosmo.LifecycleStateMachine;
 import org.cloudifysource.cosmo.TaskConsumerState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachineText;
 
 import java.net.URI;
 import java.util.List;
@@ -30,61 +32,26 @@ import java.util.List;
  */
 public class AgentState extends TaskConsumerState {
 
-    private static final String MACHINE_UNREACHABLE = "machine_unreachable";
-    private static final String MACHINE_TERMINATED = "machine_terminated";
-    private static final String MACHINE_REACHABLE = "machine_reachable";
-    private static final String MACHINE_STARTED = "machine_started";
+    private static final String MACHINE_UNREACHABLE = "cloudmachine_unreachable";
+    private static final String MACHINE_TERMINATED = "cloudmachine_terminated";
+    private static final String MACHINE_REACHABLE = "cloudmachine_reachable";
+    private static final String MACHINE_STARTED = "cloudmachine_started";
 
     public AgentState() {
-        stateMachine = new LifecycleStateMachine(
+        stateMachine = new LifecycleStateMachine();
+        stateMachine.setName(new LifecycleName("cloudmachine"));
+        stateMachine.setText(new LifecycleStateMachineText(
                 MACHINE_UNREACHABLE + "->" + MACHINE_TERMINATED + "<->" + MACHINE_STARTED + "->" +
-                MACHINE_REACHABLE + "->" + MACHINE_TERMINATED);
-        stateMachine.setFinalLifecycle(MACHINE_REACHABLE);
-        stateMachine.setInitialLifecycle(MACHINE_TERMINATED);
+                MACHINE_REACHABLE + "->" + MACHINE_TERMINATED));
+        stateMachine.setBeginState(new LifecycleState(MACHINE_TERMINATED));
+        stateMachine.setEndState(new LifecycleState(MACHINE_REACHABLE));
     }
 
     private LifecycleStateMachine stateMachine;
-
-    private String lifecycle;
-    private String ipAddress;
     private List<URI> serviceInstanceIds;
     private int numberOfAgentStarts;
     private int numberOfMachineStarts;
     private long lastPingSourceTimestamp;
-
-    /**
-     * Use isLifecycle(x or y or z) instead.
-     * This is to encourage using the pattern of positive lifecycle checks such as "isLifecycle(y)"
-     * instead of negative lifecycle checks such as (!getLifecycle().equals(x))
-     */
-    @Deprecated
-    public String getLifecycle() {
-        return lifecycle;
-    }
-
-    /**
-     * @return true if {@code #getLifecycle()} matches any of the specified options.
-     */
-    public boolean isLifecycle(String... expectedProgresses) {
-        for (String expectedProgress : expectedProgresses) {
-            if (lifecycle != null && lifecycle.equals(expectedProgress)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public void setLifecycle(String lifecycle) {
-        this.lifecycle = lifecycle;
-    }
-
-    public void setIpAddress(String ipAddress) {
-        this.ipAddress = ipAddress;
-    }
-
-    public String getIpAddress() {
-        return ipAddress;
-    }
 
     public void setServiceInstanceIds(List<URI> serviceInstanceIds) {
         this.serviceInstanceIds = serviceInstanceIds;
@@ -111,9 +78,8 @@ public class AgentState extends TaskConsumerState {
     }
 
     @JsonIgnore
-    public void removeServiceInstanceId(final URI instanceId) {
-        boolean removed = serviceInstanceIds.remove(instanceId);
-        Preconditions.checkArgument(removed, "Cannot remove instance %s", instanceId);
+    public boolean removeServiceInstanceId(final URI instanceId) {
+        return serviceInstanceIds.remove(instanceId);
     }
 
     public long getLastPingSourceTimestamp() {
@@ -139,43 +105,50 @@ public class AgentState extends TaskConsumerState {
         numberOfAgentStarts = 0;
     }
 
-    /**
-     * @param expectedLifecycle - the expected lifecycle
-     * @return - the next lifecycle that should bring us one step closer to expectedLifecyle
-     *           expectedLifecycle if the current lifecycle equals the expected lifecycle.
-     */
     @JsonIgnore
-    public String getNextAgentLifecycle(String expectedLifecycle) {
-        return stateMachine.getNextInstanceLifecycle(lifecycle, expectedLifecycle);
+    public LifecycleState getMachineTerminatedLifecycle() {
+        return new LifecycleState(MACHINE_TERMINATED);
     }
 
     @JsonIgnore
-    public String getMachineTerminatedLifecycle() {
-        return MACHINE_TERMINATED;
+    public LifecycleState getMachineReachableLifecycle() {
+        return new LifecycleState(MACHINE_REACHABLE);
     }
 
     @JsonIgnore
-    public String getMachineReachableLifecycle() {
-        return MACHINE_REACHABLE;
-    }
-
-    @JsonIgnore
-    public String getMachineStartedLifecycle() {
-        return MACHINE_STARTED;
+    public LifecycleState getMachineStartedLifecycle() {
+        return new LifecycleState(MACHINE_STARTED);
     }
 
     @JsonIgnore
     public boolean isMachineTerminatedLifecycle() {
-        return  isLifecycle(getMachineTerminatedLifecycle());
+        return  stateMachine.isLifecycleState(getMachineTerminatedLifecycle());
     }
 
     @JsonIgnore
     public boolean isMachineReachableLifecycle() {
-        return  isLifecycle(getMachineReachableLifecycle());
+        return  stateMachine.isLifecycleState(getMachineReachableLifecycle());
     }
 
     @JsonIgnore
-    public String getMachineUnreachableLifecycle() {
-        return MACHINE_UNREACHABLE;
+    public LifecycleState getMachineUnreachableLifecycle() {
+        return new LifecycleState(MACHINE_UNREACHABLE);
+    }
+
+    public LifecycleStateMachine getStateMachine() {
+        return stateMachine;
+    }
+
+    public void setStateMachine(LifecycleStateMachine stateMachine) {
+        this.stateMachine = stateMachine;
+    }
+
+    @JsonIgnore
+    public boolean isMachineStartedLifecycle() {
+        return  stateMachine.isLifecycleState(getMachineStartedLifecycle());
+    }
+
+    public boolean isMachineUnreachableLifecycle() {
+        return  stateMachine.isLifecycleState(getMachineUnreachableLifecycle());
     }
 }

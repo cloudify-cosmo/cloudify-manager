@@ -28,7 +28,6 @@ import com.google.common.base.Throwables;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * A temporary placeholder for json manipulation related static methods.
@@ -88,12 +87,11 @@ public class StreamUtils {
         }
     }
 
+    //TODO: Inline all and remove this method
+    @Deprecated
     public static URI newURI(String uri) {
-        try {
-            return new URI(uri);
-        } catch (final URISyntaxException e) {
-            throw Throwables.propagate(e);
-        }
+        return URI.create(uri);
+
     }
 
     public static URI fixSlash(URI id) {

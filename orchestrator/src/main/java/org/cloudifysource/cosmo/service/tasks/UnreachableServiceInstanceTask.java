@@ -24,9 +24,9 @@ import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
  * @author Itai Frenkel
  * @since 0.1
  */
-public class ServiceInstanceFollowsMachineLifecycleTask extends Task {
+public class UnreachableServiceInstanceTask extends Task {
 
-    public ServiceInstanceFollowsMachineLifecycleTask() {
+    public UnreachableServiceInstanceTask() {
         super(ServiceInstanceState.class);
     }
 }

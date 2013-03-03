@@ -17,25 +17,26 @@ package org.cloudifysource.cosmo.agent.tasks;
 
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.agent.state.AgentState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 
 /**
- * Task to progress the machine lifecycle (start/stop/etc...).
+ * Task to progress the machine lifecycleState (start/stop/etc...).
  * @author Itai Frenkel
  * @since 0.1
  */
 public class MachineLifecycleTask extends Task {
 
-    private String lifecycle;
+    private LifecycleState lifecycleState;
 
     public MachineLifecycleTask() {
         super(AgentState.class);
     }
 
-    public String getLifecycle() {
-        return lifecycle;
+    public LifecycleState getLifecycleState() {
+        return lifecycleState;
     }
 
-    public void setLifecycle(String lifecycle) {
-        this.lifecycle = lifecycle;
+    public void setLifecycleState(LifecycleState lifecycleState) {
+        this.lifecycleState = lifecycleState;
     }
 }

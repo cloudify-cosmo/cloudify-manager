@@ -15,8 +15,6 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
-import org.cloudifysource.cosmo.LifecycleStateMachine;
-
 import java.net.URI;
 
 /**
@@ -31,7 +29,6 @@ public class ServiceConfig {
     private int maxNumberOfInstances;
     private int minNumberOfInstances;
     private URI id;
-    private LifecycleStateMachine instanceLifecycleStateMachine;
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
@@ -71,13 +68,5 @@ public class ServiceConfig {
 
     public void setMinNumberOfInstances(int minNumberOfInstances) {
         this.minNumberOfInstances = minNumberOfInstances;
-    }
-
-    public LifecycleStateMachine getInstanceLifecycleStateMachine() {
-        return instanceLifecycleStateMachine;
-    }
-
-    public void setInstanceLifecycleStateMachine(LifecycleStateMachine instanceLifecycleStateMachine) {
-        this.instanceLifecycleStateMachine = instanceLifecycleStateMachine;
     }
 }

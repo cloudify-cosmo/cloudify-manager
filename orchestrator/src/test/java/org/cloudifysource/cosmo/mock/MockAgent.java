@@ -23,6 +23,7 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.tasks.RecoverServiceInstanceStateTask;
 import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromAgentTask;
@@ -42,9 +43,20 @@ public class MockAgent {
     private final AgentState state;
     private final Map<URI, ServiceInstanceState> instancesState;
 
-    public MockAgent(AgentState state) {
+    public static MockAgent newAgentOnCleanMachine(AgentState state) {
+        return new MockAgent(state, Maps.<URI, ServiceInstanceState>newLinkedHashMap());
+    }
+
+    public static MockAgent newRestartedAgentOnSameMachine(MockAgent agent) {
+        AgentState state = agent.getState();
+        Preconditions.checkState(state.isMachineReachableLifecycle());
+        state.incrementNumberOfAgentStarts();
+        return new MockAgent(state, agent.instancesState);
+    }
+
+    private MockAgent(AgentState state, Map<URI, ServiceInstanceState> instancesState) {
         this.state = state;
-        this.instancesState = Maps.newLinkedHashMap();
+        this.instancesState = instancesState;
     }
 
     @ImpersonatingTaskConsumer
@@ -52,13 +64,15 @@ public class MockAgent {
             TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
 
         ServiceInstanceState instanceState = impersonatedStateModifier.get();
-        instanceState.setLifecycle(task.getLifecycle());
+        instanceState.getStateMachine().setCurrentState(task.getLifecycleState());
+        instanceState.setReachable(true);
         impersonatedStateModifier.put(instanceState);
         instancesState.put(task.getStateId(), instanceState);
     }
 
     @TaskConsumer
     public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) {
+
         final URI instanceId = task.getInstanceId();
         this.state.removeServiceInstanceId(instanceId);
         this.instancesState.remove(instanceId);
@@ -78,11 +92,14 @@ public class MockAgent {
             instanceState = new ServiceInstanceState();
             instanceState.setAgentId(agentId);
             instanceState.setServiceId(serviceId);
-            instanceState.setStateMachine(task.getStateMachine());
-            instanceState.setLifecycle(task.getStateMachine().getInitialLifecycle());
+            final LifecycleStateMachine stateMachine = task.getStateMachine();
+            stateMachine.setCurrentState(stateMachine.getBeginState());
+            instanceState.setStateMachine(stateMachine);
+            instanceState.setReachable(true);
         } else {
             Preconditions.checkState(instanceState.getAgentId().equals(agentId));
             Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
+            Preconditions.checkState(instanceState.isReachable());
         }
         impersonatedStateModifier.put(instanceState);
     }
@@ -108,6 +125,4 @@ public class MockAgent {
     public AgentState getState() {
         return state;
     }
-
-
 }

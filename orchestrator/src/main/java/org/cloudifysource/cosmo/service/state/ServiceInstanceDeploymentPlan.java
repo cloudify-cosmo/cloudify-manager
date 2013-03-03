@@ -15,6 +15,8 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
+
 import java.net.URI;
 
 /**
@@ -28,7 +30,8 @@ public class ServiceInstanceDeploymentPlan {
 
     private URI instanceId;
     private URI agentId;
-    private String desiredLifecycle;
+    private URI serviceId;
+    private LifecycleStateMachine stateMachine;
 
     public URI getInstanceId() {
         return instanceId;
@@ -46,11 +49,19 @@ public class ServiceInstanceDeploymentPlan {
         this.agentId = agentId;
     }
 
-    public String getDesiredLifecycle() {
-        return desiredLifecycle;
+    public LifecycleStateMachine getStateMachine() {
+        return stateMachine;
     }
 
-    public void setDesiredLifecycle(String desiredLifecycle) {
-        this.desiredLifecycle = desiredLifecycle;
+    public void setStateMachine(LifecycleStateMachine stateMachine) {
+        this.stateMachine = stateMachine;
+    }
+
+    public URI getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(URI serviceId) {
+        this.serviceId = serviceId;
     }
 }

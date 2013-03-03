@@ -15,8 +15,8 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.tasks;
 
-import org.cloudifysource.cosmo.LifecycleStateMachine;
 import org.cloudifysource.cosmo.Task;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 
 import java.net.URI;

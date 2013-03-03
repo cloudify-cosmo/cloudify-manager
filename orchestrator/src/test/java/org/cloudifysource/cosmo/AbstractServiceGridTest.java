@@ -17,7 +17,6 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
@@ -49,19 +48,10 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
     private T management;
     private MockCurrentTimeProvider timeProvider;
     private TaskConsumerRegistrar taskConsumerRegistrar;
-    private final LifecycleStateMachine serviceLifecycleStateMachine;
 
     public AbstractServiceGridTest() {
         logger = Logger.getLogger(this.getClass().getName());
         setSimpleLoggerFormatter(logger);
-
-        serviceLifecycleStateMachine = new LifecycleStateMachine(
-                "machine_reachable->service_cleaned<->service_stopped<->service_started");
-        serviceLifecycleStateMachine.setFinalLifecycle("service_started");
-        serviceLifecycleStateMachine.setInitialLifecycle("service_cleaned");
-        Assert.assertEquals(
-                serviceLifecycleStateMachine.getNextInstanceLifecycle("service_cleaned", "service_started"),
-                "service_stopped");
     }
 
     @BeforeClass
@@ -154,11 +144,9 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void restartAgent(URI agentId) {
 
-        MockAgent agent = (MockAgent) getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
-        AgentState agentState = agent.getState();
-        Preconditions.checkState(agentState.isMachineReachableLifecycle());
-        agentState.incrementNumberOfAgentStarts();
-        getTaskConsumerRegistrar().registerTaskConsumer(new MockAgent(agentState), agentId);
+        MockAgent oldAgent = (MockAgent) getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
+        final MockAgent restartedAgent = MockAgent.newRestartedAgentOnSameMachine(oldAgent);
+        getTaskConsumerRegistrar().registerTaskConsumer(restartedAgent, agentId);
     }
 
     public TaskConsumerRegistrar getTaskConsumerRegistrar() {
@@ -170,9 +158,5 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void killMachine(URI agentId) {
         containers.findContainer(agentId).killMachine();
-    }
-
-    public LifecycleStateMachine getServiceLifecycleStateMachine() {
-        return serviceLifecycleStateMachine;
     }
 }

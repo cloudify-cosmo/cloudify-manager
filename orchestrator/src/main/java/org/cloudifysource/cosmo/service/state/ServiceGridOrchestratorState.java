@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.service.state;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.TaskConsumerState;
 
@@ -35,7 +34,15 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
     private ServiceGridDeploymentPlan deploymentPlan;
     private boolean syncedStateWithDeploymentBefore;
     private Set<URI> serviceIdsToUninstall = Sets.newHashSet();
-    private Set<URI> agentIdsToTerminate = Sets.newHashSet();
+    private URI serverId;
+
+    public ServiceGridOrchestratorState() {
+        deploymentPlan = new ServiceGridDeploymentPlan();
+    }
+
+    public void setServerId(URI serverId) {
+        this.serverId = serverId;
+    }
 
     public ServiceGridDeploymentPlan getDeploymentPlan() {
         return deploymentPlan;
@@ -54,8 +61,8 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
     }
 
     @JsonIgnore
-    public void addServiceIdsToUninstall(Iterable<URI> serviceIds) {
-        Iterables.addAll(this.serviceIdsToUninstall, serviceIds);
+    public void addServiceIdToUninstall(URI serviceId) {
+        this.serviceIdsToUninstall.add(serviceId);
     }
 
     @JsonIgnore
@@ -72,27 +79,7 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
         this.serviceIdsToUninstall = serviceIds;
     }
 
-    @JsonIgnore
-    public void addAgentIdsToTerminate(Iterable<URI> agentIds) {
-        Iterables.addAll(this.agentIdsToTerminate, agentIds);
-    }
-
-    @JsonIgnore
-    public void removeAgentIdToTerminate(URI agentId) {
-        boolean removed = agentIdsToTerminate.remove(agentId);
-        Preconditions.checkArgument(removed, "Cannot remove %s from services to uninstall list", agentId);
-    }
-
-    @JsonIgnore
-    public boolean isAgentIdToTerminate(URI agentId) {
-        return agentIdsToTerminate.contains(agentId);
-    }
-
-    public Set<URI> getAgentIdsToTerminate() {
-        return agentIdsToTerminate;
-    }
-
-    public void setAgentIdsToTerminate(Set<URI> agentIds) {
-        this.agentIdsToTerminate = agentIds;
+    public URI getServerId() {
+        return serverId;
     }
 }

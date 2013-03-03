@@ -15,8 +15,8 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
-import org.cloudifysource.cosmo.LifecycleStateMachine;
 import org.cloudifysource.cosmo.TaskConsumerState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 
 import java.net.URI;
 
@@ -28,14 +28,10 @@ import java.net.URI;
  */
 public class ServiceInstanceState extends TaskConsumerState {
 
-    private String lifecycle;
     private URI agentId;
     private URI serviceId;
     private LifecycleStateMachine stateMachine;
-
-    public void setLifecycle(String lifecycle) {
-        this.lifecycle = lifecycle;
-    }
+    private boolean reachable;
 
     public URI getAgentId() {
         return agentId;
@@ -53,30 +49,19 @@ public class ServiceInstanceState extends TaskConsumerState {
         this.serviceId = serviceId;
     }
 
-    /**
-     * @return instance lifecycle state.
-     */
-    public String getLifecycle() {
-        return lifecycle;
-    }
-
-    /**
-     * @return true if {@code #getLifecycle()} matches any of the specified options.
-     */
-    public boolean isLifecycle(String... expectedProgresses) {
-        for (String expectedProgress : expectedProgresses) {
-            if (lifecycle != null && lifecycle.equals(expectedProgress)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public LifecycleStateMachine getStateMachine() {
         return stateMachine;
     }
 
     public void setStateMachine(LifecycleStateMachine stateMachine) {
         this.stateMachine = stateMachine;
+    }
+
+    public boolean isReachable() {
+        return reachable;
+    }
+
+    public void setReachable(boolean reachable) {
+        this.reachable = reachable;
     }
 }

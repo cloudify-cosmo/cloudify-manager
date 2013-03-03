@@ -16,183 +16,274 @@
 package org.cloudifysource.cosmo;
 
 
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachineText;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**
- * Unit tests for {@link LifecycleStateMachine}.
+ * Unit tests for {@link org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine}.
  *
  * @author itaif
  * @since 0.1
  */
 public class LifeCycleStateMachineTest {
 
-    @Test
-    public void testEmptyStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("");
-        Assert.assertNull(sm.getInitialLifecycle());
-        Assert.assertNull(sm.getFinalLifecycle());
-        Assert.assertNull(sm.getNextInstanceLifecycle("s1", "s1"));
-    }
+    LifecycleStateMachine sm;
 
     @Test
     public void testSingularStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1");
-        assertSingular(sm, "s1");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s1"));
+        assertSingular(state("name_s1"));
     }
 
-    private void assertSingular(LifecycleStateMachine sm, String s) {
-        Assert.assertEquals(sm.getNextInstanceLifecycle(s, s), s);
+    private void assertSingular(LifecycleState s) {
+        sm.setCurrentState(s);
+        Assert.assertEquals(next(s), s);
     }
 
     @Test
     public void testBiSingularStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1 s2");
-        assertSingular(sm, "s1");
-        assertSingular(sm, "s2");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1 name_s2"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s1"));
+        assertSingular(state("name_s1"));
+        assertSingular(state("name_s2"));
     }
 
     @Test
     public void testOneWayStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1>s2");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s2");
-        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
-        Assert.assertEquals(sm.getFinalLifecycle(), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s1"));
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1>name_s2"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
+        Assert.assertEquals(sm.getBeginState(), state("name_s1"));
+        Assert.assertEquals(sm.getEndState(), state("name_s2"));
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertNull(next(state("name_s1")));
     }
 
     @Test
     public void testTwoWayStateMachineTwoDashes() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1<-->s2");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1<-->name_s2"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
         assertTwoWayStateMachine(sm);
     }
 
     @Test
     public void testTwoWayStateMachineSingleDash() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1<->s2");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1<->name_s2"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
         assertTwoWayStateMachine(sm);
     }
 
     @Test
     public void testTwoWayStateMachineNoDash() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1<>s2");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1<>name_s2"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
         assertTwoWayStateMachine(sm);
     }
 
     @Test
     public void testTwoWayStateMachineComma() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2,s2->s1");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1->name_s2,name_s2->name_s1"));
+        sm.setName(new LifecycleName("name"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
         assertTwoWayStateMachine(sm);
     }
 
     @Test
     public void testTwoWayStateMachineWhitespace() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2 s2->s1");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1->name_s2 name_s2->name_s1"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
         assertTwoWayStateMachine(sm);
     }
 
     private void assertTwoWayStateMachine(LifecycleStateMachine sm) {
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s1"), "s1");
+        sm.setCurrentState(state("name_s1"));
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertEquals(next(state("name_s1")), state("name_s1"));
     }
 
     @Test
     public void testLongStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2->s3");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s3");
-        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
-        Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
-        Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s1"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s1"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s2"));
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s3"));
+
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s2"));
+
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s3"));
+        Assert.assertNull(next(state("name_s1")));
+
+        sm.setCurrentState(state("name_s3"));
+        Assert.assertNull(next(state("name_s1")));
+        Assert.assertNull(next(state("name_s2")));
     }
 
     @Test
     public void testTwoWayLongStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1<->s2<->s3");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s3");
-        //sm.addStateTransition("s1","s2");
-        //sm.addStateTransition("s2","s3");
-        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
-        Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s1"), "s1");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s1"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s2"), "s2");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1<->name_s2<->name_s3"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s3"));
+
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s2"));
+
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s3"));
+        Assert.assertEquals(next(state("name_s1")), state("name_s1"));
+
+        sm.setCurrentState(state("name_s3"));
+        Assert.assertEquals(next(state("name_s1")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
     }
 
     @Test
     public void testSplitStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2->s3 s1->s4");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s3");
-        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
-        Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s4"), "s4");
-        Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s1"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s2"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s3"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s4"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s4"));
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3 name_s1->name_s4"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s3"));
+
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s4")), state("name_s4"));
+
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s3"));
+        Assert.assertNull(next(state("name_s4")));
+
+        sm.setCurrentState(state("name_s3"));
+        Assert.assertNull(next(state("name_s4")));
+
+        sm.setCurrentState(state("name_s4"));
+        Assert.assertNull(next(state("name_s1")));
+        Assert.assertNull(next(state("name_s2")));
+        Assert.assertNull(next(state("name_s3")));
     }
 
     @Test
     public void testJoinStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2->s3,s4->s3");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s3");
-        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
-        Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s4", "s3"), "s3");
-        Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s1"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s4", "s2"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s2", "s4"));
-        Assert.assertNull(sm.getNextInstanceLifecycle("s3", "s4"));
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3,name_s4->name_s3"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s3"));
+
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s2"));
+
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s3"));
+        Assert.assertNull(next(state("name_s4")));
+
+        sm.setCurrentState(state("name_s3"));
+        Assert.assertNull(next(state("name_s4")));
+
+        sm.setCurrentState(state("name_s4"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s3"));
+        Assert.assertNull(next(state("name_s1")));
+        Assert.assertNull(next(state("name_s2")));
     }
 
     @Test
     public void testRingStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1->s2->s3->s1");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s3");
-        Assert.assertEquals(sm.getInitialLifecycle(), "s1");
-        Assert.assertEquals(sm.getFinalLifecycle(), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s2"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s1", "s3"), "s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s3"), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s2", "s1"), "s3");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s1"), "s1");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s2"), "s1");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3->name_s1"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s3"));
+
+        Assert.assertEquals(next(state("name_s2")), state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s2"));
+
+        sm.setCurrentState(state("name_s2"));
+        Assert.assertEquals(next(state("name_s3")), state("name_s3"));
+        Assert.assertEquals(next(state("name_s1")), state("name_s3"));
+
+        sm.setCurrentState(state("name_s3"));
+        Assert.assertEquals(next(state("name_s1")), state("name_s1"));
+        Assert.assertEquals(next(state("name_s2")), state("name_s1"));
     }
 
     @Test()
     public void testEndlessRingStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s1<->s2,s3->s4");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s3");
-        Assert.assertNull(sm.getNextInstanceLifecycle("s1", "s3"));
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1<->name_s2,name_s3->name_s4"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s3"));
+        Assert.assertNull(next(state("name_s3")));
     }
 
     @Test
     public void testBootstrapperStateMachine() {
-        LifecycleStateMachine sm = new LifecycleStateMachine("s3->s1<->s2");
-        sm.setInitialLifecycle("s1");
-        sm.setFinalLifecycle("s2");
-        Assert.assertEquals(sm.getNextInstanceLifecycle("s3", "s2"), "s1");
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s3->name_s1<->name_s2"));
+        sm.setBeginState(state("name_s1"));
+        sm.setEndState(state("name_s2"));
+
+        sm.setCurrentState(state("name_s3"));
+        Assert.assertEquals(next(state("name_s2")), state("name_s1"));
+    }
+
+    @Test
+    public void testIsState() {
+        sm = new LifecycleStateMachine();
+        sm.setName(new LifecycleName("name"));
+        sm.setText(new LifecycleStateMachineText("name_s1 name_s2"));
+        sm.setBeginState(state("name_1"));
+        sm.setEndState(state("name_2"));
+
+        Assert.assertTrue(sm.isLifecycleBeginState());
+        Assert.assertFalse(sm.isLifecycleEndState());
+
+        sm.setCurrentState(sm.getEndState());
+        Assert.assertFalse(sm.isLifecycleBeginState());
+        Assert.assertTrue(sm.isLifecycleEndState());
+    }
+
+    private static LifecycleState state(String state) {
+        return new LifecycleState(state);
+    }
+
+    private LifecycleState next(LifecycleState state) {
+        return sm.getNextLifecycleState(state);
     }
 }

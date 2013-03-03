@@ -35,6 +35,16 @@ public class ServiceGridOrchestratorParameter {
     private StateReader stateReader;
     private CurrentTimeProvider timeProvider;
 
+    public URI getServerId() {
+        return serverId;
+    }
+
+    public void setServerId(URI serverId) {
+        this.serverId = serverId;
+    }
+
+    private URI serverId;
+
     public TaskReader getTaskReader() {
         return taskReader;
     }

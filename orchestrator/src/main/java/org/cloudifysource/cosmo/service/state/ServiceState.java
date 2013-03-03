@@ -71,7 +71,7 @@ public class ServiceState extends TaskConsumerState {
     /**
      * Use isLifecycle(x or y or z) instead.
      * This is to encourage using the pattern of positive progress checks such as "isLifecycle(y)"
-     * instead of negative progress checks such as (!getLifecycle().equals(x))
+     * instead of negative progress checks such as (!getLifecycleState().equals(x))
      */
     @Deprecated
     public String getProgress() {
@@ -79,7 +79,7 @@ public class ServiceState extends TaskConsumerState {
     }
 
     /**
-     * @return true if {@code #getLifecycle()} matches any of the specified options.
+     * @return true if {@code #getLifecycleState()} matches any of the specified options.
      */
     public boolean isProgress(String ... expectedProgresses) {
         for (String expectedProgress : expectedProgresses) {

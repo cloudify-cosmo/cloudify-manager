@@ -27,6 +27,7 @@ import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.service.ServiceGridOrchestrator;
 import org.cloudifysource.cosmo.service.ServiceGridOrchestratorParameter;
 import org.cloudifysource.cosmo.service.ServiceUtils;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
@@ -70,13 +71,11 @@ public class MockManagement {
     private TaskConsumerRegistrar taskConsumerRegistrar;
     private final MockTaskBroker persistentTaskBroker;
     private KVStoreServer stateServer;
-    private final URI agentsId;
 
     public MockManagement()  {
 
         orchestratorId = createUri("services/orchestrator/");
         machineProvisionerId = createUri("services/provisioner/");
-        agentsId = createUri("agents/");
 
         if (USE_MOCK) {
             stateReader = new MockState();
@@ -173,6 +172,7 @@ public class MockManagement {
         serviceOrchestratorParameter.setTaskReader(taskBroker);
         serviceOrchestratorParameter.setStateReader(stateReader);
         serviceOrchestratorParameter.setTimeProvider(timeProvider);
+        serviceOrchestratorParameter.setServerId(getStateServerUri());
 
         return new ServiceGridOrchestrator(serviceOrchestratorParameter);
     }
@@ -196,27 +196,11 @@ public class MockManagement {
     }
 
     public URI getStateServerUri() {
-        return StreamUtils.newURI(STATE_SERVER_URI);
+        return URI.create(STATE_SERVER_URI);
     }
 
     protected MockCurrentTimeProvider getTimeProvider() {
         return timeProvider;
-    }
-
-    public URI getAgentsId() {
-        return agentsId;
-    }
-
-    public URI getAgentId(int index) {
-        return ServiceUtils.newAgentId(getAgentsId(), index);
-    }
-
-    public URI getServiceId(String name) {
-        return ServiceUtils.newServiceId(getStateServerUri(), name);
-    }
-
-    public URI getServiceInstanceId(final String serviceName, final int index) {
-        return ServiceUtils.newInstanceId(getStateServerUri(), serviceName, index);
     }
 
     public AgentState getAgentState(URI agentId) {
@@ -233,7 +217,7 @@ public class MockManagement {
 
     public void submitTask(URI target, Task task) {
         task.setProducerTimestamp(timeProvider.currentTimeMillis());
-        task.setProducerId(getServiceId("webui"));
+        task.setProducerId(ServiceUtils.newServiceId(getStateServerUri(), "webui/", new LifecycleName("tomcat")));
         task.setConsumerId(target);
         getTaskWriter().postNewTask(task);
     }
@@ -264,6 +248,18 @@ public class MockManagement {
         for (URI taskConsumerId : ImmutableSet.copyOf(taskConsumersToUnregisterOnClose)) {
             unregisterTaskConsumer(taskConsumerId);
         }
+    }
+
+    public URI getServiceId(String aliasGroup, LifecycleName lifecycleName) {
+        return ServiceUtils.newServiceId(getStateServerUri(), aliasGroup, lifecycleName);
+    }
+
+    public URI getServiceInstanceId(String alias, LifecycleName lifecycleName) {
+        return ServiceUtils.newInstanceId(getStateServerUri(), alias, lifecycleName);
+    }
+
+    public URI getAgentId(String alias) {
+        return ServiceUtils.newAgentId(getStateServerUri(), alias);
     }
 }
 

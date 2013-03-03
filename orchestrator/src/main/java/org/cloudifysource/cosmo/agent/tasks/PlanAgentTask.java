@@ -33,6 +33,7 @@ public class PlanAgentTask  extends Task {
     }
 
     private List<URI> serviceInstanceIds;
+
     public List<URI> getServiceInstanceIds() {
         return this.serviceInstanceIds;
     }
