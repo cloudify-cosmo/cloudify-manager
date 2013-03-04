@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
+import org.cloudifysource.cosmo.mock.MockSSHAgent;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
 import org.cloudifysource.cosmo.mock.MockTaskContainers;
 import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
@@ -144,8 +145,13 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void restartAgent(URI agentId) {
 
-        MockAgent oldAgent = (MockAgent) getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
-        final MockAgent restartedAgent = MockAgent.newRestartedAgentOnSameMachine(oldAgent);
+        Object oldAgent = getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
+        final Object restartedAgent;
+        if (oldAgent instanceof MockAgent) {
+            restartedAgent = MockAgent.newRestartedAgentOnSameMachine((MockAgent) oldAgent);
+        } else {
+            restartedAgent = MockSSHAgent.newRestartedAgentOnSameMachine((MockSSHAgent) oldAgent);
+        }
         getTaskConsumerRegistrar().registerTaskConsumer(restartedAgent, agentId);
     }
 
