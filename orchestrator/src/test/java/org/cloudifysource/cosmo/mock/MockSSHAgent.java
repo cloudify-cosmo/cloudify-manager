@@ -22,7 +22,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.sftp.RemoteResourceInfo;
+import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.xfer.InMemoryDestFile;
@@ -47,7 +47,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -57,8 +56,6 @@ import java.util.Random;
  * @since 0.1
  */
 public class MockSSHAgent {
-
-    private static final Random RANDOM = new Random();
 
     private static final String HOST = "pc-lab27";
     private static final int PORT = 22;
@@ -131,7 +128,7 @@ public class MockSSHAgent {
             instanceState = new ServiceInstanceState();
             instanceState.setAgentId(agentId);
             instanceState.setServiceId(serviceId);
-            final LifecycleStateMachine stateMachine = task.getStateMachine();
+            LifecycleStateMachine stateMachine = task.getStateMachine();
             stateMachine.setCurrentState(stateMachine.getBeginState());
             instanceState.setStateMachine(stateMachine);
             instanceState.setReachable(true);
@@ -264,28 +261,29 @@ public class MockSSHAgent {
 
         public void removeDirIfExists(String remoteDir) throws IOException {
             if (sftpClient.statExistence(remoteDir) != null) {
-                List<RemoteResourceInfo> list = sftpClient.ls(remoteDir);
-                for (RemoteResourceInfo remoteResourceInfo : list) {
-                    if (remoteResourceInfo.isRegularFile()) {
-                        sftpClient.rm(remoteResourceInfo.getPath());
-                    } else {
-                        removeDirIfExists(remoteResourceInfo.getPath());
-                    }
-                }
-                sftpClient.rmdir(remoteDir);
+                executeSingleCommand("rm -r " + remoteDir);
+            }
+        }
+
+        private void executeSingleCommand(String command) throws IOException {
+            Session session = sshClient.startSession();
+            try {
+                session.exec(command);
+            } finally {
+                session.close();
             }
         }
 
         public void close() {
             try {
                 sftpClient.close();
-            } catch (Exception e) {
-
+            } catch (IOException e) {
+                // do nothing
             }
             try {
                 sshClient.close();
-            } catch (Exception e) {
-
+            } catch (IOException e) {
+                // do nothing
             }
         }
     }
