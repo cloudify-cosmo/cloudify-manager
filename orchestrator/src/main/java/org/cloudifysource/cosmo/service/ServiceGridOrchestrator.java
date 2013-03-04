@@ -579,7 +579,7 @@ public class ServiceGridOrchestrator {
             final LifecycleState nextAgentLifecycle =
                     agentState.getStateMachine().getNextLifecycleState(desiredLifecycle);
             Preconditions.checkNotNull(nextAgentLifecycle);
-            if (isAllInstancesCleanedOrUnreachable(agentState) &&
+            if (isAllInstancesRemovedOrUnreachable(agentState) &&
                 !agentState.getStateMachine().isLifecycleState(nextAgentLifecycle)) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();
                 task.setLifecycleState(nextAgentLifecycle);
@@ -598,14 +598,13 @@ public class ServiceGridOrchestrator {
                pingHealth == AgentPingHealth.AGENT_UNREACHABLE;
     }
 
-    private boolean isAllInstancesCleanedOrUnreachable(final AgentState agentState) {
+    private boolean isAllInstancesRemovedOrUnreachable(final AgentState agentState) {
         final Iterable<URI> instanceIds = agentState.getServiceInstanceIds();
         return Iterables.all(instanceIds, new Predicate<URI>() {
             @Override
             public boolean apply(URI instanceId) {
                 final ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-                return !instanceState.isReachable() ||
-                        instanceState.getStateMachine().isLifecycleBeginState();
+                return !instanceState.isReachable();
             }
         });
     }
