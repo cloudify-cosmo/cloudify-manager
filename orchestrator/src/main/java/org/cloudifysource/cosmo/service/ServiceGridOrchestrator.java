@@ -142,7 +142,7 @@ public class ServiceGridOrchestrator {
             serviceConfig.setDisplayName(name.getName());
             final ServiceDeploymentPlan servicePlan = new ServiceDeploymentPlan();
             servicePlan.setServiceConfig(serviceConfig);
-            state.getDeploymentPlan().addService(servicePlan);
+            state.getDeploymentPlan().setService(servicePlan);
 
         } else if (command.equals("plan_unset")) {
             final String aliasGroup = task.getArguments().get(0);

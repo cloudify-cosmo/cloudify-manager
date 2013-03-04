@@ -29,6 +29,7 @@ public class ServiceConfig {
     private int maxNumberOfInstances;
     private int minNumberOfInstances;
     private URI id;
+    private String aliasGroup;
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
@@ -68,5 +69,13 @@ public class ServiceConfig {
 
     public void setMinNumberOfInstances(int minNumberOfInstances) {
         this.minNumberOfInstances = minNumberOfInstances;
+    }
+
+    public String getAliasGroup() {
+        return aliasGroup;
+    }
+
+    public void setAliasGroup(String aliasGroup) {
+        this.aliasGroup = aliasGroup;
     }
 }

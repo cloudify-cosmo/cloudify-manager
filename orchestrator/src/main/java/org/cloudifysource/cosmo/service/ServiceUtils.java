@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 public class ServiceUtils {
 
     // converts myalias/1/ into myalias/
-    static final Pattern FIND_ALIAS_GROUP_FROM_ALIAS_PATTERN = Pattern.compile("(.*/)\\w+/");
+    static final Pattern FIND_ALIAS_GROUP_FROM_ALIAS_PATTERN = Pattern.compile("(.*/)\\d+/");
     static final Pattern FIND_ALIAS_GROUP_PATTERN = Pattern.compile("(.*/)");
 
     private ServiceUtils() {   }
@@ -107,13 +107,16 @@ public class ServiceUtils {
     }
 
     public static String toAliasGroup(String alias) {
+        if (!alias.endsWith("/")) {
+            alias += "/";
+        }
         Matcher matcher = FIND_ALIAS_GROUP_FROM_ALIAS_PATTERN.matcher(alias);
         String serviceAlias = null;
         while (matcher.find()) {
-            Preconditions.checkArgument(serviceAlias == null, "alias %s cannot be parsed", alias);
+            Preconditions.checkArgument(serviceAlias == null, "alias group %s cannot be parsed", alias);
             serviceAlias = matcher.group(1);
         }
-        Preconditions.checkArgument(serviceAlias != null, "alias %s cannot be parsed", alias);
+        Preconditions.checkArgument(serviceAlias != null, "alias group %s cannot be parsed", alias);
         return serviceAlias;
     }
 }

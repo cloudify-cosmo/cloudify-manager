@@ -36,7 +36,7 @@ import static org.cloudifysource.cosmo.AssertServiceState.assertTwoTomcatInstanc
 import static org.cloudifysource.cosmo.AssertServiceState.expectedAgentZeroNotRestartedAgentOneRestarted;
 import static org.cloudifysource.cosmo.AssertServiceState.expectedBothMachinesNotRestarted;
 import static org.cloudifysource.cosmo.AssertServiceState.getAgentIds;
-import static org.cloudifysource.cosmo.AssertServiceState.getServiceInstanceIds;
+import static org.cloudifysource.cosmo.AssertServiceState.getReachableInstanceIds;
 
 /**
  * Unit Tests for {@link org.cloudifysource.cosmo.service.ServiceGridOrchestrator}.
@@ -58,7 +58,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         Assert.assertTrue(Iterables.isEmpty(getAgentIds(getManagement(), "web")));
         installService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertOneTomcatInstance(getManagement());
+        assertOneTomcatInstance("web", getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
@@ -172,7 +172,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         installService("web", new LifecycleName("tomcat"), 1);
 
         execute();
-        assertOneTomcatInstance(getManagement());
+        assertOneTomcatInstance("web", getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertTomcatUninstalledGracefully(getManagement());
@@ -214,11 +214,11 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertServiceInstalledWithOneInstance(getManagement(), "db", new LifecycleName("cassandra"));
         Assert.assertEquals(
                 Iterables.size(
-                        getServiceInstanceIds(getManagement(), "web", new LifecycleName("tomcat"))),
+                        getReachableInstanceIds(getManagement(), "web", new LifecycleName("tomcat"))),
                 1);
         Assert.assertEquals(
                 Iterables.size(
-                        getServiceInstanceIds(getManagement(), "db", new LifecycleName("cassandra"))),
+                        getReachableInstanceIds(getManagement(), "db", new LifecycleName("cassandra"))),
                 1);
         uninstallService("web", new LifecycleName("tomcat"), 1);
         uninstallService("db", new LifecycleName("cassandra"), 1);
@@ -234,7 +234,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
         installService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertOneTomcatInstance(getManagement());
+        assertOneTomcatInstance("web", getManagement());
         URI instanceId = getManagement().getServiceInstanceId("web/1", new LifecycleName("tomcat"));
         setServiceInstanceProperty(instanceId, propertyName, propertyValue);
         execute();

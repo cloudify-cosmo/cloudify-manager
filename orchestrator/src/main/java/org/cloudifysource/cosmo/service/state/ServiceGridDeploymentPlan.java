@@ -46,11 +46,9 @@ public class ServiceGridDeploymentPlan {
     }
 
     @JsonIgnore
-    public void addService(ServiceDeploymentPlan servicePlan) {
-        Preconditions.checkArgument(
-                !isServiceExists(servicePlan.getServiceConfig().getServiceId()),
-                "Service %s already exists",
-                servicePlan.getServiceConfig().getServiceId());
+    public void setService(ServiceDeploymentPlan servicePlan) {
+        final URI serviceId = servicePlan.getServiceConfig().getServiceId();
+        removeService(serviceId);
         services.add(servicePlan);
     }
 
@@ -82,10 +80,10 @@ public class ServiceGridDeploymentPlan {
     public void addServiceInstance(ServiceInstanceDeploymentPlan instancePlan) {
         final URI instanceId = instancePlan.getInstanceId();
         Preconditions.checkNotNull(instanceId);
-        Preconditions.checkArgument(!getInstancePlan(instanceId).isPresent());
         Preconditions.checkNotNull(instancePlan.getAgentId());
         Preconditions.checkNotNull(instancePlan.getStateMachine());
 
+        removeServiceInstance(instanceId);
         instances.add(instancePlan);
     }
 
@@ -119,7 +117,7 @@ public class ServiceGridDeploymentPlan {
     }
 
     @JsonIgnore
-    public void removeService(final URI serviceId) {
+    public boolean removeService(final URI serviceId) {
 
         final boolean removed =
             Iterables.removeIf(services, new Predicate<ServiceDeploymentPlan>() {
@@ -129,14 +127,14 @@ public class ServiceGridDeploymentPlan {
                     return servicePlan.getServiceConfig().getServiceId().equals(serviceId);
                 }
             });
-        Preconditions.checkArgument(removed, "Service %s does not exist", serviceId);
+        return removed;
     }
 
     @JsonIgnore
     public void replaceServiceById(final URI oldServiceId, final ServiceDeploymentPlan newService) {
         Preconditions.checkArgument(oldServiceId.equals(newService.getServiceConfig().getServiceId()));
         removeService(oldServiceId);
-        addService(newService);
+        setService(newService);
     }
 
     @JsonIgnore
