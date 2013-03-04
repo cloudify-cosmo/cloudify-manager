@@ -25,10 +25,12 @@ import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromAgentTask
 import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 
 /**
@@ -47,14 +49,19 @@ public class MockSSHAgentTest {
     private MockSSHAgent agent;
     private AgentState state;
 
-    @BeforeClass
-    public void beforeClass() throws IOException {
+    @BeforeMethod
+    public void before(Method method) {
         state = new AgentState();
         agent = MockSSHAgent.newAgentOnCleanMachine(state);
         agentId = URI.create("http://www.server.com/agent");
         serviceId = URI.create("http://www.server.com/alias/service");
         instanceId = URI.create("http://www.server.com/alias/1/service");
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void after(Method method) {
+        agent.close();
     }
 
     @Test
@@ -72,7 +79,10 @@ public class MockSSHAgentTest {
 
     @Test(dependsOnMethods = "testServiceInstanceLifecycle")
     public void testRecoverServiceInstanceState() throws IOException {
-        // read state written in previous test
+        // setup
+        testServiceInstanceLifecycle();
+
+        // read
         RecoverServiceInstanceStateTask task = new RecoverServiceInstanceStateTask();
         task.setStateId(instanceId);
         task.setConsumerId(agentId);
@@ -84,15 +94,13 @@ public class MockSSHAgentTest {
         Assert.assertNotNull(readServiceInstanceState);
     }
 
-    @Test(dependsOnMethods = "testRecoverServiceInstanceState")
+    @Test(dependsOnMethods = "testServiceInstanceLifecycle")
     public void testInjectPropertyToInstance() throws IOException {
-        // update state written in previous test
-        SetInstancePropertyTask task = new SetInstancePropertyTask();
-        task.setStateId(instanceId);
-        task.setPropertyName("name");
-        task.setPropertyValue("king");
-        ServiceInstanceStateHolder holder = new ServiceInstanceStateHolder(null);
-        agent.injectPropertyToInstance(task, holder);
+        // setup
+        testServiceInstanceLifecycle();
+
+        // update
+        ServiceInstanceStateHolder holder = callInjectPropertyToInstance();
 
         // read updated state
         RecoverServiceInstanceStateTask task2 = new RecoverServiceInstanceStateTask();
@@ -108,6 +116,16 @@ public class MockSSHAgentTest {
 
     }
 
+    private ServiceInstanceStateHolder callInjectPropertyToInstance() throws IOException {
+        SetInstancePropertyTask task = new SetInstancePropertyTask();
+        task.setStateId(instanceId);
+        task.setPropertyName("name");
+        task.setPropertyValue("king");
+        ServiceInstanceStateHolder holder = new ServiceInstanceStateHolder(null);
+        agent.injectPropertyToInstance(task, holder);
+        return holder;
+    }
+
     @Test(dependsOnMethods = "testInjectPropertyToInstance")
     public void testRemoveServiceInstance() throws IOException {
         RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
@@ -116,7 +134,7 @@ public class MockSSHAgentTest {
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
 
         try {
-            testInjectPropertyToInstance();
+            callInjectPropertyToInstance();
             Assert.fail("Expected service instance state to be removed");
         } catch (IllegalStateException probableExpected) {
             Assert.assertEquals(probableExpected.getMessage(), "missing service instance state");
@@ -124,7 +142,10 @@ public class MockSSHAgentTest {
 
     }
 
-     private static class ServiceInstanceStateHolder implements TaskConsumerStateModifier<ServiceInstanceState> {
+    /**
+     * Holder for {@link ServiceInstanceState} instances.
+     */
+    private static class ServiceInstanceStateHolder implements TaskConsumerStateModifier<ServiceInstanceState> {
         ServiceInstanceState serviceInstanceState;
         ServiceInstanceStateHolder(ServiceInstanceState state) {
             this.serviceInstanceState = state;

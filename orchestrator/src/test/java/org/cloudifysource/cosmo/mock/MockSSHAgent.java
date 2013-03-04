@@ -47,11 +47,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.Random;
 
 /**
  * A mock that executes tasks using ssh. This mock stores the service instance
  * state in a file on a remote machine.
+ *
  * @author Dan Kilman
  * @since 0.1
  */
@@ -59,7 +59,7 @@ public class MockSSHAgent {
 
     private static final String HOST = "pc-lab27";
     private static final int PORT = 22;
-    private static final String USERNAME =  "dank";
+    private static final String USERNAME = "dank";
     private static final String PASSWORD = "dan1324";
     private static final String ROOT = "/export/users/dank/agent/services/";
 
@@ -98,7 +98,8 @@ public class MockSSHAgent {
 
     @ImpersonatingTaskConsumer
     public void serviceInstanceLifecycle(ServiceInstanceTask task,
-            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) throws IOException {
+                                         TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier)
+        throws IOException {
         ServiceInstanceState instanceState = impersonatedStateModifier.get();
         instanceState.getStateMachine().setCurrentState(task.getLifecycleState());
         instanceState.setReachable(true);
@@ -115,7 +116,8 @@ public class MockSSHAgent {
 
     @ImpersonatingTaskConsumer
     public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
-            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) throws IOException {
+                                            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier)
+        throws IOException {
         URI instanceId = task.getStateId();
         URI agentId = task.getConsumerId();
         URI serviceId = task.getServiceId();
@@ -193,7 +195,7 @@ public class MockSSHAgent {
         remotePath.pathToParent = ROOT;
         String path = instanceId.getPath();
         if (path.endsWith("/")) {
-            path = path.substring(0, path.length()-1);
+            path = path.substring(0, path.length() - 1);
         }
         int lastSeperatorIndex = path.lastIndexOf('/');
         if (lastSeperatorIndex == -1) {
@@ -217,15 +219,22 @@ public class MockSSHAgent {
         sshClient.removeDirIfExists(ROOT);
     }
 
+    /**
+     * Holds parent path and file name for instance states.
+     */
     private static class InstanceStateRemotePath {
         String pathToParent;
         String name;
+
         String fullPath() {
             return pathToParent + name;
         }
     }
 
     // TODO cache already created directory so we don't have to call mkdirs all the time
+    /**
+     * Helper class to perform basic file operations on a remote machine using ssh.
+     */
     private static class AgentSSHClient {
 
         private final SSHClient sshClient;
@@ -288,6 +297,9 @@ public class MockSSHAgent {
         }
     }
 
+    /**
+     * {@link InMemorySourceFile} implementation that takes a {@link String} as its input.
+     */
     private static class StringSourceFile extends InMemorySourceFile {
 
         private final String name;
@@ -297,26 +309,34 @@ public class MockSSHAgent {
             this.name = name;
             this.bytes = content.getBytes(Charsets.UTF_8);
         }
+
         @Override
         public String getName() {
             return name;
         }
+
         @Override
         public long getLength() {
             return bytes.length;
         }
+
         @Override
         public InputStream getInputStream() throws IOException {
             return new ByteArrayInputStream(bytes);
         }
     }
 
+    /**
+     * {@link InMemoryDestFile} implementations that stores the output in a byte array.
+     */
     private static class StringDestFile extends InMemoryDestFile {
         private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
         @Override
         public OutputStream getOutputStream() throws IOException {
             return outputStream;
         }
+
         public String getContent() {
             return new String(outputStream.toByteArray(), Charsets.UTF_8);
         }
