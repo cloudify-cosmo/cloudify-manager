@@ -35,7 +35,6 @@ import static org.cloudifysource.cosmo.AssertServiceState.expectedAgentZeroNotRe
 import static org.cloudifysource.cosmo.AssertServiceState.expectedBothMachinesNotRestarted;
 import static org.cloudifysource.cosmo.AssertServiceState.getAgentIds;
 import static org.cloudifysource.cosmo.AssertServiceState.getReachableInstanceIds;
-import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask.cli;
 
 /**
  * Unit Tests for {@link org.cloudifysource.cosmo.service.ServiceGridOrchestrator}.

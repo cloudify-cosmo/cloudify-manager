@@ -38,6 +38,9 @@ public class AgentState extends TaskConsumerState {
     private static final String MACHINE_TERMINATED = "cloudmachine_terminated";
     private static final String MACHINE_REACHABLE = "cloudmachine_reachable";
     private static final String MACHINE_STARTED = "cloudmachine_started";
+    private String host;
+    private String userName;
+    private String keyFile;
 
     public AgentState() {
         stateMachine = new LifecycleStateMachine();
@@ -158,5 +161,29 @@ public class AgentState extends TaskConsumerState {
     public void addServiceInstance(URI instanceId) {
         Preconditions.checkArgument(!serviceInstanceIds.contains(instanceId));
         serviceInstanceIds.add(instanceId);
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setKeyFile(String keyFile) {
+        this.keyFile = keyFile;
+    }
+
+    public String getKeyFile() {
+        return keyFile;
     }
 }
