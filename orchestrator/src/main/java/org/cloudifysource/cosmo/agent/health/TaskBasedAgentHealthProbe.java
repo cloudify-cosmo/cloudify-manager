@@ -111,16 +111,16 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
                             // agent not reachable because it was not started yet
                             health = AgentPingHealth.AGENT_UNREACHABLE;
                         }
-                    } else if (expectedNumberOfMachineRestartsInAgentState != null
-                            && agentState != null
-                            && expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineStarts()) {
+                    } else if (expectedNumberOfMachineRestartsInAgentState != null &&
+                               agentState != null &&
+                               expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineStarts()) {
                         Preconditions.checkState(
                                 expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineStarts(),
                                 "Could not have sent ping to a machine that was not restarted yet");
                         // machine restarted after ping sent. Wait for next ping
-                    } else if (expectedNumberOfAgentRestartsInAgentState != null
-                            && agentState != null
-                            && expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentStarts()) {
+                    } else if (expectedNumberOfAgentRestartsInAgentState != null &&
+                               agentState != null &&
+                               expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentStarts()) {
                         Preconditions.checkState(
                                 expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentStarts(),
                                 "Could not have sent ping to an agent that was not restarted yet");
@@ -187,7 +187,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
 
             final PingAgentTask pingTask = new PingAgentTask();
             pingTask.setConsumerId(agentId);
-            if (agentState.isMachineReachableLifecycle()) {
+            if (agentState != null && agentState.isMachineReachableLifecycle()) {
 
                 pingTask.setExpectedNumberOfAgentRestartsInAgentState(agentState.getNumberOfAgentStarts());
                 pingTask.setExpectedNumberOfMachineRestartsInAgentState(agentState.getNumberOfMachineStarts());
@@ -208,9 +208,9 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
         }
 
         for (String progress : expectedProgresses) {
-             if (agentState.getStateMachine().isLifecycleState(new LifecycleState(progress))) {
-                 return true;
-             }
+            if (agentState.getStateMachine().isLifecycleState(new LifecycleState(progress))) {
+                return true;
+            }
         }
 
         return false;

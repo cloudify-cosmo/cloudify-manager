@@ -300,7 +300,9 @@ public class ServiceGridOrchestrator {
         impersonatedStateModifier.put(agentState);
     }
 
-    private boolean syncStateWithDeploymentPlan(final List<Task> newTasks, Map<URI, AgentPingHealth> agentsHealthStatus) {
+    private boolean syncStateWithDeploymentPlan(
+            final List<Task> newTasks,
+            final Map<URI, AgentPingHealth> agentsHealthStatus) {
 
         boolean syncComplete = true;
 

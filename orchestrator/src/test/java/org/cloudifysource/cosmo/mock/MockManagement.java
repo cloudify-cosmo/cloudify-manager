@@ -187,11 +187,8 @@ public class MockManagement {
         serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
         serviceOrchestratorParameter.setStateReader(stateReader);
         serviceOrchestratorParameter.setTimeProvider(timeProvider);
-<<<<<<< HEAD
         serviceOrchestratorParameter.setServerId(getStateServerUri());
-=======
         serviceOrchestratorParameter.setAgentHealthProbe(taskBasedAgentHealthProbe);
->>>>>>> origin/develop
 
         return new ServiceGridOrchestrator(serviceOrchestratorParameter);
     }
@@ -269,7 +266,6 @@ public class MockManagement {
         }
     }
 
-<<<<<<< HEAD
     public URI getServiceId(String aliasGroup, LifecycleName lifecycleName) {
         return ServiceUtils.newServiceId(getStateServerUri(), aliasGroup, lifecycleName);
     }
@@ -281,8 +277,5 @@ public class MockManagement {
     public URI getAgentId(String alias) {
         return ServiceUtils.newAgentId(getStateServerUri(), alias);
     }
-=======
-
->>>>>>> origin/develop
 }
 
