@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo;
 
 import org.cloudifysource.cosmo.mock.MockManagement;
-import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
@@ -51,54 +50,33 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
             @Optional("myhostname") String ip,
             @Optional("myusername") String username,
             @Optional("mykeyfile.pem") String keyfile) {
-        cos("web/1", "machine_set", "--ip", ip, "--username", username, "--keyfile", keyfile);
-        installService("web", new LifecycleName("tomcat"), 1);
-        execute();
-        assertOneTomcatInstance("web", getManagement());
-        uninstallService("web", new LifecycleName("tomcat"), 1);
-        execute();
-        assertTomcatUninstalledGracefully(getManagement(), 1);
-    }
 
-    private void installService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
-        cos(aliasGroup + "/", "plan_set", lifecycleName.getName(),
-                "--instances", String.valueOf(numberOfInstances),
+        cos("web", "plan_set", "tomcat",
+                "--instances", "1",
                 "--min_instances", "1",
                 "--max_instances", "2");
 
+        cos("web/1", "machine_set",
+                "--ip", ip,
+                "--username", username,
+                "--keyfile", keyfile);
 
-        for (int i = 1; i <= numberOfInstances; i++) {
-            final String alias = aliasGroup + "/" + i + "/";
-            startServiceInstance(alias, lifecycleName);
-        }
-    }
+        cos("web/1", "lifecycle_set", "tomcat",
+                "tomcat_cleaned<-->tomcat_installed<-->tomcat_configured->tomcat_started" + "," +
+                "tomcat_started->tomcat_stopped->tomcat_cleaned",
+                "--begin", "tomcat_cleaned",
+                "--end", "tomcat_started");
 
-    private void uninstallService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
-        cos(aliasGroup + "/", "plan_unset", lifecycleName.getName());
+        cos("web/1", "tomcat_started");
 
-        for (int i = 1; i <= numberOfInstances; i++) {
-            final String alias = aliasGroup + "/" + i + "/";
-            cleanServiceInstance(alias, lifecycleName);
-        }
-    }
+        execute();
+        assertOneTomcatInstance("web", getManagement());
 
-    private void startServiceInstance(String alias, LifecycleName lifecycleName) {
+        cos("web", "plan_unset", "tomcat");
+        cos("web/1", "tomcat_cleaned");
+        cos("web/1", "machine_unset");
 
-        final String prefix = lifecycleName.getName() + "_";
-        cos(alias, "lifecycle_set", lifecycleName.getName(),
-                prefix + "cleaned<-->" + prefix + "installed<-->" + prefix + "configured->" + prefix + "started" +
-                        "," + prefix + "started->" + prefix + "stopped->" + prefix + "cleaned",
-                "--begin", prefix + "cleaned",
-                "--end", prefix + "started");
-
-        cos(alias, prefix + "started");
-    }
-
-    private void cleanServiceInstance(String alias, LifecycleName lifecycleName) {
-        final String prefix = lifecycleName.getName() + "_";
-
-        cos(alias, prefix + "cleaned");
-
-        cos(alias, "cloudmachine_terminated");
+        execute();
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 }
