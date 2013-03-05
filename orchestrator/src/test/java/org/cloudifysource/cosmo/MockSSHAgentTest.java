@@ -51,6 +51,9 @@ public class MockSSHAgentTest {
     @BeforeMethod
     public void before() {
         state = new AgentState();
+        state.setUserName("dank");
+        state.setHost("pc-lab27");
+        state.setKeyFile("d:/home/temp/id_rsa");
         agent = MockSSHAgent.newAgentOnCleanMachine(state);
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
     }

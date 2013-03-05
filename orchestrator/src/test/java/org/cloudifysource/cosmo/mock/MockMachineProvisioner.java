@@ -32,7 +32,7 @@ import java.net.URI;
  */
 public class MockMachineProvisioner {
 
-    private static final boolean USE_SSH = true;
+    private static final boolean USE_SSH = false;
 
     private final TaskConsumerState state = new TaskConsumerState();
     private final TaskConsumerRegistrar taskConsumerRegistrar;
