@@ -57,10 +57,7 @@ import java.net.URI;
  */
 public class MockSSHAgent {
 
-    private static final String HOST = "pc-lab27";
     private static final int PORT = 22;
-    private static final String USERNAME = "dank";
-    private static final String PASSWORD = "dan1324";
     private static final String ROOT = "/export/users/dank/agent/services/";
 
     private static final ObjectMapper MAPPER = StreamUtils.newObjectMapper();
@@ -90,7 +87,7 @@ public class MockSSHAgent {
     private MockSSHAgent(AgentState state) {
         this.state = state;
         try {
-            this.sshClient = new AgentSSHClient(HOST, PORT, USERNAME, PASSWORD);
+            this.sshClient = new AgentSSHClient(state.getHost(), PORT, state.getUserName(), state.getKeyFile());
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
@@ -240,11 +237,11 @@ public class MockSSHAgent {
         private final SSHClient sshClient;
         private final SFTPClient sftpClient;
 
-        public AgentSSHClient(String host, int port, String username, String password) throws IOException {
+        public AgentSSHClient(String host, int port, String userName, String keyFile) throws IOException {
             sshClient = new SSHClient();
             sshClient.addHostKeyVerifier(new PromiscuousVerifier());
             sshClient.connect(host, port);
-            sshClient.authPassword(username, password);
+            sshClient.authPublickey(userName, keyFile);
             sftpClient = sshClient.newSFTPClient();
         }
 

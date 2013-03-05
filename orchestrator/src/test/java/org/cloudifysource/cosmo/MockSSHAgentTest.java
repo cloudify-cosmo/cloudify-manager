@@ -30,7 +30,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URI;
 
 /**
@@ -43,24 +42,21 @@ public class MockSSHAgentTest {
 
     // TODO SSH verify service instance state content
 
-    private URI agentId;
-    private URI serviceId;
-    private URI instanceId;
+    private final URI agentId = URI.create("http://www.server.com/agent");
+    private final URI serviceId = URI.create("http://www.server.com/alias/service");
+    private final URI instanceId = URI.create("http://www.server.com/alias/1/service");
     private MockSSHAgent agent;
     private AgentState state;
 
     @BeforeMethod
-    public void before(Method method) {
+    public void before() {
         state = new AgentState();
         agent = MockSSHAgent.newAgentOnCleanMachine(state);
-        agentId = URI.create("http://www.server.com/agent");
-        serviceId = URI.create("http://www.server.com/alias/service");
-        instanceId = URI.create("http://www.server.com/alias/1/service");
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
     }
 
     @AfterMethod(alwaysRun = true)
-    public void after(Method method) {
+    public void after() {
         agent.close();
     }
 
@@ -113,7 +109,20 @@ public class MockSSHAgentTest {
         // verify
         Assert.assertNotNull(readServiceInstanceState);
         Assert.assertEquals(readServiceInstanceState.getProperty("name"), "king");
+    }
 
+    @Test(dependsOnMethods = "testInjectPropertyToInstance")
+    public void testRemoveServiceInstance() throws IOException {
+        RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
+        task.setInstanceId(instanceId);
+        agent.removeServiceInstance(task);
+        state.setServiceInstanceIds(Lists.newArrayList(instanceId));
+        try {
+            callInjectPropertyToInstance();
+            Assert.fail("Expected service instance state to be removed");
+        } catch (IllegalStateException probableExpected) {
+            Assert.assertEquals(probableExpected.getMessage(), "missing service instance state");
+        }
     }
 
     private ServiceInstanceStateHolder callInjectPropertyToInstance() throws IOException {
@@ -124,22 +133,6 @@ public class MockSSHAgentTest {
         ServiceInstanceStateHolder holder = new ServiceInstanceStateHolder(null);
         agent.injectPropertyToInstance(task, holder);
         return holder;
-    }
-
-    @Test(dependsOnMethods = "testInjectPropertyToInstance")
-    public void testRemoveServiceInstance() throws IOException {
-        RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
-        task.setInstanceId(instanceId);
-        agent.removeServiceInstance(task);
-        state.setServiceInstanceIds(Lists.newArrayList(instanceId));
-
-        try {
-            callInjectPropertyToInstance();
-            Assert.fail("Expected service instance state to be removed");
-        } catch (IllegalStateException probableExpected) {
-            Assert.assertEquals(probableExpected.getMessage(), "missing service instance state");
-        }
-
     }
 
     /**

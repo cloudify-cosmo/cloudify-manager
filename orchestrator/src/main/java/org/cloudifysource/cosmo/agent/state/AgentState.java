@@ -55,6 +55,9 @@ public class AgentState extends TaskConsumerState {
     private int numberOfAgentStarts;
     private int numberOfMachineStarts;
     private long lastPingSourceTimestamp;
+    private String host = "pc-lab27";
+    private String keyFile = "D:/home/temp/id_rsa";
+    private String username = "dank";
 
     public void setServiceInstanceIds(List<URI> serviceInstanceIds) {
         this.serviceInstanceIds = serviceInstanceIds;
@@ -159,4 +162,17 @@ public class AgentState extends TaskConsumerState {
         Preconditions.checkArgument(!serviceInstanceIds.contains(instanceId));
         serviceInstanceIds.add(instanceId);
     }
+
+    public String getHost() {
+        return host;
+    }
+
+    public String getKeyFile() {
+        return keyFile;
+    }
+
+    public String getUserName() {
+        return username;
+    }
+
 }
