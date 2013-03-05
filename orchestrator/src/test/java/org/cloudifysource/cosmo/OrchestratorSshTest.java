@@ -44,54 +44,33 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
 
     @Test(enabled = true)
     public void dataCenterMachineTest() {
-        cos("web/1", "machine_set", "--ip", "pc-lab128", "--username", "myuser", "--keyfile", "myuser.pem");
-        installService("web", new LifecycleName("tomcat"), 1);
-        execute();
-        assertOneTomcatInstance("web", getManagement());
-        uninstallService("web", new LifecycleName("tomcat"), 1);
-        execute();
-        assertTomcatUninstalledGracefully(getManagement(), 1);
-    }
 
-    private void installService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
-        cos(aliasGroup + "/", "plan_set", lifecycleName.getName(),
-                "--instances", String.valueOf(numberOfInstances),
+        cos("web", "plan_set", "tomcat",
+                "--instances", "1",
                 "--min_instances", "1",
                 "--max_instances", "2");
 
+        cos("web/1", "machine_set",
+                "--ip", "pc-lab128",
+                "--username", "myuser",
+                "--keyfile", "myuser.pem");
 
-        for (int i = 1; i <= numberOfInstances; i++) {
-            final String alias = aliasGroup + "/" + i + "/";
-            startServiceInstance(alias, lifecycleName);
-        }
-    }
+        cos("web/1", "lifecycle_set", "tomcat",
+                "tomcat_cleaned<-->tomcat_installed<-->tomcat_configured->tomcat_started" + "," +
+                "tomcat_started->tomcat_stopped->tomcat_cleaned",
+                "--begin", "tomcat_cleaned",
+                "--end", "tomcat_started");
 
-    private void uninstallService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
-        cos(aliasGroup + "/", "plan_unset", lifecycleName.getName());
+        cos("web/1", "tomcat_started");
 
-        for (int i = 1; i <= numberOfInstances; i++) {
-            final String alias = aliasGroup + "/" + i + "/";
-            cleanServiceInstance(alias, lifecycleName);
-        }
-    }
+        execute();
+        assertOneTomcatInstance("web", getManagement());
 
-    private void startServiceInstance(String alias, LifecycleName lifecycleName) {
+        cos("web", "plan_unset", "tomcat");
+        cos("web/1", "tomcat_cleaned");
+        cos("web/1", "cloudmachine_terminated");
 
-        final String prefix = lifecycleName.getName() + "_";
-        cos(alias, "lifecycle_set", lifecycleName.getName(),
-                prefix + "cleaned<-->" + prefix + "installed<-->" + prefix + "configured->" + prefix + "started" +
-                        "," + prefix + "started->" + prefix + "stopped->" + prefix + "cleaned",
-                "--begin", prefix + "cleaned",
-                "--end", prefix + "started");
-
-        cos(alias, prefix + "started");
-    }
-
-    private void cleanServiceInstance(String alias, LifecycleName lifecycleName) {
-        final String prefix = lifecycleName.getName() + "_";
-
-        cos(alias, prefix + "cleaned");
-
-        cos(alias, "cloudmachine_terminated");
+        execute();
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 }
