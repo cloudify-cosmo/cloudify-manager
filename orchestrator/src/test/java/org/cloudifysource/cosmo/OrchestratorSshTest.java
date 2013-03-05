@@ -38,7 +38,11 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         return new MockManagement();
     }
 
-    @Test(enabled = false)
+    private void execute() {
+        execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
+    }
+
+    @Test(enabled = true)
     public void dataCenterMachineTest() {
         cos("web/1", "machine_set", "--ip", "pc-lab128", "--username", "myuser", "--keyfile", "myuser.pem");
         installService("web", new LifecycleName("tomcat"), 1);

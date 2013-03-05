@@ -193,7 +193,7 @@ public class ServiceGridOrchestrator {
                 newAgentPlan.setAgentId(agentId);
                 //TODO: We are simulating here a cloudmachine lifecycle
                 //we need to define a statemachine that is suitable for a data center machine.
-                newAgentPlan.setLifecycleState(new LifecycleState("cloudmachine_started"));
+                newAgentPlan.setLifecycleState(new LifecycleState("cloudmachine_reachable"));
                 state.getDeploymentPlan().addAgent(newAgentPlan);
                 agentPlan = Optional.fromNullable(newAgentPlan);
             }
