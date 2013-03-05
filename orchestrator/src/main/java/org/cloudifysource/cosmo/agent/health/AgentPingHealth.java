@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.agent.tasks;
 
-import org.cloudifysource.cosmo.Task;
-import org.cloudifysource.cosmo.agent.state.AgentState;
+package org.cloudifysource.cosmo.agent.health;
 
 /**
- * Task used to initialize the state of an agent (to planned).
- * @author Itai Frenkel
+ * A three state enum that determines if the agent can process tasks.
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public class PlanAgentTask  extends Task {
-
-    public PlanAgentTask() {
-        super(AgentState.class);
-    }
+public enum AgentPingHealth {
+    UNDETERMINED, AGENT_UNREACHABLE, AGENT_REACHABLE
 }

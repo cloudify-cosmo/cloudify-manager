@@ -13,19 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.agent.tasks;
 
-import org.cloudifysource.cosmo.Task;
-import org.cloudifysource.cosmo.agent.state.AgentState;
+package org.cloudifysource.cosmo.agent.health;
+
+import java.net.URI;
+import java.util.Map;
 
 /**
- * Task used to initialize the state of an agent (to planned).
- * @author Itai Frenkel
+ * Acts as a health probe for agents.
+ *
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public class PlanAgentTask  extends Task {
+public interface AgentHealthProbe {
 
-    public PlanAgentTask() {
-        super(AgentState.class);
-    }
+    /**
+     * returns the monitored agents health status, this method should not block on IO and return immediately,
+     * usually with a cached result which is refreshed frequently. It is up to the implementation to decide when this
+     * result is updated.
+     * @return monitored agents health status
+     */
+    Map<URI, AgentPingHealth> getAgentsHealthStatus();
+
+    /**
+     * Specify which agents needs to be monitored for health status
+     * monitored.
+     * @param agentsIds the list of agents ids to monitor
+     */
+    void monitorAgents(Iterable<URI> agentsIds);
 }

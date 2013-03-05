@@ -61,7 +61,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertOneTomcatInstance("web", getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
     /**
@@ -74,7 +74,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertTwoTomcatInstances(getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 2);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 2);
     }
 
     /**
@@ -93,7 +93,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
                 numberOfAgentStarts, numberOfMachineStarts);
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
     /**
@@ -113,7 +113,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
                 numberOfAgentStarts, numberOfMachineStarts);
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
     /**
@@ -128,7 +128,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertTwoTomcatInstances(getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 2);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 2);
     }
 
     /**
@@ -143,7 +143,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertTomcatScaledInFrom2To1(getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 2);
     }
 
     /**
@@ -156,7 +156,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         killOnlyMachine("web");
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledUnreachable(getManagement());
+        assertTomcatUninstalledUnreachable(getManagement(), 1);
     }
 
     /**
@@ -175,7 +175,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertOneTomcatInstance("web", getManagement());
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
     /**
@@ -199,7 +199,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
                 expectedBothMachinesNotRestarted(getManagement()));
         uninstallService("web", new LifecycleName("tomcat"), 2);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 2);
     }
 
     /**
@@ -223,7 +223,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         uninstallService("web", new LifecycleName("tomcat"), 1);
         uninstallService("db", new LifecycleName("cassandra"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
     @Test(dependsOnMethods = {"installSingleInstanceServiceTest" })
@@ -241,7 +241,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         Assert.assertEquals(getServiceInstanceProperty(propertyName, instanceId), propertyValue);
         uninstallService("web", new LifecycleName("tomcat"), 1);
         execute();
-        assertTomcatUninstalledGracefully(getManagement());
+        assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
     private Object getServiceInstanceProperty(final String propertyName, URI instanceId) {
@@ -338,7 +338,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     private void execute() {
-        execute(getManagement().getOrchestratorId());
+        execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
     }
 
     private void killOnlyMachine(String aliasGroup) {

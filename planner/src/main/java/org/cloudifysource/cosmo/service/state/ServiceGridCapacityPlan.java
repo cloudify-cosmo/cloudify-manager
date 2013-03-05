@@ -16,6 +16,7 @@
 package org.cloudifysource.cosmo.service.state;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -33,6 +34,7 @@ import java.util.List;
 public class ServiceGridCapacityPlan {
 
     private List<ServiceConfig> services = Lists.newArrayList();
+    private List<ServiceConfig> removedServices = Lists.newArrayList();
 
     public List<ServiceConfig> getServices() {
         return services;
@@ -46,13 +48,19 @@ public class ServiceGridCapacityPlan {
     public void addService(final ServiceConfig serviceConfig) {
         final URI serviceId = serviceConfig.getServiceId();
         Preconditions.checkArgument(!Iterables.tryFind(services, findServiceIdPredicate(serviceId)).isPresent());
+        removedServices.remove(serviceId);
         services.add(serviceConfig);
     }
 
     @JsonIgnore
     public void removeServiceById(final URI serviceId) {
         Preconditions.checkNotNull(serviceId);
-        Iterables.removeIf(services, findServiceIdPredicate(serviceId));
+        final Optional<ServiceConfig> serviceConfig =
+                Iterables.tryFind(services, findServiceIdPredicate(serviceId));
+        if (serviceConfig.isPresent()) {
+            Preconditions.checkState(!Iterables.any(removedServices, findServiceIdPredicate(serviceId)));
+            removedServices.add(serviceConfig.get());
+        }
     }
 
     private Predicate<ServiceConfig> findServiceIdPredicate(final URI serviceId) {
@@ -69,5 +77,13 @@ public class ServiceGridCapacityPlan {
     public ServiceConfig getServiceById(URI serviceId) {
         Preconditions.checkNotNull(serviceId);
         return Iterables.tryFind(services, findServiceIdPredicate(serviceId)).orNull();
+    }
+
+    public List<ServiceConfig> getRemovedServices() {
+        return removedServices;
+    }
+
+    public void setRemovedServices(List<ServiceConfig> removedServices) {
+        this.removedServices = removedServices;
     }
 }

@@ -15,32 +15,23 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumerState;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskProducer;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
-import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
-import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
-import org.cloudifysource.cosmo.service.state.ServiceInstanceDeploymentPlan;
 import org.cloudifysource.cosmo.service.tasks.InstallServiceTask;
 import org.cloudifysource.cosmo.service.tasks.ScaleServiceTask;
 import org.cloudifysource.cosmo.service.tasks.UninstallServiceTask;
-import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentPlanTask;
-import org.cloudifysource.cosmo.streams.StreamUtils;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Set;
 
+import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask.cli;
 /**
  * Translates the capacity plan (number of instances per service) into a deployment plan (places instances in
  * machines).
@@ -52,15 +43,11 @@ public class ServiceGridDeploymentPlanner {
 
     private final ServiceGridDeploymentPlannerState state;
     private final URI orchestratorId;
-    private final ObjectMapper mapper;
-    private final URI agentsId;
 
     public ServiceGridDeploymentPlanner(ServiceGridDeploymentPlannerParameter parameterObject) {
         this.orchestratorId = parameterObject.getOrchestratorId();
-        this.agentsId = parameterObject.getAgentsId();
         this.state = new ServiceGridDeploymentPlannerState();
         this.state.setTasksHistory(ServiceUtils.toTasksHistoryId(parameterObject.getDeploymentPlannerId()));
-        mapper = StreamUtils.newObjectMapper();
     }
 
     @TaskConsumer(persistTask = true)
@@ -102,7 +89,8 @@ public class ServiceGridDeploymentPlanner {
         checkServiceId(serviceId);
         boolean installed = isServiceInstalled(serviceId);
         Preconditions.checkState(!installed);
-        state.updateCapacityPlan(serviceConfig);
+        state.addService(serviceConfig);
+        state.setOrchestratorUpdateRequired(true);
     }
 
     @TaskConsumer(persistTask = true)
@@ -112,123 +100,102 @@ public class ServiceGridDeploymentPlanner {
         boolean installed = isServiceInstalled(serviceId);
         Preconditions.checkState(installed);
         state.removeService(serviceId);
+        state.setOrchestratorUpdateRequired(true);
     }
 
     @TaskProducer
     public Iterable<Task> deploymentPlan() {
 
         List<Task> newTasks = Lists.newArrayList();
-        if (state.isDeploymentPlanningRequired()) {
-            updateDeploymentPlan();
-
-            UpdateDeploymentPlanTask enforceTask = new UpdateDeploymentPlanTask();
-            enforceTask.setConsumerId(orchestratorId);
-            enforceTask.setDeploymentPlan(state.getDeploymentPlan());
-            addNewTask(newTasks, enforceTask);
-
-            state.setDeploymentPlanningRequired(false);
+        if (state.isOrchestratorUpdateRequired()) {
+            updateOrchestratorWithPlan(newTasks);
+            state.setOrchestratorUpdateRequired(false);
         }
         return newTasks;
     }
 
-    private ServiceGridDeploymentPlan updateDeploymentPlan() {
+    private void updateOrchestratorWithPlan(List<Task> newTasks) {
 
-        ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
+        for (final ServiceConfig serviceConfig : state.getCapacityPlan().getServices()) {
 
-        for (final ServiceConfig newServiceConfig : state.getCapacityPlan().getServices()) {
+            final String serviceName = serviceConfig.getDisplayName();
+            final String prefix = serviceName + "_";
+            final String aliasGroup = getAliasGroup(serviceConfig);
 
-            final ServiceDeploymentPlan oldServicePlan = deploymentPlan.getServiceById(newServiceConfig.getServiceId());
-            deploymentPlanUpdateService(deploymentPlan, oldServicePlan, newServiceConfig);
+            final Task planSetTask = cli(aliasGroup, "plan_set", serviceName,
+                    "--instances", String.valueOf(serviceConfig.getPlannedNumberOfInstances()),
+                    "--min_instances", String.valueOf(serviceConfig.getMinNumberOfInstances()),
+                    "--max_instances", String.valueOf(serviceConfig.getMaxNumberOfInstances()));
+            addNewTask(newTasks, planSetTask);
 
-            final URI serviceId = newServiceConfig.getServiceId();
-            final ServiceConfig oldServiceConfig = oldServicePlan == null ? null : oldServicePlan.getServiceConfig();
-            int oldNumberOfInstances = oldServiceConfig == null ? 0 : oldServiceConfig.getPlannedNumberOfInstances();
-            int newNumberOfInstances = newServiceConfig.getPlannedNumberOfInstances();
-            if (newNumberOfInstances > oldNumberOfInstances) {
-                for (int i = newNumberOfInstances - oldNumberOfInstances; i > 0; i--) {
+            for (int i = 1; i <= serviceConfig.getMaxNumberOfInstances(); i++) {
+                final String alias = aliasGroup  + i;
+                final Task lifecycleTask = cli(alias, "lifecycle_set", serviceName,
+                    prefix + "cleaned<-->" + prefix + "installed<-->" + prefix + "configured->" + prefix + "started" +
+                            "," + prefix + "started->" + prefix + "stopped->" + prefix + "cleaned",
+                    "--begin", prefix + "cleaned",
+                    "--end", prefix + "started");
+                addNewTask(newTasks, lifecycleTask);
 
-                    final URI instanceId = newInstanceId(serviceId);
-                    final URI agentId = newAgentId();
-                    ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
-                    instancePlan.setAgentId(agentId);
-                    instancePlan.setInstanceId(instanceId);
-                    instancePlan.setDesiredLifecycle(newServiceConfig.getInstanceLifecycleStateMachine()
-                            .getFinalLifecycle());
-                    deploymentPlan.addServiceInstance(serviceId, instancePlan);
-                }
-            } else if (newNumberOfInstances < oldNumberOfInstances) {
-                for (int i = oldNumberOfInstances - newNumberOfInstances; i > 0; i--) {
-                    final int index = state.getAndDecrementNextServiceInstanceIndex(serviceId);
-                    final URI instanceId = ServiceUtils.newInstanceId(serviceId, index);
-                    boolean removed = deploymentPlan.removeServiceInstance(instanceId);
-                    Preconditions.checkState(removed);
+                if (i <= serviceConfig.getPlannedNumberOfInstances()) {
+                    final Task instanceStartedTask = cli(alias, prefix + "started");
+                    addNewTask(newTasks, instanceStartedTask);
+
+                    final Task cloudmachineReachableTask = cli(alias, "cloudmachine_reachable");
+                    addNewTask(newTasks, cloudmachineReachableTask);
+
+                } else {
+                    final Task instanceCleanedTask = cli(alias, prefix + "cleaned");
+                    addNewTask(newTasks, instanceCleanedTask);
+
+                    final Task cloudmachineTerminatedTask = cli(alias, "cloudmachine_terminated");
+                    addNewTask(newTasks, cloudmachineTerminatedTask);
                 }
             }
         }
 
-        final Function<Object, URI> getServiceIdFunc = new Function<Object, URI>() {
+        for (ServiceConfig serviceConfig : state.getCapacityPlan().getRemovedServices()) {
 
-            @Override
-            public URI apply(Object serviceConfig) {
-                if (serviceConfig instanceof ServiceConfig) {
-                    return ((ServiceConfig) serviceConfig).getServiceId();
-                }
-                if (serviceConfig instanceof ServiceDeploymentPlan) {
-                    return ((ServiceDeploymentPlan) serviceConfig).getServiceConfig().getServiceId();
-                }
-                Preconditions.checkArgument(false, "Unsupported type " + serviceConfig.getClass());
-                return null;
+            final String serviceName = serviceConfig.getDisplayName();
+            final String aliasGroup = getAliasGroup(serviceConfig);
+            final Task planUnsetTask = cli(aliasGroup, "plan_unset", serviceName);
+            addNewTask(newTasks, planUnsetTask);
+            final String prefix = serviceName + "_";
+
+            for (int i = 1; i <= serviceConfig.getMaxNumberOfInstances(); i++) {
+                final String alias = aliasGroup  + i;
+                final Task instanceCleanedTask = cli(alias, prefix + "cleaned");
+                addNewTask(newTasks, instanceCleanedTask);
+
+                final Task cloudmachineTerminatedTask = cli(alias, "cloudmachine_terminated");
+                addNewTask(newTasks, cloudmachineTerminatedTask);
             }
-        };
-
-        Set<URI> plannedServiceIds =
-                Sets.newHashSet(Iterables.transform(state.getDeploymentPlan().getServices(), getServiceIdFunc));
-        Set<URI> installedServiceIds =
-                Sets.newHashSet(Iterables.transform(state.getCapacityPlan().getServices(), getServiceIdFunc));
-        Set<URI> uninstalledServiceIds =
-                Sets.difference(plannedServiceIds, installedServiceIds);
-
-        for (URI uninstalledServiceId : uninstalledServiceIds) {
-            state.getDeploymentPlan().removeService(uninstalledServiceId);
         }
-        return deploymentPlan;
     }
 
-    private void deploymentPlanUpdateService(
-            ServiceGridDeploymentPlan deploymentPlan,
-            ServiceDeploymentPlan oldServicePlan,
-            ServiceConfig newServiceConfig) {
-
-        final ServiceDeploymentPlan newServicePlan = new ServiceDeploymentPlan();
-        newServicePlan.setServiceConfig(StreamUtils.cloneElement(mapper, newServiceConfig));
-        if (oldServicePlan == null) {
-            deploymentPlan.addService(newServicePlan);
-        } else if (!StreamUtils.elementEquals(mapper, newServiceConfig, oldServicePlan.getServiceConfig())) {
-            newServicePlan.setInstances(oldServicePlan.getInstances());
-            deploymentPlan.replaceServiceById(oldServicePlan.getServiceConfig().getServiceId(), newServicePlan);
+    /**
+     * Have a different alias not related to service serviceName, since alias can have more than one service.
+     */
+    private String getAliasGroup(ServiceConfig serviceConfig) {
+        String aliasGroup = serviceConfig.getAliasGroup();
+        if (!aliasGroup.endsWith("/")) {
+            aliasGroup += "/";
         }
+        return aliasGroup;
     }
 
     private boolean isServiceInstalled(final URI serviceId) {
         return state.getCapacityPlan().getServiceById(serviceId) != null;
     }
 
-    private URI newInstanceId(URI serviceId) {
-        final int index = state.getAndIncrementNextServiceInstanceIndex(serviceId);
-        return ServiceUtils.newInstanceId(serviceId, index);
-    }
-
-    private URI newAgentId() {
-        return ServiceUtils.newAgentId(agentsId, state.getAndIncrementNextAgentIndex());
-    }
 
     @TaskConsumerStateHolder
     public TaskConsumerState getState() {
         return state;
     }
 
-    private static void addNewTask(List<Task> newTasks, final Task task) {
-
+    private void addNewTask(List<Task> newTasks, final Task task) {
+        task.setConsumerId(orchestratorId);
         newTasks.add(task);
     }
 

@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.agent.tasks;
 
-import org.cloudifysource.cosmo.Task;
-import org.cloudifysource.cosmo.agent.state.AgentState;
+package org.cloudifysource.cosmo.agent.health;
+
+import org.cloudifysource.cosmo.TaskConsumerState;
 
 /**
- * Task used to initialize the state of an agent (to planned).
- * @author Itai Frenkel
+ * A state holder for the {@link TaskBasedAgentHealthProbe}.
+ *
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public class PlanAgentTask  extends Task {
+public class TaskBasedAgentHealthProbeState extends TaskConsumerState {
 
-    public PlanAgentTask() {
-        super(AgentState.class);
-    }
 }

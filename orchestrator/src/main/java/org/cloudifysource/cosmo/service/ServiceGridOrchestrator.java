@@ -23,19 +23,19 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
-import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
-import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
-import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.TaskProducer;
-import org.cloudifysource.cosmo.TaskReader;
+import org.cloudifysource.cosmo.agent.health.AgentHealthProbe;
+import org.cloudifysource.cosmo.agent.health.AgentPingHealth;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
-import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachineText;
 import org.cloudifysource.cosmo.service.state.AgentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
@@ -51,18 +51,17 @@ import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromAgentTask
 import org.cloudifysource.cosmo.service.tasks.RemoveServiceInstanceFromServiceTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstalledTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstallingTask;
-import org.cloudifysource.cosmo.service.tasks.UnreachableServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceUninstalledTask;
 import org.cloudifysource.cosmo.service.tasks.ServiceUninstallingTask;
+import org.cloudifysource.cosmo.service.tasks.UnreachableServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask;
 import org.cloudifysource.cosmo.state.StateReader;
-import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Consumes task from the planner, and orchestrates their execution
@@ -72,25 +71,23 @@ import java.util.concurrent.TimeUnit;
  */
 public class ServiceGridOrchestrator {
 
-    private static final long AGENT_UNREACHABLE_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
-
-    private static final long AGENT_REACHABLE_RENEW_MILLISECONDS = AGENT_UNREACHABLE_MILLISECONDS / 2;
-
     private final ServiceGridOrchestratorState state;
 
-    private final TaskReader taskReader;
     private final URI machineProvisionerId;
     private final URI orchestratorId;
     private final StateReader stateReader;
-
-    private CurrentTimeProvider timeProvider;
+    private final AgentHealthProbe agentHealthProbe;
 
     public ServiceGridOrchestrator(ServiceGridOrchestratorParameter parameterObject) {
+        Preconditions.checkNotNull(parameterObject);
+        Preconditions.checkNotNull(parameterObject.getOrchestratorId());
         this.orchestratorId = parameterObject.getOrchestratorId();
-        this.taskReader = parameterObject.getTaskReader();
+        Preconditions.checkNotNull(parameterObject.getMachineProvisionerId());
         this.machineProvisionerId = parameterObject.getMachineProvisionerId();
+        Preconditions.checkNotNull(parameterObject.getStateReader());
         this.stateReader = parameterObject.getStateReader();
-        this.timeProvider = parameterObject.getTimeProvider();
+        Preconditions.checkNotNull(parameterObject.getAgentHealthProbe());
+        this.agentHealthProbe = parameterObject.getAgentHealthProbe();
         this.state = new ServiceGridOrchestratorState();
         Preconditions.checkNotNull(parameterObject.getServerId());
         this.state.setServerId(parameterObject.getServerId());
@@ -102,28 +99,27 @@ public class ServiceGridOrchestrator {
 
         final List<Task> newTasks = Lists.newArrayList();
 
-        if (state.getDeploymentPlan() != null) {
+        agentHealthProbe.monitorAgents(getPlannedAgentIds());
+        final Map<URI, AgentPingHealth> agentsHealthStatus = agentHealthProbe.getAgentsHealthStatus();
 
-            boolean ready = syncStateWithDeploymentPlan(newTasks);
+        boolean ready = syncStateWithDeploymentPlan(newTasks, agentsHealthStatus);
 
-            if (ready) {
-                //start orchestrating according to current state
-                final long nowTimestamp = timeProvider.currentTimeMillis();
-                for (final URI agentId : getPlannedAgentIds()) {
-                    orchestrateAgent(newTasks, nowTimestamp, agentId);
-                }
+        if (ready) {
+            //start orchestrating according to current state
 
-                for (final ServiceInstanceDeploymentPlan instancePlan : state.getDeploymentPlan().getInstances()) {
-                    orchestrateServiceInstance(newTasks, instancePlan);
-                }
-
-                for (final URI serviceId : Iterables.concat(getPlannedServiceIds(), state.getServiceIdsToUninstall())) {
-                    orchestrateService(newTasks, serviceId);
-                }
+            for (final URI agentId : getPlannedAgentIds()) {
+                orchestrateAgent(newTasks, agentId, agentsHealthStatus.get(agentId));
             }
 
-            pingAgents(newTasks);
+            for (final ServiceInstanceDeploymentPlan instancePlan : state.getDeploymentPlan().getInstances()) {
+                orchestrateServiceInstance(newTasks, instancePlan);
+            }
+
+            for (final URI serviceId : Iterables.concat(getPlannedServiceIds(), state.getServiceIdsToUninstall())) {
+                orchestrateService(newTasks, serviceId);
+            }
         }
+
         return newTasks;
     }
 
@@ -205,7 +201,6 @@ public class ServiceGridOrchestrator {
                           TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
         int numberOfMachineRestarts = 0;
         AgentState impersonatedAgentState = new AgentState();
-        impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
         impersonatedAgentState.setNumberOfMachineStarts(numberOfMachineRestarts);
         impersonatedAgentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
         impersonatedStateModifier.put(impersonatedAgentState);
@@ -305,21 +300,17 @@ public class ServiceGridOrchestrator {
         impersonatedStateModifier.put(agentState);
     }
 
-    private boolean syncStateWithDeploymentPlan(final List<Task> newTasks) {
+    private boolean syncStateWithDeploymentPlan(
+            final List<Task> newTasks,
+            final Map<URI, AgentPingHealth> agentsHealthStatus) {
+
         boolean syncComplete = true;
-        final long nowTimestamp = timeProvider.currentTimeMillis();
+
         for (final URI agentId : getPlannedAgentIds()) {
-            AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
-            AgentState agentState = getAgentState(agentId);
-            boolean agentNotStarted =
-                    (agentState == null || !agentState.isMachineReachableLifecycle());
-            if (agentNotStarted &&
-                state.isSyncedStateWithDeploymentBefore() &&
-                pingHealth == AgentPingHealth.UNDETERMINED) {
-                //If this agent were started, we would have resolved it as agent started in the previous sync
-                //The agent probably never even started
-                pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
-            }
+            final AgentPingHealth pingHealth = agentsHealthStatus.get(agentId);
+            Preconditions.checkNotNull(pingHealth);
+            final AgentState agentState = getAgentState(agentId);
+
             if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
                 Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
                 if (!agentState.isMachineReachableLifecycle()) {
@@ -352,7 +343,6 @@ public class ServiceGridOrchestrator {
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
                     planAgentTask.setStateId(agentId);
                     planAgentTask.setConsumerId(orchestratorId);
-                    planAgentTask.setServiceInstanceIds(Lists.newArrayList(plannedInstanceIds));
                     addNewTaskIfNotExists(newTasks, planAgentTask);
                 }
 
@@ -404,9 +394,6 @@ public class ServiceGridOrchestrator {
             }
         }
 
-        if (syncComplete) {
-            state.setSyncedStateWithDeploymentBefore(true);
-        }
         return syncComplete;
     }
 
@@ -534,42 +521,16 @@ public class ServiceGridOrchestrator {
         return ServiceUtils.getServiceInstanceState(stateReader, instanceId);
     }
 
-    /**
-     * Ping all agents that are not doing anything.
-     */
-    private void pingAgents(List<Task> newTasks) {
 
-        long nowTimestamp = timeProvider.currentTimeMillis();
-        for (final URI agentId : getPlannedAgentIds()) {
-
-            final AgentState agentState = getAgentState(agentId);
-
-            AgentPingHealth agentPingHealth = getAgentPingHealth(agentId, nowTimestamp);
-            if (agentPingHealth.equals(AgentPingHealth.AGENT_REACHABLE)) {
-                final long taskTimestamp = agentState.getLastPingSourceTimestamp();
-                final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
-                if (sincePingMilliseconds < AGENT_REACHABLE_RENEW_MILLISECONDS) {
-                    continue;
-                }
-            }
-
-            final PingAgentTask pingTask = new PingAgentTask();
-            pingTask.setConsumerId(agentId);
-            if (agentState != null && agentState.isMachineReachableLifecycle()) {
-                pingTask.setExpectedNumberOfAgentRestartsInAgentState(agentState.getNumberOfAgentStarts());
-                pingTask.setExpectedNumberOfMachineRestartsInAgentState(agentState.getNumberOfMachineStarts());
-            }
-            addNewTaskIfNotExists(newTasks, pingTask);
-        }
-    }
-
-    private void orchestrateAgent(List<Task> newTasks, long nowTimestamp, URI agentId) {
+    private void orchestrateAgent(List<Task> newTasks, URI agentId, AgentPingHealth agentHealthStatus) {
 
         final AgentState agentState = getAgentState(agentId);
         final LifecycleState desiredLifecycle =
                 state.getDeploymentPlan().getAgentPlan(agentId).get().getLifecycleState();
 
-        if (isUnreachable(nowTimestamp, agentId, agentState)) {
+        if (agentState.isMachineReachableLifecycle() &&
+            agentHealthStatus == AgentPingHealth.AGENT_UNREACHABLE) {
+
             final MachineLifecycleTask task = new MachineLifecycleTask();
             task.setLifecycleState(agentState.getMachineUnreachableLifecycle());
             task.setStateId(agentId);
@@ -590,14 +551,6 @@ public class ServiceGridOrchestrator {
         }
     }
 
-    private boolean isUnreachable(long nowTimestamp, URI agentId, AgentState agentState) {
-        Preconditions.checkNotNull(agentState);
-        final AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
-
-        return agentState.isMachineReachableLifecycle() &&
-               pingHealth == AgentPingHealth.AGENT_UNREACHABLE;
-    }
-
     private boolean isAllInstancesRemovedOrUnreachable(final AgentState agentState) {
         final Iterable<URI> instanceIds = agentState.getServiceInstanceIds();
         return Iterables.all(instanceIds, new Predicate<URI>() {
@@ -609,82 +562,8 @@ public class ServiceGridOrchestrator {
         });
     }
 
-    private AgentPingHealth getAgentPingHealth(URI agentId, long nowTimestamp) {
-
-        AgentPingHealth health = AgentPingHealth.UNDETERMINED;
-
-        // look for ping that should have been consumed by now --> AGENT_NOT_RESPONDING
-        AgentState agentState = getAgentState(agentId);
-
-        // look for ping that was consumed just recently --> AGENT_REACHABLE
-        if (agentState != null) {
-            final long taskTimestamp = agentState.getLastPingSourceTimestamp();
-            final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
-            if (sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS) {
-                // ping was consumed just recently
-                health = AgentPingHealth.AGENT_REACHABLE;
-            }
-        }
-
-        if (health == AgentPingHealth.UNDETERMINED) {
-
-            Iterable<Task> pendingTasks = taskReader.getPendingTasks(agentId);
-            for (final Task task : pendingTasks) {
-                Preconditions.checkState(
-                        task.getProducerId().equals(orchestratorId),
-                        "All agent tasks are assumed to be from this orchestrator");
-                if (task instanceof PingAgentTask) {
-                    PingAgentTask pingAgentTask = (PingAgentTask) task;
-                    Integer expectedNumberOfAgentRestartsInAgentState =
-                            pingAgentTask.getExpectedNumberOfAgentRestartsInAgentState();
-                    Integer expectedNumberOfMachineRestartsInAgentState =
-                            pingAgentTask.getExpectedNumberOfMachineRestartsInAgentState();
-                    if (expectedNumberOfAgentRestartsInAgentState == null && agentState != null) {
-                        Preconditions.checkState(expectedNumberOfMachineRestartsInAgentState == null);
-                        if (agentState.isMachineReachableLifecycle()) {
-                            // agent started after ping sent. Wait for next ping
-                        } else {
-                            // agent not reachable because it was not started yet
-                            health = AgentPingHealth.AGENT_UNREACHABLE;
-                        }
-                    } else if (expectedNumberOfMachineRestartsInAgentState != null &&
-                               agentState != null &&
-                               expectedNumberOfMachineRestartsInAgentState != agentState.getNumberOfMachineStarts()) {
-                        Preconditions.checkState(
-                                expectedNumberOfMachineRestartsInAgentState < agentState.getNumberOfMachineStarts(),
-                                "Could not have sent ping to a machine that was not restarted yet");
-                        // machine restarted after ping sent. Wait for next ping
-                    } else if (expectedNumberOfAgentRestartsInAgentState != null &&
-                               agentState != null &&
-                               expectedNumberOfAgentRestartsInAgentState != agentState.getNumberOfAgentStarts()) {
-                        Preconditions.checkState(
-                                expectedNumberOfAgentRestartsInAgentState < agentState.getNumberOfAgentStarts(),
-                                "Could not have sent ping to an agent that was not restarted yet");
-                        // agent restarted after ping sent. Wait for next ping
-                    } else {
-                        final long taskTimestamp = task.getProducerTimestamp();
-                        final long notRespondingMilliseconds = nowTimestamp - taskTimestamp;
-                        if (notRespondingMilliseconds > AGENT_UNREACHABLE_MILLISECONDS) {
-                            // ping should have been consumed by now
-                            health = AgentPingHealth.AGENT_UNREACHABLE;
-                        }
-                    }
-                }
-            }
-        }
-
-        return health;
-    }
-
     private AgentState getAgentState(URI agentId) {
         return ServiceUtils.getAgentState(stateReader, agentId);
-    }
-
-    /**
-     * A three state enum that determines if the agent can process tasks.
-     */
-    public enum AgentPingHealth {
-        UNDETERMINED, AGENT_UNREACHABLE, AGENT_REACHABLE
     }
 
     /**
