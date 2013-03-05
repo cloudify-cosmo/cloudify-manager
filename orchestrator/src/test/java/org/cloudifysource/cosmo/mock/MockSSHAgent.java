@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A mock that executes tasks using ssh. This mock stores the service instance
@@ -158,7 +159,14 @@ public class MockSSHAgent {
 
     @TaskConsumer(noHistory = true)
     public void ping(PingAgentTask task) {
-        state.setLastPingSourceTimestamp(task.getProducerTimestamp());
+        try {
+            int exitCode = sshClient.executeSingleCommand("echo hello");
+            if (exitCode == 0) {
+                state.setLastPingSourceTimestamp(task.getProducerTimestamp());
+            }
+        } catch (IOException e) {
+
+        }
     }
 
     @TaskConsumerStateHolder
@@ -274,10 +282,13 @@ public class MockSSHAgent {
             }
         }
 
-        private void executeSingleCommand(String command) throws IOException {
+        private int executeSingleCommand(String command) throws IOException {
             Session session = sshClient.startSession();
             try {
-                session.exec(command);
+                Session.Command sessionCommand = session.exec(command);
+                sessionCommand.join(5, TimeUnit.SECONDS);
+                Integer exitCode = sessionCommand.getExitStatus();
+                return exitCode != null ? exitCode : -1;
             } finally {
                 session.close();
             }
