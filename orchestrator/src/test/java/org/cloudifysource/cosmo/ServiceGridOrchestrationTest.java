@@ -180,7 +180,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      * Tests management state recovery from crash when one of the agents also failed.
      * This test is similar to scaleOut test. Since there is one agent, and the plan is two agents.
      */
-    @Test//(dependsOnMethods = {"managementRestartTest", "agentRestartTest" })
+    @Test(dependsOnMethods = {"managementRestartTest", "agentRestartTest" })
     public void managementRestartAndOneAgentRestartTest() {
         installService("web", new LifecycleName("tomcat"), 2);
         execute();
@@ -295,9 +295,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
                 "--end", prefix + "started");
 
         cos(alias, prefix + "started");
-
         cos(alias, "cloudmachine_reachable");
-
     }
 
 
