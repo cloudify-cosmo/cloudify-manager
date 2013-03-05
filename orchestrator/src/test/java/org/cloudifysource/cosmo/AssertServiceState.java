@@ -84,7 +84,7 @@ public class AssertServiceState {
 
     public static Iterable<URI> getReachableInstanceIds(final MockManagement management, String aliasGroup,
                                                         LifecycleName lifecycleName) {
-        final Iterable<URI> instanceIds = getServiceInstanceIds(management, aliasGroup, lifecycleName);
+        final Iterable<URI> instanceIds = getServiceInstanceIds(management, aliasGroup, lifecycleName, 100);
         final Predicate<URI> reachableInstancesPredicate = new Predicate<URI>() {
             @Override
             public boolean apply(final URI instanceId) {
@@ -224,12 +224,12 @@ public class AssertServiceState {
     }
 
     private static Iterable<URI> getServiceInstanceIds(MockManagement management, String aliasGroup,
-                                                      LifecycleName lifecycleName) {
+                                                      LifecycleName lifecycleName, int numberOfInstances) {
         if (!aliasGroup.endsWith("/")) {
             aliasGroup += "/";
         }
         List<URI> uris = Lists.newArrayList();
-        for (int i = 1; true; i++) {
+        for (int i = 1; i <= numberOfInstances; i++) {
             final String alias = aliasGroup + i + "/";
             final URI instanceId = management.getServiceInstanceId(alias, lifecycleName);
             if (management.getServiceInstanceState(instanceId) != null) {
@@ -251,7 +251,7 @@ public class AssertServiceState {
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()), 2);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_INSTALLED));
-        Iterable<URI> instanceIds = getServiceInstanceIds(management, aliasGroup, lifecycleName);
+        Iterable<URI> instanceIds = getReachableInstanceIds(management, aliasGroup, lifecycleName);
         Assert.assertEquals(Iterables.size(instanceIds), 2);
 
         final ServiceGridDeploymentPlan deploymentPlan = management.getDeploymentPlan();
@@ -313,17 +313,19 @@ public class AssertServiceState {
     }
 
 
-    public static void assertTomcatUninstalledGracefully(MockManagement management) {
+    public static void assertTomcatUninstalledGracefully(MockManagement management, int numberOfInstances) {
         boolean instanceUnreachable = false;
-        assertTomcatUninstalled(management, instanceUnreachable);
+        assertTomcatUninstalled(management, instanceUnreachable, numberOfInstances);
     }
 
-    public static void assertTomcatUninstalledUnreachable(MockManagement management) {
+    public static void assertTomcatUninstalledUnreachable(MockManagement management, int numberOfInstances) {
         boolean instanceUnreachable = true;
-        assertTomcatUninstalled(management, instanceUnreachable);
+        assertTomcatUninstalled(management, instanceUnreachable, numberOfInstances);
     }
 
-    private static void assertTomcatUninstalled(MockManagement management, boolean instanceUnreachable) {
+    private static void assertTomcatUninstalled(
+            final MockManagement management, final boolean instanceUnreachable, final int numberOfInstances) {
+
         final URI serviceId = management.getServiceId("web", new LifecycleName("tomcat"));
         Assert.assertFalse(management.getDeploymentPlan().isServiceExists(serviceId));
         final ServiceState serviceState = management.getServiceState(serviceId);
@@ -331,13 +333,13 @@ public class AssertServiceState {
         Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
 
-        for (URI instanceId: getServiceInstanceIds(management, "web", new LifecycleName("tomcat"))) {
+        for (URI instanceId: getServiceInstanceIds(management, "web", new LifecycleName("tomcat"), numberOfInstances)) {
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
             Assert.assertFalse(instanceState.isReachable());
             if (instanceUnreachable) {
                 Assert.assertEquals(
                         instanceState.getStateMachine().getCurrentState(),
-                        new LifecycleState("tomcat_started"));
+                        new LifecycleState("tomcat_started"), "Wrong state for " + instanceId);
             } else {
                 Assert.assertEquals(
                         instanceState.getStateMachine().getCurrentState(),
