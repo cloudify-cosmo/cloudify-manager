@@ -27,6 +27,8 @@ import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -48,12 +50,16 @@ public class MockSSHAgentTest {
     private MockSSHAgent agent;
     private AgentState state;
 
+    @Parameters({"ip", "username", "keyfile"})
     @BeforeMethod
-    public void before() {
+    public void before(
+            @Optional("myhostname") String ip,
+            @Optional("myusername") String username,
+            @Optional("mykeyfile.pem") String keyfile) {
         state = new AgentState();
-        state.setUserName("dank");
-        state.setHost("pc-lab27");
-        state.setKeyFile("d:/home/temp/id_rsa");
+        state.setUserName(username);
+        state.setHost(ip);
+        state.setKeyFile(keyfile);
         agent = MockSSHAgent.newAgentOnCleanMachine(state);
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
     }

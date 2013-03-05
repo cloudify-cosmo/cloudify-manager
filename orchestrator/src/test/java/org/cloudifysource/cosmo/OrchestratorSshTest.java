@@ -18,6 +18,8 @@ package org.cloudifysource.cosmo;
 
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import static org.cloudifysource.cosmo.AssertServiceState.assertOneTomcatInstance;
@@ -28,7 +30,7 @@ import static org.cloudifysource.cosmo.AssertServiceState.assertTomcatUninstalle
  * running with SSH Agent.
  *
  * @author itaif
- * @author dank
+ * @author Dan Kilman
  * @since 0.1
  */
 public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement> {
@@ -43,9 +45,13 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
     }
 
+    @Parameters({"ip", "username", "keyfile"})
     @Test(enabled = true)
-    public void dataCenterMachineTest() {
-        cos("web/1", "machine_set", "--ip", "pc-lab128", "--username", "myuser", "--keyfile", "myuser.pem");
+    public void dataCenterMachineTest(
+            @Optional("myhostname") String ip,
+            @Optional("myusername") String username,
+            @Optional("mykeyfile.pem") String keyfile) {
+        cos("web/1", "machine_set", "--ip", ip, "--username", username, "--keyfile", keyfile);
         installService("web", new LifecycleName("tomcat"), 1);
         execute();
         assertOneTomcatInstance("web", getManagement());
