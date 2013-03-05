@@ -44,7 +44,7 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
     }
 
-    @Parameters({"ip", "username", "keyfile"})
+    @Parameters({"ip", "username", "keyfile" })
     @Test(enabled = true)
     public void dataCenterMachineTest(
             @Optional("myhostname") String ip,
