@@ -63,7 +63,7 @@ public class MockSSHAgentTest {
         agent.close();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testServiceInstanceLifecycle() throws IOException {
         // write
         ServiceInstanceTask task = new ServiceInstanceTask();
@@ -76,7 +76,7 @@ public class MockSSHAgentTest {
         agent.serviceInstanceLifecycle(task, holder);
     }
 
-    @Test(dependsOnMethods = "testServiceInstanceLifecycle")
+    @Test(enabled = false, dependsOnMethods = "testServiceInstanceLifecycle")
     public void testRecoverServiceInstanceState() throws IOException {
         // setup
         testServiceInstanceLifecycle();
@@ -93,7 +93,7 @@ public class MockSSHAgentTest {
         Assert.assertNotNull(readServiceInstanceState);
     }
 
-    @Test(dependsOnMethods = "testServiceInstanceLifecycle")
+    @Test(enabled = false, dependsOnMethods = "testServiceInstanceLifecycle")
     public void testInjectPropertyToInstance() throws IOException {
         // setup
         testServiceInstanceLifecycle();
@@ -114,7 +114,7 @@ public class MockSSHAgentTest {
         Assert.assertEquals(readServiceInstanceState.getProperty("name"), "king");
     }
 
-    @Test(dependsOnMethods = "testInjectPropertyToInstance")
+    @Test(enabled = false, dependsOnMethods = "testInjectPropertyToInstance")
     public void testRemoveServiceInstance() throws IOException {
         RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
         task.setInstanceId(instanceId);
