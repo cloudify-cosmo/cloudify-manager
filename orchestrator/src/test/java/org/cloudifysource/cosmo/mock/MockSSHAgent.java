@@ -118,10 +118,8 @@ public class MockSSHAgent {
         URI instanceId = task.getStateId();
         URI agentId = task.getConsumerId();
         URI serviceId = task.getServiceId();
-        Preconditions.checkArgument(
-                state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
-        Optional<ServiceInstanceState> optionalInstanceState = readServiceInstanceState(instanceId);
 
+        Optional<ServiceInstanceState> optionalInstanceState = readServiceInstanceState(instanceId);
         ServiceInstanceState instanceState;
         if (!optionalInstanceState.isPresent()) {
             instanceState = new ServiceInstanceState();
@@ -137,6 +135,11 @@ public class MockSSHAgent {
             Preconditions.checkState(instanceState.getServiceId().equals(serviceId));
             Preconditions.checkState(instanceState.isReachable());
         }
+
+        if (!state.getServiceInstanceIds().contains(instanceId)) {
+            state.addServiceInstance(instanceId);
+        }
+
         impersonatedStateModifier.put(instanceState);
     }
 
