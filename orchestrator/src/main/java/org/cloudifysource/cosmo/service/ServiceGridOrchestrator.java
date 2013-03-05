@@ -201,6 +201,14 @@ public class ServiceGridOrchestrator {
             agentPlan.get().setKeyFile(task.getOptions().get("keyfile"));
             agentPlan.get().setUserName(task.getOptions().get("username"));
 
+        } else if (command.equals("machine_unset")) {
+            String alias = task.getArguments().get(0);
+            final URI agentId = ServiceUtils.newAgentId(state.getServerId(), alias);
+            Optional<AgentPlan> agentPlan = state.getDeploymentPlan().getAgentPlan(agentId);
+            if (agentPlan.isPresent()) {
+                agentPlan.get().setLifecycleState(new LifecycleState("cloudmachine_terminated"));
+            }
+
         } else {
             final String alias = task.getArguments().get(0);
             final LifecycleState desiredState = new LifecycleState(command);

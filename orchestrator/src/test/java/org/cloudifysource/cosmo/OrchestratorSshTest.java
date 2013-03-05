@@ -68,7 +68,7 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
 
         cos("web", "plan_unset", "tomcat");
         cos("web/1", "tomcat_cleaned");
-        cos("web/1", "cloudmachine_terminated");
+        cos("web/1", "machine_unset");
 
         execute();
         assertTomcatUninstalledGracefully(getManagement(), 1);
