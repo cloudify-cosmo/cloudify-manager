@@ -319,7 +319,8 @@ public class ServiceGridIntegrationTest extends AbstractServiceGridTest<MockPlan
     private void execute() {
         execute(getManagement().getCapacityPlannerId(),
                 getManagement().getDeploymentPlannerId(),
-                getManagement().getOrchestratorId());
+                getManagement().getOrchestratorId(),
+                getManagement().getAgentProbeId());
     }
 
     private void killOnlyMachine() {

@@ -33,7 +33,6 @@ import java.util.Set;
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
     private ServiceGridDeploymentPlan deploymentPlan;
-    private boolean syncedStateWithDeploymentBefore;
     private Set<URI> serviceIdsToUninstall = Sets.newHashSet();
     private Set<URI> agentIdsToTerminate = Sets.newHashSet();
 
@@ -43,14 +42,6 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
 
     public void setDeploymentPlan(ServiceGridDeploymentPlan deploymentPlan) {
         this.deploymentPlan = deploymentPlan;
-    }
-
-    public boolean isSyncedStateWithDeploymentBefore() {
-        return syncedStateWithDeploymentBefore;
-    }
-
-    public void setSyncedStateWithDeploymentBefore(boolean firstSyncStateWithDeployment) {
-        this.syncedStateWithDeploymentBefore = firstSyncStateWithDeployment;
     }
 
     @JsonIgnore

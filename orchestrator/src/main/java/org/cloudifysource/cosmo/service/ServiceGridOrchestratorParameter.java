@@ -15,7 +15,7 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service;
 
-import org.cloudifysource.cosmo.TaskReader;
+import org.cloudifysource.cosmo.agent.health.AgentHealthProbe;
 import org.cloudifysource.cosmo.state.StateReader;
 import org.cloudifysource.cosmo.time.CurrentTimeProvider;
 
@@ -31,17 +31,8 @@ public class ServiceGridOrchestratorParameter {
 
     private URI orchestratorId;
     private URI machineProvisionerId;
-    private TaskReader taskReader;
     private StateReader stateReader;
-    private CurrentTimeProvider timeProvider;
-
-    public TaskReader getTaskReader() {
-        return taskReader;
-    }
-
-    public void setTaskReader(TaskReader taskReader) {
-        this.taskReader = taskReader;
-    }
+    private AgentHealthProbe agentHealthProbe;
 
     public StateReader getStateReader() {
         return stateReader;
@@ -67,11 +58,14 @@ public class ServiceGridOrchestratorParameter {
         this.machineProvisionerId = cloudExecutorId;
     }
 
-    public CurrentTimeProvider getTimeProvider() {
-        return timeProvider;
+    public void setTimeProvider(CurrentTimeProvider timeProvider) {
     }
 
-    public void setTimeProvider(CurrentTimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
+    public AgentHealthProbe getAgentHealthProbe() {
+        return agentHealthProbe;
+    }
+
+    public void setAgentHealthProbe(AgentHealthProbe agentHealthProbe) {
+        this.agentHealthProbe = agentHealthProbe;
     }
 }
