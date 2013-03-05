@@ -102,28 +102,26 @@ public class ServiceGridOrchestrator {
 
         final List<Task> newTasks = Lists.newArrayList();
 
-        if (state.getDeploymentPlan() != null) {
+        boolean ready = syncStateWithDeploymentPlan(newTasks);
 
-            boolean ready = syncStateWithDeploymentPlan(newTasks);
-
-            if (ready) {
-                //start orchestrating according to current state
-                final long nowTimestamp = timeProvider.currentTimeMillis();
-                for (final URI agentId : getPlannedAgentIds()) {
-                    orchestrateAgent(newTasks, nowTimestamp, agentId);
-                }
-
-                for (final ServiceInstanceDeploymentPlan instancePlan : state.getDeploymentPlan().getInstances()) {
-                    orchestrateServiceInstance(newTasks, instancePlan);
-                }
-
-                for (final URI serviceId : Iterables.concat(getPlannedServiceIds(), state.getServiceIdsToUninstall())) {
-                    orchestrateService(newTasks, serviceId);
-                }
+        if (ready) {
+            //start orchestrating according to current state
+            final long nowTimestamp = timeProvider.currentTimeMillis();
+            for (final URI agentId : getPlannedAgentIds()) {
+                orchestrateAgent(newTasks, nowTimestamp, agentId);
             }
 
-            pingAgents(newTasks);
+            for (final ServiceInstanceDeploymentPlan instancePlan : state.getDeploymentPlan().getInstances()) {
+                orchestrateServiceInstance(newTasks, instancePlan);
+            }
+
+            for (final URI serviceId : Iterables.concat(getPlannedServiceIds(), state.getServiceIdsToUninstall())) {
+                orchestrateService(newTasks, serviceId);
+            }
         }
+
+        pingAgents(newTasks);
+
         return newTasks;
     }
 
@@ -205,7 +203,6 @@ public class ServiceGridOrchestrator {
                           TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
         int numberOfMachineRestarts = 0;
         AgentState impersonatedAgentState = new AgentState();
-        impersonatedAgentState.setServiceInstanceIds(task.getServiceInstanceIds());
         impersonatedAgentState.setNumberOfMachineStarts(numberOfMachineRestarts);
         impersonatedAgentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
         impersonatedStateModifier.put(impersonatedAgentState);
@@ -311,15 +308,6 @@ public class ServiceGridOrchestrator {
         for (final URI agentId : getPlannedAgentIds()) {
             AgentPingHealth pingHealth = getAgentPingHealth(agentId, nowTimestamp);
             AgentState agentState = getAgentState(agentId);
-            boolean agentNotStarted =
-                    (agentState == null || !agentState.isMachineReachableLifecycle());
-            if (agentNotStarted &&
-                state.isSyncedStateWithDeploymentBefore() &&
-                pingHealth == AgentPingHealth.UNDETERMINED) {
-                //If this agent were started, we would have resolved it as agent started in the previous sync
-                //The agent probably never even started
-                pingHealth = AgentPingHealth.AGENT_UNREACHABLE;
-            }
             if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
                 Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
                 if (!agentState.isMachineReachableLifecycle()) {
@@ -352,7 +340,6 @@ public class ServiceGridOrchestrator {
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
                     planAgentTask.setStateId(agentId);
                     planAgentTask.setConsumerId(orchestratorId);
-                    planAgentTask.setServiceInstanceIds(Lists.newArrayList(plannedInstanceIds));
                     addNewTaskIfNotExists(newTasks, planAgentTask);
                 }
 
@@ -404,9 +391,6 @@ public class ServiceGridOrchestrator {
             }
         }
 
-        if (syncComplete) {
-            state.setSyncedStateWithDeploymentBefore(true);
-        }
         return syncComplete;
     }
 

@@ -52,14 +52,6 @@ public class ServiceGridOrchestratorState extends TaskConsumerState {
         this.deploymentPlan = deploymentPlan;
     }
 
-    public boolean isSyncedStateWithDeploymentBefore() {
-        return syncedStateWithDeploymentBefore;
-    }
-
-    public void setSyncedStateWithDeploymentBefore(boolean firstSyncStateWithDeployment) {
-        this.syncedStateWithDeploymentBefore = firstSyncStateWithDeployment;
-    }
-
     @JsonIgnore
     public void addServiceIdToUninstall(URI serviceId) {
         this.serviceIdsToUninstall.add(serviceId);
