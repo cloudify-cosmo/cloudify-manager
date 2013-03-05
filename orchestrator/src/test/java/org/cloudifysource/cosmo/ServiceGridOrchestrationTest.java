@@ -19,10 +19,8 @@ import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
-import org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask.cli;
 
 import java.net.URI;
 
@@ -37,6 +35,7 @@ import static org.cloudifysource.cosmo.AssertServiceState.expectedAgentZeroNotRe
 import static org.cloudifysource.cosmo.AssertServiceState.expectedBothMachinesNotRestarted;
 import static org.cloudifysource.cosmo.AssertServiceState.getAgentIds;
 import static org.cloudifysource.cosmo.AssertServiceState.getReachableInstanceIds;
+import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask.cli;
 
 /**
  * Unit Tests for {@link org.cloudifysource.cosmo.service.ServiceGridOrchestrator}.
@@ -267,12 +266,10 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     private void installService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
-        final UpdateDeploymentCommandlineTask planSet = cli(
-                aliasGroup + "/", "plan_set", lifecycleName.getName(),
+        cos(aliasGroup + "/", "plan_set", lifecycleName.getName(),
                 "--instances", String.valueOf(numberOfInstances),
                 "--min_instances", "1",
                 "--max_instances", "2");
-        getManagement().submitTask(getManagement().getOrchestratorId(), planSet);
 
         for (int i = 1; i <= numberOfInstances; i++) {
             final String alias = aliasGroup + "/" + i + "/";
@@ -281,8 +278,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     }
 
     private void uninstallService(String aliasGroup, LifecycleName lifecycleName, int numberOfInstances) {
-        final Task planUnset = cli(aliasGroup + "/", "plan_unset", lifecycleName.getName());
-        getManagement().submitTask(getManagement().getOrchestratorId(), planUnset);
+        cos(aliasGroup + "/", "plan_unset", lifecycleName.getName());
 
         for (int i = 1; i <= numberOfInstances; i++) {
             final String alias = aliasGroup + "/" + i + "/";
@@ -293,29 +289,24 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
     private void startServiceInstance(String alias, LifecycleName lifecycleName) {
 
         final String prefix = lifecycleName.getName() + "_";
-        final Task lifecycleDefined = cli(alias, "lifecycle_set", lifecycleName.getName(),
+        cos(alias, "lifecycle_set", lifecycleName.getName(),
                 prefix + "cleaned<-->" + prefix + "installed<-->" + prefix + "configured->" + prefix + "started" +
                         "," + prefix + "started->" + prefix + "stopped->" + prefix + "cleaned",
                 "--begin", prefix + "cleaned",
                 "--end", prefix + "started");
 
-        getManagement().submitTask(getManagement().getOrchestratorId(), lifecycleDefined);
+        cos(alias, prefix + "started");
 
-        final Task instanceStarted = cli(alias, prefix + "started");
-        getManagement().submitTask(getManagement().getOrchestratorId(), instanceStarted);
+        cos(alias, "cloudmachine_reachable");
 
-        final Task cloudmachineReachable = cli(alias, "cloudmachine_reachable");
-        getManagement().submitTask(getManagement().getOrchestratorId(), cloudmachineReachable);
     }
+
 
     private void cleanServiceInstance(String alias, LifecycleName lifecycleName) {
         final String prefix = lifecycleName.getName() + "_";
 
-        final Task instanceCleaned = cli(alias, prefix + "cleaned");
-        getManagement().submitTask(getManagement().getOrchestratorId(), instanceCleaned);
-
-        final Task cloudmachineTerminated = cli(alias, "cloudmachine_terminated");
-        getManagement().submitTask(getManagement().getOrchestratorId(), cloudmachineTerminated);
+        cos(alias, prefix + "cleaned");
+        cos(alias, "cloudmachine_terminated");
     }
 
     private void scaleService(
