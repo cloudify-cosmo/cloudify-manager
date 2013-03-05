@@ -184,6 +184,23 @@ public class ServiceGridOrchestrator {
                 state.getDeploymentPlan().addAgent(newAgentPlan);
             }
 
+        } else if (command.equals("machine_set")) {
+            String alias = task.getArguments().get(0);
+            final URI agentId = ServiceUtils.newAgentId(state.getServerId(), alias);
+            Optional<AgentPlan> agentPlan = state.getDeploymentPlan().getAgentPlan(agentId);
+            if (!agentPlan.isPresent()) {
+                final AgentPlan newAgentPlan = new AgentPlan();
+                newAgentPlan.setAgentId(agentId);
+                //TODO: We are simulating here a cloudmachine lifecycle
+                //we need to define a statemachine that is suitable for a data center machine.
+                newAgentPlan.setLifecycleState(new LifecycleState("cloudmachine_started"));
+                state.getDeploymentPlan().addAgent(newAgentPlan);
+                agentPlan = Optional.fromNullable(newAgentPlan);
+            }
+            agentPlan.get().setHost(task.getOptions().get("ip"));
+            agentPlan.get().setKeyFile(task.getOptions().get("keyfile"));
+            agentPlan.get().setUserName(task.getOptions().get("username"));
+
         } else {
             final String alias = task.getArguments().get(0);
             final LifecycleState desiredState = new LifecycleState(command);
@@ -199,11 +216,20 @@ public class ServiceGridOrchestrator {
     @ImpersonatingTaskConsumer
     public void planAgent(PlanAgentTask task,
                           TaskConsumerStateModifier<AgentState> impersonatedStateModifier) {
-        int numberOfMachineRestarts = 0;
-        AgentState impersonatedAgentState = new AgentState();
-        impersonatedAgentState.setNumberOfMachineStarts(numberOfMachineRestarts);
-        impersonatedAgentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
-        impersonatedStateModifier.put(impersonatedAgentState);
+
+        final int numberOfMachineRestarts = 0;
+
+        final URI agentId = task.getStateId();
+        Optional<AgentPlan> agentPlan = state.getDeploymentPlan().getAgentPlan(agentId);
+        Preconditions.checkState(agentPlan.isPresent());
+
+        AgentState agentState = new AgentState();
+        agentState.setNumberOfMachineStarts(numberOfMachineRestarts);
+        agentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
+        agentState.setHost(agentPlan.get().getHost());
+        agentState.setUserName(agentPlan.get().getUserName());
+        agentState.setKeyFile(agentPlan.get().getKeyFile());
+        impersonatedStateModifier.put(agentState);
     }
 
     @ImpersonatingTaskConsumer
@@ -337,7 +363,7 @@ public class ServiceGridOrchestrator {
                     }
                 }
             } else if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-                Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
+
                 if (agentState == null) {
                     syncComplete = false;
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
@@ -346,6 +372,7 @@ public class ServiceGridOrchestrator {
                     addNewTaskIfNotExists(newTasks, planAgentTask);
                 }
 
+                Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
                 for (URI instanceId : plannedInstanceIds) {
                     if (getServiceInstanceState(instanceId) == null) {
                         syncComplete = false;

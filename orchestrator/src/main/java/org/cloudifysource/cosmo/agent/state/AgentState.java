@@ -55,9 +55,9 @@ public class AgentState extends TaskConsumerState {
     private int numberOfAgentStarts;
     private int numberOfMachineStarts;
     private long lastPingSourceTimestamp;
-    private String host = "pc-lab27";
-    private String keyFile = "D:/home/temp/id_rsa";
-    private String username = "dank";
+    private String host;
+    private String keyFile;
+    private String userName;
 
     public void setServiceInstanceIds(List<URI> serviceInstanceIds) {
         this.serviceInstanceIds = serviceInstanceIds;
@@ -167,12 +167,24 @@ public class AgentState extends TaskConsumerState {
         return host;
     }
 
-    public String getKeyFile() {
-        return keyFile;
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public String getUserName() {
-        return username;
+        return userName;
+    }
+
+    public void setKeyFile(String keyFile) {
+        this.keyFile = keyFile;
+    }
+
+    public String getKeyFile() {
+        return keyFile;
     }
 
 }

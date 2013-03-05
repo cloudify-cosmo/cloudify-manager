@@ -29,6 +29,9 @@ public class AgentPlan {
 
     private URI agentId;
     private LifecycleState lifecycleState;
+    private String host;
+    private String keyFile;
+    private String userName;
 
     public URI getAgentId() {
         return agentId;
@@ -44,5 +47,29 @@ public class AgentPlan {
 
     public void setLifecycleState(LifecycleState lifecycleState) {
         this.lifecycleState = lifecycleState;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setKeyFile(String keyFile) {
+        this.keyFile = keyFile;
+    }
+
+    public String getKeyFile() {
+        return keyFile;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getUserName() {
+        return userName;
     }
 }

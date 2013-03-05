@@ -35,6 +35,8 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.logging.Logger;
 
+import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandlineTask.cli;
+
 /**
  * Base class for Unit Tests that require management mock.
  * @param <T> - The type of management mock used.
@@ -165,5 +167,14 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void killMachine(URI agentId) {
         containers.findContainer(agentId).killMachine();
+    }
+
+
+    protected void submitOrchestratorTask(Task task) {
+        getManagement().submitTask(getManagement().getOrchestratorId(), task);
+    }
+
+    protected void cos(String... args) {
+        submitOrchestratorTask(cli(args));
     }
 }
