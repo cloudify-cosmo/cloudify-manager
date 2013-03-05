@@ -18,7 +18,7 @@ package org.cloudifysource.cosmo;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.mock.MockPlannerManagement;
-import org.cloudifysource.cosmo.service.ServiceUtils;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
@@ -49,10 +49,10 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     @Test
     public void installSingleInstanceServiceTest() {
         Assert.assertTrue(Iterables.isEmpty(getAgentIds()));
-        installService("tomcat", 1);
+        installService("web", "tomcat", 1);
         execute();
         assertOneTomcatInstance();
-        uninstallService("tomcat");
+        uninstallService("web", "tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -62,10 +62,10 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
      */
     @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void installMultipleInstanceServiceTest() {
-        installService("tomcat", 2);
+        installService("web", "tomcat", 2);
         execute();
         assertTwoTomcatInstances();
-        uninstallService("tomcat");
+        uninstallService("web", "tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -75,12 +75,12 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
      */
     @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void scaleOutServiceTest() {
-        installService("tomcat", 1);
+        installService("web", "tomcat", 1);
         execute();
-        scaleService("tomcat", 2);
+        scaleService("web", "tomcat", 2);
         execute();
         assertTwoTomcatInstances();
-        uninstallService("tomcat");
+        uninstallService("web", "tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -90,12 +90,12 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
      */
     @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void scaleInServiceTest() {
-        installService("tomcat", 2);
+        installService("web", "tomcat", 2);
         execute();
-        scaleService("tomcat", 1);
+        scaleService("web", "tomcat", 1);
         execute();
         assertTomcatScaledInFrom2To1();
-        uninstallService("tomcat");
+        uninstallService("web", "tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -105,12 +105,12 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
      */
     @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void managementRestartTest() {
-        installService("tomcat", 1);
+        installService("web", "tomcat", 1);
         execute();
         getManagement().restart();
         execute();
         assertOneTomcatInstance();
-        uninstallService("tomcat");
+        uninstallService("web", "tomcat");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -120,13 +120,13 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
      */
     @Test(dependsOnMethods =  {"installSingleInstanceServiceTest" })
     public void installTwoSingleInstanceServicesTest() {
-        installService("tomcat", 1);
-        installService("cassandra", 1);
+        installService("web", "tomcat", 1);
+        installService("db", "cassandra", 1);
         execute();
-        assertServiceInstalledWithOneInstance("tomcat", 0);
-        assertServiceInstalledWithOneInstance("cassandra", 1);
-        uninstallService("tomcat");
-        uninstallService("cassandra");
+        assertServiceInstalledWithOneInstance("web", "tomcat");
+        assertServiceInstalledWithOneInstance("db", "cassandra");
+        uninstallService("web", "tomcat");
+        uninstallService("db", "cassandra");
         execute();
         assertTomcatUninstalledGracefully();
     }
@@ -136,35 +136,51 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     private void assertTomcatScaledInFrom2To1() {
-        assertServiceInstalledWithOneInstance("tomcat");
+        assertServiceInstalledWithOneInstance("web", "tomcat");
     }
 
     private void assertTomcatUninstalledGracefully() {
-        final URI serviceId = getManagement().getServiceId("tomcat");
-        Assert.assertFalse(getDeploymentPlan().isServiceExists(serviceId));
+        final URI serviceId = getServiceId("web", "tomcat");
+        Assert.assertFalse(getManagement().getDeploymentPlan().isServiceExists(serviceId));
     }
 
-    private void assertServiceInstalledWithOneInstance(String serviceName) {
-        assertServiceInstalledWithOneInstance(serviceName, 0);
+    private URI getServiceId(String aliasGroup, String serviceName) {
+        return getManagement().getServiceId(aliasGroup, new LifecycleName(serviceName));
     }
 
     private void assertSingleServiceInstance(String serviceName) {
+
         Assert.assertNotNull(getDeploymentPlannerState());
-        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlannerState().getDeploymentPlan();
-        final ServiceConfig serviceConfig = Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig();
+        final ServiceConfig serviceConfig = Iterables.getOnlyElement(
+                getDeploymentPlannerState().getCapacityPlan().getServices());
         Assert.assertEquals(serviceConfig.getDisplayName(), serviceName);
+
+        Assert.assertEquals(getManagement().getDeploymentPlan().getServices().size(), 1);
     }
 
     private void assertServiceInstalledWithOneInstance(
-            String serviceName, int agentIndex) {
-        final URI serviceId = getManagement().getServiceId(serviceName);
-        final URI instanceId = ServiceUtils.newInstanceId(serviceId, 0);
-        final URI agentId = ServiceUtils.newAgentId(getManagement().getAgentsId(), agentIndex);
-        final ServiceGridDeploymentPlan deploymentPlan = getDeploymentPlannerState().getDeploymentPlan();
+            String aliasGroup, String serviceName) {
+        if (!aliasGroup.endsWith("/")) {
+            aliasGroup += "/";
+        }
+        final String alias = aliasGroup + 1;
+        final URI instanceId = getManagement().getServiceInstanceId(alias, new LifecycleName(serviceName));
+        final URI serviceId = getServiceId(aliasGroup, serviceName);
+        final URI agentId = getManagement().getAgentId(alias);
+
+        Assert.assertEquals(
+                getDeploymentPlannerState().getCapacityPlan().getServiceById(serviceId).getPlannedNumberOfInstances(),
+                1);
+
+        final ServiceGridDeploymentPlan deploymentPlan = getManagement().getDeploymentPlan();
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByAgentId(agentId)), instanceId);
         Assert.assertEquals(Iterables.getOnlyElement(deploymentPlan.getInstanceIdsByServiceId(serviceId)), instanceId);
-        final ServiceConfig serviceConfig = deploymentPlan.getServiceById(serviceId).getServiceConfig();
+        final ServiceConfig serviceConfig = deploymentPlan.getServicePlan(serviceId).get().getServiceConfig();
         Assert.assertEquals(serviceConfig.getServiceId(), serviceId);
+    }
+
+    private String getAliasGroup(String serviceName) {
+        return serviceName + "/";
     }
 
     private ServiceGridDeploymentPlannerState getDeploymentPlannerState() {
@@ -173,40 +189,42 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
     }
 
     private void assertTwoTomcatInstances() {
-        final URI serviceId = getManagement().getServiceId("tomcat");
+        final URI serviceId = getServiceId("web", "tomcat");
 
-        final ServiceGridDeploymentPlannerState plannerState = getDeploymentPlannerState();
-        final ServiceGridDeploymentPlan deploymentPlan = plannerState.getDeploymentPlan();
+        Assert.assertEquals(
+                getDeploymentPlannerState().getCapacityPlan().getServiceById(serviceId).getPlannedNumberOfInstances(),
+                2);
+        final ServiceGridDeploymentPlan deploymentPlan = getManagement().getDeploymentPlan();
         Assert.assertEquals(
                 Iterables.getOnlyElement(deploymentPlan.getServices()).getServiceConfig().getServiceId(), serviceId);
         Assert.assertEquals(Iterables.size(deploymentPlan.getInstanceIdsByServiceId(serviceId)), 2);
     }
 
-    private void installService(String name, int numberOfInstances) {
+    private void installService(String aliasGroup, String serviceName, int numberOfInstances) {
         final int minNumberOfInstances = 1;
         final int maxNumberOfInstances = 2;
         ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setDisplayName(name);
+        serviceConfig.setDisplayName(serviceName);
         serviceConfig.setPlannedNumberOfInstances(numberOfInstances);
         serviceConfig.setMaxNumberOfInstances(maxNumberOfInstances);
         serviceConfig.setMinNumberOfInstances(minNumberOfInstances);
-        serviceConfig.setServiceId(getManagement().getServiceId(name));
-        serviceConfig.setInstanceLifecycleStateMachine(getServiceLifecycleStateMachine());
+        serviceConfig.setServiceId(getServiceId(aliasGroup, serviceName));
+        serviceConfig.setAliasGroup(aliasGroup);
         final InstallServiceTask installServiceTask = new InstallServiceTask();
         installServiceTask.setServiceConfig(serviceConfig);
         getManagement().submitTask(getManagement().getDeploymentPlannerId(), installServiceTask);
     }
 
-    private void uninstallService(String name) {
-        URI serviceId = getManagement().getServiceId(name);
+    private void uninstallService(String aliasGroup, String serviceName) {
+        URI serviceId = getServiceId(aliasGroup, serviceName);
         final UninstallServiceTask uninstallServiceTask = new UninstallServiceTask();
         uninstallServiceTask.setServiceId(serviceId);
         getManagement().submitTask(getManagement().getDeploymentPlannerId(), uninstallServiceTask);
     }
 
-    private void scaleService(String serviceName, int plannedNumberOfInstances) {
+    private void scaleService(String aliasGroup, String serviceName, int plannedNumberOfInstances) {
         final ScaleServiceTask scaleServiceTask = new ScaleServiceTask();
-        URI serviceId = getManagement().getServiceId(serviceName);
+        URI serviceId = getServiceId(aliasGroup, serviceName);
         scaleServiceTask.setServiceId(serviceId);
         scaleServiceTask.setPlannedNumberOfInstances(plannedNumberOfInstances);
         scaleServiceTask.setProducerTimestamp(currentTimeMillis());
@@ -234,7 +252,4 @@ public class ServiceGridDeploymentPlannerTest extends AbstractServiceGridTest<Mo
         return getStateIdsStartingWith(StreamUtils.newURI(getManagement().getStateServerUri() + "agents/"));
     }
 
-    public ServiceGridDeploymentPlan getDeploymentPlan() {
-        return getDeploymentPlannerState().getDeploymentPlan();
-    }
 }
