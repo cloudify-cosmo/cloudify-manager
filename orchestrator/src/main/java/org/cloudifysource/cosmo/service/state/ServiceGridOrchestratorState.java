@@ -32,7 +32,6 @@ import java.util.Set;
 public class ServiceGridOrchestratorState extends TaskConsumerState {
 
     private ServiceGridDeploymentPlan deploymentPlan;
-    private boolean syncedStateWithDeploymentBefore;
     private Set<URI> serviceIdsToUninstall = Sets.newHashSet();
     private URI serverId;
 

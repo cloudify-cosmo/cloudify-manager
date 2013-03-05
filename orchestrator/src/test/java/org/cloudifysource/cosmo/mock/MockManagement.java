@@ -22,6 +22,7 @@ import org.cloudifysource.cosmo.StateClient;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.TaskWriter;
+import org.cloudifysource.cosmo.agent.health.TaskBasedAgentHealthProbe;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.service.ServiceGridOrchestrator;
@@ -53,6 +54,7 @@ public class MockManagement {
     private static final String STATE_SERVER_URI = "http://localhost:" + STATE_SERVER_PORT + "/";
     private static final boolean USE_MOCK = true;
     private final URI orchestratorId;
+    private final URI agentProbeId;
     private final URI machineProvisionerId;
     private final StateReader stateReader;
     private final StateWriter stateWriter;
@@ -74,6 +76,7 @@ public class MockManagement {
 
     public MockManagement()  {
 
+        agentProbeId = createUri("services/agentprobe/");
         orchestratorId = createUri("services/orchestrator/");
         machineProvisionerId = createUri("services/provisioner/");
 
@@ -102,6 +105,10 @@ public class MockManagement {
 
     public URI getOrchestratorId() {
         return orchestratorId;
+    }
+
+    public URI getAgentProbeId() {
+        return agentProbeId;
     }
 
     public TaskReader getTaskReader() {
@@ -145,12 +152,15 @@ public class MockManagement {
     }
 
     public void unregisterTaskConsumers() {
+        unregisterTaskConsumer(agentProbeId);
         unregisterTaskConsumer(orchestratorId);
         unregisterTaskConsumer(machineProvisionerId);
     }
 
     protected void registerTaskConsumers() {
-        registerTaskConsumer(newServiceGridOrchestrator(timeProvider), orchestratorId);
+        TaskBasedAgentHealthProbe taskBasedAgentHealthProbe = newAgentProbe(timeProvider);
+        registerTaskConsumer(taskBasedAgentHealthProbe, agentProbeId);
+        registerTaskConsumer(newServiceGridOrchestrator(timeProvider, taskBasedAgentHealthProbe), orchestratorId);
         registerTaskConsumer(newMachineProvisionerContainer(taskConsumerRegistrar), machineProvisionerId);
     }
 
@@ -164,15 +174,24 @@ public class MockManagement {
         taskConsumersToUnregisterOnClose.remove(taskConsumerId);
     }
 
-    private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider) {
+    private TaskBasedAgentHealthProbe newAgentProbe(CurrentTimeProvider timeProvider) {
+        return new TaskBasedAgentHealthProbe(timeProvider, taskBroker,
+                stateReader, agentProbeId);
+    }
+
+    private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider,
+                                                               TaskBasedAgentHealthProbe taskBasedAgentHealthProbe) {
 
         final ServiceGridOrchestratorParameter serviceOrchestratorParameter = new ServiceGridOrchestratorParameter();
         serviceOrchestratorParameter.setOrchestratorId(orchestratorId);
         serviceOrchestratorParameter.setMachineProvisionerId(machineProvisionerId);
-        serviceOrchestratorParameter.setTaskReader(taskBroker);
         serviceOrchestratorParameter.setStateReader(stateReader);
         serviceOrchestratorParameter.setTimeProvider(timeProvider);
+<<<<<<< HEAD
         serviceOrchestratorParameter.setServerId(getStateServerUri());
+=======
+        serviceOrchestratorParameter.setAgentHealthProbe(taskBasedAgentHealthProbe);
+>>>>>>> origin/develop
 
         return new ServiceGridOrchestrator(serviceOrchestratorParameter);
     }
@@ -250,6 +269,7 @@ public class MockManagement {
         }
     }
 
+<<<<<<< HEAD
     public URI getServiceId(String aliasGroup, LifecycleName lifecycleName) {
         return ServiceUtils.newServiceId(getStateServerUri(), aliasGroup, lifecycleName);
     }
@@ -261,5 +281,8 @@ public class MockManagement {
     public URI getAgentId(String alias) {
         return ServiceUtils.newAgentId(getStateServerUri(), alias);
     }
+=======
+
+>>>>>>> origin/develop
 }
 

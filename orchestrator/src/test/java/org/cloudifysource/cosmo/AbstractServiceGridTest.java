@@ -57,7 +57,7 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
     @BeforeClass
     public void beforeClass() {
 
-        timeProvider = new MockCurrentTimeProvider(System.currentTimeMillis());
+        timeProvider = new MockCurrentTimeProvider(0);
         taskConsumerRegistrar = new TaskConsumerRegistrar() {
 
             @Override
@@ -88,10 +88,11 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
     @BeforeMethod
     public void beforeMethod(Method method) {
         containers.clear();
-        timeProvider.reset(System.currentTimeMillis());
+        timeProvider.reset(0);
         management.start();
         logger.info("Before " + method.getName());
     }
+
 
     @AfterMethod(alwaysRun = false)
     public void afterMethod(Method method) {
