@@ -16,6 +16,8 @@
 package org.cloudifysource.cosmo.agent.state;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.TaskConsumerState;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
@@ -45,6 +47,7 @@ public class AgentState extends TaskConsumerState {
                 MACHINE_REACHABLE + "->" + MACHINE_TERMINATED));
         stateMachine.setBeginState(new LifecycleState(MACHINE_TERMINATED));
         stateMachine.setEndState(new LifecycleState(MACHINE_REACHABLE));
+        serviceInstanceIds = Lists.newArrayList();
     }
 
     private LifecycleStateMachine stateMachine;
@@ -150,5 +153,10 @@ public class AgentState extends TaskConsumerState {
 
     public boolean isMachineUnreachableLifecycle() {
         return  stateMachine.isLifecycleState(getMachineUnreachableLifecycle());
+    }
+
+    public void addServiceInstance(URI instanceId) {
+        Preconditions.checkArgument(!serviceInstanceIds.contains(instanceId));
+        serviceInstanceIds.add(instanceId);
     }
 }

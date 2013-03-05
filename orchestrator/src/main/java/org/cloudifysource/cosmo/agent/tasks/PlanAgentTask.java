@@ -18,9 +18,6 @@ package org.cloudifysource.cosmo.agent.tasks;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 
-import java.net.URI;
-import java.util.List;
-
 /**
  * Task used to initialize the state of an agent (to planned).
  * @author Itai Frenkel
@@ -30,15 +27,5 @@ public class PlanAgentTask  extends Task {
 
     public PlanAgentTask() {
         super(AgentState.class);
-    }
-
-    private List<URI> serviceInstanceIds;
-
-    public List<URI> getServiceInstanceIds() {
-        return this.serviceInstanceIds;
-    }
-
-    public void setServiceInstanceIds(List<URI> serviceInstanceIds) {
-        this.serviceInstanceIds = serviceInstanceIds;
     }
 }

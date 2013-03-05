@@ -85,9 +85,14 @@ public class MockAgent {
         URI instanceId = task.getStateId();
         URI agentId = task.getConsumerId();
         URI serviceId = task.getServiceId();
-        Preconditions.checkArgument(
-                state.getServiceInstanceIds().contains(instanceId), "Wrong impersonating target: " + instanceId);
+
         ServiceInstanceState instanceState = instancesState.get(instanceId);
+        Preconditions.checkArgument(instanceState == null || instanceState.getAgentId().equals(agentId));
+
+        if (!state.getServiceInstanceIds().contains(instanceId)) {
+            state.addServiceInstance(instanceId);
+        }
+
         if (instanceState == null) {
             instanceState = new ServiceInstanceState();
             instanceState.setAgentId(agentId);
