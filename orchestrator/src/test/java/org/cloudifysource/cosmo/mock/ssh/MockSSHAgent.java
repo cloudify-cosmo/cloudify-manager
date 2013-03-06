@@ -14,14 +14,18 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.mock;
+package org.cloudifysource.cosmo.mock.ssh;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Ascii;
 import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.connection.channel.ChannelInputStream;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
@@ -33,6 +37,8 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.tasks.RecoverServiceInstanceStateTask;
@@ -47,7 +53,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A mock that executes tasks using ssh. This mock stores the service instance
@@ -60,6 +67,8 @@ public class MockSSHAgent {
 
     private static final int PORT = 22;
     private static final String ROOT = "/export/users/dank/agent/services/";
+
+    private static final Logger LOG = LoggerFactory.getLogger(MockSSHAgent.class);
 
     private static final ObjectMapper MAPPER = StreamUtils.newObjectMapper();
 
@@ -160,7 +169,7 @@ public class MockSSHAgent {
     @TaskConsumer(noHistory = true)
     public void ping(PingAgentTask task) {
         try {
-            int exitCode = sshClient.executeSingleCommand("echo hello");
+            int exitCode = sshClient.executeSingleCommand("echo ping");
             if (exitCode == 0) {
                 state.setLastPingSourceTimestamp(task.getProducerTimestamp());
             }
@@ -247,6 +256,7 @@ public class MockSSHAgent {
 
         private final SSHClient sshClient;
         private final SFTPClient sftpClient;
+        private final String connectionInfo;
 
         public AgentSSHClient(String host, int port, String userName, String keyFile) throws IOException {
             sshClient = new SSHClient();
@@ -254,6 +264,7 @@ public class MockSSHAgent {
             sshClient.connect(host, port);
             sshClient.authPublickey(userName, keyFile);
             sftpClient = sshClient.newSFTPClient();
+            connectionInfo = userName + "@" + host + ":" + port;
         }
 
         public void writeString(String parentRemotePath, String name, String content) throws IOException {
@@ -282,13 +293,19 @@ public class MockSSHAgent {
             }
         }
 
+        // TODO SSH timeout, sleep between line reads
         private int executeSingleCommand(String command) throws IOException {
             Session session = sshClient.startSession();
             try {
                 Session.Command sessionCommand = session.exec(command);
-                sessionCommand.join(5, TimeUnit.SECONDS);
-                Integer exitCode = sessionCommand.getExitStatus();
-                return exitCode != null ? exitCode : -1;
+                SessionCommandNonBlockingLineConsumer lineConsumer =
+                        new SessionCommandNonBlockingLineConsumer(sessionCommand);
+                while (sessionCommand.isOpen()) {
+                    for (String line : lineConsumer.readAvailableLines()) {
+                        LOG.info(SSHOutput.OUT, connectionInfo, line);
+                    }
+                }
+                return Objects.firstNonNull(sessionCommand.getExitStatus(), -1);
             } finally {
                 session.close();
             }
@@ -306,6 +323,72 @@ public class MockSSHAgent {
                 // do nothing
             }
         }
+    }
+
+    /**
+     * Reads lines in a non blocking manner for the given {@link Session.Command}.
+     */
+    private static class SessionCommandNonBlockingLineConsumer {
+
+        private final ChannelInputStreamNonBlockingLineConsumer stdOutLineConsumer;
+        private final ChannelInputStreamNonBlockingLineConsumer stdErrLineConsumer;
+
+        public SessionCommandNonBlockingLineConsumer(Session.Command sessionCommand) {
+            stdOutLineConsumer = new ChannelInputStreamNonBlockingLineConsumer(
+                    (ChannelInputStream) sessionCommand.getInputStream());
+            stdErrLineConsumer = new ChannelInputStreamNonBlockingLineConsumer(
+                    (ChannelInputStream) sessionCommand.getErrorStream());
+        }
+
+        public List<String> readAvailableLines() throws IOException {
+            List<String> stdOutAvailableLines = stdOutLineConsumer.readAvailableLines();
+            List<String> stdErrAvailableLines = stdErrLineConsumer.readAvailableLines();
+            if (stdOutAvailableLines.isEmpty()) {
+                return stdErrAvailableLines;
+            } else {
+                stdOutAvailableLines.addAll(stdErrAvailableLines);
+                return stdOutAvailableLines;
+            }
+        }
+
+    }
+
+    /**
+     * Reads lines in a non blocking manner for the given {@link ChannelInputStream}.
+     */
+    private static class ChannelInputStreamNonBlockingLineConsumer {
+
+        private final ChannelInputStream inputStream;
+        private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        private List<String> lines = Lists.newArrayList();
+
+        public ChannelInputStreamNonBlockingLineConsumer(ChannelInputStream inputStream) {
+            this.inputStream = inputStream;
+        }
+
+        public List<String> readAvailableLines() throws IOException {
+            int availableBytes = inputStream.available();
+            if (availableBytes > 0) {
+                for (int i = 0; i < availableBytes; i++) {
+                    int readByte = inputStream.read();
+                    // should work for windows/linux/new macs
+                    if (readByte == Ascii.LF) {
+                        lines.add(new String(outputStream.toByteArray(), Charsets.UTF_8));
+                        outputStream.reset();
+                    } else {
+                        outputStream.write(readByte);
+                    }
+                }
+            }
+            if (lines.isEmpty()) {
+                return Collections.emptyList();
+            } else {
+                List<String> result = lines;
+                lines = Lists.newArrayList();
+                return result;
+            }
+        }
+
     }
 
     /**
@@ -351,6 +434,12 @@ public class MockSSHAgent {
         public String getContent() {
             return new String(outputStream.toByteArray(), Charsets.UTF_8);
         }
+    }
+
+    public static void main(String[] args) throws IOException {
+        AgentSSHClient client = new AgentSSHClient("pc-lab27", 22, "dank", "d:/home/temp/id_rsa");
+        client.executeSingleCommand("/export/users/dank/temp/run.sh");
+        client.close();
     }
 
 }

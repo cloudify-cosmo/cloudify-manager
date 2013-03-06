@@ -18,7 +18,7 @@ package org.cloudifysource.cosmo;
 import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
-import org.cloudifysource.cosmo.mock.MockSSHAgent;
+import org.cloudifysource.cosmo.mock.ssh.MockSSHAgent;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.tasks.RecoverServiceInstanceStateTask;
@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.net.URI;
 
 /**
- * Unit Tests for {@link org.cloudifysource.cosmo.mock.MockSSHAgent}.
+ * Unit Tests for {@link org.cloudifysource.cosmo.mock.ssh.MockSSHAgent}.
  *
  * @author Dan Kilman
  * @since 0.1
