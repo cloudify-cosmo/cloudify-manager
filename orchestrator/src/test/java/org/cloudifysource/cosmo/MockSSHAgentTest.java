@@ -17,6 +17,7 @@ package org.cloudifysource.cosmo;
 
 import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.agent.state.AgentState;
+import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.mock.MockSSHAgent;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
@@ -67,6 +68,15 @@ public class MockSSHAgentTest {
     @AfterMethod(alwaysRun = true)
     public void after() {
         agent.close();
+    }
+
+    @Test(enabled = false)
+    public void testPing() throws IOException {
+        PingAgentTask task = new PingAgentTask();
+        task.setProducerTimestamp(100L);
+        agent.ping(task);
+        Assert.assertEquals(task.getProducerTimestamp(), (Long) state.getLastPingSourceTimestamp());
+        // TODO SSH test failed ping
     }
 
     @Test(enabled = false)
