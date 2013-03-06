@@ -16,9 +16,12 @@
 package org.cloudifysource.cosmo.service.tasks;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.Task;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.cloudifysource.cosmo.service.id.AliasId;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
 
 import java.util.List;
@@ -39,20 +42,39 @@ public class UpdateDeploymentCommandlineTask extends Task {
     /**
      * Converts the arguments into a command line interface task.
      */
-    public static UpdateDeploymentCommandlineTask cli(String ... args) {
-        return new UpdateDeploymentCommandlineTask(args);
+    public static UpdateDeploymentCommandlineTask cli(AliasGroupId aliasGroupId, String ... args) {
+        List<String> argsl = Lists.newArrayList(args);
+        argsl.add(0, aliasGroupId.toString());
+        return new UpdateDeploymentCommandlineTask(argsl);
     }
 
-    private UpdateDeploymentCommandlineTask(String[] args) {
+    /**
+     * Converts the arguments into a command line interface task.
+     */
+    public static UpdateDeploymentCommandlineTask cli(AliasId aliasId, String ... args) {
+        List<String> argsl = Lists.newArrayList(args);
+        argsl.add(0, aliasId.toString());
+        return new UpdateDeploymentCommandlineTask(argsl);
+    }
+
+    /**
+     * Converts the arguments into a command line interface task.
+     */
+    public static UpdateDeploymentCommandlineTask cli(String ... args) {
+        List<String> argsl = Lists.newArrayList(args);
+        return new UpdateDeploymentCommandlineTask(argsl);
+    }
+
+    private UpdateDeploymentCommandlineTask(Iterable<String> args) {
         this();
-        for (int i = 0; i < args.length; i++) {
-            final String arg = args[i];
+        for (int i = 0; i < Iterables.size(args); i++) {
+            final String arg = Iterables.get(args, i);
             if (!arg.startsWith("--")) {
                 addArgument(arg);
             } else {
                 final String optionName = arg.substring(2);
                 i++;
-                final String optionValue = args[i];
+                final String optionValue = Iterables.get(args, i);
                 addOption(optionName, optionValue);
             }
         }

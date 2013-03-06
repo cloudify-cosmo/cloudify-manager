@@ -28,6 +28,8 @@ import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.service.ServiceGridOrchestrator;
 import org.cloudifysource.cosmo.service.ServiceGridOrchestratorParameter;
 import org.cloudifysource.cosmo.service.ServiceUtils;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.cloudifysource.cosmo.service.id.AliasId;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
@@ -233,7 +235,9 @@ public class MockManagement {
 
     public void submitTask(URI target, Task task) {
         task.setProducerTimestamp(timeProvider.currentTimeMillis());
-        task.setProducerId(ServiceUtils.newServiceId(getStateServerUri(), "webui/", new LifecycleName("tomcat")));
+        task.setProducerId(
+                ServiceUtils.newServiceId(
+                    getStateServerUri(), new AliasGroupId("webui/"), new LifecycleName("tomcat")));
         task.setConsumerId(target);
         getTaskWriter().postNewTask(task);
     }
@@ -266,15 +270,15 @@ public class MockManagement {
         }
     }
 
-    public URI getServiceId(String aliasGroup, LifecycleName lifecycleName) {
+    public URI getServiceId(AliasGroupId aliasGroup, LifecycleName lifecycleName) {
         return ServiceUtils.newServiceId(getStateServerUri(), aliasGroup, lifecycleName);
     }
 
-    public URI getServiceInstanceId(String alias, LifecycleName lifecycleName) {
+    public URI getServiceInstanceId(AliasId alias, LifecycleName lifecycleName) {
         return ServiceUtils.newInstanceId(getStateServerUri(), alias, lifecycleName);
     }
 
-    public URI getAgentId(String alias) {
+    public URI getAgentId(AliasId alias) {
         return ServiceUtils.newAgentId(getStateServerUri(), alias);
     }
 }

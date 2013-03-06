@@ -22,6 +22,8 @@ import org.cloudifysource.cosmo.TaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumerState;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskProducer;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.cloudifysource.cosmo.service.id.AliasId;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlannerState;
 import org.cloudifysource.cosmo.service.tasks.InstallServiceTask;
@@ -88,7 +90,7 @@ public class ServiceGridDeploymentPlanner {
         final URI serviceId = serviceConfig.getServiceId();
         checkServiceId(serviceId);
         boolean installed = isServiceInstalled(serviceId);
-        Preconditions.checkState(!installed);
+        Preconditions.checkState(!installed, "Service %s is already installed", serviceId);
         state.addService(serviceConfig);
         state.setOrchestratorUpdateRequired(true);
     }
@@ -120,7 +122,7 @@ public class ServiceGridDeploymentPlanner {
 
             final String serviceName = serviceConfig.getDisplayName();
             final String prefix = serviceName + "_";
-            final String aliasGroup = getAliasGroup(serviceConfig);
+            final AliasGroupId aliasGroup = serviceConfig.getAliasGroup();
 
             final Task planSetTask = cli(aliasGroup, "plan_set", serviceName,
                     "--instances", String.valueOf(serviceConfig.getPlannedNumberOfInstances()),
@@ -129,7 +131,7 @@ public class ServiceGridDeploymentPlanner {
             addNewTask(newTasks, planSetTask);
 
             for (int i = 1; i <= serviceConfig.getMaxNumberOfInstances(); i++) {
-                final String alias = aliasGroup  + i;
+                final AliasId alias = aliasGroup.newAliasId(i);
                 final Task lifecycleTask = cli(alias, "lifecycle_set", serviceName,
                     prefix + "cleaned<-->" + prefix + "installed<-->" + prefix + "configured->" + prefix + "started" +
                             "," + prefix + "started->" + prefix + "stopped->" + prefix + "cleaned",
@@ -157,13 +159,13 @@ public class ServiceGridDeploymentPlanner {
         for (ServiceConfig serviceConfig : state.getCapacityPlan().getRemovedServices()) {
 
             final String serviceName = serviceConfig.getDisplayName();
-            final String aliasGroup = getAliasGroup(serviceConfig);
+            final AliasGroupId aliasGroup = serviceConfig.getAliasGroup();
             final Task planUnsetTask = cli(aliasGroup, "plan_unset", serviceName);
             addNewTask(newTasks, planUnsetTask);
             final String prefix = serviceName + "_";
 
             for (int i = 1; i <= serviceConfig.getMaxNumberOfInstances(); i++) {
-                final String alias = aliasGroup  + i;
+                final AliasId alias = aliasGroup.newAliasId(i);
                 final Task instanceCleanedTask = cli(alias, prefix + "cleaned");
                 addNewTask(newTasks, instanceCleanedTask);
 
@@ -171,17 +173,6 @@ public class ServiceGridDeploymentPlanner {
                 addNewTask(newTasks, cloudmachineTerminatedTask);
             }
         }
-    }
-
-    /**
-     * Have a different alias not related to service serviceName, since alias can have more than one service.
-     */
-    private String getAliasGroup(ServiceConfig serviceConfig) {
-        String aliasGroup = serviceConfig.getAliasGroup();
-        if (!aliasGroup.endsWith("/")) {
-            aliasGroup += "/";
-        }
-        return aliasGroup;
     }
 
     private boolean isServiceInstalled(final URI serviceId) {

@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo;
 
 import org.cloudifysource.cosmo.mock.MockManagement;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
@@ -70,7 +71,7 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         cos("web/1", "tomcat_started");
 
         execute();
-        assertOneTomcatInstance("web", getManagement());
+        assertOneTomcatInstance(new AliasGroupId("web"), getManagement());
 
         cos("web", "plan_unset", "tomcat");
         cos("web/1", "tomcat_cleaned");

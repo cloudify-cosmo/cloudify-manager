@@ -15,6 +15,8 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+
 import java.net.URI;
 
 /**
@@ -29,7 +31,7 @@ public class ServiceConfig {
     private int maxNumberOfInstances;
     private int minNumberOfInstances;
     private URI id;
-    private String aliasGroup;
+    private AliasGroupId aliasGroup;
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
@@ -71,11 +73,11 @@ public class ServiceConfig {
         this.minNumberOfInstances = minNumberOfInstances;
     }
 
-    public String getAliasGroup() {
+    public AliasGroupId getAliasGroup() {
         return aliasGroup;
     }
 
-    public void setAliasGroup(String aliasGroup) {
+    public void setAliasGroup(AliasGroupId aliasGroup) {
         this.aliasGroup = aliasGroup;
     }
 }
