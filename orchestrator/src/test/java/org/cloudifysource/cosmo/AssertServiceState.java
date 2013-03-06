@@ -26,6 +26,8 @@ import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.ServiceUtils;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.cloudifysource.cosmo.service.id.AliasId;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
@@ -52,7 +54,7 @@ public class AssertServiceState {
 
     public static void assertServiceInstalledWithOneInstance(
             MockManagement management,
-            String aliasGroup,
+            AliasGroupId aliasGroup,
             LifecycleName lifecycleName) {
         final int machineStarts = 1;
         final int agentStarts = 1;
@@ -60,14 +62,14 @@ public class AssertServiceState {
     }
 
     public static void assertSingleServiceInstance(MockManagement management,
-                                                   String aliasGroup, LifecycleName lifecycleName) {
+                                                   AliasGroupId aliasGroup, LifecycleName lifecycleName) {
         final int machineStarts = 1;
         final int agentStarts = 1;
         assertSingleServiceInstance(management, aliasGroup, lifecycleName, agentStarts, machineStarts);
     }
 
     public static void assertSingleServiceInstance(
-            MockManagement management, String aliasGroup, LifecycleName lifecycleName,
+            MockManagement management, AliasGroupId aliasGroup, LifecycleName lifecycleName,
             int numberOfAgentStarts, int numberOfMachineStarts) {
 
         Assert.assertEquals(management.getDeploymentPlan().getServices().size(), 1);
@@ -82,7 +84,7 @@ public class AssertServiceState {
                 numberOfAgentStarts, numberOfMachineStarts);
     }
 
-    public static Iterable<URI> getReachableInstanceIds(final MockManagement management, String aliasGroup,
+    public static Iterable<URI> getReachableInstanceIds(final MockManagement management, AliasGroupId aliasGroup,
                                                         LifecycleName lifecycleName) {
         final Iterable<URI> instanceIds = getServiceInstanceIds(management, aliasGroup, lifecycleName, 100);
         final Predicate<URI> reachableInstancesPredicate = new Predicate<URI>() {
@@ -95,7 +97,7 @@ public class AssertServiceState {
         return Iterables.filter(instanceIds, reachableInstancesPredicate);
     }
 
-    public static Iterable<URI> getReachableAgentIds(final MockManagement management, String aliasGroup) {
+    public static Iterable<URI> getReachableAgentIds(final MockManagement management, AliasGroupId aliasGroup) {
         final Iterable<URI> agentIds = getAgentIds(management, aliasGroup);
         final Predicate<URI> reachableAgentsPredicate = new Predicate<URI>() {
             @Override
@@ -108,7 +110,7 @@ public class AssertServiceState {
     }
 
     private static void assertServiceInstalledWithOneInstance(
-            MockManagement management, String aliasGroup, final LifecycleName lifecycleName,
+            MockManagement management, AliasGroupId aliasGroup, final LifecycleName lifecycleName,
             int numberOfAgentStarts, int numberOfMachineStarts) {
 
         final URI serviceId = management.getServiceId(aliasGroup, lifecycleName);
@@ -206,13 +208,10 @@ public class AssertServiceState {
         return etagState.getState();
     }
 
-    public static Iterable<URI> getAgentIds(MockManagement management, String aliasGroup) {
-        if (!aliasGroup.endsWith("/")) {
-            aliasGroup += "/";
-        }
+    public static Iterable<URI> getAgentIds(MockManagement management, AliasGroupId aliasGroup) {
         List<URI> uris = Lists.newArrayList();
         for (int i = 1; true; i++) {
-            final String alias = aliasGroup + i + "/";
+            final AliasId alias = new AliasId(aliasGroup, i);
             final URI agentId = management.getAgentId(alias);
             if (management.getAgentState(agentId) != null) {
                 uris.add(agentId);
@@ -223,14 +222,11 @@ public class AssertServiceState {
         return uris;
     }
 
-    private static Iterable<URI> getServiceInstanceIds(MockManagement management, String aliasGroup,
+    private static Iterable<URI> getServiceInstanceIds(MockManagement management, AliasGroupId aliasGroup,
                                                       LifecycleName lifecycleName, int numberOfInstances) {
-        if (!aliasGroup.endsWith("/")) {
-            aliasGroup += "/";
-        }
         List<URI> uris = Lists.newArrayList();
         for (int i = 1; i <= numberOfInstances; i++) {
-            final String alias = aliasGroup + i + "/";
+            final AliasId alias = new AliasId(aliasGroup, i);
             final URI instanceId = management.getServiceInstanceId(alias, lifecycleName);
             if (management.getServiceInstanceState(instanceId) != null) {
                 uris.add(instanceId);
@@ -246,7 +242,7 @@ public class AssertServiceState {
             Map<URI, Integer> numberOfAgentStartsPerAgent,
             Map<URI, Integer> numberOfMachineStartsPerAgent) {
         final LifecycleName lifecycleName = new LifecycleName("tomcat");
-        final String aliasGroup = "web";
+        final AliasGroupId aliasGroup = new AliasGroupId("web");
         final URI serviceId = management.getServiceId(aliasGroup, lifecycleName);
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertEquals(Iterables.size(serviceState.getInstanceIds()), 2);
@@ -292,23 +288,23 @@ public class AssertServiceState {
 
     public static ImmutableMap<URI, Integer> expectedBothAgentsNotRestarted(MockManagement management) {
         return ImmutableMap.<URI, Integer>builder()
-                .put(management.getAgentId("web/1"), 1)
-                .put(management.getAgentId("web/2"), 1)
+                .put(management.getAgentId(new AliasId("web/1")), 1)
+                .put(management.getAgentId(new AliasId("web/2")), 1)
                 .build();
     }
 
     public static ImmutableMap<URI, Integer> expectedBothMachinesNotRestarted(MockManagement management) {
         return ImmutableMap.<URI, Integer>builder()
-                .put(management.getAgentId("web/1"), 1)
-                .put(management.getAgentId("web/2"), 1)
+                .put(management.getAgentId(new AliasId("web/1")), 1)
+                .put(management.getAgentId(new AliasId("web/2")), 1)
                 .build();
     }
 
     public static ImmutableMap<URI, Integer> expectedAgentZeroNotRestartedAgentOneRestarted(
             MockManagement management) {
         return ImmutableMap.<URI, Integer>builder()
-                .put(management.getAgentId("web/1"), 1)
-                .put(management.getAgentId("web/2"), 2)
+                .put(management.getAgentId(new AliasId("web/1")), 1)
+                .put(management.getAgentId(new AliasId("web/2")), 2)
                 .build();
     }
 
@@ -326,14 +322,17 @@ public class AssertServiceState {
     private static void assertTomcatUninstalled(
             final MockManagement management, final boolean instanceUnreachable, final int numberOfInstances) {
 
-        final URI serviceId = management.getServiceId("web", new LifecycleName("tomcat"));
+        final AliasGroupId aliasGroup = new AliasGroupId("web");
+        final URI serviceId = management.getServiceId(aliasGroup, new LifecycleName("tomcat"));
         Assert.assertFalse(management.getDeploymentPlan().isServiceExists(serviceId));
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertNotNull(serviceState, "Cannot find service state of " + serviceId);
         Assert.assertEquals(serviceState.getInstanceIds().size(), 0);
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
 
-        for (URI instanceId: getServiceInstanceIds(management, "web", new LifecycleName("tomcat"), numberOfInstances)) {
+        final Iterable<URI> instanceIds =
+            getServiceInstanceIds(management, aliasGroup, new LifecycleName("tomcat"), numberOfInstances);
+        for (URI instanceId: instanceIds) {
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
             Assert.assertFalse(instanceState.isReachable());
             if (instanceUnreachable) {
@@ -353,20 +352,21 @@ public class AssertServiceState {
         }
     }
 
-    public static void assertOneTomcatInstance(String aliasGroup, MockManagement management) {
+    public static void assertOneTomcatInstance(AliasGroupId aliasGroup, MockManagement management) {
         assertSingleServiceInstance(management, aliasGroup, new LifecycleName("tomcat"));
     }
 
     public static void assertTomcatScaledInFrom2To1(MockManagement management) {
-        assertServiceInstalledWithOneInstance(management, "web", new LifecycleName("tomcat"));
-        final AgentState agentState0 = management.getAgentState(management.getAgentId("web/1"));
+        final AliasGroupId aliasGroup = new AliasGroupId("web");
+        assertServiceInstalledWithOneInstance(management, aliasGroup, new LifecycleName("tomcat"));
+        final AgentState agentState0 = management.getAgentState(management.getAgentId(new AliasId(aliasGroup, 1)));
         Assert.assertTrue(agentState0.getStateMachine().isLifecycleState(agentState0.getMachineReachableLifecycle()));
-        final AgentState agentState1 = management.getAgentState(management.getAgentId("web/2"));
+        final AgentState agentState1 = management.getAgentState(management.getAgentId(new AliasId(aliasGroup, 2)));
         Assert.assertTrue(agentState1.getStateMachine().isLifecycleState(agentState1.getMachineTerminatedLifecycle()));
-        final URI tomcat1Id = management.getServiceInstanceId("web/1", new LifecycleName("tomcat"));
+        final URI tomcat1Id = management.getServiceInstanceId(new AliasId(aliasGroup, 1), new LifecycleName("tomcat"));
         Assert.assertTrue(management.getServiceInstanceState(tomcat1Id)
                           .getStateMachine().isLifecycleState(new LifecycleState("tomcat_started")));
-        final URI tomcat2Id = management.getServiceInstanceId("web/2", new LifecycleName("tomcat"));
+        final URI tomcat2Id = management.getServiceInstanceId(new AliasId(aliasGroup, 2), new LifecycleName("tomcat"));
         Assert.assertTrue(management.getServiceInstanceState(tomcat2Id)
                           .getStateMachine().isLifecycleState(new LifecycleState("tomcat_cleaned")));
     }

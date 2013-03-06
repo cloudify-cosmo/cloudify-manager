@@ -33,6 +33,8 @@ import org.cloudifysource.cosmo.agent.health.AgentPingHealth;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.cloudifysource.cosmo.service.id.AliasId;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
@@ -128,7 +130,7 @@ public class ServiceGridOrchestrator {
         final String command = task.getArguments().get(1);
         if (command.equals("plan_set")) {
             final LifecycleName name = new LifecycleName(task.getArguments().get(2));
-            final String aliasGroup = task.getArguments().get(0);
+            final AliasGroupId aliasGroup = new AliasGroupId(task.getArguments().get(0));
             final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), aliasGroup, name);
             final ServiceConfig serviceConfig = new ServiceConfig();
             serviceConfig.setPlannedNumberOfInstances(Integer.valueOf(task.getOptions().get("instances")));
@@ -141,14 +143,14 @@ public class ServiceGridOrchestrator {
             state.getDeploymentPlan().setService(servicePlan);
 
         } else if (command.equals("plan_unset")) {
-            final String aliasGroup = task.getArguments().get(0);
+            final AliasGroupId aliasGroup = new AliasGroupId(task.getArguments().get(0));
             final LifecycleName name = new LifecycleName(task.getArguments().get(2));
             final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), aliasGroup, name);
             state.getDeploymentPlan().removeService(serviceId);
             state.addServiceIdToUninstall(serviceId);
 
         } else if (command.equals("lifecycle_set")) {
-            final String alias = task.getArguments().get(0);
+            final AliasId alias = new AliasId(task.getArguments().get(0));
             final LifecycleName name = new LifecycleName(task.getArguments().get(2));
             final LifecycleStateMachineText text = new LifecycleStateMachineText(task.getArguments().get(3));
             final LifecycleState begin = new LifecycleState(task.getOptions().get("begin"));
@@ -161,7 +163,7 @@ public class ServiceGridOrchestrator {
 
             final URI instanceId = ServiceUtils.newInstanceId(state.getServerId(), alias, name);
             final URI agentId = ServiceUtils.newAgentId(state.getServerId(), alias);
-            final String aliasGroup = ServiceUtils.toAliasGroup(alias);
+            final AliasGroupId aliasGroup = alias.getAliasGroup();
             final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), aliasGroup, name);
             final ServiceInstanceDeploymentPlan instancePlan = new ServiceInstanceDeploymentPlan();
             instancePlan.setInstanceId(instanceId);
@@ -171,7 +173,7 @@ public class ServiceGridOrchestrator {
             state.getDeploymentPlan().addServiceInstance(instancePlan);
 
         } else if (command.startsWith("cloudmachine_")) {
-            final String alias = task.getArguments().get(0);
+            final AliasId alias = new AliasId(task.getArguments().get(0));
             final URI agentId = ServiceUtils.newAgentId(state.getServerId(), alias);
             final Optional<AgentPlan> agentPlan = state.getDeploymentPlan().getAgentPlan(agentId);
             if (agentPlan.isPresent()) {
@@ -185,7 +187,7 @@ public class ServiceGridOrchestrator {
             }
 
         } else if (command.equals("machine_set")) {
-            String alias = task.getArguments().get(0);
+            AliasId alias = new AliasId(task.getArguments().get(0));
             final URI agentId = ServiceUtils.newAgentId(state.getServerId(), alias);
             Optional<AgentPlan> agentPlan = state.getDeploymentPlan().getAgentPlan(agentId);
             if (!agentPlan.isPresent()) {
@@ -202,7 +204,7 @@ public class ServiceGridOrchestrator {
             agentPlan.get().setUserName(task.getOptions().get("username"));
 
         } else if (command.equals("machine_unset")) {
-            String alias = task.getArguments().get(0);
+            AliasId alias = new AliasId(task.getArguments().get(0));
             final URI agentId = ServiceUtils.newAgentId(state.getServerId(), alias);
             Optional<AgentPlan> agentPlan = state.getDeploymentPlan().getAgentPlan(agentId);
             if (agentPlan.isPresent()) {
@@ -210,7 +212,7 @@ public class ServiceGridOrchestrator {
             }
 
         } else {
-            final String alias = task.getArguments().get(0);
+            final AliasId alias = new AliasId(task.getArguments().get(0));
             final LifecycleState desiredState = new LifecycleState(command);
             final LifecycleName name = LifecycleName.fromLifecycleState(desiredState);
             final URI instanceId = ServiceUtils.newInstanceId(state.getServerId(), alias, name);

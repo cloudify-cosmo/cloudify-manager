@@ -23,6 +23,9 @@ import org.cloudifysource.cosmo.mock.MockSSHAgent;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
 import org.cloudifysource.cosmo.mock.MockTaskContainers;
 import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
+import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.cloudifysource.cosmo.service.id.AliasId;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.time.MockCurrentTimeProvider;
 import org.junit.AfterClass;
 import org.testng.Assert;
@@ -45,6 +48,11 @@ import static org.cloudifysource.cosmo.service.tasks.UpdateDeploymentCommandline
  * @since 0.1
  */
 public abstract class AbstractServiceGridTest<T extends MockManagement> {
+
+    protected final AliasGroupId web = new AliasGroupId("web");
+    protected final AliasGroupId db = new AliasGroupId("db");
+    protected final LifecycleName tomcat = new LifecycleName("tomcat");
+    protected final LifecycleName cassandra = new LifecycleName("cassandra");
 
     private MockTaskContainers containers;
     private final Logger logger;
@@ -176,5 +184,13 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
     protected void cos(String... args) {
         submitOrchestratorTask(cli(args));
+    }
+
+    protected void cos(AliasGroupId aliasGroupId, String... args) {
+        submitOrchestratorTask(cli(aliasGroupId, args));
+    }
+
+    protected void cos(AliasId aliasId, String... args) {
+        submitOrchestratorTask(cli(aliasId, args));
     }
 }

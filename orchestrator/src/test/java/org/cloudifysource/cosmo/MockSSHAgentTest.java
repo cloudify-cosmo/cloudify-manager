@@ -50,7 +50,7 @@ public class MockSSHAgentTest {
     private MockSSHAgent agent;
     private AgentState state;
 
-    @Parameters({"ip", "username", "keyfile"})
+    @Parameters({"ip", "username", "keyfile" })
     @BeforeMethod
     public void before(
             @Optional("myhostname") String ip,
