@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
+import org.cloudifysource.cosmo.mock.ssh.AgentSSHClient;
 import org.cloudifysource.cosmo.mock.ssh.MockSSHAgent;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
@@ -157,7 +158,7 @@ public class MockSSHAgentTest {
 
     @Test(enabled = false)
     public void testServiceInstanceLifecycleWithProperties() throws IOException {
-        MockSSHAgent.AgentSSHClient sshClient = agent.getSSHClient();
+        AgentSSHClient sshClient = agent.getSSHClient();
 
         // setup test properties
         String fileName = "filename";
@@ -192,7 +193,7 @@ public class MockSSHAgentTest {
         Assert.assertEquals(optionalContent.get().trim(), fileContent, "Wrong file content");
     }
 
-    private void uploadResourceBasedScript(MockSSHAgent.AgentSSHClient sshClient, LifecycleState lifecycleState) {
+    private void uploadResourceBasedScript(AgentSSHClient sshClient, LifecycleState lifecycleState) {
         String scriptName = lifecycleState.getName() + ".sh";
         LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
         String scriptParentPath = Joiner.on('/').join(MockSSHAgent.SCRIPTS_ROOT, lifecycleName.getName());
