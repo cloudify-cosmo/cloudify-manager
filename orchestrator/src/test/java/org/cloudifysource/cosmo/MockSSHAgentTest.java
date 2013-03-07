@@ -157,7 +157,7 @@ public class MockSSHAgentTest {
         }
     }
 
-    @Test(enabled = false)
+    @Test
     public void testServiceInstanceLifecycleWithProperties() throws IOException {
         AgentSSHClient sshClient = agent.getSSHClient();
 
