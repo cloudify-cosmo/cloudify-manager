@@ -219,6 +219,7 @@ public class ServiceGridOrchestrator {
             final LifecycleStateMachine stateMachine =
                     state.getDeploymentPlan().getInstancePlan(instanceId).get()
                          .getStateMachine();
+            stateMachine.getProperties().putAll(task.getOptions());
             stateMachine.setCurrentState(desiredState);
         }
     }

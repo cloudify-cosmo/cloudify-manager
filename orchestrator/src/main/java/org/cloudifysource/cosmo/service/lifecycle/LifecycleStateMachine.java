@@ -43,6 +43,7 @@ public class LifecycleStateMachine {
     private LifecycleState currentState;
     private LifecycleStateMachineText text;
     private LifecycleName name;
+    private Map<String, String> properties = Maps.newLinkedHashMap();
 
     /**
      * Deserialization cotr.
@@ -208,5 +209,13 @@ public class LifecycleStateMachine {
 
     public boolean isLifecycleState(LifecycleState expectedLifecycleState) {
         return getCurrentState().equals(expectedLifecycleState);
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties;
     }
 }
