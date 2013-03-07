@@ -21,6 +21,7 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
+import org.cloudifysource.cosmo.mock.ssh.MockSSHAgent;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 
 import java.net.URI;

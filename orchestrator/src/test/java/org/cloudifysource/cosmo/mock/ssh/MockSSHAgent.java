@@ -14,14 +14,19 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.mock;
+package org.cloudifysource.cosmo.mock.ssh;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Ascii;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.connection.channel.ChannelInputStream;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
@@ -33,6 +38,10 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
+import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachine;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
 import org.cloudifysource.cosmo.service.tasks.RecoverServiceInstanceStateTask;
@@ -47,7 +56,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A mock that executes tasks using ssh. This mock stores the service instance
@@ -59,7 +70,10 @@ import java.util.concurrent.TimeUnit;
 public class MockSSHAgent {
 
     private static final int PORT = 22;
-    private static final String ROOT = "/export/users/dank/agent/services/";
+    private static final String SERVICES_ROOT = "/export/users/dank/agent/services/";
+    public static final String SCRIPTS_ROOT = "/export/users/dank/agent/scripts";
+
+    private static final Logger LOG = LoggerFactory.getLogger(MockSSHAgent.class);
 
     private static final ObjectMapper MAPPER = StreamUtils.newObjectMapper();
 
@@ -68,11 +82,7 @@ public class MockSSHAgent {
 
     public static MockSSHAgent newAgentOnCleanMachine(AgentState state) {
         MockSSHAgent agent = new MockSSHAgent(state);
-        try {
-            agent.clearPersistedServiceInstanceData();
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
+        agent.clearPersistedServiceInstanceData();
         return agent;
     }
 
@@ -87,26 +97,22 @@ public class MockSSHAgent {
 
     private MockSSHAgent(AgentState state) {
         this.state = state;
-        try {
-            this.sshClient = new AgentSSHClient(state.getHost(), PORT, state.getUserName(), state.getKeyFile());
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
+        this.sshClient = new AgentSSHClient(state.getHost(), PORT, state.getUserName(), state.getKeyFile());
     }
 
     @ImpersonatingTaskConsumer
     public void serviceInstanceLifecycle(ServiceInstanceTask task,
-                                         TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier)
-        throws IOException {
+                                         TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         ServiceInstanceState instanceState = impersonatedStateModifier.get();
         instanceState.getStateMachine().setCurrentState(task.getLifecycleState());
         instanceState.setReachable(true);
         impersonatedStateModifier.put(instanceState);
         writeServiceInstanceState(instanceState, task.getStateId());
+        executeLifecycleStateScript(instanceState.getStateMachine());
     }
 
     @TaskConsumer
-    public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) throws IOException {
+    public void removeServiceInstance(RemoveServiceInstanceFromAgentTask task) {
         final URI instanceId = task.getInstanceId();
         this.state.removeServiceInstanceId(instanceId);
         deleteServiceInstanceState(instanceId);
@@ -147,7 +153,7 @@ public class MockSSHAgent {
     @ImpersonatingTaskConsumer
     public void injectPropertyToInstance(
             SetInstancePropertyTask task,
-            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) throws IOException {
+            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         final URI instanceId = task.getStateId();
         Optional<ServiceInstanceState> optionalInstanceState = readServiceInstanceState(instanceId);
         Preconditions.checkState(optionalInstanceState.isPresent(), "missing service instance state");
@@ -160,12 +166,12 @@ public class MockSSHAgent {
     @TaskConsumer(noHistory = true)
     public void ping(PingAgentTask task) {
         try {
-            int exitCode = sshClient.executeSingleCommand("echo hello");
+            int exitCode = sshClient.executeSingleCommand("echo ping");
             if (exitCode == 0) {
                 state.setLastPingSourceTimestamp(task.getProducerTimestamp());
             }
-        } catch (IOException e) {
-
+        } catch (Exception e) {
+            LOG.debug("Ping failed", e);
         }
     }
 
@@ -178,21 +184,31 @@ public class MockSSHAgent {
         sshClient.close();
     }
 
-    private Optional<ServiceInstanceState> readServiceInstanceState(URI instanceId) throws IOException {
+    private Optional<ServiceInstanceState> readServiceInstanceState(URI instanceId) {
         InstanceStateRemotePath remotePath = createRemotePath(instanceId);
-        Optional<String> instanceStateJSON = sshClient.readString(remotePath.fullPath());
+        Optional<String> instanceStateJSON = sshClient.getString(remotePath.fullPath());
         if (instanceStateJSON.isPresent()) {
             return Optional.of(StreamUtils.fromJson(MAPPER, instanceStateJSON.get(), ServiceInstanceState.class));
         }
         return Optional.absent();
     }
 
-    private void writeServiceInstanceState(ServiceInstanceState instanceState, URI instanceId) throws IOException {
+    private void writeServiceInstanceState(ServiceInstanceState instanceState, URI instanceId) {
         InstanceStateRemotePath remotePath = createRemotePath(instanceId);
-        sshClient.writeString(remotePath.pathToParent, remotePath.name, StreamUtils.toJson(MAPPER, instanceState));
+        sshClient.putString(remotePath.pathToParent, remotePath.name, StreamUtils.toJson(MAPPER, instanceState));
     }
 
-    private void deleteServiceInstanceState(URI instanceId) throws IOException {
+    // TODO SSH handle execution errors
+    private void executeLifecycleStateScript(LifecycleStateMachine lifecycleStateMachine) {
+        LifecycleState lifecycleState = lifecycleStateMachine.getCurrentState();
+        LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
+        String scriptName = lifecycleState.getName() + ".sh";
+        String workingDirectory = Joiner.on('/').join(SCRIPTS_ROOT, lifecycleName.getName());
+        String scriptPath = Joiner.on('/').join(workingDirectory, scriptName);
+        sshClient.executeScript(workingDirectory, scriptPath, lifecycleStateMachine.getProperties());
+    }
+
+    private void deleteServiceInstanceState(URI instanceId) {
         InstanceStateRemotePath remotePath = createRemotePath(instanceId);
         sshClient.removeFileIfExists(remotePath.fullPath());
     }
@@ -200,7 +216,7 @@ public class MockSSHAgent {
     private InstanceStateRemotePath createRemotePath(URI instanceId) {
         Preconditions.checkNotNull(instanceId, "instanceId");
         InstanceStateRemotePath remotePath = new InstanceStateRemotePath();
-        remotePath.pathToParent = ROOT;
+        remotePath.pathToParent = SERVICES_ROOT;
         String path = instanceId.getPath();
         if (path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
@@ -223,9 +239,14 @@ public class MockSSHAgent {
         return remotePath;
     }
 
-    private void clearPersistedServiceInstanceData() throws IOException {
-        sshClient.removeDirIfExists(ROOT);
+    private void clearPersistedServiceInstanceData() {
+        sshClient.removeDirIfExists(SERVICES_ROOT);
     }
+
+    public AgentSSHClient getSSHClient() {
+        return sshClient;
+    }
+
 
     /**
      * Holds parent path and file name for instance states.
@@ -243,54 +264,102 @@ public class MockSSHAgent {
     /**
      * Helper class to perform basic file operations on a remote machine using ssh.
      */
-    private static class AgentSSHClient {
+    public static class AgentSSHClient {
 
         private final SSHClient sshClient;
         private final SFTPClient sftpClient;
+        private final String connectionInfo;
 
-        public AgentSSHClient(String host, int port, String userName, String keyFile) throws IOException {
-            sshClient = new SSHClient();
-            sshClient.addHostKeyVerifier(new PromiscuousVerifier());
-            sshClient.connect(host, port);
-            sshClient.authPublickey(userName, keyFile);
-            sftpClient = sshClient.newSFTPClient();
+        public AgentSSHClient(String host, int port, String userName, String keyFile) {
+            try {
+                sshClient = new SSHClient();
+                sshClient.addHostKeyVerifier(new PromiscuousVerifier());
+                sshClient.connect(host, port);
+                sshClient.authPublickey(userName, keyFile);
+                sftpClient = sshClient.newSFTPClient();
+                connectionInfo = userName + "@" + host + ":" + port;
+            } catch (IOException e) {
+                throw Throwables.propagate(e);
+            }
         }
 
-        public void writeString(String parentRemotePath, String name, String content) throws IOException {
-            sftpClient.mkdirs(parentRemotePath);
-            sftpClient.put(new StringSourceFile(name, content), parentRemotePath + name);
+        public void putString(String parentRemotePath, String name, String content) {
+            try {
+                sftpClient.mkdirs(parentRemotePath);
+                if (!parentRemotePath.endsWith("/")) {
+                    parentRemotePath += "/";
+                }
+                sftpClient.put(new StringSourceFile(name, content), parentRemotePath + name);
+            } catch (IOException e) {
+                throw Throwables.propagate(e);
+            }
         }
 
-        public Optional<String> readString(String remotePath) throws IOException {
-            if (sftpClient.statExistence(remotePath) == null) {
+        public Optional<String> getString(String remotePath) {
+            StringDestFile destFile = new StringDestFile();
+            try {
+                sftpClient.get(remotePath, destFile);
+            } catch (IOException e) {
                 return Optional.absent();
             }
-            StringDestFile destFile = new StringDestFile();
-            sftpClient.get(remotePath, destFile);
             return Optional.of(destFile.getContent());
         }
 
-        public void removeFileIfExists(String remotePath) throws IOException {
-            if (sftpClient.statExistence(remotePath) != null) {
-                sftpClient.rm(remotePath);
-            }
-        }
-
-        public void removeDirIfExists(String remoteDir) throws IOException {
-            if (sftpClient.statExistence(remoteDir) != null) {
-                executeSingleCommand("rm -r " + remoteDir);
-            }
-        }
-
-        private int executeSingleCommand(String command) throws IOException {
-            Session session = sshClient.startSession();
+        public void removeFileIfExists(String remotePath) {
             try {
-                Session.Command sessionCommand = session.exec(command);
-                sessionCommand.join(5, TimeUnit.SECONDS);
-                Integer exitCode = sessionCommand.getExitStatus();
-                return exitCode != null ? exitCode : -1;
-            } finally {
-                session.close();
+                sftpClient.rm(remotePath);
+            } catch (IOException e) {
+                LOG.debug("Failed removing file", e);
+            }
+        }
+
+        public void removeDirIfExists(String remoteDir) {
+            executeSingleCommand("rm -r " + remoteDir);
+        }
+
+        public int executeSingleCommand(String command) {
+            return execute(command);
+        }
+
+        public int executeScript(String workingDirectory, String scriptPath, Map<String,
+                String> envVars) {
+            List<String> commands = Lists.newLinkedList();
+            commands.add("cd " + workingDirectory);
+            if (envVars != null) {
+                for (Map.Entry<String, String> envVar : envVars.entrySet()) {
+                    StringBuilder command = new StringBuilder();
+                    command.append("export ").append(envVar.getKey()).append("=").append(envVar.getValue());
+                    commands.add(command.toString());
+                }
+            }
+            commands.add("chmod +x " + scriptPath);
+            commands.add(scriptPath);
+            return execute(Joiner.on(';').join(commands));
+        }
+
+        // TODO SSH timeout, sleep between line reads
+        private int execute(String command) {
+            try {
+                Session session = sshClient.startSession();
+                try {
+                    Session.Command sessionCommand = session.exec(command);
+                    SessionCommandNonBlockingLineConsumer lineConsumer =
+                            new SessionCommandNonBlockingLineConsumer(sessionCommand);
+                    while (sessionCommand.isOpen()) {
+                        for (String line : lineConsumer.readAvailableLines()) {
+                            LOG.info(SSHOutput.OUT, connectionInfo, line);
+                        }
+                    }
+                    return Objects.firstNonNull(sessionCommand.getExitStatus(), -1);
+                } finally {
+                    try {
+                        session.close();
+                    } catch (IOException e) {
+                        LOG.debug("Failed closing ssh session", e);
+                    }
+                }
+            } catch (IOException e) {
+                throw Throwables.propagate(e);
             }
         }
 
@@ -298,14 +367,85 @@ public class MockSSHAgent {
             try {
                 sftpClient.close();
             } catch (IOException e) {
-                // do nothing
+                LOG.debug("Failed closing sftp client", e);
             }
             try {
                 sshClient.close();
             } catch (IOException e) {
-                // do nothing
+                LOG.debug("Failed closing ssh client", e);
             }
         }
+    }
+
+    /**
+     * Reads lines in a non blocking manner for the given {@link Session.Command}.
+     */
+    private static class SessionCommandNonBlockingLineConsumer {
+
+        private final ChannelInputStreamNonBlockingLineConsumer stdOutLineConsumer;
+        private final ChannelInputStreamNonBlockingLineConsumer stdErrLineConsumer;
+
+        public SessionCommandNonBlockingLineConsumer(Session.Command sessionCommand) {
+            stdOutLineConsumer = new ChannelInputStreamNonBlockingLineConsumer(
+                    (ChannelInputStream) sessionCommand.getInputStream());
+            stdErrLineConsumer = new ChannelInputStreamNonBlockingLineConsumer(
+                    (ChannelInputStream) sessionCommand.getErrorStream());
+        }
+
+        public List<String> readAvailableLines() {
+            List<String> stdOutAvailableLines = stdOutLineConsumer.readAvailableLines();
+            List<String> stdErrAvailableLines = stdErrLineConsumer.readAvailableLines();
+            if (stdOutAvailableLines.isEmpty()) {
+                return stdErrAvailableLines;
+            } else {
+                stdOutAvailableLines.addAll(stdErrAvailableLines);
+                return stdOutAvailableLines;
+            }
+        }
+
+    }
+
+    /**
+     * Reads lines in a non blocking manner for the given {@link ChannelInputStream}.
+     */
+    private static class ChannelInputStreamNonBlockingLineConsumer {
+
+        private final ChannelInputStream inputStream;
+        private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        private List<String> lines = Lists.newArrayList();
+
+        public ChannelInputStreamNonBlockingLineConsumer(ChannelInputStream inputStream) {
+            this.inputStream = inputStream;
+        }
+
+        public List<String> readAvailableLines() {
+            int availableBytes = inputStream.available();
+            if (availableBytes > 0) {
+                for (int i = 0; i < availableBytes; i++) {
+                    int readByte;
+                    try {
+                        readByte = inputStream.read();
+                    } catch (IOException e) {
+                        throw Throwables.propagate(e);
+                    }
+                    // should work for windows/linux/new macs
+                    if (readByte == Ascii.LF) {
+                        lines.add(new String(outputStream.toByteArray(), Charsets.UTF_8));
+                        outputStream.reset();
+                    } else {
+                        outputStream.write(readByte);
+                    }
+                }
+            }
+            if (lines.isEmpty()) {
+                return Collections.emptyList();
+            } else {
+                List<String> result = lines;
+                lines = Lists.newArrayList();
+                return result;
+            }
+        }
+
     }
 
     /**
@@ -332,7 +472,7 @@ public class MockSSHAgent {
         }
 
         @Override
-        public InputStream getInputStream() throws IOException {
+        public InputStream getInputStream() {
             return new ByteArrayInputStream(bytes);
         }
     }
@@ -344,7 +484,7 @@ public class MockSSHAgent {
         private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         @Override
-        public OutputStream getOutputStream() throws IOException {
+        public OutputStream getOutputStream() {
             return outputStream;
         }
 
