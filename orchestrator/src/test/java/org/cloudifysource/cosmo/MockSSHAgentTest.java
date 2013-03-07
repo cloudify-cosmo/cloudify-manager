@@ -41,6 +41,7 @@ import java.net.URI;
  * @author Dan Kilman
  * @since 0.1
  */
+@Test(groups = "ssh")
 public class MockSSHAgentTest {
 
     // TODO SSH verify service instance state content
@@ -70,7 +71,7 @@ public class MockSSHAgentTest {
         agent.close();
     }
 
-    @Test(enabled = false)
+    @Test
     public void testPing() throws IOException {
         PingAgentTask task = new PingAgentTask();
         task.setProducerTimestamp(100L);
@@ -79,7 +80,7 @@ public class MockSSHAgentTest {
         // TODO SSH test failed ping
     }
 
-    @Test(enabled = false)
+    @Test
     public void testServiceInstanceLifecycle() throws IOException {
         // write
         ServiceInstanceTask task = new ServiceInstanceTask();
@@ -92,7 +93,7 @@ public class MockSSHAgentTest {
         agent.serviceInstanceLifecycle(task, holder);
     }
 
-    @Test(enabled = false, dependsOnMethods = "testServiceInstanceLifecycle")
+    @Test(dependsOnMethods = "testServiceInstanceLifecycle")
     public void testRecoverServiceInstanceState() throws IOException {
         // setup
         testServiceInstanceLifecycle();
@@ -109,7 +110,7 @@ public class MockSSHAgentTest {
         Assert.assertNotNull(readServiceInstanceState);
     }
 
-    @Test(enabled = false, dependsOnMethods = "testServiceInstanceLifecycle")
+    @Test(dependsOnMethods = "testServiceInstanceLifecycle")
     public void testInjectPropertyToInstance() throws IOException {
         // setup
         testServiceInstanceLifecycle();
@@ -130,7 +131,7 @@ public class MockSSHAgentTest {
         Assert.assertEquals(readServiceInstanceState.getProperty("name"), "king");
     }
 
-    @Test(enabled = false, dependsOnMethods = "testInjectPropertyToInstance")
+    @Test(dependsOnMethods = "testInjectPropertyToInstance")
     public void testRemoveServiceInstance() throws IOException {
         RemoveServiceInstanceFromAgentTask task = new RemoveServiceInstanceFromAgentTask();
         task.setInstanceId(instanceId);
