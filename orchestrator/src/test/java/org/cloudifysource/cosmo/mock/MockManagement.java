@@ -54,7 +54,12 @@ public class MockManagement {
 
     private static final int STATE_SERVER_PORT = 8080;
     private static final String STATE_SERVER_URI = "http://localhost:" + STATE_SERVER_PORT + "/";
-    private static final boolean USE_MOCK = true;
+
+    // set to true to use the {@link KVStoreTest}.
+    private boolean useRestKvStore = false;
+
+    // set to true to use the {@link org.cloudifysource.cosmo.mock.ssh.MockSSHAgent}.
+    private boolean useSshMock = false;
     private final URI orchestratorId;
     private final URI agentProbeId;
     private final URI machineProvisionerId;
@@ -82,7 +87,7 @@ public class MockManagement {
         orchestratorId = createUri("services/orchestrator/");
         machineProvisionerId = createUri("services/provisioner/");
 
-        if (USE_MOCK) {
+        if (!useRestKvStore) {
             stateReader = new MockState();
             stateWriter = (StateWriter) stateReader;
             ((MockState) stateReader).setLoggingEnabled(false);
@@ -137,7 +142,7 @@ public class MockManagement {
     }
 
     private void clearState() {
-        if (USE_MOCK) {
+        if (!useRestKvStore) {
             ((MockState) stateReader).clear();
         } else {
             stateServer.reload();
@@ -196,7 +201,7 @@ public class MockManagement {
     }
 
     private MockMachineProvisioner newMachineProvisionerContainer(TaskConsumerRegistrar taskConsumerRegistrar) {
-        return new MockMachineProvisioner(taskConsumerRegistrar);
+        return new MockMachineProvisioner(taskConsumerRegistrar, useSshMock);
     }
 
     public TaskReader getPersistentTaskReader() {
@@ -208,7 +213,7 @@ public class MockManagement {
     }
 
     public void close() {
-        if (!USE_MOCK) {
+        if (useRestKvStore) {
             stateServer.stop();
         }
     }
@@ -280,6 +285,10 @@ public class MockManagement {
 
     public URI getAgentId(AliasId alias) {
         return ServiceUtils.newAgentId(getStateServerUri(), alias);
+    }
+
+    public void setUseSshMock(boolean useSshMock) {
+        this.useSshMock = useSshMock;
     }
 }
 

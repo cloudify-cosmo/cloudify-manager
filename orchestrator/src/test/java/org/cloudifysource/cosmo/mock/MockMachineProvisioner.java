@@ -33,13 +33,13 @@ import java.net.URI;
  */
 public class MockMachineProvisioner {
 
-    private static final boolean USE_SSH = false;
-
     private final TaskConsumerState state = new TaskConsumerState();
     private final TaskConsumerRegistrar taskConsumerRegistrar;
+    private final boolean useSshMock;
 
-    public MockMachineProvisioner(TaskConsumerRegistrar taskConsumerRegistrar) {
+    public MockMachineProvisioner(TaskConsumerRegistrar taskConsumerRegistrar, boolean useSshMock) {
         this.taskConsumerRegistrar = taskConsumerRegistrar;
+        this.useSshMock = useSshMock;
     }
 
     @ImpersonatingTaskConsumer
@@ -78,7 +78,7 @@ public class MockMachineProvisioner {
         if (!machineState.isMachineReachableLifecycle()) {
             machineState.incrementNumberOfAgentStarts();
             Object newAgent;
-            if (USE_SSH) {
+            if (useSshMock) {
                 newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
             } else {
                 newAgent = MockAgent.newAgentOnCleanMachine(machineState);

@@ -18,9 +18,11 @@ package org.cloudifysource.cosmo;
 
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
+
 
 import static org.cloudifysource.cosmo.AssertServiceState.assertOneTomcatInstance;
 import static org.cloudifysource.cosmo.AssertServiceState.assertTomcatUninstalledGracefully;
@@ -35,9 +37,29 @@ import static org.cloudifysource.cosmo.AssertServiceState.assertTomcatUninstalle
  */
 public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement> {
 
+    private String ip;
+    private String username;
+    private String keyfile;
+    private boolean ssh;
+
+    @BeforeClass
+    @Parameters({"ip", "username", "keyfile", "ssh" })
+    public void beforeClass(
+            @Optional("myhostname") String ip,
+            @Optional("myusername") String username,
+            @Optional("mykeyfile.pem") String keyfile,
+            @Optional("false") boolean ssh) {
+
+        this.ip = ip;
+        this.username = username;
+        this.keyfile = keyfile;
+        this.ssh = ssh;
+        super.getManagement().setUseSshMock(ssh);
+    }
+
+
     @Override
     protected MockManagement createMockManagement() {
-        //TODO: Enable ssh
         return new MockManagement();
     }
 
@@ -45,12 +67,8 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
     }
 
-    @Parameters({"ip", "username", "keyfile" })
     @Test(enabled = true)
-    public void dataCenterMachineTest(
-            @Optional("myhostname") String ip,
-            @Optional("myusername") String username,
-            @Optional("mykeyfile.pem") String keyfile) {
+    public void dataCenterMachineTest() {
 
         cos("web", "plan_set", "tomcat",
                 "--instances", "1",
