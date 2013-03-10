@@ -94,14 +94,11 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
-    @Parameters({"ip", "username", "keyfile", "targetfilename", "sourcefilename" })
+    @Parameters({ "targetfilename", "sourcefilename" })
     @Test(enabled = true, groups = "ssh")
     public void copyFileToDataCenterMachineTest(
-            @Optional("myhostname") String ip,
-            @Optional("myusername") String username,
-            @Optional("mykeyfile.pem") String keyfile,
-            @Optional("targetfilename") String targetFileName,
-            @Optional("sourcefilename") String sourceFileName) {
+        @Optional("targetfilename") String targetFileName,
+        @Optional("sourcefilename") String sourceFileName) {
 
         cos("web/1", "machine_set",
                 "--ip", ip,
