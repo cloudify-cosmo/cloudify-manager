@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 public class ServiceDeploymentPlan {
 
     private ServiceConfig serviceConfig;
+    private boolean autoUninstall;
 
     public ServiceDeploymentPlan() {
 
@@ -38,6 +39,14 @@ public class ServiceDeploymentPlan {
 
     public void setServiceConfig(ServiceConfig service) {
         this.serviceConfig = service;
+    }
+
+    public void setAutoUninstall(boolean autoUninstall) {
+        this.autoUninstall = autoUninstall;
+    }
+
+    public boolean isAutoUninstall() {
+        return autoUninstall;
     }
 }
 

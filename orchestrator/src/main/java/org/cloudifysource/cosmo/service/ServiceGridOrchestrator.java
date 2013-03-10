@@ -42,6 +42,7 @@ import org.cloudifysource.cosmo.service.lifecycle.LifecycleStateMachineText;
 import org.cloudifysource.cosmo.service.state.AgentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceConfig;
 import org.cloudifysource.cosmo.service.state.ServiceDeploymentPlan;
+import org.cloudifysource.cosmo.service.state.ServiceGridDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceGridOrchestratorState;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceDeploymentPlan;
 import org.cloudifysource.cosmo.service.state.ServiceInstanceState;
@@ -113,8 +114,24 @@ public class ServiceGridOrchestrator {
                 orchestrateAgent(newTasks, agentId, agentsHealthStatus.get(agentId));
             }
 
-            for (final ServiceInstanceDeploymentPlan instancePlan : state.getDeploymentPlan().getInstances()) {
+            final ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
+            for (final ServiceInstanceDeploymentPlan instancePlan : deploymentPlan.getInstances()) {
                 orchestrateServiceInstance(newTasks, instancePlan);
+            }
+
+            for (final URI serviceId : ImmutableSet.copyOf(getPlannedServiceIds())) {
+
+                Optional<ServiceDeploymentPlan> servicePlan = deploymentPlan.getServicePlan(serviceId);
+                final boolean serviceAutoUninstall =
+                        servicePlan.isPresent() &&
+                        servicePlan.get().isAutoUninstall();
+
+                if (serviceAutoUninstall &&
+                    Iterables.isEmpty(deploymentPlan.getInstanceIdsByServiceId(serviceId)) &&
+                    Iterables.isEmpty(getServiceState(serviceId).getInstanceIds())) {
+
+                    uninstallService(serviceId);
+                }
             }
 
             for (final URI serviceId : Iterables.concat(getPlannedServiceIds(), state.getServiceIdsToUninstall())) {
@@ -152,14 +169,14 @@ public class ServiceGridOrchestrator {
             serviceConfig.setDisplayName(name.getFullName());
             final ServiceDeploymentPlan servicePlan = new ServiceDeploymentPlan();
             servicePlan.setServiceConfig(serviceConfig);
+            servicePlan.setAutoUninstall(false);
             state.getDeploymentPlan().setService(servicePlan);
 
         } else if (command.equals("plan_unset")) {
             final AliasGroupId aliasGroup = new AliasGroupId(task.getArguments().get(0));
             final LifecycleName name = extractLifecycleNameFromCommandLineTask(task, 2, 3);
             final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), aliasGroup, name);
-            state.getDeploymentPlan().removeService(serviceId);
-            state.addServiceIdToUninstall(serviceId);
+            uninstallService(serviceId);
 
         } else if (command.equals("lifecycle_set")) {
             final AliasId alias = new AliasId(task.getArguments().get(0));
@@ -238,6 +255,18 @@ public class ServiceGridOrchestrator {
             stateMachine.setLifecycleName(name);
             stateMachine.getProperties().putAll(task.getOptions());
             stateMachine.setCurrentState(desiredState);
+
+            if (!state.getDeploymentPlan().getServiceByInstanceId(instanceId).isPresent()) {
+                // create default ServiceConfig
+                final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), alias.getAliasGroup(), name);
+                final ServiceConfig serviceConfig = new ServiceConfig();
+                serviceConfig.setServiceId(serviceId);
+                serviceConfig.setDisplayName(name.getName());
+                final ServiceDeploymentPlan servicePlan = new ServiceDeploymentPlan();
+                servicePlan.setAutoUninstall(true);
+                servicePlan.setServiceConfig(serviceConfig);
+                state.getDeploymentPlan().setService(servicePlan);
+            }
         }
     }
 
@@ -457,6 +486,7 @@ public class ServiceGridOrchestrator {
     }
 
     private void orchestrateService(List<Task> newTasks, URI serviceId) {
+
         final ServiceState serviceState = getServiceState(serviceId);
         final Predicate<URI> findInstanceNotStartedPredicate = new Predicate<URI>() {
 
@@ -467,7 +497,6 @@ public class ServiceGridOrchestrator {
         };
 
         Set<URI> serviceIdsToUninstall = state.getServiceIdsToUninstall();
-
         if (serviceIdsToUninstall.contains(serviceId) &&
             serviceState.isProgress(
                 ServiceState.Progress.INSTALLING_SERVICE,
@@ -509,6 +538,11 @@ public class ServiceGridOrchestrator {
         }
     }
 
+    private void uninstallService(URI serviceId) {
+        state.getDeploymentPlan().removeService(serviceId);
+        state.addServiceIdToUninstall(serviceId);
+    }
+
     private void orchestrateServiceInstance(List<Task> newTasks, ServiceInstanceDeploymentPlan instancePlan) {
         final URI instanceId = instancePlan.getInstanceId();
         final URI agentId = state.getDeploymentPlan().getAgentIdByInstanceId(instanceId);
@@ -536,6 +570,7 @@ public class ServiceGridOrchestrator {
                 if (agentState.isMachineReachableLifecycle()) {
                     removeFromAgentTask.setConsumerId(agentId);
                 } else {
+                    removeFromAgentTask.setConsumerId(orchestratorId);
                     removeFromAgentTask.setConsumerId(orchestratorId);
                 }
                 removeFromAgentTask.setStateId(agentId);

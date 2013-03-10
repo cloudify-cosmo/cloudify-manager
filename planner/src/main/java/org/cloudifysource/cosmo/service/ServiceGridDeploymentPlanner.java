@@ -160,8 +160,6 @@ public class ServiceGridDeploymentPlanner {
 
             final String serviceName = serviceConfig.getDisplayName();
             final AliasGroupId aliasGroup = serviceConfig.getAliasGroup();
-            final Task planUnsetTask = cli(aliasGroup, "plan_unset", serviceName);
-            addNewTask(newTasks, planUnsetTask);
             final String prefix = serviceName + "_";
 
             for (int i = 1; i <= serviceConfig.getMaxNumberOfInstances(); i++) {
@@ -172,6 +170,9 @@ public class ServiceGridDeploymentPlanner {
                 final Task cloudmachineTerminatedTask = cli(alias, "cloudmachine_terminated");
                 addNewTask(newTasks, cloudmachineTerminatedTask);
             }
+
+            final Task planUnsetTask = cli(aliasGroup, "plan_unset", serviceName);
+            addNewTask(newTasks, planUnsetTask);
         }
     }
 

@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo;
 
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.service.id.AliasGroupId;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
@@ -37,9 +38,29 @@ import static org.cloudifysource.cosmo.AssertServiceState.assertTomcatUninstalle
  */
 public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement> {
 
+    private String ip;
+    private String username;
+    private String keyfile;
+    private boolean ssh;
+
+    @BeforeClass
+    @Parameters({"ip", "username", "keyfile", "ssh" })
+    public void beforeClass(
+            @Optional("myhostname") String ip,
+            @Optional("myusername") String username,
+            @Optional("mykeyfile.pem") String keyfile,
+            @Optional("false") boolean ssh) {
+
+        this.ip = ip;
+        this.username = username;
+        this.keyfile = keyfile;
+        this.ssh = ssh;
+        super.getManagement().setUseSshMock(ssh);
+    }
+
+
     @Override
     protected MockManagement createMockManagement() {
-        //TODO: Enable ssh
         return new MockManagement();
     }
 
@@ -47,17 +68,8 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute(getManagement().getOrchestratorId(), getManagement().getAgentProbeId());
     }
 
-    @Parameters({"ip", "username", "keyfile" })
     @Test(enabled = true)
-    public void dataCenterMachineTest(
-            @Optional("myhostname") String ip,
-            @Optional("myusername") String username,
-            @Optional("mykeyfile.pem") String keyfile) {
-
-        cos("web", "plan_set", "tomcat",
-                "--instances", "1",
-                "--min_instances", "1",
-                "--max_instances", "2");
+    public void dataCenterMachineTest() {
 
         cos("web/1", "machine_set",
                 "--ip", ip,
@@ -75,7 +87,6 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute();
         assertOneTomcatInstance(new AliasGroupId("web"), getManagement());
 
-        cos("web", "plan_unset", "tomcat");
         cos("web/1", "tomcat_cleaned");
         cos("web/1", "machine_unset");
 
@@ -91,11 +102,6 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
             @Optional("mykeyfile.pem") String keyfile,
             @Optional("targetfilename") String targetFileName,
             @Optional("sourcefilename") String sourceFileName) {
-
-        cos("web", "plan_set", "file", targetFileName,
-                "--instances", "1",
-                "--min_instances", "1",
-                "--max_instances", "1");
 
         cos("web/1", "machine_set",
                 "--ip", ip,
@@ -113,7 +119,6 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute();
         assertOneFileInstance(new AliasGroupId("web"), getManagement(), targetFileName);
 
-        cos("web", "plan_unset", "file", targetFileName);
         cos("web/1", "file_cleaned", targetFileName);
         cos("web/1", "machine_unset");
 
