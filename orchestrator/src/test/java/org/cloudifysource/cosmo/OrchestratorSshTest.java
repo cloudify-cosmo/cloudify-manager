@@ -70,11 +70,6 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
     @Test(enabled = true)
     public void dataCenterMachineTest() {
 
-        cos("web", "plan_set", "tomcat",
-                "--instances", "1",
-                "--min_instances", "1",
-                "--max_instances", "2");
-
         cos("web/1", "machine_set",
                 "--ip", ip,
                 "--username", username,
@@ -91,7 +86,6 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute();
         assertOneTomcatInstance(new AliasGroupId("web"), getManagement());
 
-        cos("web", "plan_unset", "tomcat");
         cos("web/1", "tomcat_cleaned");
         cos("web/1", "machine_unset");
 
