@@ -27,6 +27,8 @@ import org.testng.annotations.Test;
  */
 public class LifecycleNameTest {
 
+    // TODO SSH add secondary name tests?
+
     @Test
     public void testValidName() {
         LifecycleName name = new LifecycleName();

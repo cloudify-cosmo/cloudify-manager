@@ -38,7 +38,7 @@ import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 
-import java.io.IOException;
+import java.io.File;
 import java.net.URI;
 
 /**
@@ -91,7 +91,17 @@ public class MockSSHAgent {
         instanceState.setReachable(true);
         impersonatedStateModifier.put(instanceState);
         writeServiceInstanceState(instanceState, task.getStateId());
-        executeLifecycleStateScript(instanceState.getStateMachine());
+        handleServiceInstanceLifecycle(instanceState);
+    }
+
+    private void handleServiceInstanceLifecycle(ServiceInstanceState instanceState) {
+        LifecycleStateMachine lifecycleStateMachine = instanceState.getStateMachine();
+        LifecycleName lifecycleName = lifecycleStateMachine.getLifecycleName();
+        if ("file".equals(lifecycleName.getName())) {
+            putFileInRemoteMachine(lifecycleStateMachine, lifecycleName);
+        } else {
+            executeLifecycleStateScript(lifecycleStateMachine);
+        }
     }
 
     @TaskConsumer
@@ -103,8 +113,7 @@ public class MockSSHAgent {
 
     @ImpersonatingTaskConsumer
     public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
-                                            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier)
-        throws IOException {
+                                            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         URI instanceId = task.getStateId();
         URI agentId = task.getConsumerId();
         URI serviceId = task.getServiceId();
@@ -181,6 +190,25 @@ public class MockSSHAgent {
         sshClient.putString(remotePath.pathToParent, remotePath.name, StreamUtils.toJson(MAPPER, instanceState));
     }
 
+    private void putFileInRemoteMachine(LifecycleStateMachine lifecycleStateMachine, LifecycleName lifecycleName) {
+        String targetFileName = lifecycleName.getSecondaryName();
+        Preconditions.checkNotNull(targetFileName, "lifecycleName.secodaryName");
+        // TODO SSH parent extraction logic
+        int lastIndexOfPathSeparator = targetFileName.lastIndexOf('/');
+        Preconditions.checkArgument(lastIndexOfPathSeparator >= 0, "cannot extract parent path");
+        String parentPath = targetFileName.substring(0, lastIndexOfPathSeparator);
+        String fileName = targetFileName.substring(lastIndexOfPathSeparator + 1);
+
+        // TODO SSH refactor/extract constants
+        if (lifecycleStateMachine.getCurrentState().getName().endsWith("_exists")) {
+            String sourceFileName = lifecycleStateMachine.getProperties().get("source");
+            Preconditions.checkNotNull(sourceFileName, "lifecycleStateMachine.property(source)");
+            sshClient.putFile(parentPath, fileName, new File(sourceFileName));
+        } else if (lifecycleStateMachine.getCurrentState().getName().endsWith("_cleaned")) {
+            sshClient.removeFileIfExists(targetFileName);
+        }
+    }
+
     // TODO SSH handle execution errors
     private void executeLifecycleStateScript(LifecycleStateMachine lifecycleStateMachine) {
         LifecycleState lifecycleState = lifecycleStateMachine.getCurrentState();
@@ -230,7 +258,6 @@ public class MockSSHAgent {
         return sshClient;
     }
 
-
     /**
      * Holds parent path and file name for instance states.
      */
@@ -242,5 +269,4 @@ public class MockSSHAgent {
             return pathToParent + name;
         }
     }
-
 }

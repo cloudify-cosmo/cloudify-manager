@@ -36,7 +36,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testSingularStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s1"));
@@ -51,7 +51,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testBiSingularStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1 name_s2"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s1"));
@@ -62,7 +62,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testOneWayStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1>name_s2"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
@@ -77,7 +77,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testTwoWayStateMachineTwoDashes() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1<-->name_s2"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
@@ -87,7 +87,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testTwoWayStateMachineSingleDash() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1<->name_s2"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
@@ -97,7 +97,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testTwoWayStateMachineNoDash() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1<>name_s2"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
@@ -107,9 +107,9 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testTwoWayStateMachineComma() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1->name_s2,name_s2->name_s1"));
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
         assertTwoWayStateMachine(sm);
@@ -118,7 +118,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testTwoWayStateMachineWhitespace() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1->name_s2 name_s2->name_s1"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
@@ -135,7 +135,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testLongStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s3"));
@@ -155,7 +155,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testTwoWayLongStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1<->name_s2<->name_s3"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s3"));
@@ -175,7 +175,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testSplitStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3 name_s1->name_s4"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s3"));
@@ -200,7 +200,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testJoinStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3,name_s4->name_s3"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s3"));
@@ -224,7 +224,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testRingStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1->name_s2->name_s3->name_s1"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s3"));
@@ -244,7 +244,7 @@ public class LifeCycleStateMachineTest {
     @Test()
     public void testEndlessRingStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1<->name_s2,name_s3->name_s4"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s3"));
@@ -254,7 +254,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testBootstrapperStateMachine() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s3->name_s1<->name_s2"));
         sm.setBeginState(state("name_s1"));
         sm.setEndState(state("name_s2"));
@@ -266,7 +266,7 @@ public class LifeCycleStateMachineTest {
     @Test
     public void testIsState() {
         sm = new LifecycleStateMachine();
-        sm.setName(new LifecycleName("name"));
+        sm.setLifecycleName(new LifecycleName("name"));
         sm.setText(new LifecycleStateMachineText("name_s1 name_s2"));
         sm.setBeginState(state("name_1"));
         sm.setEndState(state("name_2"));

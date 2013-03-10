@@ -41,7 +41,7 @@ public class AgentState extends TaskConsumerState {
 
     public AgentState() {
         stateMachine = new LifecycleStateMachine();
-        stateMachine.setName(new LifecycleName("cloudmachine"));
+        stateMachine.setLifecycleName(new LifecycleName("cloudmachine"));
         stateMachine.setText(new LifecycleStateMachineText(
                 MACHINE_UNREACHABLE + "->" + MACHINE_TERMINATED + "<->" + MACHINE_STARTED + "->" +
                 MACHINE_REACHABLE + "->" + MACHINE_TERMINATED));

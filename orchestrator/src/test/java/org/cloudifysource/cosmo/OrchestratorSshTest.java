@@ -22,6 +22,8 @@ import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import static org.cloudifysource.cosmo.AssertServiceState.assertFileRemovedGracefully;
+import static org.cloudifysource.cosmo.AssertServiceState.assertOneFileInstance;
 import static org.cloudifysource.cosmo.AssertServiceState.assertOneTomcatInstance;
 import static org.cloudifysource.cosmo.AssertServiceState.assertTomcatUninstalledGracefully;
 
@@ -80,4 +82,44 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         execute();
         assertTomcatUninstalledGracefully(getManagement(), 1);
     }
+
+    @Parameters({"ip", "username", "keyfile", "targetfilename", "sourcefilename" })
+    @Test(enabled = true, groups = "ssh")
+    public void copyFileToDataCenterMachineTest(
+            @Optional("myhostname") String ip,
+            @Optional("myusername") String username,
+            @Optional("mykeyfile.pem") String keyfile,
+            @Optional("targetfilename") String targetFileName,
+            @Optional("sourcefilename") String sourceFileName) {
+
+        cos("web", "plan_set", "file", targetFileName,
+                "--instances", "1",
+                "--min_instances", "1",
+                "--max_instances", "1");
+
+        cos("web/1", "machine_set",
+                "--ip", ip,
+                "--username", username,
+                "--keyfile", keyfile);
+
+        cos("web/1", "lifecycle_set", "file",
+                "file_cleaned<-->file_exists,file_exists<-->file_cleaned",
+                targetFileName,
+                "--begin", "file_cleaned",
+                "--end", "file_exists");
+
+        cos("web/1", "file_exists", targetFileName, "--source", sourceFileName);
+
+        execute();
+        assertOneFileInstance(new AliasGroupId("web"), getManagement(), targetFileName);
+
+        cos("web", "plan_unset", "file", targetFileName);
+        cos("web/1", "file_cleaned", targetFileName);
+        cos("web/1", "machine_unset");
+
+        execute();
+        assertFileRemovedGracefully(getManagement(), targetFileName, 1);
+    }
+
+
 }

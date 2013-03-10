@@ -125,38 +125,51 @@ public class ServiceGridOrchestrator {
         return newTasks;
     }
 
+    private LifecycleName extractLifecycleNameFromCommandLineTask(UpdateDeploymentCommandlineTask task,
+                                                                  int nameIndex, int secondaryNameIndex) {
+        String name = task.getArguments().get(nameIndex);
+        String secondaryName = "";
+        if (task.getArguments().size() > secondaryNameIndex) {
+            secondaryName = task.getArguments().get(secondaryNameIndex);
+        }
+
+        return new LifecycleName(name, secondaryName);
+    }
+
     @TaskConsumer
     public void updateDeployment(UpdateDeploymentCommandlineTask task) {
         final String command = task.getArguments().get(1);
         if (command.equals("plan_set")) {
-            final LifecycleName name = new LifecycleName(task.getArguments().get(2));
+
             final AliasGroupId aliasGroup = new AliasGroupId(task.getArguments().get(0));
+            final LifecycleName name = extractLifecycleNameFromCommandLineTask(task, 2, 3);
             final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), aliasGroup, name);
             final ServiceConfig serviceConfig = new ServiceConfig();
             serviceConfig.setPlannedNumberOfInstances(Integer.valueOf(task.getOptions().get("instances")));
             serviceConfig.setMaxNumberOfInstances(Integer.valueOf(task.getOptions().get("max_instances")));
             serviceConfig.setMinNumberOfInstances(Integer.valueOf(task.getOptions().get("min_instances")));
             serviceConfig.setServiceId(serviceId);
-            serviceConfig.setDisplayName(name.getName());
+            serviceConfig.setDisplayName(name.getFullName());
             final ServiceDeploymentPlan servicePlan = new ServiceDeploymentPlan();
             servicePlan.setServiceConfig(serviceConfig);
             state.getDeploymentPlan().setService(servicePlan);
 
         } else if (command.equals("plan_unset")) {
             final AliasGroupId aliasGroup = new AliasGroupId(task.getArguments().get(0));
-            final LifecycleName name = new LifecycleName(task.getArguments().get(2));
+            final LifecycleName name = extractLifecycleNameFromCommandLineTask(task, 2, 3);
             final URI serviceId = ServiceUtils.newServiceId(state.getServerId(), aliasGroup, name);
             state.getDeploymentPlan().removeService(serviceId);
             state.addServiceIdToUninstall(serviceId);
 
         } else if (command.equals("lifecycle_set")) {
             final AliasId alias = new AliasId(task.getArguments().get(0));
-            final LifecycleName name = new LifecycleName(task.getArguments().get(2));
+            // TODO SSH: do something about indexes here its 2,4 and above 2,3
+            final LifecycleName name = extractLifecycleNameFromCommandLineTask(task, 2, 4);
             final LifecycleStateMachineText text = new LifecycleStateMachineText(task.getArguments().get(3));
             final LifecycleState begin = new LifecycleState(task.getOptions().get("begin"));
             final LifecycleState end = new LifecycleState(task.getOptions().get("end"));
             LifecycleStateMachine stateMachine = new LifecycleStateMachine();
-            stateMachine.setName(name);
+            stateMachine.setLifecycleName(name);
             stateMachine.setText(text);
             stateMachine.setBeginState(begin);
             stateMachine.setEndState(end);
@@ -215,10 +228,14 @@ public class ServiceGridOrchestrator {
             final AliasId alias = new AliasId(task.getArguments().get(0));
             final LifecycleState desiredState = new LifecycleState(command);
             final LifecycleName name = LifecycleName.fromLifecycleState(desiredState);
+            if (task.getArguments().size() >= 3) {
+                name.setSecondaryName(task.getArguments().get(2));
+            }
             final URI instanceId = ServiceUtils.newInstanceId(state.getServerId(), alias, name);
             final LifecycleStateMachine stateMachine =
                     state.getDeploymentPlan().getInstancePlan(instanceId).get()
                          .getStateMachine();
+            stateMachine.setLifecycleName(name);
             stateMachine.getProperties().putAll(task.getOptions());
             stateMachine.setCurrentState(desiredState);
         }
