@@ -26,7 +26,9 @@ import com.google.common.collect.Lists;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.connection.channel.ChannelInputStream;
 import net.schmizz.sshj.connection.channel.direct.Session;
+import net.schmizz.sshj.sftp.Response;
 import net.schmizz.sshj.sftp.SFTPClient;
+import net.schmizz.sshj.sftp.SFTPException;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.xfer.FileSystemFile;
 import net.schmizz.sshj.xfer.InMemoryDestFile;
@@ -72,18 +74,20 @@ public class AgentSSHClient {
         }
     }
 
-    public void putFile(String parentRemotePath, String name, File sourcePath) {
-        put(parentRemotePath, name, new FileSystemFile(sourcePath));
+    public void putFile(String parentRemotePath, String name, File sourcePath, boolean mkdirs) {
+        put(parentRemotePath, name, new FileSystemFile(sourcePath), mkdirs);
     }
 
-    public void putString(String parentRemotePath, String name, String content) {
-        put(parentRemotePath, name, new StringSourceFile(name, content));
+    public void putString(String parentRemotePath, String name, String content, boolean mkdirs) {
+        put(parentRemotePath, name, new StringSourceFile(name, content), mkdirs);
     }
 
     // TODO SSH refactor: parent extraction logic to one place
-    private void put(String parentRemotePath, String name, LocalSourceFile localSourceFile) {
+    private void put(String parentRemotePath, String name, LocalSourceFile localSourceFile, boolean mkdirs) {
         try {
-            sftpClient.mkdirs(parentRemotePath);
+            if (mkdirs) {
+                sftpClient.mkdirs(parentRemotePath);
+            }
             if (!parentRemotePath.endsWith("/")) {
                 parentRemotePath += "/";
             }
@@ -103,12 +107,17 @@ public class AgentSSHClient {
         return Optional.of(destFile.getContent());
     }
 
-    // TODO SSH handle file not found vs other io exceptions
     public void removeFileIfExists(String remotePath) {
         try {
             sftpClient.rm(remotePath);
+        } catch (SFTPException e) {
+            if (e.getStatusCode() == Response.StatusCode.NO_SUCH_FILE) {
+                LOG.debug("Did not remove file, file does not exist: " + remotePath, e);
+            } else {
+                throw Throwables.propagate(e);
+            }
         } catch (IOException e) {
-            LOG.debug("Failed removing file", e);
+            throw Throwables.propagate(e);
         }
     }
 

@@ -253,7 +253,7 @@ public class MockSSHAgentTest {
         } catch (IOException e) {
             Assert.fail("Failed reading script source", e);
         }
-        sshClient.putString(scriptParentPath, scriptName, content);
+        sshClient.putString(scriptParentPath, scriptName, content, true);
     }
 
     private ServiceInstanceStateHolder callInjectPropertyToInstance() throws IOException {
