@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumer;
@@ -41,6 +42,7 @@ import org.cloudifysource.cosmo.streams.StreamUtils;
 
 import java.io.File;
 import java.net.URI;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -52,9 +54,9 @@ import java.util.Set;
  */
 public class MockSSHAgent {
 
-    private static final int PORT = 22;
-    private static final String SERVICES_ROOT = "/export/users/dank/agent/services/";
-    public static final String SCRIPTS_ROOT = "/export/users/dank/agent/scripts";
+    private final String agentHome;
+    private final String servicesRoot;
+    private final String scriptsRoot;
 
     private static final Logger LOG = LoggerFactory.getLogger(MockSSHAgent.class);
 
@@ -81,9 +83,24 @@ public class MockSSHAgent {
         return newAgent;
     }
 
+    // TODO SSH refactor/extract constants
     private MockSSHAgent(AgentState state) {
         this.state = state;
-        this.sshClient = new AgentSSHClient(state.getHost(), PORT, state.getUserName(), state.getKeyFile());
+        String agentHome = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("agenthome"));
+        if (!agentHome.endsWith("/")) {
+            agentHome += "/";
+        }
+        this.agentHome = agentHome;
+        this.servicesRoot = agentHome + "services/";
+        this.scriptsRoot = agentHome + "scripts";
+        String host = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("ip"));
+        String userName = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("username"));
+        String keyFile = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("keyfile"));
+        String port = state.getStateMachine().getProperties().get("port");
+        if (port == null) {
+            port = "22";
+        }
+        this.sshClient = new AgentSSHClient(host, Integer.parseInt(port), userName, keyFile);
     }
 
     @ImpersonatingTaskConsumer
@@ -223,9 +240,13 @@ public class MockSSHAgent {
         LifecycleState lifecycleState = lifecycleStateMachine.getCurrentState();
         LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
         String scriptName = lifecycleState.getName() + ".sh";
-        String workingDirectory = Joiner.on('/').join(SCRIPTS_ROOT, lifecycleName.getName());
+        String workingDirectory = Joiner.on('/').join(scriptsRoot, lifecycleName.getName());
         String scriptPath = Joiner.on('/').join(workingDirectory, scriptName);
-        sshClient.executeScript(workingDirectory, scriptPath, lifecycleStateMachine.getProperties());
+        Map<String, String> environmentVariables = Maps.newHashMap();
+        environmentVariables.putAll(lifecycleStateMachine.getProperties());
+        // TODO SSH refactor/extract constants
+        environmentVariables.put("COSMO_HOME", agentHome);
+        sshClient.executeScript(workingDirectory, scriptPath, environmentVariables);
     }
 
     private void deleteServiceInstanceState(URI instanceId) {
@@ -236,7 +257,7 @@ public class MockSSHAgent {
     private InstanceStateRemotePath createRemotePath(URI instanceId) {
         Preconditions.checkNotNull(instanceId, "instanceId");
         InstanceStateRemotePath remotePath = new InstanceStateRemotePath();
-        remotePath.pathToParent = SERVICES_ROOT;
+        remotePath.pathToParent = servicesRoot;
         String path = instanceId.getPath();
         if (path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
@@ -260,11 +281,15 @@ public class MockSSHAgent {
     }
 
     private void clearPersistedServiceInstanceData() {
-        sshClient.removeDirIfExists(SERVICES_ROOT);
+        sshClient.removeDirIfExists(servicesRoot);
     }
 
     public AgentSSHClient getSSHClient() {
         return sshClient;
+    }
+
+    public String getScriptsRoot() {
+        return scriptsRoot;
     }
 
     /**

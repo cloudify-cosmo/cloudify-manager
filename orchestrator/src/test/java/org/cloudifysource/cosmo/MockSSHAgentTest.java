@@ -61,16 +61,21 @@ public class MockSSHAgentTest {
     private MockSSHAgent agent;
     private AgentState state;
 
-    @Parameters({"ip", "username", "keyfile" })
+    @Parameters({ "agenthome", "ip", "port", "username", "keyfile" })
     @BeforeMethod
     public void before(
+            @org.testng.annotations.Optional("myagenthome") String agenthome,
             @org.testng.annotations.Optional("myhostname") String ip,
+            @org.testng.annotations.Optional("22") String port,
             @org.testng.annotations.Optional("myusername") String username,
             @org.testng.annotations.Optional("mykeyfile.pem") String keyfile) {
         state = new AgentState();
-        state.setUserName(username);
-        state.setHost(ip);
-        state.setKeyFile(keyfile);
+        // TODO SSH extract constants
+        state.getStateMachine().getProperties().put("agenthome", agenthome);
+        state.getStateMachine().getProperties().put("username", username);
+        state.getStateMachine().getProperties().put("ip", ip);
+        state.getStateMachine().getProperties().put("port", port);
+        state.getStateMachine().getProperties().put("keyfile", keyfile);
         agent = MockSSHAgent.newAgentOnCleanMachine(state);
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
     }
@@ -175,7 +180,7 @@ public class MockSSHAgentTest {
         lifecycleStateMachine.setLifecycleName(lifecycleName);
         lifecycleStateMachine.getProperties().put("name", fileName);
         lifecycleStateMachine.getProperties().put("content", fileContent);
-        String parentPathToGeneratedFile =  Joiner.on('/').join(MockSSHAgent.SCRIPTS_ROOT, lifecycleName.getName());
+        String parentPathToGeneratedFile =  Joiner.on('/').join(agent.getScriptsRoot(), lifecycleName.getName());
         String pathToGeneratedFile = Joiner.on('/').join(parentPathToGeneratedFile, fileName);
 
         // copy resource script into scripts folder on remote machine
@@ -211,7 +216,7 @@ public class MockSSHAgentTest {
         LifecycleStateMachine lifecycleStateMachine = new LifecycleStateMachine();
         LifecycleState lifecycleState = new LifecycleState("file_exists");
         String source = tempFile.getAbsolutePath();
-        String target = Joiner.on('/').join(MockSSHAgent.SCRIPTS_ROOT, "file", tempFile.getName());
+        String target = Joiner.on('/').join(agent.getScriptsRoot(), "file", tempFile.getName());
         LifecycleName lifecycleName = new LifecycleName("file", target);
         lifecycleStateMachine.setLifecycleName(lifecycleName);
         lifecycleStateMachine.getProperties().put("source", source);
@@ -243,7 +248,7 @@ public class MockSSHAgentTest {
     private void uploadResourceBasedScript(AgentSSHClient sshClient, LifecycleState lifecycleState) {
         String scriptName = lifecycleState.getName() + ".sh";
         LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
-        String scriptParentPath = Joiner.on('/').join(MockSSHAgent.SCRIPTS_ROOT, lifecycleName.getName());
+        String scriptParentPath = Joiner.on('/').join(agent.getScriptsRoot(), lifecycleName.getName());
         String resourcePath = Joiner.on('/').join(MockSSHAgent.class.getPackage().getName().replace('.', '/'),
                 scriptName);
         URL scriptResource = Resources.getResource(resourcePath);

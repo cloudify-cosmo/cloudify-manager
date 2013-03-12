@@ -55,9 +55,6 @@ public class AgentState extends TaskConsumerState {
     private int numberOfAgentStarts;
     private int numberOfMachineStarts;
     private long lastPingSourceTimestamp;
-    private String host;
-    private String keyFile;
-    private String userName;
 
     public void setServiceInstanceIds(List<URI> serviceInstanceIds) {
         this.serviceInstanceIds = serviceInstanceIds;
@@ -161,30 +158,6 @@ public class AgentState extends TaskConsumerState {
     public void addServiceInstance(URI instanceId) {
         Preconditions.checkArgument(!serviceInstanceIds.contains(instanceId));
         serviceInstanceIds.add(instanceId);
-    }
-
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setKeyFile(String keyFile) {
-        this.keyFile = keyFile;
-    }
-
-    public String getKeyFile() {
-        return keyFile;
     }
 
 }

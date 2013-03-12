@@ -38,23 +38,27 @@ import static org.cloudifysource.cosmo.AssertServiceState.assertTomcatUninstalle
  */
 public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement> {
 
+    private String agenthome;
     private String ip;
+    private String port;
     private String username;
     private String keyfile;
-    private boolean ssh;
 
     @BeforeClass
-    @Parameters({"ip", "username", "keyfile", "ssh" })
+    @Parameters({ "agenthome", "ip", "port", "username", "keyfile", "ssh" })
     public void beforeClass(
+            @Optional("myagenthome") String agenthome,
             @Optional("myhostname") String ip,
+            @Optional("22") String port,
             @Optional("myusername") String username,
             @Optional("mykeyfile.pem") String keyfile,
             @Optional("false") boolean ssh) {
 
+        this.agenthome = agenthome;
         this.ip = ip;
+        this.port = port;
         this.username = username;
         this.keyfile = keyfile;
-        this.ssh = ssh;
         super.getManagement().setUseSshMock(ssh);
     }
 
@@ -72,7 +76,9 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
     public void dataCenterMachineTest() {
 
         cos("web/1", "machine_set",
+                "--agenthome", agenthome,
                 "--ip", ip,
+                "--port", port,
                 "--username", username,
                 "--keyfile", keyfile);
 
@@ -101,7 +107,9 @@ public class OrchestratorSshTest extends AbstractServiceGridTest<MockManagement>
         @Optional("sourcefilename") String sourceFileName) {
 
         cos("web/1", "machine_set",
+                "--agenthome", agenthome,
                 "--ip", ip,
+                "--port", port,
                 "--username", username,
                 "--keyfile", keyfile);
 

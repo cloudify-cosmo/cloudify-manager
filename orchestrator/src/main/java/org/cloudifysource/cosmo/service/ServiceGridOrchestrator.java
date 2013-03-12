@@ -229,9 +229,7 @@ public class ServiceGridOrchestrator {
                 state.getDeploymentPlan().addAgent(newAgentPlan);
                 agentPlan = Optional.fromNullable(newAgentPlan);
             }
-            agentPlan.get().setHost(task.getOptions().get("ip"));
-            agentPlan.get().setKeyFile(task.getOptions().get("keyfile"));
-            agentPlan.get().setUserName(task.getOptions().get("username"));
+            agentPlan.get().getProperties().putAll(task.getOptions());
 
         } else if (command.equals("machine_unset")) {
             AliasId alias = new AliasId(task.getArguments().get(0));
@@ -283,9 +281,7 @@ public class ServiceGridOrchestrator {
         AgentState agentState = new AgentState();
         agentState.setNumberOfMachineStarts(numberOfMachineRestarts);
         agentState.setTasksHistory(ServiceUtils.toTasksHistoryId(task.getStateId()));
-        agentState.setHost(agentPlan.get().getHost());
-        agentState.setUserName(agentPlan.get().getUserName());
-        agentState.setKeyFile(agentPlan.get().getKeyFile());
+        agentState.getStateMachine().getProperties().putAll(agentPlan.get().getProperties());
         impersonatedStateModifier.put(agentState);
     }
 
