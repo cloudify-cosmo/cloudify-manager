@@ -29,7 +29,6 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.TaskProducer;
 import org.cloudifysource.cosmo.agent.health.AgentHealthProbe;
-import org.cloudifysource.cosmo.agent.health.AgentPingHealth;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
