@@ -124,6 +124,7 @@ public class MockAgent {
     @TaskConsumer(noHistory = true)
     public void ping(PingAgentTask task) {
         state.setLastPingSourceTimestamp(task.getProducerTimestamp());
+        state.getStateMachine().setCurrentState(state.getMachineReachableLifecycle());
     }
 
     @TaskConsumerStateHolder

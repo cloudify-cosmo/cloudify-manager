@@ -181,6 +181,7 @@ public class MockSSHAgent {
             int exitCode = sshClient.executeSingleCommand("echo ping");
             if (exitCode == 0) {
                 state.setLastPingSourceTimestamp(task.getProducerTimestamp());
+                state.getStateMachine().setCurrentState(state.getMachineReachableLifecycle());
             }
         } catch (Exception e) {
             LOG.debug("Ping failed", e);

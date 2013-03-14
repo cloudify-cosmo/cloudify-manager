@@ -49,10 +49,8 @@ public class MockMachineProvisioner {
         final AgentState agentState = impersonatedStateModifier.get();
         final LifecycleState lifecycleState = task.getLifecycleState();
         final URI agentId = task.getStateId();
-        if (lifecycleState.equals(agentState.getMachineReachableLifecycle())) {
-            machineReachable(agentState, agentId);
-        } else if (lifecycleState.equals(agentState.getMachineStartedLifecycle())) {
-            machineStarted(agentState);
+        if (lifecycleState.equals(agentState.getMachineStartedLifecycle())) {
+            machineStarted(agentState, agentId);
         } else if (lifecycleState.equals(agentState.getMachineTerminatedLifecycle())) {
             machineTerminated(agentState, agentId);
         }
@@ -67,24 +65,23 @@ public class MockMachineProvisioner {
         }
     }
 
-    private void machineStarted(AgentState machineState) {
+    private void machineStarted(AgentState machineState, URI agentId) {
         if (!machineState.isMachineStartedLifecycle()) {
             machineState.incrementNumberOfMachineStarts();
             machineState.resetNumberOfAgentStarts();
+            startAgent(machineState, agentId);
         }
     }
 
-    private void machineReachable(AgentState machineState, URI agentId) {
-        if (!machineState.isMachineReachableLifecycle()) {
-            machineState.incrementNumberOfAgentStarts();
-            Object newAgent;
-            if (useSshMock) {
-                newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
-            } else {
-                newAgent = MockAgent.newAgentOnCleanMachine(machineState);
-            }
-            taskConsumerRegistrar.registerTaskConsumer(newAgent, agentId);
+    private void startAgent(AgentState machineState, URI agentId) {
+        machineState.incrementNumberOfAgentStarts();
+        Object newAgent;
+        if (useSshMock) {
+            newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
+        } else {
+            newAgent = MockAgent.newAgentOnCleanMachine(machineState);
         }
+        taskConsumerRegistrar.registerTaskConsumer(newAgent, agentId);
     }
 
     @TaskConsumerStateHolder

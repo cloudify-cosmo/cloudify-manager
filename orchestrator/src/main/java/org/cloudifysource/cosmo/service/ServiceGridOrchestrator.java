@@ -391,28 +391,24 @@ public class ServiceGridOrchestrator {
             final AgentState agentState = getAgentState(agentId);
             //Checks on null agent state
             if (agentState == null) {
-                if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
+                if (isNullAgentStateUnreachable(pingHealth)) {
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
                     planAgentTask.setStateId(agentId);
                     planAgentTask.setConsumerId(orchestratorId);
                     addNewTaskIfNotExists(newTasks, planAgentTask);
                     syncComplete = planServiceInstances(newTasks, false, agentId);
                 } else {
-                    Preconditions.checkState(pingHealth == AgentPingHealth.UNDETERMINED);
                     syncComplete = false;
                 }
             } else {
-                if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
+                if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
+                    syncComplete = planServiceInstances(newTasks, syncComplete, agentId);
+                } else {
                     if (!agentState.isMachineReachableLifecycle()) {
                         syncComplete = false;
                     } else {
                         syncComplete = recoverInstancesState(newTasks, syncComplete, agentId);
                     }
-                } else if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-                    syncComplete = planServiceInstances(newTasks, syncComplete, agentId);
-                } else {
-                    Preconditions.checkState(pingHealth == AgentPingHealth.UNDETERMINED);
-                    syncComplete = false;
                 }
             }
         }
@@ -420,6 +416,13 @@ public class ServiceGridOrchestrator {
         syncComplete = planServices(newTasks, syncComplete);
 
         return syncComplete;
+    }
+
+    private boolean isNullAgentStateUnreachable(AgentPingHealth pingHealth) {
+        if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE)
+            return true;
+
+        return false;
     }
 
     private boolean planServices(List<Task> newTasks, boolean syncComplete) {
@@ -641,7 +644,10 @@ public class ServiceGridOrchestrator {
         } else if (!agentState.getStateMachine().isLifecycleState(desiredLifecycle)) {
             final LifecycleState nextAgentLifecycle =
                     agentState.getStateMachine().getNextLifecycleState(desiredLifecycle);
-            Preconditions.checkNotNull(nextAgentLifecycle);
+
+            //TODO replace this with new concept in state machine of semi line
+            if (nextAgentLifecycle.equals(agentState.getMachineReachableLifecycle()))
+                return;
             if (isAllInstancesRemovedOrUnreachable(agentState) &&
                 !agentState.getStateMachine().isLifecycleState(nextAgentLifecycle)) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();

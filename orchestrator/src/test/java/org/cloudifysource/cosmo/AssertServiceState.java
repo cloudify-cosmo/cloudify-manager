@@ -76,7 +76,7 @@ public class AssertServiceState {
 
         Assert.assertEquals(
                 Iterables.size(getReachableAgentIds(management, aliasGroup)), 1, "Expected 1 agent id, " +
-                "instead found: " + getAgentIds(management, aliasGroup));
+                "instead found: " + getReachableAgentIds(management, aliasGroup));
 
         Assert.assertEquals(Iterables.size(getReachableInstanceIds(management, aliasGroup, lifecycleName)), 1);
         assertServiceInstalledWithOneInstance(
@@ -148,9 +148,6 @@ public class AssertServiceState {
         TaskConsumerHistory agentTasksHistory = getTasksHistory(management, agentId);
         Assert.assertEquals(
                 countMachineLifecycleTasks(agentTasksHistory, agentState.getMachineStartedLifecycle()),
-                numberOfMachineStarts);
-        Assert.assertEquals(
-                countMachineLifecycleTasks(agentTasksHistory, agentState.getMachineReachableLifecycle()),
                 numberOfMachineStarts);
 
         final ServiceGridDeploymentPlan deploymentPlan = management.getDeploymentPlan();
