@@ -86,7 +86,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
             final long sincePingMilliseconds = nowTimestamp - taskTimestamp;
             if (sincePingMilliseconds <= AGENT_UNREACHABLE_MILLISECONDS) {
                 // ping was consumed just recently
-                health = AgentPingHealth.AGENT_REACHABLE;
+                return  AgentPingHealth.AGENT_REACHABLE;
             }
         }
 
@@ -141,11 +141,12 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     }
 
     @Override
-    public Map<URI, AgentPingHealth> getAgentsHealthStatus() {
-        final Map<URI, AgentPingHealth> result = Maps.newHashMap();
+    public Map<URI, Boolean> getAgentsHealthStatus() {
+        final Map<URI, Boolean> result = Maps.newHashMap();
         final long nowTimestamp = timeProvider.currentTimeMillis();
         for (URI monitoredAgentsId : monitoredAgentsIds) {
-            result.put(monitoredAgentsId, getAgentHealthStatus(monitoredAgentsId, nowTimestamp));
+            AgentPingHealth agentHealthStatus = getAgentHealthStatus(monitoredAgentsId, nowTimestamp);
+            result.put(monitoredAgentsId, agentHealthStatus == AgentPingHealth.AGENT_UNREACHABLE);
         }
         return result;
     }

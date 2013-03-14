@@ -31,9 +31,9 @@ public interface AgentHealthProbe {
      * returns the monitored agents health status, this method should not block on IO and return immediately,
      * usually with a cached result which is refreshed frequently. It is up to the implementation to decide when this
      * result is updated.
-     * @return monitored agents health status
+     * @return monitored agents health status, true means the agent is considered unreachable
      */
-    Map<URI, AgentPingHealth> getAgentsHealthStatus();
+    Map<URI, Boolean> getAgentsHealthStatus();
 
     /**
      * Specify which agents needs to be monitored for health status

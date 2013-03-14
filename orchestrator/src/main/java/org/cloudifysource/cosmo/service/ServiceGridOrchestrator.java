@@ -103,7 +103,7 @@ public class ServiceGridOrchestrator {
         final List<Task> newTasks = Lists.newArrayList();
 
         agentHealthProbe.monitorAgents(getPlannedAgentIds());
-        final Map<URI, AgentPingHealth> agentsHealthStatus = agentHealthProbe.getAgentsHealthStatus();
+        final Map<URI, Boolean> agentsHealthStatus = agentHealthProbe.getAgentsHealthStatus();
 
         boolean ready = syncStateWithDeploymentPlan(newTasks, agentsHealthStatus);
 
@@ -381,17 +381,17 @@ public class ServiceGridOrchestrator {
 
     private boolean syncStateWithDeploymentPlan(
             final List<Task> newTasks,
-            final Map<URI, AgentPingHealth> agentsHealthStatus) {
+            final Map<URI, Boolean> agentsHealthStatus) {
 
         boolean syncComplete = true;
 
         for (final URI agentId : getPlannedAgentIds()) {
-            final AgentPingHealth pingHealth = agentsHealthStatus.get(agentId);
-            Preconditions.checkNotNull(pingHealth);
+            final boolean agentIsUnreachable = agentsHealthStatus.get(agentId);
+            Preconditions.checkNotNull(agentIsUnreachable);
             final AgentState agentState = getAgentState(agentId);
             //Checks on null agent state
             if (agentState == null) {
-                if (isNullAgentStateUnreachable(pingHealth)) {
+                if (agentIsUnreachable) {
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
                     planAgentTask.setStateId(agentId);
                     planAgentTask.setConsumerId(orchestratorId);
@@ -401,7 +401,7 @@ public class ServiceGridOrchestrator {
                     syncComplete = false;
                 }
             } else {
-                if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
+                if (agentIsUnreachable) {
                     syncComplete = planServiceInstances(newTasks, syncComplete, agentId);
                 } else {
                     if (!agentState.isMachineReachableLifecycle()) {
@@ -416,13 +416,6 @@ public class ServiceGridOrchestrator {
         syncComplete = planServices(newTasks, syncComplete);
 
         return syncComplete;
-    }
-
-    private boolean isNullAgentStateUnreachable(AgentPingHealth pingHealth) {
-        if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE)
-            return true;
-
-        return false;
     }
 
     private boolean planServices(List<Task> newTasks, boolean syncComplete) {
@@ -627,14 +620,14 @@ public class ServiceGridOrchestrator {
     }
 
 
-    private void orchestrateAgent(List<Task> newTasks, URI agentId, AgentPingHealth agentHealthStatus) {
+    private void orchestrateAgent(List<Task> newTasks, URI agentId, boolean agentUnreachable) {
 
         final AgentState agentState = getAgentState(agentId);
         final LifecycleState desiredLifecycle =
                 state.getDeploymentPlan().getAgentPlan(agentId).get().getLifecycleState();
 
         if (agentState.isMachineReachableLifecycle() &&
-            agentHealthStatus == AgentPingHealth.AGENT_UNREACHABLE) {
+            agentUnreachable) {
 
             final MachineLifecycleTask task = new MachineLifecycleTask();
             task.setLifecycleState(agentState.getMachineUnreachableLifecycle());
