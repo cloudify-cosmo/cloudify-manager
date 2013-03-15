@@ -247,6 +247,28 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
         assertTomcatUninstalledGracefully(getManagement(), 1);
     }
 
+    /**
+     * Tests zombie agent CLOUDIFY-1593
+     * Enable when implementation is complete
+     */
+    @Test(enabled = false)
+    public void detectZombieAgentTest() {
+        Assert.assertTrue(Iterables.isEmpty(getAgentIds(getManagement(), web)));
+        startZombieAgentAndThenHealthyAgent();
+        installService(web, tomcat, 1);
+        execute();
+        final int numberOfAgentStarts = 2;
+        final int numberOfMachineStarts = 2;
+        assertSingleServiceInstance(
+                getManagement(), web, tomcat,
+                numberOfAgentStarts, numberOfMachineStarts);
+
+        uninstallService(web, tomcat, 1);
+        execute();
+        assertTomcatUninstalledGracefully(getManagement(), 1);
+
+    }
+
     private Object getServiceInstanceProperty(final String propertyName, URI instanceId) {
         return getManagement().getServiceInstanceState(instanceId).getProperty(propertyName);
     }

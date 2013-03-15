@@ -37,6 +37,9 @@ public class MockMachineProvisioner {
     private final TaskConsumerRegistrar taskConsumerRegistrar;
     private final boolean useSshMock;
 
+    // used for testing, will silently fail to start an agent
+    private boolean nextAgentIsZombie;
+
     public MockMachineProvisioner(TaskConsumerRegistrar taskConsumerRegistrar, boolean useSshMock) {
         this.taskConsumerRegistrar = taskConsumerRegistrar;
         this.useSshMock = useSshMock;
@@ -76,12 +79,17 @@ public class MockMachineProvisioner {
     private void startAgent(AgentState machineState, URI agentId) {
         machineState.incrementNumberOfAgentStarts();
         Object newAgent;
-        if (useSshMock) {
+        if (nextAgentIsZombie) {
+            //clear flag, next time start agent.
+            nextAgentIsZombie = false;
+            newAgent = MockZombieAgent.newZombieAgent(machineState);
+        } else if (useSshMock) {
             newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
         } else {
             newAgent = MockAgent.newAgentOnCleanMachine(machineState);
         }
         taskConsumerRegistrar.registerTaskConsumer(newAgent, agentId);
+
     }
 
     @TaskConsumerStateHolder
@@ -89,4 +97,7 @@ public class MockMachineProvisioner {
         return state;
     }
 
+    public void startZombieAgentAndThenHealthyAgent() {
+        this.nextAgentIsZombie = true;
+    }
 }
