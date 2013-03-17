@@ -37,9 +37,9 @@ public class LifecycleStateMachineText {
     //look for a word, optional space, optional left arrow, optional dashes, right arrow,
     //and then another word with overlapping. Overlapping is required for parsing b in "a<-->b<-->c"
     //see: http://stackoverflow.com/questions/7760162/returning-overlapping-regular-expressions
-    static final Pattern RIGHT_ARROW_PATTERN = Pattern.compile("(\\w+)\\s*<?-*>\\s*(?=(\\w+))");
-    static final Pattern LEFT_ARROW_PATTERN = Pattern.compile("(\\w+)\\s*<-*>?\\s*(?=(\\w+))");
-    static final Pattern SINGULAR_PATTERN = Pattern.compile("(\\w+)");
+    static final Pattern RIGHT_ARROW_PATTERN = Pattern.compile("([\\w\\-]+\\w)\\s*<?-*>\\s*(?=([\\w\\-]+\\w))");
+    static final Pattern LEFT_ARROW_PATTERN = Pattern.compile("([\\w\\-]+\\w)\\s*<-*>?\\s*(?=([\\w\\-]+\\w))");
+    static final Pattern SINGULAR_PATTERN = Pattern.compile("([\\w\\-]+\\w)");
 
     private String stateMachine;
 

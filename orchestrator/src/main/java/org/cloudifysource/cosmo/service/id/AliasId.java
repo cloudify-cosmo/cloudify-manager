@@ -100,7 +100,7 @@ public class AliasId {
      * @return - The URI of the machine.
      */
     public URI newInstanceId(URI server, LifecycleName lifecycle) {
-        return URI.create(server + this.toString() + lifecycle.getName() + "/");
+        return URI.create(server + this.toString() + lifecycle.getFullName() + "/");
     }
 
     /**

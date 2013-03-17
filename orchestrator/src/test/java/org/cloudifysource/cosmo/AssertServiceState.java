@@ -119,7 +119,14 @@ public class AssertServiceState {
         final URI instanceId = Iterables.getOnlyElement(serviceState.getInstanceIds());
         final ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
         TaskConsumerHistory instanceTasksHistory = getTasksHistory(management, instanceId);
-        final LifecycleState startedState = new LifecycleState(lifecycleName.getName() + "_started");
+        String startedStateName;
+        if ("file".equals(lifecycleName.getName())) {
+            startedStateName = "exists";
+        } else {
+            startedStateName = "started";
+        }
+
+        final LifecycleState startedState = new LifecycleState(lifecycleName.getName() + "_" + startedStateName);
         Assert.assertEquals(
                 countServiceInstanceLifecycleTasks(
                         instanceTasksHistory,
@@ -308,22 +315,42 @@ public class AssertServiceState {
                 .build();
     }
 
+    public static void assertFileRemovedGracefully(final MockManagement management,
+                                                   String targetFileName, final int numberOfInstances) {
+        LifecycleState expectedState = new LifecycleState("file_cleaned");
+        assertFileRemoved(management, expectedState, numberOfInstances, targetFileName);
+    }
+
+    private static void assertFileRemoved(
+            final MockManagement management, final LifecycleState expectedState, final int numberOfInstances,
+            String targetFileName) {
+        assertServiceUninstalled(management, new LifecycleName("file", targetFileName), numberOfInstances,
+                expectedState);
+    }
 
     public static void assertTomcatUninstalledGracefully(MockManagement management, int numberOfInstances) {
-        boolean instanceUnreachable = false;
-        assertTomcatUninstalled(management, instanceUnreachable, numberOfInstances);
+        LifecycleState expectedState = new LifecycleState("tomcat_cleaned");
+        assertTomcatUninstalled(management, expectedState, numberOfInstances);
     }
 
     public static void assertTomcatUninstalledUnreachable(MockManagement management, int numberOfInstances) {
-        boolean instanceUnreachable = true;
-        assertTomcatUninstalled(management, instanceUnreachable, numberOfInstances);
+        LifecycleState expectedState = new LifecycleState("tomcat_started");
+        assertTomcatUninstalled(management, expectedState, numberOfInstances);
     }
 
     private static void assertTomcatUninstalled(
-            final MockManagement management, final boolean instanceUnreachable, final int numberOfInstances) {
+            final MockManagement management, final LifecycleState expectedState, final int numberOfInstances) {
+        assertServiceUninstalled(management, new LifecycleName("tomcat"), numberOfInstances, expectedState);
+    }
+
+    private static void assertServiceUninstalled(
+            final MockManagement management,
+            LifecycleName lifecycleName,
+            final int numberOfInstances,
+            LifecycleState expectedState) {
 
         final AliasGroupId aliasGroup = new AliasGroupId("web");
-        final URI serviceId = management.getServiceId(aliasGroup, new LifecycleName("tomcat"));
+        final URI serviceId = management.getServiceId(aliasGroup, lifecycleName);
         Assert.assertFalse(management.getDeploymentPlan().isServiceExists(serviceId));
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertNotNull(serviceState, "Cannot find service state of " + serviceId);
@@ -331,29 +358,28 @@ public class AssertServiceState {
         Assert.assertTrue(serviceState.isProgress(ServiceState.Progress.SERVICE_UNINSTALLED));
 
         final Iterable<URI> instanceIds =
-            getServiceInstanceIds(management, aliasGroup, new LifecycleName("tomcat"), numberOfInstances);
+                getServiceInstanceIds(management, aliasGroup, lifecycleName, numberOfInstances);
         for (URI instanceId: instanceIds) {
             ServiceInstanceState instanceState = management.getServiceInstanceState(instanceId);
             Assert.assertFalse(instanceState.isReachable());
-            if (instanceUnreachable) {
-                Assert.assertEquals(
-                        instanceState.getStateMachine().getCurrentState(),
-                        new LifecycleState("tomcat_started"), "Wrong state for " + instanceId);
-            } else {
-                Assert.assertEquals(
-                        instanceState.getStateMachine().getCurrentState(),
-                        new LifecycleState("tomcat_cleaned"));
-            }
+            Assert.assertEquals(
+                    instanceState.getStateMachine().getCurrentState(),
+                    expectedState);
             URI agentId = instanceState.getAgentId();
             AgentState agentState = management.getAgentState(agentId);
             Assert.assertEquals(
-                agentState.getStateMachine().getCurrentState(),
-                agentState.getMachineTerminatedLifecycle());
+                    agentState.getStateMachine().getCurrentState(),
+                    agentState.getMachineTerminatedLifecycle());
         }
     }
 
     public static void assertOneTomcatInstance(AliasGroupId aliasGroup, MockManagement management) {
         assertSingleServiceInstance(management, aliasGroup, new LifecycleName("tomcat"));
+    }
+
+    public static void assertOneFileInstance(AliasGroupId aliasGroup, MockManagement management,
+                                             String targetFileName) {
+        assertSingleServiceInstance(management, aliasGroup, new LifecycleName("file", targetFileName));
     }
 
     public static void assertTomcatScaledInFrom2To1(MockManagement management) {

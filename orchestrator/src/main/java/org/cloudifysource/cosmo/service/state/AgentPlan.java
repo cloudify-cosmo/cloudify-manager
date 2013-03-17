@@ -15,9 +15,11 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.state;
 
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleState;
 
 import java.net.URI;
+import java.util.Map;
 
 /**
  * The id and the desired state of a planned agent.
@@ -29,9 +31,7 @@ public class AgentPlan {
 
     private URI agentId;
     private LifecycleState lifecycleState;
-    private String host;
-    private String keyFile;
-    private String userName;
+    private Map<String, String> properties = Maps.newHashMap();
 
     public URI getAgentId() {
         return agentId;
@@ -49,27 +49,11 @@ public class AgentPlan {
         this.lifecycleState = lifecycleState;
     }
 
-    public void setHost(String host) {
-        this.host = host;
+    public Map<String, String> getProperties() {
+        return properties;
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public void setKeyFile(String keyFile) {
-        this.keyFile = keyFile;
-    }
-
-    public String getKeyFile() {
-        return keyFile;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getUserName() {
-        return userName;
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties;
     }
 }

@@ -26,15 +26,20 @@ import com.google.common.collect.Lists;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.connection.channel.ChannelInputStream;
 import net.schmizz.sshj.connection.channel.direct.Session;
+import net.schmizz.sshj.sftp.Response;
 import net.schmizz.sshj.sftp.SFTPClient;
+import net.schmizz.sshj.sftp.SFTPException;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
+import net.schmizz.sshj.xfer.FileSystemFile;
 import net.schmizz.sshj.xfer.InMemoryDestFile;
 import net.schmizz.sshj.xfer.InMemorySourceFile;
+import net.schmizz.sshj.xfer.LocalSourceFile;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -69,13 +74,24 @@ public class AgentSSHClient {
         }
     }
 
-    public void putString(String parentRemotePath, String name, String content) {
+    public void putFile(String parentRemotePath, String name, File sourcePath, boolean mkdirs) {
+        put(parentRemotePath, name, new FileSystemFile(sourcePath), mkdirs);
+    }
+
+    public void putString(String parentRemotePath, String name, String content, boolean mkdirs) {
+        put(parentRemotePath, name, new StringSourceFile(name, content), mkdirs);
+    }
+
+    // TODO SSH refactor: parent extraction logic to one place
+    private void put(String parentRemotePath, String name, LocalSourceFile localSourceFile, boolean mkdirs) {
         try {
-            sftpClient.mkdirs(parentRemotePath);
+            if (mkdirs) {
+                sftpClient.mkdirs(parentRemotePath);
+            }
             if (!parentRemotePath.endsWith("/")) {
                 parentRemotePath += "/";
             }
-            sftpClient.put(new StringSourceFile(name, content), parentRemotePath + name);
+            sftpClient.put(localSourceFile, parentRemotePath + name);
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
@@ -94,8 +110,14 @@ public class AgentSSHClient {
     public void removeFileIfExists(String remotePath) {
         try {
             sftpClient.rm(remotePath);
+        } catch (SFTPException e) {
+            if (e.getStatusCode() == Response.StatusCode.NO_SUCH_FILE) {
+                LOG.debug("Did not remove file, file does not exist: " + remotePath, e);
+            } else {
+                throw Throwables.propagate(e);
+            }
         } catch (IOException e) {
-            LOG.debug("Failed removing file", e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -113,9 +135,9 @@ public class AgentSSHClient {
         commands.add("cd " + workingDirectory);
         if (envVars != null) {
             for (Map.Entry<String, String> envVar : envVars.entrySet()) {
-                StringBuilder command = new StringBuilder();
-                command.append("export ").append(envVar.getKey()).append("=").append(envVar.getValue());
-                commands.add(command.toString());
+                StringBuilder export = new StringBuilder();
+                export.append("export ").append(envVar.getKey()).append("=").append(envVar.getValue());
+                commands.add(export.toString());
             }
         }
         commands.add("chmod +x " + scriptPath);
@@ -187,7 +209,6 @@ public class AgentSSHClient {
                 return stdOutAvailableLines;
             }
         }
-
     }
 
     /**
@@ -230,7 +251,6 @@ public class AgentSSHClient {
                 return result;
             }
         }
-
     }
 
     /**

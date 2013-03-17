@@ -62,12 +62,11 @@ public class LifecycleStateMachine {
         this.currentState = currentState;
     }
 
-    @JsonUnwrapped
     public LifecycleName getLifecycleName() {
         return name;
     }
 
-    public void setName(LifecycleName name) {
+    public void setLifecycleName(LifecycleName name) {
         this.name = name;
     }
 

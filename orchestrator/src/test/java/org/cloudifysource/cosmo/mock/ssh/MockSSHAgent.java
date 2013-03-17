@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumer;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
@@ -38,8 +40,10 @@ import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 import org.cloudifysource.cosmo.streams.StreamUtils;
 
-import java.io.IOException;
+import java.io.File;
 import java.net.URI;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A mock that executes tasks using ssh. This mock stores the service instance
@@ -50,11 +54,9 @@ import java.net.URI;
  */
 public class MockSSHAgent {
 
-    // TODO cache already created directory so we don't have to call mkdirs all the time
-
-    private static final int PORT = 22;
-    private static final String SERVICES_ROOT = "/export/users/dank/agent/services/";
-    public static final String SCRIPTS_ROOT = "/export/users/dank/agent/scripts";
+    private final String agentHome;
+    private final String servicesRoot;
+    private final String scriptsRoot;
 
     private static final Logger LOG = LoggerFactory.getLogger(MockSSHAgent.class);
 
@@ -62,6 +64,7 @@ public class MockSSHAgent {
 
     private final AgentSSHClient sshClient;
     private final AgentState state;
+    private final Set<String> createdServiceInstanceDirectories = Sets.newCopyOnWriteArraySet();
 
     public static MockSSHAgent newAgentOnCleanMachine(AgentState state) {
         MockSSHAgent agent = new MockSSHAgent(state);
@@ -75,12 +78,29 @@ public class MockSSHAgent {
         Preconditions.checkState(state.isMachineReachableLifecycle());
         state.incrementNumberOfAgentStarts();
         agent.close();
-        return new MockSSHAgent(state);
+        MockSSHAgent newAgent = new MockSSHAgent(state);
+        newAgent.createdServiceInstanceDirectories.addAll(agent.createdServiceInstanceDirectories);
+        return newAgent;
     }
 
+    // TODO SSH refactor/extract constants
     private MockSSHAgent(AgentState state) {
         this.state = state;
-        this.sshClient = new AgentSSHClient(state.getHost(), PORT, state.getUserName(), state.getKeyFile());
+        String agentHome = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("agenthome"));
+        if (!agentHome.endsWith("/")) {
+            agentHome += "/";
+        }
+        this.agentHome = agentHome;
+        this.servicesRoot = agentHome + "services/";
+        this.scriptsRoot = agentHome + "scripts";
+        String host = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("ip"));
+        String userName = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("username"));
+        String keyFile = Preconditions.checkNotNull(state.getStateMachine().getProperties().get("keyfile"));
+        String port = state.getStateMachine().getProperties().get("port");
+        if (port == null) {
+            port = "22";
+        }
+        this.sshClient = new AgentSSHClient(host, Integer.parseInt(port), userName, keyFile);
     }
 
     @ImpersonatingTaskConsumer
@@ -91,7 +111,17 @@ public class MockSSHAgent {
         instanceState.setReachable(true);
         impersonatedStateModifier.put(instanceState);
         writeServiceInstanceState(instanceState, task.getStateId());
-        executeLifecycleStateScript(instanceState.getStateMachine());
+        handleServiceInstanceLifecycle(instanceState);
+    }
+
+    private void handleServiceInstanceLifecycle(ServiceInstanceState instanceState) {
+        LifecycleStateMachine lifecycleStateMachine = instanceState.getStateMachine();
+        LifecycleName lifecycleName = lifecycleStateMachine.getLifecycleName();
+        if ("file".equals(lifecycleName.getName())) {
+            putFileInRemoteMachine(lifecycleStateMachine, lifecycleName);
+        } else {
+            executeLifecycleStateScript(lifecycleStateMachine);
+        }
     }
 
     @TaskConsumer
@@ -103,8 +133,7 @@ public class MockSSHAgent {
 
     @ImpersonatingTaskConsumer
     public void recoverServiceInstanceState(RecoverServiceInstanceStateTask task,
-                                            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier)
-        throws IOException {
+                                            TaskConsumerStateModifier<ServiceInstanceState> impersonatedStateModifier) {
         URI instanceId = task.getStateId();
         URI agentId = task.getConsumerId();
         URI serviceId = task.getServiceId();
@@ -178,7 +207,32 @@ public class MockSSHAgent {
 
     private void writeServiceInstanceState(ServiceInstanceState instanceState, URI instanceId) {
         InstanceStateRemotePath remotePath = createRemotePath(instanceId);
-        sshClient.putString(remotePath.pathToParent, remotePath.name, StreamUtils.toJson(MAPPER, instanceState));
+        boolean mkdirs = !createdServiceInstanceDirectories.contains(remotePath.pathToParent);
+        sshClient.putString(remotePath.pathToParent, remotePath.name, StreamUtils.toJson(MAPPER, instanceState),
+                mkdirs);
+        // only add to cache upon successful operation
+        if (mkdirs) {
+            createdServiceInstanceDirectories.add(remotePath.pathToParent);
+        }
+    }
+
+    private void putFileInRemoteMachine(LifecycleStateMachine lifecycleStateMachine, LifecycleName lifecycleName) {
+        String targetFileName = lifecycleName.getSecondaryName();
+        Preconditions.checkNotNull(targetFileName, "lifecycleName.secodaryName");
+        // TODO SSH parent extraction logic
+        int lastIndexOfPathSeparator = targetFileName.lastIndexOf('/');
+        Preconditions.checkArgument(lastIndexOfPathSeparator >= 0, "cannot extract parent path");
+        String parentPath = targetFileName.substring(0, lastIndexOfPathSeparator);
+        String fileName = targetFileName.substring(lastIndexOfPathSeparator + 1);
+
+        // TODO SSH refactor/extract constants
+        if (lifecycleStateMachine.getCurrentState().getName().endsWith("_exists")) {
+            String sourceFileName = lifecycleStateMachine.getProperties().get("source");
+            Preconditions.checkNotNull(sourceFileName, "lifecycleStateMachine.property(source)");
+            sshClient.putFile(parentPath, fileName, new File(sourceFileName), true);
+        } else if (lifecycleStateMachine.getCurrentState().getName().endsWith("_cleaned")) {
+            sshClient.removeFileIfExists(targetFileName);
+        }
     }
 
     // TODO SSH handle execution errors
@@ -186,9 +240,13 @@ public class MockSSHAgent {
         LifecycleState lifecycleState = lifecycleStateMachine.getCurrentState();
         LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
         String scriptName = lifecycleState.getName() + ".sh";
-        String workingDirectory = Joiner.on('/').join(SCRIPTS_ROOT, lifecycleName.getName());
+        String workingDirectory = Joiner.on('/').join(scriptsRoot, lifecycleName.getName());
         String scriptPath = Joiner.on('/').join(workingDirectory, scriptName);
-        sshClient.executeScript(workingDirectory, scriptPath, lifecycleStateMachine.getProperties());
+        Map<String, String> environmentVariables = Maps.newHashMap();
+        environmentVariables.putAll(lifecycleStateMachine.getProperties());
+        // TODO SSH refactor/extract constants
+        environmentVariables.put("COSMO_HOME", agentHome);
+        sshClient.executeScript(workingDirectory, scriptPath, environmentVariables);
     }
 
     private void deleteServiceInstanceState(URI instanceId) {
@@ -199,7 +257,7 @@ public class MockSSHAgent {
     private InstanceStateRemotePath createRemotePath(URI instanceId) {
         Preconditions.checkNotNull(instanceId, "instanceId");
         InstanceStateRemotePath remotePath = new InstanceStateRemotePath();
-        remotePath.pathToParent = SERVICES_ROOT;
+        remotePath.pathToParent = servicesRoot;
         String path = instanceId.getPath();
         if (path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
@@ -223,13 +281,16 @@ public class MockSSHAgent {
     }
 
     private void clearPersistedServiceInstanceData() {
-        sshClient.removeDirIfExists(SERVICES_ROOT);
+        sshClient.removeDirIfExists(servicesRoot);
     }
 
     public AgentSSHClient getSSHClient() {
         return sshClient;
     }
 
+    public String getScriptsRoot() {
+        return scriptsRoot;
+    }
 
     /**
      * Holds parent path and file name for instance states.
@@ -242,5 +303,4 @@ public class MockSSHAgent {
             return pathToParent + name;
         }
     }
-
 }

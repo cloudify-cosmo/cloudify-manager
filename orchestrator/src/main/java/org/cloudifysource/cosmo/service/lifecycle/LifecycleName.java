@@ -15,8 +15,10 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.service.lifecycle;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,9 +33,10 @@ import java.util.regex.Pattern;
  */
 public class LifecycleName {
 
-    static final Pattern LIFECYCLE_STATE_NAME_PATTERN = Pattern.compile("(\\w+)_(?=(\\w+))");
+    static final Pattern LIFECYCLE_STATE_NAME_PATTERN = Pattern.compile("([\\w\\-]+)_(?=(\\w+))");
 
     String name;
+    String secondaryName;
 
     /**
      * deserialization cotr.
@@ -46,13 +49,30 @@ public class LifecycleName {
         setName(name);
     }
 
+    public LifecycleName(String name, String secondaryName) {
+        setName(name);
+        setSecondaryName(secondaryName);
+    }
+
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
-        Preconditions.checkArgument(!name.contains("_"), "%s cannot contain underscore", name);
         this.name = name;
+    }
+
+    public String getSecondaryName() {
+        return secondaryName;
+    }
+
+    public void setSecondaryName(String secondaryName) {
+        this.secondaryName = secondaryName;
+    }
+
+    @JsonIgnore
+    public String getFullName() {
+        return getName() + (Strings.isNullOrEmpty(secondaryName) ? "" : "/" + getSecondaryName());
     }
 
     public void validateLifecycleStateName(LifecycleState state) {
@@ -80,20 +100,15 @@ public class LifecycleName {
 
         LifecycleName that = (LifecycleName) o;
 
-        return Objects.equal(name, that.name);
+        return Objects.equal(name, that.name) && Objects.equal(secondaryName, that.secondaryName);
 
     }
 
+    // TODO SSH should life cycle state be aware of the secondary name?
     public static LifecycleName fromLifecycleState(LifecycleState state) {
         final Matcher matcher = LIFECYCLE_STATE_NAME_PATTERN.matcher(state.getName());
-        LifecycleName lifecycleName = null;
-        while (matcher.find()) {
-            Preconditions.checkArgument(
-                    lifecycleName == null,
-                    "The underscore _ character should appear only once in %s",
-                    state.getName());
-            lifecycleName = new LifecycleName(matcher.group(1));
-        }
+        final LifecycleName lifecycleName = matcher.find() ? new LifecycleName(matcher.group(1)) : null;
+
         Preconditions.checkArgument(
                 lifecycleName != null,
                 "The underscore _ character should appear in %s", state.getName());
@@ -102,6 +117,8 @@ public class LifecycleName {
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (secondaryName != null ? secondaryName.hashCode() : 0);
+        return result;
     }
 }

@@ -79,6 +79,6 @@ public class AliasGroupId {
     }
 
     public URI newServiceId(URI server, LifecycleName lifecycle) {
-        return URI.create(server + aliasGroup + lifecycle.getName() + "/");
+        return URI.create(server + aliasGroup + lifecycle.getFullName() + "/");
     }
 }

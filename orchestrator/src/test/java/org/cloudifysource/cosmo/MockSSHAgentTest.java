@@ -19,6 +19,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
@@ -38,6 +39,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -59,16 +61,21 @@ public class MockSSHAgentTest {
     private MockSSHAgent agent;
     private AgentState state;
 
-    @Parameters({"ip", "username", "keyfile" })
+    @Parameters({ "agenthome", "ip", "port", "username", "keyfile" })
     @BeforeMethod
     public void before(
+            @org.testng.annotations.Optional("myagenthome") String agenthome,
             @org.testng.annotations.Optional("myhostname") String ip,
+            @org.testng.annotations.Optional("22") String port,
             @org.testng.annotations.Optional("myusername") String username,
             @org.testng.annotations.Optional("mykeyfile.pem") String keyfile) {
         state = new AgentState();
-        state.setUserName(username);
-        state.setHost(ip);
-        state.setKeyFile(keyfile);
+        // TODO SSH extract constants
+        state.getStateMachine().getProperties().put("agenthome", agenthome);
+        state.getStateMachine().getProperties().put("username", username);
+        state.getStateMachine().getProperties().put("ip", ip);
+        state.getStateMachine().getProperties().put("port", port);
+        state.getStateMachine().getProperties().put("keyfile", keyfile);
         agent = MockSSHAgent.newAgentOnCleanMachine(state);
         state.setServiceInstanceIds(Lists.newArrayList(instanceId));
     }
@@ -90,6 +97,8 @@ public class MockSSHAgentTest {
     @Test
     public void testServiceInstanceLifecycle() throws IOException {
         // Upload dummy script (not necessary, simply reduces errors in ssh output)
+        LifecycleStateMachine lifecycleStateMachine = new LifecycleStateMachine();
+        lifecycleStateMachine.setLifecycleName(new LifecycleName("dummy"));
         LifecycleState lifecycleState = new LifecycleState("dummy_start");
         uploadResourceBasedScript(agent.getSSHClient(), lifecycleState);
 
@@ -100,7 +109,8 @@ public class MockSSHAgentTest {
         ServiceInstanceState serviceInstanceState = new ServiceInstanceState();
         serviceInstanceState.setServiceId(serviceId);
         serviceInstanceState.setAgentId(agentId);
-        serviceInstanceState.setStateMachine(new LifecycleStateMachine());
+
+        serviceInstanceState.setStateMachine(lifecycleStateMachine);
         ServiceInstanceStateHolder holder = new ServiceInstanceStateHolder(serviceInstanceState);
         agent.serviceInstanceLifecycle(task, holder);
     }
@@ -158,7 +168,7 @@ public class MockSSHAgentTest {
     }
 
     @Test
-    public void testServiceInstanceLifecycleWithProperties() throws IOException {
+    public void testServiceInstanceLifecycleScriptExecution() throws IOException {
         AgentSSHClient sshClient = agent.getSSHClient();
 
         // setup test properties
@@ -167,9 +177,10 @@ public class MockSSHAgentTest {
         LifecycleStateMachine lifecycleStateMachine = new LifecycleStateMachine();
         LifecycleState lifecycleState = new LifecycleState("sshmockscript_start");
         LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
+        lifecycleStateMachine.setLifecycleName(lifecycleName);
         lifecycleStateMachine.getProperties().put("name", fileName);
         lifecycleStateMachine.getProperties().put("content", fileContent);
-        String parentPathToGeneratedFile =  Joiner.on('/').join(MockSSHAgent.SCRIPTS_ROOT, lifecycleName.getName());
+        String parentPathToGeneratedFile =  Joiner.on('/').join(agent.getScriptsRoot(), lifecycleName.getName());
         String pathToGeneratedFile = Joiner.on('/').join(parentPathToGeneratedFile, fileName);
 
         // copy resource script into scripts folder on remote machine
@@ -194,10 +205,50 @@ public class MockSSHAgentTest {
         Assert.assertEquals(optionalContent.get().trim(), fileContent, "Wrong file content");
     }
 
+    @Test
+    public void testServiceInstanceLifecycleFileCopy() throws IOException {
+        // create temp file with some content
+        File tempFile = File.createTempFile("testServiceInstanceLifecycleFileCopy", "");
+        String content = "this is the temp file content";
+        Files.write(content, tempFile, Charsets.UTF_8);
+
+        // set props
+        LifecycleStateMachine lifecycleStateMachine = new LifecycleStateMachine();
+        LifecycleState lifecycleState = new LifecycleState("file_exists");
+        String source = tempFile.getAbsolutePath();
+        String target = Joiner.on('/').join(agent.getScriptsRoot(), "file", tempFile.getName());
+        LifecycleName lifecycleName = new LifecycleName("file", target);
+        lifecycleStateMachine.setLifecycleName(lifecycleName);
+        lifecycleStateMachine.getProperties().put("source", source);
+
+        // set props for actual call
+        ServiceInstanceTask task = new ServiceInstanceTask();
+        task.setStateId(instanceId);
+        task.setLifecycleState(lifecycleState);
+        ServiceInstanceState serviceInstanceState = new ServiceInstanceState();
+        serviceInstanceState.setServiceId(serviceId);
+        serviceInstanceState.setAgentId(agentId);
+        serviceInstanceState.setStateMachine(lifecycleStateMachine);
+        ServiceInstanceStateHolder holder = new ServiceInstanceStateHolder(serviceInstanceState);
+        agent.serviceInstanceLifecycle(task, holder);
+
+        // verify file was written and content is correct
+        AgentSSHClient sshClient = agent.getSSHClient();
+        Optional<String> optionalTargetContent = sshClient.getString(target);
+        Assert.assertTrue(optionalTargetContent.isPresent(), "Missing file");
+        Assert.assertEquals(optionalTargetContent.get().trim(), content, "Wrong file content");
+
+        // test cleaned state
+        lifecycleState.setName("file_cleaned");
+        agent.serviceInstanceLifecycle(task, holder);
+        optionalTargetContent = sshClient.getString(target);
+        Assert.assertFalse(optionalTargetContent.isPresent(), "File should be removed");
+    }
+
     private void uploadResourceBasedScript(AgentSSHClient sshClient, LifecycleState lifecycleState) {
         String scriptName = lifecycleState.getName() + ".sh";
         LifecycleName lifecycleName = LifecycleName.fromLifecycleState(lifecycleState);
-        String scriptParentPath = Joiner.on('/').join(MockSSHAgent.SCRIPTS_ROOT, lifecycleName.getName());
+        String scriptParentPath = Joiner.on('/').join(agent.getScriptsRoot(), lifecycleName.getName());
         String resourcePath = Joiner.on('/').join(MockSSHAgent.class.getPackage().getName().replace('.', '/'),
                 scriptName);
         URL scriptResource = Resources.getResource(resourcePath);
@@ -207,7 +258,7 @@ public class MockSSHAgentTest {
         } catch (IOException e) {
             Assert.fail("Failed reading script source", e);
         }
-        sshClient.putString(scriptParentPath, scriptName, content);
+        sshClient.putString(scriptParentPath, scriptName, content, true);
     }
 
     private ServiceInstanceStateHolder callInjectPropertyToInstance() throws IOException {
