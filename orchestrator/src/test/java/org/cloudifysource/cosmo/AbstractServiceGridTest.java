@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.mock.MockAgent;
+import org.cloudifysource.cosmo.mock.MockMachineProvisioner;
 import org.cloudifysource.cosmo.mock.MockManagement;
 import org.cloudifysource.cosmo.mock.ssh.MockSSHAgent;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
@@ -192,5 +193,10 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
     protected void cos(AliasId aliasId, String... args) {
         submitOrchestratorTask(cli(aliasId, args));
+    }
+
+
+    public void startZombieAgentAndThenHealthyAgent() {
+        getManagement().startZombieAgentAndThenHealthyAgent();
     }
 }

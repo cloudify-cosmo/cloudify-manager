@@ -641,7 +641,7 @@ public class ServiceGridOrchestrator {
         final LifecycleState desiredLifecycle =
                 state.getDeploymentPlan().getAgentPlan(agentId).get().getLifecycleState();
 
-        if (agentState.isMachineReachableLifecycle() &&
+        if ((agentState.isMachineReachableLifecycle() || agentState.isMachineStartedLifecycle()) &&
             isPreviouslyReachableAgentIsNowUnreachable(agentId)) {
 
             final MachineLifecycleTask task = new MachineLifecycleTask();
