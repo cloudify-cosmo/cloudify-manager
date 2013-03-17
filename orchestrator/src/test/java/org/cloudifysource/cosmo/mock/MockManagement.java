@@ -182,8 +182,8 @@ public class MockManagement {
     }
 
     private TaskBasedAgentHealthProbe newAgentProbe(CurrentTimeProvider timeProvider) {
-        return new TaskBasedAgentHealthProbe(timeProvider, taskBroker,
-                stateReader, agentProbeId);
+        return new TaskBasedAgentHealthProbe(timeProvider,
+                stateReader);
     }
 
     private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider,

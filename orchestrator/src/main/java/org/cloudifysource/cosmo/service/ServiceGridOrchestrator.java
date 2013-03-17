@@ -29,6 +29,7 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.TaskProducer;
 import org.cloudifysource.cosmo.agent.health.AgentHealthProbe;
+import org.cloudifysource.cosmo.agent.health.TaskBasedAgentHealthProbe;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
@@ -62,7 +63,6 @@ import org.cloudifysource.cosmo.state.StateReader;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -102,15 +102,14 @@ public class ServiceGridOrchestrator {
         final List<Task> newTasks = Lists.newArrayList();
 
         agentHealthProbe.monitorAgents(getPlannedAgentIds());
-        final Map<URI, Boolean> agentsHealthStatus = agentHealthProbe.getAgentsHealthStatus();
 
-        boolean ready = syncStateWithDeploymentPlan(newTasks, agentsHealthStatus);
+        boolean ready = syncStateWithDeploymentPlan(newTasks);
 
         if (ready) {
             //start orchestrating according to current state
 
             for (final URI agentId : getPlannedAgentIds()) {
-                orchestrateAgent(newTasks, agentId, agentsHealthStatus.get(agentId));
+                orchestrateAgent(newTasks, agentId);
             }
 
             final ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
@@ -379,18 +378,15 @@ public class ServiceGridOrchestrator {
     }
 
     private boolean syncStateWithDeploymentPlan(
-            final List<Task> newTasks,
-            final Map<URI, Boolean> agentsHealthStatus) {
+            final List<Task> newTasks) {
 
         boolean syncComplete = true;
 
         for (final URI agentId : getPlannedAgentIds()) {
-            final boolean agentIsUnreachable = agentsHealthStatus.get(agentId);
-            Preconditions.checkNotNull(agentIsUnreachable);
             final AgentState agentState = getAgentState(agentId);
             //Checks on null agent state
             if (agentState == null) {
-                if (agentIsUnreachable) {
+                if (isUndiscoveredAgentUnreachable(agentId)) {
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
                     planAgentTask.setStateId(agentId);
                     planAgentTask.setConsumerId(orchestratorId);
@@ -400,7 +396,7 @@ public class ServiceGridOrchestrator {
                     syncComplete = false;
                 }
             } else {
-                if (agentIsUnreachable) {
+                if (isDiscoveredAgentUnreachable(agentId)) {
                     syncComplete = planServiceInstances(newTasks, syncComplete, agentId);
                 } else {
                     if (!agentState.isMachineReachableLifecycle()) {
@@ -415,6 +411,26 @@ public class ServiceGridOrchestrator {
         syncComplete = planServices(newTasks, syncComplete);
 
         return syncComplete;
+    }
+
+    private boolean isDiscoveredAgentUnreachable(URI agentId) {
+        AgentState agentState = getAgentState(agentId);
+        if (agentState.isMachineReachableLifecycle())
+            return false;
+
+        return true;
+    }
+
+    private boolean isUndiscoveredAgentUnreachable(URI agentId) {
+        Optional<Long> agentUnreachablePeriod = agentHealthProbe.getAgentUnreachablePeriod(agentId);
+        if (!agentUnreachablePeriod.isPresent())
+            return false;
+
+        return agentUnreachablePeriod.get() >= TaskBasedAgentHealthProbe.AGENT_UNREACHABLE_MILLISECONDS;
+    }
+
+    private boolean isPreviouslyReachableAgentIsNowUnreachable(URI agentId) {
+        return agentHealthProbe.isAgentUnreachable(agentId);
     }
 
     private boolean planServices(List<Task> newTasks, boolean syncComplete) {
@@ -619,14 +635,14 @@ public class ServiceGridOrchestrator {
     }
 
 
-    private void orchestrateAgent(List<Task> newTasks, URI agentId, boolean agentUnreachable) {
+    private void orchestrateAgent(List<Task> newTasks, URI agentId) {
 
         final AgentState agentState = getAgentState(agentId);
         final LifecycleState desiredLifecycle =
                 state.getDeploymentPlan().getAgentPlan(agentId).get().getLifecycleState();
 
         if (agentState.isMachineReachableLifecycle() &&
-            agentUnreachable) {
+            isPreviouslyReachableAgentIsNowUnreachable(agentId)) {
 
             final MachineLifecycleTask task = new MachineLifecycleTask();
             task.setLifecycleState(agentState.getMachineUnreachableLifecycle());

@@ -89,8 +89,11 @@ public class MockSSHAgentTest {
     public void testPing() throws IOException {
         PingAgentTask task = new PingAgentTask();
         task.setProducerTimestamp(100L);
+        Object challenge = new Object();
+        task.setChallenge(challenge);
         agent.ping(task);
         Assert.assertEquals(task.getProducerTimestamp(), (Long) state.getLastPingSourceTimestamp());
+        Assert.assertEquals(challenge, state.getLastPingChallenge());
         // TODO SSH test failed ping
     }
 

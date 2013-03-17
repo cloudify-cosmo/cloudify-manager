@@ -16,7 +16,11 @@
 
 package org.cloudifysource.cosmo.agent.health;
 
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.TaskConsumerState;
+
+import java.net.URI;
+import java.util.Map;
 
 /**
  * A state holder for the {@link TaskBasedAgentHealthProbe}.
@@ -26,4 +30,13 @@ import org.cloudifysource.cosmo.TaskConsumerState;
  */
 public class TaskBasedAgentHealthProbeState extends TaskConsumerState {
 
+    private Map<URI, TaskBasedAgentHealthProbe.ProbeState> probeStateMap = Maps.newHashMap();
+
+    public Map<URI, TaskBasedAgentHealthProbe.ProbeState> getProbeStateMap() {
+        return probeStateMap;
+    }
+
+    public void setProbeStateMap(Map<URI, TaskBasedAgentHealthProbe.ProbeState> probeStateMap) {
+        this.probeStateMap = probeStateMap;
+    }
 }
