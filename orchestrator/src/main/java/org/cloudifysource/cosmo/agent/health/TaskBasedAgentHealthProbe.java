@@ -26,7 +26,6 @@ import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.Task;
 import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskProducer;
-import org.cloudifysource.cosmo.TaskReader;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.PingAgentTask;
 import org.cloudifysource.cosmo.service.ServiceUtils;

@@ -249,7 +249,7 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
 
     /**
      * Tests zombie agent CLOUDIFY-1593
-     * Enable when implementation is complete
+     * Enable when implementation is complete.
      */
     @Test(enabled = false)
     public void detectZombieAgentTest() {

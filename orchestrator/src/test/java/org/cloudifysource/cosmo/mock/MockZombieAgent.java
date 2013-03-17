@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
+
 package org.cloudifysource.cosmo.mock;
 
 import org.cloudifysource.cosmo.ImpersonatingTaskConsumer;
@@ -28,7 +29,7 @@ import org.cloudifysource.cosmo.service.tasks.ServiceInstanceTask;
 import org.cloudifysource.cosmo.service.tasks.SetInstancePropertyTask;
 
 /**
- * A mock agent that does nothing when recieves a task
+ * A mock agent that does nothing when recieves a task.
  * @author itaif
  * @since 0.1
  */

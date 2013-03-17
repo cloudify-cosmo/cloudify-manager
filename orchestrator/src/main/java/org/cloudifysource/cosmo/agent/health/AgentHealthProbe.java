@@ -29,7 +29,7 @@ import java.net.URI;
 public interface AgentHealthProbe {
 
     /**
-     * Specify which agents needs to be monitored for health status
+     * Specify which agents needs to be monitored for health status.
      * @param agentsIds the list of agents ids to monitor
      */
     void monitorAgents(Iterable<URI> agentsIds);
