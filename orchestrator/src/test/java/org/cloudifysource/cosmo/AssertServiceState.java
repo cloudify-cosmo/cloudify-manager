@@ -71,6 +71,14 @@ public class AssertServiceState {
     public static void assertSingleServiceInstance(
             MockManagement management, AliasGroupId aliasGroup, LifecycleName lifecycleName,
             int numberOfAgentStarts, int numberOfMachineStarts) {
+        final int numberOfInstanceStart = numberOfMachineStarts;
+        assertSingleServiceInstance(management, aliasGroup, lifecycleName, numberOfAgentStarts,
+                numberOfMachineStarts, numberOfInstanceStart);
+    }
+
+    public static void assertSingleServiceInstance(
+                MockManagement management, AliasGroupId aliasGroup, LifecycleName lifecycleName,
+        int numberOfAgentStarts, int numberOfMachineStarts, int numberOfInstanceStart) {
 
         Assert.assertEquals(management.getDeploymentPlan().getServices().size(), 1);
 
@@ -81,7 +89,7 @@ public class AssertServiceState {
         Assert.assertEquals(Iterables.size(getReachableInstanceIds(management, aliasGroup, lifecycleName)), 1);
         assertServiceInstalledWithOneInstance(
                 management, aliasGroup, lifecycleName,
-                numberOfAgentStarts, numberOfMachineStarts);
+                numberOfAgentStarts, numberOfMachineStarts, numberOfInstanceStart);
     }
 
     public static Iterable<URI> getReachableInstanceIds(final MockManagement management, AliasGroupId aliasGroup,
@@ -113,6 +121,16 @@ public class AssertServiceState {
             MockManagement management, AliasGroupId aliasGroup, final LifecycleName lifecycleName,
             int numberOfAgentStarts, int numberOfMachineStarts) {
 
+        // assume that each time the machine was started the instance was started too
+        final int numberOfInstanceStarts = numberOfMachineStarts;
+        assertServiceInstalledWithOneInstance(management, aliasGroup, lifecycleName,
+                numberOfAgentStarts, numberOfMachineStarts, numberOfInstanceStarts);
+    }
+
+    private static void assertServiceInstalledWithOneInstance(
+            MockManagement management, AliasGroupId aliasGroup, final LifecycleName lifecycleName,
+            int numberOfAgentStarts, int numberOfMachineStarts, int numberOfInstanceStarts) {
+
         final URI serviceId = management.getServiceId(aliasGroup, lifecycleName);
         final ServiceState serviceState = management.getServiceState(serviceId);
         Assert.assertEquals(serviceState.getProgress(), ServiceState.Progress.SERVICE_INSTALLED);
@@ -131,7 +149,7 @@ public class AssertServiceState {
                 countServiceInstanceLifecycleTasks(
                         instanceTasksHistory,
                         startedState),
-                numberOfMachineStarts,
+                numberOfInstanceStarts,
                 taskHistoryToString(instanceTasksHistory));
 
         final URI agentId = instanceState.getAgentId();

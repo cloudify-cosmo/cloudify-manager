@@ -251,17 +251,18 @@ public class ServiceGridOrchestrationTest extends AbstractServiceGridTest<MockMa
      * Tests zombie agent CLOUDIFY-1593
      * Enable when implementation is complete.
      */
-    @Test(enabled = false)
+    @Test(dependsOnMethods = {"installSingleInstanceServiceTest" }, enabled = false)
     public void detectZombieAgentTest() {
         Assert.assertTrue(Iterables.isEmpty(getAgentIds(getManagement(), web)));
         startZombieAgentAndThenHealthyAgent();
         installService(web, tomcat, 1);
         execute();
-        final int numberOfAgentStarts = 2;
+        final int numberOfAgentStarts = 1;
         final int numberOfMachineStarts = 2;
+        final int numberOfInstanceStarts = 1;
         assertSingleServiceInstance(
                 getManagement(), web, tomcat,
-                numberOfAgentStarts, numberOfMachineStarts);
+                numberOfAgentStarts, numberOfMachineStarts, numberOfInstanceStarts);
 
         uninstallService(web, tomcat, 1);
         execute();
