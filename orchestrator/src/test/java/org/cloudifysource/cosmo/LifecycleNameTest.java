@@ -45,12 +45,6 @@ public class LifecycleNameTest {
         name.validateLifecycleStateName(new LifecycleState("z_y"));
     }
 
-    @Test(expectedExceptions = {IllegalArgumentException.class })
-    public void testInvalidName() {
-        LifecycleName name = new LifecycleName();
-        name.setName("x_y");
-    }
-
     @Test
     public void testFromLifecycleState() {
         final LifecycleState lifecycleState = new LifecycleState("x_y");
@@ -71,4 +65,44 @@ public class LifecycleNameTest {
         final LifecycleState lifecycleState = new LifecycleState("xy");
         LifecycleName.fromLifecycleState(lifecycleState);
     }
+
+    @Test(expectedExceptions = {IllegalArgumentException.class })
+    public void testFromInvalidLifecycleStateWithDash() {
+        final LifecycleState lifecycleState = new LifecycleState("x-y");
+        LifecycleName.fromLifecycleState(lifecycleState);
+    }
+
+    @Test
+    public void testLifeCycleNameWithUnderscore() {
+        final LifecycleState lifecycleState = new LifecycleState("x_y_z");
+        final LifecycleName name = LifecycleName.fromLifecycleState(lifecycleState);
+        Assert.assertEquals(name.getName(), "x_y");
+        name.validateLifecycleStateName(lifecycleState);
+    }
+
+    @Test
+    public void testLifeCycleNameWithDash() {
+        final LifecycleState lifecycleState = new LifecycleState("x-y_z");
+        final LifecycleName name = LifecycleName.fromLifecycleState(lifecycleState);
+        Assert.assertEquals(name.getName(), "x-y");
+        name.validateLifecycleStateName(lifecycleState);
+    }
+
+    @Test
+    public void testLifeCycleNameWithDashAndUnderscore() {
+        final LifecycleState lifecycleState = new LifecycleState("y_x-y_z");
+        final LifecycleName name = LifecycleName.fromLifecycleState(lifecycleState);
+        Assert.assertEquals(name.getName(), "y_x-y");
+        name.validateLifecycleStateName(lifecycleState);
+    }
+
+    @Test
+    public void testLifeCycleComplexName() {
+        final LifecycleState lifecycleState = new LifecycleState("abcd-e-f_g-hijklmnop");
+        final LifecycleName name = LifecycleName.fromLifecycleState(lifecycleState);
+        Assert.assertEquals(name.getName(), "abcd-e-f");
+        name.validateLifecycleStateName(lifecycleState);
+    }
+
+
 }
