@@ -82,7 +82,7 @@ public class MockMachineProvisioner {
         if (nextAgentIsZombie) {
             //clear flag, next time start agent.
             nextAgentIsZombie = false;
-            newAgent = MockZombieAgent.newZombieAgent(machineState);
+            return;
         } else if (useSshMock) {
             newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
         } else {

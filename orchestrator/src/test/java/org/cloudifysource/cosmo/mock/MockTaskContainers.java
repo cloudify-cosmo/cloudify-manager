@@ -16,6 +16,7 @@
 package org.cloudifysource.cosmo.mock;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -68,17 +69,14 @@ public class MockTaskContainers implements Iterable<MockTaskContainer> {
         }, null);
     }
 
-    public MockTaskContainer findContainer(final URI agentId) {
-        MockTaskContainer container = Iterables.tryFind(containers, new Predicate<MockTaskContainer>() {
+    public Optional<MockTaskContainer> findContainer(final URI agentId) {
+        return Iterables.tryFind(containers, new Predicate<MockTaskContainer>() {
 
             @Override
             public boolean apply(MockTaskContainer container) {
                 return agentId.equals(container.getTaskConsumerId());
             }
-        }).orNull();
-
-        Preconditions.checkNotNull(container, "Cannot find container for %s", agentId);
-        return container;
+        });
     }
 
     @Override

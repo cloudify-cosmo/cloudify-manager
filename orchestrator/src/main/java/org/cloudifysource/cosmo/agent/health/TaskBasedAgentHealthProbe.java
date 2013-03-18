@@ -80,21 +80,38 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     }
 
     @Override
-    public boolean isAgentUnreachable(URI agentId) {
-        if (!getProbeStateMap().containsKey(agentId))
+    public boolean isAgentUnreachable(URI agentId, Optional<Object> agentGeneration) {
+        if (!getProbeStateMap().containsKey(agentId)) {
             return false;
+        }
 
-        return getProbeStateMap().get(agentId).isUnreachable();
+        final ProbeState probeState = getProbeStateMap().get(agentId);
+        boolean unreachable = probeState.isUnreachable();
+        if (!unreachable) {
+            return false;
+        }
+
+        if (!Objects.equal(agentGeneration.orNull(), probeState.getPingAgentGeneration())) {
+            return false;
+        }
+
+        return true;
     }
 
     @Override
-    public Optional<Long> getAgentUnreachablePeriod(URI agentId) {
-        if (!getProbeStateMap().containsKey(agentId))
+    public Optional<Long> getAgentUnreachablePeriod(URI agentId, Optional<Object> agentGeneration) {
+        if (!getProbeStateMap().containsKey(agentId)) {
             return Optional.absent();
+        }
 
         ProbeState probeState = getProbeStateMap().get(agentId);
-        if (!probeState.isUnreachable())
+        if (!probeState.isUnreachable()) {
             return Optional.absent();
+        }
+
+        if (!Objects.equal(agentGeneration.orNull(), probeState.getPingAgentGeneration())){
+            return Optional.absent();
+        }
 
         return Optional.of(timeProvider.currentTimeMillis() - probeState.getUnreachableTimestamp());
     }
@@ -130,34 +147,35 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     }
 
     private void verifyState(URI agentId, Map<URI, ProbeState> currentProbeMap, long nowTimestamp) {
-        ProbeState probeState = currentProbeMap.get(agentId);
+        final ProbeState probeState = currentProbeMap.get(agentId);
         Preconditions.checkNotNull(probeState);
 
         final long timeSinceLastVerification = nowTimestamp - probeState.getLastVerificationTimestamp();
-        if (!probeState.isUnreachable() && timeSinceLastVerification <= AGENT_REACHABLE_RENEW_MILLISECONDS)
+        if (!probeState.isUnreachable() && timeSinceLastVerification <= AGENT_REACHABLE_RENEW_MILLISECONDS) {
             return;
+        }
 
-        Optional<AgentState> agentStateOptional = getAgentState(agentId);
+        final Optional<AgentState> agentStateOptional = getAgentState(agentId);
         if (agentStateOptional.isPresent()) {
-            AgentState agentState = agentStateOptional.get();
-            Object challenge = agentState.getLastPingChallenge();
+            final AgentState agentState = agentStateOptional.get();
+            final Object challenge = agentState.getLastPingChallenge();
             if (Objects.equal(challenge, probeState.getChallenge())) {
-                handleVerifiedReachable(nowTimestamp, probeState);
+                onAgentNotUnreachable(nowTimestamp, probeState);
             } else if (timeSinceLastVerification > AGENT_UNREACHABLE_MILLISECONDS) {
-                handleVerifiedUnreachable(probeState, nowTimestamp);
+                onAgentUnreachable(probeState, nowTimestamp);
             }
         } else {
-            handleVerifiedUnreachable(probeState, nowTimestamp);
+            onAgentUnreachable(probeState, nowTimestamp);
         }
 
     }
 
-    private void handleVerifiedReachable(long nowTimestamp, ProbeState probeState) {
+    private void onAgentNotUnreachable(long nowTimestamp, ProbeState probeState) {
         probeState.setLastVerificationTimestamp(nowTimestamp);
         probeState.setUnreachable(false);
     }
 
-    private void handleVerifiedUnreachable(ProbeState probeState, long nowTimestamp) {
+    private void onAgentUnreachable(ProbeState probeState, long nowTimestamp) {
         if (!probeState.isUnreachable()) {
             probeState.setUnreachable(true);
             probeState.setUnreachableTimestamp(nowTimestamp);
@@ -166,14 +184,21 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
 
     private void sendPing(URI agentId, Map<URI, ProbeState> currentProbeMap,
                           List<Task> newTasks, long nowTimestamp) {
-        ProbeState probeState = currentProbeMap.get(agentId);
+        final ProbeState probeState = currentProbeMap.get(agentId);
         Preconditions.checkNotNull(probeState);
-        PingAgentTask pingAgentTask = new PingAgentTask();
-        Object challenge = createChallenge();
+        final PingAgentTask pingAgentTask = new PingAgentTask();
+        final Object challenge = createChallenge();
         pingAgentTask.setConsumerId(agentId);
         pingAgentTask.setChallenge(challenge);
         probeState.setLastPingTimestamp(nowTimestamp);
         probeState.setChallenge(challenge);
+        final Optional<AgentState> agentState = getAgentState(agentId);
+        final Object agentGeneration = agentState.isPresent() ? agentState.get().getAgentGeneration() : null;
+        if (!Objects.equal(agentGeneration, probeState.getPingAgentGeneration())) {
+            probeState.setPingAgentGeneration(agentGeneration);
+            onAgentNotUnreachable(nowTimestamp, probeState);
+        }
+
         newTasks.add(pingAgentTask);
     }
 
@@ -182,7 +207,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     }
 
     private boolean shouldPing(URI agentId, Map<URI, ProbeState> currentProbeMap, long nowTimestamp) {
-        ProbeState probeState = currentProbeMap.get(agentId);
+        final ProbeState probeState = currentProbeMap.get(agentId);
         Preconditions.checkNotNull(probeState);
         if (probeState.isUnreachable()) {
             if (nowTimestamp - probeState.getLastPingTimestamp() >
@@ -203,7 +228,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
     }
 
     private Map<URI, ProbeState> syncProbeStateMapWithMonitoredAgents(Iterable<URI> currentMonitoredAgentsIds) {
-        Map<URI, ProbeState> syncedProbeStateMap = Maps.newHashMap();
+        final Map<URI, ProbeState> syncedProbeStateMap = Maps.newHashMap();
         for (URI monitoredAgentsId : currentMonitoredAgentsIds) {
             final ProbeState probeState = getProbeStateMap().containsKey(monitoredAgentsId) ? ProbeState
                     .clone(getProbeStateMap().get(monitoredAgentsId)) : new ProbeState();
@@ -233,6 +258,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
         private Object challenge;
         private long lastVerificationTimestamp;
         private long unreachableTimestamp;
+        private Object pingAgentGeneration;
 
         public boolean isUnreachable() {
             return unreachable;
@@ -282,7 +308,17 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
             clone.setUnreachableTimestamp(probeState.getUnreachableTimestamp());
             clone.setLastVerificationTimestamp(probeState.getLastVerificationTimestamp());
             clone.setChallenge(probeState.getChallenge());
+            clone.setPingAgentGeneration(probeState.getPingAgentGeneration());
             return clone;
         }
+
+        public void setPingAgentGeneration(Object pingAgentGeneration) {
+            this.pingAgentGeneration = pingAgentGeneration;
+        }
+
+        public Object getPingAgentGeneration() {
+            return pingAgentGeneration;
+        }
+
     }
 }

@@ -35,15 +35,19 @@ public interface AgentHealthProbe {
     void monitorAgents(Iterable<URI> agentsIds);
 
     /**
+     *
      * @param agentId the id of the agent which is checked for unreachability
+     * @param agentGeneration the generation of the agent which is checked for unreachability
      * @return true if the agent is considered unreachable
      */
-    boolean isAgentUnreachable(URI agentId);
+    boolean isAgentUnreachable(URI agentId, Optional<Object> agentGeneration);
 
     /**
+     *
      * @param agentId the id of the agent which is checked for unreachability period
+     * @param agentGeneration the generation of the agent which is checked for unreachability period
      * @return the period of time an agent is considered unreachable, will return an absent
      * optional if the given agent is not considered unreachable
      */
-    Optional<Long> getAgentUnreachablePeriod(URI agentId);
+    Optional<Long> getAgentUnreachablePeriod(URI agentId, Optional<Object> agentGeneration);
 }

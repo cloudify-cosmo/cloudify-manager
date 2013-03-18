@@ -422,15 +422,21 @@ public class ServiceGridOrchestrator {
     }
 
     private boolean isUndiscoveredAgentUnreachable(URI agentId) {
-        Optional<Long> agentUnreachablePeriod = agentHealthProbe.getAgentUnreachablePeriod(agentId);
+        Optional<Long> agentUnreachablePeriod = agentHealthProbe.getAgentUnreachablePeriod(agentId, Optional.absent());
         if (!agentUnreachablePeriod.isPresent())
             return false;
 
         return agentUnreachablePeriod.get() >= TaskBasedAgentHealthProbe.AGENT_UNREACHABLE_MILLISECONDS;
     }
 
-    private boolean isPreviouslyReachableAgentIsNowUnreachable(URI agentId) {
-        return agentHealthProbe.isAgentUnreachable(agentId);
+    private boolean isPreviouslyReachableAgentIsNowUnreachable(URI agentId, AgentState agentState) {
+        Preconditions.checkNotNull(agentState);
+        return agentHealthProbe.isAgentUnreachable(agentId, Optional.fromNullable(agentState.getAgentGeneration()));
+    }
+
+    private boolean isZombieAgentIsNowUnreachable(URI agentId, AgentState agentState) {
+        Preconditions.checkNotNull(agentState);
+        return agentHealthProbe.isAgentUnreachable(agentId, Optional.fromNullable(agentState.getAgentGeneration()));
     }
 
     private boolean planServices(List<Task> newTasks, boolean syncComplete) {
@@ -641,8 +647,10 @@ public class ServiceGridOrchestrator {
         final LifecycleState desiredLifecycle =
                 state.getDeploymentPlan().getAgentPlan(agentId).get().getLifecycleState();
 
-        if ((agentState.isMachineReachableLifecycle() || agentState.isMachineStartedLifecycle()) &&
-            isPreviouslyReachableAgentIsNowUnreachable(agentId)) {
+        if (((agentState.isMachineReachableLifecycle() &&
+              isPreviouslyReachableAgentIsNowUnreachable(agentId, agentState)) ||
+             (agentState.isMachineStartedLifecycle() &&
+              isZombieAgentIsNowUnreachable(agentId, agentState)))) {
 
             final MachineLifecycleTask task = new MachineLifecycleTask();
             task.setLifecycleState(agentState.getMachineUnreachableLifecycle());

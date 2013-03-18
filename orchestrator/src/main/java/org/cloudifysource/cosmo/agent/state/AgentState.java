@@ -169,4 +169,9 @@ public class AgentState extends TaskConsumerState {
     public void setLastPingChallenge(Object lastPingChallenge) {
         this.lastPingChallenge = lastPingChallenge;
     }
+
+    @JsonIgnore
+    public Object getAgentGeneration() {
+        return "{" + getNumberOfMachineStarts() + "." + getNumberOfAgentStarts() + "}";
+    }
 }

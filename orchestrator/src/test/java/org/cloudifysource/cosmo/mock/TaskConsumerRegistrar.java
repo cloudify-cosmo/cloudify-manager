@@ -15,6 +15,8 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.mock;
 
+import com.google.common.base.Optional;
+
 import java.net.URI;
 
 /**
@@ -34,6 +36,6 @@ public interface TaskConsumerRegistrar {
      * Unregisters a task consumer with the specified id.
      * @return The task consumer object
      */
-    Object unregisterTaskConsumer(URI taskConsumerId);
+    Optional<Object> unregisterTaskConsumer(URI taskConsumerId);
 
 }
