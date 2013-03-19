@@ -396,14 +396,10 @@ public class ServiceGridOrchestrator {
                     syncComplete = false;
                 }
             } else {
-                if (isDiscoveredAgentUnreachable(agentId)) {
+                if (isDiscoveredAgentUnreachable(agentState)) {
                     syncComplete = planServiceInstances(newTasks, syncComplete, agentId);
                 } else {
-                    if (!agentState.isMachineReachableLifecycle()) {
-                        syncComplete = false;
-                    } else {
-                        syncComplete = recoverInstancesState(newTasks, syncComplete, agentId);
-                    }
+                    syncComplete = recoverInstancesState(newTasks, syncComplete, agentId);
                 }
             }
         }
@@ -413,12 +409,9 @@ public class ServiceGridOrchestrator {
         return syncComplete;
     }
 
-    private boolean isDiscoveredAgentUnreachable(URI agentId) {
-        AgentState agentState = getAgentState(agentId);
-        if (agentState.isMachineReachableLifecycle())
-            return false;
+    private boolean isDiscoveredAgentUnreachable(AgentState agentState) {
+        return !agentState.isMachineReachableLifecycle();
 
-        return true;
     }
 
     private boolean isUndiscoveredAgentUnreachable(URI agentId) {
