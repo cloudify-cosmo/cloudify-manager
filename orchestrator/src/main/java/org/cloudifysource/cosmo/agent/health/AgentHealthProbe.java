@@ -16,8 +16,9 @@
 
 package org.cloudifysource.cosmo.agent.health;
 
+import com.google.common.base.Optional;
+
 import java.net.URI;
-import java.util.Map;
 
 /**
  * Acts as a health probe for agents.
@@ -28,17 +29,25 @@ import java.util.Map;
 public interface AgentHealthProbe {
 
     /**
-     * returns the monitored agents health status, this method should not block on IO and return immediately,
-     * usually with a cached result which is refreshed frequently. It is up to the implementation to decide when this
-     * result is updated.
-     * @return monitored agents health status
-     */
-    Map<URI, AgentPingHealth> getAgentsHealthStatus();
-
-    /**
-     * Specify which agents needs to be monitored for health status
-     * monitored.
+     * Specify which agents needs to be monitored for health status.
      * @param agentsIds the list of agents ids to monitor
      */
     void monitorAgents(Iterable<URI> agentsIds);
+
+    /**
+     *
+     * @param agentId the id of the agent which is checked for unreachability
+     * @param agentGeneration the generation of the agent which is checked for unreachability
+     * @return true if the agent is considered unreachable
+     */
+    boolean isAgentUnreachable(URI agentId, Optional<Object> agentGeneration);
+
+    /**
+     *
+     * @param agentId the id of the agent which is checked for unreachability period
+     * @param agentGeneration the generation of the agent which is checked for unreachability period
+     * @return the period of time an agent is considered unreachable, will return an absent
+     * optional if the given agent is not considered unreachable
+     */
+    Optional<Long> getAgentUnreachablePeriod(URI agentId, Optional<Object> agentGeneration);
 }

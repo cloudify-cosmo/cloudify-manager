@@ -39,6 +39,8 @@ public class AgentState extends TaskConsumerState {
     private static final String MACHINE_REACHABLE = "cloudmachine_reachable";
     private static final String MACHINE_STARTED = "cloudmachine_started";
 
+    private Object lastPingChallenge;
+
     public AgentState() {
         stateMachine = new LifecycleStateMachine();
         stateMachine.setLifecycleName(new LifecycleName("cloudmachine"));
@@ -160,4 +162,16 @@ public class AgentState extends TaskConsumerState {
         serviceInstanceIds.add(instanceId);
     }
 
+    public Object getLastPingChallenge() {
+        return lastPingChallenge;
+    }
+
+    public void setLastPingChallenge(Object lastPingChallenge) {
+        this.lastPingChallenge = lastPingChallenge;
+    }
+
+    @JsonIgnore
+    public Object getAgentGeneration() {
+        return "{" + getNumberOfMachineStarts() + "." + getNumberOfAgentStarts() + "}";
+    }
 }

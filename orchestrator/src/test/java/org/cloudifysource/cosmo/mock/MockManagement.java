@@ -68,6 +68,7 @@ public class MockManagement {
     private final MockTaskBroker taskBroker;
     private MockCurrentTimeProvider timeProvider;
     private List<URI> taskConsumersToUnregisterOnClose;
+    private MockMachineProvisioner mockMachineProvisioner;
 
     public void setTaskConsumerRegistrar(TaskConsumerRegistrar taskConsumerRegistrar) {
         this.taskConsumerRegistrar = taskConsumerRegistrar;
@@ -168,7 +169,8 @@ public class MockManagement {
         TaskBasedAgentHealthProbe taskBasedAgentHealthProbe = newAgentProbe(timeProvider);
         registerTaskConsumer(taskBasedAgentHealthProbe, agentProbeId);
         registerTaskConsumer(newServiceGridOrchestrator(timeProvider, taskBasedAgentHealthProbe), orchestratorId);
-        registerTaskConsumer(newMachineProvisionerContainer(taskConsumerRegistrar), machineProvisionerId);
+        mockMachineProvisioner = newMachineProvisionerContainer(taskConsumerRegistrar);
+        registerTaskConsumer(mockMachineProvisioner, machineProvisionerId);
     }
 
     protected void registerTaskConsumer(Object taskConsumer, URI taskConsumerId) {
@@ -182,8 +184,8 @@ public class MockManagement {
     }
 
     private TaskBasedAgentHealthProbe newAgentProbe(CurrentTimeProvider timeProvider) {
-        return new TaskBasedAgentHealthProbe(timeProvider, taskBroker,
-                stateReader, agentProbeId);
+        return new TaskBasedAgentHealthProbe(timeProvider,
+                stateReader);
     }
 
     private ServiceGridOrchestrator newServiceGridOrchestrator(CurrentTimeProvider timeProvider,
@@ -289,6 +291,14 @@ public class MockManagement {
 
     public void setUseSshMock(boolean useSshMock) {
         this.useSshMock = useSshMock;
+    }
+
+    public URI getMachineProvisionerId() {
+        return machineProvisionerId;
+    }
+
+    public void startZombieAgentAndThenHealthyAgent() {
+        mockMachineProvisioner.startZombieAgentAndThenHealthyAgent();
     }
 }
 

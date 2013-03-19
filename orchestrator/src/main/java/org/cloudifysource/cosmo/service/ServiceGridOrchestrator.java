@@ -29,7 +29,7 @@ import org.cloudifysource.cosmo.TaskConsumerStateHolder;
 import org.cloudifysource.cosmo.TaskConsumerStateModifier;
 import org.cloudifysource.cosmo.TaskProducer;
 import org.cloudifysource.cosmo.agent.health.AgentHealthProbe;
-import org.cloudifysource.cosmo.agent.health.AgentPingHealth;
+import org.cloudifysource.cosmo.agent.health.TaskBasedAgentHealthProbe;
 import org.cloudifysource.cosmo.agent.state.AgentState;
 import org.cloudifysource.cosmo.agent.tasks.MachineLifecycleTask;
 import org.cloudifysource.cosmo.agent.tasks.PlanAgentTask;
@@ -63,7 +63,6 @@ import org.cloudifysource.cosmo.state.StateReader;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -103,15 +102,14 @@ public class ServiceGridOrchestrator {
         final List<Task> newTasks = Lists.newArrayList();
 
         agentHealthProbe.monitorAgents(getPlannedAgentIds());
-        final Map<URI, AgentPingHealth> agentsHealthStatus = agentHealthProbe.getAgentsHealthStatus();
 
-        boolean ready = syncStateWithDeploymentPlan(newTasks, agentsHealthStatus);
+        boolean ready = syncStateWithDeploymentPlan(newTasks);
 
         if (ready) {
             //start orchestrating according to current state
 
             for (final URI agentId : getPlannedAgentIds()) {
-                orchestrateAgent(newTasks, agentId, agentsHealthStatus.get(agentId));
+                orchestrateAgent(newTasks, agentId);
             }
 
             final ServiceGridDeploymentPlan deploymentPlan = state.getDeploymentPlan();
@@ -380,77 +378,68 @@ public class ServiceGridOrchestrator {
     }
 
     private boolean syncStateWithDeploymentPlan(
-            final List<Task> newTasks,
-            final Map<URI, AgentPingHealth> agentsHealthStatus) {
+            final List<Task> newTasks) {
 
         boolean syncComplete = true;
 
         for (final URI agentId : getPlannedAgentIds()) {
-            final AgentPingHealth pingHealth = agentsHealthStatus.get(agentId);
-            Preconditions.checkNotNull(pingHealth);
             final AgentState agentState = getAgentState(agentId);
-
-            if (pingHealth == AgentPingHealth.AGENT_REACHABLE) {
-                Preconditions.checkState(agentState != null, "Responding agent cannot have null state");
-                if (!agentState.isMachineReachableLifecycle()) {
-                    syncComplete = false;
-
-                } else {
-                    Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
-                    for (URI instanceId : plannedInstanceIds) {
-                        ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
-                        if (instanceState == null || !instanceState.isReachable()) {
-
-                            syncComplete = false;
-                            final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId).get();
-                            final ServiceState serviceState = getServiceState(serviceId);
-                            final RecoverServiceInstanceStateTask recoverInstanceStateTask =
-                                    new RecoverServiceInstanceStateTask();
-                            recoverInstanceStateTask.setStateId(instanceId);
-                            recoverInstanceStateTask.setConsumerId(agentId);
-                            recoverInstanceStateTask.setServiceId(serviceId);
-                            recoverInstanceStateTask.setStateMachine(
-                                    state.getDeploymentPlan().getInstancePlan(instanceId).get().getStateMachine());
-                            addNewTaskIfNotExists(newTasks, recoverInstanceStateTask);
-                        }
-                    }
-                }
-            } else if (pingHealth == AgentPingHealth.AGENT_UNREACHABLE) {
-
-                if (agentState == null) {
-                    syncComplete = false;
+            //Checks on null agent state
+            if (agentState == null) {
+                if (isUndiscoveredAgentUnreachable(agentId)) {
                     final PlanAgentTask planAgentTask = new PlanAgentTask();
                     planAgentTask.setStateId(agentId);
                     planAgentTask.setConsumerId(orchestratorId);
                     addNewTaskIfNotExists(newTasks, planAgentTask);
-                }
-
-                Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
-                for (URI instanceId : plannedInstanceIds) {
-                    if (getServiceInstanceState(instanceId) == null) {
-                        syncComplete = false;
-                        final URI serviceId =
-                                state.getDeploymentPlan().getServiceIdByInstanceId(instanceId).get();
-                        final LifecycleStateMachine stateMachine =
-                            state.getDeploymentPlan().getInstancePlan(instanceId).get().getStateMachine();
-                        Preconditions.checkNotNull(stateMachine.getBeginState());
-                        Preconditions.checkNotNull(stateMachine.getEndState());
-                        final PlanServiceInstanceTask planInstanceTask = new PlanServiceInstanceTask();
-                        planInstanceTask.setStateId(instanceId);
-                        planInstanceTask.setAgentId(agentId);
-                        planInstanceTask.setServiceId(serviceId);
-                        planInstanceTask.setConsumerId(orchestratorId);
-                        planInstanceTask.setStateMachine(stateMachine);
-                        addNewTaskIfNotExists(newTasks, planInstanceTask);
-                    }
+                    syncComplete = planServiceInstances(newTasks, false, agentId);
+                } else {
+                    syncComplete = false;
                 }
             } else {
-                Preconditions.checkState(pingHealth == AgentPingHealth.UNDETERMINED);
-                syncComplete = false;
-                //better luck next time. wait until agent health is determined.
+                if (isDiscoveredAgentUnreachable(agentId)) {
+                    syncComplete = planServiceInstances(newTasks, syncComplete, agentId);
+                } else {
+                    if (!agentState.isMachineReachableLifecycle()) {
+                        syncComplete = false;
+                    } else {
+                        syncComplete = recoverInstancesState(newTasks, syncComplete, agentId);
+                    }
+                }
             }
         }
 
+        syncComplete = planServices(newTasks, syncComplete);
+
+        return syncComplete;
+    }
+
+    private boolean isDiscoveredAgentUnreachable(URI agentId) {
+        AgentState agentState = getAgentState(agentId);
+        if (agentState.isMachineReachableLifecycle())
+            return false;
+
+        return true;
+    }
+
+    private boolean isUndiscoveredAgentUnreachable(URI agentId) {
+        Optional<Long> agentUnreachablePeriod = agentHealthProbe.getAgentUnreachablePeriod(agentId, Optional.absent());
+        if (!agentUnreachablePeriod.isPresent())
+            return false;
+
+        return agentUnreachablePeriod.get() >= TaskBasedAgentHealthProbe.AGENT_UNREACHABLE_MILLISECONDS;
+    }
+
+    private boolean isPreviouslyReachableAgentIsNowUnreachable(URI agentId, AgentState agentState) {
+        Preconditions.checkNotNull(agentState);
+        return agentHealthProbe.isAgentUnreachable(agentId, Optional.fromNullable(agentState.getAgentGeneration()));
+    }
+
+    private boolean isZombieAgentIsNowUnreachable(URI agentId, AgentState agentState) {
+        Preconditions.checkNotNull(agentState);
+        return agentHealthProbe.isAgentUnreachable(agentId, Optional.fromNullable(agentState.getAgentGeneration()));
+    }
+
+    private boolean planServices(List<Task> newTasks, boolean syncComplete) {
         for (final ServiceDeploymentPlan servicePlan : state.getDeploymentPlan().getServices()) {
             final URI serviceId = servicePlan.getServiceConfig().getServiceId();
             final ServiceState serviceState = getServiceState(serviceId);
@@ -473,7 +462,51 @@ public class ServiceGridOrchestrator {
                 addNewTaskIfNotExists(newTasks, planServiceTask);
             }
         }
+        return syncComplete;
+    }
 
+    private boolean recoverInstancesState(List<Task> newTasks, boolean syncComplete, URI agentId) {
+        Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
+        for (URI instanceId : plannedInstanceIds) {
+            ServiceInstanceState instanceState = getServiceInstanceState(instanceId);
+            if (instanceState == null || !instanceState.isReachable()) {
+
+                syncComplete = false;
+                final URI serviceId = state.getDeploymentPlan().getServiceIdByInstanceId(instanceId).get();
+                final ServiceState serviceState = getServiceState(serviceId);
+                final RecoverServiceInstanceStateTask recoverInstanceStateTask =
+                        new RecoverServiceInstanceStateTask();
+                recoverInstanceStateTask.setStateId(instanceId);
+                recoverInstanceStateTask.setConsumerId(agentId);
+                recoverInstanceStateTask.setServiceId(serviceId);
+                recoverInstanceStateTask.setStateMachine(
+                        state.getDeploymentPlan().getInstancePlan(instanceId).get().getStateMachine());
+                addNewTaskIfNotExists(newTasks, recoverInstanceStateTask);
+            }
+        }
+        return syncComplete;
+    }
+
+    private boolean planServiceInstances(List<Task> newTasks, boolean syncComplete, URI agentId) {
+        Iterable<URI> plannedInstanceIds = state.getDeploymentPlan().getInstanceIdsByAgentId(agentId);
+        for (URI instanceId : plannedInstanceIds) {
+            if (getServiceInstanceState(instanceId) == null) {
+                syncComplete = false;
+                final URI serviceId =
+                        state.getDeploymentPlan().getServiceIdByInstanceId(instanceId).get();
+                final LifecycleStateMachine stateMachine =
+                    state.getDeploymentPlan().getInstancePlan(instanceId).get().getStateMachine();
+                Preconditions.checkNotNull(stateMachine.getBeginState());
+                Preconditions.checkNotNull(stateMachine.getEndState());
+                final PlanServiceInstanceTask planInstanceTask = new PlanServiceInstanceTask();
+                planInstanceTask.setStateId(instanceId);
+                planInstanceTask.setAgentId(agentId);
+                planInstanceTask.setServiceId(serviceId);
+                planInstanceTask.setConsumerId(orchestratorId);
+                planInstanceTask.setStateMachine(stateMachine);
+                addNewTaskIfNotExists(newTasks, planInstanceTask);
+            }
+        }
         return syncComplete;
     }
 
@@ -608,14 +641,16 @@ public class ServiceGridOrchestrator {
     }
 
 
-    private void orchestrateAgent(List<Task> newTasks, URI agentId, AgentPingHealth agentHealthStatus) {
+    private void orchestrateAgent(List<Task> newTasks, URI agentId) {
 
         final AgentState agentState = getAgentState(agentId);
         final LifecycleState desiredLifecycle =
                 state.getDeploymentPlan().getAgentPlan(agentId).get().getLifecycleState();
 
-        if (agentState.isMachineReachableLifecycle() &&
-            agentHealthStatus == AgentPingHealth.AGENT_UNREACHABLE) {
+        if (((agentState.isMachineReachableLifecycle() &&
+              isPreviouslyReachableAgentIsNowUnreachable(agentId, agentState)) ||
+             (agentState.isMachineStartedLifecycle() &&
+              isZombieAgentIsNowUnreachable(agentId, agentState)))) {
 
             final MachineLifecycleTask task = new MachineLifecycleTask();
             task.setLifecycleState(agentState.getMachineUnreachableLifecycle());
@@ -625,7 +660,10 @@ public class ServiceGridOrchestrator {
         } else if (!agentState.getStateMachine().isLifecycleState(desiredLifecycle)) {
             final LifecycleState nextAgentLifecycle =
                     agentState.getStateMachine().getNextLifecycleState(desiredLifecycle);
-            Preconditions.checkNotNull(nextAgentLifecycle);
+
+            //TODO replace this with new concept in state machine of semi line
+            if (nextAgentLifecycle.equals(agentState.getMachineReachableLifecycle()))
+                return;
             if (isAllInstancesRemovedOrUnreachable(agentState) &&
                 !agentState.getStateMachine().isLifecycleState(nextAgentLifecycle)) {
                 final MachineLifecycleTask task = new MachineLifecycleTask();

@@ -15,14 +15,15 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.mock.MockAgent;
 import org.cloudifysource.cosmo.mock.MockManagement;
-import org.cloudifysource.cosmo.mock.ssh.MockSSHAgent;
 import org.cloudifysource.cosmo.mock.MockTaskContainer;
 import org.cloudifysource.cosmo.mock.MockTaskContainers;
 import org.cloudifysource.cosmo.mock.TaskConsumerRegistrar;
+import org.cloudifysource.cosmo.mock.ssh.MockSSHAgent;
 import org.cloudifysource.cosmo.service.id.AliasGroupId;
 import org.cloudifysource.cosmo.service.id.AliasId;
 import org.cloudifysource.cosmo.service.lifecycle.LifecycleName;
@@ -80,11 +81,13 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
             }
 
             @Override
-            public Object unregisterTaskConsumer(final URI taskConsumerId) {
-                MockTaskContainer mockTaskContainer = containers.findContainer(taskConsumerId);
-                boolean removed = containers.removeContainer(mockTaskContainer);
-                Preconditions.checkState(removed, "Failed to remove container " + taskConsumerId);
-                return mockTaskContainer.getTaskConsumer();
+            public Optional<Object> unregisterTaskConsumer(final URI taskConsumerId) {
+                Optional<MockTaskContainer> mockTaskContainer = containers.findContainer(taskConsumerId);
+                if (mockTaskContainer.isPresent()) {
+                    containers.removeContainer(mockTaskContainer.get());
+                    return Optional.of(mockTaskContainer.get().getTaskConsumer());
+                }
+                return Optional.absent();
             }
         };
 
@@ -156,7 +159,9 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      */
     protected void restartAgent(URI agentId) {
 
-        Object oldAgent = getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
+        Optional<Object> oldAgentOptional = getTaskConsumerRegistrar().unregisterTaskConsumer(agentId);
+        Preconditions.checkState(oldAgentOptional.isPresent());
+        Object oldAgent = oldAgentOptional.get();
         final Object restartedAgent;
         if (oldAgent instanceof MockAgent) {
             restartedAgent = MockAgent.newRestartedAgentOnSameMachine((MockAgent) oldAgent);
@@ -174,7 +179,10 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
      * This method simulates an unexpected crash of a machine.
      */
     protected void killMachine(URI agentId) {
-        containers.findContainer(agentId).killMachine();
+        final Optional<MockTaskContainer> container = containers.findContainer(agentId);
+        if (container.isPresent()) {
+            container.get().killMachine();
+        }
     }
 
 
@@ -192,5 +200,10 @@ public abstract class AbstractServiceGridTest<T extends MockManagement> {
 
     protected void cos(AliasId aliasId, String... args) {
         submitOrchestratorTask(cli(aliasId, args));
+    }
+
+
+    public void startZombieAgentAndThenHealthyAgent() {
+        getManagement().startZombieAgentAndThenHealthyAgent();
     }
 }

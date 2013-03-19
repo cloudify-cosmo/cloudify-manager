@@ -37,6 +37,9 @@ public class MockMachineProvisioner {
     private final TaskConsumerRegistrar taskConsumerRegistrar;
     private final boolean useSshMock;
 
+    // used for testing, will silently fail to start an agent
+    private boolean nextAgentIsZombie;
+
     public MockMachineProvisioner(TaskConsumerRegistrar taskConsumerRegistrar, boolean useSshMock) {
         this.taskConsumerRegistrar = taskConsumerRegistrar;
         this.useSshMock = useSshMock;
@@ -49,10 +52,8 @@ public class MockMachineProvisioner {
         final AgentState agentState = impersonatedStateModifier.get();
         final LifecycleState lifecycleState = task.getLifecycleState();
         final URI agentId = task.getStateId();
-        if (lifecycleState.equals(agentState.getMachineReachableLifecycle())) {
-            machineReachable(agentState, agentId);
-        } else if (lifecycleState.equals(agentState.getMachineStartedLifecycle())) {
-            machineStarted(agentState);
+        if (lifecycleState.equals(agentState.getMachineStartedLifecycle())) {
+            machineStarted(agentState, agentId);
         } else if (lifecycleState.equals(agentState.getMachineTerminatedLifecycle())) {
             machineTerminated(agentState, agentId);
         }
@@ -67,24 +68,28 @@ public class MockMachineProvisioner {
         }
     }
 
-    private void machineStarted(AgentState machineState) {
+    private void machineStarted(AgentState machineState, URI agentId) {
         if (!machineState.isMachineStartedLifecycle()) {
             machineState.incrementNumberOfMachineStarts();
             machineState.resetNumberOfAgentStarts();
+            startAgent(machineState, agentId);
         }
     }
 
-    private void machineReachable(AgentState machineState, URI agentId) {
-        if (!machineState.isMachineReachableLifecycle()) {
-            machineState.incrementNumberOfAgentStarts();
-            Object newAgent;
-            if (useSshMock) {
-                newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
-            } else {
-                newAgent = MockAgent.newAgentOnCleanMachine(machineState);
-            }
-            taskConsumerRegistrar.registerTaskConsumer(newAgent, agentId);
+    private void startAgent(AgentState machineState, URI agentId) {
+        machineState.incrementNumberOfAgentStarts();
+        Object newAgent;
+        if (nextAgentIsZombie) {
+            //clear flag, next time start agent.
+            nextAgentIsZombie = false;
+            return;
+        } else if (useSshMock) {
+            newAgent = MockSSHAgent.newAgentOnCleanMachine(machineState);
+        } else {
+            newAgent = MockAgent.newAgentOnCleanMachine(machineState);
         }
+        taskConsumerRegistrar.registerTaskConsumer(newAgent, agentId);
+
     }
 
     @TaskConsumerStateHolder
@@ -92,4 +97,7 @@ public class MockMachineProvisioner {
         return state;
     }
 
+    public void startZombieAgentAndThenHealthyAgent() {
+        this.nextAgentIsZombie = true;
+    }
 }
