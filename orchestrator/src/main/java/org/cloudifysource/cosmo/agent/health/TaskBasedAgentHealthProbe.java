@@ -109,7 +109,7 @@ public class TaskBasedAgentHealthProbe implements AgentHealthProbe {
             return Optional.absent();
         }
 
-        if (!Objects.equal(agentGeneration.orNull(), probeState.getPingAgentGeneration())){
+        if (!Objects.equal(agentGeneration.orNull(), probeState.getPingAgentGeneration())) {
             return Optional.absent();
         }
 
