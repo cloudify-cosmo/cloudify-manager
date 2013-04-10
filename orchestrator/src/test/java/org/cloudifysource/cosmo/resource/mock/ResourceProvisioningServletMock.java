@@ -35,11 +35,4 @@ public class ResourceProvisioningServletMock {
         return Response.noContent().build();
     }
 
-    @GET
-    @Path("/start_virtual_machine/{id}")
-    public Response startVirtualMachineg() {
-        return Response.noContent().build();
-    }
-
-
 }

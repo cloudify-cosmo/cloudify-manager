@@ -15,6 +15,8 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
 import com.google.common.base.Throwables;
+import org.cloudifysource.cosmo.kvstore.KVStoreServer;
+import org.cloudifysource.cosmo.resource.mock.ResourceMonitorMock;
 import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerMock;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -24,27 +26,37 @@ import org.testng.annotations.Test;
 import com.ning.http.client.*;
 import static org.fest.assertions.api.Assertions.*;
 
+import java.net.URI;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class StartVirtualMachineTest {
 
-    ResourceProvisioningServerMock resourceProvisioningServer;
-    private String restUri;
+    private ResourceProvisioningServerMock resourceProvisioningServer;
+    private URI resourceProvisioningUri;
+    private KVStoreServer kvstoreServer;
+    private URI kvstoreUri;
     private AsyncHttpClient asyncHttpClient;
 
     @BeforeMethod
-    @Parameters({ "port" })
-    public void beforeMethod(@Optional("8080") int port) {
+    @Parameters({ "provisioningPort", "kvstorePort"})
+    public void beforeMethod(@Optional("8080") int provisioningPort,
+                             @Optional("8081") int kvstorePort) {
         resourceProvisioningServer = new ResourceProvisioningServerMock();
-        resourceProvisioningServer.start(port);
+        resourceProvisioningServer.start(provisioningPort);
+        resourceProvisioningUri = URI.create("http://localhost:" + provisioningPort + "/");
 
-        restUri = "http://localhost:" + port + "/";
+        kvstoreServer = new KVStoreServer();
+        kvstoreServer.start(kvstorePort);
+        kvstoreUri = URI.create("http://localhost:" + kvstorePort + "/");
+
         asyncHttpClient = new AsyncHttpClient();
     }
 
     @AfterMethod
     public void afterMethod() {
         resourceProvisioningServer.stop();
+        kvstoreServer.stop();
     }
 
     @Test
@@ -52,7 +64,7 @@ public class StartVirtualMachineTest {
         try {
             Future<Integer> f =
                     asyncHttpClient
-                    .preparePut(restUri + "start_virtual_machine/1")
+                    .preparePut(resourceProvisioningUri + "start_virtual_machine/1")
                     .execute(
                             new AsyncCompletionHandler<Integer>(){
 
@@ -73,4 +85,13 @@ public class StartVirtualMachineTest {
             throw Throwables.propagate(e);
         }
     }
+
+    @Test
+    public void testMonitorVM() throws ExecutionException, InterruptedException {
+        ResourceMonitorMock monitor = new ResourceMonitorMock(asyncHttpClient);
+        URI resourceId = kvstoreUri.resolve("vm/1");
+        monitor.setState(resourceId,"starting").get();
+        monitor.setState(resourceId,"started").get();
+    }
 }
+
