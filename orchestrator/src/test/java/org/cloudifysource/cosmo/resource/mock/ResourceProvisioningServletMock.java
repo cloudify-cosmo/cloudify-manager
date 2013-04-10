@@ -27,7 +27,7 @@ import javax.ws.rs.core.Response;
  * @since 0.1
  */
 @Path("/")
-public class ResourceProvisionerServletMock {
+public class ResourceProvisioningServletMock {
 
     @PUT
     @Path("/start_virtual_machine/{id}")

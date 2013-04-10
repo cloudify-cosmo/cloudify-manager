@@ -29,7 +29,7 @@ import javax.servlet.Servlet;
  * @author Itai Frenkel
  * @since 0.1
  */
-public class ResourceProvisionerServerMock {
+public class ResourceProvisioningServerMock {
 
     private static Server server;
     private static ServletContainer servletContainer;
@@ -63,7 +63,7 @@ public class ResourceProvisionerServerMock {
         ServletHolder servletHolder = new ServletHolder(servlet);
         servletHolder.setInitParameter(
                 "com.sun.jersey.config.property.packages",
-                ResourceProvisionerServletMock.class.getPackage().getName());
+                ResourceProvisioningServletMock.class.getPackage().getName());
         servletHolder.setInitParameter("cacheControl", "max-age=0,public");
         handler.addServlet(servletHolder, "/*");
         return handler;

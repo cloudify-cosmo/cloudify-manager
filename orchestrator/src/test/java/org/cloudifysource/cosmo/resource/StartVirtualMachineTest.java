@@ -15,7 +15,7 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
 import com.google.common.base.Throwables;
-import org.cloudifysource.cosmo.resource.mock.ResourceProvisionerServerMock;
+import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerMock;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -28,15 +28,15 @@ import java.util.concurrent.Future;
 
 public class StartVirtualMachineTest {
 
-    ResourceProvisionerServerMock server;
+    ResourceProvisioningServerMock resourceProvisioningServer;
     private String restUri;
     private AsyncHttpClient asyncHttpClient;
 
     @BeforeMethod
     @Parameters({ "port" })
     public void beforeMethod(@Optional("8080") int port) {
-        server = new ResourceProvisionerServerMock();
-        server.start(port);
+        resourceProvisioningServer = new ResourceProvisioningServerMock();
+        resourceProvisioningServer.start(port);
 
         restUri = "http://localhost:" + port + "/";
         asyncHttpClient = new AsyncHttpClient();
@@ -44,7 +44,7 @@ public class StartVirtualMachineTest {
 
     @AfterMethod
     public void afterMethod() {
-        server.stop();
+        resourceProvisioningServer.stop();
     }
 
     @Test
