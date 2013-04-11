@@ -16,6 +16,8 @@
 package org.cloudifysource.cosmo.resource.monitor;
 
 import java.util.Collection;
+import java.util.Collections;
+
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseFactory;
 import org.drools.builder.KnowledgeBuilder;
@@ -58,7 +60,7 @@ public class DroolsExpertTest {
         kbuilder.add(ResourceFactory.newClassPathResource(RULE_FILE, DroolsExpertTest.class), ResourceType.DRL);
 
         // Check the builder for errors
-        assertThat(kbuilder.hasErrors()).isFalse();
+        assertThat(kbuilder.hasErrors()).overridingErrorMessage(kbuilder.getErrors().toString()).isFalse();
 
         // get the compiled packages (which are serializable)
         pkgs = kbuilder.getKnowledgePackages();
