@@ -1,7 +1,20 @@
+/*******************************************************************************
+ * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
 package org.cloudifysource.cosmo.resource.monitor;
 
-import java.io.Reader;
-import java.io.StringReader;
 import java.util.Collection;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseFactory;
@@ -9,58 +22,50 @@ import org.drools.builder.KnowledgeBuilder;
 import org.drools.builder.KnowledgeBuilderFactory;
 import org.drools.builder.ResourceType;
 import org.drools.definition.KnowledgePackage;
-import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.drools.runtime.StatefulKnowledgeSession;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
+/**
+ * A simple Drools Expert example.
+ * @since 0.1
+ * @author Itai Frenkel
+ */
 public class DroolsExpertTest {
 
-    private static KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
-    private static Collection<KnowledgePackage> pkgs;
-    private static KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase();
-    private static StatefulKnowledgeSession ksession;
+    public static final String RULE_FILE = "/hellodrools/testrules.drl";
+    private KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
+    private Collection<KnowledgePackage> pkgs;
+    private KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase();
+    private StatefulKnowledgeSession ksession;
 
-    public static void main(final String[] args) {
-
-        initDrools();
-        initMessageObject();
-        fireRules();
-
+    @Test
+    public void testDrools() {
+        Message msg = new Message();
+        msg.setType("Test");
+        ksession.insert(msg);
+        ksession.fireAllRules();
     }
 
-    private static void initDrools(){
+    @BeforeMethod
+    private void initDrools() {
 
         // this will parse and compile in one step
         // read from file
-        kbuilder.add( ResourceFactory.newClassPathResource( "/hellodrools/testrules.drl",DroolsExpertTest.class),ResourceType.DRL );
-
-        // read second rule from String
-        String myRule = "import org.cloudifysource.cosmo.resource.monitor.Message rule \"Hello World 2\" when message:Message (type==\"Test\") then System.out.println(\"Test, Drools!\"); end";
-        Resource myResource = ResourceFactory.newReaderResource((Reader) new StringReader(myRule));
-        kbuilder.add(myResource, ResourceType.DRL);
+        kbuilder.add(ResourceFactory.newClassPathResource(RULE_FILE, DroolsExpertTest.class), ResourceType.DRL);
 
         // Check the builder for errors
-        if ( kbuilder.hasErrors() ) {
-            System.out.println( kbuilder.getErrors().toString() );
-            throw new RuntimeException( "Unable to compile drl\"." );
-        }
+        assertThat(kbuilder.hasErrors()).isFalse();
 
         // get the compiled packages (which are serializable)
         pkgs = kbuilder.getKnowledgePackages();
 
         // add the packages to a knowledgebase (deploy the knowledge packages).
-        kbase.addKnowledgePackages( pkgs );
+        kbase.addKnowledgePackages(pkgs);
 
         ksession = kbase.newStatefulKnowledgeSession();
-    }
-
-    private static void fireRules(){
-        ksession.fireAllRules();
-    }
-
-    private static void initMessageObject() {
-        Message msg = new Message();
-        msg.setType("Test");
-        ksession.insert(msg);
     }
 }
