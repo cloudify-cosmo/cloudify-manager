@@ -16,16 +16,19 @@
 package org.cloudifysource.cosmo.resource.monitor;
 
 import java.util.Collection;
-import java.util.Collections;
 
+import com.google.common.collect.Iterables;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseFactory;
 import org.drools.builder.KnowledgeBuilder;
 import org.drools.builder.KnowledgeBuilderFactory;
 import org.drools.builder.ResourceType;
+import org.drools.common.InternalFactHandle;
 import org.drools.definition.KnowledgePackage;
 import org.drools.io.ResourceFactory;
 import org.drools.runtime.StatefulKnowledgeSession;
+import org.drools.runtime.rule.FactHandle;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -46,10 +49,20 @@ public class DroolsExpertTest {
 
     @Test
     public void testDrools() {
-        Message msg = new Message();
-        msg.setType("Test");
-        ksession.insert(msg);
+        Message beforeMessage = new Message();
+        beforeMessage.setType("before");
+        beforeMessage.setMsgtext("This is the message text");
+        ksession.insert(beforeMessage);
         ksession.fireAllRules();
+        final Message afterMessage = getMessageFromSession();
+        assertThat(afterMessage.getType()).isEqualTo("after");
+    }
+
+    private Message getMessageFromSession() {
+        final Collection<FactHandle> factHandles = ksession.getFactHandles();
+        final InternalFactHandle fh = (InternalFactHandle) Iterables.getOnlyElement(factHandles);
+        final Message message = ((Message) fh.getObject());
+        return message;
     }
 
     @BeforeMethod
@@ -69,5 +82,11 @@ public class DroolsExpertTest {
         kbase.addKnowledgePackages(pkgs);
 
         ksession = kbase.newStatefulKnowledgeSession();
+    }
+
+    @AfterMethod
+    public void destroyDrools() {
+        ksession.halt();
+        ksession.dispose();
     }
 }

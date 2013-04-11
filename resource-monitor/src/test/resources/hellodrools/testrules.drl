@@ -1,7 +1,12 @@
 import org.cloudifysource.cosmo.resource.monitor.Message
+
 rule "Hello World"
-when
-    message:Message (type=="Hello")
-then
-    System.out.println("Hello World, Drools!");
+      dialect "mvel"
+  when
+      m : Message( type == "before", msgtext : msgtext )
+  then
+      System.out.println( msgtext );
+      modify ( m ) {
+        type = "after"
+      }
 end
