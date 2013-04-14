@@ -14,7 +14,11 @@
  * limitations under the License.
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
+
 import com.google.common.base.Throwables;
+import com.ning.http.client.AsyncCompletionHandler;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Response;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.resource.mock.ResourceMonitorMock;
 import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerMock;
@@ -23,13 +27,17 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
-import com.ning.http.client.*;
-import static org.fest.assertions.api.Assertions.*;
 
 import java.net.URI;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
+/**
+ * @author Itai Frenkel
+ * @since 0.1
+ */
 public class StartVirtualMachineTest {
 
     private ResourceProvisioningServerMock resourceProvisioningServer;
@@ -39,7 +47,7 @@ public class StartVirtualMachineTest {
     private AsyncHttpClient asyncHttpClient;
 
     @BeforeMethod
-    @Parameters({ "provisioningPort", "kvstorePort"})
+    @Parameters({ "provisioningPort", "kvstorePort" })
     public void beforeMethod(@Optional("8080") int provisioningPort,
                              @Optional("8081") int kvstorePort) {
         resourceProvisioningServer = new ResourceProvisioningServerMock();
@@ -66,22 +74,21 @@ public class StartVirtualMachineTest {
                     asyncHttpClient
                     .preparePut(resourceProvisioningUri + "start_virtual_machine/1")
                     .execute(
-                            new AsyncCompletionHandler<Integer>(){
+                            new AsyncCompletionHandler<Integer>() {
 
                                 @Override
-                                public Integer onCompleted(Response response) throws Exception{
+                                public Integer onCompleted(Response response) throws Exception {
                                     return response.getStatusCode();
                                 }
 
                                 @Override
-                                public void onThrowable(Throwable t){
+                                public void onThrowable(Throwable t) {
                                     throw Throwables.propagate(t);
                                 }
                             });
 
             assertThat(f.get()).isEqualTo(204);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw Throwables.propagate(e);
         }
     }
@@ -90,8 +97,8 @@ public class StartVirtualMachineTest {
     public void testMonitorVM() throws ExecutionException, InterruptedException {
         ResourceMonitorMock monitor = new ResourceMonitorMock(asyncHttpClient);
         URI resourceId = kvstoreUri.resolve("vm/1");
-        monitor.setState(resourceId,"starting").get();
-        monitor.setState(resourceId,"started").get();
+        monitor.setState(resourceId, "starting").get();
+        monitor.setState(resourceId, "started").get();
     }
 }
 
