@@ -33,7 +33,7 @@ class JavaClassParticipant < Ruote::Participant
     puts '--- JavaClassParticipant invocation:'
 
     puts 'workitem.fields:'
-    puts workitem.fields['appliance']
+    puts workitem.fields
 
     java_class_name = workitem.params['class']
     java_participant = eval("#{java_class_name}.new")
