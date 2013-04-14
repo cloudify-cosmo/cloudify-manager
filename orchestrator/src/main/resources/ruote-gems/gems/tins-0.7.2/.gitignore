@@ -1,0 +1,7 @@
+.*.sw[pon]
+.AppleDouble
+.rbx
+.rvmrc
+Gemfile.lock
+coverage
+pkg

@@ -1,0 +1,110 @@
+
+= rufus-scheduler CHANGELOG.txt
+
+
+== rufus-scheduler - 2.0.18    released 2012/03/06
+
+- support for "L" in cron lines (Thanks Andrew Davey)
+- support for negative time strings (Thanks Danny "northox" Fullerton)
+- reject invalid weekdays (Thanks pazustep)
+
+
+== rufus-scheduler - 2.0.17    released 2012/06/14
+
+- @andrehjr patch to make it work on Ruby 1.9.3
+- raises ArgumentError on unknown/unsupported options (Idea Tero Tilus)
+
+
+== rufus-scheduler - 2.0.16    released 2011/12/31
+
+- hardened Rufus.parse_time_string
+- running job thread: getting rid of the job pointer once job is done
+
+
+== rufus-scheduler - 2.0.15    released 2011/12/20
+
+- Scheduler#running_jobs (Thanks Louis Coilliot)
+
+
+== rufus-scheduler - 2.0.14    released 2011/12/11
+
+- Job #pause and #resume
+- Scheduler #pause(job_or_job_id) and #resume(job_or_job_id)
+- Scheduler#unschedule(job_or_job_id)
+
+
+== rufus-scheduler - 2.0.13    released 2011/11/14
+
+- cron lines now OK with "09". Thanks Anthony Lewis
+
+
+== rufus-scheduler - 2.0.12    released 2011/10/28
+
+- hardened exception handling. Thanks Sam Gibson
+- accepting #handle_exception, #log_exception or #on_exception
+- scheduler.in '1s', :mutex => 'that_mutex_name'
+
+
+== rufus-scheduler - 2.0.11    released 2011/09/30
+
+- require 'rufus-scheduler' works
+
+
+== rufus-scheduler - 2.0.10    released 2011/06/26
+
+- every and allow_overlapping now surviving exceptions. Thanks sha1dy
+
+
+== rufus-scheduler - 2.0.9    released 2011/04/22
+
+- Scheduler#first_at and :discard_past => true. Thanks concept47
+- Scheduler#cron and monthdays (sun#2 or mon#1)
+- Scheduler#unschedule_by_tag(t)
+
+
+== rufus-scheduler - 2.0.8    released 2010/12/31
+
+- issue with cron '0 7-23/2 * * *' fixed. Thanks Pickerel
+
+
+== rufus-scheduler - 2.0.7    released 2010/11/09
+
+- :allow_overlapping => false, thanks Adam Davies
+- cron and timezones, thanks Tanzeeb Khalili
+- Scheduler#trigger_threads, thanks Tim Uckun
+
+
+== rufus-scheduler - 2.0.6    released 2010/05/01
+
+- timeout jobs not outliving their parent job anymore, thanks Joel Wood
+
+
+== rufus-scheduler - 2.0.5    released 2010/03/02
+
+- fixed parse_time_string(s) issue, thanks Gonzalo Suarez
+
+
+== rufus-scheduler - 2.0.4    released 2010/02/12
+
+- addressing issue with every and timeout, thanks Tony Day
+
+
+== rufus-scheduler - 2.0.3    released 2009/11/04
+
+- made sure Schedulables with a call(job) method were OK when passed as second
+  parameter (thanks Nate Wiger)
+
+
+== rufus-scheduler - 2.0.2    released 2009/10/31
+
+- unified JobQueue and CronJobQueue, and handed @last_second management to the
+  latter
+- #trigger_block method for easier override
+- passing :job => job among Schedulable trigger parameters
+
+
+== rufus-scheduler - 2.0.1    released 2009/05/07
+== rufus-scheduler - 2.0.0    released 2009/05/07
+
+- initial release
+

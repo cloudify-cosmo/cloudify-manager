@@ -1,0 +1,93 @@
+
+= rufus-cloche
+
+A very stupid local JSON store.
+
+It's built on top of yajl-ruby and File.lock. Defaults to 'json' (or 'json_pure') if yajl-ruby is not present (it's probably just a "gem install yajl-ruby" away.
+
+Strives to be process-safe and thread-safe.
+
+The philosophy here is : every document has a revision number. You have to provide the latest revision number in order to update sucessfully a document (else the 'put' will fail and you'll return the latest version of the document (as a new starting point)).
+
+A cloche assumes your documents have a 'type' and it stores documents in separate dirs, one per type.
+
+WARNING : this library works on windows but without locking (only thread sync).
+
+
+== usage
+
+Basic operations :
+
+  require 'rubygems'
+  require 'rufus-cloche' # gem install rufus-cloche
+
+  c = Rufus::Cloche.new(:dir => 'my_cloche')
+
+  doc = { '_id' => 'invitation05', 'type' => 'letter', 'to' => 'The Duke' }
+    # documents are Hash instances, with an '_id' and a 'type' key.
+
+  d = c.put(doc)
+
+  p d
+    # => nil
+    # #put returned nil, the 'insertion' was successful
+
+  p doc['_rev']
+    # => 0
+    # Cloche added the '_rev' key and set its value to 0.
+
+  # ... meanwhile, someone in another process upated the document
+  # we're trying to put an updated version ...
+
+  doc['body'] = "Dear Monty, it's been a while since El Alamein..."
+
+  d = c.put(doc)
+
+  p d
+    # => { "_id" => "invitation05", "type"=>"letter", "to" => "The Count", "_rev" => 1 }
+    #
+    # the update failed, the method returned the current version of the document
+
+It's OK to get a document, but it's sometimes better to get many of them :
+
+  docs = get_many('letter')
+    # returns an array containing *all* the documents with the type 'letter'
+
+  docs = get_many('letter', /^invitation/)
+    # returns all the documents whose _id begins with "invitation"
+
+  docs = get_many('letter', /\/2009\//)
+    # returns all the 2009 letters (assuming their _id contains the string "/2009/"
+
+
+== mailing list
+
+On the rufus-ruby list :
+
+http://groups.google.com/group/rufus-ruby
+
+
+== issue tracker
+
+http://github.com/jmettraux/rufus-cloche/issues
+
+
+== irc
+
+  irc.freenode.net #ruote
+
+
+== the rest of Rufus
+
+http://rufus.rubyforge.org
+
+
+== authors
+
+* John Mettraux, jmettraux@gmail.com, http://jmettraux.wordpress.com
+
+
+== license
+
+MIT
+

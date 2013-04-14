@@ -39,6 +39,11 @@ public class YamlRecipeTest {
         assertEquals(appliance.getName(), "test");
     }
 
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testApplianceRecipeWithMissingResource() {
+        YamlRecipe.createFromString("test:\n  type: appliance\n  resources:\n  - missing_resource");
+    }
+
     @Test
     public void testRecipeFromClassPath() {
         YamlRecipe recipe = YamlRecipe.createFromClassPath("recipes/yaml/vm_appliance.yaml");

@@ -16,6 +16,7 @@
 package org.cloudifysource.cosmo.orchestrator.recipe;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 
 import java.util.Map;
 
@@ -41,6 +42,16 @@ public class Resource {
         return config;
     }
 
+    public Map<String, Object> toMap() {
+        final Map<String, Object> map = Maps.newHashMap();
+        map.put("name", name);
+        map.put("config", config);
+        return map;
+    }
+
+    /**
+     * A builder for creating a {@link Resource} instance.
+     */
     public static class Builder {
 
         private String name;

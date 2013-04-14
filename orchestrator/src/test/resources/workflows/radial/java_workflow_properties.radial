@@ -1,0 +1,3 @@
+define java_flow
+  iterator on_field: "appliances", to_field: "appliance"
+    participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteJavaParticipant"

@@ -115,9 +115,8 @@ public class YamlRecipe implements Recipe {
         Map<String, String> config;
         if (map.containsKey("config")) {
             Preconditions.checkArgument(map.get("config") instanceof Map);
-            config = toStringsMap((Map<?, ?>)map.get("config"));
-        }
-        else {
+            config = toStringsMap((Map<?, ?>) map.get("config"));
+        } else {
             config = Maps.newHashMap();
         }
         return new Resource.Builder().name(name).config(config).build();
@@ -134,5 +133,16 @@ public class YamlRecipe implements Recipe {
     @Override
     public Map<String, Appliance> getAppliances() {
         return appliances;
+    }
+
+    // TODO: create a an interface with a toMap() method which is also relevant for Resource & Appliance.
+    public Map<String, Object> toMap() {
+        final Map<String, Object> map = Maps.newHashMap();
+        final Map<String, Object> appliances = Maps.newHashMap();
+        for (Map.Entry<String, Appliance> entry : getAppliances().entrySet()) {
+            appliances.put(entry.getKey(), entry.getValue().toMap());
+        }
+        map.put("appliances", appliances);
+        return map;
     }
 }

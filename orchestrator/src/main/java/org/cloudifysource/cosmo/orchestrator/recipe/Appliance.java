@@ -16,8 +16,10 @@
 package org.cloudifysource.cosmo.orchestrator.recipe;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +29,7 @@ import java.util.Set;
  * @author Idan Moyal
  * @since 0.1
  */
-public class Appliance {
+public class Appliance implements Serializable {
 
     private final String name;
     private final Map<String, Resource> resources;
@@ -51,6 +53,21 @@ public class Appliance {
         return name;
     }
 
+    public Map<String, Object> toMap() {
+        final Map<String, Object> map = Maps.newHashMap();
+        map.put("name", name);
+        map.put("workflows", workflows);
+
+        final Map<String, Map<String, Object>> resourcesMap = Maps.newHashMap();
+        for (Map.Entry<String, Resource> entry : resources.entrySet()) {
+            resourcesMap.put(entry.getKey(), entry.getValue().toMap());
+        }
+        return map;
+    }
+
+    /**
+     * A builder for creating an {@link Appliance} instance.
+     */
     public static class Builder {
         private String name;
         private List<String> workflows;

@@ -1,0 +1,52 @@
+
+= CREDITS.txt
+
+
+== Contributors
+
+- Andrew Davey (https://github.com/asdavey) "L" in cron lines
+- Stig Kleppe-Jørgensen (https://github.com/stigkj)
+- Danny "northox" Fullerton (https://github.com/northox) negative time strings
+- Marcus Brito (https://github.com/pazustep) CronLine proofing
+- André Luis Leal Cardoso Junior (https://github.com/andrehjr) 1.9.3 patch
+- Anthony Lewis (https://github.com/anthonylewis) cron lines and 09 issue
+- concept47 (https://github.com/concept47) every and :discard_past
+- Chris Kampemeier (http://github.com/chrisk) rspec 2.0 refinements
+- Tanzeeb Khalili (http://github.com/tanzeeb) cron and timezones
+- Adam Davies (http://github.com/adz), :allow_overlapping => false
+- Klaas Jan Wierenga, at/every/in stress tests (1.0 and 2.0)
+- TobyH (http://github.com/tobyh), faster and cleaner CronLine#next_time
+
+
+== Feedback
+
+- Tero Tilus - raises on unsupported/unknown options
+- Louis Coilliot - Scheduler#running_jobs
+- Henrique G. Testa - pause/resume concept
+- Sam Gibson - https://github.com/samfoo - exception handling hardening
+- sha1dy - https://github.com/sha1dy - every and overlapping exception issue
+- Defusal - unschedule_by_tag
+- pickerel - https://github.com/pickerel
+- Gonzalo Suarez - parse_time_string(s) issue
+- Tony Day - http://github.com/tonyday - every and overlapping timeout issue
+- Nate Wiger (Schedulable call/trigger issue)
+- Aldric (readme errors)
+- Kenneth Kalmer (daemon-kit)
+- Chris Evans, :timeout tests on JRuby
+- Tim Uckun, :timeout concept
+- K Liu, for the note about CronLine#next_time
+- Xianhang Zhang, find_jobs(tag=nil) patch
+- Yi Wen, for lib/rufus-scheduler.rb
+- Adam Green and Rael Dornfest for the Taskr breaking issue feedback
+- Sean Liu, unschedule_every issue
+- Manfred Usselman (no cronjobs on sundays bug)
+- Michael Goth, tests with precision > 1s
+
+* many people gave feedback previously, see
+  http://openwferu.rubyforge.org/svn/trunk/openwfe-ruby/CREDITS.txt
+
+
+== and finally
+
+- many thanks to the EventMachine team (especially Aman Gupta)
+

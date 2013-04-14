@@ -1,0 +1,520 @@
+
+[o] port load26 (requires BlockParticipant)
+[o] logger service
+[o] test logger
+[o] object full_dup
+[o] :receive or :receive_back for when workitems come back from participant
+[o] emit :processes :launch :wfid
+[o] emit :processes :terminate :wfid only
+[o] arch doc
+[o] verbose always on
+[o] ev : :participants :register/:unregister
+[o] test logger always on for tests (in-memory only)
+[o] NullParticipant
+[o] NoOpParticipant
+[o] rufus-dollar
+[o] variables in ProcessStatus (process level only)
+[o] ProcessStatus#tree
+[o] subprocess binding
+[o] subprocess lookup
+[o] participant lookup
+[o] event : launch_sub
+[o] event : :processes, :cancelled ?
+[o] concurrence : over_if
+[o] pool cleanup
+[o] fexp : created_time
+[o] ps : launched_time
+[o] ps : #tags
+[o] wi test (and fix) ${f:xyz}
+[o] wi#to_h #from_h
+[o] wi.params
+[o] self rec for [main] process
+[o] fexp.modified_time
+[o] wfid_gen : rufus-mnemo
+[o] fs_error_journal
+[o] fs_error_journal : restart test
+[o] do errors get removed after being replayed ? yes.
+[o] cache storage
+[o] fs storage
+[o] tag (which implies variables)
+[o] event : upon setting tag !
+[o] event : upon leaving tag
+[o] undo
+[o] redo
+[o] cancel-process (exp)
+[o] cancel_process
+[o] cancel
+[o] on_error
+[o] on_cancel
+[o] iterator
+[o] iterator : break, cancel, ...
+[o] cursor
+[o] cursor : jump to tag
+[o] loop
+[o] if
+[o] equals
+[o] unset
+[o] cursor/loop/iterator : break-if rewind-if
+[o] stop passing full exp in message, except for expression updates
+[x] engine#reload
+[o] participants shutdown
+[o] stalled [participant] expressions restart (apply/reply ?)
+    "re-apply on reload"
+    http://groups.google.com/group/openwferu-users/browse_thread/thread/c2aa4b53d1664d45
+[x] workitem.__result__ / why, the workitem itself is the result
+[o] tracker
+[o] sleep
+[o] listen
+[o] listen wfid="x"
+[o] exploded scheduler
+[x] wfid --> piid (stick with the funny old name)
+[o] persisted tracker
+[o] wfidgen.shutdown (close wfidgen.last)
+[o] conditional for everybody
+[o] timeout for everybody
+[o] __timed_out__ = true ? (wi.fields)
+[o] engine.processes()
+[o] kill_process != cancel_process (need a way to not trigger on_cancel)
+[o] pdef.to_dot (a beginning)
+[o] @in_cancel, @in_error --> @state (active|cancelling|killing)
+[o] wait
+[o] Jason Allen's check about concurrence
+[x] on_cancel => 'error' NO
+[o] event on [un]setting variable
+[o] condition : != ~= >= ....
+[o] fs_participant
+[o] participant : do thread (and do_not_thread)
+[o] add test for error replay in participant
+[o] forget : participant ? subprocess ? everybody
+[o] Ruote.VERSION = "2.0.0" for Kenneth
+[o] on_timeout => 'part|sub' (idea by hassox)
+[o] on_timeout => 'error' (idea by hassox)
+[o] exp : concurrent-iterator < concurrence
+[o] exp : reserve
+[o] exp : unset
+[o] exp : save
+[o] exp : restore (and its set-fields alias)
+[o] participant : if EM is present use next_ or defer instead of Thread.new
+[o] XML process definitions
+[o] remote process definitions
+[o] json process definitions
+[o] check nested ${f:a.b.c}
+[o] test : participant in error timeout (error should cancel timeout)
+[o] nested set wi.fields['a.b.0'] = x
+[o] nested save wi.fields['a.b.0'] = x
+[o] parser.rb : test security check
+[o] add Ruote::Launchitem
+[o] participant#cancel pass flavour as well nil|:kill|:timeout
+[o] BlockParticipant : |workitem, fexp|
+[o] listeners
+[o] engine.wait_for
+[o] func tests : wire assert_no_errors back in
+[o] timeout set by participant [implementation]
+[o] test for wfids of errors in subprocesses !
+[o] Ruote::Exp:: namespace for expressions
+[o] exp : apply (ex-eval)
+[o] apply : attributes to variables
+[o] subprocess : attributes to variables
+[o] concurrent_iterator :times => X
+[o] iterator defaults to :to_v => 'i'
+[o] concurrent_iterator defaults to :to_v => 'i'
+[o] set "f:x" => "blah"; set "v:y" => [ 1, 2 ] (defaults to f:)
+[o] subprocess :ref => uri
+[o] participants : pass the &block under the option :block
+[o] concurrence : :over_unless
+[x] engine#register_subprocess (replaced by engine#variables)
+[x] switch to JSON friendly pers format for flow expressions
+[o] switch to JSON friendly pers format for workitems
+[o] rewind :ref => 'tag_of_cursor_exp' (direct) :tag oriented.
+[o] exp : error
+[o] wait 0.500 / wait 60
+[x] exp : reval : not needed, participants are here
+[o] exp : inc ? if target is array, becomes append (not cons)
+[o] exp : dec ? if target is array, then pop (not car)
+[o] _if '${f:x} == ${f:y}'
+[x] equals : equals "v:v" => "true"  NO => evokes assignment
+[x] if : _if "v:v" => "true" ?  NO => evokes assignement
+[x] deferred apply technique / not OK, with EM and next_tick / pro
+[o] reserve : perhaps it's better to have an atomic get and set variable...
+[o] clean up lookup_var/set_var into locate_var/lookup_var/set_var
+[x] Sun Hao's up-to-date-tree idea ${f:participant_name} ps#resolved_tree
+[o] error : when an error expression is cancelled, should the err get removed
+    from the process status ? yes.
+[o] file logger / history service
+[o] engine.process_history(wfid)
+[o] add_branch :times/:branches
+[o] cursor : :break_if / :break_unless
+[o] exp : when (exploit :var :set event, or frequency)
+[o] when : restart test
+[o] when : cron frequency
+[o] let listeners accept launchitems
+[o] exp : cron
+[o] exp : every
+[o] write rt test for 'timeout'
+[o] undo exp : alias to 'cancel'
+[o] Andrew's at for timeouts (Chronic maybe)
+[x] timeout :at and :after (timeout expression vanished)
+[x] listen : should it forget its triggered children ? yes
+[o] limit the number of msgs returned
+[o] should redo/undo follow the example of command and add_branches ?
+    everything through reply (receive)
+    should re_apply not touch the state of its expression ?
+[o] test undo when cancelling parent expression
+[o] issue with :unless => '${f:index} == 2000'
+[o] implement Engine#reply (Engine simply has to include ReceiverMixin
+[o] listeners X receivers
+[o] add_service(name, path, klass, opts={}) opts local to services (really?)
+[o] add_branches : pass message to concurrent_iterator like a command expression
+[o] clean up persists present in #apply
+[o] maybe cancel should have a safely / redo_reply thing
+[o] implement Storage#clear!(type)
+[o] ruote/util/time.rb utc_to_s 'YYYY/MM/DD' --> 'YYYY-MM-DD' (regex friendly)
+[x] store participant bytecode/AST ?
+[o] ${r:puts(d("f:nada"))}
+[o] :ruby_eval_allowed vs 'ruby_eval_allowed'
+[o] check : what if a reply on a concurrence wants to save, whereas the
+    concurrence terminated (got removed) meanwhile ?
+    the reply returns true...
+[o] implement StorageHistory
+[x] nuke FsHistory ? keep
+[o] EngineParticipant
+[x] expstorage.to_dot
+[o] process_status.to_dot
+[o] EngineParticipant : don't wait in case of forget (reply could NEVER come !)
+[x] align :forget behaviour on EngineParticipant forget... OK as it is
+[o] engine.re_apply(fei, wi) (thanks Torsten)... :wi => x, :tree => y...
+[o] ruote-dm 2.1
+[o] :tree => Ruote.to_tree { participant 'alpha' }
+[o] implement == eql? hash for workitem
+[o] StorageParticipant#query(wfid, participant_name, {fields})
+[x] break fs_history, prepare for dm_history
+[o] part = engine.register_participant :alpha, StorageParticipant should work...
+[o] concurrence :merge_type => 'stack'
+[o] CompositeStorage.new('msgs' => AmqpStorage.new(''), ...)
+[x] let the storage participant leverage Ruote::FlowExpressionId.from_id(s)
+[o] Andrew's technique http://groups.google.com/group/openwferu-users/browse_thread/thread/c2aa4b53d1664d45/8523a1a5ee98fd71
+[o] Avishai : LocalParticipant : repost dispatch message
+[o] Rdoc Ruote::Engine.register_participant -> passing a block to a participant
+    and perhaps also on
+    http://ruote.rubyforge.org/implementing_participants.html (Avish)
+[o] wrap workitem in process error ? for on_error consumption (thanks Oleg)
+    doing workitem.fields['__error__'] = [ fei, time, error_message ]
+[o] HashStorage should emit 'init persist fail' messages as well !
+[o] Oleg's idea about participant on_reply
+    http://groups.google.com/group/openwferu-users/browse_thread/thread/2e6a95708c10847b
+    on_reply should be done in the receive action, not in Receiver
+    thus, in the ParticipantExpression
+[x] exp : step (jump to cursor tag ?) : there is already the jump expression
+[x] auto-participant re-apply
+[o] receiver should be OK with a storage or a context
+[x] Avishai : Worker : hook for rejecting the dispatch message
+[o] receiver / local participant : reply/forward/proceed/... mess : fix
+[o] storage participant : accept string for fei
+[o] => Ruote::FlowExpressionId.extract(x)
+[o] fei : place engine id in fei.to_storage_id (and back)
+[o] wait_for(:inactive) blocks until worker is inactive
+[o] storage0.copy_to(storage1) / migrate_to as requested by Matt Nichols
+[o] check if rufus-lru is still needed
+[o] storage migration : eats all the memory :(
+[x] remove dependency on rufus-scheduler
+[o] engine.storage_participant
+[o] engine.noisy = true shortcut
+[o] (ft_27) set "v:mypart" => [ 'MyParticipant', {} ]
+    binding a participant on the fly (just for this process)
+[o] participant timeout as an instance method
+[o] engine.process_wfids (lighter than engine.processes)
+[o] storage.get_many(x, y, :descending => true) ?
+[o] storage_participant.query : use skip and limit
+[o] engine.processes use skip and limit
+[o] engine.errors use skip and limit
+[o] ParticipantEntry is a bit brittle when editing engine.participant_list
+[o] use blank slate for process definition
+[o] lib/ruote/svc for treechecker, error_handler and co (tree_checker)
+[o] part/template.rb, use Rufus::Json.pretty_encode
+[o] storage.clear OR storage.purge! OR both (cf discussion with marc_lee) !!
+[o] Nathan : throw error on ${ruby:...} when ruby_eval_allowed is not set
+[o] engine.kill and engine.cancel should accept fei, fexp or wfid
+[o] participant params['tags'] = [ a, b, c ] ? costly (x expressions to read)
+    but passing them in the workitem could be fun
+    field['__tags__'] ?
+[x] use treetop for more complex "${f:x} AND ${f:y}" ?
+    (systems like Rails require it anyway)
+    NO : using ruby_parser instead
+[o] TreeChecker : exclude_fvccall :at_exit
+[o] _if '${f:x} == ${f:y} || ${f:x} == ${f:z}'
+[x] beanstalk [as a] workqueue ?
+[o] tree.to_xml (require builder ?)
+[o] tree.to_ruby
+[o] __command__ + tag (rewind that cursor there, not the current one)
+[o] rewind 'x' where x is a tagname (command x)
+[o] solve the ps#root_expression_for(fei) dilemma
+[x] condition : "${f:x} [is] empty" / this one is hard
+[o] when : add test for cancelling when child has been triggered / is running
+[o] engine.ps(wfid)
+[x] alias "when" to "whenever" ?
+[x] alias "when" to "on" / "upon"
+[o] alias "when" to "once"  "once x == y do"
+[o] condition : "${'x} [is] empty" since ${array} => "[]"
+[x] simple worker hooks ? (as discussed with @hassox)
+    on_terminate... ? only works in the same process as the worker
+    only for tests...
+[o] on_error => retry / pass
+[o] workitem : #as_json and #from_json
+    since ruote depends on rufus-json...
+[x] engine.on_error = 'participant_name' // 'subprocess_name'
+    done at : http://github.com/jmettraux/ruote/commit/50292d954ff877f1f6615022216f346a7001b483
+    `--> reverting that for now, too dangerous
+[o] process_count and error_count ? (processes(:count => true))
+[o] exp : case (is it necessary ?) (guards ?) (hard for ruote-fluo)
+[o] exp : lose
+[o] conditional : rprefix ! ${r:x} is perhaps sufficient
+[o] implement kill_process! (kill_expression! ?)
+[o] /!\ resurrect CI
+[o] user3 :rif => "!wi.fields['approvers'].include?('user3')" : 'in' operator
+    "${customer} in [ 1, 2, 3 ]"
+    "${customer} in { 'x' => 1 }"
+[o] rename 'parser' to 'reader'
+[o] ft_42 : maybe require storage to output ids already sorted
+[o] Participant#rtimeout(workitem=nil)
+[o] alias concurrent-iterator to citerator
+[o] like we have a default WaitLogger, why not have a default HistoryLogger ?
+    so that context.history always returns something...
+    the default history would be storage based but with LRU turned on
+    for the HashStorage one...
+    like WaitLogger only remembers 147 msgs...
+[o] StorageHistory : add a method to list all wfids (for by_wfid)
+[o] DefaultHistory : add a method to list all wfids (for by_wfid)
+[x] issue with ruote-kit and inpa participants...
+[x] .nil? .empty? .set? for "${x}.nil?"
+[o] BlockParticipant : proc.to_source thanks to sourcify
+[o] register :overwrite { ... } ? (wipes all the participants)
+[o] pause engine
+[o] pause process instance
+[o] filter : blank? equivalent (maybe it already exists)
+[o] eft_18 weak with jruby-1.5.1 and 1.5.6
+[o] participant : consume/cancel/accept?/on_reply without params
+[o] participant : consume -> on_workitem
+[o] remove abort_on_exception=true
+[o] concurrence / concurrent_iterator : merge_type => 'discard' / 'ignore'
+    keep track of the first "process sub id" ?
+[o] register :toto, :accept? => lambda { |workitem| ... }
+[o] register :toto, :do_not_thread => lambda { |workitem| ... }
+[o] :on_timeout => :rewind (break, jump to x)...
+[o] :on_error => :rewind (break, jump to x)...
+[o] worker identification/registration
+    http://groups.google.com/group/openwferu-users/browse_thread/thread/c51b94fb8bb685da
+[o] worker shutdown initiated by engine (same thread)
+[o] set :var => 'y' { '2342342' }
+[o] wfid generator UTC?
+[o] iterator: drop the need for the sequence --> implicit sequence
+[o] citerator: drop the need for the sequence --> implicit sequence
+[o] move test/unit/storage[s].rb to test/functional/
+[x] exp : defined (not really necessary)
+[x] exp : quote (not really necessary)
+[x] exp : field / attribute (not really necessary)
+[x] exp : variable (not really necessary)
+[o] expression :concurrent => true idea (reply immediately, cancellable)
+    `- covered by :flank => true
+[o] concurrence: allow empty
+[o] citerator: allow empty
+
+[ ] exp : at expression ? comparable to cron
+[x] exp : exp (restricted form of eval ?) (is it apply ?)
+[x] exp : filter
+[x] exp : filter-definition
+[x] exp : parameter
+[ ] exp : log : or could it be a participant ?
+[x] wait_for(:participant) what about 'dispatched' instead of 'dispatch' ?
+
+[ ] define without name (__result__)
+
+[ ] participant dispatch thread throttling ?
+
+[ ] tailcall
+  - is it really necessary? The storage is the limit.
+
+[ ] subprocesses participants (alias ?)
+
+[ ] recursion : should cope with modified trees 'main' => :tree ??
+
+[ ] file/fs_listener [example] ?
+
+[ ] concurrence / concurrent_iterator : merge plugin ?
+    use participant for that ?
+
+[ ] restore : implement merge strategies
+
+[ ] one file, no multi-process, persistence ? LateHashStorage ?
+[ ] one file per process ?
+
+[ ] apply : ruby or xml (instead of just ast) ?
+
+[ ] history.to_tree ?
+
+[ ] Ruote.process_definition ... Ruote.method_missing or sequence ?
+
+[ ] @children diff/undiff idea ?
+
+[o] cursor : 'reset' command ?
+[ ] cursor : 'restart' alias for 'reset' ?
+[ ] repeat : have a counter in a variable (:to => x maybe) (subprocessid ?)
+
+[ ] engine.cancel_forgotten_children(wfid) ?
+
+[ ] port subprocess on_cancel test from ruote 0.9 http://groups.google.com/group/openwferu-users/t/75f02bdadf7b93eb
+
+[ ] double-check on_cancel rewrite (ft_1_process_status)
+
+[ ] verify get_last/get_raw logic, no + 0.0001...
+[x] spare 1 get_msg by caching msg (but keep 'deleting')
+[ ] [un]set_var : via message ? should be ok like that... Not much traffic there
+
+[ ] empty iterator or concurrent-iterator, log ? crash ? empty while...
+
+[ ] shell ? irb ? Shell.new(storage)
+[ ] focus on fulldup or json.dup (via fulldup ?)
+
+[ ] should __error__ contain the tree ?
+[ ] engine.on_cancel = 'participant_name' // 'subprocess_name'
+    bof
+
+[ ] participant :ref => '${f:nada}', :or => 'xyz'
+    (look at OpenWFE manual, this feature already existed in there)
+    http://www.openwfe.org/manual/ch06s02.html#expression_participant
+    else-ref... list of participants...
+    ref="alpha && bravo", ref="alpha||bravo" (|| parallel :( )
+
+[ ] LocalParticipant def consume; handle; reply; end
+
+[ ] worker : minuteman, make it cron triggerable
+    trap SIGUSR1 or USR2
+    maybe it's expensive to fire a [worker] process each minute
+    have to write the $$ (pid) somewhere for cron to pick it up
+
+[ ] toto :task => 'maw the lawn', :within => '3d'
+    alias to timeout
+[ ] "business days" plugin
+[ ] participant 'toto', :while => '${not_good}' (really ?)
+
+[ ] re_apply_stalled
+    http://groups.google.com/group/openwferu-users/browse_thread/thread/ff29f26d6b5fd135
+
+[ ] engine.purge (arts style: worker.@msgs = [])
+
+[ ] http://ruote.rubyforge.org/irclogs/ruote_2010-07-07.txt
+    configuration issue
+    maybe fail with a good error message when registering service...
+
+[ ] engine.register_from_dir() have a way to re-evaluate the dir
+[o] OR remove engine.register_from_dir()
+[o] AND provide a better register &block
+[o] provide a mean for a participant to reject a workitem (intra plist)
+    on_reply and now filter ?
+
+[ ] StorageParticipant#by_store[_name]
+    maybe : reform the store_name system !
+
+[ ] a run of ruby -w
+
+[x] cursor : previous_command field ? not really necessary with :break_if => x
+
+[ ] storage_participant.by_participant([ a, b, c, d ], opts)
+    storage_participant.by_participant(a, b, c, d, opts) too
+      leverage things like
+      http://wiki.apache.org/couchdb/HTTP_view_API#Querying_Options
+    2.1.12
+
+[ ] receiver/base.rb : fexp.lookup_variable --> lookup_variable ?
+
+[ ] engine/receiver #reply(workitem or fexp or fei) ?
+[ ] workitem : short constructor, cf http://groups.google.com/group/openwferu-users/browse_thread/thread/c52d207d85e4b93e
+[ ] engine.force_reply_to_parent(fei) ?
+    but, this is a cancel_expression(fei)
+
+[ ] concurrence : add_child ?
+    How would that impact concurrent_iterator's add_branches ?
+[ ] detach / attach segments of processes
+[x] clone process ? (could be used by {de|at}tach)
+    what about participants ?
+
+[ ] console for InformatiQ / console or dashboard or tool ?
+[ ] pooltool.ru : there are already storage copy methods
+
+[o] doc : enhance doc on conditional (and, empty, null, ...)
+[o] doc : document engine.on_{error|terminate}
+[o] doc : document on_error = retry and on_error = pass
+[ ] doc : add piece of doc about running workers on their own
+
+[o] listen to errors {in|out}
+    well... there is already on_error...
+    but on_error is for nested stuff...
+[o] listen to tags {entering|leaving}
+[x] listen to launch/terminate, listen :process => :x, :upon => 'launching'
+    you can now set :tag on a subprocess' define
+[ ] listen to [un]set variable (the events are already in there)
+    not really necessary... there is already 'once' (when)
+[o] listen condition ? :when => '${x} == y', :constraint, :only, ...
+    it's :where and it's not documented :-( but it's tested :-)
+[o] engine#on_terminate, similar to on_error
+[o] let engine#on_error use svc/tracker.rb instead of 'notifications'
+[ ] process supervise other process, listen...
+    launch a process with a designed 'supervisor' ?
+    listen to termination, listen to error, for a given process ?
+[ ] events for put_schedule/delete_schedule/trigger_schedule
+
+[ ] use 'raise' instead of error_handler.action_handle
+    (ruote-amqp, ruote-beanstalk)
+
+[ ] ruote cheatsheet
+[ ] ruote slides
+
+[x] ci : ruote-amqp
+[o] ci : ruote-mon
+[ ] ci : jruby
+
+[ ] ruote-doozer?
+
+[ ] StorageParticipant#proceed : raise if workitem not found ?
+[ ] StorageParticipant#proceed : accept fei ?
+[ ] Engine#reply(wi), should remove from storage...
+
+[o] @engine.context['participant_in_variable_enabled'] = true
+[ ] @engine.register(x, :trusted => true, &block)
+[ ] security service ? context['x'] but then, more advanced behaviours
+[ ] subaltern
+
+[x] investigate 1.9's json
+[ ] Parslet for conditions?
+[ ] subaltern for conditions?
+[ ] enhance radial/Parslet error messages (cf Raphael)
+
+[ ] concurrence: reply_to_parent instead of cease when no more children ?
+    https://github.com/jmettraux/ruote/blob/1f9add961f90049ea951b8940622fbe8d136c45f/lib/ruote/exp/fe_concurrence.rb#L304-310
+
+[ ] cursor: deeper jumps
+    http://groups.google.com/group/openwferu-users/browse_thread/thread/a973f0ea5fbb1a96
+
+[ ] on_cancel like on_error expression
+[ ] on_timeout like on_error expression (or make timeout an error)
+
+[ ] #get_msgs to cover #get_schedules (make #get_schedules empty)
+    | | |
+[ ] find better solution than "get all schedules"
+    ... or discard get_schedules completely
+
+[ ] eft_6_concurrence : 2 Fs when running standalone...
+
+[ ] get rid of the "web" test[s]
+
+[.] remove #dump from all storage implementations
+
+[ ] engine#remove_service
+
+== 3.0
+[ ] deprecate get_schedules
+    (let the storage include triggered schedules as msgs)
+[ ] deprecate "trackers as variables"
+
+== 4.0
+[ ] deprecate listen (await?) or make it an alias of await?
+
