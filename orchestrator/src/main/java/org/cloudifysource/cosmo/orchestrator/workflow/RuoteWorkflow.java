@@ -24,35 +24,42 @@ import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 
 import java.net.URL;
-import java.util.Collections;
 import java.util.Map;
 
 /**
  * @author Idan Moyal
  * @since 0.1
  */
-public class RuoteWorkflowExecutor implements WorkflowExecutor {
+public class RuoteWorkflow implements Workflow {
 
+    private final String path;
     private final Map<String, Object> properties;
 
-    public RuoteWorkflowExecutor() {
-        this(Collections.<String, Object>emptyMap());
+    public static RuoteWorkflow createFromFile(String path) {
+        return createFromFile(path, null);
     }
 
-    public RuoteWorkflowExecutor(Map<String, Object> properties) {
+    public static RuoteWorkflow createFromFile(String path, Map<String, Object> properties) {
+        return new RuoteWorkflow(path, properties);
+    }
+
+    private RuoteWorkflow(String path, Map<String, Object> properties) {
+        this.path = path;
         this.properties = properties;
     }
 
     @Override
-    public void execute(String workflowPath) {
+    public void execute() {
         try {
-            final URL workflowResource = Resources.getResource(workflowPath);
+            final URL workflowResource = Resources.getResource(path);
             Preconditions.checkNotNull(workflowResource);
             final String workflow = Resources.toString(workflowResource, Charsets.UTF_8);
             final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
 
-            for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                container.put("$" + entry.getKey(), entry.getValue());
+            if (properties != null) {
+                for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                    container.put("$" + entry.getKey(), entry.getValue());
+                }
             }
 
             container.put("$workflow", workflow);

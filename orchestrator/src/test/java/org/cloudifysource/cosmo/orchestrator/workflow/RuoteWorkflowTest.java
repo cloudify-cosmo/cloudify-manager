@@ -30,7 +30,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author Idan Moyal
  * @since 0.1
  */
-public class RuoteWorkflowExecutorTest {
+public class RuoteWorkflowTest {
 
     @BeforeMethod
     public void before() {
@@ -39,8 +39,8 @@ public class RuoteWorkflowExecutorTest {
 
     @Test
     public void testWorkflowExecution() {
-        WorkflowExecutor executor = new RuoteWorkflowExecutor();
-        executor.execute("workflows/radial/java_workflow.radial");
+        Workflow executor = RuoteWorkflow.createFromFile("workflows/radial/java_workflow.radial");
+        executor.execute();
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }
 
@@ -59,8 +59,8 @@ public class RuoteWorkflowExecutorTest {
         final Map<String, Object> props = Maps.newHashMap();
         props.put("appliances", appliances);
 
-        WorkflowExecutor executor = new RuoteWorkflowExecutor(props);
-        executor.execute("workflows/radial/java_workflow_properties.radial");
+        Workflow executor = RuoteWorkflow.createFromFile("workflows/radial/java_workflow_properties.radial", props);
+        executor.execute();
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }
 

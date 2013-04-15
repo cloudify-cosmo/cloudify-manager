@@ -19,6 +19,6 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
  * @author Idan Moyal
  * @since 0.1
  */
-public interface WorkflowExecutor {
-    void execute(String workflow);
+public interface Workflow {
+    void execute();
 }
