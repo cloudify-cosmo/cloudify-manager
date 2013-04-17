@@ -20,8 +20,6 @@ import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
-import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.orchestrator.workflow.Workflow;
 import org.cloudifysource.cosmo.resource.mock.ResourceMonitorMock;
 import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerMock;
 import org.testng.annotations.AfterMethod;
