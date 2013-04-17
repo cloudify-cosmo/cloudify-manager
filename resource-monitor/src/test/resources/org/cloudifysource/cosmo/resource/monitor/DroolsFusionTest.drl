@@ -1,0 +1,39 @@
+import org.cloudifysource.cosmo.resource.monitor.Message
+import org.cloudifysource.cosmo.resource.monitor.AppInfo
+
+declare Message
+@role(event)
+@timestamp(timestamp.getTime())
+end
+
+declare AppInfo
+@role(event)
+@timestamp(timestamp.getTime())
+end
+
+rule "Change message type after one minute"
+    dialect "mvel"
+when
+    $appinfo:AppInfo() from entry-point "testEntryPoint"
+    $message:Message( type == "before", $msgtext : msgtext, this after[ 1m ] $appinfo )
+        from entry-point "testEntryPoint"
+then
+    System.out.println( $msgtext );
+    $message.type = "after";
+    channels["testExitChannel"].send( $message );
+end
+
+rule "Create new message if not exits within 1 minute"
+    dialect "mvel"
+when
+    $request: Message( type == "request")
+            from entry-point "testEntryPoint"
+    not Message( type == "response", this after[0, 1m ] $request )
+            from entry-point "testEntryPoint"
+then
+    System.out.println( "Found no response.");
+    $message = new Message()
+    $message.type = "missing";
+    $message.msgtext = "This is the message text";
+    channels["testExitChannel"].send( $message );
+end

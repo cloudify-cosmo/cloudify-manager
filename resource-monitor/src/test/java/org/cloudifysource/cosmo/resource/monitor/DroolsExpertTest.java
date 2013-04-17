@@ -41,7 +41,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DroolsExpertTest {
 
-    public static final String RULE_FILE = "/hellodrools/testrules.drl";
+    public static final String RULE_FILE = "/org/cloudifysource/cosmo/resource/monitor/DroolsExpertTest.drl";
     private KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
     private Collection<KnowledgePackage> pkgs;
     private KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase();
