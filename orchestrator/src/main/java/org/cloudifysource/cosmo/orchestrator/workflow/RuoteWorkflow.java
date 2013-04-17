@@ -56,6 +56,12 @@ public class RuoteWorkflow implements Workflow {
             final String workflow = Resources.toString(workflowResource, Charsets.UTF_8);
             final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
 
+            final URL resource = Resources.getResource("ruote-gems/gems");
+            Preconditions.checkNotNull(resource);
+            final String resourcePath = resource.getPath();
+
+            container.runScriptlet("Dir['" + resourcePath + "/**/*'].each { |dir| $: << dir }");
+
             if (properties != null) {
                 for (Map.Entry<String, Object> entry : properties.entrySet()) {
                     container.put("$" + entry.getKey(), entry.getValue());
