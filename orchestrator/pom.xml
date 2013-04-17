@@ -45,6 +45,16 @@
             <version>14.0</version>
         </dependency>
         <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>1.7.3</version>
+        </dependency>
+        <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>logger</artifactId>
             <version>${cosmo.logger.version}</version>

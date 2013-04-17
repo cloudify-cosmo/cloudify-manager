@@ -1,0 +1,6 @@
+*.rbc
+.*.sw[pon]
+.rbx
+Gemfile.lock
+coverage
+pkg

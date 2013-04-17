@@ -1,0 +1,13 @@
+
+[x] !! test for type change. Not covered. Have to delete + put.
+[x] use 1! lock for put. It's OK for now
+[o] fall back on regular json
+[o] thread-safe
+[o] readme : get_many example
+[o] subdir for types (2 last ascii chars argh)
+[o] need for a purge mecha
+[o] work/msgs/.0/8811-2151883888-1260352977.0.json issue...
+
+[ ] LRU ?
+[ ] do not lock for cloche#get ?
+

@@ -1,0 +1,100 @@
+
+= rufus-json
+
+One interface for various JSON Ruby backends.
+
+  require 'rubygems'
+
+  # load your favourite JSON backend
+  require 'yajl'
+  #require 'json'
+  #require 'active_support'
+
+  require 'rufus-json' # gem install rufus-json
+
+  p Rufus::Json.decode('{"a":2,"b":true}')
+  p Rufus::Json.load('{"a":2,"b":true}')
+    # => { 'a' => 2, 'b' => true }
+
+  p Rufus::Json.encode({ 'a' => 2, 'b' => true })
+  p Rufus::Json.dump({ 'a' => 2, 'b' => true })
+    # => '{"a":2,"b":true}'
+
+
+If multiple libs are present, it will favour yajl-ruby and json, and then active_support. It's OK to force a backend.
+
+  Rufus::Json.backend = :yajl
+  #Rufus::Json.backend = :json
+  #Rufus::Json.backend = :active
+
+
+To know if there is currently a backend set :
+
+  Rufus::Json.has_backend?
+
+
+It's OK to load a lib and force detection :
+
+  require 'json'
+  Rufus::Json.detect_backend
+
+  p Rufus::Json.backend
+    # => :json
+
+
+There is a dup method, it may be useful in an all JSON system (flattening stuff that will anyway get flattened later).
+
+  o = Rufus::Json.dup(o)
+
+
+=== require 'rufus-json/automatic'
+
+  require 'rufus-json/automatic'
+
+will require 'rufus-json' and load the first JSON lib available (in the order yajl, active_support, json, json/pure.
+
+It is equivalent to
+
+  require 'rufus-json'
+  Rufus::Json.load_backend
+
+(the .load_backend method accepts a list/order of backends to try).
+
+
+== rdoc
+
+http://rufus.rubyforge.org/rufus-json/
+
+
+== mailing list
+
+On the rufus-ruby list :
+
+http://groups.google.com/group/rufus-ruby
+
+
+== issue tracker
+
+http://github.com/jmettraux/rufus-json/issues
+
+
+== irc
+
+  irc.freenode.net #ruote
+
+
+== the rest of Rufus
+
+http://rufus.rubyforge.org
+
+
+== authors
+
+* John Mettraux, http://jmettraux.wordpress.com/
+* Torsten Schoenebaum, https://github.com/tosch
+
+
+== license
+
+MIT
+

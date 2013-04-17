@@ -1,0 +1,133 @@
+
+= rufus-cloche CHANGELOG.txt
+
+
+== rufus-cloche - 1.0.4    not yet released
+
+- reinforce "gone detection again"
+
+
+== rufus-cloche - 1.0.3    released 2013/02/21
+
+- fix issue when putting a just deleted doc
+- standardish (no space before "(" in method signature)
+
+
+== rufus-cloche - 1.0.2    released 2012/02/27
+
+- only making sure the .gemspec doesn't require any file
+
+
+== rufus-cloche - 1.0.1    released 2011/05/25
+
+- fix for flock and JRuby (Thanks Mario Camou)
+  http://jira.codehaus.org/browse/JRUBY-5627
+
+
+== rufus-cloche - 0.1.21    release 2011/04/19
+
+- removed the require 'json' / 'yajl' in the lib itself (Thanks Torsten)
+
+
+== rufus-cloche - 0.1.20    released 2010/08/10
+
+- get_many(type, regex, :descending => true)
+
+
+== rufus-cloche - 0.1.19    release 2010/08/08
+
+- get_many(type, regexes) where regexes might be strings (end of key) or Regexp
+  instances
+- get_many(type, regex, :count => true) bug fix (when empty)
+
+
+== rufus-cloche - 0.1.18    released 2010/08/05
+
+- get_many(type, regex, :count => true)
+- get_many(type, regex, :skip => 100, :limit => 25) (added :skip)
+
+
+== rufus-cloche - 0.1.17    released 2010/05/04
+
+- for ruote-beanstalk : put/get_many now accept strings or symbols as opts keys
+
+
+== rufus-cloche - 0.1.16    released 2010/03/14
+
+- :nolock option for JRuby 1.4.0 on Ubuntu
+
+
+== rufus-cloche - 0.1.15    released 2010/02/14
+
+- windows : mswin|mingw
+
+
+== rufus-cloche - 0.1.14    released 2010/02/13
+
+- made sure it works on windows (XP)
+
+
+== rufus-cloche - 0.1.13    released 2010/01/07
+
+- implemented Cloche#ids(type) and Cloche#real_ids(type)
+
+
+== rufus-cloche - 0.1.12    released 2010/01/06
+
+- implemented Cloche#purge_type!(t)
+
+
+== rufus-cloche - 0.1.11    released 2010/01/06
+
+- test/con to test/conc, thanks gauched
+
+
+== rufus-cloche - 0.1.10    released 2010/01/03
+
+- increased mutex coverage (though flock matters more)
+- now put doesn't touch passed doc unless :update_rev => true
+
+
+== rufus-cloche - 0.1.9    released 2009/12/29
+
+- put returns true when document is gone
+
+
+== rufus-cloche - 0.1.8    released 2009/12/25
+
+- now using rufus-json
+
+
+== rufus-cloche - 0.1.7    released 2009/12/24
+
+- removed forced dependency on yajl-ruby
+
+
+== rufus-cloche - 0.1.6    released 2009/12/16
+
+- made sure it works on ruby 1.8.7
+
+
+== rufus-cloche - 0.1.5    released 2009/12/15
+
+- fixed "too many files open issue"
+
+
+== rufus-cloche - 0.1.4    released 2009/12/14
+
+- ArgumentError raised in case of delete(doc) that has no _rev
+
+
+== rufus-cloche - 0.1.3    released 2009/12/10
+
+- added the :limit option to Cloche#get_many
+- Cloche#get_many sorting by filenames (not by id anymore)
+
+
+== rufus-cloche - 0.1.2    released 2009/12/09
+
+- avoiding dir beginning with a '.' (dot)
+
+
+== rufus-cloche - 0.1.1    released 2009/11/16
+
