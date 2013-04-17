@@ -15,14 +15,18 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
 
+import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Throwables;
-import com.ning.http.client.AsyncCompletionHandler;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.Workflow;
 import org.cloudifysource.cosmo.resource.mock.ResourceMonitorMock;
+import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerListener;
 import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerMock;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -31,8 +35,9 @@ import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -72,24 +77,42 @@ public class StartVirtualMachineTest {
     @Test
     public void testStartVM() {
         try {
-            Future<Integer> f =
-                    asyncHttpClient
-                    .preparePut(resourceProvisioningUri + "start_virtual_machine/1")
-                    .execute(
-                            new AsyncCompletionHandler<Integer>() {
+            final Client client = Client.create(new DefaultClientConfig());
+            resourceProvisioningServer.setListener(new ResourceProvisioningServerListener() {
+                @Override
+                public void onRequest() {
+                    try {
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+                                final WebResource webResource = client.resource(kvstoreUri + "virtual_machine");
+                                webResource.put("1");
+                            }
+                        }).start();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
 
-                                @Override
-                                public Integer onCompleted(Response response) throws Exception {
-                                    return response.getStatusCode();
-                                }
+            final Map<String, Object> properties = Maps.newHashMap();
+            properties.put("rest_put.cloud_provisioning.host", resourceProvisioningUri.toString());
+            properties.put("rest_put.cloud_provisioning.path", "start_virtual_machine/1");
+            properties.put("rest_get.kvstore.host", kvstoreUri.toString());
+            properties.put("rest_get.kvstore.path", "virtual_machine");
+            properties.put("rest_get.kvstore.response", "1");
+            properties.put("rest_get.kvstore.timeout", "30");
+            final Workflow workflow =
+                    RuoteWorkflow.createFromFile("workflows/radial/vm_appliance.radial", properties);
+            workflow.execute();
 
-                                @Override
-                                public void onThrowable(Throwable t) {
-                                    throw Throwables.propagate(t);
-                                }
-                            });
+            assertThat(resourceProvisioningServer.getRequestsCount()).isEqualTo(1);
 
-            assertThat(f.get()).isEqualTo(204);
+            final WebResource webResource = client.resource(kvstoreUri + "virtual_machine");
+            final String s = webResource.get(String.class);
+            assertThat(s).isEqualTo("1");
+
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
@@ -102,5 +125,7 @@ public class StartVirtualMachineTest {
         monitor.setState(resourceId, "starting").get();
         monitor.setState(resourceId, "started").get();
     }
+
+
 }
 

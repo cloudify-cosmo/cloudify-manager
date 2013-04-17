@@ -26,6 +26,7 @@
 
 require 'rubygems'
 require 'ruote'
+require 'net/http'
 require 'java'
 
 class JavaClassParticipant < Ruote::Participant
@@ -46,10 +47,69 @@ class JavaClassParticipant < Ruote::Participant
   end
 end
 
+class RestGetParticipant < Ruote::Participant
+  def on_workitem
+    id = workitem.params['id']
+    host = $ruote_properties.get("rest_get.#{id}.host")
+    path = $ruote_properties.get("rest_get.#{id}.path")
+    timeout = $ruote_properties.get("rest_get.#{id}.timeout")
+    expected = $ruote_properties.get("rest_get.#{id}.response")
+    uri = URI.parse("#{host}#{path}")
+    http = Net::HTTP.start(uri.host, uri.port)
+
+    start = Time.now
+    success = false
+    while true do
+      response = http.send_request('GET', uri.request_uri)
+      if response.body == expected
+        success = true
+        break
+      end
+      delta = (Time.now - start).to_i
+      if delta >= timeout.to_i
+        break
+      end
+      puts "rest_get.#{id}:: waiting for response to be: '#{expected}'"
+      sleep(1)
+    end
+    if success
+      reply
+    end
+  end
+end
+
+class RestPutParticipant < Ruote::Participant
+  def on_workitem
+    id = workitem.params['id']
+    host = $ruote_properties.get("rest_put.#{id}.host")
+    path = $ruote_properties.get("rest_put.#{id}.path")
+    p_alias = "rest_put.#{id}"
+
+    url = "#{host}#{path}"
+    uri = URI.parse(url)
+
+    puts "#{p_alias}:: request: host=#{uri.host} port=#{uri.port} path=#{path} url=#{url}"
+
+    http = Net::HTTP.start(uri.host, uri.port)
+    response = http.send_request('PUT', uri.request_uri)
+
+    puts "#{p_alias}:: response from #{url} is:"
+    puts "#{p_alias}:: response.code = #{response.code}"
+    puts "#{p_alias}:: response.body = #{response.body}"
+
+    reply
+  end
+end
+
+appliances = $ruote_properties.get('appliances')
+
 engine = Ruote::Engine.new(Ruote::Worker.new(Ruote::HashStorage.new))
 engine.register_participant 'java', JavaClassParticipant
+engine.register_participant 'rest_get', RestGetParticipant
+engine.register_participant 'rest_put', RestPutParticipant
+
 
 radial_workflow = Ruote::RadialReader.read($workflow)
 
-wfid = engine.launch(radial_workflow, 'appliances' => $appliances)
+wfid = engine.launch(radial_workflow, 'appliances' => appliances)
 engine.wait_for(wfid)

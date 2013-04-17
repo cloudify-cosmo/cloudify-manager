@@ -1,0 +1,4 @@
+define start_vm
+  sequence
+    participant ref: "rest_put", id: "cloud_provisioning"
+    participant ref: "rest_get", id: "kvstore", timeout: 30s

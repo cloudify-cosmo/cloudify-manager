@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.jruby.embed.LocalVariableBehavior;
 import org.jruby.embed.PathType;
@@ -56,12 +57,13 @@ public class RuoteWorkflow implements Workflow {
             final String workflow = Resources.toString(workflowResource, Charsets.UTF_8);
             final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
 
-            if (properties != null) {
-                for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                    container.put("$" + entry.getKey(), entry.getValue());
-                }
-            }
+            final URL resource = Resources.getResource("ruote-gems/gems");
+            Preconditions.checkNotNull(resource);
+            final String resourcePath = resource.getPath();
 
+            container.runScriptlet("Dir['" + resourcePath + "/**/*'].each { |dir| $: << dir }");
+
+            container.put("$ruote_properties", properties != null ? properties : Maps.newHashMap());
             container.put("$workflow", workflow);
 
             container.runScriptlet(PathType.CLASSPATH, "scripts/ruby/run_ruote.rb");

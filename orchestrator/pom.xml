@@ -26,7 +26,14 @@
         <jersey.version>1.8</jersey.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
     </properties>
+
     <dependencies>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-client</artifactId>
+            <version>${jersey.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>

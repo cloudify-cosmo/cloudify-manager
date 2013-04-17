@@ -15,29 +15,14 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource.mock;
 
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
-
 /**
- * A REST servlet that exposes resource provisioning commands of the ResourceProvisionerMock.
+ * TODO: Write a short summary of this type's roles and responsibilities.
  *
- * @author Itai Frenkel
+ * @author Idan Moyal
  * @since 0.1
  */
-@Path("/")
-public class ResourceProvisioningServletMock {
+public interface ResourceProvisioningServerListener {
 
-    @Context
-    private ResourceProvisioningServerListener listener;
-
-    @PUT
-    @Path("/start_virtual_machine/{id}")
-    public Response startVirtualMachine() {
-        if (listener != null)
-            listener.onRequest();
-        return Response.noContent().build();
-    }
+    void onRequest();
 
 }
