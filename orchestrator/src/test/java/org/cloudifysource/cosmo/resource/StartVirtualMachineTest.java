@@ -23,8 +23,6 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
-import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.orchestrator.workflow.Workflow;
 import org.cloudifysource.cosmo.resource.mock.ResourceMonitorMock;
 import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerListener;
 import org.cloudifysource.cosmo.resource.mock.ResourceProvisioningServerMock;

@@ -1,0 +1,14 @@
+import org.cloudifysource.cosmo.resource.monitor.Message
+
+rule "Change message type from before to after"
+
+  dialect "mvel"
+
+  when
+      message : Message( type == "before", msgtext : msgtext )
+  then
+      System.out.println( msgtext );
+      modify ( message ) {
+        type = "after"
+      }
+end
