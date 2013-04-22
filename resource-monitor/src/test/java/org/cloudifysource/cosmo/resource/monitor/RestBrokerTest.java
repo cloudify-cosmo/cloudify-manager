@@ -16,6 +16,8 @@
 package org.cloudifysource.cosmo.resource.monitor;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.atmosphere.wasync.Client;
 import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
@@ -30,10 +32,13 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 import org.atmosphere.wasync.ClientFactory;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Tests {@link RestBrokerServer} and {@link org.cloudifysource.cosmo.broker.RestBrokerServlet}.
@@ -47,6 +52,7 @@ public class RestBrokerTest {
     private URI uri;
     private Client client;
     private final String key = "r1";
+    private List<Throwable> consumerErrors = Lists.newCopyOnWriteArrayList();
 
     @BeforeMethod
     @Parameters({"port" })
@@ -74,10 +80,24 @@ public class RestBrokerTest {
                 client.newRequestBuilder()
                   .method(Request.METHOD.GET)
                   .uri(uri.toString())
-                .transport(Request.TRANSPORT.LONG_POLLING);
+                .transport(Request.TRANSPORT.STREAMING);
 
         consumer(latch, request);
-        producer(latch, request);
+
+        Socket producerSocket = client.create().open(request.build());
+
+        for(int i = 0; latch.getCount() > 0 ; i++) {
+            Thread.sleep(100);
+            producerSocket.fire(String.valueOf(i)).get();
+            checkForConsumerErrors();
+        }
+    }
+
+    private void checkForConsumerErrors() {
+        Throwable consumerError = Iterables.getFirst(consumerErrors, null);
+        if (consumerError != null) {
+            throw Throwables.propagate(consumerError);
+        }
     }
 
     /**
@@ -91,11 +111,20 @@ public class RestBrokerTest {
             public void on(String message) {
                 if (!message.equals("OPEN")) {
                     int i = Integer.valueOf(message);
-                    if (lastI == null || i == lastI + 1) {
+
+                    if (lastI != null && i > lastI + 1) {
+                        for (lastI++;lastI < i; lastI++) {
+                            System.err.println("lost :" + lastI);
+                        }
+                    }
+                    if (lastI != null && i < lastI) {
+                        System.err.println("out-of-order :" + i);
+                    }
+                    else {
                         System.out.println("received: " + i);
+                    }
+                    if (lastI == null || i > lastI) {
                         lastI = i;
-                    } else if (lastI != null && i != lastI + 1) {
-                        System.err.println("expected: " + (lastI + 1) + " actual :" + i);
                     }
                     latch.countDown();
                 }
@@ -105,22 +134,20 @@ public class RestBrokerTest {
 
             @Override
             public void on(Throwable t) {
-                throw Throwables.propagate(t);
+                handleConsumerError(t);
             }
         }).open(request.build());
+    }
+
+    private void handleConsumerError(Throwable t) {
+        consumerErrors.add(t);
     }
 
     /**
      * Fires new events until latch count is zero.
      */
     private void producer(CountDownLatch latch, RequestBuilder request)
-        throws IOException, InterruptedException {
-        Socket producerSocket = client.create().open(request.build());
-        int i = 0;
-        while (latch.getCount() > 0) {
-            Thread.sleep(10);
-            producerSocket.fire(String.valueOf(i));
-            i++;
-        }
+            throws IOException, InterruptedException, ExecutionException {
+
     }
 }
