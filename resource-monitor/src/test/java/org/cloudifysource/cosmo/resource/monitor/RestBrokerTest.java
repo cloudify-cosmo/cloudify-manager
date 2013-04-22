@@ -38,8 +38,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.atmosphere.wasync.ClientFactory;
 
-import static org.fest.assertions.api.Assertions.assertThat;
-
 /**
  * Tests {@link RestBrokerServer} and {@link org.cloudifysource.cosmo.broker.RestBrokerServlet}.
  * @author itaif
@@ -86,7 +84,9 @@ public class RestBrokerTest {
 
         Socket producerSocket = client.create().open(request.build());
 
-        for(int i = 0; latch.getCount() > 0 ; i++) {
+        for (int i = 0; latch.getCount() > 0; i++) {
+            //Reducing this sleep period would result in event loss
+            //since pub-sub broker is not backed up by a queue yet
             Thread.sleep(100);
             producerSocket.fire(String.valueOf(i)).get();
             checkForConsumerErrors();
@@ -113,14 +113,13 @@ public class RestBrokerTest {
                     int i = Integer.valueOf(message);
 
                     if (lastI != null && i > lastI + 1) {
-                        for (lastI++;lastI < i; lastI++) {
+                        for (lastI++; lastI < i; lastI++) {
                             System.err.println("lost :" + lastI);
                         }
                     }
                     if (lastI != null && i < lastI) {
                         System.err.println("out-of-order :" + i);
-                    }
-                    else {
+                    } else {
                         System.out.println("received: " + i);
                     }
                     if (lastI == null || i > lastI) {
@@ -141,13 +140,5 @@ public class RestBrokerTest {
 
     private void handleConsumerError(Throwable t) {
         consumerErrors.add(t);
-    }
-
-    /**
-     * Fires new events until latch count is zero.
-     */
-    private void producer(CountDownLatch latch, RequestBuilder request)
-            throws IOException, InterruptedException, ExecutionException {
-
     }
 }
