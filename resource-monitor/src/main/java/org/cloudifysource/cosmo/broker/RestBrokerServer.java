@@ -74,7 +74,7 @@ public class RestBrokerServer {
                 "com.sun.jersey.config.property.packages",
                 servletClass.getPackage().getName());
         //https://github.com/Atmosphere/atmosphere/wiki/ClassNotFoundException-at-startup
-        //@see: JettyAsyncSupportWithWebSocket.class
+        //@see: org.atmosphere.cpr.DefaultAsyncSupportResolver
         holder.setInitParameter(
                 ApplicationConfig.PROPERTY_COMET_SUPPORT,
                 Jetty7CometSupport.class.getName());

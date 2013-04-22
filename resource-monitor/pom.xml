@@ -105,6 +105,12 @@
             <version>1.7.12</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.atmosphere</groupId>
+            <artifactId>wasync</artifactId>
+            <scope>test</scope>
+            <version>1.0.0.RC2</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
