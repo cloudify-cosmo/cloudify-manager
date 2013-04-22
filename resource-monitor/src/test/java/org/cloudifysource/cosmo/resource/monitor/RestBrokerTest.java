@@ -16,7 +16,6 @@
 package org.cloudifysource.cosmo.resource.monitor;
 
 import com.google.common.base.Throwables;
-import com.ning.http.client.AsyncHttpClient;
 import org.atmosphere.wasync.Client;
 import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
@@ -92,12 +91,11 @@ public class RestBrokerTest {
             public void on(String message) {
                 if (!message.equals("OPEN")) {
                     int i = Integer.valueOf(message);
-                    if (lastI == null || i == lastI+1) {
+                    if (lastI == null || i == lastI + 1) {
                         System.out.println("received: " + i);
                         lastI = i;
-                    }
-                    else if (lastI != null && i != lastI+1) {
-                        System.err.println("expected: " + (lastI+1) + " actual :" + i);
+                    } else if (lastI != null && i != lastI + 1) {
+                        System.err.println("expected: " + (lastI + 1) + " actual :" + i);
                     }
                     latch.countDown();
                 }
@@ -116,7 +114,7 @@ public class RestBrokerTest {
      * Fires new events until latch count is zero.
      */
     private void producer(CountDownLatch latch, RequestBuilder request)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         Socket producerSocket = client.create().open(request.build());
         int i = 0;
         while (latch.getCount() > 0) {
