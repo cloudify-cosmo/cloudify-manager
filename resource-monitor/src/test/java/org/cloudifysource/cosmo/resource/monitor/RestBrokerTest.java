@@ -86,7 +86,7 @@ public class RestBrokerTest {
 
         for (int i = 0; latch.getCount() > 0; i++) {
             //Reducing this sleep period would result in event loss
-            //since pub-sub broker is not backed up by a queue yet
+            //see https://github.com/Atmosphere/atmosphere/wiki/Understanding-BroadcasterCache
             Thread.sleep(100);
             producerSocket.fire(String.valueOf(i)).get();
             checkForConsumerErrors();
