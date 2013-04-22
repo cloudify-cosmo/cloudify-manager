@@ -23,7 +23,7 @@ import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
-import org.cloudifysource.cosmo.broker.RestBrokerServer;
+import org.cloudifysource.cosmo.messaging.broker.RestBrokerServer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -39,7 +39,7 @@ import java.util.concurrent.ExecutionException;
 import org.atmosphere.wasync.ClientFactory;
 
 /**
- * Tests {@link RestBrokerServer} and {@link org.cloudifysource.cosmo.broker.RestBrokerServlet}.
+ * Tests {@link RestBrokerServer} and {@link org.cloudifysource.cosmo.messaging.broker.RestBrokerServlet}.
  * @author itaif
  * @since 0.1
  */
