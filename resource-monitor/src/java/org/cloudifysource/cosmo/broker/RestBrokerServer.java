@@ -15,19 +15,14 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.broker;
 
-import javax.servlet.Servlet;
-
 import org.atmosphere.container.Jetty7CometSupport;
 import org.atmosphere.cpr.ApplicationConfig;
 import org.atmosphere.cpr.AtmosphereServlet;
-import org.atmosphere.jersey.AtmosphereFilter;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import com.google.common.base.Throwables;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
-import org.eclipse.jetty.server.Server;
 
 /**
  * Starts a jetty server, with jersey servlet container running the {@link RestBrokerServlet}.
@@ -36,7 +31,6 @@ import org.eclipse.jetty.server.Server;
  */
 public class RestBrokerServer {
     private static Server server;
-    private static ServletContainer servletContainer;
     private static AtmosphereServlet atmoServlet;
 
     public void start(int port) {
@@ -47,10 +41,6 @@ public class RestBrokerServer {
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
-    }
-
-    public void reload() {
-        servletContainer.reload();
     }
 
     public void stop() {

@@ -1,8 +1,22 @@
+/*******************************************************************************
+ * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
 package org.cloudifysource.cosmo.resource.monitor;
 
 import com.google.common.base.Throwables;
 import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.HttpResponseBodyPart;
 import com.ning.http.client.HttpResponseHeaders;
@@ -27,11 +41,9 @@ import java.util.concurrent.ExecutionException;
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
- * Created with IntelliJ IDEA.
- * User: itaif
- * Date: 22/04/13
- * Time: 10:15
- * To change this template use File | Settings | File Templates.
+ * Tests {@link RestBrokerServer} and {@link org.cloudifysource.cosmo.broker.RestBrokerServlet}.
+ * @author itaif
+ * @since 0.1
  */
 public class RestBrokerTest {
 
@@ -40,12 +52,12 @@ public class RestBrokerTest {
     private URI uri;
 
     @BeforeMethod
-    @Parameters({ "port"})
+    @Parameters({"port" })
     public void startRestServer(@Optional("8080") int port) {
         server = new RestBrokerServer();
         server.start(port);
         asyncHttpClient = new AsyncHttpClient();
-        uri = URI.create("http://localhost:"+port);
+        uri = URI.create("http://localhost:" + port);
     }
 
     @AfterMethod(alwaysRun = true)
@@ -81,10 +93,9 @@ public class RestBrokerTest {
 
                         @Override
                         public STATE onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
-                            if (responseStatus.getStatusCode()==200) {
+                            if (responseStatus.getStatusCode() == 200) {
                                 return STATE.CONTINUE;
-                            }
-                            else {
+                            } else {
                                 return STATE.ABORT;
                             }
                         }
@@ -114,7 +125,7 @@ public class RestBrokerTest {
                             return STATE.CONTINUE;
                         }
                     });
-        while(latch.getCount() > 0) {
+        while (latch.getCount() > 0) {
             Thread.sleep(100);
             asyncHttpClient
                 .preparePost(id)

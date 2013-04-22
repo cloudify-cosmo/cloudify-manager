@@ -19,6 +19,8 @@ import java.util.Date;
 
 /**
  * Drools Fusion example POJO that initializes the kbase current time/date.
+ * @author itaif
+ * @since 0.1
  */
 public class AppInfo {
     private Date timestamp;

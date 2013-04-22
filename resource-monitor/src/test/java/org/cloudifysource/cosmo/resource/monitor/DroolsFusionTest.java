@@ -17,16 +17,11 @@ package org.cloudifysource.cosmo.resource.monitor;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
 
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
@@ -34,7 +29,6 @@ import org.drools.KnowledgeBaseFactory;
 import org.drools.builder.KnowledgeBuilder;
 import org.drools.builder.KnowledgeBuilderFactory;
 import org.drools.builder.ResourceType;
-import org.drools.common.InternalFactHandle;
 import org.drools.conf.EventProcessingOption;
 import org.drools.definition.KnowledgePackage;
 import org.drools.io.ResourceFactory;
@@ -42,7 +36,6 @@ import org.drools.runtime.Channel;
 import org.drools.runtime.KnowledgeSessionConfiguration;
 import org.drools.runtime.StatefulKnowledgeSession;
 import org.drools.runtime.conf.ClockTypeOption;
-import org.drools.runtime.rule.FactHandle;
 import org.drools.runtime.rule.WorkingMemoryEntryPoint;
 import org.drools.time.SessionPseudoClock;
 import org.testng.annotations.AfterMethod;
@@ -157,12 +150,12 @@ public class DroolsFusionTest {
 
         KnowledgeSessionConfiguration conf = KnowledgeBaseFactory.newKnowledgeSessionConfiguration();
         conf.setOption(ClockTypeOption.get("pseudo"));
-        ksession = kbase.newStatefulKnowledgeSession(conf,null);
+        ksession = kbase.newStatefulKnowledgeSession(conf, null);
         clock = ksession.getSessionClock();
         entryPoint = ksession.getWorkingMemoryEntryPoint("testEntryPoint");
         assertThat(entryPoint).isNotNull();
-        exitChannel = mock( Channel.class );
-        ksession.registerChannel( "testExitChannel", exitChannel );
+        exitChannel = mock(Channel.class);
+        ksession.registerChannel("testExitChannel", exitChannel);
     }
 
     @AfterMethod
