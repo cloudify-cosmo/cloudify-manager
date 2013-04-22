@@ -23,7 +23,6 @@
     <properties>
         <jetty.version>8.1.5.v20120716</jetty.version>
         <testng.version>6.8</testng.version>
-        <jersey.version>1.8</jersey.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <drools.version>5.5.0.Final</drools.version>
     </properties>
@@ -82,6 +81,29 @@
             <groupId>org.drools</groupId>
             <artifactId>drools-compiler</artifactId>
             <version>${drools.version}</version>
+        </dependency>
+        <!-- REST server -->
+        <dependency>
+            <groupId>org.atmosphere</groupId>
+            <artifactId>atmosphere-jersey</artifactId>
+            <version>1.0.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <!-- http client -->
+        <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
+            <version>1.7.12</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
