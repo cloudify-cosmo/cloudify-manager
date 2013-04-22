@@ -15,7 +15,7 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.beust.jcommander.internal.Maps;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.cloudifysource.cosmo.orchestrator.recipe.Appliance;
 import org.testng.annotations.BeforeMethod;
@@ -55,11 +55,11 @@ public class RuoteWorkflowTest {
         appliances.add(appliance2.toMap());
         appliances.add(appliance3.toMap());
 
-        final Map<String, Object> props = Maps.newHashMap();
-        props.put("appliances", appliances);
+        final Map<String, Object> workitemFields = Maps.newHashMap();
+        workitemFields.put("appliances", appliances);
 
-        Workflow workflow = RuoteWorkflow.createFromFile("workflows/radial/java_workflow_properties.radial", props);
-        workflow.execute();
+        Workflow workflow = RuoteWorkflow.createFromFile("workflows/radial/java_workflow_properties.radial");
+        workflow.execute(workitemFields);
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }
 

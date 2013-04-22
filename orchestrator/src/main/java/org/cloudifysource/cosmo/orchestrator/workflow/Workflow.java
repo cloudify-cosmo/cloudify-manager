@@ -15,10 +15,13 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import java.util.Map;
+
 /**
  * @author Idan Moyal
  * @since 0.1
  */
 public interface Workflow {
     void execute();
+    void execute(Map<String, Object> workitemFields);
 }

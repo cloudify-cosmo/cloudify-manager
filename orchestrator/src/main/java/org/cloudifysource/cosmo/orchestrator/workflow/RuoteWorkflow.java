@@ -25,6 +25,7 @@ import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 
 import java.net.URL;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -32,6 +33,9 @@ import java.util.Map;
  * @since 0.1
  */
 public class RuoteWorkflow implements Workflow {
+
+    private static final String EXECUTE_WORKFLOW_METHOD_NAME = "execute_ruote_workflow";
+    private static final String RUOTE_SCRIPT = "scripts/ruby/run_ruote.rb";
 
     private final String path;
     private final Map<String, Object> properties;
@@ -51,6 +55,11 @@ public class RuoteWorkflow implements Workflow {
 
     @Override
     public void execute() {
+        execute(Collections.<String, Object>emptyMap());
+    }
+
+    @Override
+    public void execute(Map<String, Object> workitemFields) {
         try {
             final URL workflowResource = Resources.getResource(path);
             Preconditions.checkNotNull(workflowResource);
@@ -62,11 +71,12 @@ public class RuoteWorkflow implements Workflow {
             final String resourcePath = resource.getPath();
 
             container.runScriptlet("Dir['" + resourcePath + "/**/*'].each { |dir| $: << dir }");
-
             container.put("$ruote_properties", properties != null ? properties : Maps.newHashMap());
-            container.put("$workflow", workflow);
 
-            container.runScriptlet(PathType.CLASSPATH, "scripts/ruby/run_ruote.rb");
+            Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
+
+            container.callMethod(receiver, EXECUTE_WORKFLOW_METHOD_NAME, workflow, workitemFields);
+
         } catch (Exception e) {
             Throwables.propagate(e);
         }

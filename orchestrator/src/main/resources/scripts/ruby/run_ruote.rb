@@ -101,15 +101,23 @@ class RestPutParticipant < Ruote::Participant
   end
 end
 
-appliances = $ruote_properties.get('appliances')
+def to_map(java_map)
+  map = Hash.new
+  java_map.each { |key, value|
+    map[key] = value
+  }
+  map
+end
 
-engine = Ruote::Engine.new(Ruote::Worker.new(Ruote::HashStorage.new))
-engine.register_participant 'java', JavaClassParticipant
-engine.register_participant 'rest_get', RestGetParticipant
-engine.register_participant 'rest_put', RestPutParticipant
+def execute_ruote_workflow(workflow, workitem_fields)
+  engine = Ruote::Engine.new(Ruote::Worker.new(Ruote::HashStorage.new))
+  engine.register_participant 'java', JavaClassParticipant
+  engine.register_participant 'rest_get', RestGetParticipant
+  engine.register_participant 'rest_put', RestPutParticipant
 
+  radial_workflow = Ruote::RadialReader.read(workflow)
 
-radial_workflow = Ruote::RadialReader.read($workflow)
+  wfid = engine.launch(radial_workflow, to_map(workitem_fields))
+  engine.wait_for(wfid)
+end
 
-wfid = engine.launch(radial_workflow, 'appliances' => appliances)
-engine.wait_for(wfid)
