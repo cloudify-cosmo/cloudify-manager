@@ -15,15 +15,20 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.messaging.consumer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.atmosphere.wasync.Client;
 import org.atmosphere.wasync.ClientFactory;
+import org.atmosphere.wasync.Decoder;
+import org.atmosphere.wasync.Event;
 import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
+import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
@@ -41,24 +46,60 @@ public class MessageConsumer {
 
     private final Client client;
     private final Map<MessageConsumerListener, Socket> sockets = Maps.newConcurrentMap();
+    private ObjectMapper mapper;
 
     public MessageConsumer() {
         client = ClientFactory.getDefault().newClient();
+        mapper = ObjectMapperFactory.newObjectMapper();
     }
 
-    public void addListener(final URI uri, final MessageConsumerListener listener) {
+    public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {
+        final Class<? extends T> messageClass = listener.getMessageClass();
         final RequestBuilder request =
                 client.newRequestBuilder()
                         .method(Request.METHOD.GET)
                         .uri(uri.toString())
-                        .transport(Request.TRANSPORT.STREAMING);
+                        .decoder(new Decoder<String, T>() {
+                            @Override
+                            public T decode(Event type, String data) {
+
+                                data = data.trim();
+
+                                // Padding
+                                if (data.length() == 0) {
+                                    return null;
+                                }
+
+                                if (type.equals(Event.MESSAGE)) {
+                                    try {
+                                        final T message = mapper.readValue(data, messageClass);
+                                        return message;
+                                    } catch (IOException e) {
+                                        if (data.equals("CLOSE")) {
+                                            //Suppress bug.
+                                            //https://github.com/Atmosphere/wasync/issues/34
+                                            //Event type should be Event.CLOSE
+                                            return null;
+                                        }
+                                        throw new IllegalStateException("Failed to decode " + data, e);
+                                    }
+                                } else {
+                                    return null;
+                                }
+                            }
+                        })
+                        .transport(Request.TRANSPORT.LONG_POLLING);
         Socket socket =  client.create();
         sockets.put(listener, socket);
         try {
-            socket.on(new Function<String>() {
+            socket.on(Event.MESSAGE.name(), new Function<Object>() {
                 @Override
-                public void on(String message) {
-                    listener.onMessage(uri, message);
+                public void on(Object message) {
+                    if (message != null &&
+                        //workaround for bug https://github.com/Atmosphere/wasync/issues/35
+                        listener.getMessageClass().isAssignableFrom(message.getClass())) {
+                        listener.onMessage(uri, (T) message);
+                    }
                 }
             });
             socket.on(new Function<Throwable>() {

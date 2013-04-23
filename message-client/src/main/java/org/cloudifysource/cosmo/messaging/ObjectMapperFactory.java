@@ -13,33 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.messaging.consumer;
+package org.cloudifysource.cosmo.messaging;
 
-import java.net.URI;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
- * Callback for received messages from the message broker.
- * @see MessageConsumer
- *
- * @param <T> The message type
+ * Creates a new object mapper.
+ * TODO: Replace with singleton using dependency injection.
  *
  * @author itaif
  * @since 0.1
  */
-public interface MessageConsumerListener<T> {
+public class ObjectMapperFactory {
 
-    /**
-     * Callback when a new message is received.
-     */
-    void onMessage(URI uri, T message);
+    private ObjectMapperFactory() {
+    }
 
-    /**
-     * Callback when any error occurs.
-     */
-    void onFailure(Throwable t);
-
-    /**
-     * The message hint used to decode the JSON messages.
-     */
-    Class<? extends T> getMessageClass();
+    public static ObjectMapper newObjectMapper() {
+        final ObjectMapper mapper = new ObjectMapper();
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        return mapper;
+    }
 }

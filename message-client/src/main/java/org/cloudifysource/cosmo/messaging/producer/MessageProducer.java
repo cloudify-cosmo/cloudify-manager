@@ -15,10 +15,12 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.messaging.producer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
+import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -30,22 +32,25 @@ import java.util.concurrent.TimeoutException;
 /**
  * Client for sending messages to the message broker.
  *
+ * @param <T> The message type
  * @author itaif
  * @since 0.1
  */
-public class MessageProducer {
+public class MessageProducer<T> {
 
     AsyncHttpClient client;
+    ObjectMapper mapper;
 
     public MessageProducer() {
         client = new AsyncHttpClient();
+        mapper = ObjectMapperFactory.newObjectMapper();
     }
 
-    public ListenableFuture send(URI uri, String message) {
+    public ListenableFuture send(URI uri, Object message) {
         try {
             return convertListenableFuture(
                     client.preparePost(uri.toString())
-                    .setBody(message)
+                    .setBody(mapper.writeValueAsString(message))
                     .execute());
         } catch (IOException e) {
             throw Throwables.propagate(e);
