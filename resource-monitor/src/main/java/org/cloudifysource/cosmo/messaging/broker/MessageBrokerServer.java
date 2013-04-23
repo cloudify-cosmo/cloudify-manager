@@ -25,17 +25,17 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import com.google.common.base.Throwables;
 
 /**
- * Starts a jetty server, with jersey servlet container running the {@link RestBrokerServlet}.
+ * Starts a jetty server, with jersey servlet container running the {@link MessageBrokerServlet}.
  * @author Itai Frenkel
  * @since 0.1
  */
-public class RestBrokerServer {
+public class MessageBrokerServer {
     private static Server server;
     private static AtmosphereServlet atmoServlet;
 
     public void start(int port) {
         server = new Server(port);
-        server.setHandler(createWebAppContext(RestBrokerServlet.class));
+        server.setHandler(createWebAppContext(MessageBrokerServlet.class));
         try {
             server.start();
         } catch (Exception e) {

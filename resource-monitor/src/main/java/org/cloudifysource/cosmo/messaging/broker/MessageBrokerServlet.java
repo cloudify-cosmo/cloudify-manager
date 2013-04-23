@@ -32,13 +32,13 @@ import javax.ws.rs.PathParam;
  * @since 0.1
  */
 @Path("/{topic}")
-public class RestBrokerServlet {
+public class MessageBrokerServlet {
 
     @PathParam("topic")
     private Broadcaster topic;
 
     @GET
-    @Suspend(resumeOnBroadcast = true, listeners = { RestBrokerListener.class })
+    @Suspend(resumeOnBroadcast = true, listeners = { MessageBrokerConsumerListener.class })
     public Broadcastable subscribe() {
         return new Broadcastable(topic);
     }
