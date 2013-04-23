@@ -18,10 +18,6 @@ package org.cloudifysource.cosmo.resource.monitor;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.atmosphere.wasync.Function;
-import org.atmosphere.wasync.Request;
-import org.atmosphere.wasync.RequestBuilder;
-import org.atmosphere.wasync.Socket;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
@@ -39,7 +35,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Tests {@link org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer} and {@link org.cloudifysource.cosmo.messaging.broker.MessageBrokerServlet}.
+ * Tests {@link MessageBrokerServer}.
  * @author itaif
  * @since 0.1
  */
