@@ -25,6 +25,7 @@ import org.drools.builder.KnowledgeBuilderFactory;
 import org.drools.builder.ResourceType;
 import org.drools.common.InternalFactHandle;
 import org.drools.definition.KnowledgePackage;
+import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.drools.runtime.StatefulKnowledgeSession;
 import org.drools.runtime.rule.FactHandle;
@@ -41,7 +42,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DroolsExpertTest {
 
-    public static final String RULE_FILE = "/org/cloudifysource/cosmo/resource/monitor/DroolsExpertTest.drl";
+    public static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsExpertTest.drl";
     private KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
     private Collection<KnowledgePackage> pkgs;
     private KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase();
@@ -70,7 +71,8 @@ public class DroolsExpertTest {
 
         // this will parse and compile in one step
         // read from file
-        kbuilder.add(ResourceFactory.newClassPathResource(RULE_FILE, DroolsExpertTest.class), ResourceType.DRL);
+        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
+        kbuilder.add(resource, ResourceType.DRL);
 
         // Check the builder for errors
         assertThat(kbuilder.hasErrors()).overridingErrorMessage(kbuilder.getErrors().toString()).isFalse();

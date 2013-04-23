@@ -1,4 +1,4 @@
-import org.cloudifysource.cosmo.resource.monitor.Message
+import org.cloudifysource.cosmo.cep.Message
 
 rule "Change message type from before to after"
 
