@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource.monitor;
+package org.cloudifysource.cosmo.cep;
 
 import java.util.Date;
 
