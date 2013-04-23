@@ -61,10 +61,10 @@ public class MessageBrokerTest {
 
     @AfterMethod(alwaysRun = true)
     public void stopRestServer() {
+        consumer.removeAllListeners();
         if (server != null) {
             server.stop();
         }
-        consumer.removeAllListeners();
     }
 
     @Test
@@ -73,33 +73,36 @@ public class MessageBrokerTest {
         final int numberOfEvents = 10;
 
         final CountDownLatch latch = new CountDownLatch(numberOfEvents);
-        consumer.addListener(uri, new MessageConsumerListener() {
+        consumer.addListener(uri, new MessageConsumerListener<String>() {
             Integer lastI = null;
             @Override
             public void onMessage(URI uri, String message) {
-                if (!message.equals("OPEN") && !message.equals("CLOSE")) {
-                    int i = Integer.valueOf(message);
+                int i = Integer.valueOf(message);
 
-                    if (lastI != null && i > lastI + 1) {
-                        for (lastI++; lastI < i; lastI++) {
-                            System.err.println("lost :" + lastI);
-                        }
+                if (lastI != null && i > lastI + 1) {
+                    for (lastI++; lastI < i; lastI++) {
+                        System.err.println("lost :" + lastI);
                     }
-                    if (lastI != null && i < lastI) {
-                        System.err.println("out-of-order :" + i);
-                    } else {
-                        System.out.println("received: " + i);
-                    }
-                    if (lastI == null || i > lastI) {
-                        lastI = i;
-                    }
-                    latch.countDown();
                 }
+                if (lastI != null && i < lastI) {
+                    System.err.println("out-of-order :" + i);
+                } else {
+                    System.out.println("received: " + i);
+                }
+                if (lastI == null || i > lastI) {
+                    lastI = i;
+                }
+                latch.countDown();
             }
 
             @Override
             public void onFailure(Throwable t) {
                 consumerErrors.add(t);
+            }
+
+            @Override
+            public Class<? extends String> getMessageClass() {
+                return String.class;
             }
         });
 
