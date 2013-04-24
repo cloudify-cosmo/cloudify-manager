@@ -25,6 +25,7 @@
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
         <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
+        <cosmo.message-types.version>0.1-SNAPSHOT</cosmo.message-types.version>
         <drools.version>5.5.0.Final</drools.version>
     </properties>
     <dependencies>
@@ -54,6 +55,11 @@
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>message-client</artifactId>
             <version>${cosmo.message-client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>message-types</artifactId>
+            <version>${cosmo.message-types.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
