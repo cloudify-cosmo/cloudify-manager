@@ -15,8 +15,15 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
+import com.google.common.io.Files;
+import com.google.common.io.Resources;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 
@@ -27,35 +34,38 @@ import java.util.Map;
 public class RuoteWorkflow implements Workflow {
 
     private final RuoteRuntime runtime;
-    private final String path;
+    private final Object parsedWorkflow;
 
-    public static RuoteWorkflow createFromFile(String path) {
-        return createFromFile(path, null, null);
-    }
-
-    public static RuoteWorkflow createFromFile(String path, Map<String, Object> properties) {
-        return createFromFile(path, properties, null);
+    public static RuoteWorkflow createFromResource(String resourceName, RuoteRuntime runtime) {
+        Preconditions.checkNotNull(resourceName);
+        Preconditions.checkNotNull(runtime);
+        try {
+            final URL url = Resources.getResource(resourceName);
+            final String workflow = Resources.toString(url, Charsets.UTF_8);
+            return new RuoteWorkflow(workflow, runtime);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
     public static RuoteWorkflow createFromFile(String path, RuoteRuntime runtime) {
-        return createFromFile(path, null, runtime);
-    }
-
-    private static RuoteWorkflow createFromFile(String path, Map<String, Object> properties, RuoteRuntime runtime) {
         Preconditions.checkNotNull(path);
-        if (runtime == null) {
-            runtime = RuoteRuntime.createRuntime(properties);
+        Preconditions.checkNotNull(runtime);
+        try {
+            final String workflow = Files.toString(new File(path), Charsets.UTF_8);
+            return new RuoteWorkflow(workflow, runtime);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
         }
-        return new RuoteWorkflow(path, runtime);
     }
 
-    private RuoteWorkflow(String path, RuoteRuntime runtime) {
-        this.path = path;
+    private RuoteWorkflow(String workflow, RuoteRuntime runtime) {
         this.runtime = runtime;
+        this.parsedWorkflow = runtime.parseWorkflow(workflow);
     }
 
-    public String getPath() {
-        return path;
+    public Object getParsedWorkflow() {
+        return parsedWorkflow;
     }
 
     @Override
@@ -65,7 +75,7 @@ public class RuoteWorkflow implements Workflow {
 
     @Override
     public void execute(Map<String, Object> workitemFields) {
-        runtime.executeWorkflow(this, workitemFields, true /* wait for workflow */);
+        runtime.executeWorkflow(this, workitemFields, true /* wait for parsedWorkflow */);
     }
 
     @Override
@@ -75,7 +85,7 @@ public class RuoteWorkflow implements Workflow {
 
     @Override
     public Object asyncExecute(Map<String, Object> workitemFields) {
-        return runtime.executeWorkflow(this, workitemFields, false /* wait for workflow */);
+        return runtime.executeWorkflow(this, workitemFields, false /* wait for parsedWorkflow */);
     }
 
 }
