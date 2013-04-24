@@ -66,10 +66,6 @@ public class MessageBrokerServer {
 
     private static ServletHolder atmosphereServletHolder(Class servletClass) {
         ServletHolder holder = new ServletHolder(AtmosphereServlet.class);
-
-        //holder.setInitParameter(
-          //      ApplicationConfig.SERVLET_CLASS,
-            //    servletClass.getName());
         holder.setInitParameter(
                 "com.sun.jersey.config.property.packages",
                 servletClass.getPackage().getName());
