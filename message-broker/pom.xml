@@ -17,16 +17,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.cloudifysource.cosmo</groupId>
-    <artifactId>resource-monitor</artifactId>
+    <artifactId>message-broker</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
     <properties>
+        <jetty.version>8.1.5.v20120716</jetty.version>
         <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
-        <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
-        <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
-        <cosmo.message-types.version>0.1-SNAPSHOT</cosmo.message-types.version>
-        <drools.version>5.5.0.Final</drools.version>
     </properties>
     <dependencies>
         <dependency>
@@ -52,16 +49,6 @@
             <version>${cosmo.logger.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>message-client</artifactId>
-            <version>${cosmo.message-client.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>message-types</artifactId>
-            <version>${cosmo.message-types.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.6.6</version>
@@ -72,17 +59,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>org.drools</groupId>
-            <artifactId>drools-core</artifactId>
-            <version>${drools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.drools</groupId>
-            <artifactId>drools-compiler</artifactId>
-            <version>${drools.version}</version>
-        </dependency>
-        <!-- Test -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
@@ -97,9 +73,25 @@
         </dependency>
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>message-broker</artifactId>
-            <version>${cosmo.message-broker.version}</version>
+            <artifactId>message-client</artifactId>
+            <version>0.1-SNAPSHOT</version>
             <scope>test</scope>
+        </dependency>
+        <!-- REST server -->
+        <dependency>
+            <groupId>org.atmosphere</groupId>
+            <artifactId>atmosphere-jersey</artifactId>
+            <version>1.0.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
         </dependency>
     </dependencies>
     <build>

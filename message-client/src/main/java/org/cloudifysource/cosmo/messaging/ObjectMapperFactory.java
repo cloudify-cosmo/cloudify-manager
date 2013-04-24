@@ -13,33 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource.monitor;
-
-import java.util.Date;
+package org.cloudifysource.cosmo.messaging;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
- * Drools Fusion example POJO that initializes the kbase current time/date.
+ * Creates a new object mapper.
+ * TODO: Replace with singleton using dependency injection.
+ *
  * @author itaif
  * @since 0.1
  */
-public class AppInfo {
-    private Date timestamp;
+public class ObjectMapperFactory {
 
-    public AppInfo() {
+    private ObjectMapperFactory() {
     }
 
-    @Override
-    public String toString() {
-        return "AppInfo{" + "startTime=" + timestamp + '}';
-    }
-
-    public Date getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Date timestamp) {
-        this.timestamp = timestamp;
+    public static ObjectMapper newObjectMapper() {
+        final ObjectMapper mapper = new ObjectMapper();
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        return mapper;
     }
 }
-
-

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource.monitor;
+package org.cloudifysource.cosmo.cep.mock;
 
 import java.util.Date;
 
@@ -22,7 +22,7 @@ import java.util.Date;
  * @since 0.1
  * @author Itai Frenkel
  */
-public class Message {
+public class MonitoringMessage {
 
     private String type;
     private String msgtext;
@@ -67,9 +67,9 @@ public class Message {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Message)) return false;
+        if (!(o instanceof MonitoringMessage)) return false;
 
-        Message message = (Message) o;
+        MonitoringMessage message = (MonitoringMessage) o;
 
         if (msgtext != null ? !msgtext.equals(message.msgtext) : message.msgtext != null) return false;
         if (timestamp != null ? !timestamp.equals(message.timestamp) : message.timestamp != null) return false;
@@ -88,7 +88,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return "Message{" +
+        return "MonitoringMessage{" +
                 "type='" + type + '\'' +
                 ", msgtext='" + msgtext + '\'' +
                 ", timestamp=" + timestamp +

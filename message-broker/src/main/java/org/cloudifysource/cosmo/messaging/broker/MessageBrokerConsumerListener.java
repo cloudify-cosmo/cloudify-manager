@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.broker;
+package org.cloudifysource.cosmo.messaging.broker;
 
 import org.atmosphere.cpr.AtmosphereResourceEvent;
 import org.atmosphere.cpr.AtmosphereResourceEventListener;
 
 /**
- * Listens for @Suspend events in {@link RestBrokerServlet}
+ * Listens for @Suspend events in {@link MessageBrokerServlet}
  *
  * Currently just used for inserting breakpoints during unit tests.
  * @author itaif
  * @since 0.1
  */
-public class RestBrokerListener  implements AtmosphereResourceEventListener {
+public class MessageBrokerConsumerListener implements AtmosphereResourceEventListener {
 
 
     @Override

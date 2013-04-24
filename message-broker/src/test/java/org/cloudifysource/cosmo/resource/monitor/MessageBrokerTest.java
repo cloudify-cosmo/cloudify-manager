@@ -18,12 +18,10 @@ package org.cloudifysource.cosmo.resource.monitor;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.atmosphere.wasync.Client;
-import org.atmosphere.wasync.Function;
-import org.atmosphere.wasync.Request;
-import org.atmosphere.wasync.RequestBuilder;
-import org.atmosphere.wasync.Socket;
-import org.cloudifysource.cosmo.broker.RestBrokerServer;
+import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -36,33 +34,34 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
-import org.atmosphere.wasync.ClientFactory;
-
 /**
- * Tests {@link RestBrokerServer} and {@link org.cloudifysource.cosmo.broker.RestBrokerServlet}.
+ * Tests {@link MessageBrokerServer}.
  * @author itaif
  * @since 0.1
  */
-public class RestBrokerTest {
+public class MessageBrokerTest {
 
-    RestBrokerServer server;
+    MessageBrokerServer server;
 
     private URI uri;
-    private Client client;
+    private MessageConsumer consumer;
+    private MessageProducer producer;
     private final String key = "r1";
     private List<Throwable> consumerErrors = Lists.newCopyOnWriteArrayList();
 
     @BeforeMethod
     @Parameters({"port" })
     public void startRestServer(@Optional("8080") int port) {
-        server = new RestBrokerServer();
+        server = new MessageBrokerServer();
         server.start(port);
-        client = ClientFactory.getDefault().newClient();
+        consumer = new MessageConsumer();
+        producer = new MessageProducer();
         uri = URI.create("http://localhost:" + port);
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopRestServer() {
+        consumer.removeAllListeners();
         if (server != null) {
             server.stop();
         }
@@ -74,21 +73,44 @@ public class RestBrokerTest {
         final int numberOfEvents = 10;
 
         final CountDownLatch latch = new CountDownLatch(numberOfEvents);
-        final RequestBuilder request =
-                client.newRequestBuilder()
-                  .method(Request.METHOD.GET)
-                  .uri(uri.toString())
-                .transport(Request.TRANSPORT.STREAMING);
+        consumer.addListener(uri, new MessageConsumerListener<String>() {
+            Integer lastI = null;
+            @Override
+            public void onMessage(URI uri, String message) {
+                int i = Integer.valueOf(message);
 
-        consumer(latch, request);
+                if (lastI != null && i > lastI + 1) {
+                    for (lastI++; lastI < i; lastI++) {
+                        System.err.println("lost :" + lastI);
+                    }
+                }
+                if (lastI != null && i < lastI) {
+                    System.err.println("out-of-order :" + i);
+                } else {
+                    System.out.println("received: " + i);
+                }
+                if (lastI == null || i > lastI) {
+                    lastI = i;
+                }
+                latch.countDown();
+            }
 
-        Socket producerSocket = client.create().open(request.build());
+            @Override
+            public void onFailure(Throwable t) {
+                consumerErrors.add(t);
+            }
+
+            @Override
+            public Class<? extends String> getMessageClass() {
+                return String.class;
+            }
+        });
 
         for (int i = 0; latch.getCount() > 0; i++) {
             //Reducing this sleep period would result in event loss
-            //since pub-sub broker is not backed up by a queue yet
+            //see https://github.com/Atmosphere/atmosphere/wiki/Understanding-BroadcasterCache
             Thread.sleep(100);
-            producerSocket.fire(String.valueOf(i)).get();
+            producer.send(uri, String.valueOf(i)).get();
             checkForConsumerErrors();
         }
     }
@@ -98,47 +120,5 @@ public class RestBrokerTest {
         if (consumerError != null) {
             throw Throwables.propagate(consumerError);
         }
-    }
-
-    /**
-     * calls latch.countDown() each time a message is received.
-     */
-    private void consumer(final CountDownLatch latch, RequestBuilder request) throws IOException {
-        Socket consumerSocket = client.create();
-        consumerSocket.on(new Function<String>() {
-            Integer lastI = null;
-            @Override
-            public void on(String message) {
-                if (!message.equals("OPEN")) {
-                    int i = Integer.valueOf(message);
-
-                    if (lastI != null && i > lastI + 1) {
-                        for (lastI++; lastI < i; lastI++) {
-                            System.err.println("lost :" + lastI);
-                        }
-                    }
-                    if (lastI != null && i < lastI) {
-                        System.err.println("out-of-order :" + i);
-                    } else {
-                        System.out.println("received: " + i);
-                    }
-                    if (lastI == null || i > lastI) {
-                        lastI = i;
-                    }
-                    latch.countDown();
-                }
-
-            }
-        }).on(new Function<Throwable>() {
-
-            @Override
-            public void on(Throwable t) {
-                handleConsumerError(t);
-            }
-        }).open(request.build());
-    }
-
-    private void handleConsumerError(Throwable t) {
-        consumerErrors.add(t);
     }
 }

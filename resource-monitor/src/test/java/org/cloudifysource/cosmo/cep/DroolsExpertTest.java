@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource.monitor;
+package org.cloudifysource.cosmo.cep;
 
 import java.util.Collection;
 
 import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseFactory;
 import org.drools.builder.KnowledgeBuilder;
@@ -25,6 +26,7 @@ import org.drools.builder.KnowledgeBuilderFactory;
 import org.drools.builder.ResourceType;
 import org.drools.common.InternalFactHandle;
 import org.drools.definition.KnowledgePackage;
+import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.drools.runtime.StatefulKnowledgeSession;
 import org.drools.runtime.rule.FactHandle;
@@ -41,7 +43,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DroolsExpertTest {
 
-    public static final String RULE_FILE = "/org/cloudifysource/cosmo/resource/monitor/DroolsExpertTest.drl";
+    public static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsExpertTest.drl";
     private KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
     private Collection<KnowledgePackage> pkgs;
     private KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase();
@@ -49,19 +51,19 @@ public class DroolsExpertTest {
 
     @Test
     public void testDrools() {
-        Message beforeMessage = new Message();
+        MonitoringMessage beforeMessage = new MonitoringMessage();
         beforeMessage.setType("before");
         beforeMessage.setMsgtext("This is the message text");
         ksession.insert(beforeMessage);
         ksession.fireAllRules();
-        final Message afterMessage = getMessageFromSession();
+        final MonitoringMessage afterMessage = getMessageFromSession();
         assertThat(afterMessage.getType()).isEqualTo("after");
     }
 
-    private Message getMessageFromSession() {
+    private MonitoringMessage getMessageFromSession() {
         final Collection<FactHandle> factHandles = ksession.getFactHandles();
         final InternalFactHandle fh = (InternalFactHandle) Iterables.getOnlyElement(factHandles);
-        final Message message = ((Message) fh.getObject());
+        final MonitoringMessage message = ((MonitoringMessage) fh.getObject());
         return message;
     }
 
@@ -70,7 +72,8 @@ public class DroolsExpertTest {
 
         // this will parse and compile in one step
         // read from file
-        kbuilder.add(ResourceFactory.newClassPathResource(RULE_FILE, DroolsExpertTest.class), ResourceType.DRL);
+        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
+        kbuilder.add(resource, ResourceType.DRL);
 
         // Check the builder for errors
         assertThat(kbuilder.hasErrors()).overridingErrorMessage(kbuilder.getErrors().toString()).isFalse();

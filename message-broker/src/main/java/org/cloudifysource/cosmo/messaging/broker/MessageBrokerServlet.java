@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.broker;
+package org.cloudifysource.cosmo.messaging.broker;
 
 import com.google.common.base.Preconditions;
 import org.atmosphere.annotation.Broadcast;
@@ -32,13 +32,13 @@ import javax.ws.rs.PathParam;
  * @since 0.1
  */
 @Path("/{topic}")
-public class RestBrokerServlet {
+public class MessageBrokerServlet {
 
     @PathParam("topic")
     private Broadcaster topic;
 
     @GET
-    @Suspend(resumeOnBroadcast = true, listeners = { RestBrokerListener.class })
+    @Suspend(resumeOnBroadcast = true, listeners = { MessageBrokerConsumerListener.class })
     public Broadcastable subscribe() {
         return new Broadcastable(topic);
     }

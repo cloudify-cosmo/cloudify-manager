@@ -1,11 +1,11 @@
-import org.cloudifysource.cosmo.resource.monitor.Message
+import org.cloudifysource.cosmo.cep.mock.MonitoringMessage
 
 rule "Change message type from before to after"
 
   dialect "mvel"
 
   when
-      message : Message( type == "before", msgtext : msgtext )
+      message : MonitoringMessage( type == "before", msgtext : msgtext )
   then
       System.out.println( msgtext );
       modify ( message ) {

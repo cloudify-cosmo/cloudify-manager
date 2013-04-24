@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource.monitor;
+package org.cloudifysource.cosmo.cep;
 
 import java.util.Collection;
 import java.util.Date;
@@ -23,6 +23,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
+import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.cep.mock.AppInfo;
+import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
 import org.drools.KnowledgeBaseFactory;
@@ -51,7 +54,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DroolsFusionTest {
 
-    public static final String RULE_FILE = "/org/cloudifysource/cosmo/resource/monitor/DroolsFusionTest.drl";
+    public static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsFusionTest.drl";
     private KnowledgeBuilder kbuilder;
     private KnowledgeBase kbase;
     private StatefulKnowledgeSession ksession;
@@ -78,22 +81,21 @@ public class DroolsFusionTest {
         fireAllRules();
 
         //assert "after" message fired through exit channel
-        Message afterMessage = newMessage("after");
+        MonitoringMessage afterMessage = newMessage("after");
         verify(exitChannel).send(afterMessage);
     }
 
     @Test
     public void testMissingMessageCorrelated() {
-        fireAppInfo();
 
-        Message requestMessage = newMessage("request");
+        MonitoringMessage requestMessage = newMessage("request");
         entryPoint.insert(requestMessage);
-
         clock.advanceTime(1, TimeUnit.MINUTES);
+
         fireAllRules();
 
         //assert "after" message fired through exit channel
-        Message missingMessage = newMessage("missing");
+        MonitoringMessage missingMessage = newMessage("missing");
         missingMessage.setTimestamp(null); // exitChannel should assign timestamp
         verify(exitChannel).send(missingMessage);
     }
@@ -110,11 +112,11 @@ public class DroolsFusionTest {
         ksession.fireAllRules();
     }
 
-    private Message newMessage() {
+    private MonitoringMessage newMessage() {
         return newMessage("before");
     }
-    private Message newMessage(String type) {
-        Message beforeMessage = new Message();
+    private MonitoringMessage newMessage(String type) {
+        MonitoringMessage beforeMessage = new MonitoringMessage();
         beforeMessage.setType(type);
         beforeMessage.setMsgtext("This is the message text");
         beforeMessage.setTimestamp(now());
@@ -152,10 +154,15 @@ public class DroolsFusionTest {
         conf.setOption(ClockTypeOption.get("pseudo"));
         ksession = kbase.newStatefulKnowledgeSession(conf, null);
         clock = ksession.getSessionClock();
-        entryPoint = ksession.getWorkingMemoryEntryPoint("testEntryPoint");
+        Collection<? extends WorkingMemoryEntryPoint> entryPoints = ksession.getWorkingMemoryEntryPoints();
+        if (entryPoints.size() > 1) {
+            throw new IllegalArgumentException("DRL file must use default entry point");
+        }
+        //entryPoint = ksession.getWorkingMemoryEntryPoint("input");
+        entryPoint = Iterables.getOnlyElement(entryPoints);
         assertThat(entryPoint).isNotNull();
         exitChannel = mock(Channel.class);
-        ksession.registerChannel("testExitChannel", exitChannel);
+        ksession.registerChannel("output", exitChannel);
     }
 
     @AfterMethod
