@@ -71,9 +71,9 @@ public class StateCacheTest {
 
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
         RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
-        RuoteWorkflow useWorkItemsWorkflow = RuoteWorkflow.createFromFile("workflows/radial/use_workitems.radial",
+        RuoteWorkflow useWorkItemsWorkflow = RuoteWorkflow.createFromResource("workflows/radial/use_workitems.radial",
                 ruoteRuntime);
-        RuoteWorkflow echoWorkflow = RuoteWorkflow.createFromFile("workflows/radial/echo_workflow.radial",
+        RuoteWorkflow echoWorkflow = RuoteWorkflow.createFromResource("workflows/radial/echo_workflow.radial",
                 ruoteRuntime);
 
         useWorkItemsWorkflow.asyncExecute(cacheSnapshot);

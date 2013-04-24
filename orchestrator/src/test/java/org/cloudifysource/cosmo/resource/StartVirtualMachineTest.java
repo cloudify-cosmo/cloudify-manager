@@ -23,6 +23,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.cloudifysource.cosmo.kvstore.KVStoreServer;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.Workflow;
 import org.cloudifysource.cosmo.resource.mock.ResourceMonitorMock;
@@ -103,8 +104,9 @@ public class StartVirtualMachineTest {
             properties.put("rest_get.kvstore.path", "virtual_machine");
             properties.put("rest_get.kvstore.response", "1");
             properties.put("rest_get.kvstore.timeout", "30");
+            final RuoteRuntime runtime = RuoteRuntime.createRuntime(properties);
             final Workflow workflow =
-                    RuoteWorkflow.createFromFile("workflows/radial/vm_appliance.radial", properties);
+                    RuoteWorkflow.createFromResource("workflows/radial/vm_appliance.radial", runtime);
             workflow.execute();
 
             assertThat(resourceProvisioningServer.getRequestsCount()).isEqualTo(1);

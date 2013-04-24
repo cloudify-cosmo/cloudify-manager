@@ -45,9 +45,12 @@ def create_dashboard
   dashboard
 end
 
+def parse_workflow(workflow)
+  Ruote::RadialReader.read(workflow)
+end
+
 def execute_ruote_workflow(dashboard, workflow, workitem_fields, wait_for_workflow = true)
-  radial_workflow = Ruote::RadialReader.read(workflow)
-  wfid = dashboard.launch(radial_workflow, to_map(workitem_fields))
+  wfid = dashboard.launch(workflow, to_map(workitem_fields))
   if wait_for_workflow
     dashboard.wait_for(wfid)
   else
