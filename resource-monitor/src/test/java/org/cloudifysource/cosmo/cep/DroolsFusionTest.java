@@ -24,6 +24,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.cep.mock.AppInfo;
+import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
 import org.drools.KnowledgeBaseFactory;

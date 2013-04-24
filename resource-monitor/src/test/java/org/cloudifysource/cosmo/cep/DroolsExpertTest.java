@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.cep;
 import java.util.Collection;
 
 import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseFactory;
 import org.drools.builder.KnowledgeBuilder;

@@ -1,5 +1,5 @@
-import org.cloudifysource.cosmo.cep.MonitoringMessage
-import org.cloudifysource.cosmo.cep.AppInfo
+import org.cloudifysource.cosmo.cep.mock.MonitoringMessage
+import org.cloudifysource.cosmo.cep.mock.AppInfo
 
 declare MonitoringMessage
 @role(event)
