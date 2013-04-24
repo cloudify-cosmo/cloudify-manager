@@ -12,18 +12,30 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
-package org.cloudifysource.cosmo.orchestrator.workflow;
+ ******************************************************************************/
+
+package org.cloudifysource.cosmo.statecache;
+
+import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 /**
- * @author Idan Moyal
+ * TODO: Write a short summary of this type's roles and responsibilities.
+ *
+ * @author Dan Kilman
  * @since 0.1
  */
-public interface Workflow {
-    void execute();
-    void execute(Map<String, Object> workitemFields);
-    Object asyncExecute();
-    Object asyncExecute(Map<String, Object> workitemFields);
+public class RuoteStateCacheTestJavaParticipant {
+
+    public static volatile CountDownLatch latch = new CountDownLatch(1);
+    public static volatile Map<String, Object> lastWorkitems;
+
+    public void execute(Map<String, Object> workItemFields) {
+        lastWorkitems = Maps.newHashMap(workItemFields);
+        latch.countDown();
+        latch = new CountDownLatch(1);
+    }
+
 }

@@ -15,6 +15,7 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -25,7 +26,7 @@ public class RuoteJavaParticipant {
 
     private static AtomicInteger executeInvocationsCounter = new AtomicInteger(0);
 
-    public void execute() {
+    public void execute(Map<String, Object> workItemFields) {
         System.out.println(getClass().getName() + ".execute() invoked");
         executeInvocationsCounter.incrementAndGet();
     }

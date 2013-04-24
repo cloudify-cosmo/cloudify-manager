@@ -1,0 +1,2 @@
+define echo_workflow
+  echo 'from echo_workflow'
