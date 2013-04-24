@@ -15,16 +15,8 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
-import com.google.common.io.Resources;
-import org.jruby.embed.LocalVariableBehavior;
-import org.jruby.embed.PathType;
-import org.jruby.embed.ScriptingContainer;
 
-import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 
@@ -34,23 +26,36 @@ import java.util.Map;
  */
 public class RuoteWorkflow implements Workflow {
 
-    private static final String EXECUTE_WORKFLOW_METHOD_NAME = "execute_ruote_workflow";
-    private static final String RUOTE_SCRIPT = "scripts/ruby/run_ruote.rb";
-
+    private final RuoteRuntime runtime;
     private final String path;
-    private final Map<String, Object> properties;
 
     public static RuoteWorkflow createFromFile(String path) {
-        return createFromFile(path, null);
+        return createFromFile(path, null, null);
     }
 
     public static RuoteWorkflow createFromFile(String path, Map<String, Object> properties) {
-        return new RuoteWorkflow(path, properties);
+        return createFromFile(path, properties, null);
     }
 
-    private RuoteWorkflow(String path, Map<String, Object> properties) {
+    public static RuoteWorkflow createFromFile(String path, RuoteRuntime runtime) {
+        return createFromFile(path, null, runtime);
+    }
+
+    private static RuoteWorkflow createFromFile(String path, Map<String, Object> properties, RuoteRuntime runtime) {
+        Preconditions.checkNotNull(path);
+        if (runtime == null) {
+            runtime = RuoteRuntime.createRuntime(properties);
+        }
+        return new RuoteWorkflow(path, runtime);
+    }
+
+    private RuoteWorkflow(String path, RuoteRuntime runtime) {
         this.path = path;
-        this.properties = properties;
+        this.runtime = runtime;
+    }
+
+    public String getPath() {
+        return path;
     }
 
     @Override
@@ -60,25 +65,17 @@ public class RuoteWorkflow implements Workflow {
 
     @Override
     public void execute(Map<String, Object> workitemFields) {
-        try {
-            final URL workflowResource = Resources.getResource(path);
-            Preconditions.checkNotNull(workflowResource);
-            final String workflow = Resources.toString(workflowResource, Charsets.UTF_8);
-            final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
-
-            final URL resource = Resources.getResource("ruote-gems/gems");
-            Preconditions.checkNotNull(resource);
-            final String resourcePath = resource.getPath();
-
-            container.runScriptlet("Dir['" + resourcePath + "/**/*'].each { |dir| $: << dir }");
-            container.put("$ruote_properties", properties != null ? properties : Maps.newHashMap());
-
-            Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
-
-            container.callMethod(receiver, EXECUTE_WORKFLOW_METHOD_NAME, workflow, workitemFields);
-
-        } catch (Exception e) {
-            Throwables.propagate(e);
-        }
+        runtime.executeWorkflow(this, workitemFields, true /* wait for workflow */);
     }
+
+    @Override
+    public Object asyncExecute() {
+        return asyncExecute(Collections.<String, Object>emptyMap());
+    }
+
+    @Override
+    public Object asyncExecute(Map<String, Object> workitemFields) {
+        return runtime.executeWorkflow(this, workitemFields, false /* wait for workflow */);
+    }
+
 }

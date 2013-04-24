@@ -12,18 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
-package org.cloudifysource.cosmo.orchestrator.workflow;
+ ******************************************************************************/
 
-import java.util.Map;
+package org.cloudifysource.cosmo.statecache;
 
 /**
- * @author Idan Moyal
+ * TODO: Write a short summary of this type's roles and responsibilities.
+ *
+ * @author Dan Kilman
  * @since 0.1
  */
-public interface Workflow {
-    void execute();
-    void execute(Map<String, Object> workitemFields);
-    Object asyncExecute();
-    Object asyncExecute(Map<String, Object> workitemFields);
+public abstract class StateChangeCallbackStub implements StateChangeCallback {
+
 }
