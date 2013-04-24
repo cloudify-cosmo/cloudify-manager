@@ -107,9 +107,23 @@ public class ResourceMonitorServer {
 
     private void initDrools() {
 
-        KnowledgeBaseConfiguration config = KnowledgeBaseFactory.newKnowledgeBaseConfiguration();
+        KnowledgeBaseConfiguration kbaseConfig = KnowledgeBaseFactory.newKnowledgeBaseConfiguration();
         // Stream mode allows interacting with the clock (Drools Fusion)
-        config.setOption(EventProcessingOption.STREAM);
+        kbaseConfig.setOption(EventProcessingOption.STREAM);
+
+        KnowledgeBase kbase = newKnowledgeBase(kbaseConfig);
+
+        // start session
+        KnowledgeSessionConfiguration sessionConfig = KnowledgeBaseFactory.newKnowledgeSessionConfiguration();
+        if (pseudoClock) {
+            sessionConfig.setOption(ClockTypeOption.get("pseudo"));
+        } else {
+            sessionConfig.setOption(ClockTypeOption.get("realtime"));
+        }
+        ksession = kbase.newStatefulKnowledgeSession(sessionConfig, null);
+    }
+
+    private KnowledgeBase newKnowledgeBase(KnowledgeBaseConfiguration config) {
         KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase(config);
 
         KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
@@ -122,15 +136,7 @@ public class ResourceMonitorServer {
         // add the compiled packages to a knowledgebase
         Collection<KnowledgePackage> pkgs = kbuilder.getKnowledgePackages();
         kbase.addKnowledgePackages(pkgs);
-
-        // start session
-        KnowledgeSessionConfiguration conf = KnowledgeBaseFactory.newKnowledgeSessionConfiguration();
-        if (pseudoClock) {
-            conf.setOption(ClockTypeOption.get("pseudo"));
-        } else {
-            conf.setOption(ClockTypeOption.get("realtime"));
-        }
-        ksession = kbase.newStatefulKnowledgeSession(conf, null);
+        return kbase;
     }
 
     private void initExitChannel() {
@@ -146,6 +152,7 @@ public class ResourceMonitorServer {
 
     private void initEntryPoint() {
         Collection<? extends WorkingMemoryEntryPoint> entryPoints = ksession.getWorkingMemoryEntryPoints();
+        //TODO: Disable drools auto creation of entry points when it reads DRL file.
         if (entryPoints.size() > 1) {
             throw new IllegalArgumentException("DRL file must use default entry point");
         }
@@ -193,6 +200,9 @@ public class ResourceMonitorServer {
                         })));
     }
 
+    /**
+     * Used by tests in order to increment pseudo clock
+     */
     public SessionClock getClock() {
         return ksession.getSessionClock();
     }
