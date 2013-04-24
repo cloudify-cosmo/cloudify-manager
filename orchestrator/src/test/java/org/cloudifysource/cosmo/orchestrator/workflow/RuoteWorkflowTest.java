@@ -39,7 +39,8 @@ public class RuoteWorkflowTest {
 
     @Test
     public void testWorkflowExecution() {
-        Workflow workflow = RuoteWorkflow.createFromFile("workflows/radial/java_workflow.radial");
+        final RuoteRuntime runtime = RuoteRuntime.createRuntime();
+        Workflow workflow = RuoteWorkflow.createFromResource("workflows/radial/java_workflow.radial", runtime);
         workflow.execute();
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }
@@ -58,7 +59,9 @@ public class RuoteWorkflowTest {
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("appliances", appliances);
 
-        Workflow workflow = RuoteWorkflow.createFromFile("workflows/radial/java_workflow_properties.radial");
+        final RuoteRuntime runtime = RuoteRuntime.createRuntime();
+        Workflow workflow = RuoteWorkflow.createFromResource("workflows/radial/java_workflow_properties.radial",
+                runtime);
         workflow.execute(workitemFields);
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }

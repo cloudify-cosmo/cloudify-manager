@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -39,6 +38,7 @@ public class RuoteRuntime {
     private static final String CREATE_DASHBOARD_METHOD_NAME = "create_dashboard";
     private static final String EXECUTE_WORKFLOW_METHOD_NAME = "execute_ruote_workflow";
     private static final String WAIT_FOR_WORKFLOW_METHOD_NAME = "wait_for_workflow";
+    private static final String PARSE_WORKFLOW_METHOD_NAME = "parse_workflow";
     private static final String RUOTE_SCRIPT = "scripts/ruby/run_ruote.rb";
 
     private final ScriptingContainer container;
@@ -79,12 +79,8 @@ public class RuoteRuntime {
     public Object executeWorkflow(RuoteWorkflow workflow, Map<String, Object> workitemFields,
                                   boolean waitForWorkflow) {
         try {
-            final URL workflowResource = Resources.getResource(workflow.getPath());
-            Preconditions.checkNotNull(workflowResource);
-            final String rawWorkflow = Resources.toString(workflowResource, Charsets.UTF_8);
-            return container.callMethod(receiver, EXECUTE_WORKFLOW_METHOD_NAME, dashboard, rawWorkflow,
-                    workitemFields,
-                    waitForWorkflow);
+            return container.callMethod(receiver, EXECUTE_WORKFLOW_METHOD_NAME, dashboard, workflow.getParsedWorkflow(),
+                    workitemFields, waitForWorkflow);
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
@@ -94,4 +90,7 @@ public class RuoteRuntime {
         container.callMethod(receiver, WAIT_FOR_WORKFLOW_METHOD_NAME, dashboard, wfid);
     }
 
+    public Object parseWorkflow(String workflow) {
+        return container.callMethod(receiver, PARSE_WORKFLOW_METHOD_NAME, workflow);
+    }
 }
