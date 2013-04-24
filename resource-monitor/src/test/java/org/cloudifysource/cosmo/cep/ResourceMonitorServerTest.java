@@ -143,8 +143,8 @@ public class ResourceMonitorServerTest {
     private void startMonitoringServer(int port) {
         ResourceMonitorServerConfiguration config =
                 new ResourceMonitorServerConfiguration();
-        config.setPseudoClock(true);final Resource
-        resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
+        config.setPseudoClock(true);
+        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
         config.setDroolsResource(resource);
         config.setInputUri(inputUri);
         config.setOutputUri(outputUri);

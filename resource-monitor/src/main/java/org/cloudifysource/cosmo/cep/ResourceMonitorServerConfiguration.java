@@ -18,7 +18,7 @@ package org.cloudifysource.cosmo.cep;
 import org.drools.io.Resource;
 
 import java.net.URI;
-import java.util.concurrent.ExecutorService;
+
 
 /**
  * Configuration for {@link ResourceMonitorServer}.
