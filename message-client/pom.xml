@@ -24,6 +24,7 @@
         <jetty.version>8.1.5.v20120716</jetty.version>
         <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
+        <cosmo.message-types.version>0.1-SNAPSHOT</cosmo.message-types.version>
     </properties>
     <dependencies>
         <dependency>
@@ -71,16 +72,15 @@
             <version>2.0M8</version>
             <scope>test</scope>
         </dependency>
-        <!-- http client -->
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>message-types</artifactId>
+            <version>${cosmo.message-types.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.atmosphere</groupId>
             <artifactId>wasync</artifactId>
             <version>1.0.0.RC2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.1.4</version>
         </dependency>
     </dependencies>
     <build>
