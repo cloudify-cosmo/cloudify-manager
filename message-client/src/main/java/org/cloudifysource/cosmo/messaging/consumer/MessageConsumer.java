@@ -84,6 +84,7 @@ public class MessageConsumer {
                                         throw new IllegalStateException("Failed to decode " + data, e);
                                     }
                                 } else {
+                                    //TODO: Handle Protocol Errors Event.ERROR
                                     return null;
                                 }
                             }
@@ -111,7 +112,7 @@ public class MessageConsumer {
             });
             socket.open(request.build());
         } catch (Throwable t) {
-            sockets.remove(listener);
+            removeListener(listener);
             throw Throwables.propagate(t);
         }
     }
