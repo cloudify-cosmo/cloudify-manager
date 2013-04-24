@@ -1,0 +1,44 @@
+import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage
+import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
+import org.cloudifysource.cosmo.cep.Agent
+
+declare StateChangedMessage
+@role(event)
+end
+
+declare Agent
+@role(event)
+end
+
+declare ProbeAgentMessage
+@role(event)
+end
+
+declare AgentStatusMessage
+@role(event)
+end
+
+rule "Fire agent probe every 20 seconds"
+    dialect "mvel"
+    timer (int: 0s 20s)
+when
+    Agent( $agentId : agentId)
+then
+    probe = new ProbeAgentMessage()
+    probe.agentId = $agentId
+    insert(probe)
+    System.out.println("Probe sent")
+    //TODO: write to channel hooked with messaging broker
+end
+
+rule "Change state to failure if no response within 1 minute"
+    dialect "mvel"
+when
+    $request: ProbeAgentMessage( $agentId : agentId)
+    not AgentStatusMessage( agentId == $agentId, this after[0, 1m ] $request )
+then
+    message = new StateChangedMessage()
+    message.resourceId = $agentId
+    channels["output"].send( message );
+end

@@ -19,11 +19,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.cep.mock.AppInfo;
-import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.drools.time.SessionPseudoClock;
@@ -48,7 +48,8 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class ResourceMonitorServerTest {
 
-    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsFusionTest.drl";
+    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
+    public static final String AGENT_ID = "agent_1";
 
     // component being tested
     private ResourceMonitorServer server;
@@ -63,8 +64,8 @@ public class ResourceMonitorServerTest {
     private MessageProducer producer;
     private URI inputUri;
     private URI outputUri;
-    private MessageConsumerListener<MonitoringMessage> listener;
-    private List<MonitoringMessage> consumedMessages;
+    private MessageConsumerListener<StateChangedMessage> listener;
+    private List<StateChangedMessage> consumedMessages;
     private List<Throwable> failures;
 
     @BeforeMethod
@@ -77,9 +78,9 @@ public class ResourceMonitorServerTest {
         consumer = new MessageConsumer();
         consumedMessages = Lists.newCopyOnWriteArrayList();
         failures = Lists.newCopyOnWriteArrayList();
-        listener = new MessageConsumerListener<MonitoringMessage>() {
+        listener = new MessageConsumerListener<StateChangedMessage>() {
             @Override
-            public void onMessage(URI uri, MonitoringMessage message) {
+            public void onMessage(URI uri, StateChangedMessage message) {
                 assertThat(uri).isEqualTo(outputUri);
                 consumedMessages.add(message);
             }
@@ -90,8 +91,8 @@ public class ResourceMonitorServerTest {
             }
 
             @Override
-            public Class<? extends MonitoringMessage> getMessageClass() {
-                return MonitoringMessage.class;
+            public Class<? extends StateChangedMessage> getMessageClass() {
+                return StateChangedMessage.class;
             }
         };
         consumer.addListener(outputUri, listener);
@@ -107,20 +108,20 @@ public class ResourceMonitorServerTest {
 
     @Test(timeOut = 5000)
     public void testMissingEvent() throws InterruptedException {
-        // produce input
-        MonitoringMessage requestMessage = newMessage("request");
-        while (consumedMessages.size() < 1) {
-            producer.send(inputUri, requestMessage);
-            getClock().advanceTime(1, TimeUnit.MINUTES);
+        Agent agent = new Agent();
+        agent.setAgentId("agent_1");
+        server.insertFact(agent);
+
+        for (int i = 0 ; i < 10 ; i ++) {
+            getClock().advanceTime(10, TimeUnit.SECONDS);
             checkFailures();
-            Thread.sleep(100);
+            Thread.sleep(10);
         }
 
-        // check output
-        MonitoringMessage missingMessage = newMessage("missing");
-        //TODO: exitChannel should assign timestamp
-        missingMessage.setTimestamp(null);
-        assertThat(consumedMessages).contains(missingMessage);
+        assertThat(consumedMessages.size()).isGreaterThan(0);
+        final StateChangedMessage stateChange =
+                consumedMessages.get(0);
+        assertThat(stateChange.getResourceId()).isEqualTo(AGENT_ID);
     }
 
     private void checkFailures() {
@@ -168,14 +169,6 @@ public class ResourceMonitorServerTest {
         if (server != null) {
             server.stop();
         }
-    }
-
-    private MonitoringMessage newMessage(String type) {
-        MonitoringMessage beforeMessage = new MonitoringMessage();
-        beforeMessage.setType(type);
-        beforeMessage.setMsgtext("This is the message text");
-        beforeMessage.setTimestamp(now());
-        return beforeMessage;
     }
 
     private Date now() {
