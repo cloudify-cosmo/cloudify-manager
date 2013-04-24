@@ -79,22 +79,21 @@ public class DroolsFusionTest {
         fireAllRules();
 
         //assert "after" message fired through exit channel
-        Message afterMessage = newMessage("after");
+        MonitoringMessage afterMessage = newMessage("after");
         verify(exitChannel).send(afterMessage);
     }
 
     @Test
     public void testMissingMessageCorrelated() {
-        fireAppInfo();
 
-        Message requestMessage = newMessage("request");
+        MonitoringMessage requestMessage = newMessage("request");
         entryPoint.insert(requestMessage);
-
         clock.advanceTime(1, TimeUnit.MINUTES);
+
         fireAllRules();
 
         //assert "after" message fired through exit channel
-        Message missingMessage = newMessage("missing");
+        MonitoringMessage missingMessage = newMessage("missing");
         missingMessage.setTimestamp(null); // exitChannel should assign timestamp
         verify(exitChannel).send(missingMessage);
     }
@@ -111,11 +110,11 @@ public class DroolsFusionTest {
         ksession.fireAllRules();
     }
 
-    private Message newMessage() {
+    private MonitoringMessage newMessage() {
         return newMessage("before");
     }
-    private Message newMessage(String type) {
-        Message beforeMessage = new Message();
+    private MonitoringMessage newMessage(String type) {
+        MonitoringMessage beforeMessage = new MonitoringMessage();
         beforeMessage.setType(type);
         beforeMessage.setMsgtext("This is the message text");
         beforeMessage.setTimestamp(now());

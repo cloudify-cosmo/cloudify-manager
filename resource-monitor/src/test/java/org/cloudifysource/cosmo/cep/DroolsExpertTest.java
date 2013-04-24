@@ -50,19 +50,19 @@ public class DroolsExpertTest {
 
     @Test
     public void testDrools() {
-        Message beforeMessage = new Message();
+        MonitoringMessage beforeMessage = new MonitoringMessage();
         beforeMessage.setType("before");
         beforeMessage.setMsgtext("This is the message text");
         ksession.insert(beforeMessage);
         ksession.fireAllRules();
-        final Message afterMessage = getMessageFromSession();
+        final MonitoringMessage afterMessage = getMessageFromSession();
         assertThat(afterMessage.getType()).isEqualTo("after");
     }
 
-    private Message getMessageFromSession() {
+    private MonitoringMessage getMessageFromSession() {
         final Collection<FactHandle> factHandles = ksession.getFactHandles();
         final InternalFactHandle fh = (InternalFactHandle) Iterables.getOnlyElement(factHandles);
-        final Message message = ((Message) fh.getObject());
+        final MonitoringMessage message = ((MonitoringMessage) fh.getObject());
         return message;
     }
 

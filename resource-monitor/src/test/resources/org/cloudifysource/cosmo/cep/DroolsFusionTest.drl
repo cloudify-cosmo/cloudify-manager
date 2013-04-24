@@ -1,9 +1,9 @@
-import org.cloudifysource.cosmo.cep.Message
+import org.cloudifysource.cosmo.cep.MonitoringMessage
 import org.cloudifysource.cosmo.cep.AppInfo
 
-declare Message
+declare MonitoringMessage
 @role(event)
-@timestamp(timestamp.getTime())
+@timestamp(timestamp)
 end
 
 declare AppInfo
@@ -15,7 +15,7 @@ rule "Change message type after one minute"
     dialect "mvel"
 when
     $appinfo:AppInfo()
-    $message:Message( type == "before", $msgtext : msgtext, this after[ 1m ] $appinfo )
+    $message:MonitoringMessage( type == "before", $msgtext : msgtext, this after[ 1m ] $appinfo )
 then
     System.out.println( $msgtext );
     $message.type = "after";
@@ -25,11 +25,11 @@ end
 rule "Create new message if not exits within 1 minute"
     dialect "mvel"
 when
-    $request: Message( type == "request")
-    not Message( type == "response", this after[0, 1m ] $request )
+    $request: MonitoringMessage( type == "request")
+    not MonitoringMessage( type == "response", this after[0, 1m ] $request )
 then
     System.out.println( "Found no response.");
-    $message = new Message()
+    $message = new MonitoringMessage()
     $message.type = "missing";
     $message.msgtext = "This is the message text";
     channels["output"].send( $message );
