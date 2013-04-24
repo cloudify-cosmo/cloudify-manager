@@ -61,36 +61,51 @@ public class StateCacheTest {
     @Test
     public void testStateCache() throws InterruptedException {
 
-        System.out.println(Thread.currentThread().getId());
+        // create new state cache
         StateCache cache = new StateCache.Builder()
-                .executorService(Executors.newFixedThreadPool(1))
                 .initialState(state)
                 .build();
 
-        Map<String, Object> cacheSnapshot = cache.toMap();
+        // hold initial state snapshot
+        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot();
 
+        // insert state into jruby runtime properties so that state participant can access it
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
-        RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
-        RuoteWorkflow useWorkItemsWorkflow = RuoteWorkflow.createFromResource("workflows/radial/use_workitems.radial",
-                ruoteRuntime);
-        RuoteWorkflow echoWorkflow = RuoteWorkflow.createFromResource("workflows/radial/echo_workflow.radial",
-                ruoteRuntime);
 
+        // start jruby runtime and load test workflows
+        RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
+        RuoteWorkflow useWorkItemsWorkflow =
+                RuoteWorkflow.createFromResource("workflows/radial/use_workitems.radial", ruoteRuntime);
+        RuoteWorkflow echoWorkflow =
+                RuoteWorkflow.createFromResource("workflows/radial/echo_workflow.radial", ruoteRuntime);
+
+        // execute workflow that works with workitems and waits on state
         useWorkItemsWorkflow.asyncExecute(cacheSnapshot);
+
+        // sleep some to make sure the above work flow is executed first
         System.out.println("sleep 2000 ms from test");
         Thread.sleep(2000);
+
+        // execute workflow that does almost nothing
         echoWorkflow.asyncExecute();
 
+        // make sure the echo workflow occured and was not blocked
+        Assert.assertTrue(RuoteStateCacheTestDummyJavaParticipant.latch.await(5, TimeUnit.SECONDS));
+
+        // the use_workitems workflow waits on this state, this will release the use_workitems workflow
         cache.put("general_status", "good");
 
-        long start = System.currentTimeMillis();
+        // assert workflow continued properly
         RuoteStateCacheTestJavaParticipant.latch.await(60, TimeUnit.SECONDS);
-        System.out.println("waited: " + (System.currentTimeMillis() - start) + "ms");
         Map<String, Object> receivedWorkItemFields = RuoteStateCacheTestJavaParticipant.lastWorkitems;
         Assert.assertNotNull(receivedWorkItemFields);
+
+        // assert original state exists
         for (Map.Entry<String, Object> entry : cacheSnapshot.entrySet()) {
             Assert.assertEquals(receivedWorkItemFields.get(entry.getKey()), entry.getValue());
         }
+
+        // assert state modified by workflow exists
         Assert.assertEquals(receivedWorkItemFields.get("state0_id_processed"),
                             asMap(state.get("state0")).get("id"));
         Assert.assertEquals(receivedWorkItemFields.get("state0_status_processed"),
@@ -102,6 +117,8 @@ public class StateCacheTest {
                     asMap(state.get("state0/substates/substate" + i)).get("status"));
         }
 
+        // assert workflow after waiting on state change, includes the new state
+        Assert.assertEquals("good", receivedWorkItemFields.get("general_status"));
     }
 
     @SuppressWarnings("unchecked")

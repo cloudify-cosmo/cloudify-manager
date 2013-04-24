@@ -18,13 +18,14 @@ package org.cloudifysource.cosmo.statecache;
 
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
@@ -34,8 +35,10 @@ import java.util.concurrent.ExecutorService;
  */
 public class StateCache {
 
-    private final ExecutorService executorService;
+    private final Object lock = new Object();
+
     private final Map<String, Object> cache;
+    private final ExecutorService executorService;
     private final Map<Condition, Set<CallbackContext>> listeners;
 
     private StateCache(Map<String, Object> initialState, ExecutorService executorService) {
@@ -46,24 +49,30 @@ public class StateCache {
 
     public Object put(String key, Object value) {
 
-        Object previous = cache.put(key, value);
+        synchronized (lock) {
+            Object previous = cache.put(key, value);
 
-        final Condition condition = new KeyValueCondition(key, value);
-        final Set<CallbackContext> callbacks = listeners.get(condition);
-        if (callbacks != null) {
-            for (final CallbackContext callbackContext : callbacks) {
-                submitStateChangeNotificationTask(callbackContext);
+            final Condition condition = new KeyValueCondition(key, value);
+            final Set<CallbackContext> callbacks = listeners.get(condition);
+            if (callbacks != null) {
+                ImmutableMap<String, Object> snapshot = snapshot();
+                for (final CallbackContext callbackContext : callbacks) {
+                    submitStateChangeNotificationTask(callbackContext, snapshot);
+                }
+                listeners.remove(condition);
             }
-            listeners.remove(condition);
+
+            return previous;
         }
-
-        return previous;
     }
 
-    public Map<String, Object> toMap() {
-        return Maps.newHashMap(cache);
+    public ImmutableMap<String, Object> snapshot() {
+        synchronized (lock) {
+            return ImmutableMap.copyOf(cache);
+        }
     }
 
+    // TODO this whole method needs some thinking to get done right
     public void waitForState(final Object receiver, final Object context, final String key, final Object value,
                              final StateChangeCallback callback) {
         Preconditions.checkNotNull(key);
@@ -72,7 +81,7 @@ public class StateCache {
         CallbackContext callbackContext = new CallbackContext(receiver, context, callback);
 
         if (value.equals(cache.get(key))) {
-            submitStateChangeNotificationTask(callbackContext);
+            submitStateChangeNotificationTask(callbackContext, snapshot());
             return;
         }
 
@@ -85,13 +94,15 @@ public class StateCache {
         listeners.put(condition, conditionCallbacks);
     }
 
-    private void submitStateChangeNotificationTask(final CallbackContext callbackContext) {
+    private void submitStateChangeNotificationTask(final CallbackContext callbackContext,
+                                                   final ImmutableMap<String, Object> snapshot) {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
-                System.out.println(Thread.currentThread().getId());
                 callbackContext.getCallback().onStateChange(callbackContext.getReceiver(),
-                        callbackContext.getContext(), StateCache.this, toMap());
+                                                            callbackContext.getContext(),
+                                                            StateCache.this,
+                                                            snapshot);
             }
         });
     }
@@ -103,17 +114,12 @@ public class StateCache {
         public StateCache build() {
             return new StateCache(
                 initialState != null ? initialState : Collections.<String, Object>emptyMap(),
-                executorService != null ? executorService : MoreExecutors.sameThreadExecutor()
+                executorService != null ? executorService : Executors.newSingleThreadExecutor()
             );
         }
 
         public StateCache.Builder initialState(Map<String, Object> initialState) {
             this.initialState = initialState;
-            return this;
-        }
-
-        public StateCache.Builder executorService(ExecutorService executorService) {
-            this.executorService = executorService;
             return this;
         }
 

@@ -11,3 +11,4 @@ define use_workitems
 
   participant ref: "java", class: "org.cloudifysource.cosmo.statecache.RuoteStateCacheTestJavaParticipant"
 
+

@@ -16,7 +16,10 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
@@ -24,6 +27,15 @@ import com.google.common.collect.ImmutableMap;
  * @author Dan Kilman
  * @since 0.1
  */
-public interface StateChangeCallback {
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+public class RuoteStateCacheTestDummyJavaParticipant {
+
+    public static volatile CountDownLatch latch = new CountDownLatch(1);
+    public static volatile Map<String, Object> lastWorkitems;
+
+    public void execute(Map<String, Object> workItemFields) {
+        lastWorkitems = Maps.newHashMap(workItemFields);
+        latch.countDown();
+        latch = new CountDownLatch(1);
+    }
+
 }
