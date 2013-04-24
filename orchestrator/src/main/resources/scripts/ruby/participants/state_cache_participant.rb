@@ -14,9 +14,12 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
+
+
 class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChangeCallbackStub
+
   def onStateChange(participant, workitem, cache, new_snapshot)
-    puts "#{cache}, #{new_snapshot}"
+    workitem.fields.merge!(new_snapshot)
     participant.reply(workitem)
   end
 end
@@ -34,12 +37,10 @@ class StateCacheParticipant < Ruote::Participant
       puts "#{e.message}"
       raise
     end
+  end
 
-    def do_not_thread
-      puts 'dont_thread'
-      true
-    end
-
+  def do_not_thread
+    true
   end
 
 end

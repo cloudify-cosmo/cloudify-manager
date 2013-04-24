@@ -24,6 +24,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -60,7 +61,12 @@ public class StateCacheTest {
     @Test
     public void testStateCache() throws InterruptedException {
 
-        StateCache cache = new StateCache(state);
+        System.out.println(Thread.currentThread().getId());
+        StateCache cache = new StateCache.Builder()
+                .executorService(Executors.newFixedThreadPool(1))
+                .initialState(state)
+                .build();
+
         Map<String, Object> cacheSnapshot = cache.toMap();
 
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
@@ -71,9 +77,11 @@ public class StateCacheTest {
                 ruoteRuntime);
 
         useWorkItemsWorkflow.asyncExecute(cacheSnapshot);
-        System.out.println("sleep 500 ms from test");
-        Thread.sleep(500);
+        System.out.println("sleep 2000 ms from test");
+        Thread.sleep(2000);
         echoWorkflow.asyncExecute();
+
+        cache.put("general_status", "good");
 
         long start = System.currentTimeMillis();
         RuoteStateCacheTestJavaParticipant.latch.await(60, TimeUnit.SECONDS);
