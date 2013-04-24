@@ -55,17 +55,16 @@ public class ResourceMonitorServerTest {
     // message broker that isolates server
     private MessageBrokerServer broker;
 
-    // used to receive messages from server
+    // used to receive consumedMessages from server
     private MessageConsumer consumer;
 
-    // used to push messages into server
+    // used to push consumedMessages into server
     private MessageProducer producer;
     private URI inputUri;
     private URI outputUri;
     private MessageConsumerListener<MonitoringMessage> listener;
-    private List<MonitoringMessage> messages;
+    private List<MonitoringMessage> consumedMessages;
     private List<Throwable> failures;
-    private CountDownLatch latch;
 
     @BeforeMethod
     @Parameters({"port" })
@@ -75,13 +74,13 @@ public class ResourceMonitorServerTest {
         outputUri = URI.create("http://localhost:" + port + "/output/");
         producer = new MessageProducer();
         consumer = new MessageConsumer();
-        messages = Lists.newCopyOnWriteArrayList();
+        consumedMessages = Lists.newCopyOnWriteArrayList();
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<MonitoringMessage>() {
             @Override
             public void onMessage(URI uri, MonitoringMessage message) {
                 assertThat(uri).isEqualTo(outputUri);
-                messages.add(message);
+                consumedMessages.add(message);
             }
 
             @Override
@@ -105,11 +104,11 @@ public class ResourceMonitorServerTest {
         stopMessageBroker();
     }
 
-    @Test(timeOut = 5000 * 10000)
+    @Test(timeOut = 5000)
     public void testMissingEvent() throws InterruptedException {
         // produce input
         MonitoringMessage requestMessage = newMessage("request");
-        while (messages.size() < 1) {
+        while (consumedMessages.size() < 1) {
             producer.send(inputUri, requestMessage);
             getClock().advanceTime(1, TimeUnit.MINUTES);
             checkFailures();
@@ -120,7 +119,7 @@ public class ResourceMonitorServerTest {
         MonitoringMessage missingMessage = newMessage("missing");
         //TODO: exitChannel should assign timestamp
         missingMessage.setTimestamp(null);
-        assertThat(messages).contains(missingMessage);
+        assertThat(consumedMessages).contains(missingMessage);
     }
 
     private void checkFailures() {
