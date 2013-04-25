@@ -39,8 +39,10 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
@@ -72,6 +74,7 @@ public class ResourceMonitorServerTest {
     private List<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
     private boolean mockAgentFailed;
+    private CountDownLatch clockTickLatch;
 
     @Test
     public void testAgentUnreachable() throws InterruptedException {
@@ -80,11 +83,15 @@ public class ResourceMonitorServerTest {
         assertThat(isAgentReachable()).isFalse();
     }
 
-    @Test
+    @Test(invocationCount = 1, enabled = true)
     public void testAgentReachable() throws InterruptedException {
         mockAgentFailed = false;
         monitorAgent();
-        assertThat(isAgentReachable()).isTrue();
+        final boolean reachable = isAgentReachable();
+        if (!reachable) {
+            System.out.println("State Changes:" + stateChangedMessages);
+        }
+        assertThat(reachable).isTrue();
     }
 
     @BeforeMethod
@@ -125,11 +132,27 @@ public class ResourceMonitorServerTest {
     }
 
     private void mockAgent(ProbeAgentMessage message) {
-        if (!mockAgentFailed) {
+        if (mockAgentFailed) {
+            clockTick();
+        }
+        else {
             final AgentStatusMessage statusMessage = new AgentStatusMessage();
             statusMessage.setAgentId(AGENT_ID);
-            producer.send(inputTopic, statusMessage);
+            producer.send(inputTopic, statusMessage).addListener(new Runnable() {
+                @Override
+                public void run() {
+                    // increase clock time only after message was sent
+                    // no guarantees that message made it to drools yet
+                    // but it's almost as good.
+                    clockTick();
+                }
+            },sameThreadExecutor());
         }
+    }
+
+    private void clockTick() {
+        getClock().advanceTime(10, TimeUnit.SECONDS);
+        clockTickLatch.countDown();
     }
 
     @AfterMethod(alwaysRun = true)
@@ -145,15 +168,13 @@ public class ResourceMonitorServerTest {
     }
 
     private void monitorAgent() throws InterruptedException {
+        clockTickLatch = new CountDownLatch(10);
         Agent agent = new Agent();
         agent.setAgentId("agent_1");
         server.insertFact(agent);
 
-        for (int i = 0; i < 10; i++) {
-            getClock().advanceTime(10, TimeUnit.SECONDS);
-            checkFailures();
-            Thread.sleep(10);
-        }
+        clockTickLatch.await();
+        checkFailures();
     }
 
     private void checkFailures() {
