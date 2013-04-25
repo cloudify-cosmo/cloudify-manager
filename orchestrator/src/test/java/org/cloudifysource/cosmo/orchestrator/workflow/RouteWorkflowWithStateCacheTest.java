@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RouteWorkflowWithStateCacheTest {
 
-    //    @Test
+    @Test
     public void testStateCacheWithWorkflows() throws InterruptedException {
 
         Map<String, Object> state = new ImmutableMap.Builder<String, Object>()

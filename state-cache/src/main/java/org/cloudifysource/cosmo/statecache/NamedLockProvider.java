@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * Provides a thread safe name based lock interface for getting a shared lock instance based on its name.
  *
- * @since 9.1.1
+ * @since 0.1
  * @author Dan Kilman
  */
 public class NamedLockProvider {

@@ -101,6 +101,7 @@ public class StateCache {
             if (conditionsToRemove == null) {
                 conditionsToRemove = Lists.newArrayList();
             }
+            conditionsToRemove.add(condition);
 
             // submit callback tasks
             if (callbackContexts != null) {
