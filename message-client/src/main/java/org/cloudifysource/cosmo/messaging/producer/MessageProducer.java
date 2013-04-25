@@ -20,6 +20,7 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
+import org.cloudifysource.cosmo.messaging.MessageTypeIdResolver;
 import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
 import java.io.IOException;
@@ -44,14 +45,16 @@ public class MessageProducer<T> {
     public MessageProducer() {
         client = new AsyncHttpClient();
         mapper = ObjectMapperFactory.newObjectMapper();
+        MessageTypeIdResolver.warmUpClassPathCache();
     }
 
     public ListenableFuture send(URI uri, Object message) {
         try {
+            final String json = mapper.writerWithType(message.getClass()).writeValueAsString(message);
             return convertListenableFuture(
                     client.preparePost(uri.toString())
-                    .setBody(mapper.writeValueAsString(message))
-                    .execute());
+                            .setBody(json)
+                            .execute());
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

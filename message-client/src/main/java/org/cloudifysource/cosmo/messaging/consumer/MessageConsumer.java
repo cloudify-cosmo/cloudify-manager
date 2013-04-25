@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.messaging.consumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.ning.http.client.FluentCaseInsensitiveStringsMap;
 import org.atmosphere.wasync.Client;
 import org.atmosphere.wasync.ClientFactory;
 import org.atmosphere.wasync.Decoder;
@@ -26,6 +27,7 @@ import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
+import org.cloudifysource.cosmo.messaging.MessageTypeIdResolver;
 import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
 import java.io.IOException;
@@ -51,6 +53,7 @@ public class MessageConsumer {
     public MessageConsumer() {
         client = ClientFactory.getDefault().newClient();
         mapper = ObjectMapperFactory.newObjectMapper();
+        MessageTypeIdResolver.warmUpClassPathCache();
     }
 
     public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {
@@ -97,10 +100,22 @@ public class MessageConsumer {
                 @Override
                 public void on(Object message) {
                     if (message != null &&
-                        //workaround for bug https://github.com/Atmosphere/wasync/issues/35
-                        listener.getMessageClass().isAssignableFrom(message.getClass())) {
+                        isNotHeader(listener, message)) {
                         listener.onMessage(uri, (T) message);
                     }
+                }
+
+                /**
+                 * workaround for bug https://github.com/Atmosphere/wasync/issues/35
+                 */
+                private boolean isNotHeader(MessageConsumerListener<T> listener, Object message) {
+                    if (!listener.getMessageClass().isAssignableFrom(message.getClass())) {
+                        return false;
+                    }
+                    if (message instanceof FluentCaseInsensitiveStringsMap) {
+                        return false;
+                    }
+                    return true;
                 }
             });
             socket.on(new Function<Throwable>() {
