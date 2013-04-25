@@ -17,23 +17,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.cloudifysource.cosmo</groupId>
-    <artifactId>orchestrator</artifactId>
+    <artifactId>state-cache</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
     <properties>
-        <jetty.version>8.1.5.v20120716</jetty.version>
         <testng.version>6.8</testng.version>
-        <jersey.version>1.8</jersey.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
     </properties>
-
     <dependencies>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-client</artifactId>
-            <version>${jersey.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -50,16 +41,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>14.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>1.12</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jruby</groupId>
-            <artifactId>jruby-complete</artifactId>
-            <version>1.7.3</version>
         </dependency>
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
@@ -81,24 +62,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
             <version>1.6.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>kvstore</artifactId>
-            <scope>test</scope>
-            <version>0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>state-cache</artifactId>
-            <scope>test</scope>
-            <version>0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ning</groupId>
-            <artifactId>async-http-client</artifactId>
-            <version>1.7.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -155,14 +118,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.13</version>
-                <configuration>
-                    <excludedGroups>ssh</excludedGroups>
-                    <systemPropertyVariables>
-                        <ip>ip</ip>
-                        <username>username</username>
-                        <keyfile>keyfile</keyfile>
-                    </systemPropertyVariables>
-                </configuration>
             </plugin>
         </plugins>
     </build>
