@@ -16,21 +16,17 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.base.Objects;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -51,12 +47,15 @@ public class StateCache {
 
     private final Map<String, Object> cache;
     private final ExecutorService executorService;
-    private final Map<Condition, Set<CallbackContext>> listeners;
+    private final Map<Condition, CallbackContext> listeners;
 
     private StateCache(Map<String, Object> initialState, ExecutorService executorService) {
         this.executorService = executorService;
         this.cache = Maps.newHashMap(initialState);
-        this.listeners = Maps.newHashMap();
+
+        // Concurrent - listeners are queried and added on waitForState
+        //              listeners are iterated and removed on put
+        this.listeners = Maps.newConcurrentMap();
     }
 
     public void close() {
@@ -84,9 +83,9 @@ public class StateCache {
         List<Condition> conditionsToRemove = null;
 
         // iterate through all listeners. (this might be optimizied in the future)
-        for (Map.Entry<Condition, Set<CallbackContext>> entry : listeners.entrySet()) {
+        for (Map.Entry<Condition, CallbackContext> entry : listeners.entrySet()) {
             Condition condition = entry.getKey();
-            Set<CallbackContext> callbackContexts = entry.getValue();
+            CallbackContext callbackContext = entry.getValue();
 
             // if condition doesn't apply, move to next one
             if (!condition.applies(conditionStateCacheSnapshotInstance)) {
@@ -103,14 +102,10 @@ public class StateCache {
             }
             conditionsToRemove.add(condition);
 
-            // submit callback tasks
-            if (callbackContexts != null) {
-                for (final CallbackContext callbackContext : callbackContexts) {
-                    submitStateChangeNotificationTask(callbackContext, snapshot.asMap());
-                }
-            }
+            submitStateChangeNotificationTask(callbackContext, snapshot.asMap());
         }
 
+        // remove relevant listeners
         if (conditionsToRemove != null) {
             for (Condition condition : conditionsToRemove) {
                 listeners.remove(condition);
@@ -144,6 +139,8 @@ public class StateCache {
                               final StateChangeCallback callback) {
         CallbackContext callbackContext = new CallbackContext(receiver, context, callback);
 
+        // obtain refernce to named locks relevent for this condition
+        // and create locking/unlocking ordered lists.
         List<String> keyNamesToLock = condition.keysToLock();
         List<ReentrantReadWriteLock> keysInLockOrder = Lists.transform(keyNamesToLock, new Function<String,
                 ReentrantReadWriteLock>() {
@@ -153,24 +150,24 @@ public class StateCache {
         });
         List<ReentrantReadWriteLock> keysInUnlockOrder = Lists.reverse(keysInLockOrder);
 
+        // lock in locking order
         for (ReentrantReadWriteLock lock : keysInLockOrder) {
             lock.readLock().lock();
         }
         try {
+
             synchronized (cacheMapLock) {
+                // if condition already applies, submit notification task now and return.
                 if (condition.applies(conditionStateCacheSnapshotInstance)) {
                     submitStateChangeNotificationTask(callbackContext, snapshot().asMap());
                     return;
                 }
             }
 
-            Set<CallbackContext> conditionCallbacks = listeners.get(condition);
-            if (conditionCallbacks == null) {
-                conditionCallbacks = Sets.newHashSet();
-            }
-            conditionCallbacks.add(callbackContext);
-            listeners.put(condition, conditionCallbacks);
+            // add listener for condition
+            listeners.put(condition, callbackContext);
         } finally {
+            // unlock in reverse locking order
             for (ReentrantReadWriteLock lock : keysInUnlockOrder) {
                 lock.readLock().unlock();
             }
@@ -310,6 +307,10 @@ public class StateCache {
     }
 
     /**
+     * These conditions are used as the key for the listeners map and are expected to be to not implement equals
+     * If an implementation for cocurrent identity hash map existed I would have used it instead of
+     * posing this limitation.
+     *
      * @since 0.1
      * @author Dan Kilman
      */
