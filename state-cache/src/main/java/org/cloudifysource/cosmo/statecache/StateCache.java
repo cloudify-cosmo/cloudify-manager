@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -24,9 +25,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -330,7 +333,7 @@ public class StateCache {
 
         @Override
         public boolean applies(StateCacheSnapshot snapshot) {
-            return value != null ? value.equals(snapshot.get(key)) : snapshot.get(key) == null;
+            return Objects.equal(value, snapshot.get(key));
         }
 
         @Override
