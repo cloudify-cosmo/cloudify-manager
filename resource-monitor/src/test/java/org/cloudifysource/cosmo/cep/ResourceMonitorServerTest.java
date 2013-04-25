@@ -18,6 +18,9 @@ package org.cloudifysource.cosmo.cep;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import junit.framework.Assert;
+import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
+import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.cep.mock.AppInfo;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -57,32 +60,54 @@ public class ResourceMonitorServerTest {
     // message broker that isolates server
     private MessageBrokerServer broker;
 
-    // used to receive consumedMessages from server
+    // receives messages from server
     private MessageConsumer consumer;
 
-    // used to push consumedMessages into server
+    // pushes messages to server
     private MessageProducer producer;
-    private URI inputUri;
-    private URI outputUri;
-    private MessageConsumerListener<StateChangedMessage> listener;
-    private List<StateChangedMessage> consumedMessages;
+
+    private URI inputTopic;
+    private URI outputTopic;
+    private MessageConsumerListener<Object> listener;
+    private List<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
+    private boolean mockAgentFailed;
+
+    @Test
+    public void testAgentUnreachable() throws InterruptedException {
+        mockAgentFailed = true;
+        monitorAgent();
+        assertThat(isAgentReachable()).isFalse();
+    }
+
+    @Test
+    public void testAgentReachable() throws InterruptedException {
+        mockAgentFailed = false;
+        monitorAgent();
+        assertThat(isAgentReachable()).isTrue();
+    }
 
     @BeforeMethod
     @Parameters({"port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
-        inputUri = URI.create("http://localhost:" + port + "/input/");
-        outputUri = URI.create("http://localhost:" + port + "/output/");
+        inputTopic = URI.create("http://localhost:" + port + "/input/");
+        outputTopic = URI.create("http://localhost:" + port + "/output/");
         producer = new MessageProducer();
         consumer = new MessageConsumer();
-        consumedMessages = Lists.newCopyOnWriteArrayList();
+        stateChangedMessages = Lists.newCopyOnWriteArrayList();
         failures = Lists.newCopyOnWriteArrayList();
-        listener = new MessageConsumerListener<StateChangedMessage>() {
+        listener = new MessageConsumerListener<Object>() {
             @Override
-            public void onMessage(URI uri, StateChangedMessage message) {
-                assertThat(uri).isEqualTo(outputUri);
-                consumedMessages.add(message);
+            public void onMessage(URI uri, Object message) {
+                assertThat(uri).isEqualTo(outputTopic);
+                if (message instanceof StateChangedMessage) {
+                    stateChangedMessages.add((StateChangedMessage) message);
+                } else if (message instanceof ProbeAgentMessage) {
+                    mockAgent((ProbeAgentMessage) message);
+                } else {
+                    Assert.fail("Unexpected message: " + message);
+                }
             }
 
             @Override
@@ -91,12 +116,20 @@ public class ResourceMonitorServerTest {
             }
 
             @Override
-            public Class<? extends StateChangedMessage> getMessageClass() {
-                return StateChangedMessage.class;
+            public Class<? extends Object> getMessageClass() {
+                return Object.class;
             }
         };
-        consumer.addListener(outputUri, listener);
+        consumer.addListener(outputTopic, listener);
         startMonitoringServer(port);
+    }
+
+    private void mockAgent(ProbeAgentMessage message) {
+        if (!mockAgentFailed) {
+            final AgentStatusMessage statusMessage = new AgentStatusMessage();
+            statusMessage.setAgentId(AGENT_ID);
+            producer.send(inputTopic, statusMessage);
+        }
     }
 
     @AfterMethod(alwaysRun = true)
@@ -106,22 +139,21 @@ public class ResourceMonitorServerTest {
         stopMessageBroker();
     }
 
-    @Test(timeOut = 5000)
-    public void testMissingEvent() throws InterruptedException {
+    private boolean isAgentReachable() {
+        assertThat(stateChangedMessages.size()).isGreaterThan(0);
+        return Iterables.getLast(stateChangedMessages).isReachable();
+    }
+
+    private void monitorAgent() throws InterruptedException {
         Agent agent = new Agent();
         agent.setAgentId("agent_1");
         server.insertFact(agent);
 
-        for (int i = 0 ; i < 10 ; i ++) {
+        for (int i = 0; i < 10; i++) {
             getClock().advanceTime(10, TimeUnit.SECONDS);
             checkFailures();
             Thread.sleep(10);
         }
-
-        assertThat(consumedMessages.size()).isGreaterThan(0);
-        final StateChangedMessage stateChange =
-                consumedMessages.get(0);
-        assertThat(stateChange.getResourceId()).isEqualTo(AGENT_ID);
     }
 
     private void checkFailures() {
@@ -138,7 +170,7 @@ public class ResourceMonitorServerTest {
     private void fireAppInfo() {
         AppInfo appInfo = new AppInfo();
         appInfo.setTimestamp(now());
-        producer.send(inputUri, appInfo);
+        producer.send(inputTopic, appInfo);
     }
 
     private void startMonitoringServer(int port) {
@@ -147,8 +179,8 @@ public class ResourceMonitorServerTest {
         config.setPseudoClock(true);
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
         config.setDroolsResource(resource);
-        config.setInputUri(inputUri);
-        config.setOutputUri(outputUri);
+        config.setInputUri(inputTopic);
+        config.setOutputUri(outputTopic);
         server = new ResourceMonitorServer(config);
         server.start();
     }

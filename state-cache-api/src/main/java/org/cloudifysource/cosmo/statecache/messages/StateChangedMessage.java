@@ -15,8 +15,6 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.statecache.messages;
 
-import java.math.BigDecimal;
-
 /**
  * Message sent from cep to StateCache that indicate there was a state change.
  * @author itaif
@@ -25,6 +23,7 @@ import java.math.BigDecimal;
 public class StateChangedMessage {
 
     private String resourceId;
+    private boolean reachable;
 
     public String getResourceId() {
         return resourceId;
@@ -32,5 +31,13 @@ public class StateChangedMessage {
 
     public void setResourceId(String resourceId) {
         this.resourceId = resourceId;
+    }
+
+    public boolean isReachable() {
+        return reachable;
+    }
+
+    public void setReachable(boolean reachable) {
+        this.reachable = reachable;
     }
 }
