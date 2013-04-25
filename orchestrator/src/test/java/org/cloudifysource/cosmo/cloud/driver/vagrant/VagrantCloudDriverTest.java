@@ -16,6 +16,7 @@
 package org.cloudifysource.cosmo.cloud.driver.vagrant;
 
 import com.google.common.io.Files;
+import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.testng.annotations.AfterMethod;
@@ -33,14 +34,17 @@ import java.io.File;
 public class VagrantCloudDriverTest {
 
     private File vagrantRoot;
+    private CloudDriver driver;
 
     @BeforeMethod(alwaysRun = true)
     public void init() {
         vagrantRoot = Files.createTempDir();
+        driver = new VagrantCloudDriver(vagrantRoot);
     }
 
     @AfterMethod(alwaysRun = true)
     public void clean() {
+        driver.terminateMachines();
         vagrantRoot.delete();
     }
 

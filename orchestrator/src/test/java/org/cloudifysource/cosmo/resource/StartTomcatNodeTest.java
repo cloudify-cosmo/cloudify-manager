@@ -19,6 +19,7 @@ import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
@@ -55,6 +56,7 @@ public class StartTomcatNodeTest {
     private URI uri;
     private String key = "resource-manager";
     private CloudDriver driver;
+    private File vagrantRoot;
 
     @BeforeMethod(alwaysRun = true)
     @Parameters({ "port" })
@@ -64,12 +66,14 @@ public class StartTomcatNodeTest {
         consumer = new MessageConsumer();
         producer = new MessageProducer();
         uri = URI.create("http://localhost:" + port);
-        driver = new VagrantCloudDriver(new File("D:\\temp\\cosmo\\tests"));
+        vagrantRoot = Files.createTempDir();
+        driver = new VagrantCloudDriver(vagrantRoot);
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopMessageBrokerServer() {
         driver.terminateMachines();
+        vagrantRoot.delete();
         consumer.removeAllListeners();
         if (broker != null) {
             broker.stop();
