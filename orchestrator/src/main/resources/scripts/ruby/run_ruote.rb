@@ -42,6 +42,7 @@ def create_dashboard
   dashboard.register_participant 'rest_get', RestGetParticipant
   dashboard.register_participant 'rest_put', RestPutParticipant
   dashboard.register_participant 'state', StateCacheParticipant
+  dashboard.register_participant 'resource', ResourceManagerParticipant
   dashboard
 end
 

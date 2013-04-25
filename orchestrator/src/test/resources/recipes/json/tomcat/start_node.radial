@@ -1,0 +1,3 @@
+define start_node
+  sequence
+    resource action: start_machine
