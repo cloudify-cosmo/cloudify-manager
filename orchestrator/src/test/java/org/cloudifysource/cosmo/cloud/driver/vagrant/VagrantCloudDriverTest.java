@@ -25,8 +25,9 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -51,7 +52,9 @@ public class VagrantCloudDriverTest {
     @Test(groups = "vagrant")
     public void testMachineLifecycle() {
         VagrantCloudDriver driver = new VagrantCloudDriver(vagrantRoot);
-        MachineDetails machine = driver.startMachine(new MachineConfiguration("vm_node", "centos-6.3"));
+        MachineDetails machine = driver.startMachine(new MachineConfiguration("vm_node", "cosmo"));
+        assertThat(machine.getId()).isNotNull();
+        assertThat(machine.getIpAddress()).isNotNull();
         driver.stopMachine(machine);
         driver.terminateMachine(machine);
     }

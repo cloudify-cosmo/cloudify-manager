@@ -31,7 +31,9 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,9 +47,13 @@ public class VagrantCloudDriver implements CloudDriver {
     private static final String VAGRANT_RUNNING = "running";
     private static final String VAGRANT_STOPPED = "poweroff";
     private static final String VAGRANT_TERMINATED = "not created";
+    private static final String VAGRANT_DEFAULT_BOX = "cosmo";
+    private static final String VAGRANT_MACHINE_IP_PREFIX = "10.0.0.";
 
     private final File vagrantRoot;
     private final Map<String, VagrantMachineDetails> machines;
+    private final List<String> boxes;
+    private final AtomicInteger machinesCounter;
 
     // TODO: handle specific machine requests concurrency
 
@@ -57,6 +63,19 @@ public class VagrantCloudDriver implements CloudDriver {
             vagrantRoot.mkdirs();
         Preconditions.checkArgument(vagrantRoot.exists());
         this.machines = generateMachinesMap();
+        this.boxes = getInstalledBoxes();
+        Preconditions.checkArgument(boxes.contains(VAGRANT_DEFAULT_BOX),
+                "vagrant installation does not contain a '%s' box - install this box using 'vagrant box add %s " +
+                        "http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-x86_64-v20130309.box'",
+                VAGRANT_DEFAULT_BOX, VAGRANT_DEFAULT_BOX);
+        this.machinesCounter = new AtomicInteger(1);
+    }
+
+    private List<String> getInstalledBoxes() {
+        final String output = vagrant("box list", vagrantRoot);
+        final String[] boxes = output.split(System.getProperty("line.separator"));
+
+        return Lists.newArrayList(boxes);
     }
 
     private Map<String, VagrantMachineDetails> generateMachinesMap() {
@@ -92,18 +111,22 @@ public class VagrantCloudDriver implements CloudDriver {
     public MachineDetails startMachine(MachineConfiguration configuration) {
         Preconditions.checkNotNull(configuration.getId());
         Preconditions.checkNotNull(configuration.getImage());
+        Preconditions.checkArgument(boxes.contains(configuration.getImage()));
         Preconditions.checkArgument(!machines.containsKey(configuration.getId()));
         final File machineDirectory = new File(vagrantRoot, configuration.getId());
         Preconditions.checkArgument(machineDirectory.mkdirs());
         System.out.println("vagrant:: starting machine in '" + machineDirectory.getAbsolutePath() + "'");
         try {
-            new VagrantFileBuilder().box(configuration.getImage()).bridgedNetwork(true).write(machineDirectory);
+            final int machineNumber = machinesCounter.incrementAndGet();
+            final String ip = VAGRANT_MACHINE_IP_PREFIX + machineNumber;
+
+            new VagrantFileBuilder().box(configuration.getImage()).ip(ip).write(machineDirectory);
 
             vagrant("up", machineDirectory);
             verifyMachineStatus(machineDirectory, VAGRANT_RUNNING);
 
             final VagrantMachineDetails machineDetails =
-                    new VagrantMachineDetails(configuration.getId(), "10.0.0.1", machineDirectory);
+                    new VagrantMachineDetails(configuration.getId(), ip, machineDirectory);
             machines.put(configuration.getId(), machineDetails);
             return machineDetails;
         } catch (Exception e) {
@@ -182,26 +205,24 @@ public class VagrantCloudDriver implements CloudDriver {
         }
     }
 
-
-
     /**
      *
      */
     private class VagrantFileBuilder {
 
-        private String box = null;
-        private boolean bridgedNetwork = false;
+        private String box;
+        private String ip;
 
         public void write(File path) {
             Preconditions.checkNotNull(box);
+            Preconditions.checkNotNull(ip);
             if (!path.exists())
                 path.mkdirs();
             Preconditions.checkArgument(path.exists());
             final File vagrantFile = new File(path, VAGRANT_FILE);
             final StringBuilder content = new StringBuilder("Vagrant::Config.run do |config|\n");
             content.append("\tconfig.vm.box = \"" + box + "\"\n");
-            if (bridgedNetwork)
-                content.append("\tconfig.vm.network :bridged\n");
+            content.append("\tconfig.vm.network :hostonly, \"" + ip + "\"\n");
             content.append("end\n");
             try {
                 Files.write(content.toString().getBytes(Charsets.UTF_8), vagrantFile);
@@ -215,8 +236,8 @@ public class VagrantCloudDriver implements CloudDriver {
             return this;
         }
 
-        public VagrantFileBuilder bridgedNetwork(boolean bridgedNetwork) {
-            this.bridgedNetwork = bridgedNetwork;
+        public VagrantFileBuilder ip(String ip) {
+            this.ip = ip;
             return this;
         }
     }
