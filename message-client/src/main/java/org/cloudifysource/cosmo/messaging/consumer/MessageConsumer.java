@@ -27,12 +27,12 @@ import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
-import org.cloudifysource.cosmo.messaging.MessageTypeIdResolver;
 import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+
 
 /**
  * Client for receiving messages from the message broker.
@@ -53,7 +53,6 @@ public class MessageConsumer {
     public MessageConsumer() {
         client = ClientFactory.getDefault().newClient();
         mapper = ObjectMapperFactory.newObjectMapper();
-        MessageTypeIdResolver.warmUpClassPathCache();
     }
 
     public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {

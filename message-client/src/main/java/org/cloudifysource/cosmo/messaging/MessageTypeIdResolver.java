@@ -37,10 +37,18 @@ import com.google.common.collect.BiMap;
  */
 public class MessageTypeIdResolver implements TypeIdResolver {
 
+    public static final boolean LAZY_REFLECTION = false;
     public static final String PACKAGE_REGEX_FILTER = "org\\.cloudifysource\\.cosmo\\..*\\.messages\\..*Message.class";
 
     private static Supplier<BiMap<String, Class<?>>> idResolver =
             Suppliers.memoize(new ReflectionMessageTypeSupplier(PACKAGE_REGEX_FILTER));
+
+    static {
+        if (!LAZY_REFLECTION) {
+            //eagerly scan classpath
+            warmUpClassPathCache();
+        }
+    }
 
     /**
      * warms up the message class cache.

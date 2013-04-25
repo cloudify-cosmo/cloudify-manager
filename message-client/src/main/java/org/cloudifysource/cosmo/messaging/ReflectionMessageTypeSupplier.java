@@ -50,7 +50,6 @@ public class ReflectionMessageTypeSupplier implements Supplier<BiMap<String, Cla
 
         //see: http://code.google.com/p/reflections/issues/detail?id=122
         final Set<URL> urls = ClasspathHelper.forClassLoader();
-        System.out.println("Classpath:" + urls);
         final Reflections reflections = new Reflections(
                 new ConfigurationBuilder()
                         .filterInputsBy(cosmoMessagesFilter)
