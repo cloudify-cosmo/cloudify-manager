@@ -201,7 +201,7 @@ public class ResourceMonitorServer {
     }
 
     /**
-     * Used by tests in order to increment pseudo clock
+     * Used by tests in order to increment pseudo clock.
      */
     public SessionClock getClock() {
         return ksession.getSessionClock();
