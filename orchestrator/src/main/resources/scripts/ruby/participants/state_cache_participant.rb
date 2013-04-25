@@ -15,17 +15,19 @@
 # *******************************************************************************/
 
 class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChangeCallbackStub
+
   def onStateChange(participant, workitem, cache, new_snapshot)
-    puts "#{cache}, #{new_snapshot}"
+    workitem.fields.merge!(new_snapshot)
     participant.reply(workitem)
   end
+
 end
 
 class StateCacheParticipant < Ruote::Participant
 
   def on_workitem
     begin
-      state_cache = $ruote_properties.get("state_cache")
+      state_cache = $ruote_properties['state_cache']
       condition_key = workitem.params['key']
       condition_value = workitem.params['value']
       callback = RuoteStateChangeCallback.new
@@ -34,12 +36,10 @@ class StateCacheParticipant < Ruote::Participant
       puts "#{e.message}"
       raise
     end
+  end
 
-    def do_not_thread
-      puts 'dont_thread'
-      true
-    end
-
+  def do_not_thread
+    true
   end
 
 end
