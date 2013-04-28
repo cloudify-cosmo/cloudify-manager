@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.cep;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
 import junit.framework.Assert;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
@@ -39,10 +40,8 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.BlockingQueue;
 
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
@@ -51,6 +50,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
+
 public class ResourceMonitorServerTest {
 
     private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
@@ -71,26 +71,21 @@ public class ResourceMonitorServerTest {
     private URI inputTopic;
     private URI outputTopic;
     private MessageConsumerListener<Object> listener;
-    private List<StateChangedMessage> stateChangedMessages;
+    private BlockingQueue<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
     private boolean mockAgentFailed;
-    private CountDownLatch clockTickLatch;
 
-    @Test
+    @Test(groups = "integration")
     public void testAgentUnreachable() throws InterruptedException {
         mockAgentFailed = true;
-        monitorAgent();
-        assertThat(isAgentReachable()).isFalse();
+        boolean reachable = monitorAgentState();
+        assertThat(reachable).isFalse();
     }
 
-    @Test(invocationCount = 1, enabled = true)
+    @Test(groups = "integration")
     public void testAgentReachable() throws InterruptedException {
         mockAgentFailed = false;
-        monitorAgent();
-        final boolean reachable = isAgentReachable();
-        if (!reachable) {
-            System.out.println("State Changes:" + stateChangedMessages);
-        }
+        boolean reachable = monitorAgentState();
         assertThat(reachable).isTrue();
     }
 
@@ -102,7 +97,7 @@ public class ResourceMonitorServerTest {
         outputTopic = URI.create("http://localhost:" + port + "/output/");
         producer = new MessageProducer();
         consumer = new MessageConsumer();
-        stateChangedMessages = Lists.newCopyOnWriteArrayList();
+        stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<Object>() {
             @Override
@@ -132,27 +127,11 @@ public class ResourceMonitorServerTest {
     }
 
     private void mockAgent(ProbeAgentMessage message) {
-        if (mockAgentFailed) {
-            clockTick();
-        }
-        else {
+        if (!mockAgentFailed) {
             final AgentStatusMessage statusMessage = new AgentStatusMessage();
             statusMessage.setAgentId(AGENT_ID);
-            producer.send(inputTopic, statusMessage).addListener(new Runnable() {
-                @Override
-                public void run() {
-                    // increase clock time only after message was sent
-                    // no guarantees that message made it to drools yet
-                    // but it's almost as good.
-                    clockTick();
-                }
-            },sameThreadExecutor());
+            producer.send(inputTopic, statusMessage);
         }
-    }
-
-    private void clockTick() {
-        getClock().advanceTime(10, TimeUnit.SECONDS);
-        clockTickLatch.countDown();
     }
 
     @AfterMethod(alwaysRun = true)
@@ -162,19 +141,16 @@ public class ResourceMonitorServerTest {
         stopMessageBroker();
     }
 
-    private boolean isAgentReachable() {
-        assertThat(stateChangedMessages.size()).isGreaterThan(0);
-        return Iterables.getLast(stateChangedMessages).isReachable();
-    }
 
-    private void monitorAgent() throws InterruptedException {
-        clockTickLatch = new CountDownLatch(10);
+    private boolean monitorAgentState() throws InterruptedException {
         Agent agent = new Agent();
         agent.setAgentId("agent_1");
+        //agent.setUnreachableTimeout("60s")
         server.insertFact(agent);
-
-        clockTickLatch.await();
+        //blocks until first StateChangedMessage
+        StateChangedMessage message = stateChangedMessages.take();
         checkFailures();
+        return message.isReachable();
     }
 
     private void checkFailures() {
@@ -197,7 +173,6 @@ public class ResourceMonitorServerTest {
     private void startMonitoringServer(int port) {
         ResourceMonitorServerConfiguration config =
                 new ResourceMonitorServerConfiguration();
-        config.setPseudoClock(true);
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
         config.setDroolsResource(resource);
         config.setInputUri(inputTopic);
