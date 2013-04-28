@@ -57,6 +57,7 @@ public class StartTomcatNodeTest {
     private String key = "resource-manager";
     private CloudDriver driver;
     private File vagrantRoot;
+    private CloudResourceManager manager;
 
     @BeforeMethod(alwaysRun = true)
     @Parameters({ "port" })
@@ -68,6 +69,8 @@ public class StartTomcatNodeTest {
         uri = URI.create("http://localhost:" + port);
         vagrantRoot = Files.createTempDir();
         driver = new VagrantCloudDriver(vagrantRoot);
+        URI cloudResourceUri = uri.resolve("/" + key);
+        manager = new CloudResourceManager(driver, cloudResourceUri, consumer);
     }
 
     @AfterMethod(alwaysRun = true)
@@ -82,13 +85,10 @@ public class StartTomcatNodeTest {
 
     @Test(groups = "vagrant")
     public void testStartTomcatNode() throws IOException {
-        URI resourceProvisioningUri = uri.resolve("/" + key);
-        final CloudResourceManager manager =
-                new CloudResourceManager(driver, resourceProvisioningUri, consumer);
         URL url = Resources.getResource("recipes/json/tomcat/recipe.json");
         String json = Resources.toString(url, Charsets.UTF_8);
         JsonRecipe recipe = JsonRecipe.load(json);
-        assertThat(recipe.get("tomcat_node").isPresent()).isTrue();
+
         startWorkflow(new File(url.getPath()).getParentFile().getPath(), recipe, "tomcat_node", "start_node");
         repetitiveAssert(new Runnable() {
             @Override

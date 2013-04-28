@@ -45,7 +45,8 @@ public class VagrantCloudDriverTest {
 
     @AfterMethod(alwaysRun = true)
     public void clean() {
-        driver.terminateMachines();
+        if (driver != null)
+            driver.terminateMachines();
         vagrantRoot.delete();
     }
 
