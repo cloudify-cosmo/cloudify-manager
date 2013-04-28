@@ -48,10 +48,11 @@ public class MessageProducer<T> {
 
     public ListenableFuture send(URI uri, Object message) {
         try {
+            final String json = mapper.writerWithType(message.getClass()).writeValueAsString(message);
             return convertListenableFuture(
                     client.preparePost(uri.toString())
-                    .setBody(mapper.writeValueAsString(message))
-                    .execute());
+                            .setBody(json)
+                            .execute());
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

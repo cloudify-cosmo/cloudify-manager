@@ -25,6 +25,9 @@
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
         <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
+        <cosmo.resource-monitor-api.version>0.1-SNAPSHOT</cosmo.resource-monitor-api.version>
+        <cosmo.state-cache-api.version>0.1-SNAPSHOT</cosmo.state-cache-api.version>
+        <cosmo.agent-api.version>0.1-SNAPSHOT</cosmo.agent-api.version>
         <drools.version>5.5.0.Final</drools.version>
     </properties>
     <dependencies>
@@ -75,6 +78,21 @@
             <groupId>org.drools</groupId>
             <artifactId>drools-compiler</artifactId>
             <version>${drools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>resource-monitor-api</artifactId>
+            <version>${cosmo.resource-monitor-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>state-cache-api</artifactId>
+            <version>${cosmo.state-cache-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>agent-api</artifactId>
+            <version>${cosmo.agent-api.version}</version>
         </dependency>
         <!-- Test -->
         <dependency>
@@ -142,9 +160,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.13</version>
+                <version>2.14.1</version>
                 <configuration>
-                    <skipTests>true</skipTests>
+                    <!-- http://maven.apache.org/surefire/maven-surefire-plugin/examples/class-loading.html -->
+                    <useSystemClassLoader>false</useSystemClassLoader>
+
                 </configuration>
             </plugin>
         </plugins>

@@ -18,11 +18,16 @@ package org.cloudifysource.cosmo.cep;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
+import junit.framework.Assert;
+import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
+import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.cep.mock.AppInfo;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.drools.time.SessionPseudoClock;
@@ -35,7 +40,7 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.BlockingQueue;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -45,9 +50,11 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
+
 public class ResourceMonitorServerTest {
 
-    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsFusionTest.drl";
+    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
+    public static final String AGENT_ID = "agent_1";
 
     // component being tested
     private ResourceMonitorServer server;
@@ -55,32 +62,54 @@ public class ResourceMonitorServerTest {
     // message broker that isolates server
     private MessageBrokerServer broker;
 
-    // used to receive consumedMessages from server
+    // receives messages from server
     private MessageConsumer consumer;
 
-    // used to push consumedMessages into server
+    // pushes messages to server
     private MessageProducer producer;
-    private URI inputUri;
-    private URI outputUri;
-    private MessageConsumerListener<MonitoringMessage> listener;
-    private List<MonitoringMessage> consumedMessages;
-    private List<Throwable> failures;
 
-    @BeforeMethod
+    private URI inputTopic;
+    private URI outputTopic;
+    private MessageConsumerListener<Object> listener;
+    private BlockingQueue<StateChangedMessage> stateChangedMessages;
+    private List<Throwable> failures;
+    private boolean mockAgentFailed;
+
+    @Test(groups = "integration")
+    public void testAgentUnreachable() throws InterruptedException {
+        mockAgentFailed = true;
+        boolean reachable = monitorAgentState();
+        assertThat(reachable).isFalse();
+    }
+
+    @Test(groups = "integration")
+    public void testAgentReachable() throws InterruptedException {
+        mockAgentFailed = false;
+        boolean reachable = monitorAgentState();
+        assertThat(reachable).isTrue();
+    }
+
+    @BeforeMethod(groups = "integration")
     @Parameters({"port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
-        inputUri = URI.create("http://localhost:" + port + "/input/");
-        outputUri = URI.create("http://localhost:" + port + "/output/");
+        inputTopic = URI.create("http://localhost:" + port + "/input/");
+        outputTopic = URI.create("http://localhost:" + port + "/output/");
         producer = new MessageProducer();
         consumer = new MessageConsumer();
-        consumedMessages = Lists.newCopyOnWriteArrayList();
+        stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
-        listener = new MessageConsumerListener<MonitoringMessage>() {
+        listener = new MessageConsumerListener<Object>() {
             @Override
-            public void onMessage(URI uri, MonitoringMessage message) {
-                assertThat(uri).isEqualTo(outputUri);
-                consumedMessages.add(message);
+            public void onMessage(URI uri, Object message) {
+                assertThat(uri).isEqualTo(outputTopic);
+                if (message instanceof StateChangedMessage) {
+                    stateChangedMessages.add((StateChangedMessage) message);
+                } else if (message instanceof ProbeAgentMessage) {
+                    mockAgent((ProbeAgentMessage) message);
+                } else {
+                    Assert.fail("Unexpected message: " + message);
+                }
             }
 
             @Override
@@ -89,37 +118,39 @@ public class ResourceMonitorServerTest {
             }
 
             @Override
-            public Class<? extends MonitoringMessage> getMessageClass() {
-                return MonitoringMessage.class;
+            public Class<? extends Object> getMessageClass() {
+                return Object.class;
             }
         };
-        consumer.addListener(outputUri, listener);
+        consumer.addListener(outputTopic, listener);
         startMonitoringServer(port);
     }
 
-    @AfterMethod(alwaysRun = true)
+    private void mockAgent(ProbeAgentMessage message) {
+        if (!mockAgentFailed) {
+            final AgentStatusMessage statusMessage = new AgentStatusMessage();
+            statusMessage.setAgentId(AGENT_ID);
+            producer.send(inputTopic, statusMessage);
+        }
+    }
+
+    @AfterMethod(alwaysRun = true, groups = "integration")
     public void stopServer() {
         consumer.removeListener(listener);
         stopMonitoringServer();
         stopMessageBroker();
     }
 
-    @Test(timeOut = 5000)
-    public void testMissingEvent() throws InterruptedException {
-        // produce input
-        MonitoringMessage requestMessage = newMessage("request");
-        while (consumedMessages.size() < 1) {
-            producer.send(inputUri, requestMessage);
-            getClock().advanceTime(1, TimeUnit.MINUTES);
-            checkFailures();
-            Thread.sleep(100);
-        }
 
-        // check output
-        MonitoringMessage missingMessage = newMessage("missing");
-        //TODO: exitChannel should assign timestamp
-        missingMessage.setTimestamp(null);
-        assertThat(consumedMessages).contains(missingMessage);
+    private boolean monitorAgentState() throws InterruptedException {
+        Agent agent = new Agent();
+        agent.setAgentId("agent_1");
+        //agent.setUnreachableTimeout("60s")
+        server.insertFact(agent);
+        //blocks until first StateChangedMessage
+        StateChangedMessage message = stateChangedMessages.take();
+        checkFailures();
+        return message.isReachable();
     }
 
     private void checkFailures() {
@@ -136,17 +167,16 @@ public class ResourceMonitorServerTest {
     private void fireAppInfo() {
         AppInfo appInfo = new AppInfo();
         appInfo.setTimestamp(now());
-        producer.send(inputUri, appInfo);
+        producer.send(inputTopic, appInfo);
     }
 
     private void startMonitoringServer(int port) {
         ResourceMonitorServerConfiguration config =
                 new ResourceMonitorServerConfiguration();
-        config.setPseudoClock(true);
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
         config.setDroolsResource(resource);
-        config.setInputUri(inputUri);
-        config.setOutputUri(outputUri);
+        config.setInputUri(inputTopic);
+        config.setOutputUri(outputTopic);
         server = new ResourceMonitorServer(config);
         server.start();
     }
@@ -167,14 +197,6 @@ public class ResourceMonitorServerTest {
         if (server != null) {
             server.stop();
         }
-    }
-
-    private MonitoringMessage newMessage(String type) {
-        MonitoringMessage beforeMessage = new MonitoringMessage();
-        beforeMessage.setType(type);
-        beforeMessage.setMsgtext("This is the message text");
-        beforeMessage.setTimestamp(now());
-        return beforeMessage;
     }
 
     private Date now() {

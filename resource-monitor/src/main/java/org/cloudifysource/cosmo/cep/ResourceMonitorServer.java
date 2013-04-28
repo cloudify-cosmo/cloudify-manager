@@ -19,6 +19,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -34,6 +35,8 @@ import org.drools.builder.ResourceType;
 import org.drools.conf.EventProcessingOption;
 import org.drools.definition.KnowledgePackage;
 import org.drools.io.Resource;
+import org.drools.logger.KnowledgeRuntimeLogger;
+import org.drools.logger.KnowledgeRuntimeLoggerFactory;
 import org.drools.runtime.Channel;
 import org.drools.runtime.KnowledgeSessionConfiguration;
 import org.drools.runtime.StatefulKnowledgeSession;
@@ -67,7 +70,8 @@ public class ResourceMonitorServer {
     private final ExecutorService executorService;
     private Future<Void> future;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-    private MessageConsumerListener<MonitoringMessage> listener;
+    private MessageConsumerListener<AgentStatusMessage> listener;
+    private KnowledgeRuntimeLogger runtimeLogger;
 
     public ResourceMonitorServer(ResourceMonitorServerConfiguration config) {
         inputUri = config.getInputUri();
@@ -121,6 +125,8 @@ public class ResourceMonitorServer {
             sessionConfig.setOption(ClockTypeOption.get("realtime"));
         }
         ksession = kbase.newStatefulKnowledgeSession(sessionConfig, null);
+
+        runtimeLogger = KnowledgeRuntimeLoggerFactory.newConsoleLogger(ksession);
     }
 
     private KnowledgeBase newKnowledgeBase(KnowledgeBaseConfiguration config) {
@@ -157,10 +163,10 @@ public class ResourceMonitorServer {
             throw new IllegalArgumentException("DRL file must use default entry point");
         }
         entryPoint = Iterables.getOnlyElement(entryPoints);
-        listener = new MessageConsumerListener<MonitoringMessage>() {
+        listener = new MessageConsumerListener<AgentStatusMessage>() {
 
             @Override
-            public void onMessage(URI uri, MonitoringMessage message) {
+            public void onMessage(URI uri, AgentStatusMessage message) {
                 entryPoint.insert(message);
             }
 
@@ -170,8 +176,8 @@ public class ResourceMonitorServer {
             }
 
             @Override
-            public Class<? extends MonitoringMessage> getMessageClass() {
-                return MonitoringMessage.class;
+            public Class<? extends AgentStatusMessage> getMessageClass() {
+                return AgentStatusMessage.class;
             }
         };
         consumer.addListener(inputUri, listener);
@@ -183,6 +189,9 @@ public class ResourceMonitorServer {
     }
 
     public void destroyDrools() {
+        if (runtimeLogger != null) {
+            runtimeLogger.close();
+        }
         if (ksession != null) {
             ksession.halt();
             ksession.dispose();
@@ -205,5 +214,9 @@ public class ResourceMonitorServer {
      */
     public SessionClock getClock() {
         return ksession.getSessionClock();
+    }
+
+    public void insertFact(Object fact) {
+        ksession.insert(fact);
     }
 }

@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.messaging.consumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.ning.http.client.FluentCaseInsensitiveStringsMap;
 import org.atmosphere.wasync.Client;
 import org.atmosphere.wasync.ClientFactory;
 import org.atmosphere.wasync.Decoder;
@@ -31,6 +32,7 @@ import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+
 
 /**
  * Client for receiving messages from the message broker.
@@ -97,10 +99,22 @@ public class MessageConsumer {
                 @Override
                 public void on(Object message) {
                     if (message != null &&
-                        //workaround for bug https://github.com/Atmosphere/wasync/issues/35
-                        listener.getMessageClass().isAssignableFrom(message.getClass())) {
+                        isNotHeader(listener, message)) {
                         listener.onMessage(uri, (T) message);
                     }
+                }
+
+                /**
+                 * workaround for bug https://github.com/Atmosphere/wasync/issues/35
+                 */
+                private boolean isNotHeader(MessageConsumerListener<T> listener, Object message) {
+                    if (!listener.getMessageClass().isAssignableFrom(message.getClass())) {
+                        return false;
+                    }
+                    if (message instanceof FluentCaseInsensitiveStringsMap) {
+                        return false;
+                    }
+                    return true;
                 }
             });
             socket.on(new Function<Throwable>() {
