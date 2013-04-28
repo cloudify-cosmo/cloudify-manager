@@ -27,6 +27,8 @@ import com.google.common.collect.Maps;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -47,7 +49,7 @@ public class StateCache {
 
     private final Map<String, Object> cache;
     private final ExecutorService executorService;
-    private final Map<Condition, CallbackContext> listeners;
+    private final ConcurrentMap<String, CallbackContext> listeners;
 
     private StateCache(Map<String, Object> initialState, ExecutorService executorService) {
         this.executorService = executorService;
@@ -80,12 +82,13 @@ public class StateCache {
         }
 
         StateCacheSnapshot snapshot = null;
-        List<Condition> conditionsToRemove = null;
+        List<String> callbacksToRemove = null;
 
         // iterate through all listeners. (this might be optimizied in the future)
-        for (Map.Entry<Condition, CallbackContext> entry : listeners.entrySet()) {
-            Condition condition = entry.getKey();
+        for (Map.Entry<String, CallbackContext> entry : listeners.entrySet()) {
+            String callbackUID = entry.getKey();
             CallbackContext callbackContext = entry.getValue();
+            Condition condition = callbackContext.getCondition();
 
             // if condition doesn't apply, move to next one
             if (!condition.applies(conditionStateCacheSnapshotInstance)) {
@@ -97,18 +100,18 @@ public class StateCache {
                 snapshot = snapshot();
             }
 
-            if (conditionsToRemove == null) {
-                conditionsToRemove = Lists.newArrayList();
+            if (callbacksToRemove == null) {
+                callbacksToRemove = Lists.newArrayList();
             }
-            conditionsToRemove.add(condition);
+            callbacksToRemove.add(callbackUID);
 
             submitStateChangeNotificationTask(callbackContext, snapshot.asMap());
         }
 
         // remove relevant listeners
-        if (conditionsToRemove != null) {
-            for (Condition condition : conditionsToRemove) {
-                listeners.remove(condition);
+        if (callbacksToRemove != null) {
+            for (String callbackUID : callbacksToRemove) {
+                listeners.remove(callbackUID);
             }
         }
 
@@ -122,7 +125,7 @@ public class StateCache {
         }
     }
 
-    public void waitForKeyValueState(final Object receiver,
+    public String waitForKeyValueState(final Object receiver,
                                      final Object context,
                                      final String key,
                                      final Object value,
@@ -130,14 +133,16 @@ public class StateCache {
         Preconditions.checkNotNull(key);
         Preconditions.checkNotNull(value);
         Condition condition = new KeyValueCondition(key, value);
-        waitForState(receiver, context, condition, callback);
+        return waitForState(receiver, context, condition, callback);
     }
 
-    private void waitForState(final Object receiver,
+    private String waitForState(final Object receiver,
                               final Object context,
                               final Condition condition,
                               final StateChangeCallback callback) {
-        CallbackContext callbackContext = new CallbackContext(receiver, context, callback);
+        String callbackUID = UUID.randomUUID().toString();
+
+        CallbackContext callbackContext = new CallbackContext(receiver, context, callback, condition);
 
         // obtain refernce to named locks relevent for this condition
         // and create locking/unlocking ordered lists.
@@ -160,18 +165,23 @@ public class StateCache {
                 // if condition already applies, submit notification task now and return.
                 if (condition.applies(conditionStateCacheSnapshotInstance)) {
                     submitStateChangeNotificationTask(callbackContext, snapshot().asMap());
-                    return;
+                    return callbackUID;
                 }
             }
 
             // add listener for condition
-            listeners.put(condition, callbackContext);
+            listeners.put(callbackUID, callbackContext);
+            return callbackUID;
         } finally {
             // unlock in reverse locking order
             for (ReentrantReadWriteLock lock : keysInUnlockOrder) {
                 lock.readLock().unlock();
             }
         }
+    }
+
+    public void removeCallback(final String callbackUID) {
+        listeners.remove(callbackUID);
     }
 
     private void submitStateChangeNotificationTask(final CallbackContext callbackContext,
@@ -286,11 +296,13 @@ public class StateCache {
         private final Object receiver;
         private final Object context;
         private final StateChangeCallback callback;
+        private final Condition condition;
 
-        public CallbackContext(Object receiver, Object context, StateChangeCallback callback) {
+        public CallbackContext(Object receiver, Object context, StateChangeCallback callback, Condition condition) {
             this.receiver = receiver;
             this.context = context;
             this.callback = callback;
+            this.condition = condition;
         }
 
         public StateChangeCallback getCallback() {
@@ -304,13 +316,13 @@ public class StateCache {
         public Object getReceiver() {
             return receiver;
         }
+
+        public Condition getCondition() {
+            return condition;
+        }
     }
 
     /**
-     * These conditions are used as the key for the listeners map and are expected to be to not implement equals
-     * If an implementation for cocurrent identity hash map existed I would have used it instead of
-     * posing this limitation.
-     *
      * @since 0.1
      * @author Dan Kilman
      */

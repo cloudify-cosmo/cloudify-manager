@@ -155,4 +155,20 @@ public class StateCacheTest {
         Assert.assertFalse(callbackCalledAgainLatch.await(100, TimeUnit.MILLISECONDS));
     }
 
+    @Test(dependsOnMethods = "testWaitForKeyValueState")
+    public void testRemoveCallback() throws InterruptedException {
+        final String key = "key";
+        final Object value = "value";
+        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
+        String callbackUID = stateCache.waitForKeyValueState(null, null, key, value, new StateChangeCallback() {
+            public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                      ImmutableMap<String, Object> newSnapshot) {
+                callbackCalledLatch.countDown();
+            }
+        });
+        stateCache.removeCallback(callbackUID);
+        stateCache.put(key, value);
+        Assert.assertFalse(callbackCalledLatch.await(100, TimeUnit.MILLISECONDS));
+    }
+
 }
