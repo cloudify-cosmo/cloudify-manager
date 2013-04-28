@@ -34,7 +34,7 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.8</version>
+            <version>${testng.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -164,7 +164,7 @@
                 <configuration>
                     <!-- http://maven.apache.org/surefire/maven-surefire-plugin/examples/class-loading.html -->
                     <useSystemClassLoader>false</useSystemClassLoader>
-
+                    <excludedGroups>integration</excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
