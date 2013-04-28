@@ -9,6 +9,6 @@ define use_workitems
     set field: '${substate}_id_processed', value: '$${substate}.id'
     set field: '${substate}_status_processed', value: '$${substate}.status'
 
-  participant ref: "java", class: "org.cloudifysource.cosmo.statecache.RuoteStateCacheTestJavaParticipant"
+  participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteStateCacheTestJavaParticipant"
 
 

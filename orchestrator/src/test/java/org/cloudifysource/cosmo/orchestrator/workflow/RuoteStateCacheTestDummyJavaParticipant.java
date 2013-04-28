@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.statecache;
+package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.Maps;
 
