@@ -37,9 +37,9 @@ end
 
 rule "Fire agent probe every 20 seconds"
     dialect "mvel"
-    timer (int: 0s 20s)
 when
     Agent( $agentId : agentId)
+    not ProbeAgentMessage( agentId == $agentId) over window:time(20s)
 then
     message = new ProbeAgentMessage()
     message.agentId = $agentId
