@@ -35,6 +35,8 @@ import org.drools.builder.ResourceType;
 import org.drools.conf.EventProcessingOption;
 import org.drools.definition.KnowledgePackage;
 import org.drools.io.Resource;
+import org.drools.logger.KnowledgeRuntimeLogger;
+import org.drools.logger.KnowledgeRuntimeLoggerFactory;
 import org.drools.runtime.Channel;
 import org.drools.runtime.KnowledgeSessionConfiguration;
 import org.drools.runtime.StatefulKnowledgeSession;
@@ -69,6 +71,7 @@ public class ResourceMonitorServer {
     private Future<Void> future;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private MessageConsumerListener<AgentStatusMessage> listener;
+    private KnowledgeRuntimeLogger runtimeLogger;
 
     public ResourceMonitorServer(ResourceMonitorServerConfiguration config) {
         inputUri = config.getInputUri();
@@ -122,6 +125,8 @@ public class ResourceMonitorServer {
             sessionConfig.setOption(ClockTypeOption.get("realtime"));
         }
         ksession = kbase.newStatefulKnowledgeSession(sessionConfig, null);
+
+        runtimeLogger = KnowledgeRuntimeLoggerFactory.newConsoleLogger(ksession);
     }
 
     private KnowledgeBase newKnowledgeBase(KnowledgeBaseConfiguration config) {
@@ -184,6 +189,9 @@ public class ResourceMonitorServer {
     }
 
     public void destroyDrools() {
+        if (runtimeLogger != null) {
+            runtimeLogger.close();
+        }
         if (ksession != null) {
             ksession.halt();
             ksession.dispose();
