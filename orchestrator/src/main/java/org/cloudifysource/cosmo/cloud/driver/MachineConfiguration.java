@@ -12,30 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
-
-package org.cloudifysource.cosmo.statecache;
-
-import com.google.common.collect.Maps;
-
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+ *******************************************************************************/
+package org.cloudifysource.cosmo.cloud.driver;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
- *
- * @author Dan Kilman
+ * @author Idan Moyal
  * @since 0.1
  */
-public class RuoteStateCacheTestJavaParticipant {
+public class MachineConfiguration {
 
-    public static volatile CountDownLatch latch = new CountDownLatch(1);
-    public static volatile Map<String, Object> lastWorkitems;
+    private String id;
+    private String image;
 
-    public void execute(Map<String, Object> workItemFields) {
-        lastWorkitems = Maps.newHashMap(workItemFields);
-        latch.countDown();
-        latch = new CountDownLatch(1);
+    public MachineConfiguration(String id, String image) {
+        this.id = id;
+        this.image = image;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public String getImage() {
+        return image;
+    }
 }

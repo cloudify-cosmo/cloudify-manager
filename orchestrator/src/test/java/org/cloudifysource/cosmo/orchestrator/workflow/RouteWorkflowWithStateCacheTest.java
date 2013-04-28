@@ -14,17 +14,15 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.statecache;
+package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
-import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.statecache.StateCache;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,33 +31,66 @@ import java.util.concurrent.TimeUnit;
  * @author Dan Kilman
  * @since 0.1
  */
-public class StateCacheTest {
-
-    private Map<String, Object> state = new ImmutableMap.Builder<String, Object>()
-            .put("state0", new ImmutableMap.Builder<String, Object>()
-                    .put("id", "state0")
-                    .put("status", "good")
-                    .put("substates", new ImmutableList.Builder<String>()
-                            .add("state0/substates/substate0")
-                            .add("state0/substates/substate1")
-                            .build())
-                    .build())
-            .put("state0/substates/substate0", new ImmutableMap.Builder<String, Object>()
-                    .put("id", "state0/substates/substate0")
-                    .put("status", "good")
-                    .put("substates", new ImmutableList.Builder<String>()
-                            .build())
-                    .build())
-            .put("state0/substates/substate1", new ImmutableMap.Builder<String, Object>()
-                    .put("id", "state0/substates/substate1")
-                    .put("status", "failed")
-                    .put("substates", new ImmutableList.Builder<String>()
-                            .build())
-                    .build())
-            .build();
+public class RouteWorkflowWithStateCacheTest {
 
     @Test
-    public void testStateCache() throws InterruptedException {
+    public void testStateCacheWithWorkflowsAndTimeout() throws Exception {
+
+        // create new state cache
+        StateCache cache = new StateCache.Builder().build();
+
+        // hold initial state snapshot
+        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot().asMap();
+
+        // insert state into jruby runtime properties so that state participant can access it
+        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
+
+        // start jruby runtime and load test workflows
+        RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
+        RuoteWorkflow useWorkItemsWorkflow =
+                RuoteWorkflow.createFromResource("workflows/radial/use_workitems_with_timeout.radial", ruoteRuntime);
+
+        // execute workflow that works with workitems and waits on state
+        useWorkItemsWorkflow.asyncExecute(cacheSnapshot);
+
+        // sleep twice to state particiant timeout parameter
+        System.out.println("sleep 2000 ms from test");
+        Thread.sleep(2000);
+
+        // the use_workitems workflow waits on this state, this wuold have released the workflow
+        // in the normal case where it didn't time out.
+        cache.put("general_status", "good");
+
+        // assert workflow did not continue
+        Assert.assertFalse(RuoteStateCacheTimeoutTestJavaParticipant.latch.await(1, TimeUnit.SECONDS));
+
+    }
+
+    @Test
+    public void testStateCacheWithWorkflows() throws InterruptedException {
+
+        Map<String, Object> state = new ImmutableMap.Builder<String, Object>()
+                .put("state0", new ImmutableMap.Builder<String, Object>()
+                        .put("id", "state0")
+                        .put("status", "good")
+                        .put("substates", new ImmutableList.Builder<String>()
+                                .add("state0/substates/substate0")
+                                .add("state0/substates/substate1")
+                                .build())
+                        .build())
+                .put("state0/substates/substate0", new ImmutableMap.Builder<String, Object>()
+                        .put("id", "state0/substates/substate0")
+                        .put("status", "good")
+                        .put("substates", new ImmutableList.Builder<String>()
+                                .build())
+                        .build())
+                .put("state0/substates/substate1", new ImmutableMap.Builder<String, Object>()
+                        .put("id", "state0/substates/substate1")
+                        .put("status", "failed")
+                        .put("substates", new ImmutableList.Builder<String>()
+                                .build())
+                        .build())
+                .build();
 
         // create new state cache
         StateCache cache = new StateCache.Builder()
@@ -67,7 +98,7 @@ public class StateCacheTest {
                 .build();
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot();
+        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot().asMap();
 
         // insert state into jruby runtime properties so that state participant can access it
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
@@ -107,9 +138,9 @@ public class StateCacheTest {
 
         // assert state modified by workflow exists
         Assert.assertEquals(receivedWorkItemFields.get("state0_id_processed"),
-                            asMap(state.get("state0")).get("id"));
+                asMap(state.get("state0")).get("id"));
         Assert.assertEquals(receivedWorkItemFields.get("state0_status_processed"),
-                            asMap(state.get("state0")).get("status"));
+                asMap(state.get("state0")).get("status"));
         for (int i = 0; i <= 1; i++) {
             Assert.assertEquals(receivedWorkItemFields.get("state0/substates/substate" + i + "_id_processed"),
                     asMap(state.get("state0/substates/substate" + i)).get("id"));

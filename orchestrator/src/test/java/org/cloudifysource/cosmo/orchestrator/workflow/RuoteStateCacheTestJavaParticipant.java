@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.statecache;
+package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.Maps;
 
@@ -27,7 +27,7 @@ import java.util.concurrent.CountDownLatch;
  * @author Dan Kilman
  * @since 0.1
  */
-public class RuoteStateCacheTestDummyJavaParticipant {
+public class RuoteStateCacheTestJavaParticipant {
 
     public static volatile CountDownLatch latch = new CountDownLatch(1);
     public static volatile Map<String, Object> lastWorkitems;
