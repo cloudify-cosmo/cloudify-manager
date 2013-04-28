@@ -34,6 +34,39 @@ import java.util.concurrent.TimeUnit;
 public class RouteWorkflowWithStateCacheTest {
 
     @Test
+    public void testStateCacheWithWorkflowsAndTimeout() throws Exception {
+
+        // create new state cache
+        StateCache cache = new StateCache.Builder().build();
+
+        // hold initial state snapshot
+        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot().asMap();
+
+        // insert state into jruby runtime properties so that state participant can access it
+        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
+
+        // start jruby runtime and load test workflows
+        RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
+        RuoteWorkflow useWorkItemsWorkflow =
+                RuoteWorkflow.createFromResource("workflows/radial/use_workitems_with_timeout.radial", ruoteRuntime);
+
+        // execute workflow that works with workitems and waits on state
+        useWorkItemsWorkflow.asyncExecute(cacheSnapshot);
+
+        // sleep twice to state particiant timeout parameter
+        System.out.println("sleep 2000 ms from test");
+        Thread.sleep(2000);
+
+        // the use_workitems workflow waits on this state, this wuold have released the workflow
+        // in the normal case where it didn't time out.
+        cache.put("general_status", "good");
+
+        // assert workflow did not continue
+        Assert.assertFalse(RuoteStateCacheTimeoutTestJavaParticipant.latch.await(1, TimeUnit.SECONDS));
+
+    }
+
+    @Test
     public void testStateCacheWithWorkflows() throws InterruptedException {
 
         Map<String, Object> state = new ImmutableMap.Builder<String, Object>()
@@ -58,7 +91,6 @@ public class RouteWorkflowWithStateCacheTest {
                                 .build())
                         .build())
                 .build();
-
 
         // create new state cache
         StateCache cache = new StateCache.Builder()

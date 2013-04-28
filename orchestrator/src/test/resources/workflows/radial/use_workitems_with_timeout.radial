@@ -1,14 +1,3 @@
 define use_workitems
-
-  participant ref: "state", key: 'general_status', value: 'good'
-
-  set field: 'state0_id_processed', value: '$state0.id'
-  set field: 'state0_status_processed', value: '$state0.status'
-  iterator on_f: 'state0.substates', to_f: 'substate'
-    set field: '${substate}_processed', value: '$substate'
-    set field: '${substate}_id_processed', value: '$${substate}.id'
-    set field: '${substate}_status_processed', value: '$${substate}.status'
-
-  participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteStateCacheTestJavaParticipant"
-
-
+  participant ref: "state", key: 'general_status', value: 'good', timeout: '1s', on_timeout: 'error'
+  participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteStateCacheTimeoutTestJavaParticipant"

@@ -35,7 +35,6 @@ public class RuoteStateCacheTimeoutTestJavaParticipant {
     public void execute(Map<String, Object> workItemFields) {
         lastWorkitems = Maps.newHashMap(workItemFields);
         latch.countDown();
-        latch = new CountDownLatch(1);
     }
 
 }
