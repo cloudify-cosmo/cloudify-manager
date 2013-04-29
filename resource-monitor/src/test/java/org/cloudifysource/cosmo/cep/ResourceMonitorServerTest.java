@@ -22,7 +22,6 @@ import com.google.common.collect.Queues;
 import junit.framework.Assert;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
-import org.cloudifysource.cosmo.cep.mock.AppInfo;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
@@ -41,6 +40,7 @@ import java.net.URI;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -129,7 +129,7 @@ public class ResourceMonitorServerTest {
     private void mockAgent(ProbeAgentMessage message) {
         if (!mockAgentFailed) {
             final AgentStatusMessage statusMessage = new AgentStatusMessage();
-            statusMessage.setAgentId(AGENT_ID);
+            statusMessage.setAgentId(message.getAgentId());
             producer.send(inputTopic, statusMessage);
         }
     }
@@ -148,8 +148,12 @@ public class ResourceMonitorServerTest {
         //agent.setUnreachableTimeout("60s")
         server.insertFact(agent);
         //blocks until first StateChangedMessage
-        StateChangedMessage message = stateChangedMessages.take();
-        checkFailures();
+
+        StateChangedMessage message = null;
+        while (message == null) {
+            message = stateChangedMessages.poll(1, TimeUnit.SECONDS);
+            checkFailures();
+        }
         return message.isReachable();
     }
 
@@ -162,12 +166,6 @@ public class ResourceMonitorServerTest {
 
     private SessionPseudoClock getClock() {
         return ((SessionPseudoClock) server.getClock());
-    }
-
-    private void fireAppInfo() {
-        AppInfo appInfo = new AppInfo();
-        appInfo.setTimestamp(now());
-        producer.send(inputTopic, appInfo);
     }
 
     private void startMonitoringServer(int port) {
