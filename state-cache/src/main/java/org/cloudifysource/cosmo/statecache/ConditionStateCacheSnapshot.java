@@ -18,14 +18,41 @@ package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.collect.ImmutableMap;
 
+import java.util.Map;
+
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * TODO javadoc.
  *
- * @author Dan Kilman
  * @since 0.1
+ * @author Dan Kilman
  */
-public interface StateChangeCallback {
+class ConditionStateCacheSnapshot implements StateCacheSnapshot {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    // all operations are synchronized by 'cacheMapLock'
+    private final Map<String, Object> cache;
+    private final Object cacheMapLock;
 
+    public ConditionStateCacheSnapshot(Map<String, Object> cache, Object cacheMapLock) {
+        this.cache = cache;
+        this.cacheMapLock = cacheMapLock;
+    }
+
+    @Override
+    public Object get(String key) {
+        synchronized (cacheMapLock) {
+            return cache.get(key);
+        }
+    }
+
+    @Override
+    public boolean containsKey(String key) {
+        synchronized (cacheMapLock) {
+            return cache.containsKey(key);
+        }
+    }
+
+    @Override
+    public ImmutableMap<String, Object> asMap() {
+        throw new UnsupportedOperationException("condition snapshot cannot be viewed as an immutable map");
+    }
 }
