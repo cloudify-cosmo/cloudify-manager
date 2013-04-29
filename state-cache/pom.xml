@@ -23,6 +23,8 @@
     <properties>
         <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
+        <cosmo.state-cache-api.version>0.1-SNAPSHOT</cosmo.state-cache-api.version>
+        <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
     </properties>
     <dependencies>
         <dependency>
@@ -46,6 +48,16 @@
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>logger</artifactId>
             <version>${cosmo.logger.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>state-cache-api</artifactId>
+            <version>${cosmo.state-cache-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>message-client</artifactId>
+            <version>${cosmo.message-client.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
