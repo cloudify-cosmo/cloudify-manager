@@ -18,38 +18,80 @@ package org.cloudifysource.cosmo.orchestrator.recipe;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * JSON recipe representation.
  *
  * @author Idan Moyal
  * @since 0.1
  */
 public class JsonRecipe {
 
-    private final List<Map<String, Object>> list;
+    private final Map<String, Map<String, Object>> components;
 
     public static JsonRecipe load(String recipe) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        final List<Map<String, Object>> list = mapper.readValue(recipe, new TypeReference<List<Map<String,
-                Object>>>() {
-        });
-        return new JsonRecipe(list);
+        final Map<String, Map<String, Object>> components =
+                mapper.readValue(recipe, new TypeReference<Map<String, Map<String, Object>>>() {
+                });
+        return new JsonRecipe(components);
     }
 
-    private JsonRecipe(List<Map<String, Object>> list) {
-        this.list = list;
+    private JsonRecipe(Map<String, Map<String, Object>> components) {
+        this.components = components;
     }
 
     public Optional<Map<String, Object>> get(String name) {
-        for (Map<String, Object> map : list) {
-            if (name.equals(map.get("name")))
-                return Optional.of(map);
+        if (!components.containsKey(name))
+            return Optional.absent();
+
+        final Map<String, Object> map = components.get(name);
+        map.put("name", name);
+
+        final List<String> resourcesNames = getComponentResourcesNames(map);
+        final List<Map<String, Object>> resources = Lists.newLinkedList();
+        for (String resourceName : resourcesNames) {
+            resources.add(getResource(resourceName));
         }
-        return Optional.absent();
+        map.put("resources", resources);
+        return Optional.of(map);
     }
+
+    private Map<String, Object> getResource(String resourceName) {
+        Preconditions.checkArgument(components.containsKey(resourceName));
+        final Map<String, Object> resource = components.get(resourceName);
+        Preconditions.checkArgument(resource.containsKey("type"));
+        Preconditions.checkArgument("resource".equals(resource.get("type")));
+        resource.put("name", resourceName);
+        return resource;
+    }
+
+    public List<String> getComponentResourcesNames(Map<String, Object> component) {
+        final List<String> resources = Lists.newLinkedList();
+        getComponentResourcesNamesImpl(component, resources);
+        return resources;
+    }
+
+    private void getComponentResourcesNamesImpl(Map<String, Object> component, List<String> resourcesNames) {
+        final String type = (String) component.get("type");
+        if (type != null) {
+            final Map<String, Object> parentComponent = components.get(type);
+            if (parentComponent != null) {
+                getComponentResourcesNamesImpl(parentComponent, resourcesNames);
+            }
+        }
+        final List<?> resources = (List<?>) component.get("resources");
+        if (resources != null) {
+            for (Object resource : resources) {
+                resourcesNames.add(resource.toString());
+            }
+        }
+    }
+
 }

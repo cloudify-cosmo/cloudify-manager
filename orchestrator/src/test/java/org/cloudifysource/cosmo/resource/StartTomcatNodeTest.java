@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.resource;
 import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
@@ -29,6 +28,8 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.statecache.DefaultStateCacheReader;
+import org.cloudifysource.cosmo.statecache.StateCache;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -39,10 +40,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * @author Idan Moyal
@@ -58,6 +58,8 @@ public class StartTomcatNodeTest {
     private CloudDriver driver;
     private File vagrantRoot;
     private CloudResourceManager manager;
+    private StateCache stateCache;
+    private DefaultStateCacheReader stateCacheReader;
 
     @BeforeMethod(alwaysRun = true)
     @Parameters({ "port" })
@@ -71,11 +73,14 @@ public class StartTomcatNodeTest {
         driver = new VagrantCloudDriver(vagrantRoot);
         URI cloudResourceUri = uri.resolve("/" + key);
         manager = new CloudResourceManager(driver, cloudResourceUri, consumer);
+        stateCache = new StateCache.Builder().build();
+        stateCacheReader = new DefaultStateCacheReader(stateCache);
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopMessageBrokerServer() {
-        driver.terminateMachines();
+        if (driver != null)
+            driver.terminateMachines();
         vagrantRoot.delete();
         consumer.removeAllListeners();
         if (broker != null) {
@@ -85,32 +90,37 @@ public class StartTomcatNodeTest {
 
     @Test(groups = "vagrant")
     public void testStartTomcatNode() throws IOException {
-        URL url = Resources.getResource("recipes/json/tomcat/recipe.json");
+        // Load recipe
+        URL url = Resources.getResource("recipes/json/tomcat/tomcat_node_recipe.json");
         String json = Resources.toString(url, Charsets.UTF_8);
         JsonRecipe recipe = JsonRecipe.load(json);
+        Map<String, Object> node = recipe.get("tomcat_node").get();
+        List<?> resources = (List<?>) node.get("resources");
 
-        startWorkflow(new File(url.getPath()).getParentFile().getPath(), recipe, "tomcat_node", "start_node");
-        repetitiveAssert(new Runnable() {
-            @Override
-            public void run() {
-                assertThat(manager.isMachineStarted()).isTrue();
-            }
-        }, 3, TimeUnit.MINUTES);
-    }
+        // Create ruote runtime
+        final Map<String, Object> properties = Maps.newHashMap();
+        properties.put("message_producer", producer);
+        properties.put("broker_uri", uri);
+        properties.put("state_cache", stateCacheReader);
+        final RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(properties);
 
-    private void startWorkflow(String recipePath, JsonRecipe recipe, String name, String workflowName) {
-        try {
-            final Map<String, Object> properties = Maps.newHashMap();
-            properties.put("message_producer", producer);
-            properties.put("broker_uri", uri);
-            final RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(properties);
-            final File workflowFile = new File(recipePath, workflowName + ".radial");
-            Preconditions.checkArgument(workflowFile.exists());
-            final RuoteWorkflow workflow = RuoteWorkflow.createFromFile(workflowFile.getAbsolutePath(), ruoteRuntime);
-            workflow.execute();
-        } catch (Exception e) {
-            Throwables.propagate(e);
-        }
+        // Create ruote workflow
+        final File recipeFile = new File(url.getPath());
+        final String workflowName = "start_node";
+        final File workflowFile = new File(recipeFile.getParent(), workflowName + ".radial");
+        Preconditions.checkArgument(workflowFile.exists());
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromFile(workflowFile.getAbsolutePath(), ruoteRuntime);
+
+        // Execute workflow
+        Map<String, Object> workitemFields = Maps.newHashMap();
+        workitemFields.put("resources", resources);
+
+        Object wfid = workflow.asyncExecute(workitemFields);
+
+        stateCache.put("vm", "ready");
+        stateCache.put("tomcat", "ready");
+
+        ruoteRuntime.waitForWorkflow(wfid);
     }
 
     public static void repetitiveAssert(Runnable runnable, long timeout, TimeUnit timeUnit) {
