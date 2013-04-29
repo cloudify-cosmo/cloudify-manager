@@ -1,5 +1,5 @@
 <!-- This is not a parent pom - It is used only for building all modules in the correct order
-     Do not add <properties> nor <build> nor <dependencies> not any other section ! -->
+     Do not add <properties> nor <build> nor <dependencies> nor any other section ! -->
      
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
