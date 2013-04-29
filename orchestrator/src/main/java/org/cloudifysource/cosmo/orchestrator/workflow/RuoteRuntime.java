@@ -20,6 +20,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.jruby.embed.LocalVariableBehavior;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
@@ -34,6 +36,8 @@ import java.util.Map;
  * @since 0.1
  */
 public class RuoteRuntime {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RuoteRuntime.class);
 
     private static final String CREATE_DASHBOARD_METHOD_NAME = "create_dashboard";
     private static final String EXECUTE_WORKFLOW_METHOD_NAME = "execute_ruote_workflow";
@@ -57,6 +61,7 @@ public class RuoteRuntime {
 
     public static RuoteRuntime createRuntime(Map<String, Object> properties) {
         try {
+            LOGGER.debug("Creating ruote runtime...");
             final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
             updateLibraryPath(container, "ruote-gems/gems");
             updateLibraryPath(container, "scripts");
@@ -79,6 +84,7 @@ public class RuoteRuntime {
     public Object executeWorkflow(RuoteWorkflow workflow, Map<String, Object> workitemFields,
                                   boolean waitForWorkflow) {
         try {
+            LOGGER.debug("Executing workflow with workitem.fields: " + workitemFields);
             return container.callMethod(receiver, EXECUTE_WORKFLOW_METHOD_NAME, dashboard, workflow.getParsedWorkflow(),
                     workitemFields, waitForWorkflow);
         } catch (Exception e) {

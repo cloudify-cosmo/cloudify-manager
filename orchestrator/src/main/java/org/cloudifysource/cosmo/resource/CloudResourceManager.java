@@ -18,6 +18,8 @@ package org.cloudifysource.cosmo.resource;
 import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 
@@ -31,8 +33,9 @@ import java.net.URI;
  */
 public class CloudResourceManager {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceManager.class);
+
     private final CloudDriver driver;
-    private volatile boolean machineStarted = false;
 
     public CloudResourceManager(final CloudDriver driver, URI uri, MessageConsumer consumer) {
         Preconditions.checkNotNull(driver);
@@ -41,10 +44,9 @@ public class CloudResourceManager {
             consumer.addListener(uri, new MessageConsumerListener<String>() {
                 @Override
                 public void onMessage(URI uri, String message) {
-                    System.out.println("CloudResourceManager message received [uri=" + uri + ", " +
-                            "message=" + message + "]");
+                    LOGGER.debug("Consumed message from broker: " + message);
                     if ("start_machine".equals(message)) {
-                        startMachine();
+                        //startMachine();
                     }
                 }
 
@@ -61,11 +63,7 @@ public class CloudResourceManager {
     }
 
     private void startMachine() {
-        driver.startMachine(new MachineConfiguration("tomcat_node", "centos-6.3"));
-        machineStarted = true;
+        driver.startMachine(new MachineConfiguration("tomcat_node", "cosmo"));
     }
 
-    public boolean isMachineStarted() {
-        return machineStarted;
-    }
 }
