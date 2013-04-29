@@ -1,0 +1,67 @@
+package org.cloudifysource.cosmo.statecache;
+
+import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
+import org.testng.annotations.Test;
+
+import java.net.URI;
+
+/**
+ * Tests integration of {@link StateCache} with messaging consumer.
+ * @author itaif
+ * @since 0.1
+ */
+public class StateCacheMessagingIntegrationTest {
+
+    // message broker that isolates server
+    private MessageBrokerServer broker;
+    private URI inputUri;
+    private MessageProducer producer;
+    private RealTimeStateCache cache;
+
+    @Test(timeOut = 5000)
+    public void testNodeOk() {
+        StateChangedMessage message = new StateChangedMessage();
+        message.setResourceId("node_1");
+        message.setReachable(true);
+        producer.send(inputUri, message);
+        //TODO: complete test
+        //ListenableFuture future = cache.waitForState();
+        //future.get();
+        //check node state is reachable
+    }
+
+
+    @BeforeMethod
+    @Parameters({"port" })
+    public void startServer(@Optional("8080") int port) {
+        startMessagingBroker(port);
+        inputUri = URI.create("http://localhost:" + port + "/input/");
+        producer = new MessageProducer();
+        RealTimeStateCacheConfiguration config =
+                new RealTimeStateCacheConfiguration();
+        config.setMessageTopic(inputUri);
+        cache = new RealTimeStateCache(config);
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void stopServer() {
+        stopMessageBroker();
+    }
+
+    private void startMessagingBroker(int port) {
+        broker = new MessageBrokerServer();
+        broker.start(port);
+    }
+
+    private void stopMessageBroker() {
+        if (broker != null) {
+            broker.stop();
+        }
+    }
+}
