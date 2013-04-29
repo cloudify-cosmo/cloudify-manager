@@ -138,14 +138,14 @@ public class StateCache {
 
         // obtain refernce to named locks relevent for this condition
         // and create locking/unlocking ordered lists.
-        List<String> keyNamesToLock = condition.keysToLock();
+        List<String> keyNamesToLock = Lists.newArrayList(condition.keysToLock());
+        Collections.sort(keyNamesToLock);
         List<ReentrantReadWriteLock> keysInLockOrder = Lists.transform(keyNamesToLock, new Function<String,
                 ReentrantReadWriteLock>() {
             public ReentrantReadWriteLock apply(String key) {
                 return lockProvider.forName(key);
             }
         });
-        List<ReentrantReadWriteLock> keysInUnlockOrder = Lists.reverse(keysInLockOrder);
 
         // lock in locking order
         for (ReentrantReadWriteLock lock : keysInLockOrder) {
@@ -166,7 +166,7 @@ public class StateCache {
             return callbackUID;
         } finally {
             // unlock in reverse locking order
-            for (ReentrantReadWriteLock lock : keysInUnlockOrder) {
+            for (ReentrantReadWriteLock lock : keysInLockOrder) {
                 lock.readLock().unlock();
             }
         }

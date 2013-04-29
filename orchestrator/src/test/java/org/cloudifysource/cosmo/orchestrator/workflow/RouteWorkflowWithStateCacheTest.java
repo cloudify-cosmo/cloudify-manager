@@ -18,7 +18,9 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.cloudifysource.cosmo.statecache.DefaultStateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.StateCacheReader;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -38,12 +40,14 @@ public class RouteWorkflowWithStateCacheTest {
 
         // create new state cache
         StateCache cache = new StateCache.Builder().build();
+        StateCacheReader cacheReader = new DefaultStateCacheReader(cache);
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot().asMap();
+        ImmutableMap<String, Object> cacheSnapshot = cacheReader.snapshot().asMap();
 
         // insert state into jruby runtime properties so that state participant can access it
-        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
+        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
+                .put("state_cache", cacheReader).build();
 
         // start jruby runtime and load test workflows
         RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
@@ -96,12 +100,14 @@ public class RouteWorkflowWithStateCacheTest {
         StateCache cache = new StateCache.Builder()
                 .initialState(state)
                 .build();
+        StateCacheReader cacheReader = new DefaultStateCacheReader(cache);
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot().asMap();
+        ImmutableMap<String, Object> cacheSnapshot = cacheReader.snapshot().asMap();
 
         // insert state into jruby runtime properties so that state participant can access it
-        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder().put("state_cache", cache).build();
+        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
+                .put("state_cache", cacheReader).build();
 
         // start jruby runtime and load test workflows
         RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
