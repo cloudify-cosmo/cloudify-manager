@@ -1,0 +1,28 @@
+<!-- This is not a parent pom - It is used only for building all modules in the correct order
+     Do not add <properties> nor <build> nor <dependencies> not any other section ! -->
+     
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.cloudifysource.cosmo</groupId>
+    <artifactId>stub</artifactId>
+    <packaging>pom</packaging>
+    <name>Build automation stub</name>
+    <version>0</version>
+    <modules>
+        <module>agent-api</module>
+        <module>message-broker</module>
+        <module>message-client</module>
+        <module>orchestrator</module>
+        <module>resource-monitor</module>
+        <module>resource-monitor-api</module>
+        <module>state-cache</module>
+        <module>state-cache-api</module>
+        
+        <!-- Obsolete -->
+        <module>kvstore</module>
+    </modules>
+
+</project>
