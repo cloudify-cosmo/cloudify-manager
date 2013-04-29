@@ -16,16 +16,34 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * TODO javadoc.
  *
- * @author Dan Kilman
  * @since 0.1
+ * @author Dan Kilman
  */
-public interface StateChangeCallback {
+class KeyValueCondition implements Condition {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    private final String key;
+    private final Object value;
 
+    public KeyValueCondition(String key, Object value) {
+        this.key = key;
+        this.value = value;
+    }
+
+    @Override
+    public boolean applies(StateCacheSnapshot snapshot) {
+        return Objects.equal(value, snapshot.get(key));
+    }
+
+    @Override
+    public List<String> keysToLock() {
+        return ImmutableList.of(key);
+    }
 }

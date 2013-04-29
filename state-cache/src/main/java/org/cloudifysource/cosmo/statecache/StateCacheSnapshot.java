@@ -19,13 +19,17 @@ package org.cloudifysource.cosmo.statecache;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * TODO javadoc.
  *
- * @author Dan Kilman
  * @since 0.1
+ * @author Dan Kilman
  */
-public interface StateChangeCallback {
+public interface StateCacheSnapshot {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    Object get(String key);
+
+    boolean containsKey(String key);
+
+    ImmutableMap<String, Object> asMap();
 
 }
