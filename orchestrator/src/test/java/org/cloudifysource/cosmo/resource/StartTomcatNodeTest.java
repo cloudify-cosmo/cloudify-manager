@@ -28,6 +28,7 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.statecache.DefaultStateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -58,6 +59,7 @@ public class StartTomcatNodeTest {
     private File vagrantRoot;
     private CloudResourceManager manager;
     private StateCache stateCache;
+    private DefaultStateCacheReader stateCacheReader;
 
     @BeforeMethod(alwaysRun = true)
     @Parameters({ "port" })
@@ -72,11 +74,13 @@ public class StartTomcatNodeTest {
         URI cloudResourceUri = uri.resolve("/" + key);
         manager = new CloudResourceManager(driver, cloudResourceUri, consumer);
         stateCache = new StateCache.Builder().build();
+        stateCacheReader = new DefaultStateCacheReader(stateCache);
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopMessageBrokerServer() {
-        driver.terminateMachines();
+        if (driver != null)
+            driver.terminateMachines();
         vagrantRoot.delete();
         consumer.removeAllListeners();
         if (broker != null) {
@@ -97,6 +101,7 @@ public class StartTomcatNodeTest {
         final Map<String, Object> properties = Maps.newHashMap();
         properties.put("message_producer", producer);
         properties.put("broker_uri", uri);
+        properties.put("state_cache", stateCacheReader);
         final RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(properties);
 
         // Create ruote workflow
@@ -112,7 +117,8 @@ public class StartTomcatNodeTest {
 
         Object wfid = workflow.asyncExecute(workitemFields);
 
-        stateCache.put("tomcat_node", "ready");
+        stateCache.put("vm", "ready");
+        stateCache.put("tomcat", "ready");
 
         ruoteRuntime.waitForWorkflow(wfid);
     }

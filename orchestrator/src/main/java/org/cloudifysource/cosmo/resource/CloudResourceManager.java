@@ -46,7 +46,7 @@ public class CloudResourceManager {
                 public void onMessage(URI uri, String message) {
                     LOGGER.debug("Consumed message from broker: " + message);
                     if ("start_machine".equals(message)) {
-                        //startMachine();
+                        startMachine();
                     }
                 }
 
