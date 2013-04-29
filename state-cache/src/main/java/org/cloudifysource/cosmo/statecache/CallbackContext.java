@@ -16,16 +16,39 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
-
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * TODO javadoc.
  *
- * @author Dan Kilman
  * @since 0.1
+ * @author Dan Kilman
  */
-public interface StateChangeCallback {
+class CallbackContext {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    private final Object receiver;
+    private final Object context;
+    private final StateChangeCallback callback;
+    private final Condition condition;
 
+    public CallbackContext(Object receiver, Object context, StateChangeCallback callback, Condition condition) {
+        this.receiver = receiver;
+        this.context = context;
+        this.callback = callback;
+        this.condition = condition;
+    }
+
+    public StateChangeCallback getCallback() {
+        return callback;
+    }
+
+    public Object getContext() {
+        return context;
+    }
+
+    public Object getReceiver() {
+        return receiver;
+    }
+
+    public Condition getCondition() {
+        return condition;
+    }
 }

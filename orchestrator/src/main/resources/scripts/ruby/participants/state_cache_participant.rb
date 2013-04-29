@@ -31,7 +31,8 @@ class StateCacheParticipant < Ruote::Participant
       condition_key = workitem.params['key']
       condition_value = workitem.params['value']
       callback = RuoteStateChangeCallback.new
-      callback_uid = state_cache.wait_for_key_value_state(self, workitem, condition_key, condition_value, callback)
+      callback_uid = state_cache.subscribe_to_key_value_state_changes(self, workitem, condition_key, condition_value,
+                                                                  callback)
       put('callback_uid', callback_uid)
     rescue Exception => e
       puts "#{e.message}"

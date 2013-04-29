@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource.monitor;
+package org.cloudifysource.cosmo.messaging;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;

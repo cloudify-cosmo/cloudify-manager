@@ -12,20 +12,41 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 
-package org.cloudifysource.cosmo.statecache;
-
-import com.google.common.collect.ImmutableMap;
-
+package org.cloudifysource.cosmo.messaging.messages;
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Mock Message used by {@link org.cloudifysource.cosmo.messaging.JsonTest}.
  *
- * @author Dan Kilman
+ * @author itaif
  * @since 0.1
  */
-public interface StateChangeCallback {
+public class MockMessage {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    int value;
 
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MockMessage)) return false;
+
+        MockMessage that = (MockMessage) o;
+
+        if (value != that.value) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return value;
+    }
 }

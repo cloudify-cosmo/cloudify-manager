@@ -56,7 +56,7 @@ public class MessageConsumer {
     }
 
     public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {
-        final Class<? extends T> messageClass = listener.getMessageClass();
+
         final RequestBuilder request =
                 client.newRequestBuilder()
                         .method(Request.METHOD.GET)
@@ -74,7 +74,7 @@ public class MessageConsumer {
 
                                 if (type.equals(Event.MESSAGE)) {
                                     try {
-                                        final T message = mapper.readValue(data, messageClass);
+                                        final T message = (T) mapper.readValue(data, Object.class);
                                         return message;
                                     } catch (IOException e) {
                                         if (data.equals("CLOSE")) {

@@ -110,7 +110,7 @@ public class StateCacheTest {
         final Object context = new Object();
         final String key = "key";
         final Object value = "value";
-        stateCache.waitForKeyValueState(reciever, context, key, value, new StateChangeCallback() {
+        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, value, new StateChangeCallback() {
             public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
                                       ImmutableMap<String, Object> newSnapshot) {
                 boolean valid;
@@ -138,7 +138,7 @@ public class StateCacheTest {
         final Object value = "value";
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
         final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
-        stateCache.waitForKeyValueState(null, null, key, value, new StateChangeCallback() {
+        stateCache.subscribeToKeyValueStateChanges(null, null, key, value, new StateChangeCallback() {
             public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
                                       ImmutableMap<String, Object> newSnapshot) {
                 if (callbackCalledLatch.getCount() > 0) {
@@ -160,12 +160,13 @@ public class StateCacheTest {
         final String key = "key";
         final Object value = "value";
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        String callbackUID = stateCache.waitForKeyValueState(null, null, key, value, new StateChangeCallback() {
-            public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                      ImmutableMap<String, Object> newSnapshot) {
-                callbackCalledLatch.countDown();
-            }
-        });
+        String callbackUID = stateCache.subscribeToKeyValueStateChanges(null, null, key, value,
+                new StateChangeCallback() {
+                    public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                              ImmutableMap<String, Object> newSnapshot) {
+                        callbackCalledLatch.countDown();
+                    }
+                });
         stateCache.removeCallback(callbackUID);
         stateCache.put(key, value);
         Assert.assertFalse(callbackCalledLatch.await(100, TimeUnit.MILLISECONDS));

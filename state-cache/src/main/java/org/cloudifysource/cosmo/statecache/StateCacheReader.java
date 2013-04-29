@@ -16,16 +16,25 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
-
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Exposes data consumption operations on the {@link StateCache}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public interface StateChangeCallback {
+public interface StateCacheReader {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    StateCacheSnapshot snapshot();
+
+    /**
+     * @return callback UID, used in case the callback needs to be removed
+     */
+    String subscribeToKeyValueStateChanges(Object receiver,
+                                           Object context,
+                                           String key,
+                                           Object value,
+                                           StateChangeCallback callback);
+
+    void removeCallback(String callbackUID);
 
 }

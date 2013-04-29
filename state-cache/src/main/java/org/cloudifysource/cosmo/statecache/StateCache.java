@@ -17,14 +17,13 @@
 package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,14 +47,16 @@ public class StateCache {
     private final NamedLockProvider lockProvider = new NamedLockProvider();
 
     private final Map<String, Object> cache;
+    private final ConditionStateCacheSnapshot conditionStateCacheSnapshot;
     private final ExecutorService executorService;
     private final ConcurrentMap<String, CallbackContext> listeners;
 
-    private StateCache(Map<String, Object> initialState, ExecutorService executorService) {
-        this.executorService = executorService;
+    private StateCache(Map<String, Object> initialState) {
+        this.executorService = Executors.newSingleThreadExecutor();
         this.cache = Maps.newHashMap(initialState);
+        this.conditionStateCacheSnapshot = new ConditionStateCacheSnapshot(cache, cacheMapLock);
 
-        // Concurrent - listeners are queried and added on waitForState
+        // Concurrent - listeners are queried and added on subscribeToStateChanges
         //              listeners are iterated and removed on put
         this.listeners = Maps.newConcurrentMap();
     }
@@ -82,16 +83,17 @@ public class StateCache {
         }
 
         StateCacheSnapshot snapshot = null;
-        List<String> callbacksToRemove = null;
 
-        // iterate through all listeners. (this might be optimizied in the future)
-        for (Map.Entry<String, CallbackContext> entry : listeners.entrySet()) {
-            String callbackUID = entry.getKey();
+        Iterator<Map.Entry<String, CallbackContext>> iterator = listeners.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<String, CallbackContext> entry = iterator.next();
+
             CallbackContext callbackContext = entry.getValue();
             Condition condition = callbackContext.getCondition();
 
             // if condition doesn't apply, move to next one
-            if (!condition.applies(conditionStateCacheSnapshotInstance)) {
+            if (!condition.applies(conditionStateCacheSnapshot)) {
                 continue;
             }
 
@@ -100,19 +102,9 @@ public class StateCache {
                 snapshot = snapshot();
             }
 
-            if (callbacksToRemove == null) {
-                callbacksToRemove = Lists.newArrayList();
-            }
-            callbacksToRemove.add(callbackUID);
+            iterator.remove();
 
             submitStateChangeNotificationTask(callbackContext, snapshot.asMap());
-        }
-
-        // remove relevant listeners
-        if (callbacksToRemove != null) {
-            for (String callbackUID : callbacksToRemove) {
-                listeners.remove(callbackUID);
-            }
         }
 
         return previous;
@@ -125,35 +117,35 @@ public class StateCache {
         }
     }
 
-    public String waitForKeyValueState(final Object receiver,
-                                     final Object context,
-                                     final String key,
-                                     final Object value,
-                                     final StateChangeCallback callback) {
+    public String subscribeToKeyValueStateChanges(final Object receiver,
+                                                  final Object context,
+                                                  final String key,
+                                                  final Object value,
+                                                  final StateChangeCallback callback) {
         Preconditions.checkNotNull(key);
         Preconditions.checkNotNull(value);
         Condition condition = new KeyValueCondition(key, value);
-        return waitForState(receiver, context, condition, callback);
+        return subscribeToStateChanges(receiver, context, condition, callback);
     }
 
-    private String waitForState(final Object receiver,
-                              final Object context,
-                              final Condition condition,
-                              final StateChangeCallback callback) {
+    private String subscribeToStateChanges(final Object receiver,
+                                           final Object context,
+                                           final Condition condition,
+                                           final StateChangeCallback callback) {
         String callbackUID = UUID.randomUUID().toString();
 
         CallbackContext callbackContext = new CallbackContext(receiver, context, callback, condition);
 
         // obtain refernce to named locks relevent for this condition
         // and create locking/unlocking ordered lists.
-        List<String> keyNamesToLock = condition.keysToLock();
+        List<String> keyNamesToLock = Lists.newArrayList(condition.keysToLock());
+        Collections.sort(keyNamesToLock);
         List<ReentrantReadWriteLock> keysInLockOrder = Lists.transform(keyNamesToLock, new Function<String,
                 ReentrantReadWriteLock>() {
             public ReentrantReadWriteLock apply(String key) {
                 return lockProvider.forName(key);
             }
         });
-        List<ReentrantReadWriteLock> keysInUnlockOrder = Lists.reverse(keysInLockOrder);
 
         // lock in locking order
         for (ReentrantReadWriteLock lock : keysInLockOrder) {
@@ -163,7 +155,7 @@ public class StateCache {
 
             synchronized (cacheMapLock) {
                 // if condition already applies, submit notification task now and return.
-                if (condition.applies(conditionStateCacheSnapshotInstance)) {
+                if (condition.applies(conditionStateCacheSnapshot)) {
                     submitStateChangeNotificationTask(callbackContext, snapshot().asMap());
                     return callbackUID;
                 }
@@ -174,7 +166,7 @@ public class StateCache {
             return callbackUID;
         } finally {
             // unlock in reverse locking order
-            for (ReentrantReadWriteLock lock : keysInUnlockOrder) {
+            for (ReentrantReadWriteLock lock : keysInLockOrder) {
                 lock.readLock().unlock();
             }
         }
@@ -202,13 +194,11 @@ public class StateCache {
      * @author Dan Kilman
      */
     public static class Builder {
-        private ExecutorService executorService;
         private Map<String, Object> initialState;
 
         public StateCache build() {
             return new StateCache(
-                initialState != null ? initialState : Collections.<String, Object>emptyMap(),
-                executorService != null ? executorService : Executors.newSingleThreadExecutor()
+                initialState != null ? initialState : Collections.<String, Object>emptyMap()
             );
         }
 
@@ -217,143 +207,6 @@ public class StateCache {
             return this;
         }
 
-    }
-
-    /**
-     * @since 0.1
-     * @author Dan Kilman
-     */
-    public interface StateCacheSnapshot {
-        Object get(String key);
-        boolean containsKey(String key);
-        ImmutableMap<String, Object> asMap();
-    }
-
-    private final ConditionStateCacheSnapshot conditionStateCacheSnapshotInstance =
-            new ConditionStateCacheSnapshot();
-
-    // all operations are synchronized by 'cacheMapLock'
-    /**
-     * @since 0.1
-     * @author Dan Kilman
-     */
-    private class ConditionStateCacheSnapshot implements StateCacheSnapshot {
-
-        @Override
-        public Object get(String key) {
-            synchronized (cacheMapLock) {
-                return cache.get(key);
-            }
-        }
-
-        @Override
-        public boolean containsKey(String key) {
-            synchronized (cacheMapLock) {
-                return cache.containsKey(key);
-            }
-        }
-
-        @Override
-        public ImmutableMap<String, Object> asMap() {
-            throw new UnsupportedOperationException("condition snapshot cannot be viewed as an immutable map");
-        }
-    }
-
-    /**
-     * @since 0.1
-     * @author Dan Kilman
-     */
-    public static class ExternalStateCacheSnapshot implements StateCacheSnapshot {
-
-        private final ImmutableMap<String, Object> snapshot;
-
-        public ExternalStateCacheSnapshot(ImmutableMap<String, Object> snapshot) {
-            this.snapshot = snapshot;
-        }
-
-        @Override
-        public Object get(String key) {
-            return snapshot.get(key);
-        }
-
-        @Override
-        public boolean containsKey(String key) {
-            return snapshot.containsKey(key);
-        }
-
-        @Override
-        public ImmutableMap<String, Object> asMap() {
-            return snapshot;
-        }
-    }
-
-    /**
-     * @since 0.1
-     * @author Dan Kilman
-     */
-    private static class CallbackContext {
-
-        private final Object receiver;
-        private final Object context;
-        private final StateChangeCallback callback;
-        private final Condition condition;
-
-        public CallbackContext(Object receiver, Object context, StateChangeCallback callback, Condition condition) {
-            this.receiver = receiver;
-            this.context = context;
-            this.callback = callback;
-            this.condition = condition;
-        }
-
-        public StateChangeCallback getCallback() {
-            return callback;
-        }
-
-        public Object getContext() {
-            return context;
-        }
-
-        public Object getReceiver() {
-            return receiver;
-        }
-
-        public Condition getCondition() {
-            return condition;
-        }
-    }
-
-    /**
-     * @since 0.1
-     * @author Dan Kilman
-     */
-    private interface Condition {
-        boolean applies(StateCacheSnapshot snapshot);
-        List<String> keysToLock();
-    }
-
-    /**
-     * @since 0.1
-     * @author Dan Kilman
-     */
-    private static class KeyValueCondition implements Condition {
-
-        private final String key;
-        private final Object value;
-
-        public KeyValueCondition(String key, Object value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        @Override
-        public boolean applies(StateCacheSnapshot snapshot) {
-            return Objects.equal(value, snapshot.get(key));
-        }
-
-        @Override
-        public List<String> keysToLock() {
-            return ImmutableList.of(key);
-        }
     }
 
 }
