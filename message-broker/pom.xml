@@ -71,12 +71,6 @@
             <version>2.0M8</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>message-client</artifactId>
-            <version>0.1-SNAPSHOT</version>
-            <scope>test</scope>
-        </dependency>
         <!-- REST server -->
         <dependency>
             <groupId>org.atmosphere</groupId>
