@@ -39,7 +39,7 @@ public class DefaultStateCacheReader implements StateCacheReader {
     @Override
     public String subscribeToKeyValueStateChanges(Object receiver, Object context, String key, Object value,
                                                   StateChangeCallback callback) {
-        return subscribeToKeyValueStateChanges(receiver, context, key, value, callback);
+        return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, value, callback);
     }
 
     @Override
