@@ -94,11 +94,11 @@ public class StateCacheTest {
 
     @Test
     public void testSnapshotAsMap() {
-        Assert.assertEquals(stateCache.snapshot().asMap(), Collections.emptyMap());
+        Assert.assertEquals(stateCache.snapshot(), Collections.emptyMap());
         String key = "key";
         Object value = "value";
         stateCache.put(key, value);
-        Assert.assertEquals(stateCache.snapshot().asMap(), ImmutableMap.<String, Object>builder().put(key,
+        Assert.assertEquals(stateCache.snapshot(), ImmutableMap.<String, Object>builder().put(key,
                 value).build());
     }
 

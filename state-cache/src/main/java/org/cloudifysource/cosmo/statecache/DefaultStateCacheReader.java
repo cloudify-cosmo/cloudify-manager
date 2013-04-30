@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.collect.ImmutableMap;
+
 /**
  * A {@link StateCacheReader} implementation that delegates all operations to an underlying {@link StateCache}.
  * TODO: What is our naming convention: StateCacheReaderImpl, DefaultStateCacheReader, else?
@@ -32,7 +34,7 @@ public class DefaultStateCacheReader implements StateCacheReader {
     }
 
     @Override
-    public StateCacheSnapshot snapshot() {
+    public ImmutableMap<String, Object> snapshot() {
         return stateCache.snapshot();
     }
 

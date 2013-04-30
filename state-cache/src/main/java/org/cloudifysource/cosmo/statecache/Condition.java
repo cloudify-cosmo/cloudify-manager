@@ -26,7 +26,7 @@ import java.util.List;
  */
 interface Condition {
 
-    boolean applies(StateCacheSnapshot snapshot);
+    boolean applies(StateCacheView snapshot);
 
     List<String> keysToLock();
 

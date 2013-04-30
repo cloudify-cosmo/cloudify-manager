@@ -38,7 +38,7 @@ class KeyValueCondition implements Condition {
     }
 
     @Override
-    public boolean applies(StateCacheSnapshot snapshot) {
+    public boolean applies(StateCacheView snapshot) {
         return Objects.equal(value, snapshot.get(key));
     }
 
