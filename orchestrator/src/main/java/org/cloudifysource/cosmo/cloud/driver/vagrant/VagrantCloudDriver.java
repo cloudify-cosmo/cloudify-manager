@@ -25,6 +25,8 @@ import com.google.common.io.Files;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,10 +42,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Vagrant (http://www.vagrantup.com/) cloud driver.
+ *
+ * <p>Locally starts virtual machines mainly for testing purposes using Vagrant. Interacting with vagrant is done by
+ * executing vagrant commands in a separate process.
+ *
+ * <p>On creation, the driver checks whether the default box is installed and if not downloads a base image and
+ * creates a new one for test purposes with the relevant packages.
+ *
  * @author Idan Moyal
  * @since 0.1
  */
 public class VagrantCloudDriver implements CloudDriver {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(VagrantCloudDriver.class);
 
     private static final String VAGRANT_FILE = "Vagrantfile";
     private static final String VAGRANT_RUNNING = "running";
@@ -58,6 +70,8 @@ public class VagrantCloudDriver implements CloudDriver {
     private final Map<String, VagrantMachineDetails> machines;
     private final AtomicInteger machinesCounter;
 
+    private Map<String, VagrantBox> boxes;
+
     // TODO: handle specific machine requests concurrency
 
     public VagrantCloudDriver(File vagrantWorkingDirectory) {
@@ -68,7 +82,7 @@ public class VagrantCloudDriver implements CloudDriver {
         Preconditions.checkArgument(vagrantRoot.exists());
         this.machinesCounter = new AtomicInteger(1);
         this.machines = generateMachinesMap();
-        Map<String, VagrantBox> boxes = getInstalledBoxes();
+        this.boxes = getInstalledBoxes();
         if (!boxes.containsKey(VAGRANT_DEFAULT_BOX)) {
             prepareAndInstallDefaultBoxImage();
         }
@@ -78,15 +92,16 @@ public class VagrantCloudDriver implements CloudDriver {
         final MachineConfiguration config = new MachineConfiguration(VAGRANT_DEFAULT_BOX, VAGRANT_DEFAULT_BOX);
         VagrantMachineDetails details = null;
         try {
-            System.out.println(
-                    "vagrant installation does not contain a '" + VAGRANT_DEFAULT_BOX + "' box. The box will " +
-                            "be downloaded and installed - this might take several minutes...");
+            LOGGER.debug("vagrant installation does not contain a '{}' box. The box will " +
+                    "be downloaded and installed - this might take several minutes...", VAGRANT_DEFAULT_BOX);
             final Properties props = new Properties();
             final InputStream stream = getClass().getResourceAsStream("/vagrant/vagrant.properties");
             props.load(stream);
             Preconditions.checkArgument(props.containsKey("image"));
             final String imageLocation = (String) props.get("image");
-            System.out.println("Installing box from: '" + imageLocation + "'");
+
+            LOGGER.debug("Installing box from: '{}'", imageLocation);
+
             if (imageLocation.contains("http")) {
                 vagrant(String.format("box add %s %s", VAGRANT_DEFAULT_BOX, imageLocation), vagrantRoot);
             } else {
@@ -95,9 +110,11 @@ public class VagrantCloudDriver implements CloudDriver {
                 vagrant(String.format("box add %s %s", VAGRANT_DEFAULT_BOX, boxFile.getName()),
                         boxFile.getParentFile());
             }
-            final Map<String, VagrantBox> installedBoxes = getInstalledBoxes();
-            Preconditions.checkArgument(installedBoxes.containsKey(VAGRANT_DEFAULT_BOX));
-            final VagrantBox defaultBox = installedBoxes.get(VAGRANT_DEFAULT_BOX);
+
+            this.boxes = getInstalledBoxes();
+
+            Preconditions.checkArgument(boxes.containsKey(VAGRANT_DEFAULT_BOX));
+            final VagrantBox defaultBox = boxes.get(VAGRANT_DEFAULT_BOX);
 
             // When creating a machine an image will be exported of - we don't assign it an ip address
             // since there's an issue with vagrant and centos which prevents a created machine of the new image
@@ -137,28 +154,6 @@ public class VagrantCloudDriver implements CloudDriver {
         return vagrantBoxes;
     }
 
-    /**
-     *
-     */
-    private static class VagrantBox {
-
-        private final String name;
-        private final String provider;
-
-        public VagrantBox(String name, String provider) {
-            this.name = name;
-            this.provider = provider;
-        }
-
-        private String getName() {
-            return name;
-        }
-
-        private String getProvider() {
-            return provider;
-        }
-    }
-
     private Map<String, VagrantMachineDetails> generateMachinesMap() {
         final File[] vagrantsDirs = vagrantRoot.listFiles(new FileFilter() {
             @Override
@@ -196,7 +191,9 @@ public class VagrantCloudDriver implements CloudDriver {
         Preconditions.checkArgument(machineDirectory.mkdirs());
         final int machineNumber = machinesCounter.incrementAndGet();
         final String ip = VAGRANT_MACHINE_IP_PREFIX + machineNumber;
-        System.out.println("vagrant: starting machine in '" + machineDirectory.getAbsolutePath() + "' with ip: " + ip);
+
+        LOGGER.debug("Starting machine in: '{}' [ip={}]", machineDirectory.getAbsoluteFile(), ip);
+
         try {
             new VagrantFileBuilder()
                     .box(configuration.getImage())
@@ -290,13 +287,14 @@ public class VagrantCloudDriver implements CloudDriver {
             final ProcessBuilder builder = new ProcessBuilder(processCommands).redirectErrorStream(true);
             builder.directory(workingDirectory);
 
+            LOGGER.debug("Executing: 'vagrant {}'", vagrantCommands);
             final Process process = builder.start();
             final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             final StringBuilder processOutput = new StringBuilder();
             try {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    System.out.println("vagrant-output:: " + line);
+                    LOGGER.debug("\t{}", line);
                     processOutput.append(line);
                     processOutput.append(System.getProperty("line.separator"));
                 }
@@ -378,6 +376,33 @@ public class VagrantCloudDriver implements CloudDriver {
         public VagrantFileBuilder manifest(String manifest) {
             this.manifest = manifest;
             return this;
+        }
+    }
+
+    /**
+     *
+     */
+    private static class VagrantBox {
+
+        private final String name;
+        private final String provider;
+
+        public VagrantBox(String name, String provider) {
+            this.name = name;
+            this.provider = provider;
+        }
+
+        private String getName() {
+            return name;
+        }
+
+        private String getProvider() {
+            return provider;
+        }
+
+        @Override
+        public String toString() {
+            return Objects.toStringHelper(getClass()).add("name", name).add("provider", provider).toString();
         }
     }
 

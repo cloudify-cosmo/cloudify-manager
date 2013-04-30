@@ -1,29 +1,12 @@
+[![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png)](http://travis-ci.org/CloudifySource/cosmo-manager)
+
 # Cloudify Cosmo Management #
 
-The Cloudify Cosmo project is a clean slate implementation for deployment and monitoring orchestration of services 
+The Cloudify Cosmo Management project is the scafolding for the deployment, monitoring and automatic managing services 
 installed on the cloud.
-It is a clean rewrite of Service Grid 1.0 which is the heart of the Cloudify project.
 
-SG contains the following components:
+Cosmo Management contains the following main components:
 
-* Capacity Planner - Monitors the services and scales the services based on scaling rules. Provides the deployment planner with the desired service capacity.
-* Deployment Planner - Maps services to machines, based on the capacity requirements of each service.
-* Orchestrator - Sends command to start machines/agents/services according to deployment plan.
-* Machine Provisioner - Starts new machines and installs the agent on them.
-* Agent - Starts services and uploads service deployment state and service monitoring
-
-
-Flow Diagram:
-
-          +-----------------------------------------------+------------------------------------+ 
-          |                                               |                                    |
-     (monitoring)                                      (state)                                 |
-          |                                               |                                    |
-          V                                               V                                    |
-      CAPACITY -(cap.plan)-> DEPLOYMENT -(dep.plan)-> ORCHESTRATOR -(start service)-> AGENTS --+
-      PLANNER                 PLANNER                        |                          ^
-                                                             |                          |
-                                                             |                      (installs)
-                                                             |                          |
-                                                             |                       MACHINE
-                                                             +-------------------->  PROVISIONER
+* Orchestrator - Reacts to service state changes by running custom workflows (uses Ruote)
+* Resource Monitor - Continously evaluates service state by reacting to incoming events (uses Drools Fusion).
+* Message Broker - Decouples the different components by providing a central messaging endpoint (uses Atmosphere).

@@ -67,23 +67,6 @@
             <version>${cosmo.logger.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.6.6</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <version>1.6.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>kvstore</artifactId>
             <scope>test</scope>
@@ -116,6 +99,12 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.5</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>

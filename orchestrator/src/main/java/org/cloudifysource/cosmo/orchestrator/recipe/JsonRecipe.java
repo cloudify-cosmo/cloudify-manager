@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,7 +52,7 @@ public class JsonRecipe {
         if (!components.containsKey(name))
             return Optional.absent();
 
-        final Map<String, Object> map = components.get(name);
+        final Map<String, Object> map = Maps.newHashMap(components.get(name));
         map.put("name", name);
 
         final List<String> resourcesNames = getComponentResourcesNames(map);

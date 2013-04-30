@@ -62,7 +62,6 @@ public class VagrantCloudDriverTest {
 
     @Test(groups = "vagrant", expectedExceptions = IllegalArgumentException.class)
     public void testIllegalImage() {
-        VagrantCloudDriver driver = new VagrantCloudDriver(vagrantRoot);
         driver.startMachine(new MachineConfiguration("vm_node", "aaaaa"));
     }
 

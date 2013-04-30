@@ -15,14 +15,8 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import org.cloudifysource.cosmo.orchestrator.recipe.Appliance;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-
-import java.util.HashSet;
-import java.util.Map;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -44,27 +38,5 @@ public class RuoteWorkflowTest {
         workflow.execute();
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }
-
-    @Test
-    public void testWorkflowPropertiesInjection() {
-        Appliance appliance1 = new Appliance.Builder().name("vm_appliance1").build();
-        Appliance appliance2 = new Appliance.Builder().name("vm_appliance2").build();
-        Appliance appliance3 = new Appliance.Builder().name("vm_appliance3").build();
-
-        final HashSet<Object> appliances = Sets.newHashSet();
-        appliances.add(appliance1.toMap());
-        appliances.add(appliance2.toMap());
-        appliances.add(appliance3.toMap());
-
-        final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("appliances", appliances);
-
-        final RuoteRuntime runtime = RuoteRuntime.createRuntime();
-        Workflow workflow = RuoteWorkflow.createFromResource("workflows/radial/java_workflow_properties.radial",
-                runtime);
-        workflow.execute(workitemFields);
-        assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
-    }
-
 
 }
