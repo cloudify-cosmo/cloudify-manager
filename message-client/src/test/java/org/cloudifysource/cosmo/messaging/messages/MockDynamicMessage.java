@@ -13,21 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.statecache.messages;
+package org.cloudifysource.cosmo.messaging.messages;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import sun.applet.resources.MsgAppletViewer_sv;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Message sent from cep to StateCache that indicate there was a state change.
+ * A pojo that can handle arbitrary fields.
  * @author itaif
  * @since 0.1
  */
-public class StateChangedMessage {
+public class MockDynamicMessage {
 
     private String resourceId;
 
@@ -53,5 +52,25 @@ public class StateChangedMessage {
     @JsonAnySetter
     protected void handleUnknownProperty(String key, Object value) {
         state.put(key, value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MockDynamicMessage)) return false;
+
+        MockDynamicMessage that = (MockDynamicMessage) o;
+
+        if (resourceId != null ? !resourceId.equals(that.resourceId) : that.resourceId != null) return false;
+        if (state != null ? !state.equals(that.state) : that.state != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = resourceId != null ? resourceId.hashCode() : 0;
+        result = 31 * result + (state != null ? state.hashCode() : 0);
+        return result;
     }
 }

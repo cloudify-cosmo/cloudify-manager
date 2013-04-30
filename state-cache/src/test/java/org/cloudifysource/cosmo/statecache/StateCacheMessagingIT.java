@@ -30,6 +30,7 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Tests integration of {@link StateCache} with messaging consumer.
@@ -45,10 +46,10 @@ public class StateCacheMessagingIT {
     private StateCacheReader cache;
 
     @Test(timeOut = 5000)
-    public void testNodeOk() throws InterruptedException {
+    public void testNodeOk() throws InterruptedException, ExecutionException {
         final String key = "node_1";
         final StateChangedMessage message = newStateChangedMessage(key);
-        producer.send(inputUri, message);
+        producer.send(inputUri, message).get();
         final CountDownLatch success = new CountDownLatch(1);
         String subscriptionId = cache.subscribeToKeyValueStateChanges(null, null, key, newState(),
                 new StateChangeCallback() {
@@ -85,15 +86,25 @@ public class StateCacheMessagingIT {
         startMessagingBroker(port);
         inputUri = URI.create("http://localhost:" + port + "/input/");
         producer = new MessageProducer();
+        startStateCache();
+    }
+
+    private void startStateCache() {
         RealTimeStateCacheConfiguration config =
                 new RealTimeStateCacheConfiguration();
         config.setMessageTopic(inputUri);
         cache = new RealTimeStateCache(config);
+        ((RealTimeStateCache)cache).start();
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
+        stopStateCache();
         stopMessageBroker();
+    }
+
+    private void stopStateCache() {
+        ((RealTimeStateCache)cache).stop();
     }
 
     private void startMessagingBroker(int port) {
