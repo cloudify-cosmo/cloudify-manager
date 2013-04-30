@@ -25,6 +25,8 @@
         <testng.version>6.8</testng.version>
         <jersey.version>1.8</jersey.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
+        <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
+        <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
     </properties>
 
     <dependencies>
@@ -98,12 +100,13 @@
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>message-broker</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${cosmo.message-broker.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>message-client</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${cosmo.message-client.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
