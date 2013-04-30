@@ -16,20 +16,17 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
 
 /**
- * TODO javadoc.
+ * Used by {@link Condition} to access the current state of the map.
+ * Some of the map keys are locked while this object is handled by the {@link Condition}.
  *
  * @since 0.1
  * @author Dan Kilman
  */
-public interface StateCacheSnapshot {
+public interface StateCacheView {
 
     Object get(String key);
 
     boolean containsKey(String key);
-
-    ImmutableMap<String, Object> asMap();
-
 }

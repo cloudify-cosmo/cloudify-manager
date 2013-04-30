@@ -16,23 +16,22 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.util.Map;
 
 /**
- * TODO javadoc.
+ * A thread safe implementation of {@link StateCacheView},
+ * that uses the specified lock object.
  *
  * @since 0.1
  * @author Dan Kilman
  */
-class ConditionStateCacheSnapshot implements StateCacheSnapshot {
+class SynchronizedStateCacheView implements StateCacheView {
 
     // all operations are synchronized by 'cacheMapLock'
     private final Map<String, Object> cache;
     private final Object cacheMapLock;
 
-    public ConditionStateCacheSnapshot(Map<String, Object> cache, Object cacheMapLock) {
+    public SynchronizedStateCacheView(Map<String, Object> cache, Object cacheMapLock) {
         this.cache = cache;
         this.cacheMapLock = cacheMapLock;
     }
@@ -49,10 +48,5 @@ class ConditionStateCacheSnapshot implements StateCacheSnapshot {
         synchronized (cacheMapLock) {
             return cache.containsKey(key);
         }
-    }
-
-    @Override
-    public ImmutableMap<String, Object> asMap() {
-        throw new UnsupportedOperationException("condition snapshot cannot be viewed as an immutable map");
     }
 }
