@@ -16,22 +16,19 @@
 
 class JavaClassParticipant < Ruote::Participant
   def on_workitem
-    puts '--- JavaClassParticipant invocation:'
-
-    puts 'workitem.fields:'
-    puts workitem.fields
+    $logger.debug('--- JavaClassParticipant invocation:')
+    $logger.debug('workitem.fields: {}', workitem.fields)
 
     begin
       java_class_name = workitem.params['class']
       java_participant = eval("#{java_class_name}.new")
       java_participant.execute(workitem.fields)
     rescue Exception => e
-      puts "Exception: #{e.message}"
-      puts "Trace: #{e.backtrace.inspect}"
+      $logger.debug('Exception: {}', e.message)
+      $logger.debug('Trace: {}', e.backtrace.inspect)
     end
 
-    puts '--- DONE.'
-    puts "\n"
+    $logger.debug('--- DONE.')
 
     reply
   end

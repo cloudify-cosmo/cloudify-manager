@@ -36,7 +36,6 @@ class RestGetParticipant < Ruote::Participant
       if delta >= timeout.to_i
         break
       end
-      puts "rest_get.#{id}:: waiting for response to be: '#{expected}'"
       sleep(1)
     end
     if success

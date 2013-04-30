@@ -35,7 +35,7 @@ class StateCacheParticipant < Ruote::Participant
                                                                   callback)
       put('callback_uid', callback_uid)
     rescue Exception => e
-      puts "#{e.message}"
+      $logger.debug(e.message)
       raise
     end
   end
@@ -46,7 +46,7 @@ class StateCacheParticipant < Ruote::Participant
       callback_uid = get('callback_uid')
       state_cache.remove_callback(callback_uid)
     rescue Exception => e
-      puts "#{e.message}"
+      $logger.debug(e.message)
       raise
     end
   end

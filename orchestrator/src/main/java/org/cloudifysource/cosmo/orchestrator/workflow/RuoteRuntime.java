@@ -66,6 +66,7 @@ public class RuoteRuntime {
             updateLibraryPath(container, "ruote-gems/gems");
             updateLibraryPath(container, "scripts");
             container.put("$ruote_properties", properties != null ? properties : Maps.newHashMap());
+            container.put("$logger", LOGGER);
             Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
             Object dashboard = container.callMethod(receiver, CREATE_DASHBOARD_METHOD_NAME);
             return new RuoteRuntime(container, receiver, dashboard);
