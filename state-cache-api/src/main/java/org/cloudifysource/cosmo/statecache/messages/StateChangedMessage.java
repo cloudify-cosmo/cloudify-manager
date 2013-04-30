@@ -15,6 +15,10 @@
  ******************************************************************************/
 package org.cloudifysource.cosmo.statecache.messages;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+
+import java.util.Map;
+
 /**
  * Message sent from cep to StateCache that indicate there was a state change.
  * @author itaif
@@ -23,7 +27,15 @@ package org.cloudifysource.cosmo.statecache.messages;
 public class StateChangedMessage {
 
     private String resourceId;
-    private boolean reachable;
+    private Map<String, Object> state;
+
+    public Map<String, Object> getState() {
+        return state;
+    }
+
+    public void setState(Map<String, Object> state) {
+        this.state = state;
+    }
 
     public String getResourceId() {
         return resourceId;
@@ -33,11 +45,8 @@ public class StateChangedMessage {
         this.resourceId = resourceId;
     }
 
-    public boolean isReachable() {
-        return reachable;
-    }
-
-    public void setReachable(boolean reachable) {
-        this.reachable = reachable;
+    @JsonAnySetter
+    protected void handleUnknownProperty(String key, Object value) {
+        state.put(key, value);
     }
 }

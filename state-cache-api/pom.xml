@@ -20,6 +20,13 @@
     <artifactId>state-cache-api</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.1.4</version>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>

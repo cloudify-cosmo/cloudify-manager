@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
@@ -26,6 +28,8 @@ import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Tests integration of {@link StateCache} with messaging consumer.
@@ -38,18 +42,40 @@ public class StateCacheMessagingIT {
     private MessageBrokerServer broker;
     private URI inputUri;
     private MessageProducer producer;
-    private RealTimeStateCache cache;
+    private StateCacheReader cache;
 
     @Test(timeOut = 5000)
-    public void testNodeOk() {
-        StateChangedMessage message = new StateChangedMessage();
-        message.setResourceId("node_1");
-        message.setReachable(true);
+    public void testNodeOk() throws InterruptedException {
+        final String key = "node_1";
+        final StateChangedMessage message = newStateChangedMessage(key);
         producer.send(inputUri, message);
-        //TODO: complete test
-        //ListenableFuture future = cache.waitForState();
-        //future.get();
-        //check node state is reachable
+        final CountDownLatch success = new CountDownLatch(1);
+        String subscriptionId = cache.subscribeToKeyValueStateChanges(null, null, key, newState(),
+                new StateChangeCallback() {
+            @Override
+            public void onStateChange(Object receiver, Object context, StateCache cache,
+                                      ImmutableMap<String, Object> newSnapshot) {
+                Map<String,Object> receivedState = (Map<String, Object>) newSnapshot.get(key);
+                if ((Boolean) receivedState.get("reachable")) {
+                    success.countDown();
+                }
+            }
+        });
+        success.await();
+        cache.removeCallback(subscriptionId);
+    }
+
+    private StateChangedMessage newStateChangedMessage(String resourceId) {
+        final StateChangedMessage message = new StateChangedMessage();
+        message.setResourceId(resourceId);
+        message.setState(newState());
+        return message;
+    }
+
+    private Map<String, Object> newState() {
+        Map<String, Object> state = Maps.newLinkedHashMap();
+        state.put("reachable", true);
+        return state;
     }
 
 

@@ -102,7 +102,7 @@ public class StateCacheTest {
                 value).build());
     }
 
-    @Test
+    @Test(timeOut = 5000)
     public void testWaitForKeyValueState() throws InterruptedException {
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
         final AtomicBoolean stateChangedProperly = new AtomicBoolean(false);
@@ -128,7 +128,7 @@ public class StateCacheTest {
 
         stateCache.put(key, value);
 
-        Assert.assertTrue(callbackCalledLatch.await(5, TimeUnit.SECONDS));
+        callbackCalledLatch.await();
         Assert.assertTrue(stateChangedProperly.get());
     }
 
