@@ -51,7 +51,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @since 0.1
  */
 
-public class ResourceMonitorServerTest {
+public class ResourceMonitorServerIT {
 
     private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
     public static final String AGENT_ID = "agent_1";
@@ -75,21 +75,21 @@ public class ResourceMonitorServerTest {
     private List<Throwable> failures;
     private boolean mockAgentFailed;
 
-    @Test(groups = "integration")
+    @Test
     public void testAgentUnreachable() throws InterruptedException {
         mockAgentFailed = true;
         boolean reachable = monitorAgentState();
         assertThat(reachable).isFalse();
     }
 
-    @Test(groups = "integration")
+    @Test
     public void testAgentReachable() throws InterruptedException {
         mockAgentFailed = false;
         boolean reachable = monitorAgentState();
         assertThat(reachable).isTrue();
     }
 
-    @BeforeMethod(groups = "integration")
+    @BeforeMethod
     @Parameters({"port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
@@ -134,7 +134,7 @@ public class ResourceMonitorServerTest {
         }
     }
 
-    @AfterMethod(alwaysRun = true, groups = "integration")
+    @AfterMethod(alwaysRun = true)
     public void stopServer() {
         consumer.removeListener(listener);
         stopMonitoringServer();
