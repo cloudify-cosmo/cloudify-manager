@@ -22,6 +22,7 @@ import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
+import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage;
 
 import java.net.URI;
 
@@ -41,12 +42,12 @@ public class CloudResourceManager {
         Preconditions.checkNotNull(driver);
         this.driver = driver;
         if (consumer != null && uri != null) {
-            consumer.addListener(uri, new MessageConsumerListener<String>() {
+            consumer.addListener(uri, new MessageConsumerListener<CloudResourceMessage>() {
                 @Override
-                public void onMessage(URI uri, String message) {
+                public void onMessage(URI uri, CloudResourceMessage message) {
                     LOGGER.debug("Consumed message from broker: " + message);
-                    if ("start_machine".equals(message)) {
-                        startMachine();
+                    if ("start_machine".equals(message.getAction())) {
+                        startMachine(message.getId());
                     }
                 }
 
@@ -55,15 +56,16 @@ public class CloudResourceManager {
                 }
 
                 @Override
-                public Class<? extends String> getMessageClass() {
-                    return String.class;
+                public Class<? extends CloudResourceMessage> getMessageClass() {
+                    return CloudResourceMessage.class;
                 }
+
             });
         }
     }
 
-    private void startMachine() {
-        driver.startMachine(new MachineConfiguration("tomcat_node", "cosmo"));
+    private void startMachine(String id) {
+        driver.startMachine(new MachineConfiguration(id, "cosmo"));
     }
 
 }

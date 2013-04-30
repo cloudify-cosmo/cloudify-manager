@@ -113,6 +113,7 @@ public class StartTomcatNodeTest {
 
         // Execute workflow
         Map<String, Object> workitemFields = Maps.newHashMap();
+        workitemFields.put("id", "tomcat_node");
         workitemFields.put("resources", resources);
 
         Object wfid = workflow.asyncExecute(workitemFields);

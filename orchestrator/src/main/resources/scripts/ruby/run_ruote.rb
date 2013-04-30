@@ -53,7 +53,7 @@ end
 def execute_ruote_workflow(dashboard, workflow, workitem_fields, wait_for_workflow = true)
   wfid = dashboard.launch(workflow, to_map(workitem_fields))
   if wait_for_workflow
-    dashboard.wait_for(wfid)
+    wait_for_workflow(dashboard, wfid)
   else
     wfid
   end
