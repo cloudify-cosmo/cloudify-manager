@@ -39,8 +39,6 @@ end
 def create_dashboard
   dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
   dashboard.register_participant 'java', JavaClassParticipant
-  dashboard.register_participant 'rest_get', RestGetParticipant
-  dashboard.register_participant 'rest_put', RestPutParticipant
   dashboard.register_participant 'state', StateCacheParticipant
   dashboard.register_participant 'resource', ResourceManagerParticipant
   dashboard

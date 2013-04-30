@@ -75,12 +75,6 @@
         </dependency>
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>kvstore</artifactId>
-            <scope>test</scope>
-            <version>0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>state-cache</artifactId>
             <scope>test</scope>
             <version>0.1-SNAPSHOT</version>
