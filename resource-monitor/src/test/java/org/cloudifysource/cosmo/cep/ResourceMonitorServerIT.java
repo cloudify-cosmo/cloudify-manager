@@ -154,7 +154,7 @@ public class ResourceMonitorServerIT {
             message = stateChangedMessages.poll(1, TimeUnit.SECONDS);
             checkFailures();
         }
-        return message.isReachable();
+        return (Boolean) message.getState().get("reachable");
     }
 
     private void checkFailures() {

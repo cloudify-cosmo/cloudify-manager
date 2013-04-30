@@ -55,7 +55,7 @@ when
 then
     message = new StateChangedMessage()
     message.resourceId = $agentId
-    message.reachable = false
+    message.state.reachable = false
     channels["output"].send( message );
 end
 
@@ -67,6 +67,6 @@ when
 then
     message = new StateChangedMessage()
     message.resourceId = $agentId
-    message.reachable = true
+    message.state.reachable = true
     channels["output"].send( message );
 end
