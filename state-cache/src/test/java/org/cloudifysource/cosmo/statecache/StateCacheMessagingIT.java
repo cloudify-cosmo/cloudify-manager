@@ -52,16 +52,16 @@ public class StateCacheMessagingIT {
         producer.send(inputUri, message).get();
         final CountDownLatch success = new CountDownLatch(1);
         String subscriptionId = cache.subscribeToKeyValueStateChanges(null, null, key, newState(),
-                new StateChangeCallback() {
-            @Override
-            public void onStateChange(Object receiver, Object context, StateCache cache,
-                                      ImmutableMap<String, Object> newSnapshot) {
-                Map<String,Object> receivedState = (Map<String, Object>) newSnapshot.get(key);
-                if ((Boolean) receivedState.get("reachable")) {
-                    success.countDown();
+            new StateChangeCallback() {
+                @Override
+                public void onStateChange(Object receiver, Object context, StateCache cache,
+                                          ImmutableMap<String, Object> newSnapshot) {
+                    Map<String, Object> receivedState = (Map<String, Object>) newSnapshot.get(key);
+                    if ((Boolean) receivedState.get("reachable")) {
+                        success.countDown();
+                    }
                 }
-            }
-        });
+            });
         success.await();
         cache.removeCallback(subscriptionId);
     }
@@ -94,7 +94,7 @@ public class StateCacheMessagingIT {
                 new RealTimeStateCacheConfiguration();
         config.setMessageTopic(inputUri);
         cache = new RealTimeStateCache(config);
-        ((RealTimeStateCache)cache).start();
+        ((RealTimeStateCache) cache).start();
     }
 
     @AfterMethod(alwaysRun = true)
@@ -104,7 +104,7 @@ public class StateCacheMessagingIT {
     }
 
     private void stopStateCache() {
-        ((RealTimeStateCache)cache).stop();
+        ((RealTimeStateCache) cache).stop();
     }
 
     private void startMessagingBroker(int port) {

@@ -57,7 +57,7 @@ public class JsonTest {
 
         final MockDynamicMessage message = new MockDynamicMessage();
         final HashMap<String, Object> state = new HashMap<String, Object>();
-        state.put("reachable",true);
+        state.put("reachable", true);
         message.setState(state);
         final String json = mapper.writerWithType(message.getClass()).writeValueAsString(message);
         final MockDynamicMessage message2 = (MockDynamicMessage) mapper.readValue(json, Object.class);

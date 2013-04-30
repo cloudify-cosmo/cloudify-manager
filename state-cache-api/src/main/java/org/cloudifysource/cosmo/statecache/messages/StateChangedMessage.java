@@ -17,7 +17,6 @@ package org.cloudifysource.cosmo.statecache.messages;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import sun.applet.resources.MsgAppletViewer_sv;
 
 import java.util.HashMap;
 import java.util.Map;
