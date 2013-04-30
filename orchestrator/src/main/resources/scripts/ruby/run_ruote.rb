@@ -61,4 +61,9 @@ end
 
 def wait_for_workflow(dashboard, wfid)
   dashboard.wait_for(wfid)
+  status = dashboard.process(wfid)
+  unless status.nil? or status.errors.nil?
+    raise java.lang.RuntimeException.new(status.errors.first.message)
+  end
+
 end
