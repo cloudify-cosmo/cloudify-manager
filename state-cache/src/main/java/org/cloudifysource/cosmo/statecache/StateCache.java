@@ -41,20 +41,20 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author Dan Kilman
  * @since 0.1
  */
-public class StateCache {
+public class StateCache implements StateCacheReader {
 
     private final Object cacheMapLock = new Object();
     private final NamedLockProvider lockProvider = new NamedLockProvider();
 
     private final Map<String, Object> cache;
-    private final ConditionStateCacheSnapshot conditionStateCacheSnapshot;
+    private final SynchronizedStateCacheView conditionStateCacheView;
     private final ExecutorService executorService;
     private final ConcurrentMap<String, CallbackContext> listeners;
 
     private StateCache(Map<String, Object> initialState) {
         this.executorService = Executors.newSingleThreadExecutor();
         this.cache = Maps.newHashMap(initialState);
-        this.conditionStateCacheSnapshot = new ConditionStateCacheSnapshot(cache, cacheMapLock);
+        this.conditionStateCacheView = new SynchronizedStateCacheView(cache, cacheMapLock);
 
         // Concurrent - listeners are queried and added on subscribeToStateChanges
         //              listeners are iterated and removed on put
@@ -82,7 +82,7 @@ public class StateCache {
             lockForKey.writeLock().unlock();
         }
 
-        StateCacheSnapshot snapshot = null;
+        ImmutableMap<String, Object> snapshot = null;
 
         Iterator<Map.Entry<String, CallbackContext>> iterator = listeners.entrySet().iterator();
 
@@ -93,7 +93,7 @@ public class StateCache {
             Condition condition = callbackContext.getCondition();
 
             // if condition doesn't apply, move to next one
-            if (!condition.applies(conditionStateCacheSnapshot)) {
+            if (!condition.applies(conditionStateCacheView)) {
                 continue;
             }
 
@@ -104,16 +104,16 @@ public class StateCache {
 
             iterator.remove();
 
-            submitStateChangeNotificationTask(callbackContext, snapshot.asMap());
+            submitStateChangeNotificationTask(callbackContext, snapshot);
         }
 
         return previous;
 
     }
 
-    public StateCacheSnapshot snapshot() {
+    public ImmutableMap<String, Object> snapshot() {
         synchronized (cacheMapLock) {
-            return new ExternalStateCacheSnapshot(ImmutableMap.copyOf(cache));
+            return ImmutableMap.copyOf(cache);
         }
     }
 
@@ -155,8 +155,8 @@ public class StateCache {
 
             synchronized (cacheMapLock) {
                 // if condition already applies, submit notification task now and return.
-                if (condition.applies(conditionStateCacheSnapshot)) {
-                    submitStateChangeNotificationTask(callbackContext, snapshot().asMap());
+                if (condition.applies(conditionStateCacheView)) {
+                    submitStateChangeNotificationTask(callbackContext, snapshot());
                     return callbackUID;
                 }
             }

@@ -43,7 +43,7 @@ public class RouteWorkflowWithStateCacheTest {
         StateCacheReader cacheReader = new DefaultStateCacheReader(cache);
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cacheReader.snapshot().asMap();
+        ImmutableMap<String, Object> cacheSnapshot = cacheReader.snapshot();
 
         // insert state into jruby runtime properties so that state participant can access it
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
@@ -103,7 +103,7 @@ public class RouteWorkflowWithStateCacheTest {
         StateCacheReader cacheReader = new DefaultStateCacheReader(cache);
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cacheReader.snapshot().asMap();
+        ImmutableMap<String, Object> cacheSnapshot = cacheReader.snapshot();
 
         // insert state into jruby runtime properties so that state participant can access it
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
