@@ -32,7 +32,7 @@ import java.net.URI;
  * @author itaif
  * @since 0.1
  */
-public class StateCacheMessagingIntegrationTest {
+public class StateCacheMessagingIT {
 
     // message broker that isolates server
     private MessageBrokerServer broker;
