@@ -14,7 +14,6 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-require 'participants/rest_participants'
 require 'participants/java_participant'
 require 'participants/state_cache_participant'
 require 'participants/resource_manager'

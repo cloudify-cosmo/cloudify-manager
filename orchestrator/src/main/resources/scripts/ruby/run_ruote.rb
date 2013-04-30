@@ -39,8 +39,6 @@ end
 def create_dashboard
   dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
   dashboard.register_participant 'java', JavaClassParticipant
-  dashboard.register_participant 'rest_get', RestGetParticipant
-  dashboard.register_participant 'rest_put', RestPutParticipant
   dashboard.register_participant 'state', StateCacheParticipant
   dashboard.register_participant 'resource', ResourceManagerParticipant
   dashboard
@@ -53,7 +51,7 @@ end
 def execute_ruote_workflow(dashboard, workflow, workitem_fields, wait_for_workflow = true)
   wfid = dashboard.launch(workflow, to_map(workitem_fields))
   if wait_for_workflow
-    dashboard.wait_for(wfid)
+    wait_for_workflow(dashboard, wfid)
   else
     wfid
   end
@@ -61,4 +59,9 @@ end
 
 def wait_for_workflow(dashboard, wfid)
   dashboard.wait_for(wfid)
+  status = dashboard.process(wfid)
+  unless status.nil? or status.errors.nil?
+    raise java.lang.RuntimeException.new(status.errors.first.message)
+  end
+
 end
