@@ -37,31 +37,41 @@ public class CloudResourceProvisioner {
     private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceProvisioner.class);
 
     private final CloudDriver driver;
+    private final MessageConsumer consumer;
+    private final URI uri;
 
-    public CloudResourceProvisioner(final CloudDriver driver, URI uri, MessageConsumer consumer) {
+    public CloudResourceProvisioner(final CloudDriver driver, URI uri) {
         Preconditions.checkNotNull(driver);
+        Preconditions.checkNotNull(uri);
+        this.uri = uri;
         this.driver = driver;
-        if (consumer != null && uri != null) {
-            consumer.addListener(uri, new MessageConsumerListener<CloudResourceMessage>() {
-                @Override
-                public void onMessage(URI uri, CloudResourceMessage message) {
-                    LOGGER.debug("Consumed message from broker: " + message);
-                    if ("start_machine".equals(message.getAction())) {
-                        startMachine(message.getId());
-                    }
-                }
+        this.consumer = new MessageConsumer();
+    }
 
-                @Override
-                public void onFailure(Throwable t) {
+    public void start() {
+        consumer.addListener(uri, new MessageConsumerListener<CloudResourceMessage>() {
+            @Override
+            public void onMessage(URI uri, CloudResourceMessage message) {
+                LOGGER.debug("Consumed message from broker: " + message);
+                if ("start_machine".equals(message.getAction())) {
+                    startMachine(message.getId());
                 }
+            }
 
-                @Override
-                public Class<? extends CloudResourceMessage> getMessageClass() {
-                    return CloudResourceMessage.class;
-                }
+            @Override
+            public void onFailure(Throwable t) {
+            }
 
-            });
-        }
+            @Override
+            public Class<? extends CloudResourceMessage> getMessageClass() {
+                return CloudResourceMessage.class;
+            }
+
+        });
+    }
+
+    public void stop() {
+        consumer.removeAllListeners();
     }
 
     private void startMachine(String id) {

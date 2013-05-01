@@ -51,13 +51,12 @@ import java.util.concurrent.TimeUnit;
 public class StartTomcatNodeTest {
 
     private MessageBrokerServer broker;
-    private MessageConsumer consumer;
     private MessageProducer producer;
     private URI uri;
     private String key = "resource-manager";
     private CloudDriver driver;
     private File vagrantRoot;
-    private CloudResourceProvisioner manager;
+    private CloudResourceProvisioner provisioner;
     private StateCache stateCache;
     private DefaultStateCacheReader stateCacheReader;
 
@@ -66,13 +65,13 @@ public class StartTomcatNodeTest {
     public void startMessageBrokerServer(@Optional("8080") int port) {
         broker = new MessageBrokerServer();
         broker.start(port);
-        consumer = new MessageConsumer();
         producer = new MessageProducer();
         uri = URI.create("http://localhost:" + port);
         vagrantRoot = Files.createTempDir();
         driver = new VagrantCloudDriver(vagrantRoot);
         URI cloudResourceUri = uri.resolve("/" + key);
-        manager = new CloudResourceProvisioner(driver, cloudResourceUri, consumer);
+        provisioner = new CloudResourceProvisioner(driver, cloudResourceUri);
+        provisioner.start();
         stateCache = new StateCache.Builder().build();
         stateCacheReader = new DefaultStateCacheReader(stateCache);
     }
@@ -81,8 +80,9 @@ public class StartTomcatNodeTest {
     public void stopMessageBrokerServer() {
         if (driver != null)
             driver.terminateMachines();
+        if (provisioner != null)
+            provisioner.stop();
         vagrantRoot.delete();
-        consumer.removeAllListeners();
         if (broker != null) {
             broker.stop();
         }

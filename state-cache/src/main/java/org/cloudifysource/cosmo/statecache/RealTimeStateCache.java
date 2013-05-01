@@ -37,6 +37,7 @@ public class RealTimeStateCache implements StateCacheReader {
     private final StateCache stateCache;
 
     public RealTimeStateCache(RealTimeStateCacheConfiguration config) {
+
         this.consumer = new MessageConsumer();
         this.messageTopic = config.getMessageTopic();
         this.stateCache = new StateCache.Builder().build();
@@ -49,7 +50,7 @@ public class RealTimeStateCache implements StateCacheReader {
                 public void onMessage(URI uri, Object message) {
                     if (message instanceof StateChangedMessage) {
                         StateChangedMessage update = (StateChangedMessage) message;
-                        stateCache.put(update.getResourceId(), update);
+                        stateCache.put(update.getResourceId(), update.getState());
                     } else {
                         throw new IllegalArgumentException("Cannot handle message " + message);
                     }
