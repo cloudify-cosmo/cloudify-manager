@@ -32,13 +32,13 @@ import java.net.URI;
  * @author Idan Moyal
  * @since 0.1
  */
-public class CloudResourceManager {
+public class CloudResourceProvisioner {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceProvisioner.class);
 
     private final CloudDriver driver;
 
-    public CloudResourceManager(final CloudDriver driver, URI uri, MessageConsumer consumer) {
+    public CloudResourceProvisioner(final CloudDriver driver, URI uri, MessageConsumer consumer) {
         Preconditions.checkNotNull(driver);
         this.driver = driver;
         if (consumer != null && uri != null) {

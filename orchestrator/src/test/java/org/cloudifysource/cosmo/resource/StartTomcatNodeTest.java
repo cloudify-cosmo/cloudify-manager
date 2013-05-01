@@ -57,7 +57,7 @@ public class StartTomcatNodeTest {
     private String key = "resource-manager";
     private CloudDriver driver;
     private File vagrantRoot;
-    private CloudResourceManager manager;
+    private CloudResourceProvisioner manager;
     private StateCache stateCache;
     private DefaultStateCacheReader stateCacheReader;
 
@@ -72,7 +72,7 @@ public class StartTomcatNodeTest {
         vagrantRoot = Files.createTempDir();
         driver = new VagrantCloudDriver(vagrantRoot);
         URI cloudResourceUri = uri.resolve("/" + key);
-        manager = new CloudResourceManager(driver, cloudResourceUri, consumer);
+        manager = new CloudResourceProvisioner(driver, cloudResourceUri, consumer);
         stateCache = new StateCache.Builder().build();
         stateCacheReader = new DefaultStateCacheReader(stateCache);
     }

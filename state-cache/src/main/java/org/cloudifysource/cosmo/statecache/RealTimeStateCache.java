@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.collect.ImmutableMap;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
@@ -29,14 +30,13 @@ import java.net.URI;
  * @author itaif
  * @since 0.1
  */
-public class RealTimeStateCache {
+public class RealTimeStateCache implements StateCacheReader {
 
     private final MessageConsumer consumer;
     private final URI messageTopic;
     private final StateCache stateCache;
 
     public RealTimeStateCache(RealTimeStateCacheConfiguration config) {
-
         this.consumer = new MessageConsumer();
         this.messageTopic = config.getMessageTopic();
         this.stateCache = new StateCache.Builder().build();
@@ -75,4 +75,25 @@ public class RealTimeStateCache {
         //TODO: Logging framework
         System.err.println(t);
     }
+
+    @Override
+    public ImmutableMap<String, Object> snapshot() {
+        return stateCache.snapshot();
+    }
+
+    @Override
+    public String subscribeToKeyValueStateChanges(Object receiver,
+                                                  Object context,
+                                                  String key,
+                                                  Object value,
+                                                  StateChangeCallback callback) {
+        return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, value, callback);
+    }
+
+    @Override
+    public void removeCallback(String callbackUID) {
+        stateCache.removeCallback(callbackUID);
+    }
+
+
 }
