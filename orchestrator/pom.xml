@@ -21,8 +21,6 @@
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
     <properties>
-        <jetty.version>8.1.5.v20120716</jetty.version>
-        <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
         <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
@@ -33,11 +31,6 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>14.0</version>
-        </dependency>
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
@@ -78,9 +71,23 @@
 
         <!-- Tests -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.5</version>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easytesting</groupId>
+            <artifactId>fest-assert-core</artifactId>
+            <version>2.0M8</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>logger</artifactId>
+            <version>${cosmo.logger.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -88,18 +95,6 @@
             <artifactId>state-cache</artifactId>
             <scope>test</scope>
             <version>${cosmo.state-cache.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>6.8</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>

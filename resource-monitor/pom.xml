@@ -21,7 +21,6 @@
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
     <properties>
-        <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
         <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
@@ -31,18 +30,6 @@
         <drools.version>5.5.0.Final</drools.version>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>${testng.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -57,17 +44,6 @@
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>message-client</artifactId>
             <version>${cosmo.message-client.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.6.6</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.drools</groupId>
@@ -96,15 +72,28 @@
         </dependency>
         <!-- Test -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <version>1.6.6</version>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>logger</artifactId>
+            <version>${cosmo.logger.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.8</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
             <artifactId>fest-assert-core</artifactId>
             <version>2.0M8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.9.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
