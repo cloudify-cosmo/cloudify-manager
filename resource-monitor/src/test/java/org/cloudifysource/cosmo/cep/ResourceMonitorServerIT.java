@@ -95,7 +95,7 @@ public class ResourceMonitorServerIT {
         outputTopic = URI.create("http://localhost:" + port + "/output/");
         producer = new MessageProducer();
         consumer = new MessageConsumer();
-        agent = new MockAgent(producer, consumer, inputTopic);
+        agent = new MockAgent(producer, inputTopic);
         startResourceMonitor();
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
