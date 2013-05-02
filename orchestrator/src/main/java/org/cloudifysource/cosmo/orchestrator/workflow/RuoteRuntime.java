@@ -85,7 +85,8 @@ public class RuoteRuntime {
     public Object executeWorkflow(RuoteWorkflow workflow, Map<String, Object> workitemFields,
                                   boolean waitForWorkflow) {
         try {
-            LOGGER.debug("Executing workflow with workitem.fields: {}", workitemFields);
+            LOGGER.debug("Executing workflow: \n'{}'\n with workitem.fields: {}", workflow.getParsedWorkflow(),
+                    workitemFields);
             return container.callMethod(receiver, EXECUTE_WORKFLOW_METHOD_NAME, dashboard, workflow.getParsedWorkflow(),
                     workitemFields, waitForWorkflow);
         } catch (Exception e) {
