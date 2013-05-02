@@ -23,31 +23,16 @@
     <properties>
         <jetty.version>8.1.5.v20120716</jetty.version>
         <testng.version>6.8</testng.version>
-        <jersey.version>1.8</jersey.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
         <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
+        <cosmo.resource-monitor-api.version>0.1-SNAPSHOT</cosmo.resource-monitor-api.version>
+        <!-- Tests -->
+        <cosmo.resource-monitor.version>0.1-SNAPSHOT</cosmo.resource-monitor.version>
+        <cosmo.state-cache.version>0.1-SNAPSHOT</cosmo.state-cache.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-client</artifactId>
-            <version>${jersey.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>6.8</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -66,24 +51,12 @@
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>resource-monitor-api</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${cosmo.resource-monitor-api.version}</version>
         </dependency>
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>logger</artifactId>
             <version>${cosmo.logger.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>state-cache</artifactId>
-            <scope>test</scope>
-            <version>0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ning</groupId>
-            <artifactId>async-http-client</artifactId>
-            <version>1.7.12</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
@@ -102,21 +75,51 @@
             <artifactId>message-client</artifactId>
             <version>${cosmo.message-client.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.1.3</version>
-        </dependency>
+
+        <!-- Tests -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.5</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>state-cache</artifactId>
+            <scope>test</scope>
+            <version>${cosmo.state-cache.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>resource-monitor</artifactId>
+            <version>${cosmo.resource-monitor.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>resource-monitor</artifactId>
+            <version>${cosmo.resource-monitor.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>state-cache</artifactId>
+            <version>${cosmo.state-cache.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
         </dependency>
     </dependencies>
     <build>
