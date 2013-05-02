@@ -59,6 +59,11 @@ public class RuoteWorkflow implements Workflow {
         }
     }
 
+    public static RuoteWorkflow createFromString(String workflow, RuoteRuntime runtime) {
+        Preconditions.checkNotNull(workflow);
+        return new RuoteWorkflow(workflow, runtime);
+    }
+
     private RuoteWorkflow(String workflow, RuoteRuntime runtime) {
         this.runtime = runtime;
         this.parsedWorkflow = runtime.parseWorkflow(workflow);

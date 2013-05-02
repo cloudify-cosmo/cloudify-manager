@@ -17,21 +17,21 @@
 class ResourceManagerParticipant < Ruote::Participant
   def on_workitem
     begin
-      id = workitem.fields['id']
+      resource_id = workitem.fields['resource_id']
       action = workitem.params['action']
       producer = $ruote_properties['message_producer']
       broker_uri = $ruote_properties['broker_uri']
 
       $logger.debug('executing ResourceManagerParticipant [id={}, action={}, broker_uri={}]', id, action, broker_uri)
 
-      raise 'id is not set' unless not id.nil?
+      raise 'resource_id is not set' unless defined? resource_id and not resource_id.nil?
       raise "unknown action '#{action}'" if action != 'start_machine'
       raise 'message_producer not defined' unless defined? producer
       raise 'broker_uri not defined' unless defined? broker_uri
 
-      uri = broker_uri.resolve('/resource-manager')
-
+      uri = broker_uri.resolve('resource-manager')
       message = org.cloudifysource.cosmo.resource.messages.CloudResourceMessage.new(id, action)
+
       producer.send(uri, message)
 
       reply

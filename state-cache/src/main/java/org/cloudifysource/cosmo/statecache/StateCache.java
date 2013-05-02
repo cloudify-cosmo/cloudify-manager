@@ -190,8 +190,8 @@ public class StateCache implements StateCacheReader {
     }
 
     /**
-     * @since 0.1
      * @author Dan Kilman
+     * @since 0.1
      */
     public static class Builder {
         private Map<String, Object> initialState;

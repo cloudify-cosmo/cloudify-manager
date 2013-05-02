@@ -26,7 +26,7 @@ import java.net.URI;
  */
 public class RealTimeStateCacheConfiguration {
 
-    URI messageTopic;
+    private URI messageTopic;
 
     public URI getMessageTopic() {
         return messageTopic;
