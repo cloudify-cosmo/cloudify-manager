@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
+import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
@@ -35,6 +36,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
+import sun.management.resources.agent;
 
 import java.net.URI;
 import java.util.Date;
@@ -54,37 +56,35 @@ import static org.fest.assertions.api.Assertions.assertThat;
 public class ResourceMonitorServerIT {
 
     private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
-    public static final String AGENT_ID = "agent_1";
+    private MessageConsumerListener<Object> listener;
+    private BlockingQueue<StateChangedMessage> stateChangedMessages;
+    private List<Throwable> failures;
 
     // component being tested
-    private ResourceMonitorServer server;
+    private ResourceMonitorServer resourceMonitor;
 
-    // message broker that isolates server
+    // message broker that isolates resourceMonitor
     private MessageBrokerServer broker;
 
-    // receives messages from server
+    // receives messages from resourceMonitor
     private MessageConsumer consumer;
 
-    // pushes messages to server
+    // pushes messages to resourceMonitor
     private MessageProducer producer;
 
     private URI inputTopic;
     private URI outputTopic;
-    private MessageConsumerListener<Object> listener;
-    private BlockingQueue<StateChangedMessage> stateChangedMessages;
-    private List<Throwable> failures;
-    private boolean mockAgentFailed;
+    private MockAgent agent;
 
     @Test
     public void testAgentUnreachable() throws InterruptedException {
-        mockAgentFailed = true;
+        agent.fail();
         boolean reachable = monitorAgentState();
         assertThat(reachable).isFalse();
     }
 
     @Test
     public void testAgentReachable() throws InterruptedException {
-        mockAgentFailed = false;
         boolean reachable = monitorAgentState();
         assertThat(reachable).isTrue();
     }
@@ -97,6 +97,8 @@ public class ResourceMonitorServerIT {
         outputTopic = URI.create("http://localhost:" + port + "/output/");
         producer = new MessageProducer();
         consumer = new MessageConsumer();
+        agent = new MockAgent(producer, consumer, inputTopic);
+        startResourceMonitor();
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<Object>() {
@@ -106,7 +108,7 @@ public class ResourceMonitorServerIT {
                 if (message instanceof StateChangedMessage) {
                     stateChangedMessages.add((StateChangedMessage) message);
                 } else if (message instanceof ProbeAgentMessage) {
-                    mockAgent((ProbeAgentMessage) message);
+                    ResourceMonitorServerIT.this.agent.onMessage((ProbeAgentMessage) message);
                 } else {
                     Assert.fail("Unexpected message: " + message);
                 }
@@ -123,21 +125,12 @@ public class ResourceMonitorServerIT {
             }
         };
         consumer.addListener(outputTopic, listener);
-        startMonitoringServer(port);
-    }
-
-    private void mockAgent(ProbeAgentMessage message) {
-        if (!mockAgentFailed) {
-            final AgentStatusMessage statusMessage = new AgentStatusMessage();
-            statusMessage.setAgentId(message.getAgentId());
-            producer.send(inputTopic, statusMessage);
-        }
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
         consumer.removeListener(listener);
-        stopMonitoringServer();
+        stopResourceMonitor();
         stopMessageBroker();
     }
 
@@ -146,7 +139,7 @@ public class ResourceMonitorServerIT {
         Agent agent = new Agent();
         agent.setAgentId("agent_1");
         //agent.setUnreachableTimeout("60s")
-        server.insertFact(agent);
+        resourceMonitor.insertFact(agent);
         //blocks until first StateChangedMessage
 
         StateChangedMessage message = null;
@@ -165,18 +158,18 @@ public class ResourceMonitorServerIT {
     }
 
     private SessionPseudoClock getClock() {
-        return ((SessionPseudoClock) server.getClock());
+        return ((SessionPseudoClock) resourceMonitor.getClock());
     }
 
-    private void startMonitoringServer(int port) {
+    private void startResourceMonitor() {
         ResourceMonitorServerConfiguration config =
                 new ResourceMonitorServerConfiguration();
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
         config.setDroolsResource(resource);
         config.setInputUri(inputTopic);
         config.setOutputUri(outputTopic);
-        server = new ResourceMonitorServer(config);
-        server.start();
+        resourceMonitor = new ResourceMonitorServer(config);
+        resourceMonitor.start();
     }
 
     private void startMessagingBroker(int port) {
@@ -191,9 +184,9 @@ public class ResourceMonitorServerIT {
         }
     }
 
-    private void stopMonitoringServer() {
-        if (server != null) {
-            server.stop();
+    private void stopResourceMonitor() {
+        if (resourceMonitor != null) {
+            resourceMonitor.stop();
         }
     }
 
