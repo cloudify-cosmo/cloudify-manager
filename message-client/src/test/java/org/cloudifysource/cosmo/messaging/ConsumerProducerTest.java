@@ -61,7 +61,7 @@ public class ConsumerProducerTest {
         server.start(port);
         consumer = new MessageConsumer();
         producer = new MessageProducer();
-        uri = URI.create("http://localhost:" + port);
+        uri = URI.create("http://localhost:" + port+"/");
     }
 
     @AfterMethod(alwaysRun = true)
@@ -74,14 +74,14 @@ public class ConsumerProducerTest {
 
     @Test
     public void testPubSub() throws InterruptedException, IOException, ExecutionException {
-        final URI uri = this.uri.resolve("/" + key);
+        final URI topic = this.uri.resolve(key);
 
         final BlockingQueue<MockMessage> messages = Queues.newArrayBlockingQueue(1);
-        consumer.addListener(uri, new MessageConsumerListener<MockMessage>() {
-            Integer lastI = null;
+        consumer.addListener(topic, new MessageConsumerListener<MockMessage>() {
+
             @Override
             public void onMessage(URI messageUri, MockMessage message) {
-                assertThat(messageUri).isEqualTo(uri);
+                assertThat(messageUri).isEqualTo(topic);
                 messages.add(message);
             }
 
@@ -99,7 +99,7 @@ public class ConsumerProducerTest {
         MockMessage message = new MockMessage();
         message.setValue(1);
 
-        producer.send(uri, message);
+        producer.send(topic, message).get();
 
         MockMessage message2 = null;
         while (message2 == null) {
@@ -107,6 +107,12 @@ public class ConsumerProducerTest {
             checkFailures();
         }
         assertThat(message).isEqualTo(message2);
+    }
+
+    @Test
+    public void testWrongSubTopic() throws InterruptedException, IOException, ExecutionException {
+        uri = uri.resolve("xxx/xxx/");
+        testPubSub();
     }
 
     private void checkFailures() {

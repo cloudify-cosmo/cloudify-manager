@@ -31,7 +31,7 @@ import javax.ws.rs.PathParam;
  * @author itaif
  * @since 0.1
  */
-@Path("/{topic}")
+@Path("/{topic:.*}")
 public class MessageBrokerServlet {
 
     @PathParam("topic")
