@@ -22,6 +22,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 
 import java.net.URI;
+import java.util.Map;
 
 /**
  * Holds a cache of the distributed system state. The state
@@ -37,7 +38,6 @@ public class RealTimeStateCache implements StateCacheReader {
     private final StateCache stateCache;
 
     public RealTimeStateCache(RealTimeStateCacheConfiguration config) {
-
         this.consumer = new MessageConsumer();
         this.messageTopic = config.getMessageTopic();
         this.stateCache = new StateCache.Builder().build();
@@ -50,7 +50,12 @@ public class RealTimeStateCache implements StateCacheReader {
                 public void onMessage(URI uri, Object message) {
                     if (message instanceof StateChangedMessage) {
                         StateChangedMessage update = (StateChangedMessage) message;
-                        stateCache.put(update.getResourceId(), update.getState());
+                        if (update.getState() != null) {
+                            for (Map.Entry<String, Object> entry : update.getState().entrySet()) {
+                                final String key = String.format("%s.%s", update.getResourceId(), entry.getKey());
+                                stateCache.put(key, entry.getValue());
+                            }
+                        }
                     } else {
                         throw new IllegalArgumentException("Cannot handle message " + message);
                     }

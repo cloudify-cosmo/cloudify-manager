@@ -14,6 +14,8 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
+java_import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
+
 class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChangeCallbackStub
 
   def onStateChange(participant, workitem, cache, new_snapshot)
@@ -30,13 +32,28 @@ class StateCacheParticipant < Ruote::Participant
       state_cache = $ruote_properties['state_cache']
       condition_key = workitem.params['key']
       condition_value = workitem.params['value']
+      resource_id = workitem.params['resource_id']
+
+      raise 'state_cache property is not set' unless defined? state_cache
+      raise 'key parameter is not defined for state cache participant' unless defined? condition_key and not
+        condition_key.to_s.empty?
+      raise 'value parameter is not defined for state cache participant' unless defined? condition_value and not
+        condition_value.to_s.empty?
+
+      if defined? resource_id and not resource_id.to_s.empty?
+        condition_key = "#{resource_id}.#{condition_key}"
+      end
+
       callback = RuoteStateChangeCallback.new
-      callback_uid = state_cache.subscribe_to_key_value_state_changes(self, workitem, condition_key, condition_value,
-                                                                  callback)
+      callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
+                                                                      workitem,
+                                                                      condition_key,
+                                                                      condition_value,
+                                                                      callback)
       put('callback_uid', callback_uid)
     rescue Exception => e
       $logger.debug(e.message)
-      raise
+      raise e
     end
   end
 

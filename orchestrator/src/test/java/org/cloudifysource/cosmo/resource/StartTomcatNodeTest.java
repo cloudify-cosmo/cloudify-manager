@@ -23,7 +23,6 @@ import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;

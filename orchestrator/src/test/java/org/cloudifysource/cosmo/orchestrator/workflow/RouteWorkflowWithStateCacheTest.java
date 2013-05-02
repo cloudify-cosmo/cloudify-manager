@@ -16,11 +16,13 @@
 
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.cloudifysource.cosmo.statecache.DefaultStateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheReader;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -156,6 +158,37 @@ public class RouteWorkflowWithStateCacheTest {
 
         // assert workflow after waiting on state change, includes the new state
         Assert.assertEquals("good", receivedWorkItemFields.get("general_status"));
+    }
+
+    @Test(timeOut = 15000)
+    public void testStateCacheParticipantWithResourceIdParameter() {
+        final String id = "node";
+        final String key = "reachable";
+        final String value = "true";
+        final StateCache cache = new StateCache.Builder().build();
+
+        final StateChangedMessage message = new StateChangedMessage();
+        final Map<String, Object> state = Maps.newHashMap();
+        state.put(key, "true");
+        message.setState(state);
+        cache.put(String.format("%s.%s", id, key), state.get(key));
+
+        final String flow =
+                "define flow\n" +
+                        "  state resource_id: \"$resource_id\", key: \"$key\", value: \"$value\"\n";
+
+        final Map<String, Object> props = Maps.newHashMap();
+        props.put("state_cache", cache);
+        final RuoteRuntime runtime = RuoteRuntime.createRuntime(props);
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
+        final Map<String, Object> workitem = Maps.newHashMap();
+        workitem.put("resource_id", id);
+        workitem.put("key", key);
+        workitem.put("value", value);
+
+        final Object workflowId = workflow.asyncExecute(workitem);
+
+        runtime.waitForWorkflow(workflowId);
     }
 
     @SuppressWarnings("unchecked")

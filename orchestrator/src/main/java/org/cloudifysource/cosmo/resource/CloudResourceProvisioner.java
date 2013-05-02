@@ -38,18 +38,18 @@ public class CloudResourceProvisioner {
 
     private final CloudDriver driver;
     private final MessageConsumer consumer;
-    private final URI uri;
+    private final URI inputUri;
 
-    public CloudResourceProvisioner(final CloudDriver driver, URI uri) {
+    public CloudResourceProvisioner(final CloudDriver driver, URI inputUri) {
         Preconditions.checkNotNull(driver);
-        Preconditions.checkNotNull(uri);
-        this.uri = uri;
+        Preconditions.checkNotNull(inputUri);
+        this.inputUri = inputUri;
         this.driver = driver;
         this.consumer = new MessageConsumer();
     }
 
     public void start() {
-        consumer.addListener(uri, new MessageConsumerListener<CloudResourceMessage>() {
+        consumer.addListener(inputUri, new MessageConsumerListener<CloudResourceMessage>() {
             @Override
             public void onMessage(URI uri, CloudResourceMessage message) {
                 LOGGER.debug("Consumed message from broker: " + message);
