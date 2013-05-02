@@ -61,7 +61,7 @@ public class ConsumerProducerTest {
         server.start(port);
         consumer = new MessageConsumer();
         producer = new MessageProducer();
-        uri = URI.create("http://localhost:" + port+"/");
+        uri = URI.create("http://localhost:" + port + "/");
     }
 
     @AfterMethod(alwaysRun = true)
