@@ -57,6 +57,10 @@ public class MessageConsumer {
 
     public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {
 
+        if(uri.getPath().contains("_")) {
+            throw new IllegalArgumentException("Due to a known issue uri cannot contain underscores");
+        }
+
         final RequestBuilder request =
                 client.newRequestBuilder()
                         .method(Request.METHOD.GET)
@@ -108,9 +112,6 @@ public class MessageConsumer {
                  * workaround for bug https://github.com/Atmosphere/wasync/issues/35
                  */
                 private boolean isNotHeader(MessageConsumerListener<T> listener, Object message) {
-                    if (!listener.getMessageClass().isAssignableFrom(message.getClass())) {
-                        return false;
-                    }
                     if (message instanceof FluentCaseInsensitiveStringsMap) {
                         return false;
                     }
