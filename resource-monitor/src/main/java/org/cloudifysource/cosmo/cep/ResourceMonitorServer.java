@@ -157,11 +157,9 @@ public class ResourceMonitorServer {
                 public void send(Object message) {
                     if (message instanceof ProbeAgentMessage) {
                         producer.send(agentTopic, message);
-                    }
-                    else if (message instanceof StateChangedMessage) {
+                    } else if (message instanceof StateChangedMessage) {
                         producer.send(stateCacheTopic, message);
-                    }
-                    else {
+                    } else {
                         throw new IllegalStateException("Don't know how to route message " + message);
                     }
                 }

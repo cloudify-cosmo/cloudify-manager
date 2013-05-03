@@ -74,7 +74,6 @@ public class MockAgent {
                 return Object.class;
             }
         };
-
     }
 
     public void start() {
