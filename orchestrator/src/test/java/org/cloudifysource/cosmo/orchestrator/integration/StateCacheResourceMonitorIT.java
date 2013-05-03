@@ -14,10 +14,14 @@
  * limitations under the License.
  *******************************************************************************/
 
-package org.cloudifysource.cosmo.orchestrator;
+package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import org.cloudifysource.cosmo.cep.Agent;
+import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
+import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
+import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
@@ -26,6 +30,8 @@ import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateChangeCallback;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.drools.io.Resource;
+import org.drools.io.ResourceFactory;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -45,31 +51,48 @@ import java.util.concurrent.ExecutionException;
  */
 public class StateCacheResourceMonitorIT {
 
+    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
+    public static final String AGENT_ID = "agent_1";
+    public static final String REACHABLE_PROP = "reachable";
+
     // message broker that isolates server
     private MessageBrokerServer broker;
-    private URI inputUri;
-    private MessageProducer producer;
-    private StateCacheReader cache;
 
-    @Test(timeOut = 5000)
+    //input for resourceMonitor and state cache
+    private URI resourceMonitorTopic;
+    private MessageProducer producer;
+    private URI stateCacheTopic;
+
+    //components under test
+    private StateCacheReader cache;
+    private ResourceMonitorServer resourceMonitor;
+    private MockAgent agent;
+    private URI agentTopic;
+
+
+    @Test()
     public void testNodeOk() throws InterruptedException, ExecutionException {
-        final String key = "node_1";
-        final StateChangedMessage message = newStateChangedMessage(key);
-        producer.send(inputUri, message).get();
+        Agent agent = new Agent();
+        agent.setAgentId(AGENT_ID);
+        resourceMonitor.insertFact(agent);
+
         final CountDownLatch success = new CountDownLatch(1);
-        String subscriptionId = cache.subscribeToKeyValueStateChanges(null, null, key, newState(),
+        String subscriptionId = cache.subscribeToKeyValueStateChanges(null, null,
+                AGENT_ID + "." + REACHABLE_PROP,
+                newState().get(REACHABLE_PROP),
                 new StateChangeCallback() {
                     @Override
                     public void onStateChange(Object receiver, Object context, StateCache cache,
                                               ImmutableMap<String, Object> newSnapshot) {
-                        Map<String, Object> receivedState = (Map<String, Object>) newSnapshot.get(key);
-                        if ((Boolean) receivedState.get("reachable")) {
+
+                        if ((Boolean) newSnapshot.get(AGENT_ID + "." + REACHABLE_PROP)) {
                             success.countDown();
                         }
                     }
                 });
         success.await();
         cache.removeCallback(subscriptionId);
+        this.agent.validateNoFailures();
     }
 
     private StateChangedMessage newStateChangedMessage(String resourceId) {
@@ -90,22 +113,39 @@ public class StateCacheResourceMonitorIT {
     @Parameters({"port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
-        inputUri = URI.create("http://localhost:" + port + "/input/");
+        URI uri = broker.getUri();
+        stateCacheTopic = uri.resolve("state-cache");
+        resourceMonitorTopic = uri.resolve("resource-monitor");
+        agentTopic = uri.resolve("agent");
         producer = new MessageProducer();
         startStateCache();
+        startAgent();
+        startResourceMonitor();
+
+    }
+
+    private void startAgent() {
+        agent = new MockAgent(agentTopic, resourceMonitorTopic);
+        agent.start();
+    }
+
+    private void stopAgent() {
+        agent.stop();
     }
 
     private void startStateCache() {
         RealTimeStateCacheConfiguration config =
                 new RealTimeStateCacheConfiguration();
-        config.setMessageTopic(inputUri);
+        config.setMessageTopic(stateCacheTopic);
         cache = new RealTimeStateCache(config);
         ((RealTimeStateCache) cache).start();
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
+        stopAgent();
         stopStateCache();
+        stopResourceMonitor();
         stopMessageBroker();
     }
 
@@ -121,6 +161,24 @@ public class StateCacheResourceMonitorIT {
     private void stopMessageBroker() {
         if (broker != null) {
             broker.stop();
+        }
+    }
+
+    private void startResourceMonitor() {
+        ResourceMonitorServerConfiguration config =
+                new ResourceMonitorServerConfiguration();
+        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
+        config.setDroolsResource(resource);
+        config.setResourceMonitorTopic(resourceMonitorTopic);
+        config.setStateCacheTopic(stateCacheTopic);
+        config.setAgentTopic(agentTopic);
+        resourceMonitor = new ResourceMonitorServer(config);
+        resourceMonitor.start();
+    }
+
+    private void stopResourceMonitor() {
+        if (resourceMonitor != null) {
+            resourceMonitor.stop();
         }
     }
 }
