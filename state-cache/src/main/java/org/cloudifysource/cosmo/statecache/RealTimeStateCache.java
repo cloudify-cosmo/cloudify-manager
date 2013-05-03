@@ -78,7 +78,7 @@ public class RealTimeStateCache implements StateCacheReader {
     }
 
     private void messageConsumerFailure(Throwable t) {
-        //TODO: Logging framework
+        //TODO: Propagate Error
         System.err.println(t);
     }
 
