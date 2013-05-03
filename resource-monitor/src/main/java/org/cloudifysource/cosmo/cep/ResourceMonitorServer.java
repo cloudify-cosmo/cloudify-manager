@@ -19,12 +19,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
 import org.drools.KnowledgeBaseFactory;
@@ -59,8 +61,8 @@ import java.util.concurrent.Future;
  */
 public class ResourceMonitorServer {
 
-    private URI inputUri;
-    private URI outputUri;
+    private URI resourceMonitorTopic;
+    private URI stateCacheTopic;
     private boolean pseudoClock;
     private final MessageProducer producer;
     private final MessageConsumer consumer;
@@ -72,12 +74,15 @@ public class ResourceMonitorServer {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private MessageConsumerListener<AgentStatusMessage> listener;
     private KnowledgeRuntimeLogger runtimeLogger;
+    private final URI agentTopic;
 
     public ResourceMonitorServer(ResourceMonitorServerConfiguration config) {
-        inputUri = config.getInputUri();
-        Preconditions.checkNotNull(inputUri);
-        outputUri = config.getOutputUri();
-        Preconditions.checkNotNull(outputUri);
+        resourceMonitorTopic = config.getResourceMonitorTopic();
+        Preconditions.checkNotNull(resourceMonitorTopic);
+        stateCacheTopic = config.getStateCacheTopic();
+        Preconditions.checkNotNull(stateCacheTopic);
+        agentTopic = config.getAgentTopic();
+        Preconditions.checkNotNull(agentTopic);
         pseudoClock = config.isPseudoClock();
         droolsResource = config.getDroolsResource();
         Preconditions.checkNotNull(droolsResource);
@@ -149,8 +154,16 @@ public class ResourceMonitorServer {
         Channel exitChannel = new Channel() {
 
                 @Override
-                public void send(Object object) {
-                    producer.send(outputUri, object);
+                public void send(Object message) {
+                    if (message instanceof ProbeAgentMessage) {
+                        producer.send(agentTopic, message);
+                    }
+                    else if (message instanceof StateChangedMessage) {
+                        producer.send(stateCacheTopic, message);
+                    }
+                    else {
+                        throw new IllegalStateException("Don't know how to route message " + message);
+                    }
                 }
             };
         ksession.registerChannel("output", exitChannel);
@@ -180,7 +193,7 @@ public class ResourceMonitorServer {
                 return AgentStatusMessage.class;
             }
         };
-        consumer.addListener(inputUri, listener);
+        consumer.addListener(resourceMonitorTopic, listener);
     }
 
     private void onConsumerFailure(Throwable t) {

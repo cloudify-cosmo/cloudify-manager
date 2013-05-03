@@ -16,11 +16,20 @@
 
 package org.cloudifysource.cosmo.cep.mock;
 
+import com.beust.jcommander.internal.Lists;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.testng.Assert;
 
 import java.net.URI;
+import java.util.List;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Mocks the behavior of a real agent.
@@ -30,25 +39,67 @@ import java.net.URI;
  */
 public class MockAgent {
 
-    private final URI topic;
     private boolean failed;
     private final MessageProducer producer;
+    private final MessageConsumer consumer;
+    private final URI requestTopic;
+    private final URI responseTopic;
+    private final MessageConsumerListener<Object> listener;
+    private List<Throwable> failures;
 
-    public MockAgent(final MessageProducer producer,
-                     final URI topic) {
-        this.producer = producer;
-        this.topic = topic;
+    public MockAgent(final URI requestTopic, final URI responseTopic) {
+        this.requestTopic = requestTopic;
+        this.responseTopic = responseTopic;
+        this.failures = Lists.newArrayList();
+        producer = new MessageProducer();
+        consumer = new MessageConsumer();
+        listener = new MessageConsumerListener<Object>() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                assertThat(uri).isEqualTo(requestTopic);
+                if (message instanceof ProbeAgentMessage) {
+                    onProbeAgentMessage((ProbeAgentMessage) message);
+                } else {
+                    Assert.fail("Unexpected message: " + message);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                failures.add(t);
+            }
+
+            @Override
+            public Class<? extends Object> getMessageClass() {
+                return Object.class;
+            }
+        };
+
+    }
+
+    public void start() {
+        consumer.addListener(requestTopic, listener);
+    }
+    public void stop() {
+        consumer.removeListener(listener);
+    }
+
+    public void validateNoFailures() {
+        final Throwable t = Iterables.getFirst(failures, null);
+        if (t != null) {
+            throw Throwables.propagate(t);
+        }
     }
 
     public void fail() {
         this.failed = true;
     }
 
-    public void onMessage(ProbeAgentMessage message) {
+    public void onProbeAgentMessage(ProbeAgentMessage message) {
         if (!failed) {
             final AgentStatusMessage statusMessage = new AgentStatusMessage();
             statusMessage.setAgentId(message.getAgentId());
-            producer.send(topic, statusMessage);
+            producer.send(responseTopic, statusMessage);
         }
     }
 }

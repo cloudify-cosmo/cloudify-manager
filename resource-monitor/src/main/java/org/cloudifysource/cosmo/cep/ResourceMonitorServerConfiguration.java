@@ -26,20 +26,25 @@ import java.net.URI;
  * @since 0.1
  */
 public class ResourceMonitorServerConfiguration {
-    private URI inputUri;
-    private URI outputUri;
+    private URI resourceMonitorTopic;
+    private URI stateCacheTopic;
     private boolean pseudoClock;
     private Resource droolsResource;
+    private URI agentTopic;
 
     public ResourceMonitorServerConfiguration() {
     }
 
-    public URI getInputUri() {
-        return inputUri;
+    public URI getResourceMonitorTopic() {
+        return resourceMonitorTopic;
     }
 
-    public URI getOutputUri() {
-        return outputUri;
+    public URI getAgentTopic() {
+        return agentTopic;
+    }
+
+    public URI getStateCacheTopic() {
+        return stateCacheTopic;
     }
 
     public boolean isPseudoClock() {
@@ -50,12 +55,12 @@ public class ResourceMonitorServerConfiguration {
         return droolsResource;
     }
 
-    public void setInputUri(URI inputUri) {
-        this.inputUri = inputUri;
+    public void setResourceMonitorTopic(URI resourceMonitorTopic) {
+        this.resourceMonitorTopic = resourceMonitorTopic;
     }
 
-    public void setOutputUri(URI outputUri) {
-        this.outputUri = outputUri;
+    public void setStateCacheTopic(URI stateCacheTopic) {
+        this.stateCacheTopic = stateCacheTopic;
     }
 
     public void setPseudoClock(boolean pseudoClock) {
@@ -64,5 +69,9 @@ public class ResourceMonitorServerConfiguration {
 
     public void setDroolsResource(Resource droolsResource) {
         this.droolsResource = droolsResource;
+    }
+
+    public void setAgentTopic(URI agentTopic) {
+        this.agentTopic = agentTopic;
     }
 }
