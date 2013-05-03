@@ -116,7 +116,7 @@ public class ConsumerProducerTest {
     }
 
     //TODO: Support underscores in URIs
-    @Test(expectedExceptions = {IllegalArgumentException.class})
+    @Test(expectedExceptions = {IllegalArgumentException.class })
     public void testUnderscoreSubTopic() throws InterruptedException, IOException, ExecutionException {
         uri = uri.resolve("x_x/");
         testPubSub();

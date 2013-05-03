@@ -57,7 +57,7 @@ public class MessageConsumer {
 
     public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {
 
-        if(uri.getPath().contains("_")) {
+        if (uri.getPath().contains("_")) {
             throw new IllegalArgumentException("Due to a known issue uri cannot contain underscores");
         }
 
