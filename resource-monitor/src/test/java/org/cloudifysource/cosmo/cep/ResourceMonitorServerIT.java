@@ -87,7 +87,7 @@ public class ResourceMonitorServerIT {
     @Parameters({"port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
-        URI uri = URI.create("http://localhost:" + port + "/");
+        URI uri = broker.getUri();
         resourceMonitorTopic = uri.resolve("resource-monitor");
         agentTopic = uri.resolve("agent");
         stateCacheTopic = uri.resolve("state-cache");

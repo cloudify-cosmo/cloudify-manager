@@ -24,6 +24,8 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 import com.google.common.base.Throwables;
 
+import java.net.URI;
+
 /**
  * Starts a jetty server, with jersey servlet container running the {@link MessageBrokerServlet}.
  * @author Itai Frenkel
@@ -32,8 +34,10 @@ import com.google.common.base.Throwables;
 public class MessageBrokerServer {
     private static Server server;
     private static AtmosphereServlet atmoServlet;
+    private URI uri;
 
     public void start(int port) {
+        this.uri = URI.create("http://localhost:" + port + "/");
         server = new Server(port);
         server.setHandler(createWebAppContext(MessageBrokerServlet.class));
         try {
@@ -44,7 +48,7 @@ public class MessageBrokerServer {
     }
 
     public void stop() {
-
+        this.uri = null;
         atmoServlet.destroy();
 
         try {
@@ -76,5 +80,9 @@ public class MessageBrokerServer {
                 Jetty7CometSupport.class.getName());
 
         return holder;
+    }
+
+    public URI getUri() {
+        return uri;
     }
 }
