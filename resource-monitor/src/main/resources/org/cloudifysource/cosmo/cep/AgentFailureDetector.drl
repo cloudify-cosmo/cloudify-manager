@@ -35,11 +35,11 @@ declare AgentStatusMessage
 @role(event)
 end
 
-rule "Fire agent probe every 20 seconds"
+rule "Fire agent probe every 4 seconds"
     dialect "mvel"
 when
     Agent( $agentId : agentId)
-    not ProbeAgentMessage( agentId == $agentId) over window:time(20s)
+    not ProbeAgentMessage( agentId == $agentId) over window:time(4s)
 then
     message = new ProbeAgentMessage()
     message.agentId = $agentId
@@ -47,11 +47,11 @@ then
     channels["output"].send( message );
 end
 
-rule "Change state to not_reachable if no response within 1 minute"
+rule "Change state to not_reachable if no response within 12 seconds"
     dialect "mvel"
 when
     $request: ProbeAgentMessage( $agentId : agentId)
-    not AgentStatusMessage( agentId == $agentId, this after[0, 1m ] $request )
+    not AgentStatusMessage( agentId == $agentId, this after[0, 12s ] $request )
 then
     message = new StateChangedMessage()
     message.resourceId = $agentId
