@@ -20,87 +20,74 @@
     <artifactId>resource-monitor</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
-    <properties>
-        <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
-        <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
-        <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
-        <cosmo.resource-monitor-api.version>0.1-SNAPSHOT</cosmo.resource-monitor-api.version>
-        <cosmo.state-cache-api.version>0.1-SNAPSHOT</cosmo.state-cache-api.version>
-        <cosmo.agent-api.version>0.1-SNAPSHOT</cosmo.agent-api.version>
-        <drools.version>5.5.0.Final</drools.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>14.0</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
-            <version>${cosmo.logger.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
-            <version>${cosmo.message-client.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.drools</groupId>
             <artifactId>drools-core</artifactId>
-            <version>${drools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.drools</groupId>
+            <artifactId>knowledge-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.drools</groupId>
             <artifactId>drools-compiler</artifactId>
-            <version>${drools.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>resource-monitor-api</artifactId>
-            <version>${cosmo.resource-monitor-api.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>state-cache-api</artifactId>
-            <version>${cosmo.state-cache-api.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>agent-api</artifactId>
-            <version>${cosmo.agent-api.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <!-- Test -->
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>logger</artifactId>
-            <version>${cosmo.logger.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.8</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
             <artifactId>fest-assert-core</artifactId>
-            <version>2.0M8</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>1.9.5</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>message-broker</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>message-broker</artifactId>
-            <version>${cosmo.message-broker.version}</version>
-            <scope>test</scope>
+            <groupId>org.apache.logging.log4j.adapters</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
         </dependency>
     </dependencies>
     <build>
@@ -173,7 +160,39 @@
                         </goals>
                     </execution>
                 </executions>
-              </plugin>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>analyze</id>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                        <configuration>
+                            <failOnWarning>true</failOnWarning>
+                            <usedDependencies>
+                                <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
+                                <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
+                                <usedDependency>org.drools:drools-compiler</usedDependency>
+                            </usedDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>dep-management</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 </project>
