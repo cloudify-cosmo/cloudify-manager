@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
-
 /**
  * Client for receiving messages from the message broker.
  * Call {@link #addListener(URI, MessageConsumerListener)} to start receiving messages.
@@ -72,7 +71,10 @@ public class MessageConsumer {
                             public T decode(Event type, String data) {
 
                                 data = data.trim();
-
+                                if (data.startsWith("<html>")) {
+                                    throw new IllegalStateException(
+                                            "Server returned unexpected response " + data);
+                                }
                                 // Padding
                                 if (data.length() == 0) {
                                     return null;
@@ -91,16 +93,28 @@ public class MessageConsumer {
                                         }
                                         throw new IllegalStateException("Failed to decode " + data, e);
                                     }
-                                } else {
-                                    //TODO: Handle Protocol Errors Event.ERROR
+                                } else if (type.equals(Event.OPEN) ||
+                                        type.equals(Event.CLOSE)) {
                                     return null;
+                                } else if (type.equals(Event.ERROR)) {
+                                    throw new IllegalStateException("Communication error " + data);
+                                } else {
+                                    throw new IllegalStateException("Unexpected type=" + type +" data="+data);
                                 }
                             }
                         })
                         .transport(Request.TRANSPORT.LONG_POLLING);
-        Socket socket =  client.create();
+        final Socket socket =  client.create();
         sockets.put(listener, socket);
         try {
+            socket.on("STATUS", new Function<Integer>() {
+                @Override
+                public void on(Integer statusCode) {
+                    if (statusCode >= 400) {
+                       socket.close();
+                    }
+                }
+            });
             socket.on(Event.MESSAGE.name(), new Function<Object>() {
                 @Override
                 public void on(Object message) {
