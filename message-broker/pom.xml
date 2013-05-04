@@ -24,11 +24,13 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
         <!-- REST server -->
         <dependency>
@@ -59,10 +61,12 @@
         <dependency>
             <groupId>org.apache.logging.log4j.adapters</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
