@@ -29,7 +29,6 @@ import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateChangeCallback;
-import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.testng.annotations.AfterMethod;
@@ -93,13 +92,6 @@ public class StateCacheResourceMonitorIT {
         success.await();
         cache.removeCallback(subscriptionId);
         this.agent.validateNoFailures();
-    }
-
-    private StateChangedMessage newStateChangedMessage(String resourceId) {
-        final StateChangedMessage message = new StateChangedMessage();
-        message.setResourceId(resourceId);
-        message.setState(newState());
-        return message;
     }
 
     private Map<String, Object> newState() {
