@@ -20,52 +20,43 @@
     <artifactId>state-cache</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
-    <properties>
-        <testng.version>6.8</testng.version>
-        <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
-        <cosmo.state-cache-api.version>0.1-SNAPSHOT</cosmo.state-cache-api.version>
-        <cosmo.message-client.version>0.1-SNAPSHOT</cosmo.message-client.version>
-        <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>14.0</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
-            <version>${cosmo.logger.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>state-cache-api</artifactId>
-            <version>${cosmo.state-cache-api.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
-            <version>${cosmo.message-client.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <!-- Test dependencies -->
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>logger</artifactId>
-            <version>${cosmo.logger.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
+            <groupId>org.apache.logging.log4j.adapters</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.8</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>message-broker</artifactId>
-            <version>${cosmo.message-broker.version}</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -140,6 +131,38 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>analyze</id>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                        <configuration>
+                            <failOnWarning>true</failOnWarning>
+                            <usedDependencies>
+                                <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
+                                <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
+                            </usedDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>dep-management</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 </project>

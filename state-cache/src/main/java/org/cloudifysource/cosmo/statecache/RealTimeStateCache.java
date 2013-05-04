@@ -17,6 +17,8 @@
 package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.collect.ImmutableMap;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
@@ -36,6 +38,7 @@ public class RealTimeStateCache implements StateCacheReader {
     private final MessageConsumer consumer;
     private final URI messageTopic;
     private final StateCache stateCache;
+    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public RealTimeStateCache(RealTimeStateCacheConfiguration config) {
         this.consumer = new MessageConsumer();
