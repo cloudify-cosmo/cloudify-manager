@@ -15,9 +15,9 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  * @author Idan Moyal
  * @since 0.1
  */
-public class StartTomcatNodeTest {
+public class StartTomcatNodeIT {
 
     private MessageBrokerServer broker;
     private MessageProducer producer;
@@ -59,7 +59,7 @@ public class StartTomcatNodeTest {
     private StateCache stateCache;
     private DefaultStateCacheReader stateCacheReader;
 
-    @BeforeMethod(alwaysRun = true)
+    @BeforeMethod(alwaysRun = true, groups = "vagrant")
     @Parameters({ "port" })
     public void startMessageBrokerServer(@Optional("8080") int port) {
         broker = new MessageBrokerServer();
@@ -75,7 +75,7 @@ public class StartTomcatNodeTest {
         stateCacheReader = new DefaultStateCacheReader(stateCache);
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, groups = "vagrant")
     public void stopMessageBrokerServer() {
         if (driver != null)
             driver.terminateMachines();
