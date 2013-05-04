@@ -16,9 +16,9 @@
 
 package org.cloudifysource.cosmo.cep.mock;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
