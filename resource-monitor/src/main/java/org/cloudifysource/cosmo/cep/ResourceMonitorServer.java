@@ -185,11 +185,6 @@ public class ResourceMonitorServer {
             public void onFailure(Throwable t) {
                 ResourceMonitorServer.this.onConsumerFailure(t);
             }
-
-            @Override
-            public Class<? extends AgentStatusMessage> getMessageClass() {
-                return AgentStatusMessage.class;
-            }
         };
         consumer.addListener(resourceMonitorTopic, listener);
     }

@@ -89,11 +89,6 @@ public class ConsumerProducerTest {
             public void onFailure(Throwable t) {
                 failures.add(t);
             }
-
-            @Override
-            public Class<? extends MockMessage> getMessageClass() {
-                return MockMessage.class;
-            }
         });
 
         MockMessage message = new MockMessage();

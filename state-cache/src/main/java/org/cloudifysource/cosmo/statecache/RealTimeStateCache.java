@@ -68,11 +68,6 @@ public class RealTimeStateCache implements StateCacheReader {
                 public void onFailure(Throwable t) {
                     RealTimeStateCache.this.messageConsumerFailure(t);
                 }
-
-                @Override
-                public Class getMessageClass() {
-                    return Object.class;
-                }
             });
     }
 

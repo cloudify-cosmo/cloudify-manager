@@ -37,9 +37,4 @@ public interface MessageConsumerListener<T> {
      * Callback when any error occurs.
      */
     void onFailure(Throwable t);
-
-    /**
-     * The message hint used to decode the JSON messages.
-     */
-    Class<? extends T> getMessageClass();
 }

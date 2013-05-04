@@ -98,11 +98,6 @@ public class MessageBrokerTest {
             public void onFailure(Throwable t) {
                 consumerErrors.add(t);
             }
-
-            @Override
-            public Class<? extends Integer> getMessageClass() {
-                return Integer.class;
-            }
         });
 
         for (int i = 0; latch.getCount() > 0; i++) {

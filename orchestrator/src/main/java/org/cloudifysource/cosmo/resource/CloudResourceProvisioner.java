@@ -61,12 +61,6 @@ public class CloudResourceProvisioner {
             @Override
             public void onFailure(Throwable t) {
             }
-
-            @Override
-            public Class<? extends CloudResourceMessage> getMessageClass() {
-                return CloudResourceMessage.class;
-            }
-
         });
     }
 

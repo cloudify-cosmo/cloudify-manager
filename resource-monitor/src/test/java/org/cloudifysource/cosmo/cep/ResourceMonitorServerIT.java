@@ -111,11 +111,6 @@ public class ResourceMonitorServerIT {
             public void onFailure(Throwable t) {
                 failures.add(t);
             }
-
-            @Override
-            public Class<? extends Object> getMessageClass() {
-                return Object.class;
-            }
         };
         consumer.addListener(stateCacheTopic, listener);
     }
