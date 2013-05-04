@@ -16,9 +16,9 @@
 
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.statecache.DefaultStateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheReader;

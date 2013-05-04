@@ -16,8 +16,8 @@
 
 package org.cloudifysource.cosmo.resource.mock;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import com.sun.jersey.api.core.PackagesResourceConfig;
 import com.sun.jersey.core.spi.component.ComponentContext;
 import com.sun.jersey.core.spi.component.ComponentScope;
