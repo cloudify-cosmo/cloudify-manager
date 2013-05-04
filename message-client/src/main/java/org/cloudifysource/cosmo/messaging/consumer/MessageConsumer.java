@@ -99,7 +99,7 @@ public class MessageConsumer {
                                 } else if (type.equals(Event.ERROR)) {
                                     throw new IllegalStateException("Communication error " + data);
                                 } else {
-                                    throw new IllegalStateException("Unexpected type=" + type +" data="+data);
+                                    throw new IllegalStateException("Unexpected type=" + type + " data=" + data);
                                 }
                             }
                         })
@@ -111,7 +111,7 @@ public class MessageConsumer {
                 @Override
                 public void on(Integer statusCode) {
                     if (statusCode >= 400) {
-                       socket.close();
+                        socket.close();
                     }
                 }
             });
