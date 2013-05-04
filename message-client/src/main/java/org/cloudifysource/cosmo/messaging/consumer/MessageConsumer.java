@@ -27,6 +27,8 @@ import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
 import java.io.IOException;
@@ -49,7 +51,7 @@ public class MessageConsumer {
     private final Client client;
     private final Map<MessageConsumerListener, Socket> sockets = Maps.newConcurrentMap();
     private ObjectMapper mapper;
-
+    protected Logger logger = LoggerFactory.getLogger(this.getClass());
     public MessageConsumer() {
         client = ClientFactory.getDefault().newClient();
         mapper = ObjectMapperFactory.newObjectMapper();
