@@ -35,8 +35,10 @@ class ResourceManagerParticipant < Ruote::Participant
       uri = broker_uri.resolve('resource-manager')
       message = org.cloudifysource.cosmo.resource.messages.CloudResourceMessage.new(resource_id, action)
 
-      producer.send(uri, message)
-
+      producer.send(uri, message).get()
+      $logger.debug('sent [uri={}, message={}]',
+                    uri,
+                    message)
       reply
     end
   end
