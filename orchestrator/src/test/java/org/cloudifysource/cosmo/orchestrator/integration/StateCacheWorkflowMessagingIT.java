@@ -18,6 +18,8 @@ package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
+import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
@@ -27,6 +29,8 @@ import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -36,6 +40,9 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests integration of {@link org.cloudifysource.cosmo.statecache.StateCache} with messaging consumer.
@@ -51,40 +58,58 @@ public class StateCacheWorkflowMessagingIT {
     private RealTimeStateCache cache;
     private RuoteRuntime runtime;
     private CloudResourceProvisioner provisioner;
-    private URI resourceProvisionerTopic;
-    private URI stateCacheTopic;
-    private URI resourceMonitorTopic;
-
+    private URI provisionerUri;
+    private URI cacheUri;
+    private CloudDriver cloudDriver;
 
     @BeforeMethod
     @Parameters({ "port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
         inputUri = URI.create("http://localhost:" + port + "/input/");
-        resourceProvisionerTopic = inputUri.resolve("resource-manager");
-        stateCacheTopic = inputUri.resolve("state-cache");
-        resourceMonitorTopic = inputUri.resolve("resource-monitor");
+        provisionerUri = inputUri.resolve("resource-manager");
+        cacheUri = inputUri.resolve("state");
         producer = new MessageProducer();
-        RealTimeStateCacheConfiguration config = new RealTimeStateCacheConfiguration();
-        config.setMessageTopic(stateCacheTopic);
-        cache = new RealTimeStateCache(config);
-        cache.start();
+        startCache();
 
         Map<String, Object> runtimeProperties = Maps.newHashMap();
         runtimeProperties.put("state_cache", cache);
         runtimeProperties.put("broker_uri", inputUri);
         runtimeProperties.put("message_producer", producer);
         runtime = RuoteRuntime.createRuntime(runtimeProperties);
-        provisioner = new CloudResourceProvisioner(Mockito.mock(CloudDriver.class), resourceProvisionerTopic);
+        startProvisioner();
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
-        if (cache != null)
-            cache.stop();
-        if (provisioner != null)
-            provisioner.stop();
+        stopCache();
+        stopProvisioner();
         stopMessageBroker();
+    }
+
+    private void startCache() {
+        RealTimeStateCacheConfiguration config = new RealTimeStateCacheConfiguration();
+        config.setMessageTopic(cacheUri);
+        cache = new RealTimeStateCache(config);
+        cache.start();
+    }
+
+    private void startProvisioner() {
+        cloudDriver = Mockito.mock(CloudDriver.class);
+        provisioner = new CloudResourceProvisioner(cloudDriver, provisionerUri);
+        provisioner.start();
+    }
+
+    private void stopCache() {
+        if (cache != null) {
+            cache.stop();
+        }
+    }
+
+    private void stopProvisioner() {
+        if (provisioner != null) {
+            provisioner.stop();
+        }
     }
 
     private void startMessagingBroker(int port) {
@@ -105,18 +130,28 @@ public class StateCacheWorkflowMessagingIT {
         // Create radial workflow
         final String flow =
                 "define flow\n" +
-                "  resource resource_id: \"$resource_id\", action: \"start_machine\"\n" +
+                "  echo '--1--'\n" +
+                "  resource id: 'abcd', resource_id: \"$resource_id\", action: \"start_machine\"\n" +
+                "  echo '--2--'\n" +
                 "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
+
+        // Configure mock cloud driver
+        when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                // Update state cache
+                final StateChangedMessage message = newStateChangedMessage(resourceId);
+                producer.send(cacheUri, message).get();
+                return new MachineDetails(resourceId, "127.0.0.1");
+            }
+        });
 
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", resourceId);
         final Object workflowId = workflow.asyncExecute(workitem);
 
-        // Update state cache
-        final StateChangedMessage message = newStateChangedMessage(resourceId);
-        producer.send(stateCacheTopic, message).get();
 
         // Wait for workflow to end
         runtime.waitForWorkflow(workflowId);
