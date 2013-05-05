@@ -88,6 +88,11 @@
             <artifactId>log4j-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>logger</artifactId>
+            <type>test-jar</type>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -176,6 +181,7 @@
                             <usedDependencies>
                                 <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
                                 <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
+                                <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.drools:drools-compiler</usedDependency>
                             </usedDependencies>
                         </configuration>
