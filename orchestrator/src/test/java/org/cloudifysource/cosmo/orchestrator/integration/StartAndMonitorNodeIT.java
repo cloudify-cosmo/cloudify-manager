@@ -22,6 +22,8 @@ import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
+import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
@@ -32,6 +34,8 @@ import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
@@ -41,6 +45,9 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
@@ -55,7 +62,6 @@ public class StartAndMonitorNodeIT {
     // message broker that isolates server
     private MessageBrokerServer broker;
     private URI inputUri;
-    private MessageProducer producer;
     private RealTimeStateCache cache;
     private RuoteRuntime runtime;
     private CloudResourceProvisioner provisioner;
@@ -64,6 +70,7 @@ public class StartAndMonitorNodeIT {
     private URI resourceMonitorTopic;
     private URI agentTopic;
     private ResourceMonitorServer resourceMonitor;
+    private CloudDriver cloudDriver;
 
 
     @Test(timeOut = 10000)
@@ -77,21 +84,24 @@ public class StartAndMonitorNodeIT {
                         "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
+        // Configure mock cloud driver
+        final MockAgent mockAgent = new MockAgent(agentTopic, resourceMonitorTopic);
+        when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                final Agent agent = new Agent();
+                agent.setAgentId(resourceId);
+                resourceMonitor.insertFact(agent);
+                mockAgent.start();
+                return new MachineDetails(resourceId, "127.0.0.1");
+            }
+        });
+
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", resourceId);
-        final Object workflowId = workflow.asyncExecute(workitem);
-
-        final MockAgent mockAgent = new MockAgent(agentTopic, resourceMonitorTopic);
         try {
-            mockAgent.start();
-            final Agent agent = new Agent();
-            agent.setAgentId(resourceId);
-            resourceMonitor.insertFact(agent);
-
-            // Wait for workflow to end
-            runtime.waitForWorkflow(workflowId);
-
+            workflow.execute(workitem);
         } finally {
             mockAgent.stop();
         }
@@ -108,7 +118,6 @@ public class StartAndMonitorNodeIT {
         stateCacheTopic = inputUri.resolve("state-cache");
         resourceMonitorTopic = inputUri.resolve("resource-monitor");
         agentTopic = inputUri.resolve("agent");
-        producer = new MessageProducer();
         RealTimeStateCacheConfiguration config = new RealTimeStateCacheConfiguration();
         config.setMessageTopic(stateCacheTopic);
         startRealTimeStateCache(config);
@@ -116,7 +125,7 @@ public class StartAndMonitorNodeIT {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
         runtimeProperties.put("state_cache", cache);
         runtimeProperties.put("broker_uri", inputUri);
-        runtimeProperties.put("message_producer", producer);
+        runtimeProperties.put("message_producer", new MessageProducer());
         runtime = RuoteRuntime.createRuntime(runtimeProperties);
         startCloudResourceProvisioner();
         startResourceMonitor();
@@ -128,7 +137,8 @@ public class StartAndMonitorNodeIT {
     }
 
     private void startCloudResourceProvisioner() {
-        provisioner = new CloudResourceProvisioner(Mockito.mock(CloudDriver.class), resourceProvisionerTopic);
+        cloudDriver = Mockito.mock(CloudDriver.class);
+        provisioner = new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic);
         provisioner.start();
     }
 

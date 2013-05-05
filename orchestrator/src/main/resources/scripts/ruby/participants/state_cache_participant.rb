@@ -14,8 +14,6 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-java_import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
-
 class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChangeCallbackStub
 
   @resource_id = nil
@@ -28,13 +26,17 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
     matches = true
     unless @resource_id.nil?
       state = new_snapshot.get(@resource_id)
-      workitem.params.each do |key, value|
-        if key != 'resource_id' and key != 'ref'
-          matches = (state.contains_key(key) and state.get(key) == value)
+      if state.java_kind_of?(java::util::Map)
+        workitem.params.each do |key, value|
+          if key != 'resource_id' and key != 'ref'
+            matches = (state.contains_key(key) and state.get(key).to_s.eql? value.to_s)
+          end
+          break unless matches
         end
-        break unless matches
       end
     end
+    $logger.debug('RuoteStateChangeCallback invoked: [params={}, snapshot={}, matches={}]',
+                  workitem.params, new_snapshot, matches)
     if matches
       workitem.fields.merge!(new_snapshot)
       participant.reply(workitem)
@@ -66,6 +68,7 @@ class StateCacheParticipant < Ruote::Participant
                                                                         condition_key,
                                                                         condition_value,
                                                                         callback)
+        $logger.debug('StateCacheParticipant: subscribed with [key={}, value={}]', condition_key, condition_value)
       else
         callback = RuoteStateChangeCallback.new
         callback.resource_id = resource_id
@@ -73,6 +76,7 @@ class StateCacheParticipant < Ruote::Participant
                                                                         workitem,
                                                                         resource_id,
                                                                         callback)
+        $logger.debug('StateCacheParticipant: subscribed with [resource_id={}]', resource_id)
       end
 
       put('callback_uid', callback_uid)

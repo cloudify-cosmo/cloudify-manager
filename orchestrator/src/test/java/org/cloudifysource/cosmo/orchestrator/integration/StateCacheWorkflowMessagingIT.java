@@ -58,8 +58,8 @@ public class StateCacheWorkflowMessagingIT {
     private RealTimeStateCache cache;
     private RuoteRuntime runtime;
     private CloudResourceProvisioner provisioner;
-    private URI provisionerUri;
-    private URI cacheUri;
+    private URI resourceProvisionerTopic;
+    private URI stateCacheTopic;
     private CloudDriver cloudDriver;
 
     @BeforeMethod
@@ -67,8 +67,8 @@ public class StateCacheWorkflowMessagingIT {
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
         inputUri = URI.create("http://localhost:" + port + "/input/");
-        provisionerUri = inputUri.resolve("resource-manager");
-        cacheUri = inputUri.resolve("state");
+        resourceProvisionerTopic = inputUri.resolve("resource-manager");
+        stateCacheTopic = inputUri.resolve("state-cache");
         producer = new MessageProducer();
         startCache();
 
@@ -89,14 +89,14 @@ public class StateCacheWorkflowMessagingIT {
 
     private void startCache() {
         RealTimeStateCacheConfiguration config = new RealTimeStateCacheConfiguration();
-        config.setMessageTopic(cacheUri);
+        config.setMessageTopic(stateCacheTopic);
         cache = new RealTimeStateCache(config);
         cache.start();
     }
 
     private void startProvisioner() {
         cloudDriver = Mockito.mock(CloudDriver.class);
-        provisioner = new CloudResourceProvisioner(cloudDriver, provisionerUri);
+        provisioner = new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic);
         provisioner.start();
     }
 
@@ -140,7 +140,7 @@ public class StateCacheWorkflowMessagingIT {
             public Object answer(InvocationOnMock invocation) throws Throwable {
                 // Update state cache
                 final StateChangedMessage message = newStateChangedMessage(resourceId);
-                producer.send(cacheUri, message).get();
+                producer.send(stateCacheTopic, message).get();
                 return new MachineDetails(resourceId, "127.0.0.1");
             }
         });
@@ -149,7 +149,6 @@ public class StateCacheWorkflowMessagingIT {
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", resourceId);
         final Object workflowId = workflow.asyncExecute(workitem);
-
 
         // Wait for workflow to end
         runtime.waitForWorkflow(workflowId);
