@@ -28,12 +28,10 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.drools</groupId>
@@ -50,17 +48,14 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>resource-monitor-api</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>state-cache-api</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>agent-api</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- Test -->
         <dependency>
@@ -81,7 +76,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>message-broker</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

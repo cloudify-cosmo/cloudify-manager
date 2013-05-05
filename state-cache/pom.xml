@@ -28,17 +28,14 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>state-cache-api</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- Test dependencies -->
         <dependency>
@@ -68,18 +65,6 @@
                     <debug>true</debug>
                 </configuration>
                 <version>2.3.2</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>test-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
