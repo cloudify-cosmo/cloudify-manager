@@ -56,17 +56,6 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
         </dependency>
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>org.apache.logging.log4j.adapters</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -116,10 +105,6 @@
                         </goals>
                         <configuration>
                             <failOnWarning>true</failOnWarning>
-                            <usedDependencies>
-                                <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
-                                <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
-                            </usedDependencies>
                         </configuration>
                     </execution>
                 </executions>
