@@ -59,11 +59,11 @@ then
     channels["output"].send( message );
 end
 
-rule "Change state to reachable if response within 1 minute"
+rule "Change state to reachable if response within 12 seconds"
     dialect "mvel"
 when
     $request: ProbeAgentMessage( $agentId : agentId)
-    AgentStatusMessage( agentId == $agentId, this after[0, 1m ] $request )
+    AgentStatusMessage( agentId == $agentId, this after[0, 12s ] $request )
 then
     message = new StateChangedMessage()
     message.resourceId = $agentId
