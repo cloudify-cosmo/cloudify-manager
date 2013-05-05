@@ -130,9 +130,7 @@ public class StateCacheWorkflowMessagingIT {
         // Create radial workflow
         final String flow =
                 "define flow\n" +
-                "  echo '--1--'\n" +
-                "  resource id: 'abcd', resource_id: \"$resource_id\", action: \"start_machine\"\n" +
-                "  echo '--2--'\n" +
+                "  resource resource_id: \"$resource_id\", action: \"start_machine\"\n" +
                 "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 

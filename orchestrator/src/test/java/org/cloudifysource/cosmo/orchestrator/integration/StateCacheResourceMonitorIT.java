@@ -23,7 +23,6 @@ import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
 import org.cloudifysource.cosmo.statecache.StateCache;
