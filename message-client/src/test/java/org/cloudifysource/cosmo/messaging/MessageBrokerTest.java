@@ -19,15 +19,20 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.configuration.MessageClientTestConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -39,23 +44,27 @@ import java.util.concurrent.ExecutionException;
  * @author itaif
  * @since 0.1
  */
-public class MessageBrokerTest {
+@ContextConfiguration(classes = { MessageClientTestConfiguration.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
 
+    @Inject
     MessageBrokerServer server;
 
-    private URI uri;
+    @Inject
     private MessageConsumer consumer;
+
+    @Inject
     private MessageProducer producer;
+
+    private URI uri;
     private final String key = "r1";
     private List<Throwable> consumerErrors = Lists.newCopyOnWriteArrayList();
 
     @BeforeMethod
     @Parameters({"port" })
     public void startRestServer(@Optional("8080") int port) {
-        server = new MessageBrokerServer();
         server.start(port);
-        consumer = new MessageConsumer();
-        producer = new MessageProducer();
         uri = URI.create("http://localhost:" + port);
     }
 

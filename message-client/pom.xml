@@ -25,6 +25,7 @@
         <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
         <cosmo.message-broker.version>0.1-SNAPSHOT</cosmo.message-broker.version>
+        <org.springframework.version>3.2.2.RELEASE</org.springframework.version>
     </properties>
     <dependencies>
         <dependency>
@@ -75,6 +76,24 @@
             <artifactId>reflections</artifactId>
             <version>0.9.8</version>
         </dependency>
+
+        <!-- Spring DI -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>${org.springframework.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>jsr250-api</artifactId>
+            <version>1.0</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -92,6 +111,12 @@
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>message-broker</artifactId>
             <version>${cosmo.message-broker.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>${org.springframework.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

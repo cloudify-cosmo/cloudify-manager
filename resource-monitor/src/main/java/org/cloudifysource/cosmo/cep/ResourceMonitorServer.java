@@ -59,32 +59,33 @@ import java.util.concurrent.Future;
  */
 public class ResourceMonitorServer {
 
-    private URI inputUri;
-    private URI outputUri;
-    private boolean pseudoClock;
+    private final URI inputUri;
+    private final URI outputUri;
+    private final boolean pseudoClock;
     private final MessageProducer producer;
     private final MessageConsumer consumer;
-    private StatefulKnowledgeSession ksession;
-    private WorkingMemoryEntryPoint entryPoint;
     private final Resource droolsResource;
     private final ExecutorService executorService;
+    private StatefulKnowledgeSession ksession;
+    private WorkingMemoryEntryPoint entryPoint;
     private Future<Void> future;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private MessageConsumerListener<AgentStatusMessage> listener;
     private KnowledgeRuntimeLogger runtimeLogger;
 
-    public ResourceMonitorServer(ResourceMonitorServerConfiguration config) {
-        inputUri = config.getInputUri();
+    public ResourceMonitorServer(URI inputUri, URI outputUri, boolean pseudoClock, Resource droolsResource,
+                                 MessageProducer producer, MessageConsumer consumer) {
+        this.inputUri = inputUri;
         Preconditions.checkNotNull(inputUri);
-        outputUri = config.getOutputUri();
+        this.outputUri = outputUri;
         Preconditions.checkNotNull(outputUri);
-        pseudoClock = config.isPseudoClock();
-        droolsResource = config.getDroolsResource();
+        this.pseudoClock = pseudoClock;
+        this.droolsResource = droolsResource;
         Preconditions.checkNotNull(droolsResource);
         executorService = Executors.newSingleThreadExecutor();
         Preconditions.checkNotNull(executorService);
-        producer = new MessageProducer();
-        consumer = new MessageConsumer();
+        this.producer = producer;
+        this.consumer = consumer;
     }
 
     public void start() {

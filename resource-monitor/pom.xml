@@ -29,6 +29,7 @@
         <cosmo.state-cache-api.version>0.1-SNAPSHOT</cosmo.state-cache-api.version>
         <cosmo.agent-api.version>0.1-SNAPSHOT</cosmo.agent-api.version>
         <drools.version>5.5.0.Final</drools.version>
+        <org.springframework.version>3.2.2.RELEASE</org.springframework.version>
     </properties>
     <dependencies>
         <dependency>
@@ -94,7 +95,29 @@
             <artifactId>agent-api</artifactId>
             <version>${cosmo.agent-api.version}</version>
         </dependency>
+        <!-- Spring DI -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>${org.springframework.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>jsr250-api</artifactId>
+            <version>1.0</version>
+        </dependency>
         <!-- Test -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>${org.springframework.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>

@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
+ ******************************************************************************/
 package org.cloudifysource.cosmo.cep;
 
 import com.google.common.base.Throwables;
@@ -24,19 +24,26 @@ import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.cep.mock.AppInfo;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
-import org.drools.io.Resource;
-import org.drools.io.ResourceFactory;
 import org.drools.time.SessionPseudoClock;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
@@ -50,26 +57,51 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
+@ContextConfiguration(classes = { ResourceMonitorServerTest.Config.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class ResourceMonitorServerTest extends AbstractTestNGSpringContextTests {
 
-public class ResourceMonitorServerTest {
+    /**
+     * @author Dan Kilman
+     * @since 0.1
+     */
+    @Configuration
+    @PropertySource("org/cloudifysource/cosmo/cep/configuration/test.properties")
+    @Import({ ResourceMonitorServerConfiguration.class,
+            MessageBrokerServerConfiguration.class,
+            MessageConsumerConfiguration.class,
+            MessageProducerConfiguration.class
+    })
+    static class Config { }
 
-    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
-    public static final String AGENT_ID = "agent_1";
+    @Value("${resource.monitor.port}")
+    private int port;
+
+    @Value("${agent.id}")
+    private String agentId;
+
+    @Value("${input.uri}")
+    private URI inputTopic;
+
+    @Value("${output.uri}")
+    private URI outputTopic;
 
     // component being tested
+    @Inject
     private ResourceMonitorServer server;
 
     // message broker that isolates server
+    @Inject
     private MessageBrokerServer broker;
 
     // receives messages from server
+    @Inject
     private MessageConsumer consumer;
 
     // pushes messages to server
+    @Inject
     private MessageProducer producer;
 
-    private URI inputTopic;
-    private URI outputTopic;
     private MessageConsumerListener<Object> listener;
     private BlockingQueue<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
@@ -90,13 +122,8 @@ public class ResourceMonitorServerTest {
     }
 
     @BeforeMethod(groups = "integration")
-    @Parameters({"port" })
-    public void startServer(@Optional("8080") int port) {
-        startMessagingBroker(port);
-        inputTopic = URI.create("http://localhost:" + port + "/input/");
-        outputTopic = URI.create("http://localhost:" + port + "/output/");
-        producer = new MessageProducer();
-        consumer = new MessageConsumer();
+    public void startServer() {
+        startMessagingBroker();
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<Object>() {
@@ -123,13 +150,13 @@ public class ResourceMonitorServerTest {
             }
         };
         consumer.addListener(outputTopic, listener);
-        startMonitoringServer(port);
+        startMonitoringServer();
     }
 
     private void mockAgent(ProbeAgentMessage message) {
         if (!mockAgentFailed) {
             final AgentStatusMessage statusMessage = new AgentStatusMessage();
-            statusMessage.setAgentId(AGENT_ID);
+            statusMessage.setAgentId(agentId);
             producer.send(inputTopic, statusMessage);
         }
     }
@@ -170,22 +197,13 @@ public class ResourceMonitorServerTest {
         producer.send(inputTopic, appInfo);
     }
 
-    private void startMonitoringServer(int port) {
-        ResourceMonitorServerConfiguration config =
-                new ResourceMonitorServerConfiguration();
-        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        config.setDroolsResource(resource);
-        config.setInputUri(inputTopic);
-        config.setOutputUri(outputTopic);
-        server = new ResourceMonitorServer(config);
+    private void startMonitoringServer() {
         server.start();
     }
 
-    private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
+    private void startMessagingBroker() {
         broker.start(port);
     }
-
 
     private void stopMessageBroker() {
         if (broker != null) {

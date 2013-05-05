@@ -24,6 +24,7 @@
         <jetty.version>8.1.5.v20120716</jetty.version>
         <testng.version>6.8</testng.version>
         <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
+        <org.springframework.version>3.2.2.RELEASE</org.springframework.version>
     </properties>
     <dependencies>
         <dependency>
@@ -87,6 +88,25 @@
             <artifactId>jetty-servlet</artifactId>
             <version>${jetty.version}</version>
         </dependency>
+
+        <!-- Spring DI -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>${org.springframework.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>jsr250-api</artifactId>
+            <version>1.0</version>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

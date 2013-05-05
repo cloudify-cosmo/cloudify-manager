@@ -15,8 +15,19 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.cep;
 
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.drools.io.Resource;
+import org.drools.io.ResourceFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
+import javax.inject.Inject;
 import java.net.URI;
 
 
@@ -25,44 +36,38 @@ import java.net.URI;
  * @author itaif
  * @since 0.1
  */
+@Configuration
+@Import({MessageProducerConfiguration.class, MessageConsumerConfiguration.class })
 public class ResourceMonitorServerConfiguration {
+
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer ps() {
+        return new PropertySourcesPlaceholderConfigurer();
+    }
+
+    @Value("${input.uri}")
     private URI inputUri;
+
+    @Value("${output.uri}")
     private URI outputUri;
+
+    @Value("${pseudo.clock}")
     private boolean pseudoClock;
-    private Resource droolsResource;
 
-    public ResourceMonitorServerConfiguration() {
+    @Value("${rule.file}")
+    private String droolsResourcePath;
+
+    @Inject
+    private MessageProducer messageProducer;
+
+    @Inject
+    private MessageConsumer messageConsumer;
+
+    @Bean
+    public ResourceMonitorServer resourceMonitorServer() {
+        Resource droolsResource = ResourceFactory.newClassPathResource(droolsResourcePath, this.getClass());
+        return new ResourceMonitorServer(inputUri, outputUri, pseudoClock, droolsResource, messageProducer,
+                messageConsumer);
     }
 
-    public URI getInputUri() {
-        return inputUri;
-    }
-
-    public URI getOutputUri() {
-        return outputUri;
-    }
-
-    public boolean isPseudoClock() {
-        return pseudoClock;
-    }
-
-    public Resource getDroolsResource() {
-        return droolsResource;
-    }
-
-    public void setInputUri(URI inputUri) {
-        this.inputUri = inputUri;
-    }
-
-    public void setOutputUri(URI outputUri) {
-        this.outputUri = outputUri;
-    }
-
-    public void setPseudoClock(boolean pseudoClock) {
-        this.pseudoClock = pseudoClock;
-    }
-
-    public void setDroolsResource(Resource droolsResource) {
-        this.droolsResource = droolsResource;
-    }
 }
