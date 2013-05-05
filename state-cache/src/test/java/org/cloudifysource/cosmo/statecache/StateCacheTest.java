@@ -17,12 +17,14 @@
 package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -131,6 +133,45 @@ public class StateCacheTest {
         callbackCalledLatch.await();
         Assert.assertTrue(stateChangedProperly.get());
     }
+
+    @Test(timeOut = 15000)
+    public void testWaitForKeyValueChange() throws InterruptedException {
+        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
+        final AtomicBoolean stateChangedProperly = new AtomicBoolean(false);
+        final Object reciever = new Object();
+        final Object context = new Object();
+        final String key = "key";
+        final Map<String, String> value = Maps.newHashMap();
+        value.put("key", "value");
+        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
+            public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                      ImmutableMap<String, Object> newSnapshot) {
+                boolean valid;
+                valid = (receiverParam == reciever);
+                valid &= (contextParam == context);
+                final Object changedValue = newSnapshot.get(key);
+                if (changedValue instanceof Map<?, ?>) {
+                    final Map<?, ?> typedValue = (Map<?, ?>) changedValue;
+                    valid &= typedValue.containsKey("key");
+                    valid &= "value".equals(typedValue.get("key"));
+                } else {
+                    valid = false;
+                }
+                stateChangedProperly.set(valid);
+                callbackCalledLatch.countDown();
+            }
+        });
+
+        Thread.sleep(100);
+
+        Assert.assertEquals(callbackCalledLatch.getCount(), 1);
+
+        stateCache.put(key, value);
+
+        callbackCalledLatch.await();
+        Assert.assertTrue(stateChangedProperly.get());
+    }
+
 
     @Test(dependsOnMethods = "testWaitForKeyValueState")
     public void testWaitForKeyValueStateIsRemoved() throws InterruptedException {

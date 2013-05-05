@@ -105,7 +105,7 @@ public class StateCacheWorkflowMessagingIT {
                 "  echo '--1--'\n" +
                 "  resource id: 'abcd', resource_id: \"$resource_id\", action: \"start_machine\"\n" +
                 "  echo '--2--'\n" +
-                "  state resource_id: \"$resource_id\", key: \"reachable\", value: \"true\"\n";
+                "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
         // Execute workflow

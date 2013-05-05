@@ -69,7 +69,7 @@ public class StateCacheResourceMonitorIT {
     private URI agentTopic;
 
 
-    @Test()
+    @Test(timeOut = 10000)
     public void testNodeOk() throws InterruptedException, ExecutionException {
         Agent agent = new Agent();
         agent.setAgentId(AGENT_ID);
@@ -77,15 +77,18 @@ public class StateCacheResourceMonitorIT {
 
         final CountDownLatch success = new CountDownLatch(1);
         String subscriptionId = cache.subscribeToKeyValueStateChanges(null, null,
-                AGENT_ID + "." + REACHABLE_PROP,
-                newState().get(REACHABLE_PROP),
+                AGENT_ID,
                 new StateChangeCallback() {
                     @Override
                     public void onStateChange(Object receiver, Object context, StateCache cache,
                                               ImmutableMap<String, Object> newSnapshot) {
-
-                        if ((Boolean) newSnapshot.get(AGENT_ID + "." + REACHABLE_PROP)) {
-                            success.countDown();
+                        final Object entry = newSnapshot.get(AGENT_ID);
+                        if (entry instanceof Map<?, ?>) {
+                            final Map<?, ?> state = (Map<?, ?>) entry;
+                            if (state.containsKey(REACHABLE_PROP) &&
+                                    Boolean.parseBoolean(state.get(REACHABLE_PROP).toString())) {
+                                success.countDown();
+                            }
                         }
                     }
                 });

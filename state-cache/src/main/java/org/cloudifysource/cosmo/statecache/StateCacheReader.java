@@ -46,6 +46,19 @@ public interface StateCacheReader {
                                            StateChangeCallback callback);
 
     /**
+     *
+     * @param receiver - ruote participant
+     * @param context - ruote work item
+     * @param key - the value to listen to
+     * @param callback - the method called when the condition is satisfied
+     * @return callback UID, used in case the callback needs to be removed
+     */
+    String subscribeToKeyValueStateChanges(Object receiver,
+                                           Object context,
+                                           String key,
+                                           StateChangeCallback callback);
+
+    /**
      * Un-subscribe callback for state changes represented by the callback UID.
      * @param callbackUID - The return value of subscribeToKeyValueStateChanges.
      */

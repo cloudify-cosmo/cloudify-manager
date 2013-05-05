@@ -162,28 +162,28 @@ public class RouteWorkflowWithStateCacheTest {
 
     @Test(timeOut = 15000)
     public void testStateCacheParticipantWithResourceIdParameter() {
-        final String id = "node";
-        final String key = "reachable";
+        final String key = "node";
+        final String property = "reachable";
         final String value = "true";
         final StateCache cache = new StateCache.Builder().build();
 
         final StateChangedMessage message = new StateChangedMessage();
         final Map<String, Object> state = Maps.newHashMap();
-        state.put(key, "true");
+        state.put(property, value);
         message.setState(state);
-        cache.put(String.format("%s.%s", id, key), state.get(key));
+        cache.put(key, state);
 
         final String flow =
                 "define flow\n" +
-                        "  state resource_id: \"$resource_id\", key: \"$key\", value: \"$value\"\n";
+                        "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
 
         final Map<String, Object> props = Maps.newHashMap();
         props.put("state_cache", cache);
         final RuoteRuntime runtime = RuoteRuntime.createRuntime(props);
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
         final Map<String, Object> workitem = Maps.newHashMap();
-        workitem.put("resource_id", id);
-        workitem.put("key", key);
+        workitem.put("resource_id", key);
+        workitem.put("property", property);
         workitem.put("value", value);
 
         final Object workflowId = workflow.asyncExecute(workitem);

@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -127,6 +128,26 @@ public class StateCache implements StateCacheReader {
         Condition condition = new KeyValueCondition(key, value);
         return subscribeToStateChanges(receiver, context, condition, callback);
     }
+
+    public String subscribeToKeyValueStateChanges(Object receiver,
+                                                  Object context,
+                                                  final String key,
+                                                  StateChangeCallback callback) {
+        Preconditions.checkNotNull(key);
+        Condition condition = new Condition() {
+            @Override
+            public boolean applies(StateCacheView snapshot) {
+                return snapshot.containsKey(key);
+            }
+
+            @Override
+            public List<String> keysToLock() {
+                return ImmutableList.of(key);
+            }
+        };
+        return subscribeToStateChanges(receiver, context, condition, callback);
+    }
+
 
     private String subscribeToStateChanges(final Object receiver,
                                            final Object context,

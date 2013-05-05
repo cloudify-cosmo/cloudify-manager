@@ -22,7 +22,10 @@ class ResourceManagerParticipant < Ruote::Participant
       producer = $ruote_properties['message_producer']
       broker_uri = $ruote_properties['broker_uri']
 
-      $logger.debug('executing ResourceManagerParticipant [id={}, action={}, broker_uri={}]', id, action, broker_uri)
+      $logger.debug('executing ResourceManagerParticipant [id={}, action={}, broker_uri={}]',
+                    resource_id,
+                    action,
+                    broker_uri)
 
       raise 'resource_id is not set' unless defined? resource_id and not resource_id.nil?
       raise "unknown action '#{action}'" if action != 'start_machine'
@@ -30,7 +33,7 @@ class ResourceManagerParticipant < Ruote::Participant
       raise 'broker_uri not defined' unless defined? broker_uri
 
       uri = broker_uri.resolve('resource-manager')
-      message = org.cloudifysource.cosmo.resource.messages.CloudResourceMessage.new(id, action)
+      message = org.cloudifysource.cosmo.resource.messages.CloudResourceMessage.new(resource_id, action)
 
       producer.send(uri, message)
 

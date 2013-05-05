@@ -18,9 +18,27 @@ java_import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
 
 class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChangeCallbackStub
 
+  @resource_id = nil
+
+  def resource_id=(resource_id)
+    @resource_id = resource_id
+  end
+
   def onStateChange(participant, workitem, cache, new_snapshot)
-    workitem.fields.merge!(new_snapshot)
-    participant.reply(workitem)
+    matches = true
+    unless @resource_id.nil?
+      state = new_snapshot.get(@resource_id)
+      workitem.params.each do |key, value|
+        if key != 'resource_id' and key != 'ref'
+          matches = (state.contains_key(key) and state.get(key) == value)
+        end
+        break unless matches
+      end
+    end
+    if matches
+      workitem.fields.merge!(new_snapshot)
+      participant.reply(workitem)
+    end
   end
 
 end
@@ -30,26 +48,33 @@ class StateCacheParticipant < Ruote::Participant
   def on_workitem
     begin
       state_cache = $ruote_properties['state_cache']
-      condition_key = workitem.params['key']
-      condition_value = workitem.params['value']
-      resource_id = workitem.params['resource_id']
-
       raise 'state_cache property is not set' unless defined? state_cache
-      raise 'key parameter is not defined for state cache participant' unless defined? condition_key and not
-        condition_key.to_s.empty?
-      raise 'value parameter is not defined for state cache participant' unless defined? condition_value and not
-        condition_value.to_s.empty?
 
-      if defined? resource_id and not resource_id.to_s.empty?
-        condition_key = "#{resource_id}.#{condition_key}"
+      resource_id = workitem.params['resource_id']
+      resource_id = nil unless defined? resource_id
+
+      if resource_id.nil?
+        condition_key = workitem.params['key']
+        condition_value = workitem.params['value']
+        raise 'key parameter is not defined for state cache participant' unless defined? condition_key and not
+          condition_key.to_s.empty?
+        raise 'value parameter is not defined for state cache participant' unless defined? condition_value and not
+          condition_value.to_s.empty?
+        callback = RuoteStateChangeCallback.new
+        callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
+                                                                        workitem,
+                                                                        condition_key,
+                                                                        condition_value,
+                                                                        callback)
+      else
+        callback = RuoteStateChangeCallback.new
+        callback.resource_id = resource_id
+        callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
+                                                                        workitem,
+                                                                        resource_id,
+                                                                        callback)
       end
 
-      callback = RuoteStateChangeCallback.new
-      callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
-                                                                      workitem,
-                                                                      condition_key,
-                                                                      condition_value,
-                                                                      callback)
       put('callback_uid', callback_uid)
     rescue Exception => e
       $logger.debug(e.message)

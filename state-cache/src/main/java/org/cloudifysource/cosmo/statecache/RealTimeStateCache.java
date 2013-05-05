@@ -24,7 +24,6 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 
 import java.net.URI;
-import java.util.Map;
 
 /**
  * Holds a cache of the distributed system state. The state
@@ -52,13 +51,8 @@ public class RealTimeStateCache implements StateCacheReader {
                 @Override
                 public void onMessage(URI uri, Object message) {
                     if (message instanceof StateChangedMessage) {
-                        StateChangedMessage update = (StateChangedMessage) message;
-                        if (update.getState() != null) {
-                            for (Map.Entry<String, Object> entry : update.getState().entrySet()) {
-                                final String key = String.format("%s.%s", update.getResourceId(), entry.getKey());
-                                stateCache.put(key, entry.getValue());
-                            }
-                        }
+                        final StateChangedMessage update = (StateChangedMessage) message;
+                        stateCache.put(update.getResourceId(), update.getState());
                     } else {
                         throw new IllegalArgumentException("Cannot handle message " + message);
                     }
@@ -92,6 +86,14 @@ public class RealTimeStateCache implements StateCacheReader {
                                                   Object value,
                                                   StateChangeCallback callback) {
         return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, value, callback);
+    }
+
+    @Override
+    public String subscribeToKeyValueStateChanges(Object receiver,
+                                                  Object context,
+                                                  String key,
+                                                  StateChangeCallback stateChangeCallback) {
+        return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, stateChangeCallback);
     }
 
     @Override

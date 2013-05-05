@@ -45,6 +45,12 @@ public class DefaultStateCacheReader implements StateCacheReader {
     }
 
     @Override
+    public String subscribeToKeyValueStateChanges(Object reciever, Object context, String key,
+                                                  StateChangeCallback stateChangeCallback) {
+        return stateCache.subscribeToKeyValueStateChanges(reciever, context, key, stateChangeCallback);
+    }
+
+    @Override
     public void removeCallback(String callbackUID) {
         stateCache.removeCallback(callbackUID);
     }
