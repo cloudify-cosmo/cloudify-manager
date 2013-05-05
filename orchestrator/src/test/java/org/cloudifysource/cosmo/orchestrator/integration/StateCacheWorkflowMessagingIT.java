@@ -51,19 +51,22 @@ public class StateCacheWorkflowMessagingIT {
     private RealTimeStateCache cache;
     private RuoteRuntime runtime;
     private CloudResourceProvisioner provisioner;
-    private URI provisionerUri;
-    private URI cacheUri;
+    private URI resourceProvisionerTopic;
+    private URI stateCacheTopic;
+    private URI resourceMonitorTopic;
+
 
     @BeforeMethod
     @Parameters({ "port" })
     public void startServer(@Optional("8080") int port) {
         startMessagingBroker(port);
         inputUri = URI.create("http://localhost:" + port + "/input/");
-        provisionerUri = inputUri.resolve("resource-manager");
-        cacheUri = inputUri.resolve("state");
+        resourceProvisionerTopic = inputUri.resolve("resource-manager");
+        stateCacheTopic = inputUri.resolve("state-cache");
+        resourceMonitorTopic = inputUri.resolve("resource-monitor");
         producer = new MessageProducer();
         RealTimeStateCacheConfiguration config = new RealTimeStateCacheConfiguration();
-        config.setMessageTopic(cacheUri);
+        config.setMessageTopic(stateCacheTopic);
         cache = new RealTimeStateCache(config);
         cache.start();
 
@@ -72,7 +75,7 @@ public class StateCacheWorkflowMessagingIT {
         runtimeProperties.put("broker_uri", inputUri);
         runtimeProperties.put("message_producer", producer);
         runtime = RuoteRuntime.createRuntime(runtimeProperties);
-        provisioner = new CloudResourceProvisioner(Mockito.mock(CloudDriver.class), provisionerUri);
+        provisioner = new CloudResourceProvisioner(Mockito.mock(CloudDriver.class), resourceProvisionerTopic);
     }
 
     @AfterMethod(alwaysRun = true)
@@ -102,9 +105,7 @@ public class StateCacheWorkflowMessagingIT {
         // Create radial workflow
         final String flow =
                 "define flow\n" +
-                "  echo '--1--'\n" +
-                "  resource id: 'abcd', resource_id: \"$resource_id\", action: \"start_machine\"\n" +
-                "  echo '--2--'\n" +
+                "  resource resource_id: \"$resource_id\", action: \"start_machine\"\n" +
                 "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
@@ -115,7 +116,7 @@ public class StateCacheWorkflowMessagingIT {
 
         // Update state cache
         final StateChangedMessage message = newStateChangedMessage(resourceId);
-        producer.send(cacheUri, message).get();
+        producer.send(stateCacheTopic, message).get();
 
         // Wait for workflow to end
         runtime.waitForWorkflow(workflowId);

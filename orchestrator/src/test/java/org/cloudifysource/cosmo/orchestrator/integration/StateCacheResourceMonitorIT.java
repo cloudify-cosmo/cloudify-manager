@@ -59,7 +59,6 @@ public class StateCacheResourceMonitorIT {
 
     //input for resourceMonitor and state cache
     private URI resourceMonitorTopic;
-    private MessageProducer producer;
     private URI stateCacheTopic;
 
     //components under test
@@ -112,7 +111,6 @@ public class StateCacheResourceMonitorIT {
         stateCacheTopic = uri.resolve("state-cache");
         resourceMonitorTopic = uri.resolve("resource-monitor");
         agentTopic = uri.resolve("agent");
-        producer = new MessageProducer();
         startStateCache();
         startAgent();
         startResourceMonitor();
