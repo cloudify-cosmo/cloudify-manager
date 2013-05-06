@@ -80,11 +80,6 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
         testPubSub(topic);
     }
 
-    @AfterMethod
-    public void cleanup() {
-        consumer.removeAllListeners();
-    }
-
     private void testPubSub(final URI topic) throws ExecutionException, InterruptedException {
         final BlockingQueue<MockMessage> messages = Queues.newArrayBlockingQueue(1);
         consumer.addListener(topic, new MessageConsumerListener<MockMessage>() {
