@@ -26,10 +26,6 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -49,7 +45,7 @@ import java.util.concurrent.ExecutionException;
 public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
 
     @Inject
-    MessageBrokerServer server;
+    MessageBrokerServer broker;
 
     @Inject
     private MessageConsumer consumer;
@@ -57,32 +53,17 @@ public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MessageProducer producer;
 
-    private URI uri;
     private final String key = "r1";
     private List<Throwable> consumerErrors = Lists.newCopyOnWriteArrayList();
 
-    @BeforeMethod
-    @Parameters({"port" })
-    public void startRestServer(@Optional("8080") int port) {
-        server.start(port);
-        uri = URI.create("http://localhost:" + port);
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void stopRestServer() {
-        consumer.removeAllListeners();
-        if (server != null) {
-            server.stop();
-        }
-    }
 
     @Test
     public void testPubSub() throws InterruptedException, IOException, ExecutionException {
-        final URI uri = this.uri.resolve("/" + key);
+        final URI topic = broker.getUri().resolve(key);
         final int numberOfEvents = 10;
 
         final CountDownLatch latch = new CountDownLatch(numberOfEvents);
-        consumer.addListener(uri, new MessageConsumerListener<Integer>() {
+        consumer.addListener(topic, new MessageConsumerListener<Integer>() {
             Integer lastI = null;
             @Override
             public void onMessage(URI uri, Integer i) {
@@ -113,7 +94,7 @@ public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
             //Reducing this sleep period would result in event loss
             //see https://github.com/Atmosphere/atmosphere/wiki/Understanding-BroadcasterCache
             Thread.sleep(100);
-            producer.send(uri, i).get();
+            producer.send(topic, i).get();
             checkForConsumerErrors();
         }
     }

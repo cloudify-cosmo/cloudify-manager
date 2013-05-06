@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * {@link MessageConsumer} spring configuration.
+ * Creates a new {@link MessageConsumer}.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MessageConsumerConfiguration {
 
-    @Bean
+    @Bean(destroyMethod = "removeAllListeners")
     public MessageConsumer messageConsumer() {
         return new MessageConsumer();
     }

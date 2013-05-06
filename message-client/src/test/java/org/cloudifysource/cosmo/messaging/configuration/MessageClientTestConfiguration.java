@@ -19,8 +19,11 @@ package org.cloudifysource.cosmo.messaging.configuration;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
 /**
  * Message client test configuration.
@@ -29,6 +32,7 @@ import org.springframework.context.annotation.Import;
  * @since 0.1
  */
 @Configuration
+@PropertySource("org/cloudifysource/cosmo/messaging/configuration/test.properties")
 @Import({
         MessageConsumerConfiguration.class,
         MessageProducerConfiguration.class,
@@ -36,4 +40,11 @@ import org.springframework.context.annotation.Import;
 })
 public class MessageClientTestConfiguration {
 
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+        return new PropertySourcesPlaceholderConfigurer();
+    }
+
+    //SUPPRESS CHECKSTYLE HideUtilityClassConstructor
+    public void foo() { }
 }

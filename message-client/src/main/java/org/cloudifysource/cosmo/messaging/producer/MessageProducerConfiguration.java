@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Creates a new {@link MessageProducer}.
  *
  * @author Dan Kilman
  * @since 0.1

@@ -16,11 +16,12 @@
 
 package org.cloudifysource.cosmo.messaging.broker;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * {@link MessageBrokerServer} spring configuration.
+ * Creates a new {@link MessageBrokerServer}.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -28,9 +29,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MessageBrokerServerConfiguration {
 
-    @Bean
+    @Value("${message-broker.port}")
+    int port;
+
+    @Bean(initMethod = "start", destroyMethod = "stop")
     public MessageBrokerServer messageBrokerServer() {
-        return new MessageBrokerServer();
+        return new MessageBrokerServer(port);
     }
 
 }

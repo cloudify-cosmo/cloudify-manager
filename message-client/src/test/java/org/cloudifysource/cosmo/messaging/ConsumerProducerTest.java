@@ -29,9 +29,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -62,31 +59,33 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MessageProducer producer;
 
-    private URI uri;
-
-    private final String key = "r1";
-
     private List<Throwable> failures = Lists.newCopyOnWriteArrayList();
-
-    @BeforeMethod
-    @Parameters({"port" })
-    public void startRestServer(@Optional("8080") int port) {
-        server.start(port);
-        uri = URI.create("http://localhost:" + port + "/");
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void stopRestServer() {
-        consumer.removeAllListeners();
-        if (server != null) {
-            server.stop();
-        }
-    }
 
     @Test
     public void testPubSub() throws InterruptedException, IOException, ExecutionException {
-        final URI topic = this.uri.resolve(key);
+        final URI topic = server.getUri().resolve("x");
+        testPubSub(topic);
+    }
 
+    @Test
+    public void testSubTopic() throws InterruptedException, IOException, ExecutionException {
+        final URI topic = server.getUri().resolve("xxx/xxx/");
+        testPubSub(topic);
+    }
+
+    //TODO: Support underscores in URIs
+    @Test(expectedExceptions = {IllegalArgumentException.class })
+    public void testUnderscoreSubTopic() throws InterruptedException, IOException, ExecutionException {
+        final URI topic = server.getUri().resolve("x_x/");
+        testPubSub(topic);
+    }
+
+    @AfterMethod
+    public void cleanup() {
+        consumer.removeAllListeners();
+    }
+
+    private void testPubSub(final URI topic) throws ExecutionException, InterruptedException {
         final BlockingQueue<MockMessage> messages = Queues.newArrayBlockingQueue(1);
         consumer.addListener(topic, new MessageConsumerListener<MockMessage>() {
 
@@ -113,19 +112,6 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
             checkFailures();
         }
         assertThat(message).isEqualTo(message2);
-    }
-
-    @Test
-    public void testSubTopic() throws InterruptedException, IOException, ExecutionException {
-        uri = uri.resolve("xxx/xxx/");
-        testPubSub();
-    }
-
-    //TODO: Support underscores in URIs
-    @Test(expectedExceptions = {IllegalArgumentException.class })
-    public void testUnderscoreSubTopic() throws InterruptedException, IOException, ExecutionException {
-        uri = uri.resolve("x_x/");
-        testPubSub();
     }
 
     private void checkFailures() {
