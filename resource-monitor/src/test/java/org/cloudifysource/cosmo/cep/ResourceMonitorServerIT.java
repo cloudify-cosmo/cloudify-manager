@@ -19,6 +19,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import org.cloudifysource.cosmo.cep.config.MockAgentConfig;
 import org.cloudifysource.cosmo.cep.config.ResourceMonitorServerConfig;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
@@ -39,7 +40,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -70,7 +70,8 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     @Import({ ResourceMonitorServerConfig.class,
             MessageBrokerServerConfig.class,
             MessageConsumerTestConfig.class,
-            MessageProducerConfig.class
+            MessageProducerConfig.class,
+            MockAgentConfig.class
     })
     static class Config {
         @Bean
@@ -95,6 +96,10 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     @Inject
     private MessageProducer producer;
 
+    // responds to agent status messages if not failed
+    @Inject
+    private MockAgent agent;
+
     private MessageConsumerListener<Object> listener;
     private BlockingQueue<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
@@ -104,8 +109,6 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
 
     @Value("${state-cache.topic}")
     private URI stateCacheTopic;
-
-    private MockAgent agent;
 
     @Value("${agent.topic}")
     private URI agentTopic;
@@ -123,10 +126,8 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
         assertThat(reachable).isTrue();
     }
 
-
     @BeforeMethod(groups = "integration")
     public void startServer() {
-        startAgent();
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<Object>() {
@@ -146,21 +147,6 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
             }
         };
         consumer.addListener(stateCacheTopic, listener);
-    }
-
-    private void startAgent() {
-        agent = new MockAgent(agentTopic, resourceMonitorTopic);
-        agent.start();
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void stopServer() {
-        consumer.removeListener(listener);
-        stopAgent();
-    }
-
-    private void stopAgent() {
-        agent.stop();
     }
 
     private boolean monitorAgentState() throws InterruptedException {

@@ -47,16 +47,19 @@ public class MockAgent {
     private final MessageConsumerListener<Object> listener;
     private List<Throwable> failures;
 
-    public MockAgent(final URI requestTopic, final URI responseTopic) {
-        this.requestTopic = requestTopic;
-        this.responseTopic = responseTopic;
+    public MockAgent(final MessageConsumer consumer,
+                     final MessageProducer producer,
+                     final URI agentTopic,
+                     final URI resourceMonitorTopic) {
+        this.consumer = consumer;
+        this.producer = producer;
+        this.requestTopic = agentTopic;
+        this.responseTopic = resourceMonitorTopic;
         this.failures = Lists.newArrayList();
-        producer = new MessageProducer();
-        consumer = new MessageConsumer();
         listener = new MessageConsumerListener<Object>() {
             @Override
             public void onMessage(URI uri, Object message) {
-                assertThat(uri).isEqualTo(requestTopic);
+                assertThat(uri).isEqualTo(agentTopic);
                 if (message instanceof ProbeAgentMessage) {
                     onProbeAgentMessage((ProbeAgentMessage) message);
                 } else {
