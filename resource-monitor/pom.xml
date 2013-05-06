@@ -57,11 +57,37 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>agent-api</artifactId>
         </dependency>
+        <!-- Spring DI -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <!-- TODO:Remove version -->
+            <version>3.2.2.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <!-- TODO:Remove version -->
+            <version>3.2.2.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <!-- TODO:Remove version -->
+            <version>1</version>
+        </dependency>
         <!-- Test -->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+            <!-- TODO:Remove version -->
+            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
@@ -72,6 +98,14 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>message-client</artifactId>
+            <scope>test</scope>
+            <type>test-jar</type>
+            <!-- TODO:Remove version -->
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -205,7 +239,8 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-            <url>http://maven-repository.cloudifysource.org</url>
+            <!--<url>http://maven-repository.cloudifysource.org</url>-->
+            <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>
             <releases>
                 <enabled>true</enabled>
                 <updatePolicy>daily</updatePolicy>

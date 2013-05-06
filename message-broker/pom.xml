@@ -56,6 +56,20 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
         </dependency>
+
+        <!-- Spring DI -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <!-- TODO:Remove version -->
+            <version>3.2.2.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <!-- TODO:Remove version -->
+            <version>3.2.2.RELEASE</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -127,7 +141,8 @@
         <repository>
           <id>org.cloudifysource</id>
           <name>cloudifysource</name>
-          <url>http://maven-repository.cloudifysource.org</url>
+          <!--<url>http://maven-repository.cloudifysource.org</url>-->
+          <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>
           <releases>
             <enabled>true</enabled>
             <updatePolicy>daily</updatePolicy>

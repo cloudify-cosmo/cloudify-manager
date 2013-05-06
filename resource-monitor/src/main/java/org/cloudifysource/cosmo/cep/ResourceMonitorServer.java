@@ -17,7 +17,6 @@ package org.cloudifysource.cosmo.cep;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
@@ -66,30 +65,33 @@ public class ResourceMonitorServer {
     private boolean pseudoClock;
     private final MessageProducer producer;
     private final MessageConsumer consumer;
-    private StatefulKnowledgeSession ksession;
-    private WorkingMemoryEntryPoint entryPoint;
     private final Resource droolsResource;
     private final ExecutorService executorService;
+    private StatefulKnowledgeSession ksession;
+    private WorkingMemoryEntryPoint entryPoint;
     private Future<Void> future;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private MessageConsumerListener<AgentStatusMessage> listener;
     private KnowledgeRuntimeLogger runtimeLogger;
     private final URI agentTopic;
 
-    public ResourceMonitorServer(ResourceMonitorServerConfiguration config) {
-        resourceMonitorTopic = config.getResourceMonitorTopic();
-        Preconditions.checkNotNull(resourceMonitorTopic);
-        stateCacheTopic = config.getStateCacheTopic();
-        Preconditions.checkNotNull(stateCacheTopic);
-        agentTopic = config.getAgentTopic();
-        Preconditions.checkNotNull(agentTopic);
-        pseudoClock = config.isPseudoClock();
-        droolsResource = config.getDroolsResource();
-        Preconditions.checkNotNull(droolsResource);
+    public ResourceMonitorServer(
+            URI resourceMonitorTopic,
+            URI stateCacheTopic,
+            URI agentTopic,
+            boolean pseudoClock,
+            Resource droolsResource,
+            MessageProducer producer,
+            MessageConsumer consumer) {
+
+        this.resourceMonitorTopic = resourceMonitorTopic;
+        this.stateCacheTopic = stateCacheTopic;
+        this.agentTopic = agentTopic;
+        this.pseudoClock = pseudoClock;
+        this.droolsResource = droolsResource;
+        this.producer = producer;
+        this.consumer = consumer;
         executorService = Executors.newSingleThreadExecutor();
-        Preconditions.checkNotNull(executorService);
-        producer = new MessageProducer();
-        consumer = new MessageConsumer();
     }
 
     public void start() {

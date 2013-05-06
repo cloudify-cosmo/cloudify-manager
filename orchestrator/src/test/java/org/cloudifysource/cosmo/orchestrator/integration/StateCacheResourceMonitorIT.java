@@ -20,9 +20,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.cep.Agent;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
-import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
 import org.cloudifysource.cosmo.statecache.StateCache;
@@ -117,7 +118,7 @@ public class StateCacheResourceMonitorIT {
     }
 
     private void startAgent() {
-        agent = new MockAgent(agentTopic, resourceMonitorTopic);
+        agent = new MockAgent(new MessageConsumer(), new MessageProducer(), agentTopic, resourceMonitorTopic);
         agent.start();
     }
 
@@ -146,8 +147,8 @@ public class StateCacheResourceMonitorIT {
     }
 
     private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
+        broker = new MessageBrokerServer(port);
+        broker.start();
     }
 
     private void stopMessageBroker() {
@@ -157,14 +158,15 @@ public class StateCacheResourceMonitorIT {
     }
 
     private void startResourceMonitor() {
-        ResourceMonitorServerConfiguration config =
-                new ResourceMonitorServerConfiguration();
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        config.setDroolsResource(resource);
-        config.setResourceMonitorTopic(resourceMonitorTopic);
-        config.setStateCacheTopic(stateCacheTopic);
-        config.setAgentTopic(agentTopic);
-        resourceMonitor = new ResourceMonitorServer(config);
+        boolean pseudoClock = false;
+        resourceMonitor = new ResourceMonitorServer(resourceMonitorTopic,
+                stateCacheTopic,
+                agentTopic,
+                pseudoClock,
+                resource,
+                new MessageProducer(),
+                new MessageConsumer());
         resourceMonitor.start();
     }
 

@@ -20,16 +20,17 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.config.MessageClientTestConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.messages.MockMessage;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -44,38 +45,41 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
-public class ConsumerProducerTest {
+@ContextConfiguration(classes = { MessageClientTestConfig.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
 
+    @Inject
     MessageBrokerServer server;
 
-    private URI uri;
+    @Inject
     private MessageConsumer consumer;
+
+    @Inject
     private MessageProducer producer;
-    private final String key = "r1";
+
     private List<Throwable> failures = Lists.newCopyOnWriteArrayList();
-
-    @BeforeMethod
-    @Parameters({"port" })
-    public void startRestServer(@Optional("8080") int port) {
-        server = new MessageBrokerServer();
-        server.start(port);
-        consumer = new MessageConsumer();
-        producer = new MessageProducer();
-        uri = URI.create("http://localhost:" + port + "/");
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void stopRestServer() {
-        consumer.removeAllListeners();
-        if (server != null) {
-            server.stop();
-        }
-    }
 
     @Test
     public void testPubSub() throws InterruptedException, IOException, ExecutionException {
-        final URI topic = this.uri.resolve(key);
+        final URI topic = server.getUri().resolve("x");
+        testPubSub(topic);
+    }
 
+    @Test
+    public void testSubTopic() throws InterruptedException, IOException, ExecutionException {
+        final URI topic = server.getUri().resolve("xxx/xxx/");
+        testPubSub(topic);
+    }
+
+    //TODO: Support underscores in URIs
+    @Test(expectedExceptions = {IllegalArgumentException.class })
+    public void testUnderscoreSubTopic() throws InterruptedException, IOException, ExecutionException {
+        final URI topic = server.getUri().resolve("x_x/");
+        testPubSub(topic);
+    }
+
+    private void testPubSub(final URI topic) throws ExecutionException, InterruptedException {
         final BlockingQueue<MockMessage> messages = Queues.newArrayBlockingQueue(1);
         consumer.addListener(topic, new MessageConsumerListener<MockMessage>() {
 
@@ -102,19 +106,6 @@ public class ConsumerProducerTest {
             checkFailures();
         }
         assertThat(message).isEqualTo(message2);
-    }
-
-    @Test
-    public void testSubTopic() throws InterruptedException, IOException, ExecutionException {
-        uri = uri.resolve("xxx/xxx/");
-        testPubSub();
-    }
-
-    //TODO: Support underscores in URIs
-    @Test(expectedExceptions = {IllegalArgumentException.class })
-    public void testUnderscoreSubTopic() throws InterruptedException, IOException, ExecutionException {
-        uri = uri.resolve("x_x/");
-        testPubSub();
     }
 
     private void checkFailures() {

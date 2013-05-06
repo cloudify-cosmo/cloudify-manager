@@ -113,8 +113,8 @@ public class StateCacheWorkflowMessagingIT {
     }
 
     private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
+        broker = new MessageBrokerServer(port);
+        broker.start();
     }
 
     private void stopMessageBroker() {

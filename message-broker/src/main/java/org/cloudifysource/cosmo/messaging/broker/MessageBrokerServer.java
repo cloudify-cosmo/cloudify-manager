@@ -38,8 +38,13 @@ public class MessageBrokerServer {
     private static AtmosphereServlet atmoServlet;
     private URI uri;
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final int port;
 
-    public void start(int port) {
+    public MessageBrokerServer(int port) {
+        this.port = port;
+    }
+
+    public void start() {
         this.uri = URI.create("http://localhost:" + port + "/");
         server = new Server(port);
         server.setHandler(createWebAppContext(MessageBrokerServlet.class));

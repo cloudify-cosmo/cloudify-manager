@@ -12,30 +12,39 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
+ ******************************************************************************/
 package org.cloudifysource.cosmo.cep;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import org.cloudifysource.cosmo.cep.config.MockAgentConfig;
+import org.cloudifysource.cosmo.cep.config.ResourceMonitorServerConfig;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
+import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
+import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
-import org.drools.io.Resource;
-import org.drools.io.ResourceFactory;
-import org.drools.time.SessionPseudoClock;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.net.URI;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -48,29 +57,63 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
+@ContextConfiguration(classes = { ResourceMonitorServerIT.Config.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
 
-public class ResourceMonitorServerIT {
+    /**
+     * @author Dan Kilman
+     * @since 0.1
+     */
+    @Configuration
+    @PropertySource("org/cloudifysource/cosmo/cep/configuration/test.properties")
+    @Import({ ResourceMonitorServerConfig.class,
+            MessageBrokerServerConfig.class,
+            MessageConsumerTestConfig.class,
+            MessageProducerConfig.class,
+            MockAgentConfig.class
+    })
+    static class Config {
+        @Bean
+        public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+            return new PropertySourcesPlaceholderConfigurer();
+        }
+    }
 
-    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
+    // component being tested
+    @Inject
+    private ResourceMonitorServer resourceMonitor;
+
+    // message broker that isolates server
+    @Inject
+    private MessageBrokerServer broker;
+
+    // receives messages from server
+    @Inject
+    private MessageConsumer consumer;
+
+    // pushes messages to server
+    @Inject
+    private MessageProducer producer;
+
+    // responds to agent status messages if not failed
+    @Inject
+    private MockAgent agent;
+
     private MessageConsumerListener<Object> listener;
     private BlockingQueue<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
 
-    // component being tested
-    private ResourceMonitorServer resourceMonitor;
-
-    // message broker that isolates resourceMonitor
-    private MessageBrokerServer broker;
-
-    // receives messages from resourceMonitor
-    private MessageConsumer consumer;
-
+    @Value("${resource-monitor.topic}")
     private URI resourceMonitorTopic;
+
+    @Value("${state-cache.topic}")
     private URI stateCacheTopic;
-    private MockAgent agent;
+
+    @Value("${agent.topic}")
     private URI agentTopic;
 
-    @Test
+    @Test(groups = "integration")
     public void testAgentUnreachable() throws InterruptedException {
         agent.fail();
         boolean reachable = monitorAgentState();
@@ -83,17 +126,8 @@ public class ResourceMonitorServerIT {
         assertThat(reachable).isTrue();
     }
 
-    @BeforeMethod
-    @Parameters({"port" })
-    public void startServer(@Optional("8080") int port) {
-        startMessagingBroker(port);
-        URI uri = broker.getUri();
-        resourceMonitorTopic = uri.resolve("resource-monitor");
-        agentTopic = uri.resolve("agent");
-        stateCacheTopic = uri.resolve("state-cache");
-        consumer = new MessageConsumer();
-        startResourceMonitor();
-        startAgent();
+    @BeforeMethod(groups = "integration")
+    public void startServer() {
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<Object>() {
@@ -115,24 +149,6 @@ public class ResourceMonitorServerIT {
         consumer.addListener(stateCacheTopic, listener);
     }
 
-    private void startAgent() {
-        agent = new MockAgent(agentTopic, resourceMonitorTopic);
-        agent.start();
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void stopServer() {
-        consumer.removeListener(listener);
-        stopResourceMonitor();
-        stopAgent();
-        stopMessageBroker();
-    }
-
-    private void stopAgent() {
-        agent.stop();
-    }
-
-
     private boolean monitorAgentState() throws InterruptedException {
         Agent agent = new Agent();
         agent.setAgentId("agent_1");
@@ -153,43 +169,5 @@ public class ResourceMonitorServerIT {
             throw Throwables.propagate(t);
         }
         agent.validateNoFailures();
-    }
-
-    private SessionPseudoClock getClock() {
-        return ((SessionPseudoClock) resourceMonitor.getClock());
-    }
-
-    private void startResourceMonitor() {
-        ResourceMonitorServerConfiguration config =
-                new ResourceMonitorServerConfiguration();
-        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        config.setDroolsResource(resource);
-        config.setResourceMonitorTopic(resourceMonitorTopic);
-        config.setStateCacheTopic(stateCacheTopic);
-        config.setAgentTopic(agentTopic);
-        resourceMonitor = new ResourceMonitorServer(config);
-        resourceMonitor.start();
-    }
-
-    private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
-    }
-
-
-    private void stopMessageBroker() {
-        if (broker != null) {
-            broker.stop();
-        }
-    }
-
-    private void stopResourceMonitor() {
-        if (resourceMonitor != null) {
-            resourceMonitor.stop();
-        }
-    }
-
-    private Date now() {
-        return new Date(getClock().getCurrentTime());
     }
 }

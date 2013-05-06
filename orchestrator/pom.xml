@@ -107,6 +107,7 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
@@ -209,8 +210,8 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-            <url>http://maven-repository.cloudifysource.org</url>
-            <releases>
+                <!--<url>http://maven-repository.cloudifysource.org</url>-->
+                <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>            <releases>
                 <enabled>true</enabled>
                 <updatePolicy>daily</updatePolicy>
                 <checksumPolicy>warn</checksumPolicy>

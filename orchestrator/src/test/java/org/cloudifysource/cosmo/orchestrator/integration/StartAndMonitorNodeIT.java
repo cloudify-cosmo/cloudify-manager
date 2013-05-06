@@ -75,7 +75,6 @@ public class StartAndMonitorNodeIT {
     private URI agentTopic;
     private ResourceMonitorServer resourceMonitor;
     private CloudDriver cloudDriver;
-    private MockAgent mockAgent;
 
 
     @Test(timeOut = 10000)
@@ -90,6 +89,8 @@ public class StartAndMonitorNodeIT {
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
         // Configure mock cloud driver
+        final MockAgent mockAgent = new MockAgent(new MessageConsumer(), new MessageProducer(), agentTopic,
+                resourceMonitorTopic);
         when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -104,8 +105,11 @@ public class StartAndMonitorNodeIT {
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", resourceId);
-        workflow.execute(workitem);
-        mockAgent.stop();
+        try {
+            workflow.execute(workitem);
+        } finally {
+            mockAgent.stop();
+        }
         mockAgent.validateNoFailures();
     }
 
@@ -130,7 +134,6 @@ public class StartAndMonitorNodeIT {
         runtime = RuoteRuntime.createRuntime(runtimeProperties);
         startCloudResourceProvisioner();
         startResourceMonitor();
-        mockAgent = new MockAgent(agentTopic, resourceMonitorTopic);
     }
 
     private void startRealTimeStateCache(RealTimeStateCacheConfiguration config) {
@@ -146,7 +149,6 @@ public class StartAndMonitorNodeIT {
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
-        mockAgent.stop();
         stopResourceMonitor();
         stopRealTimeStateCache();
         stopCloudResourceProvisioner();
@@ -166,8 +168,8 @@ public class StartAndMonitorNodeIT {
     }
 
     private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
+        broker = new MessageBrokerServer(port);
+        broker.start();
     }
 
     private void stopMessageBroker() {
@@ -177,14 +179,15 @@ public class StartAndMonitorNodeIT {
     }
 
     private void startResourceMonitor() {
-        ResourceMonitorServerConfiguration config =
-                new ResourceMonitorServerConfiguration();
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        config.setDroolsResource(resource);
-        config.setResourceMonitorTopic(resourceMonitorTopic);
-        config.setStateCacheTopic(stateCacheTopic);
-        config.setAgentTopic(agentTopic);
-        resourceMonitor = new ResourceMonitorServer(config);
+        boolean pseudoClock = false;
+        resourceMonitor = new ResourceMonitorServer(resourceMonitorTopic,
+                stateCacheTopic,
+                agentTopic,
+                pseudoClock,
+                resource,
+                new MessageProducer(),
+                new MessageConsumer());
         resourceMonitor.start();
     }
 
