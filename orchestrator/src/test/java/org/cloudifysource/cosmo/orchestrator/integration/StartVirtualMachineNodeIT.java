@@ -22,10 +22,10 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
-import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
@@ -177,8 +177,8 @@ public class StartVirtualMachineNodeIT {
     }
 
     private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
+        broker = new MessageBrokerServer(port);
+        broker.start();
     }
 
     private void stopMessageBroker() {
@@ -188,14 +188,15 @@ public class StartVirtualMachineNodeIT {
     }
 
     private void startResourceMonitor() {
-        ResourceMonitorServerConfiguration config =
-                new ResourceMonitorServerConfiguration();
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        config.setDroolsResource(resource);
-        config.setResourceMonitorTopic(resourceMonitorTopic);
-        config.setStateCacheTopic(stateCacheTopic);
-        config.setAgentTopic(agentTopic);
-        resourceMonitor = new ResourceMonitorServer(config);
+        boolean pseudoClock = false;
+        resourceMonitor = new ResourceMonitorServer(resourceMonitorTopic,
+                stateCacheTopic,
+                agentTopic,
+                pseudoClock,
+                resource,
+                new MessageProducer(),
+                new MessageConsumer());
         resourceMonitor.start();
     }
 
