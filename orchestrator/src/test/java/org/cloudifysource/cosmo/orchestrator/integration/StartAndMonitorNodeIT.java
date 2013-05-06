@@ -19,12 +19,12 @@ package org.cloudifysource.cosmo.orchestrator.integration;
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.cep.Agent;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
-import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
@@ -85,7 +85,8 @@ public class StartAndMonitorNodeIT {
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
         // Configure mock cloud driver
-        final MockAgent mockAgent = new MockAgent(agentTopic, resourceMonitorTopic);
+        final MockAgent mockAgent = new MockAgent(new MessageConsumer(), new MessageProducer(), agentTopic,
+                resourceMonitorTopic);
         when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -163,8 +164,8 @@ public class StartAndMonitorNodeIT {
     }
 
     private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
+        broker = new MessageBrokerServer(port);
+        broker.start();
     }
 
     private void stopMessageBroker() {
@@ -174,14 +175,15 @@ public class StartAndMonitorNodeIT {
     }
 
     private void startResourceMonitor() {
-        ResourceMonitorServerConfiguration config =
-                new ResourceMonitorServerConfiguration();
         final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        config.setDroolsResource(resource);
-        config.setResourceMonitorTopic(resourceMonitorTopic);
-        config.setStateCacheTopic(stateCacheTopic);
-        config.setAgentTopic(agentTopic);
-        resourceMonitor = new ResourceMonitorServer(config);
+        boolean pseudoClock = false;
+        resourceMonitor = new ResourceMonitorServer(resourceMonitorTopic,
+                stateCacheTopic,
+                agentTopic,
+                pseudoClock,
+                resource,
+                new MessageProducer(),
+                new MessageConsumer());
         resourceMonitor.start();
     }
 

@@ -62,8 +62,8 @@ public class StartTomcatNodeIT {
     @BeforeMethod(alwaysRun = true, groups = "vagrant")
     @Parameters({ "port" })
     public void startMessageBrokerServer(@Optional("8080") int port) {
-        broker = new MessageBrokerServer();
-        broker.start(port);
+        broker = new MessageBrokerServer(port);
+        broker.start();
         producer = new MessageProducer();
         uri = URI.create("http://localhost:" + port);
         vagrantRoot = Files.createTempDir();
