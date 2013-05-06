@@ -20,6 +20,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
+import org.cloudifysource.cosmo.cep.messages.ResourceMonitorMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -71,7 +72,7 @@ public class ResourceMonitorServer {
     private WorkingMemoryEntryPoint entryPoint;
     private Future<Void> future;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-    private MessageConsumerListener<AgentStatusMessage> listener;
+    private MessageConsumerListener<Object> listener;
     private KnowledgeRuntimeLogger runtimeLogger;
     private final URI agentTopic;
 
@@ -176,11 +177,20 @@ public class ResourceMonitorServer {
             throw new IllegalArgumentException("DRL file must use default entry point");
         }
         entryPoint = Iterables.getOnlyElement(entryPoints);
-        listener = new MessageConsumerListener<AgentStatusMessage>() {
-
+        listener = new MessageConsumerListener<Object>() {
             @Override
-            public void onMessage(URI uri, AgentStatusMessage message) {
-                entryPoint.insert(message);
+            public void onMessage(URI uri, Object message) {
+                // TODO: all message types are currently consumed here.
+                // Should have a distinction between messages and tasks.
+                if (message instanceof AgentStatusMessage) {
+                    entryPoint.insert(message);
+                } else if (message instanceof ResourceMonitorMessage) {
+                    final ResourceMonitorMessage typedMessage = (ResourceMonitorMessage) message;
+                    final Agent agent = new Agent();
+                    agent.setAgentId(typedMessage.getResourceId());
+                    insertFact(agent);
+                    logger.debug("Started resource monitoring [resourceId={}]", typedMessage.getResourceId());
+                }
             }
 
             @Override

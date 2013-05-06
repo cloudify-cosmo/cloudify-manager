@@ -22,10 +22,13 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
+import org.cloudifysource.cosmo.cep.messages.ResourceMonitorMessage;
+import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
@@ -79,9 +82,11 @@ public class StartVirtualMachineNodeIT {
     private ResourceMonitorServer resourceMonitor;
     private CloudDriver cloudDriver;
     private File tempDirectory;
+    private MockAgent mockAgent;
+    private MessageConsumer messageConsumer;
 
 
-    @Test(groups = "vagrant")
+    @Test(groups = "vagrant", timeOut = 30000 * 2 * 5)
     public void testStartVirtualMachine() throws ExecutionException, InterruptedException {
         final JsonRecipe recipe = JsonRecipe.load(readRecipe());
         final List<String> nodes = recipe.getNodes();
@@ -91,6 +96,22 @@ public class StartVirtualMachineNodeIT {
         final String workflowName = workflows.get(0).toString();
         final String workflow = loadWorkflow(resourceId, workflowName);
         final RuoteWorkflow ruoteWorkflow = RuoteWorkflow.createFromString(workflow, runtime);
+
+        messageConsumer.addListener(resourceMonitorTopic, new MessageConsumerListener<Object>() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                if (message instanceof ResourceMonitorMessage) {
+                    final ResourceMonitorMessage typedMessage = (ResourceMonitorMessage) message;
+                    if (typedMessage.getResourceId().equals(resourceId)) {
+                        mockAgent.start();
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                t.printStackTrace();
+            }
+        });
 
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();
@@ -141,6 +162,8 @@ public class StartVirtualMachineNodeIT {
         runtime = RuoteRuntime.createRuntime(runtimeProperties);
         startCloudResourceProvisioner();
         startResourceMonitor();
+        messageConsumer = new MessageConsumer();
+        mockAgent = new MockAgent(messageConsumer, new MessageProducer(), agentTopic, resourceMonitorTopic);
     }
 
     private void startRealTimeStateCache(RealTimeStateCacheConfiguration config) {
@@ -156,6 +179,8 @@ public class StartVirtualMachineNodeIT {
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
+        mockAgent.stop();
+        messageConsumer.removeAllListeners();
         cloudDriver.terminateMachines();
         tempDirectory.delete();
         stopResourceMonitor();

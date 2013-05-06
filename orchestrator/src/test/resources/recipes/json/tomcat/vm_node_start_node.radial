@@ -1,3 +1,4 @@
 define start_node
-  resource resource_id: "$resource_id", action: start_machine
+  resource resource_id: "$resource_id", action: "start_machine"
+  resource_monitor resource_id: "$resource_id"
   state resource_id: "$resource_id", reachable: "true"

@@ -41,6 +41,7 @@ def create_dashboard
   dashboard.register_participant 'java', JavaClassParticipant
   dashboard.register_participant 'state', StateCacheParticipant
   dashboard.register_participant 'resource', ResourceManagerParticipant
+  dashboard.register_participant 'resource_monitor', ResourceMonitorParticipant
   dashboard
 end
 

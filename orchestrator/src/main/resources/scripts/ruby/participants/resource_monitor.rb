@@ -14,31 +14,27 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-java_import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage
+java_import org.cloudifysource.cosmo.cep.messages.ResourceMonitorMessage
 
-class ResourceManagerParticipant < Ruote::Participant
+class ResourceMonitorParticipant < Ruote::Participant
   def on_workitem
     begin
       resource_id = workitem.fields['resource_id']
-      action = workitem.params['action']
       producer = $ruote_properties['message_producer']
       broker_uri = $ruote_properties['broker_uri']
 
-      $logger.debug('Resource provisioner participant invoked: [id={}, action={}, broker_uri={}]',
-                    resource_id,
-                    action,
-                    broker_uri)
+      $logger.debug('Executing ResourceMonitorParticipant [resourceId={}]', resource_id)
 
       raise 'resource_id is not set' unless defined? resource_id and not resource_id.nil?
-      raise "unknown action '#{action}'" if action != 'start_machine'
       raise 'message_producer not defined' unless defined? producer
       raise 'broker_uri not defined' unless defined? broker_uri
 
-      uri = broker_uri.resolve('resource-manager')
-      message = CloudResourceMessage.new(resource_id, action)
+      uri = broker_uri.resolve('resource-monitor')
+      message = ResourceMonitorMessage.new(resource_id)
+
+      $logger.debug('Sending resource monitor message [uri={}, message={}]', uri, message)
 
       producer.send(uri, message).get()
-      $logger.debug('Resource provisioner participant sent: [uri={}, message={}]', uri, message)
 
       reply
     end
