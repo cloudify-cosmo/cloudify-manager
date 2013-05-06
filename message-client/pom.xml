@@ -20,9 +20,6 @@
     <artifactId>message-client</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
-    <properties>
-        <org.springframework.version>3.2.2.RELEASE</org.springframework.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -57,12 +54,10 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-            <version>${org.springframework.version}</version>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
-            <version>1</version>
         </dependency>
 
         <!-- Test Dependencies -->
@@ -94,7 +89,6 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
-            <version>${org.springframework.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
