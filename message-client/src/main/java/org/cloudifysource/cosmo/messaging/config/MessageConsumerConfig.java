@@ -14,8 +14,9 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.messaging.consumer;
+package org.cloudifysource.cosmo.messaging.config;
 
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
  * @since 0.1
  */
 @Configuration
-public class MessageConsumerConfiguration {
+public class MessageConsumerConfig {
 
     @Bean(destroyMethod = "removeAllListeners")
     public MessageConsumer messageConsumer() {

@@ -14,11 +14,8 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.messaging.configuration;
+package org.cloudifysource.cosmo.messaging.config;
 
-import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServerConfiguration;
-import org.cloudifysource.cosmo.messaging.consumer.config.MessageConsumerTestConfig;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -35,10 +32,10 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 @PropertySource("org/cloudifysource/cosmo/messaging/configuration/test.properties")
 @Import({
         MessageConsumerTestConfig.class,
-        MessageProducerConfiguration.class,
-        MessageBrokerServerConfiguration.class
+        MessageProducerConfig.class,
+        MessageBrokerServerConfig.class
 })
-public class MessageClientTestConfiguration {
+public class MessageClientTestConfig {
 
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {

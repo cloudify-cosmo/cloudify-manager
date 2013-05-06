@@ -14,27 +14,24 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.messaging.broker;
+package org.cloudifysource.cosmo.messaging.config;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
+import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.springframework.context.annotation.Configuration;
 
+import javax.inject.Inject;
+
 /**
- * Creates a new {@link MessageBrokerServer}.
+ * Creates a new {@link org.cloudifysource.cosmo.messaging.consumer.MessageConsumer}
+ * that depends on {@link MessageBrokerServer}.
+ * This ensures broker initializes before consumer, and terminates after consumer.
  *
- * @author Dan Kilman
+ * @author itaif
  * @since 0.1
  */
 @Configuration
-public class MessageBrokerServerConfiguration {
+public class MessageConsumerTestConfig extends MessageConsumerConfig {
 
-    @Value("${message-broker.port}")
-    int port;
-
-    @Bean(initMethod = "start", destroyMethod = "stop")
-    public MessageBrokerServer messageBrokerServer() {
-        return new MessageBrokerServer(port);
-    }
-
+    @Inject
+    MessageBrokerServer broker;
 }

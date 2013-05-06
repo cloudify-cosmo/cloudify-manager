@@ -19,7 +19,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
-import org.cloudifysource.cosmo.messaging.configuration.MessageClientTestConfiguration;
+import org.cloudifysource.cosmo.messaging.config.MessageClientTestConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
@@ -40,7 +40,7 @@ import java.util.concurrent.ExecutionException;
  * @author itaif
  * @since 0.1
  */
-@ContextConfiguration(classes = { MessageClientTestConfiguration.class })
+@ContextConfiguration(classes = { MessageClientTestConfig.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
 

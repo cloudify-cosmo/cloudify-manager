@@ -13,31 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep;
+package org.cloudifysource.cosmo.cep.config;
 
+import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
 import java.net.URI;
 
 
 /**
- * Configuration for {@link ResourceMonitorServer}.
+ * Configuration for {@link org.cloudifysource.cosmo.cep.ResourceMonitorServer}.
  * @author itaif
  * @since 0.1
  */
 @Configuration
-@Import({MessageProducerConfiguration.class, MessageConsumerConfiguration.class })
-public class ResourceMonitorServerConfiguration {
+public class ResourceMonitorServerConfig {
 
     @Value("${resource-monitor.topic}")
     private String resourceMonitorTopic;

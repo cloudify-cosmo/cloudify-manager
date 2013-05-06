@@ -17,22 +17,25 @@
 package org.cloudifysource.cosmo.messaging.consumer.config;
 
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.inject.Inject;
-
 /**
- * Creates a new {@link org.cloudifysource.cosmo.messaging.consumer.MessageConsumer}
- * that depends on {@link MessageBrokerServer}.
- * This ensures broker initializes before consumer, and terminates after consumer.
+ * Creates a new {@link org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer}.
  *
- * @author itaif
+ * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class MessageConsumerTestConfig extends MessageConsumerConfiguration {
+public class MessageBrokerServerConfig {
 
-    @Inject
-    MessageBrokerServer broker;
+    @Value("${message-broker.port}")
+    int port;
+
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    public MessageBrokerServer messageBrokerServer() {
+        return new MessageBrokerServer(port);
+    }
+
 }

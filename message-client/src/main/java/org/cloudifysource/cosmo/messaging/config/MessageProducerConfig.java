@@ -14,20 +14,21 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.messaging.producer;
+package org.cloudifysource.cosmo.messaging.config;
 
 
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Creates a new {@link MessageProducer}.
+ * Creates a new {@link org.cloudifysource.cosmo.messaging.producer.MessageProducer}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class MessageProducerConfiguration {
+public class MessageProducerConfig {
 
     @Bean
     public MessageProducer messageProducer() {
