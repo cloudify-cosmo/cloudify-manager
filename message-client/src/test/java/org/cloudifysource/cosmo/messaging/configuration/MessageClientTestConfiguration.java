@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.messaging.configuration;
 
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServerConfiguration;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.springframework.context.annotation.Bean;

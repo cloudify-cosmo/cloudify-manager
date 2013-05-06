@@ -28,7 +28,6 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
