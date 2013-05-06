@@ -23,15 +23,17 @@ import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
+import org.cloudifysource.cosmo.messaging.consumer.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
@@ -66,16 +68,15 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     @PropertySource("org/cloudifysource/cosmo/cep/configuration/test.properties")
     @Import({ ResourceMonitorServerConfiguration.class,
             MessageBrokerServerConfiguration.class,
-            MessageConsumerConfiguration.class,
+            MessageConsumerTestConfig.class,
             MessageProducerConfiguration.class
     })
-    static class Config { }
-
-    @Value("${resource.monitor.port}")
-    private int port;
-
-    @Value("${agent.id}")
-    private String agentId;
+    static class Config {
+        @Bean
+        public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+            return new PropertySourcesPlaceholderConfigurer();
+        }
+    }
 
     // component being tested
     @Inject
@@ -96,17 +97,16 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     private MessageConsumerListener<Object> listener;
     private BlockingQueue<StateChangedMessage> stateChangedMessages;
     private List<Throwable> failures;
-    private boolean mockAgentFailed;
 
-    @Value("${resource-monitor.topic")
+    @Value("${resource-monitor.topic}")
     private URI resourceMonitorTopic;
 
-    @Value("${state-cache.topic")
+    @Value("${state-cache.topic}")
     private URI stateCacheTopic;
 
     private MockAgent agent;
 
-    @Value("${agent.topic")
+    @Value("${agent.topic}")
     private URI agentTopic;
 
     @Test(groups = "integration")
