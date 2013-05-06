@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.messaging.consumer.config;
+package org.cloudifysource.cosmo.messaging.config;
 
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.springframework.beans.factory.annotation.Value;
