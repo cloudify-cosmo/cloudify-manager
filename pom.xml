@@ -20,9 +20,6 @@
         <module>resource-monitor-api</module>
         <module>state-cache</module>
         <module>state-cache-api</module>
-        
-        <!-- Obsolete -->
-        <module>kvstore</module>
     </modules>
 
 </project>

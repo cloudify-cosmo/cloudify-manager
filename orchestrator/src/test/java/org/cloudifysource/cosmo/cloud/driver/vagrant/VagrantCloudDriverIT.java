@@ -32,18 +32,18 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author Idan Moyal
  * @since 0.1
  */
-public class VagrantCloudDriverTest {
+public class VagrantCloudDriverIT {
 
     private File vagrantRoot;
     private CloudDriver driver;
 
-    @BeforeMethod(alwaysRun = true)
+    @BeforeMethod(alwaysRun = true, groups = "vagrant")
     public void init() {
         vagrantRoot = Files.createTempDir();
         driver = new VagrantCloudDriver(vagrantRoot);
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, groups = "vagrant")
     public void clean() {
         if (driver != null)
             driver.terminateMachines();

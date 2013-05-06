@@ -25,7 +25,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
 import javax.inject.Inject;
 import java.net.URI;
@@ -40,34 +39,37 @@ import java.net.URI;
 @Import({MessageProducerConfiguration.class, MessageConsumerConfiguration.class })
 public class ResourceMonitorServerConfiguration {
 
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer ps() {
-        return new PropertySourcesPlaceholderConfigurer();
-    }
+    @Value("${resource-monitor.topic")
+    private URI resourceMonitorTopic;
 
-    @Value("${input.uri}")
-    private URI inputUri;
+    @Value("${state-cache.topic")
+    private URI stateCacheTopic;
 
-    @Value("${output.uri}")
-    private URI outputUri;
+    @Value("${agent.topic")
+    private URI agentTopic;
 
     @Value("${pseudo.clock}")
     private boolean pseudoClock;
 
-    @Value("${rule.file}")
+    @Value("${resource-monitor.rule.file}")
     private String droolsResourcePath;
 
     @Inject
-    private MessageProducer messageProducer;
+    private MessageProducer producer;
 
     @Inject
-    private MessageConsumer messageConsumer;
+    private MessageConsumer consumer;
 
     @Bean
     public ResourceMonitorServer resourceMonitorServer() {
         Resource droolsResource = ResourceFactory.newClassPathResource(droolsResourcePath, this.getClass());
-        return new ResourceMonitorServer(inputUri, outputUri, pseudoClock, droolsResource, messageProducer,
-                messageConsumer);
+        return new ResourceMonitorServer(
+                resourceMonitorTopic,
+                stateCacheTopic,
+                agentTopic,
+                pseudoClock,
+                droolsResource,
+                producer,
+                consumer);
     }
-
 }

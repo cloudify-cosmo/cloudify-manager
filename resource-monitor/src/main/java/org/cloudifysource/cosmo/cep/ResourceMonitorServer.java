@@ -19,12 +19,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
 import org.drools.KnowledgeBaseFactory;
@@ -59,9 +61,9 @@ import java.util.concurrent.Future;
  */
 public class ResourceMonitorServer {
 
-    private final URI inputUri;
-    private final URI outputUri;
-    private final boolean pseudoClock;
+    private URI resourceMonitorTopic;
+    private URI stateCacheTopic;
+    private boolean pseudoClock;
     private final MessageProducer producer;
     private final MessageConsumer consumer;
     private final Resource droolsResource;
@@ -72,20 +74,25 @@ public class ResourceMonitorServer {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private MessageConsumerListener<AgentStatusMessage> listener;
     private KnowledgeRuntimeLogger runtimeLogger;
+    private final URI agentTopic;
 
-    public ResourceMonitorServer(URI inputUri, URI outputUri, boolean pseudoClock, Resource droolsResource,
-                                 MessageProducer producer, MessageConsumer consumer) {
-        this.inputUri = inputUri;
-        Preconditions.checkNotNull(inputUri);
-        this.outputUri = outputUri;
-        Preconditions.checkNotNull(outputUri);
+    public ResourceMonitorServer(
+            URI resourceMonitorTopic,
+            URI stateCacheTopic,
+            URI agentTopic,
+            boolean pseudoClock,
+            Resource droolsResource,
+            MessageProducer producer,
+            MessageConsumer consumer) {
+
+        this.resourceMonitorTopic = resourceMonitorTopic;
+        this.stateCacheTopic = stateCacheTopic;
+        this.agentTopic = agentTopic;
         this.pseudoClock = pseudoClock;
         this.droolsResource = droolsResource;
-        Preconditions.checkNotNull(droolsResource);
-        executorService = Executors.newSingleThreadExecutor();
-        Preconditions.checkNotNull(executorService);
         this.producer = producer;
         this.consumer = consumer;
+        executorService = Executors.newSingleThreadExecutor();
     }
 
     public void start() {
@@ -150,8 +157,14 @@ public class ResourceMonitorServer {
         Channel exitChannel = new Channel() {
 
                 @Override
-                public void send(Object object) {
-                    producer.send(outputUri, object);
+                public void send(Object message) {
+                    if (message instanceof ProbeAgentMessage) {
+                        producer.send(agentTopic, message);
+                    } else if (message instanceof StateChangedMessage) {
+                        producer.send(stateCacheTopic, message);
+                    } else {
+                        throw new IllegalStateException("Don't know how to route message " + message);
+                    }
                 }
             };
         ksession.registerChannel("output", exitChannel);
@@ -175,13 +188,8 @@ public class ResourceMonitorServer {
             public void onFailure(Throwable t) {
                 ResourceMonitorServer.this.onConsumerFailure(t);
             }
-
-            @Override
-            public Class<? extends AgentStatusMessage> getMessageClass() {
-                return AgentStatusMessage.class;
-            }
         };
-        consumer.addListener(inputUri, listener);
+        consumer.addListener(resourceMonitorTopic, listener);
     }
 
     private void onConsumerFailure(Throwable t) {

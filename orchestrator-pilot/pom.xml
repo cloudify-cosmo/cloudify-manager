@@ -20,12 +20,6 @@
 	<artifactId>orchestrator-pilot</artifactId>
 	<packaging>jar</packaging>
 	<version>0.1-SNAPSHOT</version>
-	<properties>
-		<jetty.version>8.1.5.v20120716</jetty.version>
-		<testng.version>6.8</testng.version>
-		<jersey.version>1.8</jersey.version>
-        <cosmo.logger.version>0.1-SNAPSHOT</cosmo.logger.version>
-	</properties>
 	<dependencies>
         <dependency>
             <groupId>net.schmizz</groupId>
@@ -57,7 +51,6 @@
         <dependency>
             <groupId>org.cloudifysource.cosmo</groupId>
             <artifactId>logger</artifactId>
-            <version>${cosmo.logger.version}</version>
         </dependency>
 		<dependency>
 		    <groupId>org.slf4j</groupId>

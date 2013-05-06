@@ -72,7 +72,7 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
     @Parameters({"port" })
     public void startRestServer(@Optional("8080") int port) {
         server.start(port);
-        uri = URI.create("http://localhost:" + port);
+        uri = URI.create("http://localhost:" + port + "/");
     }
 
     @AfterMethod(alwaysRun = true)
@@ -85,14 +85,14 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
 
     @Test
     public void testPubSub() throws InterruptedException, IOException, ExecutionException {
-        final URI uri = this.uri.resolve("/" + key);
+        final URI topic = this.uri.resolve(key);
 
         final BlockingQueue<MockMessage> messages = Queues.newArrayBlockingQueue(1);
-        consumer.addListener(uri, new MessageConsumerListener<MockMessage>() {
-            Integer lastI = null;
+        consumer.addListener(topic, new MessageConsumerListener<MockMessage>() {
+
             @Override
             public void onMessage(URI messageUri, MockMessage message) {
-                assertThat(messageUri).isEqualTo(uri);
+                assertThat(messageUri).isEqualTo(topic);
                 messages.add(message);
             }
 
@@ -100,17 +100,12 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
             public void onFailure(Throwable t) {
                 failures.add(t);
             }
-
-            @Override
-            public Class<? extends MockMessage> getMessageClass() {
-                return MockMessage.class;
-            }
         });
 
         MockMessage message = new MockMessage();
         message.setValue(1);
 
-        producer.send(uri, message);
+        producer.send(topic, message).get();
 
         MockMessage message2 = null;
         while (message2 == null) {
@@ -118,6 +113,19 @@ public class ConsumerProducerTest extends AbstractTestNGSpringContextTests {
             checkFailures();
         }
         assertThat(message).isEqualTo(message2);
+    }
+
+    @Test
+    public void testSubTopic() throws InterruptedException, IOException, ExecutionException {
+        uri = uri.resolve("xxx/xxx/");
+        testPubSub();
+    }
+
+    //TODO: Support underscores in URIs
+    @Test(expectedExceptions = {IllegalArgumentException.class })
+    public void testUnderscoreSubTopic() throws InterruptedException, IOException, ExecutionException {
+        uri = uri.resolve("x_x/");
+        testPubSub();
     }
 
     private void checkFailures() {

@@ -17,7 +17,7 @@
 package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.collect.Maps;
-import junit.framework.Assert;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -58,7 +58,7 @@ public class NamedLockProviderTest {
         for (int i = 0; i < clients.length; i++)
             clients[i].join();
 
-        Assert.assertEquals("Unexpected number of locks created", lockIDs.size(), locks.size());
+        Assert.assertEquals(lockIDs.size(), locks.size(), "Unexpected number of locks created");
     }
 
     /**

@@ -32,36 +32,40 @@ import java.net.URI;
  * @author Idan Moyal
  * @since 0.1
  */
-public class CloudResourceManager {
+public class CloudResourceProvisioner {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceProvisioner.class);
 
     private final CloudDriver driver;
+    private final MessageConsumer consumer;
+    private final URI inputUri;
 
-    public CloudResourceManager(final CloudDriver driver, URI uri, MessageConsumer consumer) {
+    public CloudResourceProvisioner(final CloudDriver driver, URI inputUri) {
         Preconditions.checkNotNull(driver);
+        Preconditions.checkNotNull(inputUri);
+        this.inputUri = inputUri;
         this.driver = driver;
-        if (consumer != null && uri != null) {
-            consumer.addListener(uri, new MessageConsumerListener<CloudResourceMessage>() {
-                @Override
-                public void onMessage(URI uri, CloudResourceMessage message) {
-                    LOGGER.debug("Consumed message from broker: " + message);
-                    if ("start_machine".equals(message.getAction())) {
-                        startMachine(message.getId());
-                    }
-                }
+        this.consumer = new MessageConsumer();
+    }
 
-                @Override
-                public void onFailure(Throwable t) {
+    public void start() {
+        consumer.addListener(inputUri, new MessageConsumerListener<CloudResourceMessage>() {
+            @Override
+            public void onMessage(URI uri, CloudResourceMessage message) {
+                LOGGER.debug("Consumed message from broker: " + message);
+                if ("start_machine".equals(message.getAction())) {
+                    startMachine(message.getId());
                 }
+            }
 
-                @Override
-                public Class<? extends CloudResourceMessage> getMessageClass() {
-                    return CloudResourceMessage.class;
-                }
+            @Override
+            public void onFailure(Throwable t) {
+            }
+        });
+    }
 
-            });
-        }
+    public void stop() {
+        consumer.removeAllListeners();
     }
 
     private void startMachine(String id) {

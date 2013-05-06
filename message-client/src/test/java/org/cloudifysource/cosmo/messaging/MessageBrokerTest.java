@@ -82,11 +82,10 @@ public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
         final int numberOfEvents = 10;
 
         final CountDownLatch latch = new CountDownLatch(numberOfEvents);
-        consumer.addListener(uri, new MessageConsumerListener<String>() {
+        consumer.addListener(uri, new MessageConsumerListener<Integer>() {
             Integer lastI = null;
             @Override
-            public void onMessage(URI uri, String message) {
-                int i = Integer.valueOf(message);
+            public void onMessage(URI uri, Integer i) {
 
                 if (lastI != null && i > lastI + 1) {
                     for (lastI++; lastI < i; lastI++) {
@@ -108,18 +107,13 @@ public class MessageBrokerTest extends AbstractTestNGSpringContextTests {
             public void onFailure(Throwable t) {
                 consumerErrors.add(t);
             }
-
-            @Override
-            public Class<? extends String> getMessageClass() {
-                return String.class;
-            }
         });
 
         for (int i = 0; latch.getCount() > 0; i++) {
             //Reducing this sleep period would result in event loss
             //see https://github.com/Atmosphere/atmosphere/wiki/Understanding-BroadcasterCache
             Thread.sleep(100);
-            producer.send(uri, String.valueOf(i)).get();
+            producer.send(uri, i).get();
             checkForConsumerErrors();
         }
     }

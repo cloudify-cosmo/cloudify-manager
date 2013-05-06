@@ -19,10 +19,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
-import junit.framework.Assert;
-import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
-import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
-import org.cloudifysource.cosmo.cep.mock.AppInfo;
+import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServerConfiguration;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -31,7 +28,6 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducerConfiguration;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
-import org.drools.time.SessionPseudoClock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -39,15 +35,16 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.net.URI;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -57,9 +54,9 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
-@ContextConfiguration(classes = { ResourceMonitorServerTest.Config.class })
+@ContextConfiguration(classes = { ResourceMonitorServerIT.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class ResourceMonitorServerTest extends AbstractTestNGSpringContextTests {
+public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
 
     /**
      * @author Dan Kilman
@@ -80,15 +77,9 @@ public class ResourceMonitorServerTest extends AbstractTestNGSpringContextTests 
     @Value("${agent.id}")
     private String agentId;
 
-    @Value("${input.uri}")
-    private URI inputTopic;
-
-    @Value("${output.uri}")
-    private URI outputTopic;
-
     // component being tested
     @Inject
-    private ResourceMonitorServer server;
+    private ResourceMonitorServer resourceMonitor;
 
     // message broker that isolates server
     @Inject
@@ -107,33 +98,42 @@ public class ResourceMonitorServerTest extends AbstractTestNGSpringContextTests 
     private List<Throwable> failures;
     private boolean mockAgentFailed;
 
+    @Value("${resource-monitor.topic")
+    private URI resourceMonitorTopic;
+
+    @Value("${state-cache.topic")
+    private URI stateCacheTopic;
+
+    private MockAgent agent;
+
+    @Value("${agent.topic")
+    private URI agentTopic;
+
     @Test(groups = "integration")
     public void testAgentUnreachable() throws InterruptedException {
-        mockAgentFailed = true;
+        agent.fail();
         boolean reachable = monitorAgentState();
         assertThat(reachable).isFalse();
     }
 
-    @Test(groups = "integration")
+    @Test
     public void testAgentReachable() throws InterruptedException {
-        mockAgentFailed = false;
         boolean reachable = monitorAgentState();
         assertThat(reachable).isTrue();
     }
 
+
     @BeforeMethod(groups = "integration")
     public void startServer() {
-        startMessagingBroker();
+        startAgent();
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
         listener = new MessageConsumerListener<Object>() {
             @Override
             public void onMessage(URI uri, Object message) {
-                assertThat(uri).isEqualTo(outputTopic);
+                assertThat(uri).isEqualTo(stateCacheTopic);
                 if (message instanceof StateChangedMessage) {
                     stateChangedMessages.add((StateChangedMessage) message);
-                } else if (message instanceof ProbeAgentMessage) {
-                    mockAgent((ProbeAgentMessage) message);
                 } else {
                     Assert.fail("Unexpected message: " + message);
                 }
@@ -143,81 +143,44 @@ public class ResourceMonitorServerTest extends AbstractTestNGSpringContextTests 
             public void onFailure(Throwable t) {
                 failures.add(t);
             }
-
-            @Override
-            public Class<? extends Object> getMessageClass() {
-                return Object.class;
-            }
         };
-        consumer.addListener(outputTopic, listener);
-        startMonitoringServer();
+        consumer.addListener(stateCacheTopic, listener);
     }
 
-    private void mockAgent(ProbeAgentMessage message) {
-        if (!mockAgentFailed) {
-            final AgentStatusMessage statusMessage = new AgentStatusMessage();
-            statusMessage.setAgentId(agentId);
-            producer.send(inputTopic, statusMessage);
-        }
+    private void startAgent() {
+        agent = new MockAgent(agentTopic, resourceMonitorTopic);
+        agent.start();
     }
 
-    @AfterMethod(alwaysRun = true, groups = "integration")
+    @AfterMethod(alwaysRun = true)
     public void stopServer() {
         consumer.removeListener(listener);
-        stopMonitoringServer();
-        stopMessageBroker();
+        stopAgent();
     }
 
+    private void stopAgent() {
+        agent.stop();
+    }
 
     private boolean monitorAgentState() throws InterruptedException {
         Agent agent = new Agent();
         agent.setAgentId("agent_1");
-        //agent.setUnreachableTimeout("60s")
-        server.insertFact(agent);
+        resourceMonitor.insertFact(agent);
         //blocks until first StateChangedMessage
-        StateChangedMessage message = stateChangedMessages.take();
-        checkFailures();
-        return message.isReachable();
+
+        StateChangedMessage message = null;
+        while (message == null) {
+            message = stateChangedMessages.poll(1, TimeUnit.SECONDS);
+            validateNoFailures();
+        }
+        return (Boolean) message.getState().get("reachable");
     }
 
-    private void checkFailures() {
+    private void validateNoFailures() {
         final Throwable t = Iterables.getFirst(failures, null);
         if (t != null) {
             throw Throwables.propagate(t);
         }
-    }
-
-    private SessionPseudoClock getClock() {
-        return ((SessionPseudoClock) server.getClock());
-    }
-
-    private void fireAppInfo() {
-        AppInfo appInfo = new AppInfo();
-        appInfo.setTimestamp(now());
-        producer.send(inputTopic, appInfo);
-    }
-
-    private void startMonitoringServer() {
-        server.start();
-    }
-
-    private void startMessagingBroker() {
-        broker.start(port);
-    }
-
-    private void stopMessageBroker() {
-        if (broker != null) {
-            broker.stop();
-        }
-    }
-
-    private void stopMonitoringServer() {
-        if (server != null) {
-            server.stop();
-        }
-    }
-
-    private Date now() {
-        return new Date(getClock().getCurrentTime());
+        agent.validateNoFailures();
     }
 }

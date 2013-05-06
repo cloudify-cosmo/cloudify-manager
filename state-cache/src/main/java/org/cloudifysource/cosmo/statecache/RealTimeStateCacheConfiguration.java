@@ -12,32 +12,27 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
-package org.cloudifysource.cosmo.resource.mock;
+ ******************************************************************************/
 
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
+package org.cloudifysource.cosmo.statecache;
+
+import java.net.URI;
 
 /**
- * A REST servlet that exposes resource provisioning commands of the ResourceProvisionerMock.
+ * Configures {@link RealTimeStateCache} object.
  *
- * @author Itai Frenkel
+ * @author itaif
  * @since 0.1
  */
-@Path("/")
-public class ResourceProvisioningServletMock {
+public class RealTimeStateCacheConfiguration {
 
-    @Context
-    private ResourceProvisioningServerListener listener;
+    private URI messageTopic;
 
-    @PUT
-    @Path("/start_virtual_machine/{id}")
-    public Response startVirtualMachine() {
-        if (listener != null)
-            listener.onRequest();
-        return Response.noContent().build();
+    public URI getMessageTopic() {
+        return messageTopic;
     }
 
+    public void setMessageTopic(URI messageTopic) {
+        this.messageTopic = messageTopic;
+    }
 }

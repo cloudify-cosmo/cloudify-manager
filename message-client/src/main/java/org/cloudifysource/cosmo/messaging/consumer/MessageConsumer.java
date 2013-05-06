@@ -27,12 +27,13 @@ import org.atmosphere.wasync.Function;
 import org.atmosphere.wasync.Request;
 import org.atmosphere.wasync.RequestBuilder;
 import org.atmosphere.wasync.Socket;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.ObjectMapperFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
-
 
 /**
  * Client for receiving messages from the message broker.
@@ -49,7 +50,7 @@ public class MessageConsumer {
     private final Client client;
     private final Map<MessageConsumerListener, Socket> sockets = Maps.newConcurrentMap();
     private ObjectMapper mapper;
-
+    protected Logger logger = LoggerFactory.getLogger(this.getClass());
     public MessageConsumer() {
         client = ClientFactory.getDefault().newClient();
         mapper = ObjectMapperFactory.newObjectMapper();
@@ -57,6 +58,10 @@ public class MessageConsumer {
 
     public <T> void addListener(final URI uri, final MessageConsumerListener<T> listener) {
 
+        if (uri.getPath().contains("_")) {
+            throw new IllegalArgumentException("Due to a known issue uri cannot contain underscores");
+        }
+        logger.debug("Adding listener {} on {}", listener , uri);
         final RequestBuilder request =
                 client.newRequestBuilder()
                         .method(Request.METHOD.GET)
@@ -66,7 +71,10 @@ public class MessageConsumer {
                             public T decode(Event type, String data) {
 
                                 data = data.trim();
-
+                                if (data.startsWith("<html>")) {
+                                    throw new IllegalStateException(
+                                            "Server returned unexpected response " + data);
+                                }
                                 // Padding
                                 if (data.length() == 0) {
                                     return null;
@@ -85,16 +93,28 @@ public class MessageConsumer {
                                         }
                                         throw new IllegalStateException("Failed to decode " + data, e);
                                     }
-                                } else {
-                                    //TODO: Handle Protocol Errors Event.ERROR
+                                } else if (type.equals(Event.OPEN) ||
+                                        type.equals(Event.CLOSE)) {
                                     return null;
+                                } else if (type.equals(Event.ERROR)) {
+                                    throw new IllegalStateException("Communication error " + data);
+                                } else {
+                                    throw new IllegalStateException("Unexpected type=" + type + " data=" + data);
                                 }
                             }
                         })
                         .transport(Request.TRANSPORT.LONG_POLLING);
-        Socket socket =  client.create();
+        final Socket socket =  client.create();
         sockets.put(listener, socket);
         try {
+            socket.on("STATUS", new Function<Integer>() {
+                @Override
+                public void on(Integer statusCode) {
+                    if (statusCode >= 400) {
+                        socket.close();
+                    }
+                }
+            });
             socket.on(Event.MESSAGE.name(), new Function<Object>() {
                 @Override
                 public void on(Object message) {
@@ -108,9 +128,6 @@ public class MessageConsumer {
                  * workaround for bug https://github.com/Atmosphere/wasync/issues/35
                  */
                 private boolean isNotHeader(MessageConsumerListener<T> listener, Object message) {
-                    if (!listener.getMessageClass().isAssignableFrom(message.getClass())) {
-                        return false;
-                    }
                     if (message instanceof FluentCaseInsensitiveStringsMap) {
                         return false;
                     }
@@ -135,6 +152,7 @@ public class MessageConsumer {
         final Socket socket = sockets.remove(listener);
         if (socket != null) {
             socket.close();
+            logger.debug("Removed listener {}", listener);
             return true;
         }
         return false;

@@ -15,15 +15,14 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
@@ -48,41 +47,41 @@ import java.util.concurrent.TimeUnit;
  * @author Idan Moyal
  * @since 0.1
  */
-public class StartTomcatNodeTest {
+public class StartTomcatNodeIT {
 
     private MessageBrokerServer broker;
-    private MessageConsumer consumer;
     private MessageProducer producer;
     private URI uri;
     private String key = "resource-manager";
     private CloudDriver driver;
     private File vagrantRoot;
-    private CloudResourceManager manager;
+    private CloudResourceProvisioner provisioner;
     private StateCache stateCache;
     private DefaultStateCacheReader stateCacheReader;
 
-    @BeforeMethod(alwaysRun = true)
+    @BeforeMethod(alwaysRun = true, groups = "vagrant")
     @Parameters({ "port" })
     public void startMessageBrokerServer(@Optional("8080") int port) {
         broker = new MessageBrokerServer();
         broker.start(port);
-        consumer = new MessageConsumer();
         producer = new MessageProducer();
         uri = URI.create("http://localhost:" + port);
         vagrantRoot = Files.createTempDir();
         driver = new VagrantCloudDriver(vagrantRoot);
         URI cloudResourceUri = uri.resolve("/" + key);
-        manager = new CloudResourceManager(driver, cloudResourceUri, consumer);
+        provisioner = new CloudResourceProvisioner(driver, cloudResourceUri);
+        provisioner.start();
         stateCache = new StateCache.Builder().build();
         stateCacheReader = new DefaultStateCacheReader(stateCache);
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, groups = "vagrant")
     public void stopMessageBrokerServer() {
         if (driver != null)
             driver.terminateMachines();
+        if (provisioner != null)
+            provisioner.stop();
         vagrantRoot.delete();
-        consumer.removeAllListeners();
         if (broker != null) {
             broker.stop();
         }

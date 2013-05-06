@@ -67,8 +67,8 @@ public class MessageTypeIdResolver implements TypeIdResolver {
     @Override
     public String idFromValue(Object value) {
         String id = idResolver.get().inverse().get(value.getClass());
-        Preconditions.checkArgument(id != null, "Cannot serialize class %s since it does not conform to the " +
-                "regex pattern %s", value.getClass(), PACKAGE_REGEX_FILTER);
+        //Preconditions.checkArgument(id != null, "Cannot serialize class %s since it does not conform to the " +
+        //        "regex pattern %s", value.getClass(), PACKAGE_REGEX_FILTER);
         return id;
     }
 
