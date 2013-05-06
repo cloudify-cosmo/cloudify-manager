@@ -229,7 +229,8 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-            <url>http://maven-repository.cloudifysource.org</url>
+            <!--<url>http://maven-repository.cloudifysource.org</url>-->
+            <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>
             <releases>
                 <enabled>true</enabled>
                 <updatePolicy>daily</updatePolicy>
