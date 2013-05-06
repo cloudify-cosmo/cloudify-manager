@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -36,12 +37,16 @@ public class JsonRecipe {
 
     private final Map<String, Map<String, Object>> components;
 
-    public static JsonRecipe load(String recipe) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        final Map<String, Map<String, Object>> components =
-                mapper.readValue(recipe, new TypeReference<Map<String, Map<String, Object>>>() {
-                });
-        return new JsonRecipe(components);
+    public static JsonRecipe load(String recipe) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            final Map<String, Map<String, Object>> components =
+                    mapper.readValue(recipe, new TypeReference<Map<String, Map<String, Object>>>() {
+                    });
+            return new JsonRecipe(components);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
     private JsonRecipe(Map<String, Map<String, Object>> components) {
@@ -54,6 +59,7 @@ public class JsonRecipe {
 
         final Map<String, Object> map = Maps.newHashMap(components.get(name));
         map.put("name", name);
+        map.put("id", name);
 
         final List<String> resourcesNames = getComponentResourcesNames(map);
         final List<Map<String, Object>> resources = Lists.newLinkedList();
@@ -70,10 +76,11 @@ public class JsonRecipe {
         Preconditions.checkArgument(resource.containsKey("type"));
         Preconditions.checkArgument("resource".equals(resource.get("type")));
         resource.put("name", resourceName);
+        resource.put("id", resourceName);
         return resource;
     }
 
-    public List<String> getComponentResourcesNames(Map<String, Object> component) {
+    private List<String> getComponentResourcesNames(Map<String, Object> component) {
         final List<String> resources = Lists.newLinkedList();
         getComponentResourcesNamesImpl(component, resources);
         return resources;
@@ -95,4 +102,31 @@ public class JsonRecipe {
         }
     }
 
+    public List<String> getNodes() {
+        final List<String> nodes = Lists.newLinkedList();
+        for (Map.Entry<String, Map<String, Object>> entry : components.entrySet()) {
+            if (entry.getValue().containsKey("type")) {
+                final String type = (String) entry.getValue().get("type");
+                if (isNodeComponent(type)) {
+                    nodes.add(entry.getKey());
+                }
+            }
+        }
+        return nodes;
+    }
+
+    private boolean isNodeComponent(String type) {
+        if ("node".equals(type)) {
+            return true;
+        }
+        if (!components.containsKey(type)) {
+            return false;
+        }
+        final Map<String, Object> parent = components.get(type);
+        if (parent.containsKey("type")) {
+            final String parentType = (String) parent.get("type");
+            return isNodeComponent(parentType);
+        }
+        return false;
+    }
 }

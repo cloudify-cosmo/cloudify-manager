@@ -1,0 +1,3 @@
+define start_node
+  resource resource_id: "$resource_id", action: start_machine
+  state resource_id: "$resource_id", reachable: "true"

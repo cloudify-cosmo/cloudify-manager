@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.resource;
 import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -27,15 +28,14 @@ import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage;
 import java.net.URI;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * This class is responsible for cloud resources provisioning using a specified {@link CloudDriver} instance.
  *
  * @author Idan Moyal
  * @since 0.1
  */
 public class CloudResourceProvisioner {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceProvisioner.class);
-
+    private final Logger logger;
     private final CloudDriver driver;
     private final MessageConsumer consumer;
     private final URI inputUri;
@@ -46,15 +46,16 @@ public class CloudResourceProvisioner {
         this.inputUri = inputUri;
         this.driver = driver;
         this.consumer = new MessageConsumer();
+        this.logger = LoggerFactory.getLogger(getClass());
     }
 
     public void start() {
         consumer.addListener(inputUri, new MessageConsumerListener<CloudResourceMessage>() {
             @Override
             public void onMessage(URI uri, CloudResourceMessage message) {
-                LOGGER.debug("Consumed message from broker: " + message);
+                logger.debug("Consumed message from broker: " + message);
                 if ("start_machine".equals(message.getAction())) {
-                    startMachine(message.getId());
+                    startMachine(message.getResourceId());
                 }
             }
 
@@ -69,7 +70,15 @@ public class CloudResourceProvisioner {
     }
 
     private void startMachine(String id) {
-        driver.startMachine(new MachineConfiguration(id, "cosmo"));
+        final MachineConfiguration config = new MachineConfiguration(id, "cosmo");
+        logger.debug("Starting machine: {}", config);
+        try {
+            final MachineDetails machineDetails = driver.startMachine(config);
+            logger.debug("Machine successfully started: {}", machineDetails);
+
+        } catch (Exception e) {
+            logger.debug("Error starting machine [config={}, exception={}]", config, e);
+        }
     }
 
 }

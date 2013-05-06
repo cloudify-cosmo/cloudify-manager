@@ -13,19 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-
 package org.cloudifysource.cosmo.orchestrator.integration;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.cep.Agent;
+import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
 import org.cloudifysource.cosmo.cep.ResourceMonitorServerConfiguration;
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
-import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
-import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
+import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
@@ -33,35 +35,36 @@ import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Optional;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.when;
-
 /**
- * Integration test for the following components:
- *  1. Ruote workflow.
- *  2. Real time state cache.
- *  3. Cloud resource provisioner.
- *  4. Drools.
+ * An integration test combining the following components:
+ *  1. JSON recipe.
+ *  2. Ruote workflow.
+ *  3. Vagrant cloud driver.
+ *  4. Message Broker.
+ *  5. Real time state cache.
+ *  6. Drools.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public class StartAndMonitorNodeIT {
+public class StartVirtualMachineNodeIT {
 
     private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
+    private static final String RECIPE_PATH = "recipes/json/tomcat/vm_node_recipe.json";
 
     // message broker that isolates server
     private MessageBrokerServer broker;
@@ -75,44 +78,52 @@ public class StartAndMonitorNodeIT {
     private URI agentTopic;
     private ResourceMonitorServer resourceMonitor;
     private CloudDriver cloudDriver;
-    private MockAgent mockAgent;
+    private File tempDirectory;
 
 
-    @Test(timeOut = 10000)
-    public void testStartAndMonitor() throws ExecutionException, InterruptedException {
-        final String resourceId = "node_1";
-
-        // Create radial workflow
-        final String flow =
-                "define flow\n" +
-                        "  resource resource_id: \"$resource_id\", action: \"start_machine\"\n" +
-                        "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
-
-        // Configure mock cloud driver
-        when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                final Agent agent = new Agent();
-                agent.setAgentId(resourceId);
-                resourceMonitor.insertFact(agent);
-                mockAgent.start();
-                return new MachineDetails(resourceId, "127.0.0.1");
-            }
-        });
+    @Test(groups = "vagrant")
+    public void testStartVirtualMachine() throws ExecutionException, InterruptedException {
+        final JsonRecipe recipe = JsonRecipe.load(readRecipe());
+        final List<String> nodes = recipe.getNodes();
+        final String resourceId = nodes.get(0);
+        final Map<String, Object> resource = recipe.get(resourceId).get();
+        final List<?> workflows = (List<?>) resource.get("workflows");
+        final String workflowName = workflows.get(0).toString();
+        final String workflow = loadWorkflow(resourceId, workflowName);
+        final RuoteWorkflow ruoteWorkflow = RuoteWorkflow.createFromString(workflow, runtime);
 
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", resourceId);
-        workflow.execute(workitem);
-        mockAgent.stop();
-        mockAgent.validateNoFailures();
+        ruoteWorkflow.execute(workitem);
+    }
+
+    private String loadWorkflow(String resourceId, String workflowName) {
+        final String workflowFileName = String.format("%s_%s.radial", resourceId, workflowName);
+        final String parentDirectory = new File(Resources.getResource(RECIPE_PATH).getPath()).getParent();
+        final File file = new File(parentDirectory, workflowFileName);
+        Preconditions.checkArgument(file.exists());
+        try {
+            return Files.toString(file, Charsets.UTF_8);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    private String readRecipe() {
+        final URL resource = Resources.getResource(RECIPE_PATH);
+        try {
+            return Resources.toString(resource, Charsets.UTF_8);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
 
     @BeforeMethod
     @Parameters({ "port" })
     public void startServer(@Optional("8080") int port) {
+        tempDirectory = Files.createTempDir();
         startMessagingBroker(port);
         inputUri = URI.create("http://localhost:" + port + "/input/");
         resourceProvisionerTopic = inputUri.resolve("resource-manager");
@@ -130,7 +141,6 @@ public class StartAndMonitorNodeIT {
         runtime = RuoteRuntime.createRuntime(runtimeProperties);
         startCloudResourceProvisioner();
         startResourceMonitor();
-        mockAgent = new MockAgent(agentTopic, resourceMonitorTopic);
     }
 
     private void startRealTimeStateCache(RealTimeStateCacheConfiguration config) {
@@ -139,14 +149,15 @@ public class StartAndMonitorNodeIT {
     }
 
     private void startCloudResourceProvisioner() {
-        cloudDriver = Mockito.mock(CloudDriver.class);
-        provisioner = new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic);
+        cloudDriver = new VagrantCloudDriver(tempDirectory);
+        provisioner = new CloudResourceProvisioner(new VagrantCloudDriver(tempDirectory), resourceProvisionerTopic);
         provisioner.start();
     }
 
     @AfterMethod(alwaysRun = true)
     public void stopServer() {
-        mockAgent.stop();
+        cloudDriver.terminateMachines();
+        tempDirectory.delete();
         stopResourceMonitor();
         stopRealTimeStateCache();
         stopCloudResourceProvisioner();

@@ -30,7 +30,7 @@ import java.util.Map;
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Tests JSON recipes parsing and object model.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -82,15 +82,23 @@ public class JsonRecipeTest {
         for (Object resource : resourcesList) {
             assertThat(resource).isInstanceOf(Map.class);
             Map<?, ?> resourceMap = (Map<?, ?>) resource;
-            if (i == 0)
+            if (i == 0) {
                 assertThat(resourceMap.get("name").toString()).isEqualTo("vm");
-            else
+                assertThat(resourceMap.get("id").toString()).isEqualTo("vm");
+            } else {
                 assertThat(resourceMap.get("name").toString()).isEqualTo("tomcat");
+                assertThat(resourceMap.get("id").toString()).isEqualTo("tomcat");
+            }
             i++;
         }
     }
 
-
-
+    @Test
+    public void testGetNodes() {
+        final List<String> nodes = recipe.getNodes();
+        assertThat(nodes).isNotNull();
+        assertThat(nodes.size()).isEqualTo(2);
+        assertThat(nodes).contains("tomcat_node", "vm_node");
+    }
 
 }

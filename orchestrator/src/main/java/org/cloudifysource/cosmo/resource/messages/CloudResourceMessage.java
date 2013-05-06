@@ -27,23 +27,23 @@ import com.google.common.base.Objects;
  */
 public class CloudResourceMessage {
 
-    private String id;
+    private String resourceId;
     private String action;
 
     public CloudResourceMessage() {
     }
 
-    public CloudResourceMessage(String id, String action) {
-        this.id = id;
+    public CloudResourceMessage(String resourceId, String action) {
+        this.resourceId = resourceId;
         this.action = action;
     }
 
-    public String getId() {
-        return id;
+    public String getResourceId() {
+        return resourceId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setResourceId(String resourceId) {
+        this.resourceId = resourceId;
     }
 
     public String getAction() {
@@ -56,6 +56,6 @@ public class CloudResourceMessage {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(getClass()).add("id", id).add("action", action).toString();
+        return Objects.toStringHelper(getClass()).add("resourceId", resourceId).add("action", action).toString();
     }
 }

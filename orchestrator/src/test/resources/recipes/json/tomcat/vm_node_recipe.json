@@ -1,0 +1,11 @@
+{
+    "vm_node": {
+        "type": "node",
+        "resources": [ "vm" ],
+        "workflows": [ "start_node" ]
+    },
+
+    "vm": {
+        "type": "resource"
+    }
+}
