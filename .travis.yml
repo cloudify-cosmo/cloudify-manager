@@ -1,5 +1,9 @@
 language: java
 jdk:
   - openjdk7
-install: "mvn install -DskipTests"
-script: "mvn verify"
+before_script:
+   - "gem install travis-artifacts"
+install:
+   - "mvn install -DskipTests -X"
+script:
+   - "mvn verify"
