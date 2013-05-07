@@ -64,13 +64,10 @@ public class RealTimeStateCache implements StateCacheReader {
                 RealTimeStateCache.this.messageConsumerFailure(t);
             }
         };
-    }
-
-    public void start() {
         this.consumer.addListener(messageTopic, messageConsumerListener);
     }
 
-    public void stop() {
+    public void close() {
         this.consumer.removeListener(messageConsumerListener);
     }
 

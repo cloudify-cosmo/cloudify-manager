@@ -68,7 +68,6 @@ public class StartTomcatNodeIT {
         driver = new VagrantCloudDriver(vagrantRoot);
         URI cloudResourceUri = uri.resolve("/" + key);
         provisioner = new CloudResourceProvisioner(driver, cloudResourceUri, null);
-        provisioner.start();
         stateCache = new StateCache.Builder().build();
     }
 
@@ -77,7 +76,7 @@ public class StartTomcatNodeIT {
         if (driver != null)
             driver.terminateMachines();
         if (provisioner != null)
-            provisioner.stop();
+            provisioner.close();
         vagrantRoot.delete();
         if (broker != null) {
             broker.stop();

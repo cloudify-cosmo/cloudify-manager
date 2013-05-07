@@ -47,7 +47,7 @@ public class MockAgentConfig {
     @Inject
     MessageConsumer consumer;
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(destroyMethod = "close")
     public MockAgent mockAgent() {
         return new MockAgent(
                 consumer,

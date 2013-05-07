@@ -44,7 +44,7 @@ public class CloudResourceProvisionerConfig {
     @Inject
     private MessageConsumer messageConsumer;
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(destroyMethod = "close")
     public CloudResourceProvisioner cloudResourceProvisioner() {
         return new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic, messageConsumer);
     }

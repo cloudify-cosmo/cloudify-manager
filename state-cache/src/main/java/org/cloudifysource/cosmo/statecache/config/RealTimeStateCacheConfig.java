@@ -49,7 +49,7 @@ public class RealTimeStateCacheConfig {
         return new StateCache.Builder().build();
     }
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(destroyMethod = "close")
     public RealTimeStateCache realTimeStateCache() {
         return new RealTimeStateCache(messageTopic, messageConsumer, stateCache);
     }

@@ -32,7 +32,7 @@ import java.net.URI;
  * @author Idan Moyal
  * @since 0.1
  */
-public class CloudResourceProvisioner {
+public class CloudResourceProvisioner implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CloudResourceProvisioner.class);
 
@@ -61,13 +61,10 @@ public class CloudResourceProvisioner {
             public void onFailure(Throwable t) {
             }
         };
-    }
-
-    public void start() {
         consumer.addListener(inputUri, listener);
     }
 
-    public void stop() {
+    public void close() {
         consumer.removeListener(listener);
     }
 

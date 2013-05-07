@@ -57,7 +57,7 @@ public class ResourceMonitorServerConfig {
     @Inject
     private MessageConsumer consumer;
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(destroyMethod = "close")
     public ResourceMonitorServer resourceMonitorServer() {
         Resource droolsResource = ResourceFactory.newClassPathResource(droolsResourcePath, this.getClass());
         return new ResourceMonitorServer(
