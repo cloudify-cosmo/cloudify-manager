@@ -113,11 +113,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.drools</groupId>
-            <artifactId>knowledge-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
             <type>test-jar</type>
