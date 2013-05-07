@@ -24,10 +24,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import java.net.URI;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Creates a new {@link org.cloudifysource.cosmo.statecache.RealTimeStateCache}.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -41,9 +42,17 @@ public class RealTimeStateCacheConfig {
     @Inject
     private MessageConsumer messageConsumer;
 
+    @Inject
+    private StateCache stateCache;
+
+    @Bean(destroyMethod = "close")
+    public StateCache stateCache() {
+        return new StateCache.Builder().build();
+    }
+
     @Bean(initMethod = "start", destroyMethod = "stop")
     public RealTimeStateCache realTimeStateCache() {
-        return new RealTimeStateCache(messageTopic, messageConsumer, new StateCache.Builder().build());
+        return new RealTimeStateCache(messageTopic, messageConsumer, stateCache);
     }
 
 

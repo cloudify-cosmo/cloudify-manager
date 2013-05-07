@@ -17,27 +17,97 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.orchestrator.integration.config.StateCacheWorkflowMessasingTestConfig;
+import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
+import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
+import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests integration of {@link org.cloudifysource.cosmo.statecache.StateCache} with messaging consumer.
  * @author itaif
  * @since 0.1
  */
-@ContextConfiguration(classes = { StateCacheWorkflowMessasingTestConfig.class })
+@ContextConfiguration(classes = { StateCacheWorkflowMessagingIT.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class StateCacheWorkflowMessagingIT extends AbstractTestNGSpringContextTests {
+
+    /**
+     */
+    @Configuration
+    @Import({
+            CloudResourceProvisionerConfig.class,
+            RuoteRuntimeConfig.class
+    })
+    static class Config extends BaseOrchestratorIntegrationTestConfig {
+
+        @Inject
+        private ResourceMonitorServer resourceMonitor;
+
+        @Inject
+        private MessageProducer producer;
+
+        @Value("${state-cache.topic}")
+        private URI stateCacheTopic;
+
+        @Value("${test.resource.id}")
+        private String resourceId;
+
+        @Bean
+        public CloudDriver cloudDriver() {
+            CloudDriver cloudDriver = Mockito.mock(CloudDriver.class);
+            // Configure mock cloud driver
+            when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
+                @Override
+                public Object answer(InvocationOnMock invocation) throws Throwable {
+                    // Update state cache
+                    final StateChangedMessage message = newStateChangedMessage(resourceId);
+                    producer.send(stateCacheTopic, message).get();
+                    return new MachineDetails(resourceId, "127.0.0.1");
+                }
+            });
+            return cloudDriver;
+        }
+
+        private StateChangedMessage newStateChangedMessage(String resourceId) {
+            final StateChangedMessage message = new StateChangedMessage();
+            message.setResourceId(resourceId);
+            message.setState(newState());
+            return message;
+        }
+
+        private Map<String, Object> newState() {
+            Map<String, Object> state = Maps.newLinkedHashMap();
+            state.put("reachable", "true");
+            return state;
+        }
+
+    }
 
     @Value("${test.resource.id}")
     private String resourceId;

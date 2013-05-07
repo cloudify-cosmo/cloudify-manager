@@ -17,11 +17,24 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.Maps;
+import org.cloudifysource.cosmo.cep.Agent;
+import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
-import org.cloudifysource.cosmo.orchestrator.integration.config.StartAndMonitorNodeTestConfig;
+import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
+import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
+import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
@@ -31,15 +44,50 @@ import javax.inject.Inject;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
+
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-@ContextConfiguration(classes = { StartAndMonitorNodeTestConfig.class })
+@ContextConfiguration(classes = { StartAndMonitorNodeIT.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
+
+    /**
+     *
+     */
+    @Configuration
+    @Import({
+            CloudResourceProvisionerConfig.class,
+            RuoteRuntimeConfig.class
+    })
+    static class Config extends BaseOrchestratorIntegrationTestConfig {
+
+        @Inject
+        private ResourceMonitorServer resourceMonitor;
+
+        @Value("${test.resource.id}")
+        private String resourceId;
+
+        @Bean
+        public CloudDriver cloudDriver() {
+            CloudDriver cloudDriver = Mockito.mock(CloudDriver.class);
+            when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
+                @Override
+                public Object answer(InvocationOnMock invocation) throws Throwable {
+                    final Agent agent = new Agent();
+                    agent.setAgentId(resourceId);
+                    resourceMonitor.insertFact(agent);
+                    return new MachineDetails(resourceId, "127.0.0.1");
+                }
+            });
+            return cloudDriver;
+        }
+    }
 
     @Value("${test.resource.id}")
     private String resourceId;

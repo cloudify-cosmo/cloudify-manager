@@ -12,41 +12,32 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 
-package org.cloudifysource.cosmo.resource.config;
+package org.cloudifysource.cosmo.cloud.driver.config;
 
-import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
+import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.inject.Inject;
-import java.net.URI;
+import java.io.File;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.resource.CloudResourceProvisioner}.
+ * Creates a new {@link org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class CloudResourceProvisionerConfig {
+public class VagrantCloudDriverConfig {
 
-    @Value("${resource-manager.topic}")
-    private URI resourceProvisionerTopic;
+    @Value("${cosmo.cloud-driver.vagrant.working-directory}")
+    private File vagrantWorkingDirectory;
 
-    @Inject
-    private CloudDriver cloudDriver;
-
-    @Inject
-    private MessageConsumer messageConsumer;
-
-    @Bean(initMethod = "start", destroyMethod = "stop")
-    public CloudResourceProvisioner cloudResourceProvisioner() {
-        return new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic, messageConsumer);
+    @Bean
+    public VagrantCloudDriver vagrantCloudDriver() {
+        return new VagrantCloudDriver(vagrantWorkingDirectory);
     }
 
 }

@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.orchestrator.integration.config;
 
 import org.cloudifysource.cosmo.cep.config.MockAgentConfig;
 import org.cloudifysource.cosmo.cep.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
@@ -29,7 +30,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Base test class spring configuration.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -44,14 +45,6 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
         MockAgentConfig.class
 })
 @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
-public class BaseOrchestratorIntegrationTestConfig {
-
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer stub() {
-        return new PropertySourcesPlaceholderConfigurer();
-    }
-
-    // SUPRESS CHECKSTYLE
-    public void fixMe() { }
+public class BaseOrchestratorIntegrationTestConfig extends TestConfig {
 
 }

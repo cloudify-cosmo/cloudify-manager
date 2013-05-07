@@ -12,41 +12,43 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 
-package org.cloudifysource.cosmo.resource.config;
+package org.cloudifysource.cosmo.config;
 
-import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.mock.env.MockPropertySource;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import java.net.URI;
+import java.util.Properties;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.resource.CloudResourceProvisioner}.
+ * Abstract test spring configuration.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class CloudResourceProvisionerConfig {
-
-    @Value("${resource-manager.topic}")
-    private URI resourceProvisionerTopic;
+public class TestConfig {
 
     @Inject
-    private CloudDriver cloudDriver;
+    private ConfigurableEnvironment environment;
 
-    @Inject
-    private MessageConsumer messageConsumer;
-
-    @Bean(initMethod = "start", destroyMethod = "stop")
-    public CloudResourceProvisioner cloudResourceProvisioner() {
-        return new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic, messageConsumer);
+    @PostConstruct
+    public void postConstruct() {
+        environment.getPropertySources().addFirst(new MockPropertySource(overridenProperties()));
     }
 
+    protected Properties overridenProperties() {
+        return new Properties();
+    }
+
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer stub() {
+        return new PropertySourcesPlaceholderConfigurer();
+    }
 }

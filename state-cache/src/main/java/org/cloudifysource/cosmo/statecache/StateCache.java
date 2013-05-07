@@ -42,7 +42,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author Dan Kilman
  * @since 0.1
  */
-public class StateCache implements StateCacheReader {
+public class StateCache {
 
     private final Object cacheMapLock = new Object();
     private final NamedLockProvider lockProvider = new NamedLockProvider();

@@ -29,7 +29,7 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Creates a new {@link org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime}.
  *
  * @author Dan Kilman
  * @since 0.1
