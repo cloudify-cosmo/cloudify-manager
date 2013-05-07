@@ -27,7 +27,6 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.statecache.DefaultStateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -57,7 +56,6 @@ public class StartTomcatNodeIT {
     private File vagrantRoot;
     private CloudResourceProvisioner provisioner;
     private StateCache stateCache;
-    private DefaultStateCacheReader stateCacheReader;
 
     @BeforeMethod(alwaysRun = true, groups = "vagrant")
     @Parameters({ "port" })
@@ -69,10 +67,9 @@ public class StartTomcatNodeIT {
         vagrantRoot = Files.createTempDir();
         driver = new VagrantCloudDriver(vagrantRoot);
         URI cloudResourceUri = uri.resolve("/" + key);
-        provisioner = new CloudResourceProvisioner(driver, cloudResourceUri);
+        provisioner = new CloudResourceProvisioner(driver, cloudResourceUri, null);
         provisioner.start();
         stateCache = new StateCache.Builder().build();
-        stateCacheReader = new DefaultStateCacheReader(stateCache);
     }
 
     @AfterMethod(alwaysRun = true, groups = "vagrant")
@@ -100,7 +97,7 @@ public class StartTomcatNodeIT {
         final Map<String, Object> properties = Maps.newHashMap();
         properties.put("message_producer", producer);
         properties.put("broker_uri", uri);
-        properties.put("state_cache", stateCacheReader);
+        properties.put("state_cache", stateCache);
         final RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(properties);
 
         // Create ruote workflow

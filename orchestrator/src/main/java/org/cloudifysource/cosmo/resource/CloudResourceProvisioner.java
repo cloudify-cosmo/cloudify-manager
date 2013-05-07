@@ -40,16 +40,15 @@ public class CloudResourceProvisioner {
     private final MessageConsumer consumer;
     private final URI inputUri;
 
-    public CloudResourceProvisioner(final CloudDriver driver, URI inputUri) {
+    private final MessageConsumerListener<CloudResourceMessage> listener;
+
+    public CloudResourceProvisioner(final CloudDriver driver, URI inputUri, MessageConsumer consumer) {
         Preconditions.checkNotNull(driver);
         Preconditions.checkNotNull(inputUri);
         this.inputUri = inputUri;
         this.driver = driver;
-        this.consumer = new MessageConsumer();
-    }
-
-    public void start() {
-        consumer.addListener(inputUri, new MessageConsumerListener<CloudResourceMessage>() {
+        this.consumer = consumer;
+        this.listener = new MessageConsumerListener<CloudResourceMessage>() {
             @Override
             public void onMessage(URI uri, CloudResourceMessage message) {
                 LOGGER.debug("Consumed message from broker: " + message);
@@ -61,11 +60,15 @@ public class CloudResourceProvisioner {
             @Override
             public void onFailure(Throwable t) {
             }
-        });
+        };
+    }
+
+    public void start() {
+        consumer.addListener(inputUri, listener);
     }
 
     public void stop() {
-        consumer.removeAllListeners();
+        consumer.removeListener(listener);
     }
 
     private void startMachine(String id) {

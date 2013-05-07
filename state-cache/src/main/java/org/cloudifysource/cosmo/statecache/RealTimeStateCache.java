@@ -34,39 +34,44 @@ import java.net.URI;
  */
 public class RealTimeStateCache implements StateCacheReader {
 
+    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     private final MessageConsumer consumer;
     private final URI messageTopic;
     private final StateCache stateCache;
-    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final MessageConsumerListener messageConsumerListener;
 
-    public RealTimeStateCache(RealTimeStateCacheConfiguration config) {
-        this.consumer = new MessageConsumer();
-        this.messageTopic = config.getMessageTopic();
-        this.stateCache = new StateCache.Builder().build();
+    public RealTimeStateCache(URI messageTopic,
+                              MessageConsumer messageConsumer,
+                              StateCache stateCache) {
+        this.consumer = messageConsumer;
+        this.messageTopic = messageTopic;
+        this.stateCache = stateCache;
+
+        this.messageConsumerListener = new MessageConsumerListener() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                if (message instanceof StateChangedMessage) {
+                    final StateChangedMessage update = (StateChangedMessage) message;
+                    RealTimeStateCache.this.stateCache.put(update.getResourceId(), update.getState());
+                } else {
+                    throw new IllegalArgumentException("Cannot handle message " + message);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                RealTimeStateCache.this.messageConsumerFailure(t);
+            }
+        };
     }
 
     public void start() {
-        this.consumer.addListener(messageTopic,
-            new MessageConsumerListener() {
-                @Override
-                public void onMessage(URI uri, Object message) {
-                    if (message instanceof StateChangedMessage) {
-                        final StateChangedMessage update = (StateChangedMessage) message;
-                        stateCache.put(update.getResourceId(), update.getState());
-                    } else {
-                        throw new IllegalArgumentException("Cannot handle message " + message);
-                    }
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    RealTimeStateCache.this.messageConsumerFailure(t);
-                }
-            });
+        this.consumer.addListener(messageTopic, messageConsumerListener);
     }
 
     public void stop() {
-        this.consumer.removeAllListeners();
+        this.consumer.removeListener(messageConsumerListener);
     }
 
     private void messageConsumerFailure(Throwable t) {
@@ -100,6 +105,5 @@ public class RealTimeStateCache implements StateCacheReader {
     public void removeCallback(String callbackUID) {
         stateCache.removeCallback(callbackUID);
     }
-
 
 }

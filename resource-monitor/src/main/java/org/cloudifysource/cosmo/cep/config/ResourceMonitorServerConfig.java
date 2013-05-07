@@ -37,13 +37,13 @@ import java.net.URI;
 public class ResourceMonitorServerConfig {
 
     @Value("${resource-monitor.topic}")
-    private String resourceMonitorTopic;
+    private URI resourceMonitorTopic;
 
     @Value("${state-cache.topic}")
-    private String stateCacheTopic;
+    private URI stateCacheTopic;
 
     @Value("${agent.topic}")
-    private String agentTopic;
+    private URI agentTopic;
 
     @Value("${resource-monitor.pseudo-clock}")
     private boolean pseudoClock;
@@ -61,9 +61,9 @@ public class ResourceMonitorServerConfig {
     public ResourceMonitorServer resourceMonitorServer() {
         Resource droolsResource = ResourceFactory.newClassPathResource(droolsResourcePath, this.getClass());
         return new ResourceMonitorServer(
-                URI.create(resourceMonitorTopic),
-                URI.create(stateCacheTopic),
-                URI.create(agentTopic),
+                resourceMonitorTopic,
+                stateCacheTopic,
+                agentTopic,
                 pseudoClock,
                 droolsResource,
                 producer,
