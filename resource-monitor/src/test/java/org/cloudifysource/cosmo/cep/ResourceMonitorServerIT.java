@@ -22,13 +22,11 @@ import com.google.common.collect.Queues;
 import org.cloudifysource.cosmo.cep.config.MockAgentConfig;
 import org.cloudifysource.cosmo.cep.config.ResourceMonitorServerConfig;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
-import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -62,8 +60,6 @@ import static org.fest.assertions.api.Assertions.assertThat;
 public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
 
     /**
-     * @author Dan Kilman
-     * @since 0.1
      */
     @Configuration
     @PropertySource("org/cloudifysource/cosmo/cep/configuration/test.properties")
@@ -84,34 +80,19 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     @Inject
     private ResourceMonitorServer resourceMonitor;
 
-    // message broker that isolates server
-    @Inject
-    private MessageBrokerServer broker;
-
     // receives messages from server
     @Inject
     private MessageConsumer consumer;
-
-    // pushes messages to server
-    @Inject
-    private MessageProducer producer;
 
     // responds to agent status messages if not failed
     @Inject
     private MockAgent agent;
 
-    private MessageConsumerListener<Object> listener;
-    private BlockingQueue<StateChangedMessage> stateChangedMessages;
-    private List<Throwable> failures;
-
-    @Value("${resource-monitor.topic}")
-    private URI resourceMonitorTopic;
-
-    @Value("${state-cache.topic}")
+    @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
-    @Value("${agent.topic}")
-    private URI agentTopic;
+    private BlockingQueue<StateChangedMessage> stateChangedMessages;
+    private List<Throwable> failures;
 
     @Test(groups = "integration")
     public void testAgentUnreachable() throws InterruptedException {
@@ -130,7 +111,7 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     public void startServer() {
         stateChangedMessages = Queues.newArrayBlockingQueue(100);
         failures = Lists.newCopyOnWriteArrayList();
-        listener = new MessageConsumerListener<Object>() {
+        MessageConsumerListener<?> listener = new MessageConsumerListener<Object>() {
             @Override
             public void onMessage(URI uri, Object message) {
                 assertThat(uri).isEqualTo(stateCacheTopic);

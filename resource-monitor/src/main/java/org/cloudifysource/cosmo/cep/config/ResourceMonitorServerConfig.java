@@ -36,19 +36,19 @@ import java.net.URI;
 @Configuration
 public class ResourceMonitorServerConfig {
 
-    @Value("${resource-monitor.topic}")
+    @Value("${cosmo.resource-monitor.topic}")
     private URI resourceMonitorTopic;
 
-    @Value("${state-cache.topic}")
+    @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
-    @Value("${agent.topic}")
+    @Value("${cosmo.agent.topic}")
     private URI agentTopic;
 
-    @Value("${resource-monitor.pseudo-clock}")
+    @Value("${cosmo.resource-monitor.pseudo-clock}")
     private boolean pseudoClock;
 
-    @Value("${resource-monitor.rule}")
+    @Value("${cosmo.resource-monitor.rule}")
     private String droolsResourcePath;
 
     @Inject

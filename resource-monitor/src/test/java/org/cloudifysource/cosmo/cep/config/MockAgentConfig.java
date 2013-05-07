@@ -35,10 +35,10 @@ import java.net.URI;
 @Configuration
 public class MockAgentConfig {
 
-    @Value("${resource-monitor.topic}")
+    @Value("${cosmo.resource-monitor.topic}")
     private String resourceMonitorTopic;
 
-    @Value("${agent.topic}")
+    @Value("${cosmo.agent.topic}")
     private String agentTopic;
 
     @Inject

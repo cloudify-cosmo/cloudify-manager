@@ -35,7 +35,7 @@ import java.net.URI;
 @Configuration
 public class CloudResourceProvisionerConfig {
 
-    @Value("${resource-manager.topic}")
+    @Value("${cosmo.resource-manager.topic}")
     private URI resourceProvisionerTopic;
 
     @Inject

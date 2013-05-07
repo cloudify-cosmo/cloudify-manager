@@ -70,7 +70,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
         @Inject
         private ResourceMonitorServer resourceMonitor;
 
-        @Value("${test.resource.id}")
+        @Value("${cosmo.test.resource.id}")
         private String resourceId;
 
         @Bean
@@ -89,7 +89,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
         }
     }
 
-    @Value("${test.resource.id}")
+    @Value("${cosmo.test.resource.id}")
     private String resourceId;
 
     @Inject

@@ -47,7 +47,7 @@ public class StateCacheResourceMonitorIT extends AbstractTestNGSpringContextTest
 
     public static final String REACHABLE_PROP = "reachable";
 
-    @Value("${agent.id}")
+    @Value("${cosmo.test.agent.id}")
     private String agentId;
 
     //components under test

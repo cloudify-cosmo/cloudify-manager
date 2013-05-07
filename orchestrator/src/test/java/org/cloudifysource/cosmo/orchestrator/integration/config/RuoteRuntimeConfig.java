@@ -37,7 +37,7 @@ import java.util.Map;
 @Configuration
 public class RuoteRuntimeConfig {
 
-    @Value("${message-broker.uri}")
+    @Value("${cosmo.message-broker.uri}")
     private URI messageBrokerURI;
 
     @Inject

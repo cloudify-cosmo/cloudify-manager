@@ -23,11 +23,9 @@ import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
 /**
  * Base test class spring configuration.

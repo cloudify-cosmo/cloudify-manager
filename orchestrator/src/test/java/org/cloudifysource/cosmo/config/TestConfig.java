@@ -40,7 +40,9 @@ public class TestConfig {
 
     @PostConstruct
     public void postConstruct() {
-        environment.getPropertySources().addFirst(new MockPropertySource(overridenProperties()));
+        Properties overridenProperties = overridenProperties();
+        if (!overridenProperties.isEmpty())
+            environment.getPropertySources().addFirst(new MockPropertySource(overridenProperties));
     }
 
     protected Properties overridenProperties() {

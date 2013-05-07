@@ -24,7 +24,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.net.URI;
 
 /**
@@ -36,7 +35,7 @@ import java.net.URI;
 @Configuration
 public class RealTimeStateCacheConfig {
 
-    @Value("${state-cache.topic}")
+    @Value("${cosmo.state-cache.topic}")
     private URI messageTopic;
 
     @Inject

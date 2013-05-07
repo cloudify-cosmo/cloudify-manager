@@ -72,10 +72,10 @@ public class StateCacheWorkflowMessagingIT extends AbstractTestNGSpringContextTe
         @Inject
         private MessageProducer producer;
 
-        @Value("${state-cache.topic}")
+        @Value("${cosmo.state-cache.topic}")
         private URI stateCacheTopic;
 
-        @Value("${test.resource.id}")
+        @Value("${cosmo.test.resource.id}")
         private String resourceId;
 
         @Bean
@@ -109,7 +109,7 @@ public class StateCacheWorkflowMessagingIT extends AbstractTestNGSpringContextTe
 
     }
 
-    @Value("${test.resource.id}")
+    @Value("${cosmo.test.resource.id}")
     private String resourceId;
 
     @Inject

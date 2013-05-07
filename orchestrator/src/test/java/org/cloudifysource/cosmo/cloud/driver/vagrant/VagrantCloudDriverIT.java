@@ -46,6 +46,8 @@ import static org.fest.assertions.api.Assertions.assertThat;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class VagrantCloudDriverIT extends AbstractTestNGSpringContextTests {
 
+    /**
+     */
     @Configuration
     @Import({ VagrantCloudDriverConfig.class })
     static class Config extends TestConfig {
