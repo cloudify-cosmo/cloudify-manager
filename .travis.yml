@@ -7,3 +7,22 @@ install:
    - "mvn install -DskipTests -X"
 script:
    - "mvn verify"
+
+after_success:
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path org/cloudifysource/cosmo"
+  
+env:
+ global:
+   - "ARTIFACTS_AWS_REGION=us-east-1"
+   - "ARTIFACTS_S3_BUCKET=cosmo-snapshot-maven-repository"
+   - secure: "KIxNU7VRr0Adm/yvMjlF5vLudWtq6SytI+X+xKYnOhRcTqOuXEZoOXbLeF/N\nJObM8LOYkVuAbuh1TrMGArDB2DwBjvYQVp90wyr85xsb7mK3RPDpak/kHb35\njnwd+/DbQrgGdHFIrUFLXOT4LI9Rswi36ASDVvCuO45RxY8PECw="
+   - secure: "IlaPH7li/kSUeQ6QzleW0KTQH5Jq794S/1dZKjrc3ehIA67krjp9epXhughm\nz4Am73Ll9c2a5nKN+6QdiABYZSE6njHWejgps8QDoxF8zbWsPkXOSOTHEebs\nOEx2MiPM3+NRnoSsx4fEix9WgUtm3lkK6dndHnhWWsD26d3ZHlI="
+   
+
+//Comments:
+//
+// Finding the public key used for encryption: https://api.travis-ci.org/repos/CloudifySource/cosmo-manager/key
+// Encrypting: http://about.travis-ci.org/docs/user/encryption-keys/
+//             http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
+// How to upload travis artifacts: https://github.com/travis-ci/travis-artifacts
+// How to find local maven repo: http://stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
