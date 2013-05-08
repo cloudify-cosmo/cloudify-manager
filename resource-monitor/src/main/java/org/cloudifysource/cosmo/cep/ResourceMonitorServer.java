@@ -20,7 +20,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
-import org.cloudifysource.cosmo.cep.messages.ResourceMonitorMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -72,7 +71,7 @@ public class ResourceMonitorServer {
     private WorkingMemoryEntryPoint entryPoint;
     private Future<Void> future;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-    private MessageConsumerListener<Object> listener;
+    private MessageConsumerListener<AgentStatusMessage> listener;
     private KnowledgeRuntimeLogger runtimeLogger;
     private final URI agentTopic;
 

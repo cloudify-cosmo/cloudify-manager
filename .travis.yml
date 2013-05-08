@@ -1,5 +1,5 @@
 language: java
 jdk:
-  - oraclejdk7
+  - openjdk7
 install: "mvn install -DskipTests"
 script: "mvn verify"

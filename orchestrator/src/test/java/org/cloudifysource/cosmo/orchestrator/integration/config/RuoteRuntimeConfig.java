@@ -14,46 +14,45 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.cep.config;
+package org.cloudifysource.cosmo.orchestrator.integration.config;
 
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
+import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 import java.net.URI;
+import java.util.Map;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.cep.mock.MockAgent}.
+ * Creates a new {@link org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime}.
  *
- * @author Itai Frenkel
+ * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class MockAgentConfig {
+public class RuoteRuntimeConfig {
 
-    @Value("${cosmo.resource-monitor.topic}")
-    private String resourceMonitorTopic;
-
-    @Value("${cosmo.agent.topic}")
-    private String agentTopic;
+    @Value("${cosmo.message-broker.uri}")
+    private URI messageBrokerURI;
 
     @Inject
-    MessageProducer producer;
+    private RealTimeStateCache realTimeStateCache;
 
     @Inject
-    MessageConsumer consumer;
+    private MessageProducer messageProducer;
 
-    @Bean(destroyMethod = "close")
-    public MockAgent mockAgent() {
-        return new MockAgent(
-                consumer,
-                producer,
-                URI.create(agentTopic),
-                URI.create(resourceMonitorTopic));
+    @Bean
+    public RuoteRuntime ruoteRuntime() {
+        Map<String, Object> runtimeProperties = Maps.newHashMap();
+        runtimeProperties.put("state_cache", realTimeStateCache);
+        runtimeProperties.put("broker_uri", messageBrokerURI);
+        runtimeProperties.put("message_producer", messageProducer);
+        return RuoteRuntime.createRuntime(runtimeProperties);
     }
 
 }

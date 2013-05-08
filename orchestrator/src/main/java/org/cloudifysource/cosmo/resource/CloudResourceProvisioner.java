@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.resource;
 import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
-import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -28,7 +27,7 @@ import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage;
 import java.net.URI;
 
 /**
- * This class is responsible for cloud resources provisioning using a specified {@link CloudDriver} instance.
+ * TODO: Write a short summary of this type's roles and responsibilities.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -39,18 +38,15 @@ public class CloudResourceProvisioner {
     private final CloudDriver driver;
     private final MessageConsumer consumer;
     private final URI inputUri;
+    private final MessageConsumerListener<CloudResourceMessage> listener;
 
-    public CloudResourceProvisioner(final CloudDriver driver, URI inputUri) {
+    public CloudResourceProvisioner(final CloudDriver driver, URI inputUri, MessageConsumer consumer) {
         Preconditions.checkNotNull(driver);
         Preconditions.checkNotNull(inputUri);
         this.inputUri = inputUri;
         this.driver = driver;
-        this.consumer = new MessageConsumer();
-        this.logger = LoggerFactory.getLogger(getClass());
-    }
-
-    public void start() {
-        consumer.addListener(inputUri, new MessageConsumerListener<CloudResourceMessage>() {
+        this.consumer = consumer;
+        this.listener = new MessageConsumerListener<CloudResourceMessage>() {
             @Override
             public void onMessage(URI uri, CloudResourceMessage message) {
                 logger.debug("Consumed message from broker: " + message);
@@ -62,11 +58,12 @@ public class CloudResourceProvisioner {
             @Override
             public void onFailure(Throwable t) {
             }
-        });
+        };
+        consumer.addListener(inputUri, listener);
     }
 
-    public void stop() {
-        consumer.removeAllListeners();
+    public void close() {
+        consumer.removeListener(listener);
     }
 
     private void startMachine(String id) {

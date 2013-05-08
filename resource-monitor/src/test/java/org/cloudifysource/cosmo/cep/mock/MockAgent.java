@@ -37,7 +37,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author itaif
  * @since 0.1
  */
-public class MockAgent {
+public class MockAgent implements AutoCloseable {
 
     private boolean failed;
     private final MessageProducer producer;
@@ -45,7 +45,7 @@ public class MockAgent {
     private final URI requestTopic;
     private final URI responseTopic;
     private final MessageConsumerListener<Object> listener;
-    private List<Throwable> failures;
+    private final List<Throwable> failures;
 
     public MockAgent(final MessageConsumer consumer,
                      final MessageProducer producer,
@@ -56,7 +56,7 @@ public class MockAgent {
         this.requestTopic = agentTopic;
         this.responseTopic = resourceMonitorTopic;
         this.failures = Lists.newArrayList();
-        listener = new MessageConsumerListener<Object>() {
+        this.listener = new MessageConsumerListener<Object>() {
             @Override
             public void onMessage(URI uri, Object message) {
                 assertThat(uri).isEqualTo(agentTopic);
@@ -72,12 +72,10 @@ public class MockAgent {
                 failures.add(t);
             }
         };
+        this.consumer.addListener(requestTopic, listener);
     }
 
-    public void start() {
-        consumer.addListener(requestTopic, listener);
-    }
-    public void stop() {
+    public void close() {
         consumer.removeListener(listener);
     }
 

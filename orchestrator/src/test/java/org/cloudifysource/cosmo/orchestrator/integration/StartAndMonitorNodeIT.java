@@ -23,26 +23,24 @@ import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
-import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCacheConfiguration;
-import org.drools.io.Resource;
-import org.drools.io.ResourceFactory;
+import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
-import java.net.URI;
+import javax.inject.Inject;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -59,27 +57,53 @@ import static org.mockito.Mockito.when;
  * @author Idan Moyal
  * @since 0.1
  */
-public class StartAndMonitorNodeIT {
+@ContextConfiguration(classes = { StartAndMonitorNodeIT.Config.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
 
-    private static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/AgentFailureDetector.drl";
+    /**
+     *
+     */
+    @Configuration
+    @Import({
+            CloudResourceProvisionerConfig.class,
+            RuoteRuntimeConfig.class
+    })
+    static class Config extends BaseOrchestratorIntegrationTestConfig {
 
-    // message broker that isolates server
-    private MessageBrokerServer broker;
-    private URI inputUri;
-    private RealTimeStateCache cache;
+        @Inject
+        private ResourceMonitorServer resourceMonitor;
+
+        @Value("${cosmo.test.resource.id}")
+        private String resourceId;
+
+        @Bean
+        public CloudDriver cloudDriver() {
+            CloudDriver cloudDriver = Mockito.mock(CloudDriver.class);
+            when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
+                @Override
+                public Object answer(InvocationOnMock invocation) throws Throwable {
+                    final Agent agent = new Agent();
+                    agent.setAgentId(resourceId);
+                    resourceMonitor.insertFact(agent);
+                    return new MachineDetails(resourceId, "127.0.0.1");
+                }
+            });
+            return cloudDriver;
+        }
+    }
+
+    @Value("${cosmo.test.resource.id}")
+    private String resourceId;
+
+    @Inject
+    private MockAgent mockAgent;
+
+    @Inject
     private RuoteRuntime runtime;
-    private CloudResourceProvisioner provisioner;
-    private URI resourceProvisionerTopic;
-    private URI stateCacheTopic;
-    private URI resourceMonitorTopic;
-    private URI agentTopic;
-    private ResourceMonitorServer resourceMonitor;
-    private CloudDriver cloudDriver;
 
-
-    @Test(timeOut = 10000)
+    @Test(timeOut = 30000)
     public void testStartAndMonitor() throws ExecutionException, InterruptedException {
-        final String resourceId = "node_1";
 
         // Create radial workflow
         final String flow =
@@ -88,113 +112,11 @@ public class StartAndMonitorNodeIT {
                         "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
-        // Configure mock cloud driver
-        final MockAgent mockAgent = new MockAgent(new MessageConsumer(), new MessageProducer(), agentTopic,
-                resourceMonitorTopic);
-        when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                final Agent agent = new Agent();
-                agent.setAgentId(resourceId);
-                resourceMonitor.insertFact(agent);
-                mockAgent.start();
-                return new MachineDetails(resourceId, "127.0.0.1");
-            }
-        });
-
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", resourceId);
-        try {
-            workflow.execute(workitem);
-        } finally {
-            mockAgent.stop();
-        }
+        workflow.execute(workitem);
         mockAgent.validateNoFailures();
-    }
-
-
-    @BeforeMethod
-    @Parameters({ "port" })
-    public void startServer(@Optional("8080") int port) {
-        startMessagingBroker(port);
-        inputUri = URI.create("http://localhost:" + port + "/input/");
-        resourceProvisionerTopic = inputUri.resolve("resource-manager");
-        stateCacheTopic = inputUri.resolve("state-cache");
-        resourceMonitorTopic = inputUri.resolve("resource-monitor");
-        agentTopic = inputUri.resolve("agent");
-        RealTimeStateCacheConfiguration config = new RealTimeStateCacheConfiguration();
-        config.setMessageTopic(stateCacheTopic);
-        startRealTimeStateCache(config);
-
-        Map<String, Object> runtimeProperties = Maps.newHashMap();
-        runtimeProperties.put("state_cache", cache);
-        runtimeProperties.put("broker_uri", inputUri);
-        runtimeProperties.put("message_producer", new MessageProducer());
-        runtime = RuoteRuntime.createRuntime(runtimeProperties);
-        startCloudResourceProvisioner();
-        startResourceMonitor();
-    }
-
-    private void startRealTimeStateCache(RealTimeStateCacheConfiguration config) {
-        cache = new RealTimeStateCache(config);
-        cache.start();
-    }
-
-    private void startCloudResourceProvisioner() {
-        cloudDriver = Mockito.mock(CloudDriver.class);
-        provisioner = new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic);
-        provisioner.start();
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void stopServer() {
-        stopResourceMonitor();
-        stopRealTimeStateCache();
-        stopCloudResourceProvisioner();
-        stopMessageBroker();
-    }
-
-    private void stopRealTimeStateCache() {
-        if (cache != null) {
-            cache.stop();
-        }
-    }
-
-    private void stopCloudResourceProvisioner() {
-        if (provisioner != null) {
-            provisioner.stop();
-        }
-    }
-
-    private void startMessagingBroker(int port) {
-        broker = new MessageBrokerServer(port);
-        broker.start();
-    }
-
-    private void stopMessageBroker() {
-        if (broker != null) {
-            broker.stop();
-        }
-    }
-
-    private void startResourceMonitor() {
-        final Resource resource = ResourceFactory.newClassPathResource(RULE_FILE, this.getClass());
-        boolean pseudoClock = false;
-        resourceMonitor = new ResourceMonitorServer(resourceMonitorTopic,
-                stateCacheTopic,
-                agentTopic,
-                pseudoClock,
-                resource,
-                new MessageProducer(),
-                new MessageConsumer());
-        resourceMonitor.start();
-    }
-
-    private void stopResourceMonitor() {
-        if (resourceMonitor != null) {
-            resourceMonitor.stop();
-        }
     }
 
 }
