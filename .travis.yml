@@ -13,7 +13,7 @@ script:
    - "mvn verify"
 
 after_success:
-  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path /"
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path travisci"
   
 env:
  global:
