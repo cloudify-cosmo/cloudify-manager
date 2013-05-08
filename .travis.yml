@@ -19,8 +19,8 @@ env:
  global:
    - "ARTIFACTS_AWS_REGION=us-east-1"
    - "ARTIFACTS_S3_BUCKET=cosmo-snapshot-maven-repository"
-   - secure: "KIxNU7VRr0Adm/yvMjlF5vLudWtq6SytI+X+xKYnOhRcTqOuXEZoOXbLeF/N\nJObM8LOYkVuAbuh1TrMGArDB2DwBjvYQVp90wyr85xsb7mK3RPDpak/kHb35\njnwd+/DbQrgGdHFIrUFLXOT4LI9Rswi36ASDVvCuO45RxY8PECw="
-   - secure: "IlaPH7li/kSUeQ6QzleW0KTQH5Jq794S/1dZKjrc3ehIA67krjp9epXhughm\nz4Am73Ll9c2a5nKN+6QdiABYZSE6njHWejgps8QDoxF8zbWsPkXOSOTHEebs\nOEx2MiPM3+NRnoSsx4fEix9WgUtm3lkK6dndHnhWWsD26d3ZHlI="
+   - "ARTIFACTS_AWS_ACCESS_KEY_ID=AKIAJFLYGO6MOVROX2OA"
+   - "ARTIFACTS_AWS_SECRET_ACCESS_KEY=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"
    
 
 # Comments:
@@ -28,6 +28,7 @@ env:
 #  Finding the public key used for encryption: https:# api.travis-ci.org/repos/CloudifySource/cosmo-manager/key
 #  Encrypting: http://about.travis-ci.org/docs/user/encryption-keys/
 #              http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
+#  Don't use your direct AWS credentials. Create limited credentials with Amazon IAM
 #  How to upload travis artifacts: https:# github.com/travis-ci/travis-artifacts
 #  How to find local maven repo: http:# stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
 #  Do not use mvn -X switch as it exposes the environment variables and exposes the secret key.
