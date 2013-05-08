@@ -21,7 +21,6 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
 import org.hibernate.validator.constraints.NotEmpty;
-import org.hibernate.validator.constraints.URL;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -37,12 +37,14 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
         </dependency>
+        <!-- include when a constraint is added to real time state cache
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-validator</artifactId>
-            <!-- TODO remove version -->
+            TODO remove version
             <version>5.0.0.Final</version>
         </dependency>
+        -->
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
