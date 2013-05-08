@@ -57,6 +57,12 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>agent-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <!-- TODO remove version -->
+            <version>5.0.0.Final</version>
+        </dependency>
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>

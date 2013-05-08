@@ -45,7 +45,12 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <!-- TODO remove version -->
+            <version>5.0.0.Final</version>
+        </dependency>
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -54,6 +59,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
+            <!-- TODO remove version -->
             <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
