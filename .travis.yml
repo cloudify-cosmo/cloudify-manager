@@ -13,21 +13,20 @@ script:
    - "mvn verify"
 
 after_success:
-  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path org/cloudifysource/cosmo"
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path /"
   
 env:
  global:
    - "ARTIFACTS_AWS_REGION=us-east-1"
    - "ARTIFACTS_S3_BUCKET=cosmo-snapshot-maven-repository"
-   - "ARTIFACTS_AWS_ACCESS_KEY_ID=AKIAJFLYGO6MOVROX2OA"
-   - "ARTIFACTS_AWS_SECRET_ACCESS_KEY=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"
-   
+   - secure: ZFXmjFGg7wHA+u/8HmhAop6Y4zRJIHdVPvWrYHN3zlV5MuaG/5Zfr7HTzVyK\nGirLlRK3g0trDNnkNWYbnu4gfP1V7sPxv+G9HcP0Ig1hr13Xlh8u0u0yCFjp\nD/fW8nndIPNNi+7xT6KZMhUt+oNxEA31rY4dIVGoU7oHCebhD5U=
+   - secure: bXHI5aPs5VROGRwm44wPT49YzU8oSJ4Y82sl5SyAg7oalRPHeTdm2tv+cjx5\nxRaw9BW0CMYycbqQl3Bt8BuPfaQKgNpGdweJTFSdDKNB/rH0qnqFdBYLtbL3\nOv0UJp04XGUidfDjzCtS7uhrF5p/UFKewoFGaYuelasZ0wfCKFU=
 
 # Comments:
 # 
 #  Finding the public key used for encryption: https:# api.travis-ci.org/repos/CloudifySource/cosmo-manager/key
-#  Encrypting: http://about.travis-ci.org/docs/user/encryption-keys/
-#              http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
+#  Encrypting: http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
+#              travis encrypt -r CloudifySource/cosmo-manager ARTIFACTS_AWS_ACCESS_KEY_ID=xxxxx
 #  Don't use your direct AWS credentials. Create limited credentials with Amazon IAM
 #  How to upload travis artifacts: https:# github.com/travis-ci/travis-artifacts
 #  How to find local maven repo: http:# stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
