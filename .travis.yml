@@ -7,10 +7,10 @@ before_script:
    - "gem install travis-artifacts"
 
 install:
-   - "mvn install -DskipTests"
+   - "mvn install -DskipTests -f travis-pom.xml"
 
 script:
-   - "mvn verify"
+   - "mvn verify -f travis-pom.xml"
 
 after_success:
   - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
