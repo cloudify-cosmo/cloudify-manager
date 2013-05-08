@@ -14,11 +14,11 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.cep.config;
+package org.cloudifysource.cosmo.resource.config;
 
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
+import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,33 +27,26 @@ import javax.inject.Inject;
 import java.net.URI;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.cep.mock.MockAgent}.
+ * Creates a new {@link org.cloudifysource.cosmo.resource.CloudResourceProvisioner}.
  *
- * @author Itai Frenkel
+ * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class MockAgentConfig {
+public class CloudResourceProvisionerConfig {
 
-    @Value("${cosmo.resource-monitor.topic}")
-    private String resourceMonitorTopic;
-
-    @Value("${cosmo.agent.topic}")
-    private String agentTopic;
+    @Value("${cosmo.resource-manager.topic}")
+    private URI resourceProvisionerTopic;
 
     @Inject
-    MessageProducer producer;
+    private CloudDriver cloudDriver;
 
     @Inject
-    MessageConsumer consumer;
+    private MessageConsumer messageConsumer;
 
     @Bean(destroyMethod = "close")
-    public MockAgent mockAgent() {
-        return new MockAgent(
-                consumer,
-                producer,
-                URI.create(agentTopic),
-                URI.create(resourceMonitorTopic));
+    public CloudResourceProvisioner cloudResourceProvisioner() {
+        return new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic, messageConsumer);
     }
 
 }

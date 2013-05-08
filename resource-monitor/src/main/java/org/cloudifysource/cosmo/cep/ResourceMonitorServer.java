@@ -58,21 +58,21 @@ import java.util.concurrent.Future;
  * @author itaif
  * @since 0.1
  */
-public class ResourceMonitorServer {
+public class ResourceMonitorServer implements AutoCloseable {
 
-    private URI resourceMonitorTopic;
-    private URI stateCacheTopic;
-    private boolean pseudoClock;
+    private final URI resourceMonitorTopic;
+    private final URI stateCacheTopic;
+    private final boolean pseudoClock;
     private final MessageProducer producer;
     private final MessageConsumer consumer;
     private final Resource droolsResource;
     private final ExecutorService executorService;
-    private StatefulKnowledgeSession ksession;
-    private WorkingMemoryEntryPoint entryPoint;
-    private Future<Void> future;
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
-    private MessageConsumerListener<AgentStatusMessage> listener;
-    private KnowledgeRuntimeLogger runtimeLogger;
+    private final StatefulKnowledgeSession ksession;
+    private final WorkingMemoryEntryPoint entryPoint;
+    private final Future<Void> future;
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final MessageConsumerListener<AgentStatusMessage> listener;
+    private final KnowledgeRuntimeLogger runtimeLogger;
     private final URI agentTopic;
 
     public ResourceMonitorServer(
@@ -91,24 +91,36 @@ public class ResourceMonitorServer {
         this.droolsResource = droolsResource;
         this.producer = producer;
         this.consumer = consumer;
-        executorService = Executors.newSingleThreadExecutor();
-    }
+        this.executorService = Executors.newSingleThreadExecutor();
 
-    public void start() {
-        initDrools();
-        initEntryPoint();
+        KSessionAndRuntimeLogger droolsInitProperties = initDrools();
+        this.ksession = droolsInitProperties.ksession;
+        this.runtimeLogger = droolsInitProperties.runtimeLogger;
+
+        EntryPointAndListener entryPointInitProperties = initEntryPoint();
+        this.entryPoint = entryPointInitProperties.entryPoint;
+        this.listener = entryPointInitProperties.listener;
+
         initExitChannel();
-        future =
-            executorService.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    ksession.fireUntilHalt();
-                    return null;
-                }
-            });
+
+        this.future = sumbitTask();
     }
 
-    public void stop() {
+    /**
+     */
+    private static class KSessionAndRuntimeLogger {
+        StatefulKnowledgeSession ksession;
+        KnowledgeRuntimeLogger runtimeLogger;
+    }
+
+    /**
+     */
+    private static class EntryPointAndListener {
+        WorkingMemoryEntryPoint entryPoint;
+        MessageConsumerListener<AgentStatusMessage> listener;
+    }
+
+    public void close() {
         if (listener != null) {
             consumer.removeListener(listener);
         }
@@ -116,7 +128,9 @@ public class ResourceMonitorServer {
         executorService.shutdownNow();
     }
 
-    private void initDrools() {
+    private KSessionAndRuntimeLogger initDrools() {
+
+        KSessionAndRuntimeLogger result = new KSessionAndRuntimeLogger();
 
         KnowledgeBaseConfiguration kbaseConfig = KnowledgeBaseFactory.newKnowledgeBaseConfiguration();
         // Stream mode allows interacting with the clock (Drools Fusion)
@@ -131,9 +145,11 @@ public class ResourceMonitorServer {
         } else {
             sessionConfig.setOption(ClockTypeOption.get("realtime"));
         }
-        ksession = kbase.newStatefulKnowledgeSession(sessionConfig, null);
+        result.ksession = kbase.newStatefulKnowledgeSession(sessionConfig, null);
 
-        runtimeLogger = KnowledgeRuntimeLoggerFactory.newConsoleLogger(ksession);
+        result.runtimeLogger = KnowledgeRuntimeLoggerFactory.newConsoleLogger(result.ksession);
+
+        return result;
     }
 
     private KnowledgeBase newKnowledgeBase(KnowledgeBaseConfiguration config) {
@@ -169,18 +185,20 @@ public class ResourceMonitorServer {
         ksession.registerChannel("output", exitChannel);
     }
 
-    private void initEntryPoint() {
+    private EntryPointAndListener initEntryPoint() {
+        final EntryPointAndListener result = new EntryPointAndListener();
+
         Collection<? extends WorkingMemoryEntryPoint> entryPoints = ksession.getWorkingMemoryEntryPoints();
         //TODO: Disable drools auto creation of entry points when it reads DRL file.
         if (entryPoints.size() > 1) {
             throw new IllegalArgumentException("DRL file must use default entry point");
         }
-        entryPoint = Iterables.getOnlyElement(entryPoints);
-        listener = new MessageConsumerListener<AgentStatusMessage>() {
+        result.entryPoint = Iterables.getOnlyElement(entryPoints);
+        result.listener = new MessageConsumerListener<AgentStatusMessage>() {
 
             @Override
             public void onMessage(URI uri, AgentStatusMessage message) {
-                entryPoint.insert(message);
+                result.entryPoint.insert(message);
             }
 
             @Override
@@ -188,7 +206,19 @@ public class ResourceMonitorServer {
                 ResourceMonitorServer.this.onConsumerFailure(t);
             }
         };
-        consumer.addListener(resourceMonitorTopic, listener);
+        consumer.addListener(resourceMonitorTopic, result.listener);
+
+        return result;
+    }
+
+    private Future<Void> sumbitTask() {
+        return executorService.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                ksession.fireUntilHalt();
+                return null;
+            }
+        });
     }
 
     private void onConsumerFailure(Throwable t) {

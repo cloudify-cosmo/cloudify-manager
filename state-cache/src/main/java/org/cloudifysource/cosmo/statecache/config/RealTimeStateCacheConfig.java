@@ -14,11 +14,11 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.cep.config;
+package org.cloudifysource.cosmo.statecache.config;
 
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
+import org.cloudifysource.cosmo.statecache.StateCache;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,33 +27,32 @@ import javax.inject.Inject;
 import java.net.URI;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.cep.mock.MockAgent}.
+ * Creates a new {@link org.cloudifysource.cosmo.statecache.RealTimeStateCache}.
  *
- * @author Itai Frenkel
+ * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class MockAgentConfig {
+public class RealTimeStateCacheConfig {
 
-    @Value("${cosmo.resource-monitor.topic}")
-    private String resourceMonitorTopic;
-
-    @Value("${cosmo.agent.topic}")
-    private String agentTopic;
+    @Value("${cosmo.state-cache.topic}")
+    private URI messageTopic;
 
     @Inject
-    MessageProducer producer;
+    private MessageConsumer messageConsumer;
 
     @Inject
-    MessageConsumer consumer;
+    private StateCache stateCache;
 
     @Bean(destroyMethod = "close")
-    public MockAgent mockAgent() {
-        return new MockAgent(
-                consumer,
-                producer,
-                URI.create(agentTopic),
-                URI.create(resourceMonitorTopic));
+    public StateCache stateCache() {
+        return new StateCache.Builder().build();
     }
+
+    @Bean(destroyMethod = "close")
+    public RealTimeStateCache realTimeStateCache() {
+        return new RealTimeStateCache(messageTopic, messageConsumer, stateCache);
+    }
+
 
 }
