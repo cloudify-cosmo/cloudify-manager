@@ -44,3 +44,20 @@ class ResourceManagerParticipant < Ruote::Participant
     end
   end
 end
+
+class ExecuteTaskParticipant < Ruote::Participant
+  def on_workitem
+    begin
+      topic = workitem.params['topic']
+      payload = workitem.params['payload']
+
+      puts "topic is: #{topic}, payload is: #{payload} type: #{payload.class}"
+
+      producer = org::cloudifysource::cosmo::messaging::producer::MessageProducer.new
+
+
+
+      reply
+    end
+  end
+end

@@ -1,4 +1,14 @@
 define start_node
+  execute_task target: "$resource_provisioner", continue_on: "task_started", payload: {
+    exec: "start_machine",
+    resource_id: "$resource.id"
+  }
+
+  resource_provisioner exec: "start_machine", resource_id: "$resource.id"
+
   resource resource_id: "$resource_id", action: "start_machine"
   resource_monitor resource_id: "$resource_id"
   state resource_id: "$resource_id", reachable: "true"
+
+
+

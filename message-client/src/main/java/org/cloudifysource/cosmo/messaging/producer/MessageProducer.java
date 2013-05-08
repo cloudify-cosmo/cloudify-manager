@@ -46,7 +46,7 @@ public class MessageProducer<T> {
         mapper = ObjectMapperFactory.newObjectMapper();
     }
 
-    public ListenableFuture send(URI uri, Object message) {
+    public ListenableFuture<Response> send(URI uri, Object message) {
         try {
             final String json = mapper.writerWithType(message.getClass()).writeValueAsString(message);
             return convertListenableFuture(
@@ -58,8 +58,9 @@ public class MessageProducer<T> {
         }
     }
 
-    private ListenableFuture convertListenableFuture(final com.ning.http.client.ListenableFuture<Response> future) {
-        return new ListenableFuture() {
+    private ListenableFuture<Response> convertListenableFuture(
+            final com.ning.http.client.ListenableFuture<Response> future) {
+        return new ListenableFuture<Response>() {
             @Override
             public void addListener(Runnable listener, Executor executor) {
                 future.addListener(listener, executor);
@@ -81,12 +82,12 @@ public class MessageProducer<T> {
             }
 
             @Override
-            public Object get() throws InterruptedException, ExecutionException {
+            public Response get() throws InterruptedException, ExecutionException {
                 return future.get();
             }
 
             @Override
-            public Object get(long timeout, TimeUnit unit)
+            public Response get(long timeout, TimeUnit unit)
                 throws InterruptedException, ExecutionException, TimeoutException {
                 return future.get(timeout, unit);
             }

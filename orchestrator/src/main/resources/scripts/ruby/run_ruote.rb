@@ -42,6 +42,7 @@ def create_dashboard
   dashboard.register_participant 'state', StateCacheParticipant
   dashboard.register_participant 'resource', ResourceManagerParticipant
   dashboard.register_participant 'resource_monitor', ResourceMonitorParticipant
+  dashboard.register_participant 'execute_task', ExecuteTaskParticipant
   dashboard
 end
 
