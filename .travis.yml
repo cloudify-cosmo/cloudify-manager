@@ -7,7 +7,7 @@ before_script:
    - "gem install travis-artifacts"
 
 install:
-   - "mvn install -DskipTests -X"
+   - "mvn install -DskipTests"
 
 script:
    - "mvn verify"
@@ -30,3 +30,4 @@ env:
 #              http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
 #  How to upload travis artifacts: https:# github.com/travis-ci/travis-artifacts
 #  How to find local maven repo: http:# stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
+#  Do not use mvn -X switch as it exposes the environment variables and exposes the secret key.
