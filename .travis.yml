@@ -1,5 +1,34 @@
 language: java
+
 jdk:
   - openjdk7
-install: "mvn install -DskipTests"
-script: "mvn verify"
+  
+before_script:
+   - "gem install travis-artifacts"
+
+install:
+   - "mvn install -DskipTests"
+
+script:
+   - "mvn verify"
+
+after_success:
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path org/cloudifysource/cosmo"
+  
+env:
+ global:
+   - "ARTIFACTS_AWS_REGION=us-east-1"
+   - "ARTIFACTS_S3_BUCKET=cosmo-snapshot-maven-repository"
+   - "ARTIFACTS_AWS_ACCESS_KEY_ID=AKIAJFLYGO6MOVROX2OA"
+   - "ARTIFACTS_AWS_SECRET_ACCESS_KEY=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"
+   
+
+# Comments:
+# 
+#  Finding the public key used for encryption: https:# api.travis-ci.org/repos/CloudifySource/cosmo-manager/key
+#  Encrypting: http://about.travis-ci.org/docs/user/encryption-keys/
+#              http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
+#  Don't use your direct AWS credentials. Create limited credentials with Amazon IAM
+#  How to upload travis artifacts: https:# github.com/travis-ci/travis-artifacts
+#  How to find local maven repo: http:# stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
+#  Do not use mvn -X switch as it exposes the environment variables and exposes the secret key.
