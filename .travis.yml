@@ -13,8 +13,12 @@ script:
    - "mvn verify"
 
 after_success:
-  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo --target-path travisci"
-  
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/resource-monitor --target-path travisci"
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/resource-monitor-api --target-path travisci"
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
+  - "travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache-api --target-path travisci"
+
 env:
  global:
    - "ARTIFACTS_AWS_REGION=us-east-1"
