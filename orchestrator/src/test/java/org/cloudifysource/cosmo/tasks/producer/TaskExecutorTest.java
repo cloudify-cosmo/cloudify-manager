@@ -38,7 +38,6 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.net.URI;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
