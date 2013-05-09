@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.cloud.driver.config;
 
-import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

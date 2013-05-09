@@ -19,13 +19,7 @@ package org.cloudifysource.cosmo.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.mock.env.MockPropertySource;
 import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import java.util.Properties;
 
 /**
  * Abstract test spring configuration.

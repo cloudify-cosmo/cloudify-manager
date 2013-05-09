@@ -20,12 +20,10 @@ import com.google.common.io.Files;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
-import org.cloudifysource.cosmo.cloud.driver.config.VagrantCloudDriverConfig;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
@@ -34,7 +32,6 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.util.Properties;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
