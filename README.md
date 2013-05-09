@@ -1,4 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager)
+[![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager) develop branch
 
 # Cloudify Cosmo Management #
 
