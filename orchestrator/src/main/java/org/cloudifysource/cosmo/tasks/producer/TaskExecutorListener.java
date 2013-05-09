@@ -15,17 +15,17 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.tasks.producer;
 
-import org.cloudifysource.cosmo.tasks.messages.TaskMessage;
+import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * A listener for task execution status messages.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public interface TaskProducerListener {
+public interface TaskExecutorListener {
 
-    void onTaskUpdateReceived(TaskMessage result);
+    void onTaskStatusReceived(TaskStatusMessage message);
     void onFailure(Throwable t);
 
 }

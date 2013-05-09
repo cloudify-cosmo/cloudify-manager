@@ -15,14 +15,17 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.tasks.producer;
 
-import com.google.common.collect.Maps;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
+import org.cloudifysource.cosmo.messaging.mock.MockMessageProducer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.tasks.messages.TaskMessage;
+import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
+import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.cloudifysource.cosmo.tasks.producer.config.TaskProducerConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -43,21 +46,23 @@ import java.util.concurrent.TimeUnit;
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
- * Tests {@link TaskProducer} functionality.
+ * Tests {@link TaskExecutor} functionality.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-@ContextConfiguration(classes = { TaskProducerTest.Config.class })
+@ContextConfiguration(classes = { TaskExecutorTest.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class TaskProducerTest extends AbstractTestNGSpringContextTests {
+public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
 
     @Inject
     private MessageProducer producer;
     @Inject
+    private MockMessageProducer mockMessageProducer;
+    @Inject
     private MessageConsumer consumer;
     @Inject
-    private TaskProducer taskProducer;
+    private TaskExecutor taskExecutor;
     @Value("${cosmo.resource-provisioner.topic}")
     private URI topic;
 
@@ -76,34 +81,37 @@ public class TaskProducerTest extends AbstractTestNGSpringContextTests {
 
     @Test
     public void testSend() throws InterruptedException {
+        final String key = "text";
+        final String value = "hello";
         final CountDownLatch latch = new CountDownLatch(1);
-        consumer.addListener(topic, new MessageConsumerListener<TaskMessage>() {
+        consumer.addListener(topic, new MessageConsumerListener<Object>() {
             @Override
-            public void onMessage(URI uri, TaskMessage message) {
-                final Map<String, Object> data = message.getPayload();
-                if (data.containsKey("text") && "hello".equals(data.get("text"))) {
+            public void onMessage(URI uri, Object message) {
+                final ExecuteTaskMessage executeTaskMessage = (ExecuteTaskMessage) message;
+                final Optional<Object> text = executeTaskMessage.get("text");
+                if (text.isPresent() && Objects.equal(text.get(), value)) {
                     latch.countDown();
                 }
             }
-
             @Override
             public void onFailure(Throwable t) {
                 t.printStackTrace();
             }
         });
-        final TaskMessage task = createTask();
-        taskProducer.send(topic, task);
+        final ExecuteTaskMessage task = createTask();
+        task.put(key, value);
+        taskExecutor.send(topic, task);
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
     public void testMessageSentListener() throws InterruptedException {
-        final TaskMessage task = createTask();
+        final ExecuteTaskMessage task = createTask();
         final CountDownLatch latch = new CountDownLatch(1);
-        taskProducer.send(topic, task, new TaskProducerListener() {
+        taskExecutor.send(topic, task, new TaskExecutorListener() {
             @Override
-            public void onTaskUpdateReceived(TaskMessage result) {
-                if (TaskMessage.TASK_SENT.equals(result.getStatus())) {
+            public void onTaskStatusReceived(TaskStatusMessage message) {
+                if (Objects.equal(message.getStatus(), TaskStatusMessage.SENT)) {
                     latch.countDown();
                 }
             }
@@ -114,18 +122,23 @@ public class TaskProducerTest extends AbstractTestNGSpringContextTests {
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
     }
 
+    private ExecuteTaskMessage createTask() {
+        return taskExecutor.createTask("server", "client");
+    }
+
     @Test
     public void testMessageReceivedListener() throws InterruptedException, ExecutionException {
-        final TaskMessage task = createTask();
+        final ExecuteTaskMessage task = createTask();
         final CountDownLatch latch1 = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
-        taskProducer.send(topic, task, new TaskProducerListener() {
+        taskExecutor.send(topic, task, new TaskExecutorListener() {
             @Override
-            public void onTaskUpdateReceived(TaskMessage result) {
-                if (result.getTaskId().equals(task.getTaskId())) {
-                    if (TaskMessage.TASK_SENT.equals(result.getStatus())) {
+            public void onTaskStatusReceived(TaskStatusMessage message) {
+                if (Objects.equal(message.getTaskId(), task.getTaskId())) {
+                    final String status = message.getStatus();
+                    if (Objects.equal(status, TaskStatusMessage.SENT)) {
                         latch1.countDown();
-                    } else if (TaskMessage.TASK_RECEIVED.equals(result.getStatus())) {
+                    } else if (Objects.equal(status, TaskStatusMessage.RECEIVED)) {
                         latch2.countDown();
                     }
                 }
@@ -136,39 +149,32 @@ public class TaskProducerTest extends AbstractTestNGSpringContextTests {
             }
         });
         assertThat(latch1.await(5, TimeUnit.SECONDS)).isTrue();
-        final TaskMessage taskResult = createTask();
-        taskResult.setTaskId(task.getTaskId());
-        taskResult.setStatus(TaskMessage.TASK_RECEIVED);
-        System.out.println("!! sending message: " + taskResult);
-        producer.send(topic, taskResult).get();
+
+        final TaskStatusMessage taskStatusMessage = new TaskStatusMessage();
+        taskStatusMessage.setTaskId(task.getTaskId());
+        taskStatusMessage.setStatus(TaskStatusMessage.RECEIVED);
+        taskStatusMessage.setTarget(task.getTarget());
+        taskStatusMessage.setSender(task.getSender());
+        producer.send(topic, taskStatusMessage).get();
+
         assertThat(latch2.await(5, TimeUnit.SECONDS)).isTrue();
     }
 
-
-    @Test(expectedExceptions = RuntimeException.class, enabled = false)
+    @Test(timeOut = 5000)
     public void testSentMessageNotReceivedByBroker() throws ExecutionException, InterruptedException {
-        final TaskMessage task = createTask();
-        taskProducer.send(topic, task, new TaskProducerListener() {
+        mockMessageProducer.setReturnedStatusCode(500);
+        final ExecuteTaskMessage task = createTask();
+        final CountDownLatch latch = new CountDownLatch(1);
+        taskExecutor.send(topic, task, new TaskExecutorListener() {
             @Override
-            public void onTaskUpdateReceived(TaskMessage result) {
-
+            public void onTaskStatusReceived(TaskStatusMessage message) {
             }
-
             @Override
             public void onFailure(Throwable t) {
+                latch.countDown();
             }
         });
+        latch.await();
     }
-
-    private TaskMessage createTask() {
-        final Map<String, Object> payload = Maps.newHashMap();
-        payload.put("text", "hello");
-        final TaskMessage task = new TaskMessage();
-        task.setPayload(payload);
-        task.setStatus(TaskMessage.TASK_CREATED);
-        return task;
-    }
-
-
 
 }

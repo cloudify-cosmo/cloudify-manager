@@ -15,38 +15,23 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.tasks.messages;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * A task object to be sent using a {@link org.cloudifysource.cosmo.tasks.producer.TaskProducer}.
+ * An execute task object to be sent using a {@link org.cloudifysource.cosmo.tasks.producer.TaskExecutor}.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public class TaskMessage {
+public class ExecuteTaskMessage extends AbstractTaskMessage {
 
-    public static final String TASK_CREATED = "task_created";
-    public static final String TASK_SENT = "task_sent";
-    public static final String TASK_RECEIVED = "task_received";
-
-    private String taskId;
     private Map<String, Object> payload;
-    private String status;
 
-    public String getTaskId() {
-        return taskId;
-    }
 
-    public void setTaskId(String id) {
-        this.taskId = id;
-    }
-
-    @JsonAnyGetter
     public Map<String, Object> getPayload() {
         return payload;
     }
@@ -55,24 +40,24 @@ public class TaskMessage {
         this.payload = payload;
     }
 
-    @JsonAnySetter
-    protected void handleUnknownProperty(String key, Object value) {
+    public void put(String key, String value) {
         if (payload == null)
             payload = Maps.newHashMap();
         payload.put(key, value);
     }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getStatus() {
-        return status;
+    public Optional<Object> get(String key) {
+        final Object value = payload != null && payload.containsKey(key) ? payload.get(key) : null;
+        return Optional.fromNullable(value);
     }
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(getClass()).add("taskId", taskId).add("status", status).add("payload", payload)
+        return com.google.common.base.Objects.toStringHelper(this)
+                .add("taskId", getTaskId())
+                .add("target", getTarget())
+                .add("sender", getSender())
+                .add("payload", payload)
                 .toString();
     }
 }

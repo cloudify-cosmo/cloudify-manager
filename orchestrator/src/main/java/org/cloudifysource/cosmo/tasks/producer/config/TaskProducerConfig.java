@@ -17,14 +17,14 @@ package org.cloudifysource.cosmo.tasks.producer.config;
 
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.tasks.producer.TaskProducer;
+import org.cloudifysource.cosmo.tasks.producer.TaskExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.tasks.producer.TaskProducer} instance.
+ * Creates a new {@link org.cloudifysource.cosmo.tasks.producer.TaskExecutor} instance.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -39,8 +39,8 @@ public class TaskProducerConfig {
     private MessageProducer messageProducer;
 
     @Bean
-    public TaskProducer taskProducer() {
-        return new TaskProducer(messageProducer, messageConsumer);
+    public TaskExecutor taskProducer() {
+        return new TaskExecutor(messageProducer, messageConsumer);
     }
 
 }
