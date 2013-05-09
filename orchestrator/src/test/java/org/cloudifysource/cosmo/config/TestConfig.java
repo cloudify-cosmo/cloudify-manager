@@ -19,13 +19,7 @@ package org.cloudifysource.cosmo.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.mock.env.MockPropertySource;
 import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import java.util.Properties;
 
 /**
  * Abstract test spring configuration.
@@ -35,19 +29,6 @@ import java.util.Properties;
  */
 @Configuration
 public abstract class TestConfig {
-
-    // To enable injecting dynamic properties straight from test code
-    @Inject
-    private ConfigurableEnvironment environment;
-    @PostConstruct
-    public void postConstruct() {
-        Properties overridenProperties = overridenProperties();
-        if (!overridenProperties.isEmpty())
-            environment.getPropertySources().addFirst(new MockPropertySource(overridenProperties));
-    }
-    protected Properties overridenProperties() {
-        return new Properties();
-    }
 
     // To enable @Value("${place_holder}")
     @Bean
@@ -60,5 +41,4 @@ public abstract class TestConfig {
     public static BeanValidationPostProcessor beanValidationPostProcessor() {
         return new BeanValidationPostProcessor();
     }
-
 }
