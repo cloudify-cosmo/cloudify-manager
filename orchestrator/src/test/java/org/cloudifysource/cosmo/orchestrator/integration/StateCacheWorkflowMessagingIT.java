@@ -28,6 +28,7 @@ import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -75,6 +76,7 @@ public class StateCacheWorkflowMessagingIT extends AbstractTestNGSpringContextTe
         @Value("${cosmo.state-cache.topic}")
         private URI stateCacheTopic;
 
+        @NotEmpty
         @Value("${cosmo.test.resource.id}")
         private String resourceId;
 

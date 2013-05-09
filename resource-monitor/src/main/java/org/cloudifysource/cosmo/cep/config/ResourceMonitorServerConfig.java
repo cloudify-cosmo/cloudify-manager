@@ -20,6 +20,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.drools.io.Resource;
 import org.drools.io.ResourceFactory;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,18 +37,22 @@ import java.net.URI;
 @Configuration
 public class ResourceMonitorServerConfig {
 
+    @Topic
     @Value("${cosmo.resource-monitor.topic}")
     private URI resourceMonitorTopic;
 
+    @Topic
     @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
+    @Topic
     @Value("${cosmo.agent.topic}")
     private URI agentTopic;
 
     @Value("${cosmo.resource-monitor.pseudo-clock}")
     private boolean pseudoClock;
 
+    @NotEmpty
     @Value("${cosmo.resource-monitor.rule}")
     private String droolsResourcePath;
 
