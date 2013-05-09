@@ -61,20 +61,14 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-            <!-- TODO:Remove version -->
-            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-beans</artifactId>
-            <!-- TODO:Remove version -->
-            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
-            <!-- TODO:Remove version -->
-            <version>1</version>
         </dependency>
         <!-- Test -->
         <dependency>
@@ -86,8 +80,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
             <scope>test</scope>
-            <!-- TODO:Remove version -->
-            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
@@ -104,8 +96,6 @@
             <artifactId>message-client</artifactId>
             <scope>test</scope>
             <type>test-jar</type>
-            <!-- TODO:Remove version -->
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
