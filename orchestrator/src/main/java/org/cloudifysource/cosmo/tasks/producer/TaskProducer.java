@@ -55,24 +55,30 @@ public class TaskProducer {
 
     public void send(URI topic, final TaskMessage task, final TaskProducerListener listener) {
         task.setTaskId(generateTaskId());
-        consumer.addListener(topic, new MessageConsumerListener<Object>() {
-            @Override
-            public void onMessage(URI uri, Object message) {
-                if (message instanceof TaskMessage) {
-                    final TaskMessage result = (TaskMessage) message;
-                    if (Objects.equal(task.getTaskId(), result.getTaskId()) && !Objects.equal(TaskMessage.TASK_CREATED,
-                            result.getStatus())) {
-                        logger.debug("Received task notification: {} for sent task: {}", result, task);
-                        listener.onTaskUpdateReceived(result);
+        if (listener != null) {
+            consumer.addListener(topic, new MessageConsumerListener<Object>() {
+                @Override
+                public void onMessage(URI uri, Object message) {
+                    System.out.println("!! message: " + message);
+                    if (message instanceof TaskMessage) {
+                        final TaskMessage result = (TaskMessage) message;
+                        if (Objects.equal(task.getTaskId(), result.getTaskId()) && !Objects.equal(TaskMessage.TASK_CREATED,
+                                result.getStatus())) {
+                            logger.debug("Received task notification: {} for sent task: {}", result, task);
+                            listener.onTaskUpdateReceived(result);
+                        }
                     }
                 }
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                listener.onFailure(t);
-            }
-        });
-        ListenableFuture future = producer.send(topic, task);
+
+                @Override
+                public void onFailure(Throwable t) {
+                    listener.onFailure(t);
+                }
+            });
+        }
+
+        final ListenableFuture future = producer.send(topic, task);
+
         if (listener != null) {
             Futures.addCallback(future, new FutureCallback<Response>() {
                 @Override

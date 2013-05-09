@@ -16,19 +16,25 @@
 package org.cloudifysource.cosmo.tasks.producer;
 
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.messaging.broker.MessageBrokerServer;
+import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
+import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.tasks.messages.TaskMessage;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
+import org.cloudifysource.cosmo.tasks.producer.config.TaskProducerConfig;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -42,13 +48,31 @@ import static org.fest.assertions.api.Assertions.assertThat;
  * @author Idan Moyal
  * @since 0.1
  */
-public class TaskProducerTest {
+@ContextConfiguration(classes = { TaskProducerTest.Config.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class TaskProducerTest extends AbstractTestNGSpringContextTests {
 
+    @Inject
     private MessageProducer producer;
+    @Inject
     private MessageConsumer consumer;
-    private MessageBrokerServer broker;
-    private URI topic;
+    @Inject
     private TaskProducer taskProducer;
+    @Value("${cosmo.resource-provisioner.topic}")
+    private URI topic;
+
+    /**
+     *
+     */
+    @Configuration
+    @Import({
+            MockMessageConsumerConfig.class,
+            MockMessageProducerConfig.class,
+            TaskProducerConfig.class
+    })
+    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
+    static class Config extends TestConfig {
+    }
 
     @Test
     public void testSend() throws InterruptedException {
@@ -57,7 +81,7 @@ public class TaskProducerTest {
             @Override
             public void onMessage(URI uri, TaskMessage message) {
                 final Map<String, Object> data = message.getPayload();
-                if (data.containsKey("message") && "hello".equals(data.get("message"))) {
+                if (data.containsKey("text") && "hello".equals(data.get("text"))) {
                     latch.countDown();
                 }
             }
@@ -92,21 +116,6 @@ public class TaskProducerTest {
 
     @Test
     public void testMessageReceivedListener() throws InterruptedException, ExecutionException {
-        consumer.addListener(topic, new MessageConsumerListener<Object>() {
-            @Override
-            public void onMessage(URI uri, Object message) {
-                System.out.println("!! message = " + message);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                t.printStackTrace();
-            }
-        });
-        producer.send(topic, createTask()).get();
-
-
-
         final TaskMessage task = createTask();
         final CountDownLatch latch1 = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
@@ -123,20 +132,21 @@ public class TaskProducerTest {
             }
             @Override
             public void onFailure(Throwable t) {
+                t.printStackTrace();
             }
         });
         assertThat(latch1.await(5, TimeUnit.SECONDS)).isTrue();
         final TaskMessage taskResult = createTask();
         taskResult.setTaskId(task.getTaskId());
         taskResult.setStatus(TaskMessage.TASK_RECEIVED);
+        System.out.println("!! sending message: " + taskResult);
         producer.send(topic, taskResult).get();
         assertThat(latch2.await(5, TimeUnit.SECONDS)).isTrue();
     }
 
 
-    @Test(expectedExceptions = RuntimeException.class)
+    @Test(expectedExceptions = RuntimeException.class, enabled = false)
     public void testSentMessageNotReceivedByBroker() throws ExecutionException, InterruptedException {
-        //broker.stop();
         final TaskMessage task = createTask();
         taskProducer.send(topic, task, new TaskProducerListener() {
             @Override
@@ -150,35 +160,15 @@ public class TaskProducerTest {
         });
     }
 
-    @BeforeMethod
-    @Parameters({ "port" })
-    public void init(@Optional("8080") int port) throws URISyntaxException {
-        topic = new URI("http://localhost:" + port + "/resource-provisioner/");
-        broker = new MessageBrokerServer(port);
-        producer = new MessageProducer();
-        consumer = new MessageConsumer();
-        broker.start();
-        taskProducer = new TaskProducer(producer, consumer);
-    }
-
-    @AfterMethod
-    public void cleanup() {
-        if (consumer != null) {
-            consumer.removeAllListeners();
-        }
-        if (broker != null) {
-            broker.stop();
-        }
-    }
-
     private TaskMessage createTask() {
         final Map<String, Object> payload = Maps.newHashMap();
-        payload.put("message", "hello");
+        payload.put("text", "hello");
         final TaskMessage task = new TaskMessage();
         task.setPayload(payload);
         task.setStatus(TaskMessage.TASK_CREATED);
         return task;
     }
+
 
 
 }

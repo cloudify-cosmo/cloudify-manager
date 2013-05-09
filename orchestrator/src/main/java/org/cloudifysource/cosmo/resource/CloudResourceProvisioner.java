@@ -15,9 +15,9 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.resource;
 
-import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
+import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -27,7 +27,8 @@ import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage;
 import java.net.URI;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * This class is in charge of cloud resources provisioning using a specified {@link CloudDriver} instance.
+ * <p>Provisioning requests are passed through a messaging broker which the provisioner is listening to.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -37,13 +38,10 @@ public class CloudResourceProvisioner {
     private final Logger logger;
     private final CloudDriver driver;
     private final MessageConsumer consumer;
-    private final URI inputUri;
     private final MessageConsumerListener<CloudResourceMessage> listener;
 
     public CloudResourceProvisioner(final CloudDriver driver, URI inputUri, MessageConsumer consumer) {
-        Preconditions.checkNotNull(driver);
-        Preconditions.checkNotNull(inputUri);
-        this.inputUri = inputUri;
+        this.logger = LoggerFactory.getLogger(getClass());
         this.driver = driver;
         this.consumer = consumer;
         this.listener = new MessageConsumerListener<CloudResourceMessage>() {
