@@ -260,12 +260,9 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-            <!--<url>http://maven-repository.cloudifysource.org</url>-->
-            <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>
+            <url>https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository</url>
             <releases>
-                <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
+                <enabled>false</enabled>
             </releases>
             <snapshots>
                 <enabled>true</enabled>
