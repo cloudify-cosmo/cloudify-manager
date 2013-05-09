@@ -7,9 +7,11 @@ before_script:
    - "gem install travis-artifacts"
 
 install:
+#    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn install -DskipTests -f travis-pom.xml"
 
 script:
+#    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
 
 after_success:
@@ -28,10 +30,36 @@ env:
 
 # Comments:
 # 
-#  Finding the public key used for encryption: https:# api.travis-ci.org/repos/CloudifySource/cosmo-manager/key
-#  Encrypting: http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
+#  Don't use your direct AWS credentials. Create limited credentials with Amazon IAM. Here are is the relevant group policy for IAM:
+#
+# 
+# {
+#   "Version": "2012-10-17",
+#   "Statement": [
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#          "s3:GetObject*", "s3:PutObject*", "s3:DeleteObject*"
+#       ],
+#       "Resource": [ "arn:aws:s3:::cosmo-snapshot-maven-repository/*" ]
+#     },
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#          "s3:ListBucket"
+#       ],
+#       "Resource": [ "arn:aws:s3:::cosmo-snapshot-maven-repository" ]
+#     }
+#   ]
+# }
+# 
+#  Encrypting Credentials: http://about.travis-ci.org/docs/user/build-configuration/#Secure-environment-variables
 #              travis encrypt -r CloudifySource/cosmo-manager ARTIFACTS_AWS_ACCESS_KEY_ID=xxxxx
-#  Don't use your direct AWS credentials. Create limited credentials with Amazon IAM
-#  How to upload travis artifacts: https:# github.com/travis-ci/travis-artifacts
+#              travis encrypt -r CloudifySource/cosmo-manager ARTIFACTS_AWS_SECRET_ACCESS_KEY=xxxxx
+
+#  How to upload travis artifacts:
+#      https:# github.com/travis-ci/travis-artifacts
+#      http://stackoverflow.com/questions/16406727/how-to-upload-travis-artifacts-to-s3-only-in-develop-branch/16406929?noredirect=1#16406929
+#
 #  How to find local maven repo: http:# stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
 #  Do not use mvn -X switch as it exposes the environment variables and exposes the secret key.
