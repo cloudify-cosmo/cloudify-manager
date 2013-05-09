@@ -23,6 +23,7 @@ import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.cloud.driver.config.VagrantCloudDriverConfig;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
@@ -49,15 +50,12 @@ public class VagrantCloudDriverIT extends AbstractTestNGSpringContextTests {
     /**
      */
     @Configuration
-    @Import({ VagrantCloudDriverConfig.class })
     static class Config extends TestConfig {
-        @Override
-        protected Properties overridenProperties() {
-            File tempDir = Files.createTempDir();
-            String vagrantRootPath = tempDir.getAbsolutePath();
-            Properties props = super.overridenProperties();
-            props.setProperty("cosmo.cloud-driver.vagrant.working-directory", vagrantRootPath);
-            return props;
+
+        @Bean
+        public VagrantCloudDriver vagrantCloudDriver() {
+            File tempDir = Files.createTempDir().getAbsoluteFile();
+            return new VagrantCloudDriver(tempDir);
         }
     }
 
