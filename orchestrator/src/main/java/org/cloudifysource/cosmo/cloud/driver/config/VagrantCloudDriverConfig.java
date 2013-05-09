@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.cloud.driver.config;
 
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,7 +32,6 @@ import java.io.File;
 @Configuration
 public class VagrantCloudDriverConfig {
 
-    @NotEmpty
     @Value("${cosmo.cloud-driver.vagrant.working-directory}")
     private File vagrantWorkingDirectory;
 
