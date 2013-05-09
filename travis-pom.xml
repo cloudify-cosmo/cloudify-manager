@@ -12,7 +12,6 @@
     <name>Build automation stub</name>
     <version>0</version>
     <modules>
-        <module>agent-api</module>
         <module>orchestrator</module>
         <module>resource-monitor</module>
         <module>resource-monitor-api</module>
