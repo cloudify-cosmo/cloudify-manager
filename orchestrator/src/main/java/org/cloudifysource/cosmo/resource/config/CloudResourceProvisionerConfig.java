@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.resource.config;
 
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +36,7 @@ import java.net.URI;
 @Configuration
 public class CloudResourceProvisionerConfig {
 
-    @Value("${cosmo.resource-manager.topic}")
+    @Value("${cosmo.resource-provisioner.topic}")
     private URI resourceProvisionerTopic;
 
     @Inject
@@ -44,9 +45,12 @@ public class CloudResourceProvisionerConfig {
     @Inject
     private MessageConsumer messageConsumer;
 
+    @Inject
+    private MessageProducer messageProducer;
+
     @Bean(destroyMethod = "close")
     public CloudResourceProvisioner cloudResourceProvisioner() {
-        return new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic, messageConsumer);
+        return new CloudResourceProvisioner(cloudDriver, resourceProvisionerTopic, messageProducer, messageConsumer);
     }
 
 }

@@ -64,6 +64,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       @target_uri = URI.new(target)
 
+      @message_consumer.add_listener(@target_uri, self)
       future = message_producer.send(@target_uri, @new_task)
       Futures.add_callback(future, self)
 
@@ -93,8 +94,6 @@ class ExecuteTaskParticipant < Ruote::Participant
     else
       if @continue_on.eql? TaskStatusMessage::SENT
         reply(workitem)
-      else
-        @message_consumer.add_listener(@target_uri, self)
       end
     end
   end
