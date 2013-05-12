@@ -65,7 +65,7 @@ public class CloudResourceProvisioner {
                             Objects.equal(executeTaskMessage.get("exec").get(), "start_machine")) {
                         logger.debug("Sending task status message reply [uri={}, message={}]", uri, taskStatusMessage);
                         producer.send(uri, taskStatusMessage);
-                        startMachine((String) executeTaskMessage.get("resource_id").get());
+                        //startMachine((String) executeTaskMessage.get("resource_id").get());
                     }
                 } else if (message instanceof CloudResourceMessage) {
                     final CloudResourceMessage cloudResourceMessage = (CloudResourceMessage) message;

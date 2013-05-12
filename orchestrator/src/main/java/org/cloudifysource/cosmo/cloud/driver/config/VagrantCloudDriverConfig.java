@@ -16,12 +16,10 @@
 
 package org.cloudifysource.cosmo.cloud.driver.config;
 
+import com.google.common.io.Files;
 import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.io.File;
 
 /**
  * Creates a new {@link org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver}.
@@ -32,12 +30,9 @@ import java.io.File;
 @Configuration
 public class VagrantCloudDriverConfig {
 
-    @Value("${cosmo.cloud-driver.vagrant.working-directory}")
-    private File vagrantWorkingDirectory;
-
     @Bean
     public VagrantCloudDriver vagrantCloudDriver() {
-        return new VagrantCloudDriver(vagrantWorkingDirectory);
+        return new VagrantCloudDriver(Files.createTempDir());
     }
 
 }
