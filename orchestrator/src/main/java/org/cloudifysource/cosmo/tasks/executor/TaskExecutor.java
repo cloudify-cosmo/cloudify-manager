@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.tasks.producer;
+package org.cloudifysource.cosmo.tasks.executor;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
@@ -51,11 +51,11 @@ public class TaskExecutor {
         this.logger = LoggerFactory.getLogger(getClass());
     }
 
-    public void send(URI topic, ExecuteTaskMessage task) {
-        send(topic, task, null);
+    public void execute(URI topic, ExecuteTaskMessage task) {
+        execute(topic, task, null);
     }
 
-    public void send(URI topic, final ExecuteTaskMessage task, final TaskExecutorListener listener) {
+    public void execute(URI topic, final ExecuteTaskMessage task, final TaskExecutorListener listener) {
         task.setTaskId(generateTaskId());
         if (listener != null) {
             consumer.addListener(topic, new MessageConsumerListener<Object>() {

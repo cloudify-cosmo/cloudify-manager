@@ -45,6 +45,11 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>tasks-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Spring DI -->
         <dependency>

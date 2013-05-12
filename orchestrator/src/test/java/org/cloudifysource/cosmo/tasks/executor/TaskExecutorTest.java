@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.tasks.producer;
+package org.cloudifysource.cosmo.tasks.executor;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -26,7 +26,7 @@ import org.cloudifysource.cosmo.messaging.mock.MockMessageProducer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
-import org.cloudifysource.cosmo.tasks.producer.config.TaskProducerConfig;
+import org.cloudifysource.cosmo.tasks.executor.config.TaskExecutorConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -72,7 +72,7 @@ public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
     @Import({
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
-            TaskProducerConfig.class
+            TaskExecutorConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -99,7 +99,7 @@ public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
         });
         final ExecuteTaskMessage task = createTask();
         task.put(key, value);
-        taskExecutor.send(topic, task);
+        taskExecutor.execute(topic, task);
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
     }
 
@@ -107,13 +107,14 @@ public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
     public void testMessageSentListener() throws InterruptedException {
         final ExecuteTaskMessage task = createTask();
         final CountDownLatch latch = new CountDownLatch(1);
-        taskExecutor.send(topic, task, new TaskExecutorListener() {
+        taskExecutor.execute(topic, task, new TaskExecutorListener() {
             @Override
             public void onTaskStatusReceived(TaskStatusMessage message) {
                 if (Objects.equal(message.getStatus(), TaskStatusMessage.SENT)) {
                     latch.countDown();
                 }
             }
+
             @Override
             public void onFailure(Throwable t) {
             }
@@ -130,7 +131,7 @@ public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
         final ExecuteTaskMessage task = createTask();
         final CountDownLatch latch1 = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
-        taskExecutor.send(topic, task, new TaskExecutorListener() {
+        taskExecutor.execute(topic, task, new TaskExecutorListener() {
             @Override
             public void onTaskStatusReceived(TaskStatusMessage message) {
                 if (Objects.equal(message.getTaskId(), task.getTaskId())) {
@@ -142,6 +143,7 @@ public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
                     }
                 }
             }
+
             @Override
             public void onFailure(Throwable t) {
                 t.printStackTrace();
@@ -164,10 +166,11 @@ public class TaskExecutorTest extends AbstractTestNGSpringContextTests {
         mockMessageProducer.setReturnedStatusCode(500);
         final ExecuteTaskMessage task = createTask();
         final CountDownLatch latch = new CountDownLatch(1);
-        taskExecutor.send(topic, task, new TaskExecutorListener() {
+        taskExecutor.execute(topic, task, new TaskExecutorListener() {
             @Override
             public void onTaskStatusReceived(TaskStatusMessage message) {
             }
+
             @Override
             public void onFailure(Throwable t) {
                 latch.countDown();

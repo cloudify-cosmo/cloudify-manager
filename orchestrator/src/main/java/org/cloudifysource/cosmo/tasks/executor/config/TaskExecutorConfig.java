@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.tasks.producer.config;
+package org.cloudifysource.cosmo.tasks.executor.config;
 
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.tasks.producer.TaskExecutor;
+import org.cloudifysource.cosmo.tasks.executor.TaskExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.tasks.producer.TaskExecutor} instance.
+ * Creates a new {@link org.cloudifysource.cosmo.tasks.executor.TaskExecutor} instance.
  *
  * @author Idan Moyal
  * @since 0.1
  */
 @Configuration
-public class TaskProducerConfig {
+public class TaskExecutorConfig {
 
     @Inject
     private MessageConsumer messageConsumer;
@@ -39,7 +39,7 @@ public class TaskProducerConfig {
     private MessageProducer messageProducer;
 
     @Bean
-    public TaskExecutor taskProducer() {
+    public TaskExecutor taskExecutor() {
         return new TaskExecutor(messageProducer, messageConsumer);
     }
 
