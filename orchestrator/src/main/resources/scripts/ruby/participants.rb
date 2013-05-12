@@ -18,5 +18,5 @@ require 'participants/java_participant'
 require 'participants/state_cache_participant'
 require 'participants/resource_manager'
 require 'participants/resource_monitor'
-require 'participants/execute_task'
+require 'participants/execute_task_participant'
 

@@ -43,12 +43,10 @@ class ExecuteTaskParticipant < Ruote::Participant
       raise 'message_consumer not set' unless $ruote_properties.has_key? 'message_consumer'
       raise 'target parameter not set' unless workitem.params.has_key? 'target'
 
-      @message_consumer.remove_listener(self)
-
       if workitem.params.has_key? 'continue_on'
         @continue_on = workitem.params['continue_on']
       else
-        @continue_on = TaskStatusMessage.SENT
+        @continue_on = TaskStatusMessage::SENT
       end
 
       message_producer = $ruote_properties['message_producer']
@@ -84,12 +82,16 @@ class ExecuteTaskParticipant < Ruote::Participant
     task
   end
 
+  def on_cancel
+    # TODO: remove listener from message consumer
+  end
+
   def onSuccess(result)
     $logger.debug('Message producer callback invoked [status={}]', result.get_status_code)
     if result.get_status_code != 200
       onFailure(RuntimeException.new("HTTP status code is: #{result.get_status_code}"))
     else
-      if @continue_on.eql? TaskStatusMessage.SENT
+      if @continue_on.eql? TaskStatusMessage::SENT
         reply(workitem)
       else
         @message_consumer.add_listener(@target_uri, self)
@@ -104,7 +106,6 @@ class ExecuteTaskParticipant < Ruote::Participant
         $logger.debug('Received task status matches sent task! [continue_on={}]', @continue_on)
         if message.get_status.eql? @continue_on
           $logger.debug('Received task status: {}', message)
-          @message_consumer.remove_listener(self)
           reply(workitem)
         end
       end
@@ -115,7 +116,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   def onFailure(error)
     $logger.error('Exception on message producer callback: {}', error)
-    @message_consumer.remove_listener(self)
+    # TODO: remove listener from message consumer
   end
 
 end

@@ -50,6 +50,11 @@
             <artifactId>tasks-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- Spring DI -->
         <dependency>

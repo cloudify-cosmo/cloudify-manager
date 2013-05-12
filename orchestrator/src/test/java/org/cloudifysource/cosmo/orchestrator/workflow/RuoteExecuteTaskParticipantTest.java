@@ -15,17 +15,18 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Objects;
+import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.tasks.executor.TaskExecutor;
-import org.cloudifysource.cosmo.tasks.executor.config.TaskExecutorConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
+import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
+import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -33,14 +34,17 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Tests ruote "execute task" participant.
@@ -58,27 +62,26 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
      */
     @Configuration
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
-    @Import({ MockMessageConsumerConfig.class, MockMessageProducerConfig.class, TaskExecutorConfig.class })
+    @Import({
+            MockMessageConsumerConfig.class,
+            MockMessageProducerConfig.class,
+            RealTimeStateCacheConfig.class,
+            RuoteRuntimeConfig.class })
     static class Config extends TestConfig {
     }
 
     @Inject
     private MessageConsumer messageConsumer;
+
     @Inject
     private MessageProducer messageProducer;
+
     @Value("${cosmo.resource-provisioner.topic}")
     private String target;
 
-    // TODO: add @Inject annotation
+    @Inject
     private RuoteRuntime runtime;
 
-    @BeforeMethod
-    public void beforeMethod() {
-        final Map<String, Object> properties = Maps.newHashMap();
-        properties.put("message_producer", messageProducer);
-        properties.put("message_consumer", messageConsumer);
-        runtime = RuoteRuntime.createRuntime(properties);
-    }
 
     @Test(timeOut = 30000)
     public void testTaskExecution() throws URISyntaxException, InterruptedException {
@@ -91,7 +94,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         final String radial = String.format("define start_node\n" +
                 "  execute_task target: \"%s\", payload: {\n" +
                 "    exec: \"%s\",\n" +
-                "    resource_id: \"%s\", timeout: 5s\n" +
+                "    resource_id: \"%s\"\n" +
                 "  }\n", target, execute, resourceId);
 
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
@@ -119,6 +122,77 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         final Object id = workflow.asyncExecute();
         latch.await();
         runtime.waitForWorkflow(id);
+    }
+
+    @Test(timeOut = 30000)
+    public void testTaskExecutionContinueOn() throws URISyntaxException, InterruptedException, BrokenBarrierException {
+
+        final String target = "http://localhost:8080/";
+        final String resourceId = "vm_node";
+        final String execute = "start_machine";
+        final CyclicBarrier barrier = new CyclicBarrier(2);
+        final AtomicBoolean started = new AtomicBoolean(false);
+        final StringBuilder taskId = new StringBuilder();
+
+        final String radial = String.format("define start_node\n" +
+                "  execute_task target: \"%s\", continue_on: \"%s\", payload: {\n" +
+                "    exec: \"%s\",\n" +
+                "    resource_id: \"%s\"\n" +
+                "  }\n", target, TaskStatusMessage.STARTED, execute, resourceId);
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+
+        messageConsumer.addListener(new URI(target), new MessageConsumerListener<Object>() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                try {
+                    if (message instanceof ExecuteTaskMessage) {
+                        taskId.append(((ExecuteTaskMessage) message).getTaskId());
+                        barrier.await();
+                    } else if (message instanceof TaskStatusMessage) {
+                        final TaskStatusMessage statusMessage = (TaskStatusMessage) message;
+                        barrier.await();
+                        if (Objects.equal(statusMessage.getStatus(), TaskStatusMessage.STARTED)) {
+                            started.set(true);
+                        }
+                    }
+                } catch (Exception e) {
+                    Throwables.propagate(e);
+                }
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                t.printStackTrace();
+            }
+        });
+
+        // Start workflow
+        final Object id = workflow.asyncExecute();
+
+        // Wait until new task message is sent
+        barrier.await();
+
+        // Send task message status received
+        final TaskStatusMessage status = new TaskStatusMessage();
+        status.setTaskId(taskId.toString());
+        status.setStatus(TaskStatusMessage.RECEIVED);
+        messageProducer.send(new URI(target), status);
+
+        // Wait until status is received
+        barrier.await();
+
+        // Send task message status started
+        status.setStatus(TaskStatusMessage.STARTED);
+        messageProducer.send(new URI(target), status);
+
+        // Wait until status is received
+        barrier.await();
+
+        // Wait for workflow to end
+        runtime.waitForWorkflow(id);
+
+        // Assert
+        assertThat(started.get()).isTrue();
     }
 
 
