@@ -39,14 +39,4 @@ public class RuoteWorkflowTest {
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
     }
 
-    @Test
-    public void testWorkflowPayloadParameter() {
-        final RuoteRuntime runtime = RuoteRuntime.createRuntime();
-        final String radial =
-                "define flow\n" +
-                        "  execute_task topic: \"the_topic\", payload: { a: '111', b: '222' }\n";
-        Workflow workflow = RuoteWorkflow.createFromString(radial, runtime);
-        workflow.execute();
-    }
-
 }
