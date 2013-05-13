@@ -20,6 +20,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
+import org.cloudifysource.cosmo.cep.messages.ResourceMonitorMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -71,7 +72,7 @@ public class ResourceMonitorServer implements AutoCloseable {
     private final WorkingMemoryEntryPoint entryPoint;
     private final Future<Void> future;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final MessageConsumerListener<AgentStatusMessage> listener;
+    private final MessageConsumerListener<Object> listener;
     private final KnowledgeRuntimeLogger runtimeLogger;
     private final URI agentTopic;
 
@@ -117,7 +118,7 @@ public class ResourceMonitorServer implements AutoCloseable {
      */
     private static class EntryPointAndListener {
         WorkingMemoryEntryPoint entryPoint;
-        MessageConsumerListener<AgentStatusMessage> listener;
+        MessageConsumerListener<Object> listener;
     }
 
     public void close() {
@@ -171,17 +172,17 @@ public class ResourceMonitorServer implements AutoCloseable {
     private void initExitChannel() {
         Channel exitChannel = new Channel() {
 
-                @Override
-                public void send(Object message) {
-                    if (message instanceof ProbeAgentMessage) {
-                        producer.send(agentTopic, message);
-                    } else if (message instanceof StateChangedMessage) {
-                        producer.send(stateCacheTopic, message);
-                    } else {
-                        throw new IllegalStateException("Don't know how to route message " + message);
-                    }
+            @Override
+            public void send(Object message) {
+                if (message instanceof ProbeAgentMessage) {
+                    producer.send(agentTopic, message);
+                } else if (message instanceof StateChangedMessage) {
+                    producer.send(stateCacheTopic, message);
+                } else {
+                    throw new IllegalStateException("Don't know how to route message " + message);
                 }
-            };
+            }
+        };
         ksession.registerChannel("output", exitChannel);
     }
 
@@ -194,11 +195,21 @@ public class ResourceMonitorServer implements AutoCloseable {
             throw new IllegalArgumentException("DRL file must use default entry point");
         }
         result.entryPoint = Iterables.getOnlyElement(entryPoints);
-        result.listener = new MessageConsumerListener<AgentStatusMessage>() {
-
+        result.listener = new MessageConsumerListener<Object>() {
             @Override
-            public void onMessage(URI uri, AgentStatusMessage message) {
-                result.entryPoint.insert(message);
+            public void onMessage(URI uri, Object message) {
+                logger.debug("Resource monitor received message [uri={}, message={}]", uri, message);
+                // TODO: all message types are currently consumed here.
+                // Should have a distinction between messages and tasks.
+                if (message instanceof AgentStatusMessage) {
+                    entryPoint.insert(message);
+                } else if (message instanceof ResourceMonitorMessage) {
+                    final ResourceMonitorMessage typedMessage = (ResourceMonitorMessage) message;
+                    final Agent agent = new Agent();
+                    agent.setAgentId(typedMessage.getResourceId());
+                    insertFact(agent);
+                    logger.debug("Started resource monitoring [resourceId={}]", typedMessage.getResourceId());
+                }
             }
 
             @Override

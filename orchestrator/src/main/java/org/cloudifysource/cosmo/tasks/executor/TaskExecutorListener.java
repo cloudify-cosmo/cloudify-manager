@@ -13,26 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
+package org.cloudifysource.cosmo.tasks.executor;
 
-package org.cloudifysource.cosmo.cloud.driver.config;
-
-import com.google.common.io.Files;
-import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver}.
+ * A listener for task execution status messages.
  *
- * @author Dan Kilman
+ * @author Idan Moyal
  * @since 0.1
  */
-@Configuration
-public class VagrantCloudDriverConfig {
+public interface TaskExecutorListener {
 
-    @Bean
-    public VagrantCloudDriver vagrantCloudDriver() {
-        return new VagrantCloudDriver(Files.createTempDir());
-    }
+    void onTaskStatusReceived(TaskStatusMessage message);
+    void onFailure(Throwable t);
 
 }

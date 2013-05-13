@@ -1,0 +1,10 @@
+define start_node
+  execute_task target: "$resource_provisioner", continue_on: "started", timeout: 5m, payload: {
+    exec: "start_machine",
+    resource_id: "$resource_id"
+  }
+  resource_monitor resource_id: "$resource_id"
+  state resource_id: "$resource_id", reachable: "true"
+
+
+

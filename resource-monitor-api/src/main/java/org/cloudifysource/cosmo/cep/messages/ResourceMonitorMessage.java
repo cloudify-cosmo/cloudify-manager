@@ -14,25 +14,37 @@
  * limitations under the License.
  *******************************************************************************/
 
-package org.cloudifysource.cosmo.cloud.driver.config;
+package org.cloudifysource.cosmo.cep.messages;
 
-import com.google.common.io.Files;
-import org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import com.google.common.base.Objects;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.cloud.driver.vagrant.VagrantCloudDriver}.
+ * A message sent to the resource monitoring server with an indication of which new resource to monitor.
  *
- * @author Dan Kilman
+ * @author Idan Moyal
  * @since 0.1
  */
-@Configuration
-public class VagrantCloudDriverConfig {
+public class ResourceMonitorMessage {
 
-    @Bean
-    public VagrantCloudDriver vagrantCloudDriver() {
-        return new VagrantCloudDriver(Files.createTempDir());
+    private String resourceId;
+
+    public ResourceMonitorMessage() {
     }
 
+    public ResourceMonitorMessage(String resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public String getResourceId() {
+        return resourceId;
+    }
+
+    public void setResourceId(String resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this).add("resourceId", resourceId).toString();
+    }
 }

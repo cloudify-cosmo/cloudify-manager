@@ -20,6 +20,14 @@
     <artifactId>resource-monitor-api</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>

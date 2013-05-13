@@ -17,8 +17,9 @@ package org.cloudifysource.cosmo.statecache.messages;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.google.common.base.Objects;
+import com.google.common.collect.Maps;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -30,7 +31,7 @@ public class StateChangedMessage {
 
     private String resourceId;
 
-    private Map<String, Object> state = new HashMap<String, Object>();
+    private Map<String, Object> state = Maps.newHashMap();
 
     @JsonAnyGetter
     public Map<String, Object> getState() {
@@ -52,5 +53,10 @@ public class StateChangedMessage {
     @JsonAnySetter
     protected void handleUnknownProperty(String key, Object value) {
         state.put(key, value);
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this).add("resourceId", resourceId).add("state", getState()).toString();
     }
 }

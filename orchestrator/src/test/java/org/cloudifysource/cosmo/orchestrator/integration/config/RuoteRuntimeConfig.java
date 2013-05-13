@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
 import com.google.common.collect.Maps;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
@@ -40,11 +41,20 @@ public class RuoteRuntimeConfig {
     @Value("${cosmo.message-broker.uri}")
     private URI messageBrokerURI;
 
+    @Value("${cosmo.resource-monitor.topic}")
+    private String resourceMonitorTopic;
+
+    @Value("${cosmo.resource-provisioner.topic}")
+    private String resourceProvisionerTopic;
+
     @Inject
     private RealTimeStateCache realTimeStateCache;
 
     @Inject
     private MessageProducer messageProducer;
+
+    @Inject
+    private MessageConsumer messageConsumer;
 
     @Bean
     public RuoteRuntime ruoteRuntime() {
@@ -52,6 +62,9 @@ public class RuoteRuntimeConfig {
         runtimeProperties.put("state_cache", realTimeStateCache);
         runtimeProperties.put("broker_uri", messageBrokerURI);
         runtimeProperties.put("message_producer", messageProducer);
+        runtimeProperties.put("message_consumer", messageConsumer);
+        runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
+        runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
         return RuoteRuntime.createRuntime(runtimeProperties);
     }
 

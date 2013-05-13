@@ -23,11 +23,14 @@ import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
+import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -35,12 +38,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -48,7 +53,11 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Integration test for the following components:
+ *  1. Ruote workflow.
+ *  2. Real time state cache.
+ *  3. Cloud resource provisioner.
+ *  4. Drools.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -65,6 +74,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
             CloudResourceProvisionerConfig.class,
             RuoteRuntimeConfig.class
     })
+    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends BaseOrchestratorIntegrationTestConfig {
 
         @Inject
@@ -73,9 +83,18 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
         @Value("${cosmo.test.resource.id}")
         private String resourceId;
 
+        @Value("cosmo.resource-provisioner.topic")
+        private String resourceProvisionerTopic;
+
+        @Inject
+        private MessageConsumer messageConsumer;
+
+        @Inject
+        private MessageProducer messageProducer;
+
         @Bean
-        public CloudDriver cloudDriver() {
-            CloudDriver cloudDriver = Mockito.mock(CloudDriver.class);
+        public CloudDriver cloudDriver() throws URISyntaxException {
+            final CloudDriver cloudDriver = Mockito.mock(CloudDriver.class);
             when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
                 @Override
                 public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -92,20 +111,28 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
     @Value("${cosmo.test.resource.id}")
     private String resourceId;
 
+    @Value("${cosmo.resource-provisioner.topic}")
+    private String resourceProvisionerTopic;
+
     @Inject
     private MockAgent mockAgent;
 
     @Inject
     private RuoteRuntime runtime;
 
-    @Test(timeOut = 30000)
+    @Test(timeOut = 90000)
     public void testStartAndMonitor() throws ExecutionException, InterruptedException {
 
         // Create radial workflow
-        final String flow =
+        final String flow = String.format(
                 "define flow\n" +
-                        "  resource resource_id: \"$resource_id\", action: \"start_machine\"\n" +
-                        "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
+                        "  execute_task target: \"%s\", continue_on: \"%s\", payload: {\n" +
+                        "    exec: \"start_machine\",\n" +
+                        "    resource_id: \"$resource_id\"\n" +
+                        "  }\n" +
+                        "  state resource_id: \"$resource_id\", reachable: \"true\"\n",
+                resourceProvisionerTopic,
+                TaskStatusMessage.STARTED);
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
         // Execute workflow
