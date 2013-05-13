@@ -56,6 +56,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <!-- TODO remove version -->
+            <version>5.0.0.Final</version>
+        </dependency>
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -148,6 +154,27 @@
     <build>
         <plugins>
             <plugin>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                  <createChecksum>true</createChecksum>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                      <id>attach-sources</id>
+                      <phase>verify</phase>
+                      <goals>
+                        <goal>jar-no-fork</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
@@ -222,7 +249,6 @@
                                 <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
                                 <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
-                                <usedDependency>com.ning:async-http-client</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
@@ -246,11 +272,9 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-                <!--<url>http://maven-repository.cloudifysource.org</url>-->
-                <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
+            <url>https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository</url>
+            <releases>
+                <enabled>false</enabled>
             </releases>
             <snapshots>
                 <enabled>true</enabled>

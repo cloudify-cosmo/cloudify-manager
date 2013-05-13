@@ -37,6 +37,7 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
+import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -73,6 +74,10 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
         @Bean
         public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
             return new PropertySourcesPlaceholderConfigurer();
+        }
+        @Bean
+        public static BeanValidationPostProcessor beanValidationPostProcessor() {
+            return new BeanValidationPostProcessor();
         }
     }
 

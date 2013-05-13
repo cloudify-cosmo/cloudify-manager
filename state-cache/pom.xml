@@ -37,6 +37,14 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
         </dependency>
+        <!-- include when a constraint is added to real time state cache
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            TODO remove version
+            <version>5.0.0.Final</version>
+        </dependency>
+        -->
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -74,6 +82,27 @@
     </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                  <createChecksum>true</createChecksum>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                      <id>attach-sources</id>
+                      <phase>verify</phase>
+                      <goals>
+                        <goal>jar-no-fork</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -152,12 +181,9 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-            <!--<url>http://maven-repository.cloudifysource.org</url>-->
-            <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>
+            <url>https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository</url>
             <releases>
-                <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
+                <enabled>false</enabled>
             </releases>
             <snapshots>
                 <enabled>true</enabled>

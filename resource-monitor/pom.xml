@@ -57,24 +57,30 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>agent-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <!-- TODO remove version -->
+            <version>5.0.0.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <!-- TODO remove version -->
+            <version>1.1.0.Final</version>
+        </dependency>
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-            <!-- TODO:Remove version -->
-            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-beans</artifactId>
-            <!-- TODO:Remove version -->
-            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
-            <!-- TODO:Remove version -->
-            <version>1</version>
         </dependency>
         <!-- Test -->
         <dependency>
@@ -86,8 +92,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
             <scope>test</scope>
-            <!-- TODO:Remove version -->
-            <version>3.2.2.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
@@ -104,8 +108,6 @@
             <artifactId>message-client</artifactId>
             <scope>test</scope>
             <type>test-jar</type>
-            <!-- TODO:Remove version -->
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -130,6 +132,27 @@
     </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                  <createChecksum>true</createChecksum>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                      <id>attach-sources</id>
+                      <phase>verify</phase>
+                      <goals>
+                        <goal>jar-no-fork</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -239,12 +262,9 @@
         <repository>
             <id>org.cloudifysource</id>
             <name>cloudifysource</name>
-            <!--<url>http://maven-repository.cloudifysource.org</url>-->
-            <url>https://s3-eu-west-1.amazonaws.com/gigaspaces-maven-repository-eu</url>
+            <url>https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository</url>
             <releases>
-                <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
+                <enabled>false</enabled>
             </releases>
             <snapshots>
                 <enabled>true</enabled>

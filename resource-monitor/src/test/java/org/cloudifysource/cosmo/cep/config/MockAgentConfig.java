@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.cep.config;
 import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,9 +36,11 @@ import java.net.URI;
 @Configuration
 public class MockAgentConfig {
 
+    @NotEmpty
     @Value("${cosmo.resource-monitor.topic}")
     private String resourceMonitorTopic;
 
+    @NotEmpty
     @Value("${cosmo.agent.topic}")
     private String agentTopic;
 
