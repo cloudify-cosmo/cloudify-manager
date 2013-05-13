@@ -29,7 +29,6 @@ class ExecuteTaskParticipant < Ruote::Participant
   include FutureCallback
   include MessageConsumerListener
 
-  @message_consumer   # used for listening to task status reply messages
   @new_task           # the new executed task message
   @target_uri         # the target executor's URI (topic) the task is addressed to
 
@@ -50,7 +49,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
 
       message_producer = $ruote_properties['message_producer']
-      @message_consumer = $ruote_properties['message_consumer']
+      message_consumer = $ruote_properties['message_consumer']
       target = workitem.params['target']
       sender = 'execute_task_participant'
 
@@ -64,7 +63,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       @target_uri = URI.new(target)
 
-      @message_consumer.add_listener(@target_uri, self)
+      message_consumer.add_listener(@target_uri, self)
       future = message_producer.send(@target_uri, @new_task)
       Futures.add_callback(future, self)
 

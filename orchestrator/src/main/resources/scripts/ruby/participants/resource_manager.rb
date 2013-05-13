@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 java_import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage
+java_import java.net.URI
 
 class ResourceManagerParticipant < Ruote::Participant
   def on_workitem
@@ -22,19 +23,19 @@ class ResourceManagerParticipant < Ruote::Participant
       resource_id = workitem.fields['resource_id']
       action = workitem.params['action']
       producer = $ruote_properties['message_producer']
-      broker_uri = $ruote_properties['broker_uri']
+      resource_provisioner_topic = $ruote_properties['resource_provisioner_topic']
 
-      $logger.debug('Resource provisioner participant invoked: [id={}, action={}, broker_uri={}]',
+      $logger.debug('Resource provisioner participant invoked: [id={}, action={}, topic={}]',
                     resource_id,
                     action,
-                    broker_uri)
+                    resource_provisioner_topic)
 
       raise 'resource_id is not set' unless defined? resource_id and not resource_id.nil?
       raise "unknown action '#{action}'" if action != 'start_machine'
       raise 'message_producer not defined' unless defined? producer
-      raise 'broker_uri not defined' unless defined? broker_uri
+      raise 'resource_provisioner_topic not defined' unless defined? resource_provisioner_topic
 
-      uri = broker_uri.resolve('resource-manager')
+      uri = URI.new(resource_provisioner_topic)
       message = CloudResourceMessage.new(resource_id, action)
 
       producer.send(uri, message).get()

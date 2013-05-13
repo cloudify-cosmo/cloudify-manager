@@ -196,9 +196,9 @@ public class ResourceMonitorServer implements AutoCloseable {
         }
         result.entryPoint = Iterables.getOnlyElement(entryPoints);
         result.listener = new MessageConsumerListener<Object>() {
-
             @Override
             public void onMessage(URI uri, Object message) {
+                logger.debug("Resource monitor received message [uri={}, message={}]", uri, message);
                 // TODO: all message types are currently consumed here.
                 // Should have a distinction between messages and tasks.
                 if (message instanceof AgentStatusMessage) {

@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.cep.messages;
 
+import com.google.common.base.Objects;
+
 /**
  * A message sent to the resource monitoring server with an indication of which new resource to monitor.
  *
@@ -39,5 +41,10 @@ public class ResourceMonitorMessage {
 
     public void setResourceId(String resourceId) {
         this.resourceId = resourceId;
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this).add("resourceId", resourceId).toString();
     }
 }

@@ -27,8 +27,8 @@ import org.cloudifysource.cosmo.cep.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.config.VagrantCloudDriverConfig;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
+import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
+import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
@@ -53,6 +53,7 @@ import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -84,10 +85,8 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
             CloudResourceProvisionerConfig.class,
             ResourceMonitorServerConfig.class,
             MessageBrokerServerConfig.class,
-//            MessageConsumerTestConfig.class,
-//            MessageProducerConfig.class,
-            MockMessageConsumerConfig.class,
-            MockMessageProducerConfig.class,
+            MessageConsumerTestConfig.class,
+            MessageProducerConfig.class,
             RuoteRuntimeConfig.class,
             VagrantCloudDriverConfig.class
     })
@@ -130,7 +129,7 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
     }
 
     @Test(groups = "vagrant", timeOut = 30000 * 2 * 5)
-    public void testStartVirtualMachine() throws ExecutionException, InterruptedException {
+    public void testStartVirtualMachine() throws ExecutionException, InterruptedException, URISyntaxException {
         final JsonRecipe recipe = JsonRecipe.load(readRecipe());
         final List<String> nodes = recipe.getNodes();
         final String resourceId = nodes.get(0);
@@ -140,7 +139,7 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
         final String workflow = loadWorkflow(resourceId, workflowName);
         final RuoteWorkflow ruoteWorkflow = RuoteWorkflow.createFromString(workflow, runtime);
 
-        messageConsumer.addListener(resourceMonitorTopic, new MessageConsumerListener<Object>() {
+        messageConsumer.addListener(new URI(resourceProvisionerTopic), new MessageConsumerListener<Object>() {
             @Override
             public void onMessage(URI uri, Object message) {
                 if (message instanceof TaskStatusMessage) {

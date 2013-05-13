@@ -16,6 +16,8 @@
 package org.cloudifysource.cosmo.resource;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
@@ -63,9 +65,11 @@ public class CloudResourceProvisioner {
                     taskStatusMessage.setStatus(TaskStatusMessage.STARTED);
                     if (executeTaskMessage.get("exec").isPresent() &&
                             Objects.equal(executeTaskMessage.get("exec").get(), "start_machine")) {
+                        final Optional<Object> resourceId = executeTaskMessage.get("resource_id");
+                        Preconditions.checkArgument(resourceId.isPresent());
+                        startMachine((String) resourceId.get());
                         logger.debug("Sending task status message reply [uri={}, message={}]", uri, taskStatusMessage);
                         producer.send(uri, taskStatusMessage);
-                        //startMachine((String) executeTaskMessage.get("resource_id").get());
                     }
                 } else if (message instanceof CloudResourceMessage) {
                     final CloudResourceMessage cloudResourceMessage = (CloudResourceMessage) message;

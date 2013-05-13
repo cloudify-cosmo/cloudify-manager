@@ -41,6 +41,12 @@ public class RuoteRuntimeConfig {
     @Value("${cosmo.message-broker.uri}")
     private URI messageBrokerURI;
 
+    @Value("${cosmo.resource-monitor.topic}")
+    private String resourceMonitorTopic;
+
+    @Value("${cosmo.resource-provisioner.topic}")
+    private String resourceProvisionerTopic;
+
     @Inject
     private RealTimeStateCache realTimeStateCache;
 
@@ -57,6 +63,8 @@ public class RuoteRuntimeConfig {
         runtimeProperties.put("broker_uri", messageBrokerURI);
         runtimeProperties.put("message_producer", messageProducer);
         runtimeProperties.put("message_consumer", messageConsumer);
+        runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
+        runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
         return RuoteRuntime.createRuntime(runtimeProperties);
     }
 
