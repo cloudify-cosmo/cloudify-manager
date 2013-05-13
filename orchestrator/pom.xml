@@ -48,12 +48,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ning</groupId>
-            <artifactId>async-http-client</artifactId>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -141,6 +135,11 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

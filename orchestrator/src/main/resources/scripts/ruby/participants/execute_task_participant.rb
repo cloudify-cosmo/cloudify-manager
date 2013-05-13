@@ -63,13 +63,23 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       @target_uri = URI.new(target)
 
-      message_consumer.add_listener(@target_uri, self)
+      listener_id = message_consumer.add_listener(@target_uri, self)
+      put(:listener_id, listener_id)
       future = message_producer.send(@target_uri, @new_task)
       Futures.add_callback(future, self)
 
     rescue Exception => e
       $logger.debug('Exception caught on execute_task participant execution: {}', e)
+      remove_listener
       raise e
+    end
+  end
+
+  def remove_listener
+    message_consumer = $ruote_properties['message_consumer']
+    listener_id = get(:listener_id)
+    unless listener_id.nil?
+      message_consumer.remove_listener(listener_id)
     end
   end
 
@@ -83,7 +93,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def on_cancel
-    # TODO: remove listener from message consumer
+    remove_listener
   end
 
   def onSuccess(result)
@@ -92,6 +102,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       onFailure(RuntimeException.new("HTTP status code is: #{result.get_status_code}"))
     else
       if @continue_on.eql? TaskStatusMessage::SENT
+        remove_listener
         reply(workitem)
       end
     end
@@ -104,6 +115,7 @@ class ExecuteTaskParticipant < Ruote::Participant
         $logger.debug('Received task status matches sent task! [continue_on={}]', @continue_on)
         if message.get_status.eql? @continue_on
           $logger.debug('Received task status: {}', message)
+          remove_listener
           reply(workitem)
         end
       end
@@ -113,8 +125,8 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def onFailure(error)
-    $logger.error('Exception on message producer callback: {}', error)
-    # TODO: remove listener from message consumer
+    $logger.debug('Exception on message producer callback: {}', error)
+    remove_listener
   end
 
 end
