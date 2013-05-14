@@ -20,6 +20,7 @@
     <artifactId>orchestrator</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
+
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -48,12 +49,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ning</groupId>
-            <artifactId>async-http-client</artifactId>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -143,7 +138,13 @@
             <artifactId>spring-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>

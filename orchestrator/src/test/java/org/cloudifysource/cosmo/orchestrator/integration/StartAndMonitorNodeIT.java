@@ -98,6 +98,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
             when(cloudDriver.startMachine(any(MachineConfiguration.class))).thenAnswer(new Answer() {
                 @Override
                 public Object answer(InvocationOnMock invocation) throws Throwable {
+                    System.out.println("-- cloud driver invoked --");
                     final Agent agent = new Agent();
                     agent.setAgentId(resourceId);
                     resourceMonitor.insertFact(agent);
@@ -120,7 +121,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
     @Inject
     private RuoteRuntime runtime;
 
-    @Test(timeOut = 90000)
+    @Test(timeOut = 30000)
     public void testStartAndMonitor() throws ExecutionException, InterruptedException {
 
         // Create radial workflow
