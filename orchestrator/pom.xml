@@ -20,6 +20,7 @@
     <artifactId>orchestrator</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
+
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -143,6 +144,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
