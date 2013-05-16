@@ -127,6 +127,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   def onFailure(error)
     $logger.debug('Exception on message producer callback: {}', error)
     remove_listener
+    flunk(workitem, error)
   end
 
 end
