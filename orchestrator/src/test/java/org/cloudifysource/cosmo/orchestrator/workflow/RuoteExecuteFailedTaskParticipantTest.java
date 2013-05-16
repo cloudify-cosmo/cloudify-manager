@@ -15,19 +15,12 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MockDisconnectedMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
-import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
-import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.jruby.embed.InvokeFailedException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -39,14 +32,7 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Tests ruote "execute task" participant when producer raises exception.
@@ -111,7 +97,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
                 "  execute_task target: \"%s\", payload: {\n" +
                 "    exec: \"%s\",\n" +
                 "    resource_id: \"%s\"\n" +
-                "  }, on_error: do_nothing\n"+
+                "  }, on_error: do_nothing\n" +
                 "  define do_nothing\n" +
                 "    echo nop\n",
                 target, execute, resourceId);
