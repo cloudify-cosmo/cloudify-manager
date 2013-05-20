@@ -22,13 +22,13 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
-import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage;
-import org.cloudifysource.cosmo.monitor.messages.ResourceMonitorMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage;
+import org.cloudifysource.cosmo.monitor.messages.ResourceMonitorMessage;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
@@ -55,11 +55,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Consumes event from message broker, processes events with Drools and
  * produces new events back to message broker.
- * @author itaif
+ * @author Itai Frenkel
  * @since 0.1
  */
 public class ResourceMonitorServer implements AutoCloseable {
@@ -78,6 +79,8 @@ public class ResourceMonitorServer implements AutoCloseable {
     private final MessageConsumerListener<Object> listener;
     private final KnowledgeRuntimeLogger runtimeLogger;
     private final URI agentTopic;
+    private final AtomicBoolean closed;
+    private final Object closingLock;
 
     public ResourceMonitorServer(
             URI resourceMonitorTopic,
@@ -96,6 +99,8 @@ public class ResourceMonitorServer implements AutoCloseable {
         this.producer = producer;
         this.consumer = consumer;
         this.executorService = Executors.newSingleThreadExecutor();
+        this.closed = new AtomicBoolean(false);
+        this.closingLock = new Object();
 
         KSessionAndRuntimeLogger droolsInitProperties = initDrools();
         this.ksession = droolsInitProperties.ksession;
@@ -108,6 +113,12 @@ public class ResourceMonitorServer implements AutoCloseable {
         initExitChannel();
 
         this.future = sumbitTask();
+
+    }
+
+    public boolean isClosed() {
+        // atomic integer used instead of lock so this method does not block
+        return closed.get();
     }
 
     /**
@@ -125,11 +136,15 @@ public class ResourceMonitorServer implements AutoCloseable {
     }
 
     public void close() {
-        if (listener != null) {
-            consumer.removeListener(listener);
+        // Lock needed since we want spring to wait until close really finishes
+        synchronized (closingLock) {
+            if (listener != null) {
+                consumer.removeListener(listener);
+            }
+            destroyDrools();
+            executorService.shutdownNow();
+            closed.set(true);
         }
-        destroyDrools();
-        executorService.shutdownNow();
     }
 
     private KSessionAndRuntimeLogger initDrools() {
@@ -139,7 +154,6 @@ public class ResourceMonitorServer implements AutoCloseable {
         KnowledgeBaseConfiguration kbaseConfig = KnowledgeBaseFactory.newKnowledgeBaseConfiguration();
         // Stream mode allows interacting with the clock (Drools Fusion)
         kbaseConfig.setOption(EventProcessingOption.STREAM);
-
         KnowledgeBase kbase = newKnowledgeBase(kbaseConfig);
 
         // start session
@@ -241,10 +255,21 @@ public class ResourceMonitorServer implements AutoCloseable {
         return executorService.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                ksession.fireUntilHalt();
+                try {
+                    ksession.fireUntilHalt();
+                } catch (Throwable t) {
+                    ResourceMonitorServer.this.onDroolsFailure(t);
+                    //don't leave this component in a zombie state
+                    close();
+                }
                 return null;
             }
         });
+    }
+
+
+    private void onDroolsFailure(Throwable t) {
+        logger.warn(MonitorLogDescription.DROOLS_ERROR, t);
     }
 
     private void onConsumerFailure(Throwable t) {
