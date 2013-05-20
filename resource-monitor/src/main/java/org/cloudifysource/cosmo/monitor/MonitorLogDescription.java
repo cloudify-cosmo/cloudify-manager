@@ -14,17 +14,17 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.provisioner;
+package org.cloudifysource.cosmo.monitor;
 
 import org.cloudifysource.cosmo.logging.LogDescription;
 
 /**
- * Log description for provisioner.
+ * Log description for resource monitor.
  *
  * @author Itai Frenkel
  * @since 0.1
  */
-public enum ProvisionerLogDescription implements LogDescription {
+public enum MonitorLogDescription implements LogDescription {
     MESSAGE_CONSUMER_ERROR,
     MESSAGE_PRODUCER_ERROR
 }
