@@ -27,6 +27,7 @@ import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConf
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
+import org.fest.assertions.api.Assertions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -195,5 +196,165 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         assertThat(started.get()).isTrue();
     }
 
+    @Test(timeOut = 30000)
+    public void testTaskExecutionFailure() throws URISyntaxException, InterruptedException, BrokenBarrierException {
+
+        final String target = "http://localhost:8080/";
+        final String resourceId = "vm_node";
+        final String execute = "start_machine";
+        final CyclicBarrier barrier = new CyclicBarrier(2);
+        final StringBuilder taskId = new StringBuilder();
+
+        final String radial = String.format("define start_node\n" +
+                "  execute_task target: \"%s\", payload: {\n" +
+                "    exec: \"%s\",\n" +
+                "    resource_id: \"%s\"\n" +
+                "  }\n", target, execute, resourceId);
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+
+        messageConsumer.addListener(new URI(target), new MessageConsumerListener<Object>() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                try {
+                    if (message instanceof ExecuteTaskMessage) {
+                        taskId.append(((ExecuteTaskMessage) message).getTaskId());
+                        barrier.await();
+                    }
+                } catch (Exception e) {
+                    throw Throwables.propagate(e);
+                }
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                t.printStackTrace();
+            }
+        });
+
+        // Start workflow
+        final Object id = workflow.asyncExecute();
+
+        // Wait until new task message is sent
+        barrier.await();
+
+        // Send task message failed status
+        final TaskStatusMessage status = new TaskStatusMessage();
+        status.setTaskId(taskId.toString());
+        status.setStatus(TaskStatusMessage.FAILED);
+        messageProducer.send(URI.create(target), status);
+
+        // Wait for workflow to end - should not throw exception because
+        // execute_task_participant continues on "sent" status.
+        runtime.waitForWorkflow(id);
+    }
+
+    @Test(timeOut = 30000)
+    public void testTaskExecutionFailureWithContinueOn()
+        throws URISyntaxException, InterruptedException, BrokenBarrierException {
+
+        final String target = "http://localhost:8080/";
+        final String resourceId = "vm_node";
+        final String execute = "start_machine";
+        final CyclicBarrier barrier = new CyclicBarrier(2);
+        final StringBuilder taskId = new StringBuilder();
+
+        final String radial = String.format("define start_node\n" +
+                "  execute_task target: \"%s\", continue_on: \"%s\",payload: {\n" +
+                "    exec: \"%s\",\n" +
+                "    resource_id: \"%s\"\n" +
+                "  }\n", target, TaskStatusMessage.STARTED, execute, resourceId);
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+
+        messageConsumer.addListener(new URI(target), new MessageConsumerListener<Object>() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                try {
+                    if (message instanceof ExecuteTaskMessage) {
+                        taskId.append(((ExecuteTaskMessage) message).getTaskId());
+                        barrier.await();
+                    }
+                } catch (Exception e) {
+                    throw Throwables.propagate(e);
+                }
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                t.printStackTrace();
+            }
+        });
+
+        // Start workflow
+        final Object id = workflow.asyncExecute();
+
+        // Wait until new task message is sent
+        barrier.await();
+
+        // Send task message failed status
+        final TaskStatusMessage status = new TaskStatusMessage();
+        status.setTaskId(taskId.toString());
+        status.setStatus(TaskStatusMessage.FAILED);
+        messageProducer.send(URI.create(target), status);
+
+        // Wait for workflow to end
+        try {
+            runtime.waitForWorkflow(id);
+            Assertions.fail("Exception expected!");
+        } catch (Exception e) {
+        }
+    }
+
+    @Test(timeOut = 30000)
+    public void testTaskExecutionFailureWithContinueOnSent()
+        throws URISyntaxException, InterruptedException, BrokenBarrierException {
+
+        final String target = "http://localhost:8080/";
+        final String resourceId = "vm_node";
+        final String execute = "start_machine";
+        final CyclicBarrier barrier = new CyclicBarrier(2);
+        final StringBuilder taskId = new StringBuilder();
+
+        final String radial = String.format("define start_node\n" +
+                "  execute_task target: \"%s\", continue_on: \"%s\",payload: {\n" +
+                "    exec: \"%s\",\n" +
+                "    resource_id: \"%s\"\n" +
+                "  }\n", target, TaskStatusMessage.SENT, execute, resourceId);
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+
+        messageConsumer.addListener(new URI(target), new MessageConsumerListener<Object>() {
+            @Override
+            public void onMessage(URI uri, Object message) {
+                try {
+                    if (message instanceof ExecuteTaskMessage) {
+                        taskId.append(((ExecuteTaskMessage) message).getTaskId());
+                        barrier.await();
+                    }
+                } catch (Exception e) {
+                    throw Throwables.propagate(e);
+                }
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                t.printStackTrace();
+            }
+        });
+
+        // Start workflow
+        final Object id = workflow.asyncExecute();
+
+        // Wait until new task message is sent
+        barrier.await();
+
+        // Send task message failed status
+        final TaskStatusMessage status = new TaskStatusMessage();
+        status.setTaskId(taskId.toString());
+        status.setStatus(TaskStatusMessage.FAILED);
+        messageProducer.send(URI.create(target), status);
+
+        // Wait for workflow to end - should not throw exception because
+        // execute_task_participant continues on "sent" status.
+        runtime.waitForWorkflow(id);
+    }
 
 }

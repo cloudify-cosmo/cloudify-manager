@@ -110,6 +110,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   def onMessage(uri, message)
     $logger.debug('Message consumer listener received message: {}', message)
+    return unless not @continue_on.eql? TaskStatusMessage::SENT
     begin
       if message.java_kind_of? TaskStatusMessage and message.get_task_id.eql? @new_task.get_task_id
         $logger.debug('Received task status matches sent task! [continue_on={}]', @continue_on)
@@ -117,6 +118,8 @@ class ExecuteTaskParticipant < Ruote::Participant
           $logger.debug('Received task status: {}', message)
           remove_listener
           reply(workitem)
+        elsif message.get_status.eql? TaskStatusMessage::FAILED
+          onFailure(RuntimeException.new("Task execution failed: #{message}"))
         end
       end
     rescue Exception => e
@@ -125,7 +128,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def onFailure(error)
-    $logger.debug('Exception on message producer callback: {}', error)
+    $logger.debug('Exception on message producer callback:', error)
     remove_listener
     flunk(workitem, error)
   end
