@@ -16,8 +16,12 @@
 
 java_import org.cloudifysource.cosmo.provisioner.messages.CloudResourceMessage
 java_import java.net.URI
+java_import com::google::common::util::concurrent::FutureCallback
+java_import com::google::common::util::concurrent::Futures
 
 class ResourceManagerParticipant < Ruote::Participant
+  include FutureCallback
+
   def on_workitem
     begin
       resource_id = workitem.fields['resource_id']
@@ -38,11 +42,18 @@ class ResourceManagerParticipant < Ruote::Participant
       uri = URI.new(resource_provisioner_topic)
       message = CloudResourceMessage.new(resource_id, action)
 
-      producer.send(uri, message).get()
-      $logger.debug('Resource provisioner participant sent: [uri={}, message={}]', uri, message)
-
-      reply
+      future = producer.send(uri, message)
+      Futures.add_callback(future, self)
+      $logger.debug('Resource provisioner participant sending: [uri={}, message={}]', uri, message)
     end
+  end
+
+  def onSuccess(result)
+      reply(workitem)
+  end
+
+  def onFailure(error)
+      flunk(workitem, error)
   end
 end
 

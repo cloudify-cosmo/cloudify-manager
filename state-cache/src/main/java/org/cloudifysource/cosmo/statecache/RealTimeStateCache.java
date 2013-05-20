@@ -72,8 +72,7 @@ public class RealTimeStateCache implements StateCacheReader {
     }
 
     private void messageConsumerFailure(Throwable t) {
-        logger.warn(StateCacheLogMessage.MESSAGE_CONSUMER_ERROR, t);
-        System.err.println(t);
+        logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, t);
     }
 
     @Override

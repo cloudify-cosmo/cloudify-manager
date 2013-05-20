@@ -19,6 +19,9 @@ package org.cloudifysource.cosmo.monitor.mock;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -94,7 +97,18 @@ public class MockAgent implements AutoCloseable {
         if (!failed) {
             final AgentStatusMessage statusMessage = new AgentStatusMessage();
             statusMessage.setAgentId(message.getAgentId());
-            producer.send(responseTopic, statusMessage);
+            ListenableFuture future = producer.send(responseTopic, statusMessage);
+            Futures.addCallback(future, new FutureCallback() {
+                @Override
+                public void onSuccess(Object result) {
+                    //do nothing
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    failures.add(t);
+                }
+            });
         }
     }
 }

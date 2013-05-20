@@ -18,6 +18,9 @@ package org.cloudifysource.cosmo.monitor;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage;
 import org.cloudifysource.cosmo.monitor.messages.ResourceMonitorMessage;
@@ -174,13 +177,25 @@ public class ResourceMonitorServer implements AutoCloseable {
 
             @Override
             public void send(Object message) {
+                ListenableFuture future = null;
                 if (message instanceof ProbeAgentMessage) {
-                    producer.send(agentTopic, message);
+                    future = producer.send(agentTopic, message);
                 } else if (message instanceof StateChangedMessage) {
-                    producer.send(stateCacheTopic, message);
+                    future = producer.send(stateCacheTopic, message);
                 } else {
                     throw new IllegalStateException("Don't know how to route message " + message);
                 }
+                Futures.addCallback(future, new FutureCallback() {
+                    @Override
+                    public void onSuccess(Object result) {
+                        //do nothing
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        ResourceMonitorServer.this.onProducerFailure(t);
+                    }
+                });
             }
         };
         ksession.registerChannel("output", exitChannel);
@@ -233,8 +248,11 @@ public class ResourceMonitorServer implements AutoCloseable {
     }
 
     private void onConsumerFailure(Throwable t) {
-        //TODO: Replace with official info logging:
-        logger.debug("Failed to consume events", t);
+        logger.warn(MonitorLogDescription.MESSAGE_CONSUMER_ERROR, t);
+    }
+
+    private void onProducerFailure(Throwable t) {
+        logger.warn(MonitorLogDescription.MESSAGE_PRODUCER_ERROR, t);
     }
 
     public void destroyDrools() {

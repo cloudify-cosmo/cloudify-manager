@@ -156,7 +156,7 @@ public class RouteWorkflowWithStateCacheTest {
         Assert.assertEquals("good", receivedWorkItemFields.get("general_status"));
     }
 
-    @Test(timeOut = 30000)
+    @Test(timeOut = 60000)
     public void testStateCacheParticipantWithResourceIdParameter() {
         final String key = "node";
         final String property = "reachable";
