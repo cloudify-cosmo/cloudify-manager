@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.provisioner;
 
-import org.cloudifysource.cosmo.logging.LogMessage;
+import org.cloudifysource.cosmo.logging.LogDescription;
 
 /**
  * Log errors for provisioner.
@@ -24,7 +24,7 @@ import org.cloudifysource.cosmo.logging.LogMessage;
  * @author Itai Frenkel
  * @since 0.1
  */
-public enum ProvisionerLogMessage implements LogMessage {
+public enum ProvisionerLogDescription implements LogDescription {
     MESSAGE_CONSUMER_ERROR,
     MESSAGE_PRODUCER_ERROR
 }

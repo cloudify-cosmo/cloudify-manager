@@ -81,7 +81,7 @@ public class CloudResourceProvisioner {
 
                             @Override
                             public void onFailure(Throwable t) {
-                                logger.warn(ProvisionerLogMessage.MESSAGE_PRODUCER_ERROR, t);
+                                logger.warn(ProvisionerLogDescription.MESSAGE_PRODUCER_ERROR, t);
                             }
                         });
                     }
@@ -95,7 +95,7 @@ public class CloudResourceProvisioner {
 
             @Override
             public void onFailure(Throwable t) {
-                logger.warn(ProvisionerLogMessage.MESSAGE_CONSUMER_ERROR, t);
+                logger.warn(ProvisionerLogDescription.MESSAGE_CONSUMER_ERROR, t);
             }
         };
         consumer.addListener(inputUri, listener);
