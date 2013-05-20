@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.resource;
+package org.cloudifysource.cosmo.provisioner;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
@@ -26,7 +29,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage;
+import org.cloudifysource.cosmo.provisioner.messages.CloudResourceMessage;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 
@@ -69,7 +72,18 @@ public class CloudResourceProvisioner {
                         Preconditions.checkArgument(resourceId.isPresent());
                         startMachine((String) resourceId.get());
                         logger.debug("Sending task status message reply [uri={}, message={}]", uri, taskStatusMessage);
-                        producer.send(uri, taskStatusMessage);
+                        ListenableFuture future = producer.send(uri, taskStatusMessage);
+                        Futures.addCallback(future, new FutureCallback() {
+                            @Override
+                            public void onSuccess(Object result) {
+                                // do nothing
+                            }
+
+                            @Override
+                            public void onFailure(Throwable t) {
+                                logger.warn(ProvisionerLogMessage.MESSAGE_PRODUCER_ERROR, t);
+                            }
+                        });
                     }
                 } else if (message instanceof CloudResourceMessage) {
                     final CloudResourceMessage cloudResourceMessage = (CloudResourceMessage) message;
@@ -81,7 +95,7 @@ public class CloudResourceProvisioner {
 
             @Override
             public void onFailure(Throwable t) {
-                logger.debug("Exception occurred on cloud resource provisioner message consumer: {}", t);
+                logger.warn(ProvisionerLogMessage.MESSAGE_CONSUMER_ERROR, t);
             }
         };
         consumer.addListener(inputUri, listener);
@@ -94,13 +108,8 @@ public class CloudResourceProvisioner {
     private void startMachine(String id) {
         final MachineConfiguration config = new MachineConfiguration(id, "cosmo");
         logger.debug("Starting machine: {}", config);
-        try {
-            final MachineDetails machineDetails = driver.startMachine(config);
-            logger.debug("Machine successfully started: {}", machineDetails);
-
-        } catch (Exception e) {
-            logger.debug("Error starting machine [config={}, exception={}]", config, e);
-        }
+        final MachineDetails machineDetails = driver.startMachine(config);
+        logger.debug("Machine successfully started: {}", machineDetails);
     }
 
 }

@@ -14,7 +14,7 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-java_import org.cloudifysource.cosmo.resource.messages.CloudResourceMessage
+java_import org.cloudifysource.cosmo.provisioner.messages.CloudResourceMessage
 java_import java.net.URI
 
 class ResourceManagerParticipant < Ruote::Participant

@@ -29,7 +29,7 @@ import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestrator
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
+import org.cloudifysource.cosmo.provisioner.config.CloudResourceProvisionerConfig;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;

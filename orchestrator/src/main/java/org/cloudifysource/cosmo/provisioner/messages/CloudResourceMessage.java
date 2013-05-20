@@ -14,7 +14,7 @@
  * limitations under the License.
  *******************************************************************************/
 
-package org.cloudifysource.cosmo.resource.messages;
+package org.cloudifysource.cosmo.provisioner.messages;
 
 
 import com.google.common.base.Objects;

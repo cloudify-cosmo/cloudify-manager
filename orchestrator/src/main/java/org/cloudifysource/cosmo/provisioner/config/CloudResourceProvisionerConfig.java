@@ -14,12 +14,12 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.resource.config;
+package org.cloudifysource.cosmo.provisioner.config;
 
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.resource.CloudResourceProvisioner;
+import org.cloudifysource.cosmo.provisioner.CloudResourceProvisioner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +28,7 @@ import javax.inject.Inject;
 import java.net.URI;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.resource.CloudResourceProvisioner}.
+ * Creates a new {@link org.cloudifysource.cosmo.provisioner.CloudResourceProvisioner}.
  *
  * @author Dan Kilman
  * @since 0.1

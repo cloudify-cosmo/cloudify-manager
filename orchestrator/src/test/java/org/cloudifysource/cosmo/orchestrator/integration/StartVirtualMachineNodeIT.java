@@ -36,7 +36,7 @@ import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConf
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.resource.config.CloudResourceProvisionerConfig;
+import org.cloudifysource.cosmo.provisioner.config.CloudResourceProvisionerConfig;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.springframework.beans.factory.annotation.Value;
