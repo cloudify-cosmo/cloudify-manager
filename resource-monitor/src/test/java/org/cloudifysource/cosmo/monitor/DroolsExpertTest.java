@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep;
+package org.cloudifysource.cosmo.monitor;
 
 import java.util.Collection;
 
 import com.google.common.collect.Iterables;
-import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
+import org.cloudifysource.cosmo.monitor.mock.MonitoringMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseFactory;
 import org.drools.builder.KnowledgeBuilder;
@@ -43,7 +43,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DroolsExpertTest {
 
-    public static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsExpertTest.drl";
+    public static final String RULE_FILE = "/org/cloudifysource/cosmo/monitor/DroolsExpertTest.drl";
     private KnowledgeBuilder kbuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
     private Collection<KnowledgePackage> pkgs;
     private KnowledgeBase kbase = KnowledgeBaseFactory.newKnowledgeBase();

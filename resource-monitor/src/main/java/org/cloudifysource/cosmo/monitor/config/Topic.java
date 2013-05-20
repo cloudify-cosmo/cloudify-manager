@@ -14,7 +14,7 @@
  * limitations under the License.
  *******************************************************************************/
 
-package org.cloudifysource.cosmo.cep.config;
+package org.cloudifysource.cosmo.monitor.config;
 
 import javax.validation.Constraint;
 import javax.validation.ConstraintValidator;

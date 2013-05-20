@@ -16,8 +16,8 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
-import org.cloudifysource.cosmo.cep.config.MockAgentConfig;
-import org.cloudifysource.cosmo.cep.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.monitor.config.MockAgentConfig;
+import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;

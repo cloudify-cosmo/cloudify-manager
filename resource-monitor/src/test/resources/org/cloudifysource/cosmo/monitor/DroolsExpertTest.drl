@@ -1,4 +1,4 @@
-import org.cloudifysource.cosmo.cep.mock.MonitoringMessage
+import org.cloudifysource.cosmo.monitor.mock.MonitoringMessage
 
 rule "Change message type from before to after"
 

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep.config;
+package org.cloudifysource.cosmo.monitor.config;
 
-import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
+import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.drools.io.Resource;
@@ -30,7 +30,7 @@ import java.net.URI;
 
 
 /**
- * Configuration for {@link org.cloudifysource.cosmo.cep.ResourceMonitorServer}.
+ * Configuration for {@link org.cloudifysource.cosmo.monitor.ResourceMonitorServer}.
  * @author itaif
  * @since 0.1
  */

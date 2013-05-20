@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep;
+package org.cloudifysource.cosmo.monitor;
 
 import java.util.Collection;
 import java.util.Date;
@@ -24,8 +24,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import com.google.common.collect.Iterables;
-import org.cloudifysource.cosmo.cep.mock.AppInfo;
-import org.cloudifysource.cosmo.cep.mock.MonitoringMessage;
+import org.cloudifysource.cosmo.monitor.mock.AppInfo;
+import org.cloudifysource.cosmo.monitor.mock.MonitoringMessage;
 import org.drools.KnowledgeBase;
 import org.drools.KnowledgeBaseConfiguration;
 import org.drools.KnowledgeBaseFactory;
@@ -54,7 +54,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DroolsFusionTest {
 
-    public static final String RULE_FILE = "/org/cloudifysource/cosmo/cep/DroolsFusionTest.drl";
+    public static final String RULE_FILE = "/org/cloudifysource/cosmo/monitor/DroolsFusionTest.drl";
     private KnowledgeBuilder kbuilder;
     private KnowledgeBase kbase;
     private StatefulKnowledgeSession ksession;

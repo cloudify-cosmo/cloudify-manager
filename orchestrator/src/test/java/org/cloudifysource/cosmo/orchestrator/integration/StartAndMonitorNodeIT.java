@@ -17,9 +17,9 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.cep.Agent;
-import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
+import org.cloudifysource.cosmo.monitor.Agent;
+import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
+import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;

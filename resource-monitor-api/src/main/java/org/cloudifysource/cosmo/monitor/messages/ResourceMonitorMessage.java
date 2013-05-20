@@ -13,23 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep;
+
+package org.cloudifysource.cosmo.monitor.messages;
+
+import com.google.common.base.Objects;
 
 /**
- * A drools fact that an agent has been discovered.
+ * A message sent to the resource monitoring server with an indication of which new resource to monitor.
  *
- * @author itaif
+ * @author Idan Moyal
  * @since 0.1
  */
-public class Agent {
+public class ResourceMonitorMessage {
 
-    String agentId;
+    private String resourceId;
 
-    public String getAgentId() {
-        return agentId;
+    public ResourceMonitorMessage() {
     }
 
-    public void setAgentId(String agentId) {
-        this.agentId = agentId;
+    public ResourceMonitorMessage(String resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public String getResourceId() {
+        return resourceId;
+    }
+
+    public void setResourceId(String resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this).add("resourceId", resourceId).toString();
     }
 }

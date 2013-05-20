@@ -15,9 +15,9 @@
  *******************************************************************************/
 
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage
-import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage
+import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
-import org.cloudifysource.cosmo.cep.Agent
+import org.cloudifysource.cosmo.monitor.Agent
 
 declare StateChangedMessage
 @role(event)

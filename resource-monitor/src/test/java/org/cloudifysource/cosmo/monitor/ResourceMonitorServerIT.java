@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.cloudifysource.cosmo.cep;
+package org.cloudifysource.cosmo.monitor;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
-import org.cloudifysource.cosmo.cep.config.MockAgentConfig;
-import org.cloudifysource.cosmo.cep.config.ResourceMonitorServerConfig;
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
+import org.cloudifysource.cosmo.monitor.config.MockAgentConfig;
+import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
@@ -63,7 +63,7 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
     /**
      */
     @Configuration
-    @PropertySource("org/cloudifysource/cosmo/cep/configuration/test.properties")
+    @PropertySource("org/cloudifysource/cosmo/monitor/configuration/test.properties")
     @Import({ ResourceMonitorServerConfig.class,
             MessageBrokerServerConfig.class,
             MessageConsumerTestConfig.class,

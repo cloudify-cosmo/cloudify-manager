@@ -17,9 +17,9 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.ImmutableMap;
-import org.cloudifysource.cosmo.cep.Agent;
-import org.cloudifysource.cosmo.cep.ResourceMonitorServer;
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
+import org.cloudifysource.cosmo.monitor.Agent;
+import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
+import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheReader;
@@ -37,7 +37,7 @@ import java.util.concurrent.ExecutionException;
 
 /**
 * Tests integration of {@link org.cloudifysource.cosmo.statecache.RealTimeStateCache} with {@link
-* org.cloudifysource.cosmo.cep.ResourceMonitorServer}.
+* org.cloudifysource.cosmo.monitor.ResourceMonitorServer}.
 * @author itaif
 * @since 0.1
 */

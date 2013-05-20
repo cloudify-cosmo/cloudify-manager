@@ -1,5 +1,6 @@
-import org.cloudifysource.cosmo.cep.mock.MonitoringMessage
-import org.cloudifysource.cosmo.cep.mock.AppInfo
+import org.cloudifysource.cosmo.monitor.mock.MonitoringMessage
+import org.cloudifysource.cosmo.monitor.mock.AppInfo
+import org.cloudifysource.cosmo.monitor.mock.MonitoringMessage
 
 declare MonitoringMessage
 @role(event)
@@ -29,7 +30,7 @@ when
     not MonitoringMessage( type == "response", this after[0, 1m ] $request )
 then
     System.out.println( "Found no response.");
-    $message = new MonitoringMessage()
+    $message = new org.cloudifysource.cosmo.monitor.mock.MonitoringMessage()
     $message.type = "missing";
     $message.msgtext = "This is the message text";
     channels["output"].send( $message );

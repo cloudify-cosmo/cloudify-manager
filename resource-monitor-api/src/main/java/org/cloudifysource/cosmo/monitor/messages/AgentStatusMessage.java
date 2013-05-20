@@ -14,7 +14,7 @@
  * limitations under the License.
  *******************************************************************************/
 
-package org.cloudifysource.cosmo.cep.messages;
+package org.cloudifysource.cosmo.monitor.messages;
 
 /**
  * A message sent from the agent to the resource monitor about a resource.

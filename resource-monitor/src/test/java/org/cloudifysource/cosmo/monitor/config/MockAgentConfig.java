@@ -14,9 +14,9 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.cep.config;
+package org.cloudifysource.cosmo.monitor.config;
 
-import org.cloudifysource.cosmo.cep.mock.MockAgent;
+import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.hibernate.validator.constraints.NotEmpty;
@@ -28,7 +28,7 @@ import javax.inject.Inject;
 import java.net.URI;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.cep.mock.MockAgent}.
+ * Creates a new {@link org.cloudifysource.cosmo.monitor.mock.MockAgent}.
  *
  * @author Itai Frenkel
  * @since 0.1

@@ -13,33 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep.mock;
-
-import java.util.Date;
+package org.cloudifysource.cosmo.monitor;
 
 /**
- * Drools Fusion example POJO that initializes the kbase current time/date.
+ * A drools fact that an agent has been discovered.
+ *
  * @author itaif
  * @since 0.1
  */
-public class AppInfo {
-    private Date timestamp;
+public class Agent {
 
-    public AppInfo() {
+    String agentId;
+
+    public String getAgentId() {
+        return agentId;
     }
 
-    @Override
-    public String toString() {
-        return "AppInfo{" + "startTime=" + timestamp + '}';
-    }
-
-    public Date getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Date timestamp) {
-        this.timestamp = timestamp;
+    public void setAgentId(String agentId) {
+        this.agentId = agentId;
     }
 }
-
-

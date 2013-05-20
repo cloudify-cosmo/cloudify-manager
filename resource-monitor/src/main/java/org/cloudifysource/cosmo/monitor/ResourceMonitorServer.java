@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package org.cloudifysource.cosmo.cep;
+package org.cloudifysource.cosmo.monitor;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
-import org.cloudifysource.cosmo.cep.messages.AgentStatusMessage;
-import org.cloudifysource.cosmo.cep.messages.ResourceMonitorMessage;
+import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage;
+import org.cloudifysource.cosmo.monitor.messages.ResourceMonitorMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
