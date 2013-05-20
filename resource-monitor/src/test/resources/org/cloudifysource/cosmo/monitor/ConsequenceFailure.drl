@@ -12,20 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 
-package org.cloudifysource.cosmo.monitor;
+import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage
+import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
+import org.cloudifysource.cosmo.monitor.Agent
 
-import org.cloudifysource.cosmo.logging.LogDescription;
+declare Agent
+@role(event)
+end
 
-/**
- * Log description for resource monitor.
- *
- * @author Itai Frenkel
- * @since 0.1
- */
-public enum MonitorLogDescription implements LogDescription {
-    DROOLS_ERROR,
-    MESSAGE_CONSUMER_ERROR,
-    MESSAGE_PRODUCER_ERROR
-}
+declare ProbeAgentMessage
+@role(event)
+end
+
+rule "Inject Failure Rule"
+    dialect "mvel"
+when
+    Agent( $agentId : agentId)
+    not ProbeAgentMessage( agentId == $agentId)
+then
+    message = new ProbeAgentMessage()
+    message.agentId = $agentId
+    insert(message)
+    insert(Class.forName("DoesNotExist---FailureInjectionClass").newInstance())
+end
