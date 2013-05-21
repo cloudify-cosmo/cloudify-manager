@@ -16,9 +16,9 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.bootstrap.BootstrapSetup;
@@ -78,6 +78,8 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
 
     }
 
+    /**
+     */
     private static class MockBootstrapSetup extends BootstrapSetup {
 
         private static final String MOCKENVVAR = "MOCKENVVAR";
