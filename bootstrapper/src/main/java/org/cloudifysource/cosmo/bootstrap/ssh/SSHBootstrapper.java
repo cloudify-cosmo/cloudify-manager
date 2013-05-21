@@ -17,10 +17,11 @@
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.cloudifysource.cosmo.bootstrap.BootstrapSetup;
 import org.cloudifysource.cosmo.bootstrap.Bootstrapper;
 
 import java.io.IOException;
@@ -40,40 +41,57 @@ public class SSHBootstrapper implements Bootstrapper {
     private static final String BOOTSTRAP_PROPERTIES = "bootstrap.properties";
 
     private final SSHClient sshClient;
-    private final BootstrapSetup bootstrapSetup;
+    private final String workDirectory;
+    private final String scriptResourceLocation;
+    private final Map<String, String> scriptEnvironment;
+    private final String propertiesResourceLocation;
+    private final LineConsumedListener lineConsumedListener;
 
     public SSHBootstrapper(SSHClient sshClient,
-                           BootstrapSetup bootstrapSetup) {
+                           String workDirectory,
+                           String scriptResourceLocation,
+                           Map<String, String> scriptEnvironment,
+                           String propertiesResourceLocation,
+                           LineConsumedListener lineConsumedListener) {
         this.sshClient = sshClient;
-        this.bootstrapSetup = bootstrapSetup;
+        this.workDirectory = workDirectory;
+        this.scriptResourceLocation = scriptResourceLocation;
+        this.scriptEnvironment = scriptEnvironment;
+        this.propertiesResourceLocation = propertiesResourceLocation;
+        this.lineConsumedListener = lineConsumedListener;
+    }
+
+    public String getPropertiesResourceLocation() {
+        return propertiesResourceLocation;
+    }
+
+    public Map<String, String> getScriptEnvironment() {
+        return ImmutableMap.copyOf(scriptEnvironment);
     }
 
     @Override
     public ListenableFuture<?> bootstrap() {
         try {
-            String workDirectory = bootstrapSetup.getWorkDirectory();
 
             // copy script to remote host
-            URL url = Resources.getResource(bootstrapSetup.getScriptResourceLocation());
+            URL url = Resources.getResource(scriptResourceLocation);
             String bootstrapScript = Resources.toString(url, Charsets.UTF_8);
             sshClient.putString(workDirectory, SCRIPT_NAME, bootstrapScript);
 
             // copy env script to remote host
-            Map<String, String> scriptEnvironment = bootstrapSetup.getScriptEnvironment();
             if (!scriptEnvironment.isEmpty()) {
                 sshClient.putString(workDirectory, ENV_SCRIPT_NAME, ScriptUtils.toEnvScript(scriptEnvironment));
             }
 
             // copy properties file to remote host
-            if (bootstrapSetup.getPropertiesResourceLocation().isPresent()) {
-                url = Resources.getResource(bootstrapSetup.getPropertiesResourceLocation().get());
+            if (!Strings.isNullOrEmpty(propertiesResourceLocation)) {
+                url = Resources.getResource(propertiesResourceLocation);
                 String boostrapProperties = Resources.toString(url, Charsets.UTF_8);
                 sshClient.putString(workDirectory, BOOTSTRAP_PROPERTIES, boostrapProperties);
             }
 
             // execute script
-            return sshClient.executeScript(workDirectory, workDirectory + SCRIPT_NAME,
-                    bootstrapSetup.getLinedLineConsumedListener());
+            return sshClient.executeScript(workDirectory, workDirectory + SCRIPT_NAME, lineConsumedListener);
 
         } catch (IOException e) {
             throw Throwables.propagate(e);

@@ -16,15 +16,13 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.cloudifysource.cosmo.bootstrap.BootstrapSetup;
-import org.cloudifysource.cosmo.bootstrap.config.BaseConfig;
 import org.cloudifysource.cosmo.bootstrap.config.SSHBootstrapperConfig;
-import org.springframework.beans.factory.annotation.Value;
+import org.cloudifysource.cosmo.bootstrap.config.SSHClientConfig;
+import org.cloudifysource.cosmo.bootstrap.config.SessionCommandExecutionMonitorConfig;
+import org.cloudifysource.cosmo.bootstrap.config.TestConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -58,63 +56,41 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     /**
      */
     @Configuration
-    @Import({ SSHBootstrapperConfig.class })
+    @Import({SSHClientConfig.class,
+            SessionCommandExecutionMonitorConfig.class,
+            MockSSHBootstrapperConfig.class })
     @PropertySource("org/cloudifysource/cosmo/bootstrap/config/mockbootstrapsetuptest.properties")
-    static class Config extends BaseConfig {
-
-        @Value("${work.dir}")
-        private String workDir;
-
-        @Value("${script.location}")
-        private String scriptLocation;
-
-        @Value("${properties.location}")
-        private String propertiesLocation;
-
-        @Bean
-        public BootstrapSetup bootstrapSetup() {
-            return new MockBootstrapSetup(scriptLocation, workDir, propertiesLocation);
-        }
+    static class Config extends TestConfig {
 
     }
 
     /**
      */
-    private static class MockBootstrapSetup extends BootstrapSetup {
+    @Configuration
+    static class MockSSHBootstrapperConfig extends SSHBootstrapperConfig {
 
         private static final String MOCKENVVAR = "MOCKENVVAR";
         private final List<String> lines = Lists.newLinkedList();
-        private final Map<String, String> mockEnv = ImmutableMap.<String, String>builder()
-                .put(MOCKENVVAR, "mockenvvarvalue")
-                .build();
         private final CountDownLatch outputLatch = new CountDownLatch(2); // 2 expected output lines
 
-        public MockBootstrapSetup(String scriptResourceLocation, String workDirectory,
-                                  String propertiesResourceLocation) {
-            super(scriptResourceLocation, workDirectory, propertiesResourceLocation);
+        @Override
+        protected void addEnviromentVariables(Map<String, String> environmentVariables) {
+            super.addEnviromentVariables(environmentVariables);
+            environmentVariables.put(MOCKENVVAR, "mockenvvarvalue");
         }
 
-        @Override
-        public Map<String, String> getScriptEnvironment() {
-            return mockEnv;
-        }
-
-        @Override
-        public Optional<LineConsumedListener> getLinedLineConsumedListener() {
-            LineConsumedListener listener = new LineConsumedListener() {
+        @Bean
+        public LineConsumedListener lineConsumedListener() {
+            return new LineConsumedListener() {
                 @Override
                 public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
                     lines.add(line);
                     outputLatch.countDown();
                 }
             };
-            return Optional.of(listener);
         }
 
     }
-
-    @Inject
-    private MockBootstrapSetup bootstrapSetup;
 
     // Tested component
     @Inject
@@ -124,21 +100,24 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     @Inject
     private SSHClient sshClient;
 
-    @Test(groups = "ssh", timeOut = 5 * 1000)
+    @Inject
+    private MockSSHBootstrapperConfig config;
+
+    @Test(groups = "ssh", timeOut = 5 * 1000 * 100000)
     public void testBootstrap() throws ExecutionException, InterruptedException, TimeoutException, IOException {
         ListenableFuture<?> future = bootstrapper.bootstrap();
         future.get();
         Properties properties = new Properties();
         InputStream propsStream =
-                Resources.getResource(bootstrapSetup.getPropertiesResourceLocation().get()).openStream();
+                Resources.getResource(bootstrapper.getPropertiesResourceLocation()).openStream();
         properties.load(propsStream);
         propsStream.close();
         boolean foundEnvVar = false;
         boolean foundProperty = false;
 
-        for (String line : bootstrapSetup.lines) {
-            String envLine = MockBootstrapSetup.MOCKENVVAR + "=" + bootstrapSetup.mockEnv.get(MockBootstrapSetup
-                    .MOCKENVVAR);
+        for (String line : config.lines) {
+            String envLine = MockSSHBootstrapperConfig.MOCKENVVAR + "=" +
+                    bootstrapper.getScriptEnvironment().get(MockSSHBootstrapperConfig.MOCKENVVAR);
             String propName = properties.stringPropertyNames().iterator().next();
             String propLine = propName + "=" + properties.get(propName);
 
@@ -151,7 +130,7 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
             }
         }
 
-        bootstrapSetup.outputLatch.await();
+        config.outputLatch.await();
         Assert.assertTrue(foundEnvVar);
         Assert.assertTrue(foundProperty);
     }

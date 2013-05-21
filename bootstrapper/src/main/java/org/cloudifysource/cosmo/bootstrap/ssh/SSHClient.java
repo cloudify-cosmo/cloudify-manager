@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.bootstrap.ssh;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
@@ -98,7 +97,7 @@ public class SSHClient implements AutoCloseable {
      *  otherwise.
      */
     public ListenableFuture<?> executeScript(String workingDirectory, String scriptPath) {
-        return executeScript(workingDirectory, scriptPath, Optional.<LineConsumedListener>absent());
+        return executeScript(workingDirectory, scriptPath, null);
     }
 
     /**
@@ -110,7 +109,7 @@ public class SSHClient implements AutoCloseable {
      *  otherwise.
      */
     public ListenableFuture<?> executeScript(String workingDirectory, String scriptPath,
-                                             Optional<LineConsumedListener> lineConsumedListener) {
+                                             LineConsumedListener lineConsumedListener) {
         List<String> commands = Lists.newLinkedList();
         commands.add("cd " + workingDirectory);
         commands.add("chmod +x " + scriptPath);
@@ -125,7 +124,7 @@ public class SSHClient implements AutoCloseable {
      *  otherwise.
      */
     public ListenableFuture<?> execute(String command) {
-        return execute(command, Optional.<LineConsumedListener>absent());
+        return execute(command, null);
     }
 
     /**
@@ -135,10 +134,10 @@ public class SSHClient implements AutoCloseable {
      * @return A future whose value will be set to null upon sucessful execution and an exception will be set
      *  otherwise.
      */
-    public ListenableFuture<?> execute(String command, Optional<LineConsumedListener> lineConsumedListener) {
+    public ListenableFuture<?> execute(String command, LineConsumedListener lineConsumedListener) {
         logger.debug("Excecuting command: [{}]", command);
         final SSHSessionCommandExecution sessionCommmand = new SSHSessionCommandExecution(sshClient, connectionInfo,
-                command, lineConsumedListener.orNull());
+                command, lineConsumedListener);
         ListenableFuture<?> result = sessionCommandExecutionMonitor.addSessionCommand(sessionCommmand);
         Futures.addCallback(result, new FutureCallback<Object>() {
             @Override

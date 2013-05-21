@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
-import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -138,14 +137,13 @@ public class SSHClientIT extends AbstractTestNGSpringContextTests  {
         final AtomicBoolean validOutput = new AtomicBoolean(false);
         final CountDownLatch outputLatch = new CountDownLatch(1);
         String command = "echo " + output;
-        LineConsumedListener listener = new LineConsumedListener() {
+        sshClient.execute(command, new LineConsumedListener() {
             @Override
             public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
                 validOutput.set(line.equals(output));
                 outputLatch.countDown();
             }
-        };
-        sshClient.execute(command, Optional.of(listener)).get();
+        }).get();
         outputLatch.await();
         assertThat(validOutput.get()).isTrue();
     }

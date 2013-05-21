@@ -17,9 +17,8 @@
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.cloudifysource.cosmo.bootstrap.config.AgentBootstrapSetupConfig;
+import org.cloudifysource.cosmo.bootstrap.config.AgentSSHBootstrapperConfig;
 import org.cloudifysource.cosmo.bootstrap.config.BaseConfig;
-import org.cloudifysource.cosmo.bootstrap.config.SSHBootstrapperConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
@@ -44,9 +43,7 @@ public class SSHBootstrapperAgentBootstrapSetupIT extends AbstractTestNGSpringCo
     /**
      */
     @Configuration
-    @Import({
-            AgentBootstrapSetupConfig.class,
-            SSHBootstrapperConfig.class })
+    @Import({ AgentSSHBootstrapperConfig.class })
     static class Config extends BaseConfig { }
 
     // Tested component
