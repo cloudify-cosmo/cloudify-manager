@@ -50,10 +50,6 @@ public class SSHBootstrapperAgentBootstrapSetupIT extends AbstractTestNGSpringCo
     @Inject
     private SSHBootstrapper bootstrapper;
 
-    // Used by test.
-    @Inject
-    private SSHClient sshClient;
-
     @Test(groups = "ssh", timeOut = 50 * 60 * 1000)
     public void testAgentBootstrap() throws ExecutionException, InterruptedException, TimeoutException {
         ListenableFuture<?> future = bootstrapper.bootstrap();

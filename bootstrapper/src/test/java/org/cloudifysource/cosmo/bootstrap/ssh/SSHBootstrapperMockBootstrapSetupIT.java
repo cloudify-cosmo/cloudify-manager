@@ -96,10 +96,6 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     @Inject
     private SSHBootstrapper bootstrapper;
 
-    // Used by test.
-    @Inject
-    private SSHClient sshClient;
-
     @Inject
     private MockSSHBootstrapperConfig config;
 
