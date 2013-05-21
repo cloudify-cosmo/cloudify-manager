@@ -165,6 +165,7 @@ public class ResourceMonitorServer implements AutoCloseable {
         }
         result.ksession = kbase.newStatefulKnowledgeSession(sessionConfig, null);
 
+        // emits drools log entries to slf4j as org.drools.audit.WorkingMemoryConsoleLogger
         result.runtimeLogger = KnowledgeRuntimeLoggerFactory.newConsoleLogger(result.ksession);
 
         return result;
