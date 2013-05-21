@@ -80,14 +80,6 @@ if [ ! -z "$COSMO_URL" ]; then
 	wget -q $COSMO_URL -O $COSMO_WORK_DIRECTORY/agent-all.jar || error_exit $? "Failed downloading cosmo agent installation"
 fi
 
-if [ -f nohup.out ]; then
-  rm nohup.out
-fi
-
-if [ -f nohup.out ]; then
-   error_exit 1 "Failed to remove nohup.out Probably used by another process"
-fi
-
 COMMAND="$JAVA_HOME/jre/bin/java -cp $COSMO_WORK_DIRECTORY/agent-all.jar -Dcosmo.agent.properties-location=$COSMO_WORK_DIRECTORY/bootstrap.properties org.cloudifysource.cosmo.agent.AgentProcess"
 echo $COMMAND
 nohup $COMMAND | tee /dev/null
