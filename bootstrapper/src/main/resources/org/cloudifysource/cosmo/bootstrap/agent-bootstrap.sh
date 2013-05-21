@@ -2,8 +2,11 @@
 
 #############################################################################
 # Parameters that should be exported beforehand:
-# 	$COSMO_WORK_DIRECTORY - This is where the files were copied to (cloudify installation, etc..)
+# 	$COSMO_WORK_DIRECTORY - This directory holds the files that we're copied and will will server as
+#                           root for most of the script actions.
 #	$COSMO_URL - If this url is found, it will be downloaded to $COSMO_WORK_DIRECTORY/agent-all.jar
+#   $COSMO_ENV_JAVA_URL - If this url is found it will be used to download the Java7 jdk.
+#                         Otherwise, the default cloudify repository will be used.
 #############################################################################
 
 # args:
@@ -35,10 +38,8 @@ if [ -f ${ENV_FILE_PATH} ]; then
 	source ${ENV_FILE_PATH}
 fi
 
-JAVA_32_URL="http://repository.cloudifysource.org/com/oracle/java/1.6.0_32/jdk-6u32-linux-i586.bin"
-#TODO restore me!!!
-#JAVA_64_URL="http://repository.cloudifysource.org/com/oracle/java/1.6.0_32/jdk-6u32-linux-x64.bin"
-JAVA_64_URL="http://192.168.10.13/users/dank/temp/jdk-7u21-linux-x64.tar.gz"
+JAVA_32_URL="http://repository.cloudifysource.org/com/oracle/java/1.7.0_21/jdk-7u21-linux-i586.tar.gz"
+JAVA_64_URL="http://repository.cloudifysource.org/com/oracle/java/1.7.0_21/jdk-7u21-linux-x64.tar.gz"
 
 # If not JDK specified, determine which JDK to install based on hardware architecture
 if [ -z "$COSMO_ENV_JAVA_URL" ]; then
@@ -70,6 +71,8 @@ else
     tar xfz $COSMO_WORK_DIRECTORY/java.tar.gz -C ~/java || error_exit_on_level $? "Failed extracting cloudify installation" 2
 	mv ~/java/*/* ~/java || error_exit $? "Failed moving JDK installation"
     export JAVA_HOME=~/java
+
+    cd $COSMO_WORK_DIRECTORY
 fi
 
 if [ ! -z "$COSMO_URL" ]; then
@@ -85,14 +88,7 @@ if [ -f nohup.out ]; then
    error_exit 1 "Failed to remove nohup.out Probably used by another process"
 fi
 
-COMMAND="nohup $JAVA_HOME/jre/bin/java -cp $COSMO_WORK_DIRECTORY/agent-all.jar -Dcosmo.agent.properties-location=$COSMO_WORK_DIRECTORY/bootstrap.properties org.cloudifysource.cosmo.agent.AgentProcess"
+COMMAND="$JAVA_HOME/jre/bin/java -cp $COSMO_WORK_DIRECTORY/agent-all.jar -Dcosmo.agent.properties-location=$COSMO_WORK_DIRECTORY/bootstrap.properties org.cloudifysource.cosmo.agent.AgentProcess"
 echo $COMMAND
-$COMMAND
+nohup $COMMAND | tee /dev/null
 
-RETVAL=$?
-echo cat nohup.out
-cat nohup.out
-if [ $RETVAL -ne 0 ]; then
-  error_exit $RETVAL $ERRMSG
-fi
-exit 0

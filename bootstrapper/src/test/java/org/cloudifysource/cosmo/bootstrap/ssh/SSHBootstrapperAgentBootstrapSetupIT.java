@@ -29,6 +29,7 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Tests the {@link SSHBootstrapper}.
@@ -56,10 +57,10 @@ public class SSHBootstrapperAgentBootstrapSetupIT extends AbstractTestNGSpringCo
     @Inject
     private SSHClient sshClient;
 
-    @Test(groups = "ssh", timeOut = 50 * 1000)
-    public void testAgentBootstrap() throws ExecutionException, InterruptedException {
+    @Test(groups = "ssh", timeOut = 50 * 60 * 1000)
+    public void testAgentBootstrap() throws ExecutionException, InterruptedException, TimeoutException {
         ListenableFuture<?> future = bootstrapper.bootstrap();
-
+        future.isDone();
     }
 
 }

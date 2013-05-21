@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -30,6 +31,7 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -56,14 +58,14 @@ public class SSHClientIT extends AbstractTestNGSpringContextTests  {
     private String workDir;
 
 
-    @Test(groups = "ssh")
+    @Test(groups = "ssh", timeOut = 10000)
     public void testScriptNormal() throws Exception {
         String script = "echo from testScriptNormal";
         ListenableFuture<?> future = uploadScriptAndExecute("test_script.sh", script);
         assertThat(future.get()).isNull();
     }
 
-    @Test(groups = "ssh", expectedExceptions = ExecutionException.class)
+    @Test(groups = "ssh", expectedExceptions = ExecutionException.class, timeOut = 10000)
     public void testScriptWithError() throws Exception {
         String script = "exit -1";
         ListenableFuture<?> future = uploadScriptAndExecute("test_script.sh", script);
@@ -107,9 +109,52 @@ public class SSHClientIT extends AbstractTestNGSpringContextTests  {
         assertThat(future2EndTimestamp.get()).isGreaterThan(future3EndTimestamp.get());
     }
 
+    @Test(groups = "ssh", timeOut = 10000)
+    public void testExecute() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicBoolean validOutcome = new AtomicBoolean(false);
+        final int exitStatus = 100;
+        String command = "exit " + exitStatus;
+        ListenableFuture<?> future = sshClient.execute(command);
+        Futures.addCallback(future, new FutureCallback<Object>() {
+            @Override
+            public void onSuccess(Object result) {
+                latch.countDown();
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                validOutcome.set(t instanceof SSHExecutionException &&
+                                ((SSHExecutionException) t).getExitStatus() == exitStatus);
+                latch.countDown();
+            }
+        });
+        latch.await();
+        assertThat(validOutcome.get()).isTrue();
+    }
+
+    @Test(groups = "ssh", timeOut = 10000)
+    public void testLineConsumedListener() throws ExecutionException, InterruptedException {
+        final String output = "What?";
+        final AtomicBoolean validOutput = new AtomicBoolean(false);
+        final CountDownLatch outputLatch = new CountDownLatch(1);
+        String command = "echo " + output;
+        LineConsumedListener listener = new LineConsumedListener() {
+            @Override
+            public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
+                validOutput.set(line.equals(output));
+                outputLatch.countDown();
+            }
+        };
+        sshClient.execute(command, Optional.of(listener)).get();
+        outputLatch.await();
+        assertThat(validOutput.get()).isTrue();
+    }
+
     private ListenableFuture<?> uploadScriptAndExecute(String scriptName, String script) {
         sshClient.putString(workDir, scriptName, script);
         return sshClient.executeScript(workDir, workDir + scriptName);
     }
+
+
 
 }
