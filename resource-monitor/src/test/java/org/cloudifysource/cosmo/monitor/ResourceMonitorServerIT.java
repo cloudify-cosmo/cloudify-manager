@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import org.cloudifysource.cosmo.monitor.config.MockAgentConfig;
 import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.monitor.config.TestConfig;
 import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
@@ -70,15 +71,7 @@ public class ResourceMonitorServerIT extends AbstractTestNGSpringContextTests {
             MessageProducerConfig.class,
             MockAgentConfig.class
     })
-    static class Config {
-        @Bean
-        public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-            return new PropertySourcesPlaceholderConfigurer();
-        }
-        @Bean
-        public static BeanValidationPostProcessor beanValidationPostProcessor() {
-            return new BeanValidationPostProcessor();
-        }
+    static class Config extends TestConfig {
     }
 
     // component being tested
