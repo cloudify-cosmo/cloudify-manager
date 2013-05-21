@@ -117,7 +117,7 @@ public class ResourceMonitorServer implements AutoCloseable {
     }
 
     public boolean isClosed() {
-        // atomic integer used instead of lock so this method does not block
+        // AtomicBoolean used instead of lock so this method does not block
         return closed.get();
     }
 
@@ -138,6 +138,9 @@ public class ResourceMonitorServer implements AutoCloseable {
     public void close() {
         // Lock needed since we want spring to wait until close really finishes
         synchronized (closingLock) {
+            if (closed.get()) {
+                return;
+            }
             if (listener != null) {
                 consumer.removeListener(listener);
             }
