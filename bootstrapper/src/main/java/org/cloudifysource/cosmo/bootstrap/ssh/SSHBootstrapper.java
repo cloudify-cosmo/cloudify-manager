@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -76,18 +77,31 @@ public class SSHBootstrapper implements Bootstrapper {
             // copy script to remote host
             URL url = Resources.getResource(scriptResourceLocation);
             String bootstrapScript = Resources.toString(url, Charsets.UTF_8);
-            sshClient.putString(workDirectory, SCRIPT_NAME, bootstrapScript);
+            sshClient.writeFileOnRemoteHostFromStringContent(workDirectory, SCRIPT_NAME, bootstrapScript);
 
             // copy env script to remote host
+            // The script enviroment will be copied to the remote host and will reside in the work directory.
+            // Its name will be bootstrap-env.sh and script may export its properties and use them in the scrxipt
+            // using something like 'source bootstrap-env.sh'
             if (!scriptEnvironment.isEmpty()) {
-                sshClient.putString(workDirectory, ENV_SCRIPT_NAME, ScriptUtils.toEnvScript(scriptEnvironment));
+                StringBuilder result = new StringBuilder("export ");
+                sshClient.writeFileOnRemoteHostFromStringContent(workDirectory, ENV_SCRIPT_NAME,
+                        Joiner.on("\nexport ")
+                                .withKeyValueSeparator("=")
+                                .appendTo(result, scriptEnvironment)
+                                .toString());
             }
 
             // copy properties file to remote host
+            // The properties file is optional and might be used when bootstrapping
+            // spring based components (i.e. @PropertySource)/
+            // The remote file will reside in the work directory. Its name will be
+            // bootstrap.properties
             if (!Strings.isNullOrEmpty(propertiesResourceLocation)) {
                 url = Resources.getResource(propertiesResourceLocation);
                 String boostrapProperties = Resources.toString(url, Charsets.UTF_8);
-                sshClient.putString(workDirectory, BOOTSTRAP_PROPERTIES, boostrapProperties);
+                sshClient.writeFileOnRemoteHostFromStringContent(workDirectory, BOOTSTRAP_PROPERTIES,
+                        boostrapProperties);
             }
 
             // execute script

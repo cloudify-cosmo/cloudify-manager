@@ -16,9 +16,13 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
+import com.google.common.collect.Queues;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.bootstrap.config.AgentSSHBootstrapperConfig;
 import org.cloudifysource.cosmo.bootstrap.config.BaseConfig;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
@@ -27,8 +31,12 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Tests the {@link SSHBootstrapper}.
@@ -44,16 +52,56 @@ public class SSHBootstrapperAgentBootstrapSetupIT extends AbstractTestNGSpringCo
      */
     @Configuration
     @Import({ AgentSSHBootstrapperConfig.class })
-    static class Config extends BaseConfig { }
+    static class Config extends BaseConfig {
+
+        private final BlockingQueue<Boolean> queue = Queues.newArrayBlockingQueue(1);
+
+        // This listener is here only for testing and should not be treated
+        // as any valid form of agent process monitoring.
+        @Bean
+        public LineConsumedListener lineConsumedListener() {
+            return new LineConsumedListener() {
+                @Override
+                public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
+                    if (line.contains("AgentProcess - Agent started succesfully")) {
+                        queue.offer(true);
+                    }
+                }
+            };
+        }
+
+    }
 
     // Tested component
     @Inject
     private SSHBootstrapper bootstrapper;
 
-    @Test(groups = "ssh", timeOut = 50 * 60 * 1000)
+    @Inject
+    private Config config;
+
+    // This test serves more as a demo than as a test and is thus disabled
+    @Test(groups = "ssh", timeOut = 10 * 60 * 1000, enabled = false)
     public void testAgentBootstrap() throws ExecutionException, InterruptedException, TimeoutException {
         ListenableFuture<?> future = bootstrapper.bootstrap();
-        future.isDone();
+
+        Futures.addCallback(future, new FutureCallback<Object>() {
+            @Override
+            public void onSuccess(Object result) {
+                config.queue.offer(false); // getting here means something went wrong. script should not terminate.
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                config.queue.offer(false); // getting here means something went wrong. (obviously)
+            }
+        });
+
+        // wait for agent to start
+        boolean agentStarted = config.queue.poll(1, TimeUnit.MINUTES);
+
+        // good to go lets disconnect
+        future.cancel(true);
+
+        assertThat(agentStarted).isTrue();
     }
 
 }

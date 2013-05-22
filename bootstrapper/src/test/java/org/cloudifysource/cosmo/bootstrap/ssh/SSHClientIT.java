@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
+import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -28,9 +29,10 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -110,46 +112,43 @@ public class SSHClientIT extends AbstractTestNGSpringContextTests  {
 
     @Test(groups = "ssh", timeOut = 10000)
     public void testExecute() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicBoolean validOutcome = new AtomicBoolean(false);
+        final BlockingQueue<Throwable> queue = Queues.newArrayBlockingQueue(1);
         final int exitStatus = 100;
         String command = "exit " + exitStatus;
         ListenableFuture<?> future = sshClient.execute(command);
         Futures.addCallback(future, new FutureCallback<Object>() {
             @Override
             public void onSuccess(Object result) {
-                latch.countDown();
+                queue.offer(new AssertionError("Unexpected result"));
             }
             @Override
             public void onFailure(Throwable t) {
-                validOutcome.set(t instanceof SSHExecutionException &&
-                                ((SSHExecutionException) t).getExitStatus() == exitStatus);
-                latch.countDown();
+                queue.offer(t);
             }
         });
-        latch.await();
-        assertThat(validOutcome.get()).isTrue();
+        Throwable throwable = queue.poll(5, TimeUnit.SECONDS);
+        assertThat(throwable).isInstanceOf(SSHExecutionException.class);
+        int actualExitStatus = ((SSHExecutionException) throwable).getExitStatus();
+        assertThat(actualExitStatus).isEqualTo(exitStatus);
     }
 
     @Test(groups = "ssh", timeOut = 10000)
     public void testLineConsumedListener() throws ExecutionException, InterruptedException {
         final String output = "What?";
-        final AtomicBoolean validOutput = new AtomicBoolean(false);
-        final CountDownLatch outputLatch = new CountDownLatch(1);
+        final BlockingQueue<String> queue = Queues.newArrayBlockingQueue(1);
         String command = "echo " + output;
         sshClient.execute(command, new LineConsumedListener() {
             @Override
             public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
-                validOutput.set(line.equals(output));
-                outputLatch.countDown();
+                queue.offer(line);
             }
         }).get();
-        outputLatch.await();
-        assertThat(validOutput.get()).isTrue();
+        String line = queue.poll(5, TimeUnit.SECONDS);
+        assertThat(line).isEqualTo(output);
     }
 
     private ListenableFuture<?> uploadScriptAndExecute(String scriptName, String script) {
-        sshClient.putString(workDir, scriptName, script);
+        sshClient.writeFileOnRemoteHostFromStringContent(workDir, scriptName, script);
         return sshClient.executeScript(workDir, workDir + scriptName);
     }
 

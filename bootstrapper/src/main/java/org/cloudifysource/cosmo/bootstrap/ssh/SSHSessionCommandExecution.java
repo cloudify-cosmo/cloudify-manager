@@ -87,7 +87,7 @@ public class SSHSessionCommandExecution implements AutoCloseable {
         try {
             session.close();
         } catch (ConnectionException | TransportException e) {
-            logger.debug("Failed closing session. [connection=[{}], exception=[{}]]", connectionInfo, e.getMessage());
+            throw Throwables.propagate(e);
         }
     }
 

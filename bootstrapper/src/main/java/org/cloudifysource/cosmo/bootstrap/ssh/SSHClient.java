@@ -19,7 +19,6 @@ package org.cloudifysource.cosmo.bootstrap.ssh;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -32,7 +31,6 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -73,7 +71,7 @@ public class SSHClient implements AutoCloseable {
      * @param name The name of the file to create in 'parentRemotePath'
      * @param content The content of the file to create.
      */
-    public void putString(String parentRemotePath, String name, String content) {
+    public void writeFileOnRemoteHostFromStringContent(String parentRemotePath, String name, String content) {
         put(parentRemotePath, name, new StringSourceFile(name, content));
     }
 
@@ -110,11 +108,11 @@ public class SSHClient implements AutoCloseable {
      */
     public ListenableFuture<?> executeScript(String workingDirectory, String scriptPath,
                                              LineConsumedListener lineConsumedListener) {
-        List<String> commands = Lists.newLinkedList();
-        commands.add("cd " + workingDirectory);
-        commands.add("chmod +x " + scriptPath);
-        commands.add(scriptPath);
-        return execute(Joiner.on(';').join(commands), lineConsumedListener);
+        return execute(Joiner.on(';').join(
+            "cd " + workingDirectory,
+            "chmod +x " + scriptPath,
+            scriptPath
+        ), lineConsumedListener);
     }
 
     /**
@@ -144,7 +142,10 @@ public class SSHClient implements AutoCloseable {
             public void onFailure(Throwable t) {
                 sessionCommmand.close();
             }
-            @Override public void onSuccess(Object result) { }
+            @Override
+            public void onSuccess(Object result) {
+                sessionCommmand.close();
+            }
         });
         return result;
     }
@@ -157,7 +158,7 @@ public class SSHClient implements AutoCloseable {
         try {
             sshClient.close();
         } catch (IOException e) {
-            logger.debug("Failed closing ssh client", e);
+            throw Throwables.propagate(e);
         }
     }
 

@@ -17,8 +17,7 @@
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
 /**
- * An exception that is thrown if an ssh execution failed.
- * The cause may be an exit status different the 0 or some {@link java.io.IOException}
+ * An exception that is thrown if an ssh execution returned with a non-zero exit status.
  * @author Dan Kilman
  * @since 0.1
  */

@@ -23,6 +23,7 @@ import org.cloudifysource.cosmo.bootstrap.config.SSHBootstrapperConfig;
 import org.cloudifysource.cosmo.bootstrap.config.SSHClientConfig;
 import org.cloudifysource.cosmo.bootstrap.config.SessionCommandExecutionMonitorConfig;
 import org.cloudifysource.cosmo.bootstrap.config.TestConfig;
+import org.fest.assertions.api.Assertions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -30,7 +31,6 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -59,25 +59,13 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     @Import({SSHClientConfig.class,
             SessionCommandExecutionMonitorConfig.class,
             MockSSHBootstrapperConfig.class })
-    @PropertySource("org/cloudifysource/cosmo/bootstrap/config/mockbootstrapsetuptest.properties")
+    @PropertySource({ "org/cloudifysource/cosmo/bootstrap/config/connection-test.properties",
+            "org/cloudifysource/cosmo/bootstrap/config/mockbootstrapsetuptest.properties" })
     static class Config extends TestConfig {
-
-    }
-
-    /**
-     */
-    @Configuration
-    static class MockSSHBootstrapperConfig extends SSHBootstrapperConfig {
 
         private static final String MOCKENVVAR = "MOCKENVVAR";
         private final List<String> lines = Lists.newLinkedList();
         private final CountDownLatch outputLatch = new CountDownLatch(2); // 2 expected output lines
-
-        @Override
-        protected void addEnviromentVariables(Map<String, String> environmentVariables) {
-            super.addEnviromentVariables(environmentVariables);
-            environmentVariables.put(MOCKENVVAR, "mockenvvarvalue");
-        }
 
         @Bean
         public LineConsumedListener lineConsumedListener() {
@@ -92,43 +80,49 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
 
     }
 
+    /**
+     */
+    @Configuration
+    static class MockSSHBootstrapperConfig extends SSHBootstrapperConfig {
+        @Override
+        protected void addEnviromentVariables(Map<String, String> environmentVariables) {
+            super.addEnviromentVariables(environmentVariables);
+            environmentVariables.put(Config.MOCKENVVAR, "mockenvvarvalue");
+        }
+    }
+
     // Tested component
     @Inject
     private SSHBootstrapper bootstrapper;
 
     @Inject
-    private MockSSHBootstrapperConfig config;
+    private Config config;
 
-    @Test(groups = "ssh", timeOut = 5 * 1000 * 100000)
+    @Test(groups = "ssh", timeOut = 10 * 1000)
     public void testBootstrap() throws ExecutionException, InterruptedException, TimeoutException, IOException {
+
         ListenableFuture<?> future = bootstrapper.bootstrap();
         future.get();
+
+        config.outputLatch.await();
+
+        Assertions.assertThat(config.lines.get(0)).isEqualTo(expectedEnviromentVaribleLine());
+        Assertions.assertThat(config.lines.get(1)).isEqualTo(expectedPropertiesLine());
+    }
+
+    private String expectedPropertiesLine() throws IOException {
         Properties properties = new Properties();
         InputStream propsStream =
                 Resources.getResource(bootstrapper.getPropertiesResourceLocation()).openStream();
         properties.load(propsStream);
         propsStream.close();
-        boolean foundEnvVar = false;
-        boolean foundProperty = false;
+        String propName = properties.stringPropertyNames().iterator().next();
+        return propName + "=" + properties.get(propName);
+    }
 
-        for (String line : config.lines) {
-            String envLine = MockSSHBootstrapperConfig.MOCKENVVAR + "=" +
-                    bootstrapper.getScriptEnvironment().get(MockSSHBootstrapperConfig.MOCKENVVAR);
-            String propName = properties.stringPropertyNames().iterator().next();
-            String propLine = propName + "=" + properties.get(propName);
-
-            if (line.equals(envLine)) {
-                foundEnvVar = true;
-            }
-
-            if (line.equals(propLine)) {
-                foundProperty = true;
-            }
-        }
-
-        config.outputLatch.await();
-        Assert.assertTrue(foundEnvVar);
-        Assert.assertTrue(foundProperty);
+    private String expectedEnviromentVaribleLine() {
+        return Config.MOCKENVVAR + "=" +
+                bootstrapper.getScriptEnvironment().get(Config.MOCKENVVAR);
     }
 
 }
