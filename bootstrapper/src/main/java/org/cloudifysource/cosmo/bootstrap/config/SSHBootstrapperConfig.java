@@ -19,7 +19,7 @@ package org.cloudifysource.cosmo.bootstrap.config;
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.bootstrap.ssh.LineConsumedListener;
 import org.cloudifysource.cosmo.bootstrap.ssh.SSHBootstrapper;
-import org.cloudifysource.cosmo.bootstrap.ssh.SSHClient;
+import org.cloudifysource.cosmo.bootstrap.ssh.SSHScriptExecutor;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +39,7 @@ import java.util.Map;
 public class SSHBootstrapperConfig {
 
     @Inject
-    private SSHClient sshClient;
+    private SSHScriptExecutor sshClient;
 
     @NotEmpty
     @Value("${cosmo.bootstrap.work-dir}")

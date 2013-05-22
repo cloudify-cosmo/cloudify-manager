@@ -16,24 +16,21 @@
 
 package org.cloudifysource.cosmo.bootstrap.config;
 
-import org.cloudifysource.cosmo.bootstrap.ssh.SSHClient;
-import org.cloudifysource.cosmo.bootstrap.ssh.SessionCommandExecutionMonitor;
+import org.cloudifysource.cosmo.bootstrap.ssh.SSHScriptExecutor;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.hibernate.validator.constraints.Range;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.inject.Inject;
-
 /**
- * Creates a new {@link org.cloudifysource.cosmo.bootstrap.ssh.SSHClient}.
+ * Creates a new {@link org.cloudifysource.cosmo.bootstrap.ssh.SSHScriptExecutor}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class SSHClientConfig {
+public class SSHScriptExecutorConfig {
 
     @NotEmpty
     @Value("${cosmo.ssh-client.host}")
@@ -51,12 +48,9 @@ public class SSHClientConfig {
     @Value("${cosmo.ssh-client.key-file}")
     private String keyFile;
 
-    @Inject
-    private SessionCommandExecutionMonitor sessionCommandExecutionMonitor;
-
-    @Bean(destroyMethod = "close")
-    public SSHClient sshClient() {
-        return new SSHClient(host, port, userName, keyFile, sessionCommandExecutionMonitor);
+    @Bean
+    public SSHScriptExecutor sshScriptExecutor() {
+        return new SSHScriptExecutor(host, port, userName, keyFile);
     }
 
 }

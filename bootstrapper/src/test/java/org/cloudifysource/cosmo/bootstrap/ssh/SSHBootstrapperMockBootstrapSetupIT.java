@@ -20,8 +20,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.cloudifysource.cosmo.bootstrap.config.SSHBootstrapperConfig;
-import org.cloudifysource.cosmo.bootstrap.config.SSHClientConfig;
-import org.cloudifysource.cosmo.bootstrap.config.SessionCommandExecutionMonitorConfig;
+import org.cloudifysource.cosmo.bootstrap.config.SSHScriptExecutorConfig;
 import org.cloudifysource.cosmo.bootstrap.config.TestConfig;
 import org.fest.assertions.api.Assertions;
 import org.springframework.context.annotation.Bean;
@@ -56,8 +55,7 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     /**
      */
     @Configuration
-    @Import({SSHClientConfig.class,
-            SessionCommandExecutionMonitorConfig.class,
+    @Import({SSHScriptExecutorConfig.class,
             MockSSHBootstrapperConfig.class })
     @PropertySource({ "org/cloudifysource/cosmo/bootstrap/config/connection-test.properties",
             "org/cloudifysource/cosmo/bootstrap/config/mockbootstrapsetuptest.properties" })

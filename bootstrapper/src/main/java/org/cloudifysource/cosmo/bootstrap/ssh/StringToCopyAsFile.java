@@ -14,24 +14,36 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.bootstrap.config;
-
-import org.cloudifysource.cosmo.bootstrap.ssh.SessionCommandExecutionMonitor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+package org.cloudifysource.cosmo.bootstrap.ssh;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.bootstrap.ssh.SessionCommandExecutionMonitor}.
+ * Encapsulates a string that is to be copied to a remote host a file.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-@Configuration
-public class SessionCommandExecutionMonitorConfig {
+public class StringToCopyAsFile {
 
-    @Bean(destroyMethod = "close")
-    public SessionCommandExecutionMonitor sessionCommandExecutionMonitor() {
-        return new SessionCommandExecutionMonitor();
+    private final String parentRemotePath;
+    private final String name;
+    private final String content;
+
+    public StringToCopyAsFile(String parentRemotePath, String name, String content) {
+        this.parentRemotePath = parentRemotePath;
+        this.name = name;
+        this.content = content;
+    }
+
+    public String getParentRemotePath() {
+        return parentRemotePath;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getContent() {
+        return content;
     }
 
 }
