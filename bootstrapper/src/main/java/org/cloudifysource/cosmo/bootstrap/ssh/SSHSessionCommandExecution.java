@@ -40,8 +40,6 @@ import java.util.List;
  */
 public class SSHSessionCommandExecution implements AutoCloseable {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
     private final SSHConnectionInfo connectionInfo;
     private final LineConsumedListener lineConsumedListener;
     private final Session session;

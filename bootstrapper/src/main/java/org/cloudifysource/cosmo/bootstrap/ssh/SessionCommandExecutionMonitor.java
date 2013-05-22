@@ -62,71 +62,83 @@ public class SessionCommandExecutionMonitor implements AutoCloseable {
             public void run() {
                 Thread.currentThread().setName("command-execution-monitor" + ID.getAndIncrement());
                 try {
+
                     // break on interrupt
                     while (!Thread.currentThread().isInterrupted()) {
 
                         // don't busy loop for nothing, only work when there is work to be done.
-                        if (sessionCommands.isEmpty()) {
-                            lock.lock();
-                            try {
-                                while (sessionCommands.isEmpty()) {
-                                    // wait for signal from addSessionCommand
-                                    notEmptyCondition.await();
-                                }
-                            } finally {
-                                lock.unlock();
-                            }
-                        }
+                        blockIfNoSessionCommandsAreAvailable();
 
                         // iterate all currently active session command. some will be read from, some will be removed
                         // and closed.
-                        for (Iterator<Map.Entry<SSHSessionCommandExecution, SettableFuture<?>>> iterator =
-                                     sessionCommands.entrySet().iterator();
-                             iterator.hasNext();) {
-
-                            Map.Entry<SSHSessionCommandExecution, SettableFuture<?>> entry = iterator.next();
-                            SSHSessionCommandExecution sessionCommand = entry.getKey();
-                            SettableFuture<?> future = entry.getValue();
-
-                            // session command has ended, remove from iterator, close session and update
-                            // listenable future
-                            if (!sessionCommand.isOpen() || future.isCancelled()) {
-                                closeSessionCommand(iterator, sessionCommand, future, null /* exception */);
-                                // consume last lines (if any exist).
-                                outputLines(sessionCommand);
-                                continue;
-                            }
-
-                            // session is active, check if socket has pending bytes to read.
-                            try {
-                                // readAvailableLines is where we actually read from the input stream
-                                // and where we will fail if the connection is dead.
-                                outputLines(sessionCommand);
-                            } catch (Exception e) {
-                                closeSessionCommand(iterator, sessionCommand, future, e);
-                                continue;
-                            }
-                        }
+                        consumeCurrentlyAvailableOutput();
 
                         // don't want to to waste precious CPU
                         Thread.sleep(10);
+
                     }
                 } catch (InterruptedException e) {
-                    return;
+                    // We are outside the read loop. Interrupt is the machanism to stop this
+                    // thread. Simply do nothing and end exection.
                 }
             }
 
-            private void outputLines(SSHSessionCommandExecution sessionCommand) {
+            private void blockIfNoSessionCommandsAreAvailable() throws InterruptedException {
+                if (sessionCommands.isEmpty()) {
+                    lock.lockInterruptibly();
+                    try {
+                        while (sessionCommands.isEmpty()) {
+                            // wait for signal from addSessionCommand
+                            notEmptyCondition.await();
+                        }
+                    } finally {
+                        lock.unlock();
+                    }
+                }
+            }
+
+            private void consumeCurrentlyAvailableOutput() {
+                for (Iterator<Map.Entry<SSHSessionCommandExecution, SettableFuture<?>>> iterator =
+                             sessionCommands.entrySet().iterator();
+                     iterator.hasNext();) {
+                    Map.Entry<SSHSessionCommandExecution, SettableFuture<?>> entry = iterator.next();
+
+                    SSHSessionCommandExecution sessionCommand = entry.getKey();
+                    SettableFuture<?> future = entry.getValue();
+
+                    if (sessionCommand.isOpen() && !future.isCancelled()) {
+                        // session is active, check if socket has pending bytes to read.
+                        try {
+                            // readAvailableLines is where we actually read from the input stream
+                            // and where we will fail if the connection is dead.
+                            consumeOutput(sessionCommand);
+                        } catch (Exception e) {
+                            iterator.remove();
+                            setFutureIfNeeded(sessionCommand, future, e);
+                        }
+                    } else {
+                        // consume last lines (if any exist).
+                        try {
+                            consumeOutput(sessionCommand);
+                        } catch (Exception e) {
+                            // output lines may fail when reading output after
+                            // the transport dies. if so, ignore.
+                        }
+
+                        iterator.remove();
+                        setFutureIfNeeded(sessionCommand, future, null /* exception */);
+                    }
+                }
+            }
+
+            private void consumeOutput(SSHSessionCommandExecution sessionCommand) {
                 for (String line : sessionCommand.readAvailableLines()) {
                     logger.debug("[{}] {}", sessionCommand.getConnectionInfo(), line);
                 }
             }
 
-            private void closeSessionCommand(
-                    Iterator<Map.Entry<SSHSessionCommandExecution, SettableFuture<?>>> iterator,
-                    SSHSessionCommandExecution sessionCommand,
-                    SettableFuture<?> future, Exception exception) {
-                iterator.remove();
+            private void setFutureIfNeeded(SSHSessionCommandExecution sessionCommand,
+                                           SettableFuture<?> future, Exception exception) {
                 if (future.isCancelled()) {
                     return;
                 }
@@ -142,6 +154,7 @@ public class SessionCommandExecutionMonitor implements AutoCloseable {
                     }
                 }
             }
+
         });
     }
 
