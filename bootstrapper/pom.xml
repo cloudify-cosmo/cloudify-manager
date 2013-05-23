@@ -1,23 +1,23 @@
-<!--
-  Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-  
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-  
-        http://www.apache.org/licenses/LICENSE-2.0
-  
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.cloudifysource.cosmo</groupId>
-    <artifactId>state-cache</artifactId>
+    <artifactId>bootstrapper</artifactId>
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
     <dependencies>
@@ -30,21 +30,9 @@
             <artifactId>logger</artifactId>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>state-cache-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>message-client</artifactId>
-        </dependency>
-        <!-- include when a constraint is added to real time state cache
-        <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-validator</artifactId>
-            TODO remove version
-            <version>5.0.0.Final</version>
         </dependency>
-        -->
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -58,12 +46,30 @@
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
         </dependency>
+        <!-- SSH -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jcl-over-slf4j</artifactId>
+            <groupId>net.schmizz</groupId>
+            <artifactId>sshj</artifactId>
+            <!-- TODO remove version -->
+            <version>0.8.1</version>
         </dependency>
-
-        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk16</artifactId>
+            <!-- TODO remove version -->
+            <version>1.46</version>
+        </dependency>
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easytesting</groupId>
+            <artifactId>fest-assert-core</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j.adapters</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
@@ -75,14 +81,15 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
@@ -91,7 +98,7 @@
                 <artifactId>maven-install-plugin</artifactId>
                 <version>2.3.1</version>
                 <configuration>
-                  <createChecksum>true</createChecksum>
+                    <createChecksum>true</createChecksum>
                 </configuration>
             </plugin>
             <plugin>
@@ -100,13 +107,13 @@
                 <version>2.2.1</version>
                 <executions>
                     <execution>
-                      <id>attach-sources</id>
-                      <phase>verify</phase>
-                      <goals>
-                        <goal>jar-no-fork</goal>
-                      </goals>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
                     </execution>
-                  </executions>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -148,6 +155,27 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.14.1</version>
+                <configuration>
+                    <!-- http://maven.apache.org/surefire/maven-surefire-plugin/examples/class-loading.html -->
+                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <forkCount>1</forkCount>
+                    <excludedGroups>ssh</excludedGroups>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>failsafe-integration-tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>2.7</version>
                 <executions>
@@ -162,7 +190,7 @@
                                 <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
                                 <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
-                                <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
+                                <usedDependency>org.bouncycastle:bcprov-jdk16</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
@@ -182,7 +210,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <repositories>
         <repository>
             <id>org.cloudifysource</id>

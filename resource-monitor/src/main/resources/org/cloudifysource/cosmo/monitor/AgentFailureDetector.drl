@@ -18,6 +18,7 @@ import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage
 import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage
 import org.cloudifysource.cosmo.monitor.Agent
+import function org.cloudifysource.cosmo.monitor.RuleLogger.log
 
 declare StateChangedMessage
 @role(event)
@@ -57,6 +58,7 @@ then
     message.resourceId = $agentId
     message.state.reachable = false
     channels["output"].send( message );
+    log(drools, "Agent {} is not reachable", $agentId)
 end
 
 rule "Change state to reachable if response within 12 seconds"
@@ -69,4 +71,5 @@ then
     message.resourceId = $agentId
     message.state.reachable = true
     channels["output"].send( message );
+    log(drools, "Agent {} is reachable", $agentId)
 end

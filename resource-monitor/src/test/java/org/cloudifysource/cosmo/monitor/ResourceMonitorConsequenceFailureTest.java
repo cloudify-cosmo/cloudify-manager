@@ -19,15 +19,13 @@ import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.monitor.config.MockAgentConfig;
 import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
-import org.springframework.context.annotation.Bean;
+import org.cloudifysource.cosmo.monitor.config.TestConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -52,15 +50,7 @@ public class ResourceMonitorConsequenceFailureTest extends AbstractTestNGSpringC
             MockMessageProducerConfig.class,
             MockAgentConfig.class
     })
-    static class Config {
-        @Bean
-        public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-            return new PropertySourcesPlaceholderConfigurer();
-        }
-        @Bean
-        public static BeanValidationPostProcessor beanValidationPostProcessor() {
-            return new BeanValidationPostProcessor();
-        }
+    static class Config extends TestConfig {
     }
 
     // component being tested
