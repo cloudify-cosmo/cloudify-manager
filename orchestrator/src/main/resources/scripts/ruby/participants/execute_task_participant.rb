@@ -18,6 +18,8 @@ java_import java::net::URI
 java_import org.cloudifysource::cosmo::tasks::messages::ExecuteTaskMessage
 java_import org.cloudifysource::cosmo::tasks::messages::TaskStatusMessage
 java_import org.cloudifysource::cosmo::tasks::messages::TaskMessage
+java_import org.cloudifysource.cosmo.tasks.messages.TaskPayloadMessage
+java_import org.cloudifysource.cosmo.tasks.messages.TaskPluginMessage
 java_import java::util::UUID
 java_import com::google::common::util::concurrent::FutureCallback
 java_import com::google::common::util::concurrent::Futures
@@ -88,7 +90,13 @@ class ExecuteTaskParticipant < Ruote::Participant
     task.set_task_id(UUID.random_uuid.to_string)
     task.set_target(target)
     task.set_sender(sender)
-    task.set_payload(payload)
+    task_payload = TaskPayloadMessage.new
+    task_payload.set_data(payload)
+    task.set_payload(task_payload)
+    plugin = TaskPluginMessage.new
+    plugin.set_name('cosmo-provisioner')
+    plugin.set_version('1.0')
+    task.set_plugin(plugin)
     task
   end
 
