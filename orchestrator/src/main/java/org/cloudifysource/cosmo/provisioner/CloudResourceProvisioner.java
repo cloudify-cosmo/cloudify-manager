@@ -66,9 +66,9 @@ public class CloudResourceProvisioner {
                     final TaskStatusMessage taskStatusMessage = new TaskStatusMessage();
                     taskStatusMessage.setTaskId(executeTaskMessage.getTaskId());
                     taskStatusMessage.setStatus(TaskStatusMessage.STARTED);
-                    if (executeTaskMessage.get("exec").isPresent() &&
-                            Objects.equal(executeTaskMessage.get("exec").get(), "start_machine")) {
-                        final Optional<Object> resourceId = executeTaskMessage.get("resource_id");
+                    if (executeTaskMessage.getPayloadProperty("exec").isPresent() &&
+                            Objects.equal(executeTaskMessage.getPayloadProperty("exec").get(), "start_machine")) {
+                        final Optional<Object> resourceId = executeTaskMessage.getPayloadProperty("resource_id");
                         Preconditions.checkArgument(resourceId.isPresent());
                         startMachine((String) resourceId.get());
                         logger.debug("Sending task status message reply [uri={}, message={}]", uri, taskStatusMessage);

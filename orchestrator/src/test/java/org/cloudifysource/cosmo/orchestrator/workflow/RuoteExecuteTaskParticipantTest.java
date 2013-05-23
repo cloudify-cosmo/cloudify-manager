@@ -107,8 +107,8 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
                     final ExecuteTaskMessage executeTaskMessage = (ExecuteTaskMessage) message;
                     boolean valid = Objects.equal(executeTaskMessage.getSender(), "execute_task_participant");
                     valid &= Objects.equal(executeTaskMessage.getTarget(), target);
-                    valid &= Objects.equal(executeTaskMessage.get("exec").get(), execute);
-                    valid &= Objects.equal(executeTaskMessage.get("resource_id").get(), resourceId);
+                    valid &= Objects.equal(executeTaskMessage.getPayloadProperty("exec").get(), execute);
+                    valid &= Objects.equal(executeTaskMessage.getPayloadProperty("resource_id").get(), resourceId);
                     if (valid) {
                         latch.countDown();
                     }
