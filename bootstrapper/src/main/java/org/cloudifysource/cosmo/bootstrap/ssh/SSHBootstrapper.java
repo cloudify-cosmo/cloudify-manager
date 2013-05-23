@@ -48,24 +48,27 @@ public class SSHBootstrapper implements Bootstrapper {
     private final String scriptResourceLocation;
     private final Map<String, String> scriptEnvironment;
     private final String propertiesResourceLocation;
-    private final LineConsumedListener lineConsumedListener;
+
+    private LineConsumedListener lineConsumedListener;
 
     public SSHBootstrapper(SSHScriptExecutor sshClient,
                            String workDirectory,
                            String scriptResourceLocation,
                            Map<String, String> scriptEnvironment,
-                           String propertiesResourceLocation,
-                           LineConsumedListener lineConsumedListener) {
+                           String propertiesResourceLocation) {
         this.sshClient = sshClient;
         this.workDirectory = workDirectory;
         this.scriptResourceLocation = scriptResourceLocation;
         this.scriptEnvironment = scriptEnvironment;
         this.propertiesResourceLocation = propertiesResourceLocation;
-        this.lineConsumedListener = lineConsumedListener;
     }
 
     public String getPropertiesResourceLocation() {
         return propertiesResourceLocation;
+    }
+
+    public void setLineConsumedListener(LineConsumedListener lineConsumedListener) {
+        this.lineConsumedListener = lineConsumedListener;
     }
 
     public Map<String, String> getScriptEnvironment() {

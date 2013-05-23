@@ -145,13 +145,23 @@ public class SSHScriptExecutor {
                 command, lineConsumedListener);
 
         while (sessionCommmand.isOpen() && !executionFuture.isCancelled()) {
-            for (String line : sessionCommmand.readAvailableLines()) {
-                logger.debug("[{}] {}", connectionInfo, line);
-            }
+            consumeOutput(sessionCommmand);
+        }
+
+        // means we broke out of the loop simply because it ended
+        // let up consume final ouptut
+        if (!sessionCommmand.isOpen() && !executionFuture.isCancelled()) {
+            consumeOutput(sessionCommmand);
         }
 
         return Objects.firstNonNull(sessionCommmand.getExitStatus(), -1);
 
+    }
+
+    private void consumeOutput(SSHSessionCommandExecution sessionCommmand) {
+        for (String line : sessionCommmand.readAvailableLines()) {
+            logger.debug("[{}] {}", connectionInfo, line);
+        }
     }
 
     /**
@@ -177,10 +187,9 @@ public class SSHScriptExecutor {
 
             executorService.shutdownNow();
             try {
-                // TODO BOOTSTRAP rethrow?
                 sshClient.close();
             } catch (IOException e) {
-                logger.debug("Failed closing ssh client.", e);
+                super.setException(e);
             }
             return true;
         }
@@ -202,7 +211,7 @@ public class SSHScriptExecutor {
             try {
                 sshClient.close();
             } catch (IOException e) {
-                logger.debug("Failed closing ssh client.", e);
+                throwable.addSuppressed(e);
             }
             return super.setException(throwable);
         }

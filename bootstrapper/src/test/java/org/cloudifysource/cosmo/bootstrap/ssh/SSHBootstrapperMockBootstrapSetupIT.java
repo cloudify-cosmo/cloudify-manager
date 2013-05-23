@@ -23,7 +23,6 @@ import org.cloudifysource.cosmo.bootstrap.config.SSHBootstrapperConfig;
 import org.cloudifysource.cosmo.bootstrap.config.SSHScriptExecutorConfig;
 import org.cloudifysource.cosmo.bootstrap.config.TestConfig;
 import org.fest.assertions.api.Assertions;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -52,6 +51,8 @@ import java.util.concurrent.TimeoutException;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringContextTests {
 
+    private static final String MOCKENVVAR = "MOCKENVVAR";
+
     /**
      */
     @Configuration
@@ -60,21 +61,6 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     @PropertySource({ "org/cloudifysource/cosmo/bootstrap/config/connection-test.properties",
             "org/cloudifysource/cosmo/bootstrap/config/mockbootstrapsetuptest.properties" })
     static class Config extends TestConfig {
-
-        private static final String MOCKENVVAR = "MOCKENVVAR";
-        private final List<String> lines = Lists.newLinkedList();
-        private final CountDownLatch outputLatch = new CountDownLatch(2); // 2 expected output lines
-
-        @Bean
-        public LineConsumedListener lineConsumedListener() {
-            return new LineConsumedListener() {
-                @Override
-                public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
-                    lines.add(line);
-                    outputLatch.countDown();
-                }
-            };
-        }
 
     }
 
@@ -85,7 +71,7 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
         @Override
         protected void addEnviromentVariables(Map<String, String> environmentVariables) {
             super.addEnviromentVariables(environmentVariables);
-            environmentVariables.put(Config.MOCKENVVAR, "mockenvvarvalue");
+            environmentVariables.put(MOCKENVVAR, "mockenvvarvalue");
         }
     }
 
@@ -96,16 +82,28 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     @Inject
     private Config config;
 
-    @Test(groups = "ssh", timeOut = 10 * 1000)
+    @Test(groups = "ssh", timeOut = 60 * 1000)
     public void testBootstrap() throws ExecutionException, InterruptedException, TimeoutException, IOException {
+
+        final List<String> lines = Lists.newLinkedList();
+        final CountDownLatch outputLatch = new CountDownLatch(2); // 2 expected output lines
+
+        LineConsumedListener listener = new LineConsumedListener() {
+            @Override
+            public void onLineConsumed(SSHConnectionInfo connectionInfo, String line) {
+                lines.add(line);
+                outputLatch.countDown();
+            }
+        };
+        bootstrapper.setLineConsumedListener(listener);
 
         ListenableFuture<?> future = bootstrapper.bootstrap();
         future.get();
 
-        config.outputLatch.await();
+        outputLatch.await();
 
-        Assertions.assertThat(config.lines.get(0)).isEqualTo(expectedEnviromentVaribleLine());
-        Assertions.assertThat(config.lines.get(1)).isEqualTo(expectedPropertiesLine());
+        Assertions.assertThat(lines.get(0)).isEqualTo(expectedEnviromentVaribleLine());
+        Assertions.assertThat(lines.get(1)).isEqualTo(expectedPropertiesLine());
     }
 
     private String expectedPropertiesLine() throws IOException {
@@ -119,8 +117,7 @@ public class SSHBootstrapperMockBootstrapSetupIT extends AbstractTestNGSpringCon
     }
 
     private String expectedEnviromentVaribleLine() {
-        return Config.MOCKENVVAR + "=" +
-                bootstrapper.getScriptEnvironment().get(Config.MOCKENVVAR);
+        return MOCKENVVAR + "=" + bootstrapper.getScriptEnvironment().get(MOCKENVVAR);
     }
 
 }
