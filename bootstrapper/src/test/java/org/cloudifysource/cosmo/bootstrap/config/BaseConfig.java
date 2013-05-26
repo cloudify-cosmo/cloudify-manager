@@ -27,10 +27,9 @@ import org.springframework.context.annotation.PropertySource;
  * @since 0.1
  */
 @Configuration
-@PropertySource("org/cloudifysource/cosmo/bootstrap/config/test.properties")
-@Import({
-        SSHClientConfig.class,
-        SessionCommandExecutionMonitorConfig.class })
+@PropertySource({ "org/cloudifysource/cosmo/bootstrap/config/connection-test.properties",
+        "org/cloudifysource/cosmo/bootstrap/config/test.properties" })
+@Import({ SSHScriptExecutorConfig.class })
 public abstract class BaseConfig extends TestConfig {
 
 }

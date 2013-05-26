@@ -24,8 +24,6 @@ import net.schmizz.sshj.connection.ConnectionException;
 import net.schmizz.sshj.connection.channel.ChannelInputStream;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.transport.TransportException;
-import org.cloudifysource.cosmo.logging.Logger;
-import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,8 +37,6 @@ import java.util.List;
  * @since 0.1
  */
 public class SSHSessionCommandExecution implements AutoCloseable {
-
-    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final SSHConnectionInfo connectionInfo;
     private final LineConsumedListener lineConsumedListener;
@@ -87,7 +83,7 @@ public class SSHSessionCommandExecution implements AutoCloseable {
         try {
             session.close();
         } catch (ConnectionException | TransportException e) {
-            logger.debug("Failed closing session. [connection=[{}], exception=[{}]]", connectionInfo, e.getMessage());
+            throw Throwables.propagate(e);
         }
     }
 

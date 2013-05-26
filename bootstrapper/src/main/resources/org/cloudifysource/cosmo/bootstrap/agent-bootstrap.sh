@@ -1,4 +1,6 @@
 #! /bin/bash
+# Verbose script output
+set -x
 
 #############################################################################
 # Parameters that should be exported beforehand:
@@ -64,7 +66,7 @@ else
 	echo Downloading JDK from $COSMO_ENV_JAVA_URL
 	wget -q -O $COSMO_WORK_DIRECTORY/java.tar.gz $COSMO_ENV_JAVA_URL || error_exit $? "Failed downloading Java installation from $COSMO_ENV_JAVA_URL"
 	rm -rf ~/java || error_exit $? "Failed removing old java installation directory"
-	mkdir ~/java
+	mkdir ~/java || error_exit $? "Failed creating new java directory"
 	cd ~/java
 
 	echo Extracting JDK
@@ -82,5 +84,9 @@ fi
 
 COMMAND="$JAVA_HOME/jre/bin/java -cp $COSMO_WORK_DIRECTORY/agent-all.jar -Dcosmo.agent.properties-location=$COSMO_WORK_DIRECTORY/bootstrap.properties org.cloudifysource.cosmo.agent.AgentProcess"
 echo $COMMAND
+# The following nuphup call pipes output to standard output and to /dev/null (using tee).
+# This means that when the ssh session output can be monitored (by the output to standard output)
+# and can be disconnected when the time is right without killing the java process and without creating any output
+# file due to the use of /dev/null
 nohup $COMMAND | tee /dev/null
 

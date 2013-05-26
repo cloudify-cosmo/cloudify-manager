@@ -28,11 +28,13 @@ public class SSHConnectionInfo {
     private final String host;
     private final int port;
     private final String userName;
+    private final String keyFile;
 
-    public SSHConnectionInfo(String host, int port, String userName) {
+    public SSHConnectionInfo(String host, int port, String userName, String keyFile) {
         this.host = host;
         this.port = port;
         this.userName = userName;
+        this.keyFile = keyFile;
     }
 
     public String getHost() {
@@ -45,6 +47,10 @@ public class SSHConnectionInfo {
 
     public int getPort() {
         return port;
+    }
+
+    public String getKeyFile() {
+        return keyFile;
     }
 
     @Override

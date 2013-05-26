@@ -16,13 +16,16 @@
 
 package org.cloudifysource.cosmo.bootstrap.config;
 
-import org.cloudifysource.cosmo.bootstrap.BootstrapSetup;
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.bootstrap.ssh.SSHBootstrapper;
-import org.cloudifysource.cosmo.bootstrap.ssh.SSHClient;
+import org.cloudifysource.cosmo.bootstrap.ssh.SSHScriptExecutor;
+import org.hibernate.validator.constraints.NotEmpty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
+import java.util.Map;
 
 /**
  * Creates a new {@link org.cloudifysource.cosmo.bootstrap.ssh.SSHBootstrapper}.
@@ -34,14 +37,30 @@ import javax.inject.Inject;
 public class SSHBootstrapperConfig {
 
     @Inject
-    private SSHClient sshClient;
+    private SSHScriptExecutor sshClient;
 
-    @Inject
-    private BootstrapSetup bootstrapSetup;
+    @NotEmpty
+    @Value("${cosmo.bootstrap.work-dir}")
+    protected String workDirectory;
+
+    @NotEmpty
+    @Value("${cosmo.bootstrap.bootstrap-script-resource}")
+    private String bootstrapScriptResource;
+
+    @NotEmpty
+    @Value("${cosmo.bootstrap.bootstrap-properties-resource}")
+    private String bootstrapPropertiesResource;
+
+    protected void addEnviromentVariables(Map<String, String> environmentVariables) {
+
+    }
 
     @Bean
     public SSHBootstrapper sshBoostrapper() {
-        return new SSHBootstrapper(sshClient, bootstrapSetup);
+        Map<String, String> environmentVariables = Maps.newHashMap();
+        addEnviromentVariables(environmentVariables);
+        return new SSHBootstrapper(sshClient, workDirectory, bootstrapScriptResource,
+                environmentVariables, bootstrapPropertiesResource);
     }
 
 }

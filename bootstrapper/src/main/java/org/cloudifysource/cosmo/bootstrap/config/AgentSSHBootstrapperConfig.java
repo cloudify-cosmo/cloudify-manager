@@ -14,47 +14,42 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.bootstrap;
+package org.cloudifysource.cosmo.bootstrap.config;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
+import org.hibernate.validator.constraints.NotEmpty;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
 
 /**
- * A {@link BootstrapSetup} implementation to start an agent process.
+ * Creates a new {@link org.cloudifysource.cosmo.bootstrap.ssh.SSHBootstrapper}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public class AgentBootstrapSetup extends BootstrapSetup {
+@Configuration
+public class AgentSSHBootstrapperConfig extends SSHBootstrapperConfig {
 
     private static final String COSMO_ENV_JAVA_URL = "COSMO_ENV_JAVA_URL";
     private static final String COSMO_URL = "COSMO_URL";
     private static final String COSMO_WORK_DIRECTORY = "COSMO_WORK_DIRECTORY";
 
-    private final String cosmoUrl;
-    private final String javaUrl;
+    @NotEmpty
+    @Value("${cosmo.bootstrap.cosmo-url}")
+    private String cosmoUrl;
 
-    public AgentBootstrapSetup(String scriptResourceLocation,
-                               String workDirectory,
-                               String propertiesResourceLocation,
-                               String cosmoUrl,
-                               String javaUrl) {
-        super(scriptResourceLocation, workDirectory, propertiesResourceLocation);
-        this.cosmoUrl = cosmoUrl;
-        this.javaUrl = javaUrl;
-    }
+    @Value("${cosmo.bootstrap.java-url:}")
+    private String javaUrl;
 
     @Override
-    public Map<String, String> getScriptEnvironment() {
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.<String, String>builder()
-            .put(COSMO_WORK_DIRECTORY, getWorkDirectory())
-            .put(COSMO_URL, cosmoUrl);
+    protected void addEnviromentVariables(Map<String, String> environmentVariables) {
+        super.addEnviromentVariables(environmentVariables);
+        environmentVariables.put(COSMO_WORK_DIRECTORY, workDirectory);
+        environmentVariables.put(COSMO_URL, cosmoUrl);
         if (!Strings.isNullOrEmpty(javaUrl)) {
-            builder.put(COSMO_ENV_JAVA_URL, javaUrl);
+            environmentVariables.put(COSMO_ENV_JAVA_URL, javaUrl);
         }
-        return builder.build();
     }
-
 }

@@ -16,47 +16,41 @@
 
 package org.cloudifysource.cosmo.bootstrap.config;
 
-import org.cloudifysource.cosmo.bootstrap.AgentBootstrapSetup;
+import org.cloudifysource.cosmo.bootstrap.ssh.SSHScriptExecutor;
 import org.hibernate.validator.constraints.NotEmpty;
+import org.hibernate.validator.constraints.Range;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Creats a new {@link org.cloudifysource.cosmo.bootstrap.AgentBootstrapSetup}.
+ * Creates a new {@link org.cloudifysource.cosmo.bootstrap.ssh.SSHScriptExecutor}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class AgentBootstrapSetupConfig {
+public class SSHScriptExecutorConfig {
 
     @NotEmpty
-    @Value("${cosmo.bootstrap.work-dir}")
-    private String workDirectory;
+    @Value("${cosmo.ssh-client.host}")
+    private String host;
+
+    @Range(min = 1, max = 65535)
+    @Value("${cosmo.ssh-client.port:22}")
+    private int port;
 
     @NotEmpty
-    @Value("${cosmo.bootstrap.cosmo-url}")
-    private String cosmoUrl;
-
-    @Value("${cosmo.bootstrap.java-url:}")
-    private String javaUrl;
+    @Value("${cosmo.ssh-client.username}")
+    private String userName;
 
     @NotEmpty
-    @Value("${cosmo.bootstrap.bootstrap-script-resource}")
-    private String bootstrapScriptResource;
-
-    @NotEmpty
-    @Value("${cosmo.bootstrap.bootstrap-properties-resource}")
-    private String bootstrapPropertiesResource;
+    @Value("${cosmo.ssh-client.key-file}")
+    private String keyFile;
 
     @Bean
-    public AgentBootstrapSetup agentBootstrapSetup() {
-        return new AgentBootstrapSetup(bootstrapScriptResource,
-                                       workDirectory,
-                                       bootstrapPropertiesResource,
-                                       cosmoUrl,
-                                       javaUrl);
+    public SSHScriptExecutor sshScriptExecutor() {
+        return new SSHScriptExecutor(host, port, userName, keyFile);
     }
 
 }

@@ -16,28 +16,34 @@
 
 package org.cloudifysource.cosmo.bootstrap.ssh;
 
-import com.google.common.base.Joiner;
-
-import java.util.Map;
-
 /**
- * Script files related utility methods.
+ * Encapsulates a string that is to be copied to a remote host a file.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public class ScriptUtils {
+public class StringToCopyAsFile {
 
-    /**
-     * @param env Map with variables to be expored.
-     * @return a String in which every line matches an export statement matching an entry in 'env'
-     */
-    public static String toEnvScript(Map<String, String> env) {
-        StringBuilder result = new StringBuilder("export ");
-        return Joiner.on("\nexport ")
-                .withKeyValueSeparator("=")
-                .appendTo(result, env)
-                .toString();
+    private final String parentRemotePath;
+    private final String name;
+    private final String content;
+
+    public StringToCopyAsFile(String parentRemotePath, String name, String content) {
+        this.parentRemotePath = parentRemotePath;
+        this.name = name;
+        this.content = content;
+    }
+
+    public String getParentRemotePath() {
+        return parentRemotePath;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getContent() {
+        return content;
     }
 
 }
