@@ -27,6 +27,7 @@ import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 
 import java.net.URL;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -59,20 +60,26 @@ public class RuoteRuntime {
         return createRuntime(null);
     }
 
-    public static RuoteRuntime createRuntime(Map<String, Object> properties) {
+    public static RuoteRuntime createRuntime(Map<String, Object> globalProperties,
+                                             Map<String, Object> dashboardVariables) {
         try {
             LOGGER.debug("Creating ruote runtime...");
             final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
             updateLibraryPath(container, "ruote-gems/gems");
             updateLibraryPath(container, "scripts");
-            container.put("$ruote_properties", properties != null ? properties : Maps.newHashMap());
+            container.put("$ruote_properties", globalProperties != null ? globalProperties : Maps.newHashMap());
             container.put("$logger", LOGGER);
-            Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
-            Object dashboard = container.callMethod(receiver, CREATE_DASHBOARD_METHOD_NAME);
+            final Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
+            final Object dashboard =
+                    container.callMethod(receiver, CREATE_DASHBOARD_METHOD_NAME, dashboardVariables);
             return new RuoteRuntime(container, receiver, dashboard);
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    public static RuoteRuntime createRuntime(Map<String, Object> globalProperties) {
+        return createRuntime(globalProperties, Collections.<String, Object>emptyMap());
     }
 
     private static void updateLibraryPath(ScriptingContainer container, String resourcesRoot) {

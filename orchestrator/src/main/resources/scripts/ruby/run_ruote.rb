@@ -30,19 +30,33 @@ require 'net/http'
 require 'java'
 require 'participants'
 
+java_import com.google.common.io.Resources
+java_import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable
+
 def to_map(java_map)
   map = Hash.new
   java_map.each { |key, value| map[key] = value }
   map
 end
 
-def create_dashboard
+def create_dashboard(dashboard_variables)
   dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
   dashboard.register_participant 'java', JavaClassParticipant
   dashboard.register_participant 'state', StateCacheParticipant
   dashboard.register_participant 'resource', ResourceManagerParticipant
   dashboard.register_participant 'resource_monitor', ResourceMonitorParticipant
   dashboard.register_participant 'execute_task', ExecuteTaskParticipant
+
+  dashboard_variables.each do |key, value|
+    converted_value = value
+    if value.java_kind_of? RuoteRadialVariable
+      converted_value = parse_workflow(value.get_radial)
+    elsif value.java_kind_of? java.util.Map
+      converted_value = to_map(value)
+    end
+    dashboard.variables[key] = converted_value
+  end
+
   dashboard
 end
 

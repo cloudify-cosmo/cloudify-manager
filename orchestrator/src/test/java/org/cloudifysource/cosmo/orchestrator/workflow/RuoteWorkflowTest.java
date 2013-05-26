@@ -15,8 +15,13 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import com.google.common.collect.Maps;
+import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.util.Collections;
+import java.util.Map;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -37,6 +42,24 @@ public class RuoteWorkflowTest {
         Workflow workflow = RuoteWorkflow.createFromResource("workflows/radial/java_workflow.radial", runtime);
         workflow.execute();
         assertThat(RuoteJavaParticipant.get()).isEqualTo(3);
+    }
+
+    @Test(timeOut = 10000)
+    public void testRuoteDashboardVariables() {
+        final Map<String, Object> variables = Maps.newHashMap();
+        variables.put("my_process", new RuoteRadialVariable("define my_process\n" +
+                "  echo 'my_process'\n" +
+                "  java class: 'org.cloudifysource.cosmo.orchestrator.workflow.RuoteJavaParticipant'\n"));
+
+        final RuoteRuntime runtime = RuoteRuntime.createRuntime(Collections.<String, Object>emptyMap(), variables);
+
+        final String radial = "define my_workflow\n" +
+                "  echo 'my_workflow'\n" +
+                "  my_process\n";
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+        workflow.execute();
+
+        assertThat(RuoteJavaParticipant.get()).isEqualTo(1);
     }
 
 }
