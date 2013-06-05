@@ -1,0 +1,5 @@
+define provision
+  execute_task target: '${cosmo.provisioner_topic}', payload: {
+    exec: 'start_machine',
+    resource_id: '${v:machine_id}'
+  }

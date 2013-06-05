@@ -14,10 +14,17 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-require 'participants/java_participant'
-require 'participants/state_cache_participant'
-require 'participants/resource_manager'
-require 'participants/resource_monitor_participant'
-require 'participants/execute_task_participant'
-require 'participants/prepare_plan_participant'
+class PreparePlanParticipant < Ruote::Participant
 
+  def on_workitem
+    begin
+      raise 'dsl not set' unless workitem.fields.has_key? 'dsl'
+
+    rescue Exception => e
+      $logger.debug('Exception caught on prepare_plan participant execution: {}', e)
+      remove_listener
+      raise e
+    end
+  end
+
+end
