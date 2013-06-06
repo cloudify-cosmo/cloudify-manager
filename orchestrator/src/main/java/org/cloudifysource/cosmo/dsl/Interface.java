@@ -21,7 +21,8 @@ import com.google.common.collect.Lists;
 import java.util.List;
 
 /**
- * TODO write javadoc.
+ * A class used to represent the interface of a type.
+ * Used internally only by the dsl processor.
  *
  * @author Dan Kilman
  * @since 0.1

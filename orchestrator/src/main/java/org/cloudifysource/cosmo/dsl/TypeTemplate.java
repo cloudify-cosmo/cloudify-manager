@@ -21,20 +21,20 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 /**
-* TODO: Write a short summary of this type's roles and responsibilities.
+ * A class used to represent a type template.
 *
 * @author Dan Kilman
 * @since 0.1
 */
 public class TypeTemplate extends Type {
 
-    private Map<String, String> relationships;
+    private Map<String, Object> relationships;
 
-    public Map<String, String> getRelationships() {
+    public Map<String, Object> getRelationships() {
         return relationships;
     }
 
-    public void setRelationships(Map<String, String> relationships) {
+    public void setRelationships(Map<String, Object> relationships) {
         this.relationships = relationships;
     }
 

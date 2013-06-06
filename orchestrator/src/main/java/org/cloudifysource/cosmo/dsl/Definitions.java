@@ -19,7 +19,8 @@ package org.cloudifysource.cosmo.dsl;
 import java.util.Map;
 
 /**
- * TODO write javadoc.
+ * A class used to represent the top level definitions of the dsl.
+ * Used internally only by the dsl processor.
  *
  * @author Dan Kilman
  * @since 0.1

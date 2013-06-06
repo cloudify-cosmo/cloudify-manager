@@ -78,8 +78,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Test(timeOut = 30000)
     public void testPlanExecution() throws IOException, InterruptedException {
-        final String machineId = "machine";
-        final String databaseId = "database";
+        final String machineId = "mysql_machine";
+        final String databaseId = "mysql_database_server";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
                 "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 

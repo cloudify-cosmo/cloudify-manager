@@ -17,7 +17,7 @@
 package org.cloudifysource.cosmo.dsl.tree;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * A simple visitor interface to visit each node of a {@link Tree<T>}.
  *
  * @param <T> The node type.
  *

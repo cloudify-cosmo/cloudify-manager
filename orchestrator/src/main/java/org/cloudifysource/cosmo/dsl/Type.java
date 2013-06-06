@@ -21,7 +21,8 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 /**
- * TODO write javadoc.
+ * A class used to represent a type.
+ * Used internally only by the dsl processor.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -42,7 +43,7 @@ public class Type implements Named {
     private String type;
     private Map<String, Interface> interfaces;
     // TODO DSL should be string -> object
-    private Map<String, String> properties;
+    private Map<String, Object> properties;
 
     public String getName() {
         return name;
@@ -68,11 +69,11 @@ public class Type implements Named {
         this.interfaces = interfaces;
     }
 
-    public Map<String, String> getProperties() {
+    public Map<String, Object> getProperties() {
         return properties;
     }
 
-    public void setProperties(Map<String, String> properties) {
+    public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }
 

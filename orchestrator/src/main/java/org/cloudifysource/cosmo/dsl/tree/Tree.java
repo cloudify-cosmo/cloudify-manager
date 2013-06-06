@@ -22,7 +22,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * A Tree based data structure where each node can have any number of children.
  *
  * @param <T> The tree node type.
  *

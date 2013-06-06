@@ -22,7 +22,7 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Represents a node in a {@link Tree<T>}.
  *
  * @param <T> The node type.
  *

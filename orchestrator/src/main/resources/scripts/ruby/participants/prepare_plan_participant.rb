@@ -14,30 +14,26 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
+java_import org.cloudifysource.cosmo.dsl.DSLProcessor
+require 'json'
+
 class PreparePlanParticipant < Ruote::Participant
 
   def on_workitem
     begin
-      # raise 'dsl not set' unless workitem.fields.has_key? 'dsl'
+      raise 'dsl not set' unless workitem.params.has_key? 'dsl'
 
-      # prepare plan
+      raw_dsl = workitem.params['dsl']
 
-      # any ruote workflows in the plan should be parsed
-      plan = Hash.new
+      processed_dsl = DSLProcessor.process(raw_dsl)
 
-      machine = Hash[ 'id' => 'machine/1', 'properties' => Hash[ 'image' => 'aws34234234' ] ]
-      machine['relationships'] = Array.new
-      machine_init = "define machine_init\n  echo ' -> machine_init'\n"
-      machine['workflows'] = Hash['init' => Ruote::RadialReader.read(machine_init)]
+      plan = JSON.parse(processed_dsl)
 
-      database = Hash[ 'id' => 'database/1', 'properties' => Hash[ 'port' => '3306' ] ]
-      database['relationships'] = Array[ Hash['type' => 'hosted_on', 'target_id' => 'machine/1'] ]
-      database_init = "define database_init\n  echo ' -> database_init'\n"
-      database['workflows'] = Hash['init' => Ruote::RadialReader.read(database_init)]
-
-      nodes = Array[machine, database]
-
-      plan['nodes'] = nodes
+      plan['nodes'].each do |node|
+        workflows = Hash.new
+        node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value)  }
+        node['workflows'] = workflows
+      end
 
       workitem.fields['plan'] = plan
 

@@ -17,7 +17,7 @@
 package org.cloudifysource.cosmo.dsl;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Helper interface used during dsl processing for name map.
  *
  * @author Dan Kilman
  * @since 0.1
