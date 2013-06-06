@@ -18,19 +18,13 @@ package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
-import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Collections;
-import java.util.Map;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * TODO: Write tests.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -55,16 +49,6 @@ public class DSLProcessorTest {
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
-    }
-
-    @Test
-    public void testRuoteExecutePlan() throws IOException {
-        URL url = Resources.getResource("org/cloudifysource/cosmo/dsl/dsl.json");
-        String dsl = Resources.toString(url, Charsets.UTF_8);
-        Map<String, Object> properties = ImmutableMap.<String, Object>builder().put("dsl", dsl).build();
-        final RuoteRuntime runtime = RuoteRuntime.createRuntime(Collections.<String, Object>emptyMap());
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource("ruote/pdefs/execute_plan.radial", runtime);
-        workflow.execute(properties);
     }
 
 }
