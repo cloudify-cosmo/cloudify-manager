@@ -41,9 +41,9 @@ public class Type implements Named {
     private String name;
     // denotes parent type
     private String type;
-    private Map<String, Interface> interfaces;
+    private Map<String, Interface> interfaces = Maps.newHashMap();
     // TODO DSL should be string -> object
-    private Map<String, Object> properties;
+    private Map<String, Object> properties = Maps.newHashMap();
 
     public String getName() {
         return name;
@@ -78,31 +78,20 @@ public class Type implements Named {
     }
 
     public void inheritPropertiesFrom(Type other) {
-        if (other.getInterfaces() != null) {
-            if (interfaces == null) {
-                interfaces = Maps.newHashMap();
-            }
-            for (Map.Entry<String, Interface> entry : other.getInterfaces().entrySet()) {
-                String otherInterfaceName = entry.getKey();
-                Interface otherInterface = entry.getValue();
-                if (interfaces.containsKey(otherInterfaceName)) {
-                    Interface theInterface = interfaces.get(otherInterfaceName);
-                    theInterface.inheritPropertiesFrom(otherInterface);
-                } else {
-                    Interface theInterface = new Interface();
-                    theInterface.setName(otherInterfaceName);
-                    theInterface.inheritPropertiesFrom(otherInterface);
-                    interfaces.put(otherInterfaceName, theInterface);
-                }
+        for (Map.Entry<String, Interface> entry : other.getInterfaces().entrySet()) {
+            String otherInterfaceName = entry.getKey();
+            Interface otherInterface = entry.getValue();
+            if (interfaces.containsKey(otherInterfaceName)) {
+                Interface theInterface = interfaces.get(otherInterfaceName);
+                theInterface.inheritPropertiesFrom(otherInterface);
+            } else {
+                Interface theInterface = new Interface();
+                theInterface.setName(otherInterfaceName);
+                theInterface.inheritPropertiesFrom(otherInterface);
+                interfaces.put(otherInterfaceName, theInterface);
             }
         }
-
-        if (properties != null && other.getProperties() != null) {
-            properties.putAll(other.getProperties());
-        } else if (other.getProperties() != null) {
-            this.properties = Maps.newHashMap(other.getProperties());
-        }
-
+        properties.putAll(other.getProperties());
     }
 
 }

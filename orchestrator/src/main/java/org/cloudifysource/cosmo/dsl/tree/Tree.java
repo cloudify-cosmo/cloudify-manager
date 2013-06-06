@@ -18,8 +18,10 @@ package org.cloudifysource.cosmo.dsl.tree;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A Tree based data structure where each node can have any number of children.
@@ -53,7 +55,15 @@ public class Tree<T> {
     }
 
     public void validateLegalTree() {
-        // TODO DSL implement
+        final Set<Node<T>> traversedNodes = Sets.newHashSet();
+        traverseParentThenChildren(new Visitor<T>() {
+            @Override
+            public void visit(Node<T> node) {
+                boolean exists = !traversedNodes.add(node);
+                Preconditions.checkState(!exists, "Tree is not valid");
+            }
+        });
+        Preconditions.checkState(traversedNodes.size() == nodes.size(), "Tree is not valid");
     }
 
     public void traverseParentThenChildren(Visitor<T> visitor) {

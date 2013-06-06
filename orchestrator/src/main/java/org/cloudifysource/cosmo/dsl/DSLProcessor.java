@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -77,13 +78,11 @@ public class DSLProcessor {
             List<Object> relationships = Lists.newLinkedList();
             // TODO DSL Handle proper typing for relationship (i.e. should be in sync with relationship
             // inheritance
-            if (typeTemplate.getRelationships() != null) {
-                for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
-                    Map<String, Object> relationshipMap = Maps.newHashMap();
-                    relationshipMap.put("type", entry.getKey());
-                    relationshipMap.put("target_id", entry.getValue());
-                    relationships.add(relationshipMap);
-                }
+            for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
+                Map<String, Object> relationshipMap = Maps.newHashMap();
+                relationshipMap.put("type", entry.getKey());
+                relationshipMap.put("target_id", entry.getValue());
+                relationships.add(relationshipMap);
             }
             node.put("relationships", relationships);
             Map<String, String> workflows = Maps.newHashMap();
@@ -104,8 +103,9 @@ public class DSLProcessor {
             TypeTemplate typeTemplate = entry.getValue();
 
             TypeTemplate populatedTemplate = new TypeTemplate();
-            // TODO DSL validate we have a valid type here
             Type typeTemplateParentType = populatedTypes.get(typeTemplate.getType());
+            Preconditions.checkArgument(typeTemplateParentType != null, "Missing type %s for %s", templateName,
+                    typeTemplate.getType());
             populatedTemplate.inheritPropertiesFrom(typeTemplateParentType);
             populatedTemplate.inheritPropertiesFrom(typeTemplate);
             populatedTemplate.setName(templateName);
@@ -157,8 +157,8 @@ public class DSLProcessor {
         Map<String, Definitions> topLevel = mapper.readValue(dsl,
                 new TypeReference<Map<String, Definitions>>() { });
 
-        // TODO DSL validate exists
         Definitions definitions = topLevel.get("definitions");
+        Preconditions.checkArgument(definitions != null, "Missing definitions in provided dsl");
 
         setNames(definitions.getProviders());
         setNames(definitions.getRelationships());
@@ -174,9 +174,6 @@ public class DSLProcessor {
     }
 
     private static void setNames(Map<String, ? extends Named> namedEntries) {
-        if (namedEntries == null) {
-            return;
-        }
         for (Map.Entry<String, ? extends Named> entry : namedEntries.entrySet()) {
             entry.getValue().setName(entry.getKey());
         }

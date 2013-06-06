@@ -28,7 +28,7 @@ import java.util.Map;
 */
 public class TypeTemplate extends Type {
 
-    private Map<String, Object> relationships;
+    private Map<String, Object> relationships = Maps.newHashMap();
 
     public Map<String, Object> getRelationships() {
         return relationships;
@@ -40,10 +40,6 @@ public class TypeTemplate extends Type {
 
     public void inheritPropertiesFrom(TypeTemplate other) {
         super.inheritPropertiesFrom(other);
-        if (relationships != null && other.getRelationships() != null) {
-            relationships.putAll(other.getRelationships());
-        } else if (other.getRelationships() != null) {
-            relationships = Maps.newHashMap(other.getRelationships());
-        }
+        relationships.putAll(other.getRelationships());
     }
 }

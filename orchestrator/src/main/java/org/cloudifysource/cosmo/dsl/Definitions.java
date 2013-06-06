@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.collect.Maps;
+
 import java.util.Map;
 
 /**
@@ -27,13 +29,13 @@ import java.util.Map;
  */
 public class Definitions {
 
-    private Map<String, Type> types;
-    private Map<String, Relationship> relationships;
-    private Map<String, Provider> providers;
+    private Map<String, Type> types = Maps.newHashMap();
+    private Map<String, Relationship> relationships = Maps.newHashMap();
+    private Map<String, Provider> providers = Maps.newHashMap();
 
     // TODO DSL currently this is a service template. should be extracted to its own type
     // once we introduce plans into it
-    private Map<String, TypeTemplate> serviceTemplate;
+    private Map<String, TypeTemplate> serviceTemplate = Maps.newHashMap();
 
     public Map<String, Type> getTypes() {
         return types;

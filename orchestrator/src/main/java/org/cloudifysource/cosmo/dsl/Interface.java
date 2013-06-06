@@ -31,7 +31,7 @@ public class Interface implements Named {
 
     private String name;
     private String provider;
-    private List<String> operations;
+    private List<String> operations = Lists.newArrayList();
 
     public String getName() {
         return name;
@@ -59,11 +59,7 @@ public class Interface implements Named {
 
     public void inheritPropertiesFrom(Interface other) {
         setProvider(other.getProvider());
-        if (operations != null && other.getOperations() != null) {
-            operations.addAll(other.getOperations());
-        } else if (other.getOperations() != null) {
-            operations = Lists.newArrayList(other.getOperations());
-        }
+        operations.addAll(other.getOperations());
     }
 
 }
