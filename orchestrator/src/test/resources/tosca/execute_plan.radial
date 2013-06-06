@@ -1,7 +1,0 @@
-define execute_plan
-    prepare_plan
-    concurrent_iterator on: "${plan.nodes}", to_field: "node"
-        concurrent_iterator on: "${node.relationships}", to_field: "relationship"
-            state resource_id: "${relationship.target.id}", reachable": "true"
-        set "v:init": "${node.workflows.init}"
-        init

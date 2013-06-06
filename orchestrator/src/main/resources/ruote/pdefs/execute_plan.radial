@@ -1,0 +1,14 @@
+define execute_plan
+    log message: 'preparing plan from dsl'
+    prepare_plan dsl: $dsl
+
+    log message: 'processing nodes: ${plan.nodes}'
+    iterator on: "$plan.nodes", to_v: "node"
+        log message: 'processing node: ${v:node}'
+        iterator on: "$v:node.relationships", to_v: "relationship"
+            log message: 'waiting for node dependencies: ${v:relationship}'
+            state resource_id: "${relationship.target_id}", reachable": "true"
+
+        log message: 'executing init workflow'
+        set 'v:init': "$v:node.workflows.init"
+        init

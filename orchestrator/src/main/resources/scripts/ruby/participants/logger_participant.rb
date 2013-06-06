@@ -14,11 +14,20 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-require 'participants/java_participant'
-require 'participants/state_cache_participant'
-require 'participants/resource_manager'
-require 'participants/resource_monitor_participant'
-require 'participants/execute_task_participant'
-require 'participants/prepare_plan_participant'
-require 'participants/logger_participant'
+class LoggerParticipant < Ruote::Participant
 
+  MESSAGE = 'message'
+
+  def on_workitem
+    begin
+      raise 'message not set' unless workitem.params.has_key? MESSAGE
+      message = workitem.params[MESSAGE]
+      $logger.debug('ruote-workflow: {}', message)
+      reply
+    rescue Exception => e
+      $logger.debug('Exception caught on logger participant execution: {}', e)
+      raise e
+    end
+  end
+
+end
