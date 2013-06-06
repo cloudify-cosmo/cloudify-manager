@@ -32,7 +32,7 @@ import java.net.URL;
  */
 public class DSLProcessorTest {
 
-    @Test
+//    @Test
     public void testDsl() throws IOException {
         process("org/cloudifysource/cosmo/dsl/dsl.json");
     }
