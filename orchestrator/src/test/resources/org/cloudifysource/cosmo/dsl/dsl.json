@@ -4,12 +4,7 @@
         "types": {
             "machine": {
                 "type": "node",
-                "interfaces": {
-                    "provisioner": {
-                        "provider": "default_provisioner_provider",
-                        "operations": [ "create", "start", "stop", "terminate" ]
-                    }
-                }
+                "interfaces": [ "provisioner" ]
             },
 
             "database_server": {
@@ -17,11 +12,7 @@
                 "properties": {
                     "port": ""
                 },
-                "interfaces": {
-                    "configurer": {
-                        "operations": [ "install", "start", "stop", "uninstall" ]
-                    }
-                }
+                "interfaces": [ "configurer" ]
             },
 
             "database": {
@@ -30,13 +21,47 @@
                     "name": "",
                     "schema_file": ""
                 },
-                "interfaces": {
-                    "configurer": {
-                        "operations": [ "create", "delete" ]
-                    }
-                }
+                "interfaces": [ "schema_configurer" ]
             }
 
+        },
+
+        "interfaces": {
+            "provisioner": {
+                "operations": [ "create", "start", "stop", "terminate" ]
+            },
+            "configurer": {
+                "operations": [ "install", "start" ,"stop", "uninstall" ]
+            },
+            "schema_configurer": {
+                "operations": [ "create", "delete" ]
+            }
+        },
+
+        "artifacts": {
+            "plugin": {
+            },
+            "provisioner_plugin": {
+                "type": "plugin",
+                "properties": {
+                    "interface": "provisioner",
+                    "url": "plugins/provisioner-plugin.zip"
+                }
+            },
+            "configurer_plugin": {
+                "type": "plugin",
+                "properties": {
+                    "interface": "configurer",
+                    "url": "plugins/configurer-plugin.zip"
+                }
+            },
+            "schema_configurer_plugin": {
+                "type": "plugin",
+                "properties": {
+                    "interface": "schema_configurer",
+                    "url": "plugins/schema-configurer-plugin.zip"
+                }
+            }
         },
 
         "relationships": {
@@ -44,12 +69,11 @@
             "hosted_on": { }
         },
 
-        "providers": {
-            "default_provisioner_provider": {
-                "url": "plugins/default_provisioner_plugin.zip"
-            },
-            "default_chef_provider": {
-                "url": "plugins/default_provisioner_plugin.zip"
+        "plans": {
+            "vm": {
+                "init": {
+                    "radial": "define vm_init\n  execute operation: 'create'\n  execute operation: 'start'\n"
+                }
             }
         },
 
@@ -67,11 +91,6 @@
                 "properties": {
                     "port": "3306",
                     "chef_recipe": "mysql_chef_recipe"
-                },
-                "interfaces": {
-                    "configurer": {
-                        "provider": "default_chef_provider"
-                    }
                 },
                 "relationships": {
                     "hosted_on": "mysql_machine"
