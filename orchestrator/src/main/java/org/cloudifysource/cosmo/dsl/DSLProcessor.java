@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -154,11 +153,11 @@ public class DSLProcessor {
 
     private static Definitions parseRawDsl(ObjectMapper mapper, String dsl) throws IOException {
 
-        Map<String, Definitions> topLevel = mapper.readValue(dsl,
-                new TypeReference<Map<String, Definitions>>() { });
-
-        Definitions definitions = topLevel.get("definitions");
-        Preconditions.checkArgument(definitions != null, "Missing definitions in provided dsl");
+        TopLevel topLevel = mapper.readValue(dsl, TopLevel.class);
+        Definitions definitions = topLevel.getDefinitions();
+        if (definitions == null) {
+            throw new IllegalArgumentException("Invalid DSL - does not contain definitions");
+        }
 
         setNames(definitions.getProviders());
         setNames(definitions.getRelationships());

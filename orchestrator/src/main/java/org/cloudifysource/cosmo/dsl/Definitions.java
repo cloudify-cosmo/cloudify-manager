@@ -21,7 +21,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 /**
- * A class used to represent the top level definitions of the dsl.
+ * A class used to represent the definitions of the dsl.
  * Used internally only by the dsl processor.
  *
  * @author Dan Kilman
