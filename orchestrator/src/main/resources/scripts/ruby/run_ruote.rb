@@ -47,6 +47,7 @@ def create_dashboard(dashboard_variables)
   dashboard.register_participant 'resource_monitor', ResourceMonitorParticipant
   dashboard.register_participant 'execute_task', ExecuteTaskParticipant
   dashboard.register_participant 'prepare_plan', PreparePlanParticipant
+  dashboard.register_participant 'prepare_operation', PrepareOperationParticipant
   dashboard.register_participant 'log', LoggerParticipant
 
   dashboard_variables.each do |key, value|

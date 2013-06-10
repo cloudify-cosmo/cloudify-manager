@@ -21,4 +21,5 @@ require 'participants/resource_monitor_participant'
 require 'participants/execute_task_participant'
 require 'participants/prepare_plan_participant'
 require 'participants/logger_participant'
+require 'participants/prepare_operation_participant'
 

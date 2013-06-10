@@ -1,0 +1,6 @@
+define execute_operation
+    prepare_operation operation: "${v:operation}"
+    execute_task target: '${target}', payload: {
+        exec: '${operation}',
+        properties: '$node.properties'
+    }
