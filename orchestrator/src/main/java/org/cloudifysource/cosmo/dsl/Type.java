@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -72,10 +73,12 @@ public class Type extends InheritedDefinition {
         for (Object rawOtherInterface : other.getInterfaces()) {
             InterfaceDescription otherInterface = InterfaceDescription.from(rawOtherInterface);
 
-            for (InterfaceDescription interfaceDescription : interfacesDescriptions) {
-                if (otherInterface.name.equals(interfaceDescription.name)) {
-                    interfaceDescription.implementation = otherInterface.implementation;
-                }
+            Optional<InterfaceDescription> interfaceDescription = findInterace(interfacesDescriptions, otherInterface);
+
+            if (interfaceDescription.isPresent()) {
+                interfaceDescription.get().implementation = otherInterface.implementation;
+            } else {
+                interfacesDescriptions.add(otherInterface);
             }
 
         }
@@ -85,6 +88,16 @@ public class Type extends InheritedDefinition {
             newInterfaces.add(interfaceDescription.toInterfaceRep());
         }
         setInterfaces(newInterfaces);
+    }
+
+    private Optional<InterfaceDescription> findInterace(List<InterfaceDescription> interfacesDescriptions,
+                        InterfaceDescription otherInterface) {
+        for (InterfaceDescription interfaceDescription : interfacesDescriptions) {
+            if (otherInterface.name.equals(interfaceDescription.name)) {
+                return Optional.of(interfaceDescription);
+            }
+        }
+        return Optional.absent();
     }
 
     /**
@@ -124,7 +137,8 @@ public class Type extends InheritedDefinition {
         }
 
         public Optional<String> getImplementation() {
-            return Optional.fromNullable(implementation);
+            return Strings.isNullOrEmpty(implementation) ? Optional.<String>absent()
+                                                         : Optional.of(implementation);
         }
 
     }

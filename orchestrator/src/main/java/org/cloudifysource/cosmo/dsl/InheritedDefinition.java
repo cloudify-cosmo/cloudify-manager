@@ -84,7 +84,7 @@ public abstract class InheritedDefinition extends Definition {
             return true;
         }
         for (String superType : superTypes) {
-            if (Objects.equal(otherType, this.type)) {
+            if (Objects.equal(otherType, superType)) {
                 return true;
             }
         }

@@ -73,17 +73,17 @@
         "plans": {
             "machine": {
                 "init": {
-                    "radial": "define machine_init\n  execute operation: 'create'\n  execute operation: 'start'\n"
+                    "radial": "define machine_init\n  execute_operation operation: 'create'\n  execute_operation operation: 'start'\n"
                 }
             },
             "database_server": {
                 "init": {
-                    "radial": "define machine_init\n  execute operation: 'install'\n  execute operation: 'start'\n"
+                    "radial": "define database_server_init\n  execute_operation operation: 'install'\n  execute_operation operation: 'start'\n"
                 }
             },
             "database": {
                 "init": {
-                    "radial": "define machine_init\n  execute operation: 'create'\n"
+                    "radial": "define database_init\n  execute_operation operation: 'create'\n"
                 }
             }
         },

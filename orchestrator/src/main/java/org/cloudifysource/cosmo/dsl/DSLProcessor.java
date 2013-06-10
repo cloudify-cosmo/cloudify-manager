@@ -26,6 +26,8 @@ import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.dsl.tree.Node;
 import org.cloudifysource.cosmo.dsl.tree.Tree;
 import org.cloudifysource.cosmo.dsl.tree.Visitor;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -38,6 +40,7 @@ import java.util.Map;
  */
 public class DSLProcessor {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DSLProcessor.class);
     private static final ObjectMapper OBJECT_MAPPER = newObjectMapper();
 
     /**
@@ -45,6 +48,8 @@ public class DSLProcessor {
      * @return A processed json dsl to be used by the workflow engine.
      */
     public static String process(String dsl, DSLPostProcessor postProcessor) {
+
+        LOG.debug("Starting dsl processing");
 
         try {
 
@@ -65,7 +70,9 @@ public class DSLProcessor {
                     populatedTypeTemplates,
                     populatedArtifacts);
 
-            return OBJECT_MAPPER.writeValueAsString(plan);
+            String result = OBJECT_MAPPER.writeValueAsString(plan);
+            LOG.debug("Processed dsl is: {}", result);
+            return result;
 
         } catch (IOException e) {
             throw Throwables.propagate(e);

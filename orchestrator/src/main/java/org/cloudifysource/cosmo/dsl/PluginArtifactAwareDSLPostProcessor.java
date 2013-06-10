@@ -35,16 +35,13 @@ import java.util.Set;
  */
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
-    public static final PluginArtifactAwareDSLPostProcessor INSTANCE =
-            new PluginArtifactAwareDSLPostProcessor();
-
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
                                            Map<String, TypeTemplate> populatedTypeTemplates,
                                            Map<String, Artifact> populatedArtifacts) {
 
         Map<String, Set<String>> interfacePluginImplementations =
-                extractInterfacePluginImplementations(populatedArtifacts);
+                extractInterfacePluginImplementations(definitions.getInterfaces(), populatedArtifacts);
 
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
@@ -60,8 +57,13 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         return result;
     }
 
-    private Map<String, Set<String>> extractInterfacePluginImplementations(Map<String, Artifact> populatedArtifacts) {
+    private Map<String, Set<String>> extractInterfacePluginImplementations(Map<String, Interface> interfaces,
+                                                                           Map<String, Artifact> populatedArtifacts) {
         Map<String, Set<String>> interfacePluginImplementations = Maps.newHashMap();
+        for (String interfaceName : interfaces.keySet()) {
+            interfacePluginImplementations.put(interfaceName, Sets.<String>newHashSet());
+        }
+
         for (Artifact artifact : populatedArtifacts.values()) {
             if (!artifact.isInstanceOf("plugin")) {
                 continue;
@@ -73,9 +75,11 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             String pluginInterface = (String) artifact.getProperties().get("interface");
             Set<String> implementingPlugins = interfacePluginImplementations.get(pluginInterface);
             if (implementingPlugins == null) {
-                implementingPlugins = Sets.newHashSet();
+                throw new IllegalArgumentException("Plugin references a non defined interface [" +
+                        pluginInterface + "]");
             }
             implementingPlugins.add(artifact.getName());
+            interfacePluginImplementations.put(pluginInterface, implementingPlugins);
         }
         return interfacePluginImplementations;
     }
@@ -134,7 +138,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         if (!initWorkflow.isPresent()) {
             throw new IllegalArgumentException("No init workflow found for template: " + typeTemplate.getName());
         }
-        workflows.put("init", initWorkflow);
+        workflows.put("init", initWorkflow.get());
 
         node.put("workflows", workflows);
     }
@@ -166,11 +170,12 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
             // find and validate exactly 1 matching plugin implementation
             Set<String> pluginImplementations = interfacesToPluginImplementations.get(interfaceDescription.getName());
+
             String pluginImplementation;
             if (interfaceDescription.getImplementation().isPresent()) {
                 if (!pluginImplementations.contains(interfaceDescription.getImplementation().get())) {
                     throw new IllegalArgumentException("Explicit plugin [" + interfaceDescription.getImplementation()
-                            .get());
+                            .get() + "] not defined.");
                 }
                 pluginImplementation = interfaceDescription.getImplementation().get();
             } else {

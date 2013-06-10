@@ -45,7 +45,7 @@ public class DSLProcessorTest {
         try {
             URL url = Resources.getResource(resourceName);
             String jsonDsl = Resources.toString(url, Charsets.UTF_8);
-            DSLProcessor.process(jsonDsl, PluginArtifactAwareDSLPostProcessor.INSTANCE);
+            DSLProcessor.process(jsonDsl, new PluginArtifactAwareDSLPostProcessor());
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

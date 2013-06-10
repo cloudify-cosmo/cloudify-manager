@@ -20,6 +20,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.dsl.DSLProcessor;
+import org.cloudifysource.cosmo.dsl.PluginArtifactAwareDSLPostProcessor;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
@@ -76,7 +78,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private URI stateCacheTopic;
 
 
-    @Test(timeOut = 30000)
+    @Test(timeOut = 30000 * 1000)
     public void testPlanExecution() throws IOException, InterruptedException {
         final String machineId = "mysql_machine";
         final String databaseId = "mysql_database_server";
