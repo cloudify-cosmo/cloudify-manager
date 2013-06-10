@@ -17,10 +17,8 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * A class used to represent the interface of a type.

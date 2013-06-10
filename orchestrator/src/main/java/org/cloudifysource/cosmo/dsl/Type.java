@@ -73,10 +73,10 @@ public class Type extends InheritedDefinition {
         for (Object rawOtherInterface : other.getInterfaces()) {
             InterfaceDescription otherInterface = InterfaceDescription.from(rawOtherInterface);
 
-            Optional<InterfaceDescription> interfaceDescription = findInterace(interfacesDescriptions, otherInterface);
+            Optional<InterfaceDescription> interfaceDescription = findInterface(interfacesDescriptions, otherInterface);
 
             if (interfaceDescription.isPresent()) {
-                interfaceDescription.get().implementation = otherInterface.implementation;
+                interfaceDescription.get().setImplementation(otherInterface.implementation);
             } else {
                 interfacesDescriptions.add(otherInterface);
             }
@@ -90,8 +90,8 @@ public class Type extends InheritedDefinition {
         setInterfaces(newInterfaces);
     }
 
-    private Optional<InterfaceDescription> findInterace(List<InterfaceDescription> interfacesDescriptions,
-                        InterfaceDescription otherInterface) {
+    private Optional<InterfaceDescription> findInterface(List<InterfaceDescription> interfacesDescriptions,
+                                                         InterfaceDescription otherInterface) {
         for (InterfaceDescription interfaceDescription : interfacesDescriptions) {
             if (otherInterface.name.equals(interfaceDescription.name)) {
                 return Optional.of(interfaceDescription);
@@ -137,8 +137,11 @@ public class Type extends InheritedDefinition {
         }
 
         public Optional<String> getImplementation() {
-            return Strings.isNullOrEmpty(implementation) ? Optional.<String>absent()
-                                                         : Optional.of(implementation);
+            return Strings.isNullOrEmpty(implementation) ? Optional.<String>absent() : Optional.of(implementation);
+        }
+
+        private void setImplementation(String implementation) {
+            this.implementation = implementation;
         }
 
     }

@@ -22,8 +22,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.dsl.DSLProcessor;
-import org.cloudifysource.cosmo.dsl.PluginArtifactAwareDSLPostProcessor;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -171,6 +169,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         return message;
     }
 
+    /**
+     */
     private static class PluginExecutionMessageConsumerListener
             implements MessageConsumerListener<ExecuteTaskMessage> {
         private CountDownLatch latch;
