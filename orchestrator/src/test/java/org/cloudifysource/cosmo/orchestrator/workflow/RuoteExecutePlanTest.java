@@ -17,6 +17,8 @@
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
@@ -24,11 +26,15 @@ import org.cloudifysource.cosmo.dsl.DSLProcessor;
 import org.cloudifysource.cosmo.dsl.PluginArtifactAwareDSLPostProcessor;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
+import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -41,8 +47,10 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Idan Moyal
@@ -74,6 +82,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MessageProducer messageProducer;
 
+    @Inject
+    private MessageConsumer messageConsumer;
+
     @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
@@ -86,8 +97,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 
         final Map<String, Object> fields = Maps.newHashMap();
-        final URL dslResource = Resources.getResource("org/cloudifysource/cosmo/dsl/dsl.json");
-        final String dsl = Resources.toString(dslResource, Charsets.UTF_8);
+        final String dsl = getResourceAsString("org/cloudifysource/cosmo/dsl/dsl.json");
         fields.put("dsl", dsl);
 
         final Object wfid = workflow.asyncExecute(fields);
@@ -97,6 +107,56 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(databaseId));
 
         ruoteRuntime.waitForWorkflow(wfid);
+    }
+
+    @Test(timeOut = 30000)
+    public void testExecuteOperation() throws URISyntaxException, InterruptedException {
+        final String operation = "test";
+        final Map<String, Object> props = Maps.newHashMap();
+        props.put("message_consumer", messageConsumer);
+        props.put("message_producer", messageProducer);
+        final Map<String, Object> variables = Maps.newHashMap();
+        final String executePlanRadial = getResourceAsString("ruote/pdefs/execute_operation.radial");
+        variables.put("execute_operation", new RuoteRadialVariable(executePlanRadial));
+        final RuoteRuntime runtime = RuoteRuntime.createRuntime(props, variables);
+        final String radial = "define flow\n" +
+                "  execute_operation operation: '" + operation + "'\n";
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+        final Map<String, Object> fields = Maps.newHashMap();
+        final Map<String, Object> node = Maps.newHashMap();
+        final Map<String, Object> operations = Maps.newHashMap();
+        final String plugin = "some-plugin";
+        operations.put(operation, plugin);
+        node.put("operations", operations);
+        fields.put("node", node);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        messageConsumer.addListener(new URI(plugin), new MessageConsumerListener<ExecuteTaskMessage>() {
+            @Override
+            public void onMessage(URI uri, ExecuteTaskMessage message) {
+                final Optional<Object> exec = message.getPayloadProperty("exec");
+                if (exec.isPresent() && exec.get().toString().equals(operation))
+                    latch.countDown();
+            }
+            @Override
+            public void onFailure(Throwable t) {
+            }
+        });
+
+        workflow.execute(fields);
+
+        latch.await();
+    }
+
+    private String getResourceAsString(String resourceName) {
+        final URL resource = Resources.getResource(resourceName);
+        try {
+            return Resources.toString(resource, Charsets.UTF_8);
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
+        }
     }
 
     private StateChangedMessage createReachableStateCacheMessage(String resourceId) {
