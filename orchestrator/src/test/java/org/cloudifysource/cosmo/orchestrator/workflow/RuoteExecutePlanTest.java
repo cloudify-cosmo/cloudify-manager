@@ -89,7 +89,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private URI stateCacheTopic;
 
 
-    @Test(timeOut = 30000 * 1000)
+    @Test(timeOut = 30000)
     public void testPlanExecution() throws IOException, InterruptedException {
         final String machineId = "mysql_machine";
         final String databaseId = "mysql_database_server";
@@ -106,8 +106,20 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(databaseId));
 
+        final CountDownLatch latch = new CountDownLatch(5);
+
+        messageConsumer.addListener(URI.create("provisioner_plugin"),
+                new PluginExecutionMessageConsumerListener(latch, new String[] {"create", "start"}));
+        messageConsumer.addListener(URI.create("configurer_plugin"),
+                new PluginExecutionMessageConsumerListener(latch, new String[] {"install", "start"}));
+        messageConsumer.addListener(URI.create("schema_configurer_plugin"),
+                new PluginExecutionMessageConsumerListener(latch, new String[] {"create"}));
+
         ruoteRuntime.waitForWorkflow(wfid);
+        latch.await();
     }
+
+
 
     @Test(timeOut = 30000)
     public void testExecuteOperation() throws URISyntaxException, InterruptedException {
@@ -133,17 +145,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        messageConsumer.addListener(new URI(plugin), new MessageConsumerListener<ExecuteTaskMessage>() {
-            @Override
-            public void onMessage(URI uri, ExecuteTaskMessage message) {
-                final Optional<Object> exec = message.getPayloadProperty("exec");
-                if (exec.isPresent() && exec.get().toString().equals(operation))
-                    latch.countDown();
-            }
-            @Override
-            public void onFailure(Throwable t) {
-            }
-        });
+        messageConsumer.addListener(new URI(plugin),
+                new PluginExecutionMessageConsumerListener(latch, new String[] {operation}));
 
         workflow.execute(fields);
 
@@ -166,6 +169,31 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         state.put("reachable", "true");
         message.setState(state);
         return message;
+    }
+
+    private static class PluginExecutionMessageConsumerListener
+            implements MessageConsumerListener<ExecuteTaskMessage> {
+        private CountDownLatch latch;
+        private String[] operations;
+        PluginExecutionMessageConsumerListener(CountDownLatch latch, String[] operations) {
+            this.latch = latch;
+            this.operations = operations;
+        }
+        public void onMessage(URI uri, ExecuteTaskMessage message) {
+            final Optional<Object> exec = message.getPayloadProperty("exec");
+            if (!exec.isPresent()) {
+                return;
+            }
+            String actualOperation = exec.get().toString();
+            for (String expectedOperation : operations) {
+                if (actualOperation.equals(expectedOperation)) {
+                    latch.countDown();
+                    break;
+                }
+            }
+        }
+        public void onFailure(Throwable t) {
+        }
     }
 
 }
