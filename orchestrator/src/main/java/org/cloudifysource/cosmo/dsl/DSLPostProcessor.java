@@ -16,13 +16,18 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import java.util.Map;
+
 /**
- * Helper interface used during dsl processing for name map.
+ * Call by the {@link DSLProcessor} after initial processing, to perform model aware transformations.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public interface Named {
-    String getName();
-    void setName(String name);
+public interface DSLPostProcessor {
+
+    Map<String, Object> postProcess(Definitions definitions,
+                                    Map<String, TypeTemplate> populatedTypeTemplates,
+                                    Map<String, Artifact> populatedArtifacts);
+
 }

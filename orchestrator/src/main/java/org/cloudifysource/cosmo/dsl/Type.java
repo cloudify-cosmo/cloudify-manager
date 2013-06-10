@@ -16,8 +16,12 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.Maps;
+import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,7 +31,7 @@ import java.util.Map;
  * @author Dan Kilman
  * @since 0.1
  */
-public class Type implements Named {
+public class Type extends InheritedDefinition {
 
     public static final String ROOT_NODE_TYPE_NAME = "node";
     public static final Type ROOT_NODE_TYPE = initRootNodeType();
@@ -38,60 +42,91 @@ public class Type implements Named {
         return root;
     }
 
-    private String name;
-    // denotes parent type
-    private String type;
-    private Map<String, Interface> interfaces = Maps.newHashMap();
-    // TODO DSL should be string -> object
-    private Map<String, Object> properties = Maps.newHashMap();
+    private List<Object> interfaces = Lists.newArrayList();
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public Map<String, Interface> getInterfaces() {
+    public List<Object> getInterfaces() {
         return interfaces;
     }
 
-    public void setInterfaces(Map<String, Interface> interfaces) {
+    public void setInterfaces(List<Object> interfaces) {
         this.interfaces = interfaces;
     }
 
-    public Map<String, Object> getProperties() {
-        return properties;
+    public Type newInstanceWithInheritance(Type parent) {
+        Type result = new Type();
+        result.inheritPropertiesFrom(parent);
+        result.inheritPropertiesFrom(this);
+        result.setName(getName());
+        result.setSuperTypes(parent);
+        return result;
     }
 
-    public void setProperties(Map<String, Object> properties) {
-        this.properties = properties;
+    protected void inheritPropertiesFrom(Type other) {
+        super.inheritPropertiesFrom(other);
+
+        List<InterfaceDescription> interfacesDescriptions = Lists.newArrayList();
+        for (Object rawInterface : interfaces) {
+            interfacesDescriptions.add(InterfaceDescription.from(rawInterface));
+        }
+
+        for (Object rawOtherInterface : other.getInterfaces()) {
+            InterfaceDescription otherInterface = InterfaceDescription.from(rawOtherInterface);
+
+            for (InterfaceDescription interfaceDescription : interfacesDescriptions) {
+                if (otherInterface.name.equals(interfaceDescription.name)) {
+                    interfaceDescription.implementation = otherInterface.implementation;
+                }
+            }
+
+        }
+
+        List<Object> newInterfaces = Lists.newArrayList();
+        for (InterfaceDescription interfaceDescription : interfacesDescriptions) {
+            newInterfaces.add(interfaceDescription.toInterfaceRep());
+        }
+        setInterfaces(newInterfaces);
     }
 
-    public void inheritPropertiesFrom(Type other) {
-        for (Map.Entry<String, Interface> entry : other.getInterfaces().entrySet()) {
-            String otherInterfaceName = entry.getKey();
-            Interface otherInterface = entry.getValue();
-            if (interfaces.containsKey(otherInterfaceName)) {
-                Interface theInterface = interfaces.get(otherInterfaceName);
-                theInterface.inheritPropertiesFrom(otherInterface);
-            } else {
-                Interface theInterface = new Interface();
-                theInterface.setName(otherInterfaceName);
-                theInterface.inheritPropertiesFrom(otherInterface);
-                interfaces.put(otherInterfaceName, theInterface);
+    /**
+     */
+    static class InterfaceDescription {
+        private String name;
+        private String implementation;
+        public InterfaceDescription(String name, String implementation) {
+            this.name = name;
+            this.implementation = implementation;
+        }
+
+        static InterfaceDescription from(Object obj) {
+            try {
+                if (obj instanceof String) {
+                    return new InterfaceDescription((String) obj, null);
+                } else if (obj instanceof Map) {
+                    Map<String, String> tuple = (Map<String, String>) obj;
+                    Map.Entry<String, String> entry = tuple.entrySet().iterator().next();
+                    return new InterfaceDescription(entry.getKey(), entry.getValue());
+                } else {
+                    throw new IllegalArgumentException("Invalid interface element");
+                }
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
             }
         }
-        properties.putAll(other.getProperties());
+
+        Map<String, String> toInterfaceRep() {
+            return ImmutableMap.<String, String>builder()
+                    .put(name, implementation != null ? implementation : "")
+                    .build();
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Optional<String> getImplementation() {
+            return Optional.fromNullable(implementation);
+        }
+
     }
 
 }

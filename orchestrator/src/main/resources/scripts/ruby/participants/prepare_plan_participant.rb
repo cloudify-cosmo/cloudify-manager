@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 java_import org.cloudifysource.cosmo.dsl.DSLProcessor
+java_import org.cloudifysource.cosmo.dsl.PluginArtifactAwareDSLPostProcessor
 require 'json'
 
 class PreparePlanParticipant < Ruote::Participant
@@ -25,7 +26,7 @@ class PreparePlanParticipant < Ruote::Participant
 
       raw_dsl = workitem.params['dsl']
 
-      processed_dsl = DSLProcessor.process(raw_dsl)
+      processed_dsl = DSLProcessor.process(raw_dsl, PluginArtifactAwareDSLPostProcessor.INSTANCE)
 
       plan = JSON.parse(processed_dsl)
 

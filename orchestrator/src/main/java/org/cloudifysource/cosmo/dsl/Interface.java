@@ -17,8 +17,10 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A class used to represent the interface of a type.
@@ -27,27 +29,9 @@ import java.util.List;
  * @author Dan Kilman
  * @since 0.1
  */
-public class Interface implements Named {
+public class Interface extends Definition {
 
-    private String name;
-    private String provider;
     private List<String> operations = Lists.newArrayList();
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getProvider() {
-        return provider;
-    }
-
-    public void setProvider(String provider) {
-        this.provider = provider;
-    }
 
     public List<String> getOperations() {
         return operations;
@@ -55,11 +39,6 @@ public class Interface implements Named {
 
     public void setOperations(List<String> operations) {
         this.operations = operations;
-    }
-
-    public void inheritPropertiesFrom(Interface other) {
-        setProvider(other.getProvider());
-        operations.addAll(other.getOperations());
     }
 
 }

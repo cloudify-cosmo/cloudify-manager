@@ -16,31 +16,27 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.collect.Maps;
+
+import java.util.Map;
+
 /**
- * A class used to represent a provider.
+ * A class used to represent a plan of the dsl.
  * Used internally only by the dsl processor.
-*
-* @author Dan Kilman
-* @since 0.1
-*/
-public class Provider implements Named {
+ *
+ * @author Dan Kilman
+ * @since 0.1
+ */
+public class Plan extends Definition {
 
-    private String name;
-    private String url;
+    private Map<String, Object> init = Maps.newHashMap();
 
-    public String getName() {
-        return name;
+    public Map<String, Object> getInit() {
+        return init;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setInit(Map<String, Object> init) {
+        this.init = init;
     }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
 }

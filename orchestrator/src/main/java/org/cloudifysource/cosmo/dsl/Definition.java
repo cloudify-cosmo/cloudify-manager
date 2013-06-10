@@ -17,12 +17,22 @@
 package org.cloudifysource.cosmo.dsl;
 
 /**
- * A class used to represent a relationship.
+ * A base class used to represent all definitions of the dsl.
  * Used internally only by the dsl processor.
-*
-* @author Dan Kilman
-* @since 0.1
-*/
-public class Relationship extends Definition {
+ *
+ * @author Dan Kilman
+ * @since 0.1
+ */
+public abstract class Definition {
+
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
 }

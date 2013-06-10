@@ -40,6 +40,7 @@
 
         "artifacts": {
             "plugin": {
+                "type": "artifact"
             },
             "provisioner_plugin": {
                 "type": "plugin",
@@ -70,9 +71,19 @@
         },
 
         "plans": {
-            "vm": {
+            "machine": {
                 "init": {
-                    "radial": "define vm_init\n  execute operation: 'create'\n  execute operation: 'start'\n"
+                    "radial": "define machine_init\n  execute operation: 'create'\n  execute operation: 'start'\n"
+                }
+            },
+            "database_server": {
+                "init": {
+                    "radial": "define machine_init\n  execute operation: 'install'\n  execute operation: 'start'\n"
+                }
+            },
+            "database": {
+                "init": {
+                    "radial": "define machine_init\n  execute operation: 'create'\n"
                 }
             }
         },

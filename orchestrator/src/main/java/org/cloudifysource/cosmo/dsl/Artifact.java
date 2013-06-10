@@ -17,12 +17,33 @@
 package org.cloudifysource.cosmo.dsl;
 
 /**
- * A class used to represent a relationship.
+ * A class used to represent an artifact of the dsl.
  * Used internally only by the dsl processor.
-*
-* @author Dan Kilman
-* @since 0.1
-*/
-public class Relationship extends Definition {
+ *
+ * @author Dan Kilman
+ * @since 0.1
+ */
+public class Artifact extends InheritedDefinition {
 
+    public static final String ROOT_ARTIFACT_NAME = "artifact";
+    public static final Artifact ROOT_ARTIFACT = initRootArtifact();
+
+    private static Artifact initRootArtifact() {
+        Artifact root = new Artifact();
+        root.setName(ROOT_ARTIFACT_NAME);
+        return root;
+    }
+
+    public Artifact newInstanceWithInheritance(Artifact parent) {
+        Artifact result = new Artifact();
+        result.inheritPropertiesFrom(parent);
+        result.inheritPropertiesFrom(this);
+        result.setName(getName());
+        result.setSuperTypes(parent);
+        return result;
+    }
+
+    protected void inheritPropertiesFrom(Artifact other) {
+        super.inheritPropertiesFrom(other);
+    }
 }

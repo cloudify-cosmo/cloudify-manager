@@ -30,9 +30,10 @@ import java.util.Map;
 public class Definitions {
 
     private Map<String, Type> types = Maps.newHashMap();
+    private Map<String, Interface> interfaces = Maps.newHashMap();
+    private Map<String, Artifact> artifacts = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
-    private Map<String, Provider> providers = Maps.newHashMap();
-
+    private Map<String, Plan> plans = Maps.newHashMap();
     // TODO DSL currently this is a service template. should be extracted to its own type
     // once we introduce plans into it
     private Map<String, TypeTemplate> serviceTemplate = Maps.newHashMap();
@@ -53,14 +54,6 @@ public class Definitions {
         this.relationships = relationships;
     }
 
-    public Map<String, Provider> getProviders() {
-        return providers;
-    }
-
-    public void setProviders(Map<String, Provider> providers) {
-        this.providers = providers;
-    }
-
     public Map<String, TypeTemplate> getServiceTemplate() {
         return serviceTemplate;
     }
@@ -69,4 +62,27 @@ public class Definitions {
         this.serviceTemplate = serviceTemplate;
     }
 
+    public Map<String, Interface> getInterfaces() {
+        return interfaces;
+    }
+
+    public void setInterfaces(Map<String, Interface> interfaces) {
+        this.interfaces = interfaces;
+    }
+
+    public Map<String, Artifact> getArtifacts() {
+        return artifacts;
+    }
+
+    public void setArtifacts(Map<String, Artifact> artifacts) {
+        this.artifacts = artifacts;
+    }
+
+    public Map<String, Plan> getPlans() {
+        return plans;
+    }
+
+    public void setPlans(Map<String, Plan> plans) {
+        this.plans = plans;
+    }
 }

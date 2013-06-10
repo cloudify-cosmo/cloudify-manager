@@ -38,7 +38,16 @@ public class TypeTemplate extends Type {
         this.relationships = relationships;
     }
 
-    public void inheritPropertiesFrom(TypeTemplate other) {
+    public TypeTemplate newInstanceWithInheritance(Type parent) {
+        TypeTemplate result = new TypeTemplate();
+        result.inheritPropertiesFrom(parent);
+        result.inheritPropertiesFrom(this);
+        result.setName(getName());
+        result.setSuperTypes(parent);
+        return result;
+    }
+
+    protected void inheritPropertiesFrom(TypeTemplate other) {
         super.inheritPropertiesFrom(other);
         relationships.putAll(other.getRelationships());
     }
