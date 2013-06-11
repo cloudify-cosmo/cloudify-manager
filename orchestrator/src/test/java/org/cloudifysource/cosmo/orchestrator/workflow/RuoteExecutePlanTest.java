@@ -88,7 +88,16 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
 
     @Test(timeOut = 30000)
-    public void testPlanExecution() throws IOException, InterruptedException {
+    public void testPlanExecutionJson() throws IOException, InterruptedException {
+        testPlanExecution("org/cloudifysource/cosmo/dsl/dsl.json");
+    }
+
+    @Test(timeOut = 30000)
+    public void testPlanExecutionYaml() throws IOException, InterruptedException {
+        testPlanExecution("org/cloudifysource/cosmo/dsl/dsl.yaml");
+    }
+
+    private void testPlanExecution(String dslFile) throws IOException, InterruptedException {
         final String machineId = "mysql_machine";
         final String databaseId = "mysql_database_server";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
@@ -116,8 +125,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         ruoteRuntime.waitForWorkflow(wfid);
         latch.await();
     }
-
-
 
     @Test(timeOut = 30000)
     public void testExecuteOperation() throws URISyntaxException, InterruptedException {

@@ -67,13 +67,21 @@ definitions:
     plans:
         machine:
             init:
-                radial: "define machine_init\n  execute_operation operation: 'create'\n  execute_operation operation: 'start'\n"
+                radial: |
+                    define machine_init
+                        execute_operation operation: 'create'
+                        execute_operation operation: 'start'
         database_server:
             init:
-                radial: "define database_server_init\n  execute_operation operation: 'install'\n  execute_operation operation: 'start'\n"
+                radial: |
+                    define database_server_init
+                        execute_operation operation: 'install'
+                        execute_operation operation: 'start'
         database:
             init:
-                radial: "define database_init\n  execute_operation operation: 'create'\n"
+                radial: |
+                    define database_init
+                        execute_operation operation: 'create'
 
     service_template:
         mysql_machine:
