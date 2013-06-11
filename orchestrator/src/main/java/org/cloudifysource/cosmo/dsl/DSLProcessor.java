@@ -17,9 +17,11 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -41,7 +43,8 @@ import java.util.Map;
 public class DSLProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(DSLProcessor.class);
-    private static final ObjectMapper OBJECT_MAPPER = newObjectMapper();
+    private static final ObjectMapper JSON_OBJECT_MAPPER = newObjectMapper(new JsonFactory());
+    private static final ObjectMapper YAML_OBJECT_MAPPER = newObjectMapper(new YAMLFactory());
 
     /**
      * @param dsl The dsl in its declarative form
@@ -70,7 +73,7 @@ public class DSLProcessor {
                     populatedTypeTemplates,
                     populatedArtifacts);
 
-            String result = OBJECT_MAPPER.writeValueAsString(plan);
+            String result = JSON_OBJECT_MAPPER.writeValueAsString(plan);
             LOG.debug("Processed dsl is: {}", result);
             return result;
 
@@ -163,8 +166,8 @@ public class DSLProcessor {
 
 
     private static Definitions parseRawDsl(String dsl) throws IOException {
-
-        TopLevel topLevel = OBJECT_MAPPER.readValue(dsl, TopLevel.class);
+        final ObjectMapper objectMapper = dsl.startsWith("{") ? JSON_OBJECT_MAPPER : YAML_OBJECT_MAPPER;
+        TopLevel topLevel = objectMapper.readValue(dsl, TopLevel.class);
         Definitions definitions = topLevel.getDefinitions();
         if (definitions == null) {
             throw new IllegalArgumentException("Invalid DSL - does not contain definitions");
@@ -186,8 +189,8 @@ public class DSLProcessor {
         }
     }
 
-    private static ObjectMapper newObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
+    private static ObjectMapper newObjectMapper(JsonFactory factory) {
+        ObjectMapper mapper = new ObjectMapper(factory);
         mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
