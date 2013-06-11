@@ -16,39 +16,26 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
-import com.google.common.io.Resources;
+import com.google.common.collect.Sets;
 
-import java.io.IOException;
-import java.net.URL;
+import java.util.Set;
 
 /**
- * TODO: Write tests.
+ * Contains context used during the imports phase of the {@link DSLProcessor}
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public class DSLProcessorTest {
+public class ImportContext {
 
-//    @Test
-    public void testDsl() throws IOException {
-        process("org/cloudifysource/cosmo/dsl/dsl.json");
+    private final Set<String> imports = Sets.newHashSet();
+
+    public void addImport(String definitionImport) {
+        imports.add(definitionImport);
     }
 
-//    @Test
-    public void testTypeHierarcy() {
-        process("org/cloudifysource/cosmo/dsl/unit/type-hierarchy.json");
-    }
-
-    private static void process(String resourceName) {
-        try {
-            URL url = Resources.getResource(resourceName);
-            String jsonDsl = Resources.toString(url, Charsets.UTF_8);
-            DSLProcessor.process(jsonDsl, new PluginArtifactAwareDSLPostProcessor());
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
+    public boolean isImported(String definitionImport) {
+        return imports.contains(definitionImport);
     }
 
 }

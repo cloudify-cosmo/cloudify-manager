@@ -1,0 +1,97 @@
+{
+    "definitions": {
+
+        "imports": [
+            "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports-imported1.json",
+            "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports-imported2.json"
+        ],
+
+        "types": {
+            "type0" : {
+                "type" : "node"
+            },
+            "type1_sub" : {
+                "type" : "type1"
+            },
+            "type2_sub" : {
+                "type" : "type2"
+            },
+            "type3_sub" : {
+                "type" : "type3"
+            }
+        },
+
+        "interfaces": {
+            "interface0" : {
+                "operations" : [ "operation1", "operation2" ]
+            }
+        },
+
+        "artifacts": {
+            "artifact0": {
+                "type": "artifact"
+            },
+            "artifact1_sub" : {
+                "type" : "artifact1"
+            },
+            "artifact2_sub" : {
+                "type" : "artifact2"
+            },
+            "artifact3_sub" : {
+                "type" : "artifact3"
+            }
+        },
+
+        "relationships": {
+            "relationship0" : { }
+        },
+
+        "plans": {
+            "node" : {
+                "init" : {
+                    "radial" : "node_radial_stub"
+                }
+            },
+            "type1" : {
+                "init" : {
+                    "radial" : "type1_radial_stub_override"
+                }
+            },
+            "type2_sub" : {
+                "init" : {
+                    "radial" : "type2_sub_radial_stub_override"
+                }
+            },
+            "type3_sub_template" : {
+                "init" : {
+                    "radial" : "type3_sub_template_radial_stub_override"
+                }
+            }
+        },
+
+        "service_template": {
+            "type0_template" : {
+                "type" : "type0"
+            },
+            "type1_template" : {
+                "type" : "type1"
+            },
+            "type2_template" : {
+                "type" : "type2"
+            },
+            "type3_template" : {
+                "type" : "type3"
+            },
+            "type1_sub_template" : {
+                "type" : "type1_sub"
+            },
+            "type2_sub_template" : {
+                "type" : "type2_sub"
+            },
+            "type3_sub_template" : {
+                "type" : "type3_sub"
+            }
+        }
+    }
+
+}

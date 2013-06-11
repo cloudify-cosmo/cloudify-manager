@@ -56,7 +56,7 @@ public class DSLProcessor {
 
         try {
 
-            Definitions definitions = parseRawDsl(dsl);
+            Definitions definitions = parseDslAndHandleImports(dsl, new ImportContext());
 
             Tree<String> typeNameHierarchyTree = buildTypeNameHierarchyTree(definitions);
             Tree<String> artifactNameHierarchyTree = buildArtifactNameHierarchyTree(definitions);
@@ -164,23 +164,88 @@ public class DSLProcessor {
         return tree;
     }
 
+    private static Definitions parseDslAndHandleImports(String dsl, ImportContext context) {
 
-    private static Definitions parseRawDsl(String dsl) throws IOException {
-        final ObjectMapper objectMapper = dsl.startsWith("{") ? JSON_OBJECT_MAPPER : YAML_OBJECT_MAPPER;
-        TopLevel topLevel = objectMapper.readValue(dsl, TopLevel.class);
-        Definitions definitions = topLevel.getDefinitions();
-        if (definitions == null) {
-            throw new IllegalArgumentException("Invalid DSL - does not contain definitions");
+        Definitions definitions = parseRawDsl(dsl);
+        for (String definitionImport : definitions.getImports()) {
+            if (context.isImported(definitionImport)) {
+                continue;
+            }
+            context.addImport(definitionImport);
+
+            String importedDsl = ImportsLoader.load(definitionImport);
+            Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
+
+            if (!importedDefinitions.getServiceTemplate().isEmpty()) {
+                throw new IllegalArgumentException("Cannot define a service_templates element in an imported " +
+                        "definition [" + definitionImport + "]");
+            }
+
+            copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
+            copyDefinitions(importedDefinitions.getArtifacts(), definitions.getArtifacts());
+            copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
+            copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
+            copyPlans(importedDefinitions.getPlans(), definitions.getPlans());
+
         }
 
-        setNames(definitions.getArtifacts());
-        setNames(definitions.getPlans());
-        setNames(definitions.getRelationships());
-        setNames(definitions.getServiceTemplate());
-        setNames(definitions.getTypes());
-        setNames(definitions.getInterfaces());
-
         return definitions;
+    }
+
+    private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,
+                                                               Map<String, T> copyToDefinitions) {
+        for (Map.Entry<String, T> entry : copyFromDefinitions.entrySet()) {
+            String name = entry.getKey();
+            T definition = entry.getValue();
+            if (copyToDefinitions.containsKey(name)) {
+                throw new IllegalArgumentException("Cannot override definition of [" + name + "]");
+            }
+            copyToDefinitions.put(name, definition);
+        }
+    }
+
+    private static void copyPlans(Map<String, Plan> copyFromPlans,
+                                  Map<String, Plan> copyToPlans) {
+        // TODO DSL need to define semantics and
+        // add some sort of validation to this copy phase.
+        // Currently the semantics are not very clear.
+        // The first plan to show up in the import phase will be
+        // the one to "win". Where 'first' is not clearly defined.
+        for (Map.Entry<String, Plan> entry : copyFromPlans.entrySet()) {
+            String name = entry.getKey();
+            Plan copiedPlan = entry.getValue();
+
+            if (!copyToPlans.containsKey(name)) {
+                copyToPlans.put(name, copiedPlan);
+            } else {
+                Plan currentPlan = copyToPlans.get(name);
+                if (currentPlan.getInit().isEmpty()) {
+                    currentPlan.setInit(copiedPlan.getInit());
+                }
+            }
+        }
+    }
+
+    private static Definitions parseRawDsl(String dsl) {
+        try {
+            final ObjectMapper objectMapper = dsl.startsWith("{") ? JSON_OBJECT_MAPPER : YAML_OBJECT_MAPPER;
+            TopLevel topLevel = objectMapper.readValue(dsl, TopLevel.class);
+            Definitions definitions = topLevel.getDefinitions();
+            if (definitions == null) {
+                throw new IllegalArgumentException("Invalid DSL - does not contain definitions");
+            }
+
+            setNames(definitions.getArtifacts());
+            setNames(definitions.getPlans());
+            setNames(definitions.getRelationships());
+            setNames(definitions.getServiceTemplate());
+            setNames(definitions.getTypes());
+            setNames(definitions.getInterfaces());
+
+            return definitions;
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
     private static void setNames(Map<String, ? extends Definition> namedEntries) {

@@ -57,6 +57,24 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         return result;
     }
 
+    private Map<String, Object> processTypeTemplate(TypeTemplate typeTemplate,
+                                                    Definitions definitions,
+                                                    Map<String, Set<String>> interfacesToPluginImplementations) {
+        Map<String, Object> node = Maps.newHashMap();
+
+        setNodeId(typeTemplate, node);
+
+        setNodeProperties(typeTemplate, node);
+
+        setNodeRelationships(typeTemplate, node);
+
+        setNodeWorkflows(typeTemplate, definitions, node);
+
+        setNodeOperations(typeTemplate, definitions, interfacesToPluginImplementations, node);
+
+        return node;
+    }
+
     private Map<String, Set<String>> extractInterfacePluginImplementations(Map<String, Interface> interfaces,
                                                                            Map<String, Artifact> populatedArtifacts) {
         Map<String, Set<String>> interfacePluginImplementations = Maps.newHashMap();
@@ -82,24 +100,6 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             interfacePluginImplementations.put(pluginInterface, implementingPlugins);
         }
         return interfacePluginImplementations;
-    }
-
-    private Map<String, Object> processTypeTemplate(TypeTemplate typeTemplate,
-                                                    Definitions definitions,
-                                                    Map<String, Set<String>> interfacesToPluginImplementations) {
-        Map<String, Object> node = Maps.newHashMap();
-
-        setNodeId(typeTemplate, node);
-
-        setNodeProperties(typeTemplate, node);
-
-        setNodeRelationships(typeTemplate, node);
-
-        setNodeWorkflows(typeTemplate, definitions, node);
-
-        setNodeOperations(typeTemplate, definitions, interfacesToPluginImplementations, node);
-
-        return node;
     }
 
     private void setNodeId(TypeTemplate typeTemplate, Map<String, Object> node) {

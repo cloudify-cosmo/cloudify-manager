@@ -16,8 +16,10 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,9 +36,8 @@ public class Definitions {
     private Map<String, Artifact> artifacts = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
     private Map<String, Plan> plans = Maps.newHashMap();
-    // TODO DSL currently this is a service template. should be extracted to its own type
-    // once we introduce plans into it
     private Map<String, TypeTemplate> serviceTemplate = Maps.newHashMap();
+    private List<String> imports = Lists.newArrayList();
 
     public Map<String, Type> getTypes() {
         return types;
@@ -84,5 +85,13 @@ public class Definitions {
 
     public void setPlans(Map<String, Plan> plans) {
         this.plans = plans;
+    }
+
+    public List<String> getImports() {
+        return imports;
+    }
+
+    public void setImports(List<String> imports) {
+        this.imports = imports;
     }
 }

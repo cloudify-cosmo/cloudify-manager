@@ -1,0 +1,28 @@
+{
+    "definitions": {
+
+        "imports": [
+            "org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/dsl-with-imports-invalid-definition-imported.json"
+        ],
+
+        "types": {
+            "type0" : {
+                "type" : "node"
+            }
+        },
+
+        "plans": {
+            "node" : {
+                "init" : {
+                    "radial" : "node_radial_stub"
+                }
+            }
+        },
+
+        "service_template": {
+            "type_template" : {
+                "type" : "node"
+            }
+        }
+    }
+}

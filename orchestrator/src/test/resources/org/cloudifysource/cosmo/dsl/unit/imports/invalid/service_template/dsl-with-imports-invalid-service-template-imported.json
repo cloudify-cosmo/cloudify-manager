@@ -1,0 +1,10 @@
+{
+    "definitions": {
+
+        "service_template": {
+            "type_template2" : {
+                "type" : "node"
+            }
+        }
+    }
+}

@@ -1,0 +1,40 @@
+{
+    "definitions": {
+
+        "types": {
+            "type1" : {
+                "type" : "node"
+            }
+        },
+
+        "interfaces": {
+            "interface1" : {
+                "operations" : [ "operation1", "operation2" ]
+            }
+        },
+
+        "artifacts": {
+            "artifact1": {
+                "type": "artifact"
+            }
+        },
+
+        "relationships": {
+            "relationship1" : { }
+        },
+
+        "plans": {
+            "type1" : {
+                "init" : {
+                    "radial" : "type1_radial_stub"
+                }
+            },
+            "type1_1" : {
+                "init" : {
+                    "radial" : "type1_1_radial_stub"
+                }
+            }
+        }
+    }
+
+}

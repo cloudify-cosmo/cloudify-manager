@@ -1,0 +1,11 @@
+{
+    "definitions": {
+
+        "types": {
+            "type0" : {
+                "type" : "node"
+            }
+        }
+
+    }
+}
