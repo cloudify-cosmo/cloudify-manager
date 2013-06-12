@@ -88,18 +88,53 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
 
     @Test(timeOut = 30000)
-    public void testPlanExecutionJson() throws IOException, InterruptedException {
-        testPlanExecution("org/cloudifysource/cosmo/dsl/dsl.json");
+    public void testPlanExecutionDslJson() throws IOException, InterruptedException {
+        testPlanExecutionDsl("org/cloudifysource/cosmo/dsl/dsl.json");
     }
 
     @Test(timeOut = 30000)
-    public void testPlanExecutionYaml() throws IOException, InterruptedException {
-        testPlanExecution("org/cloudifysource/cosmo/dsl/dsl.yaml");
+    public void testPlanExecutionDslYaml() throws IOException, InterruptedException {
+        testPlanExecutionDsl("org/cloudifysource/cosmo/dsl/dsl.yaml");
     }
 
-    private void testPlanExecution(String dslFile) throws IOException, InterruptedException {
-        final String machineId = "mysql_machine";
-        final String databaseId = "mysql_database_server";
+    private void testPlanExecutionDsl(String dslFile) throws IOException, InterruptedException {
+        String machineId = "mysql_machine";
+        String databaseId = "mysql_database_server";
+        OperationsDescriptor[] descriptors = {
+            new OperationsDescriptor("provisioner_plugin", new String[] {"create", "start"}),
+            new OperationsDescriptor("configurer_plugin", new String[] {"install", "start"}),
+            new OperationsDescriptor("schema_configurer_plugin", new String[] {"create"})
+        };
+
+        testPlanExecution(dslFile, machineId, databaseId, descriptors);
+    }
+
+    @Test(timeOut = 30000)
+    public void testPlanExecutionDslWithBaseImports() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
+        String machineId = "mysql_host";
+        String databaseId = "mysql_database_server";
+        OperationsDescriptor[] descriptors = {
+            new OperationsDescriptor(
+                "cloudify.tosca.artifacts.plugin.host.provisioner",
+                new String[]{"provision", "start"}),
+            new OperationsDescriptor(
+                "cloudify.tosca.artifacts.plugin.middleware_component.installer",
+                new String[]{"install", "start"}),
+            new OperationsDescriptor(
+                "cloudify.tosca.artifacts.plugin.app_module.installer",
+                new String[]{"deploy", "start"})
+        };
+        testPlanExecution(dslFile, machineId, databaseId, descriptors);
+    }
+
+    private void testPlanExecution(
+            String dslFile,
+            String machineId,
+            String databaseId,
+            OperationsDescriptor[] expectedOperations) throws IOException,
+            InterruptedException {
+
         final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
                 "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 
@@ -113,14 +148,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(databaseId));
 
-        final CountDownLatch latch = new CountDownLatch(5);
-
-        messageConsumer.addListener(URI.create("provisioner_plugin"),
-                new PluginExecutionMessageConsumerListener(latch, new String[] {"create", "start"}));
-        messageConsumer.addListener(URI.create("configurer_plugin"),
-                new PluginExecutionMessageConsumerListener(latch, new String[] {"install", "start"}));
-        messageConsumer.addListener(URI.create("schema_configurer_plugin"),
-                new PluginExecutionMessageConsumerListener(latch, new String[] {"create"}));
+        int latchCount = 0;
+        for (OperationsDescriptor descriptor : expectedOperations) {
+            latchCount += descriptor.operations.length;
+        }
+        final CountDownLatch latch = new CountDownLatch(latchCount);
+        for (OperationsDescriptor descriptor : expectedOperations) {
+            messageConsumer.addListener(URI.create(descriptor.target),
+                    new PluginExecutionMessageConsumerListener(latch, descriptor.operations));
+        }
 
         ruoteRuntime.waitForWorkflow(wfid);
         latch.await();
@@ -174,6 +210,17 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         state.put("reachable", "true");
         message.setState(state);
         return message;
+    }
+
+    /**
+     */
+    private static class OperationsDescriptor {
+        final String target;
+        final String[] operations;
+        private OperationsDescriptor(String target, String[] operations) {
+            this.target = target;
+            this.operations = operations;
+        }
     }
 
     /**

@@ -39,25 +39,25 @@
         },
 
         "artifacts": {
-            "plugin": {
+            "cloudify.tosca.artifacts.plugin": {
                 "derived_from": "artifact"
             },
             "provisioner_plugin": {
-                "derived_from": "plugin",
+                "derived_from": "cloudify.tosca.artifacts.plugin",
                 "properties": {
                     "interface": "provisioner",
                     "url": "plugins/provisioner-plugin.zip"
                 }
             },
             "configurer_plugin": {
-                "derived_from": "plugin",
+                "derived_from": "cloudify.tosca.artifacts.plugin",
                 "properties": {
                     "interface": "configurer",
                     "url": "plugins/configurer-plugin.zip"
                 }
             },
             "schema_configurer_plugin": {
-                "derived_from": "plugin",
+                "derived_from": "cloudify.tosca.artifacts.plugin",
                 "properties": {
                     "interface": "schema_configurer",
                     "url": "plugins/schema-configurer-plugin.zip"

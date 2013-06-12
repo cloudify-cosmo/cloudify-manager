@@ -38,9 +38,11 @@ public class TypeTemplate extends Type {
         this.relationships = relationships;
     }
 
-    public TypeTemplate newInstanceWithInheritance(Type parent) {
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        Type typedParent = (Type) parent;
         TypeTemplate result = new TypeTemplate();
-        result.inheritPropertiesFrom(parent);
+        result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);

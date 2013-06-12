@@ -60,10 +60,17 @@ public class DSLProcessor {
 
             Tree<String> typeNameHierarchyTree = buildTypeNameHierarchyTree(definitions);
             Tree<String> artifactNameHierarchyTree = buildArtifactNameHierarchyTree(definitions);
+            Tree<String> relationshipNameHierarchyTree = buildRelationshipNameHierarchyTree(definitions);
 
-            Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions, typeNameHierarchyTree);
-            Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(definitions,
+            Map<String, Type> populatedTypes = buildPopulatedTypesMap(
+                    definitions.getTypes(),
+                    typeNameHierarchyTree);
+            Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(
+                    definitions.getArtifacts(),
                     artifactNameHierarchyTree);
+            Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
+                    definitions.getRelationships(),
+                    relationshipNameHierarchyTree);
 
             Map<String, TypeTemplate> populatedTypeTemplates =
                     buildPopulatedTemplatesMap(definitions, populatedTypes);
@@ -91,51 +98,63 @@ public class DSLProcessor {
             Type typeTemplateParentType = populatedTypes.get(typeTemplate.getDerivedFrom());
             Preconditions.checkArgument(typeTemplateParentType != null, "Missing type %s for %s", templateName,
                     typeTemplate.getDerivedFrom());
-            TypeTemplate populatedTemplate = typeTemplate.newInstanceWithInheritance(typeTemplateParentType);
+            TypeTemplate populatedTemplate = (TypeTemplate) typeTemplate.newInstanceWithInheritance(
+                    typeTemplateParentType);
+
             populatedTemplates.put(templateName, populatedTemplate);
         }
         return populatedTemplates;
     }
 
-    private static Map<String, Type> buildPopulatedTypesMap(final Definitions definitions, Tree<String> tree) {
-        final Map<String, Type> populatedTypes = Maps.newHashMap();
-        tree.traverseParentThenChildren(new Visitor<String>() {
-            @Override
-            public void visit(Node<String> node) {
-                String parentTypeName = node.getParentValue();
-                Type parentType = populatedTypes.get(parentTypeName);
-                if (parentType == null) {
-                    populatedTypes.put(Type.ROOT_NODE_TYPE_NAME, Type.ROOT_NODE_TYPE);
-                    return;
-                }
-                String typeName = node.getValue();
-                Type type = definitions.getTypes().get(typeName);
-                Type populatedType = type.newInstanceWithInheritance(parentType);
-                populatedTypes.put(typeName, populatedType);
-            }
-        });
-        return populatedTypes;
+    private static Map<String, Type> buildPopulatedTypesMap(final Map<String, Type> types,
+                                                            Tree<String> typeNameHierarchyTree) {
+        return buildPopulatedMap(Type.ROOT_NODE_TYPE_NAME,
+                                 Type.ROOT_NODE_TYPE,
+                                 types,
+                                 typeNameHierarchyTree);
     }
 
-    private static Map<String, Artifact> buildPopulatedArtifactsMap(final Definitions definitions,
+    private static Map<String, Artifact> buildPopulatedArtifactsMap(final Map<String, Artifact> artifacts,
                                                                     Tree<String> artifactNameHierarchyTree) {
-        final Map<String, Artifact> populatedArtifacts = Maps.newHashMap();
-        artifactNameHierarchyTree.traverseParentThenChildren(new Visitor<String>() {
+        return buildPopulatedMap(Artifact.ROOT_ARTIFACT_NAME,
+                                 Artifact.ROOT_ARTIFACT,
+                                 artifacts,
+                                 artifactNameHierarchyTree);
+    }
+
+    private static Map<String, Relationship> buildPopulatedRelationshipsMap(
+            final Map<String, Relationship> relationships,
+            Tree<String> relationshipNameHierarchyTree) {
+        return buildPopulatedMap(Relationship.ROOT_RELATIONSHIP_NAME,
+                                 Relationship.ROOT_RELATIONSHIP,
+                                 relationships,
+                                 relationshipNameHierarchyTree);
+    }
+
+    private static <T extends InheritedDefinition> Map<String, T> buildPopulatedMap(
+            final String rootName,
+            final T root,
+            final Map<String, T> inheritedDefinitions,
+            Tree<String> nameHierarchyTree) {
+        final Map<String, T> populatedInheritedDefinitions = Maps.newHashMap();
+        nameHierarchyTree.traverseParentThenChildren(new Visitor<String>() {
             @Override
             public void visit(Node<String> node) {
-                String parentArtifactName = node.getParentValue();
-                Artifact parentArtifact = populatedArtifacts.get(parentArtifactName);
-                if (parentArtifact == null) {
-                    populatedArtifacts.put(Artifact.ROOT_ARTIFACT_NAME, Artifact.ROOT_ARTIFACT);
+                String parentName = node.getParentValue();
+                T parentInheritedDefinition = populatedInheritedDefinitions.get(parentName);
+                if (parentInheritedDefinition == null) {
+                    populatedInheritedDefinitions.put(rootName, root);
                     return;
                 }
-                String artifactName = node.getValue();
-                Artifact artifact = definitions.getArtifacts().get(artifactName);
-                Artifact populatedArtifact = artifact.newInstanceWithInheritance(parentArtifact);
-                populatedArtifacts.put(artifactName, populatedArtifact);
+                String name = node.getValue();
+                T inheritedDefinition = inheritedDefinitions.get(name);
+                T populatedInheritedDefinition =
+                        (T) inheritedDefinition.newInstanceWithInheritance(parentInheritedDefinition);
+                populatedInheritedDefinitions.put(name, populatedInheritedDefinition);
             }
         });
-        return populatedArtifacts;
+
+        return populatedInheritedDefinitions;
     }
 
     private static Tree<String> buildTypeNameHierarchyTree(Definitions definitions) {
@@ -144,6 +163,10 @@ public class DSLProcessor {
 
     private static Tree<String> buildArtifactNameHierarchyTree(Definitions definitions) {
         return buildNameHierarchyTree(definitions.getArtifacts(), Artifact.ROOT_ARTIFACT_NAME);
+    }
+
+    private static Tree<String> buildRelationshipNameHierarchyTree(Definitions definitions) {
+        return buildNameHierarchyTree(definitions.getRelationships(), Relationship.ROOT_RELATIONSHIP_NAME);
     }
 
     private static Tree<String> buildNameHierarchyTree(

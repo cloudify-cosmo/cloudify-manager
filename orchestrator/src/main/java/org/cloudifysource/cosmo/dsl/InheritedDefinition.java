@@ -64,6 +64,8 @@ public abstract class InheritedDefinition extends Definition {
         this.superTypes = superTypes;
     }
 
+    public abstract InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent);
+
     protected void inheritPropertiesFrom(InheritedDefinition other) {
         getProperties().putAll(other.getProperties());
     }

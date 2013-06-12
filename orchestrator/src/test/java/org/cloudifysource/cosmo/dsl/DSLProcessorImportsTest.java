@@ -23,7 +23,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 /**
- * Tests the import mechanism of the {@link DSLProcessor}
+ * Tests the import mechanism of the {@link DSLProcessor}.
  *
  * @author Dan Kilman
  * @since 0.1
