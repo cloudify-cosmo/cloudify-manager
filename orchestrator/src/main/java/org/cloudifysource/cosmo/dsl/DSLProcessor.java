@@ -58,19 +58,10 @@ public class DSLProcessor {
 
             Definitions definitions = parseDslAndHandleImports(dsl, new ImportContext());
 
-            Tree<String> typeNameHierarchyTree = buildTypeNameHierarchyTree(definitions);
-            Tree<String> artifactNameHierarchyTree = buildArtifactNameHierarchyTree(definitions);
-            Tree<String> relationshipNameHierarchyTree = buildRelationshipNameHierarchyTree(definitions);
-
-            Map<String, Type> populatedTypes = buildPopulatedTypesMap(
-                    definitions.getTypes(),
-                    typeNameHierarchyTree);
-            Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(
-                    definitions.getArtifacts(),
-                    artifactNameHierarchyTree);
+            Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
+            Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getArtifacts());
             Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
-                    definitions.getRelationships(),
-                    relationshipNameHierarchyTree);
+                    definitions.getRelationships());
 
             Map<String, TypeTemplate> populatedTypeTemplates =
                     buildPopulatedTemplatesMap(definitions, populatedTypes);
@@ -106,36 +97,29 @@ public class DSLProcessor {
         return populatedTemplates;
     }
 
-    private static Map<String, Type> buildPopulatedTypesMap(final Map<String, Type> types,
-                                                            Tree<String> typeNameHierarchyTree) {
+    private static Map<String, Type> buildPopulatedTypesMap(Map<String, Type> types) {
         return buildPopulatedMap(Type.ROOT_NODE_TYPE_NAME,
                                  Type.ROOT_NODE_TYPE,
-                                 types,
-                                 typeNameHierarchyTree);
+                                 types);
     }
 
-    private static Map<String, Artifact> buildPopulatedArtifactsMap(final Map<String, Artifact> artifacts,
-                                                                    Tree<String> artifactNameHierarchyTree) {
+    private static Map<String, Artifact> buildPopulatedArtifactsMap(Map<String, Artifact> artifacts) {
         return buildPopulatedMap(Artifact.ROOT_ARTIFACT_NAME,
                                  Artifact.ROOT_ARTIFACT,
-                                 artifacts,
-                                 artifactNameHierarchyTree);
+                                 artifacts);
     }
 
-    private static Map<String, Relationship> buildPopulatedRelationshipsMap(
-            final Map<String, Relationship> relationships,
-            Tree<String> relationshipNameHierarchyTree) {
+    private static Map<String, Relationship> buildPopulatedRelationshipsMap(Map<String, Relationship> relationships) {
         return buildPopulatedMap(Relationship.ROOT_RELATIONSHIP_NAME,
                                  Relationship.ROOT_RELATIONSHIP,
-                                 relationships,
-                                 relationshipNameHierarchyTree);
+                                 relationships);
     }
 
     private static <T extends InheritedDefinition> Map<String, T> buildPopulatedMap(
             final String rootName,
             final T root,
-            final Map<String, T> inheritedDefinitions,
-            Tree<String> nameHierarchyTree) {
+            final Map<String, T> inheritedDefinitions) {
+        Tree<String> nameHierarchyTree = buildNameHierarchyTree(inheritedDefinitions, rootName);
         final Map<String, T> populatedInheritedDefinitions = Maps.newHashMap();
         nameHierarchyTree.traverseParentThenChildren(new Visitor<String>() {
             @Override
@@ -155,18 +139,6 @@ public class DSLProcessor {
         });
 
         return populatedInheritedDefinitions;
-    }
-
-    private static Tree<String> buildTypeNameHierarchyTree(Definitions definitions) {
-        return buildNameHierarchyTree(definitions.getTypes(), Type.ROOT_NODE_TYPE_NAME);
-    }
-
-    private static Tree<String> buildArtifactNameHierarchyTree(Definitions definitions) {
-        return buildNameHierarchyTree(definitions.getArtifacts(), Artifact.ROOT_ARTIFACT_NAME);
-    }
-
-    private static Tree<String> buildRelationshipNameHierarchyTree(Definitions definitions) {
-        return buildNameHierarchyTree(definitions.getRelationships(), Relationship.ROOT_RELATIONSHIP_NAME);
     }
 
     private static Tree<String> buildNameHierarchyTree(
