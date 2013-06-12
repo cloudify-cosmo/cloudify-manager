@@ -104,7 +104,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 
         final Map<String, Object> fields = Maps.newHashMap();
-        final String dsl = getResourceAsString("org/cloudifysource/cosmo/dsl/dsl.json");
+        final String dsl = getResourceAsString(dslFile);
         fields.put("dsl", dsl);
 
         final Object wfid = workflow.asyncExecute(fields);
