@@ -88,9 +88,9 @@ public class DSLProcessor {
         for (Map.Entry<String, TypeTemplate> entry : definitions.getServiceTemplate().entrySet()) {
             String templateName = entry.getKey();
             TypeTemplate typeTemplate = entry.getValue();
-            Type typeTemplateParentType = populatedTypes.get(typeTemplate.getType());
+            Type typeTemplateParentType = populatedTypes.get(typeTemplate.getDerivedFrom());
             Preconditions.checkArgument(typeTemplateParentType != null, "Missing type %s for %s", templateName,
-                    typeTemplate.getType());
+                    typeTemplate.getDerivedFrom());
             TypeTemplate populatedTemplate = typeTemplate.newInstanceWithInheritance(typeTemplateParentType);
             populatedTemplates.put(templateName, populatedTemplate);
         }
@@ -157,7 +157,7 @@ public class DSLProcessor {
         for (Map.Entry<String, ? extends InheritedDefinition> entry : inheritedDefinitions.entrySet()) {
             String artifactName = entry.getKey();
             InheritedDefinition type = entry.getValue();
-            String parentArtifactName = type.getType();
+            String parentArtifactName = type.getDerivedFrom();
             tree.setParentChildRelationship(parentArtifactName, artifactName);
         }
         tree.validateLegalTree();

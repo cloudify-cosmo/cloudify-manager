@@ -8,16 +8,16 @@
 
         "types": {
             "type0" : {
-                "type" : "node"
+                "derived_from" : "node"
             },
             "type1_sub" : {
-                "type" : "type1"
+                "derived_from" : "type1"
             },
             "type2_sub" : {
-                "type" : "type2"
+                "derived_from" : "type2"
             },
             "type3_sub" : {
-                "type" : "type3"
+                "derived_from" : "type3"
             }
         },
 
@@ -29,16 +29,16 @@
 
         "artifacts": {
             "artifact0": {
-                "type": "artifact"
+                "derived_from": "artifact"
             },
             "artifact1_sub" : {
-                "type" : "artifact1"
+                "derived_from" : "artifact1"
             },
             "artifact2_sub" : {
-                "type" : "artifact2"
+                "derived_from" : "artifact2"
             },
             "artifact3_sub" : {
-                "type" : "artifact3"
+                "derived_from" : "artifact3"
             }
         },
 
@@ -71,25 +71,25 @@
 
         "service_template": {
             "type0_template" : {
-                "type" : "type0"
+                "derived_from" : "type0"
             },
             "type1_template" : {
-                "type" : "type1"
+                "derived_from" : "type1"
             },
             "type2_template" : {
-                "type" : "type2"
+                "derived_from" : "type2"
             },
             "type3_template" : {
-                "type" : "type3"
+                "derived_from" : "type3"
             },
             "type1_sub_template" : {
-                "type" : "type1_sub"
+                "derived_from" : "type1_sub"
             },
             "type2_sub_template" : {
-                "type" : "type2_sub"
+                "derived_from" : "type2_sub"
             },
             "type3_sub_template" : {
-                "type" : "type3_sub"
+                "derived_from" : "type3_sub"
             }
         }
     }

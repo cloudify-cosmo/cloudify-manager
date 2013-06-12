@@ -3,7 +3,7 @@
 
         "types": {
             "type0" : {
-                "type" : "node"
+                "derived_from" : "node"
             }
         }
 

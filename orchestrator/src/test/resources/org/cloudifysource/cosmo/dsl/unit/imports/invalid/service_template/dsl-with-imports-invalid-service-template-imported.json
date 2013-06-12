@@ -3,7 +3,7 @@
 
         "service_template": {
             "type_template2" : {
-                "type" : "node"
+                "derived_from" : "node"
             }
         }
     }

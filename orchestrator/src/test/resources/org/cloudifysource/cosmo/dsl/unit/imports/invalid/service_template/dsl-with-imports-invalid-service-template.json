@@ -7,7 +7,7 @@
 
         "types": {
             "type0" : {
-                "type" : "node"
+                "derived_from" : "node"
             }
         },
 
@@ -21,7 +21,7 @@
 
         "service_template": {
             "type_template" : {
-                "type" : "node"
+                "derived_from" : "node"
             }
         }
     }

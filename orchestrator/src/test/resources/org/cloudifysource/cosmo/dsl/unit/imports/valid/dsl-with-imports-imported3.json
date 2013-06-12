@@ -3,7 +3,7 @@
 
         "types": {
             "type3" : {
-                "type" : "node"
+                "derived_from" : "node"
             }
         },
 
@@ -15,7 +15,7 @@
 
         "artifacts": {
             "artifact3": {
-                "type": "artifact"
+                "derived_from": "artifact"
             }
         },
 
