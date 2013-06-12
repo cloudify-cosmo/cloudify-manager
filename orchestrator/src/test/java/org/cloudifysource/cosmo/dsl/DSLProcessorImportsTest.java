@@ -33,7 +33,7 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
     @Test
     public void testValidImports() {
 
-        String validImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports.json";
+        String validImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports.yaml";
 
         Processed processed = process(readResource(validImportsDSLResource));
 
@@ -54,7 +54,7 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
     public void testInvalidTwoServiceTemplates() {
 
         String invalidImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/invalid/service_template/" +
-                "dsl-with-imports-invalid-service-template.json";
+                "dsl-with-imports-invalid-service-template.yaml";
 
         process(readResource(invalidImportsDSLResource));
     }
@@ -64,7 +64,7 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
     public void testInvalidOverrideDefinition() {
 
         String invalidImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/" +
-                "dsl-with-imports-invalid-definition.json";
+                "dsl-with-imports-invalid-definition.yaml";
 
         process(readResource(invalidImportsDSLResource));
     }
