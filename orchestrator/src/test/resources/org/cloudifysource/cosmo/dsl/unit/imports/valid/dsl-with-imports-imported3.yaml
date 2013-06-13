@@ -1,0 +1,22 @@
+--- 
+definitions: 
+  artifacts: 
+    artifact3: 
+      derived_from: artifact
+  interfaces: 
+    interface3: 
+      operations: 
+        - operation1
+        - operation2
+  plans: 
+    type3: 
+      init: 
+        radial: type3_radial_stub
+    type3_1: 
+      init: 
+        radial: type3_1_radial_stub
+  relationships: 
+    relationship3: {}
+  types: 
+    type3: 
+      derived_from: node

@@ -34,9 +34,16 @@ public class Artifact extends InheritedDefinition {
         return root;
     }
 
-    public Artifact newInstanceWithInheritance(Artifact parent) {
+    public Artifact() {
+        // Default value
+        setDerivedFrom(ROOT_ARTIFACT_NAME);
+    }
+
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        Artifact typedParent = (Artifact) parent;
         Artifact result = new Artifact();
-        result.inheritPropertiesFrom(parent);
+        result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);

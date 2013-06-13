@@ -35,6 +35,8 @@ import java.util.Set;
  */
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
+    private static final String CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN = "cloudify.tosca.artifacts.plugin";
+
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
                                            Map<String, TypeTemplate> populatedTypeTemplates,
@@ -83,7 +85,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
 
         for (Artifact artifact : populatedArtifacts.values()) {
-            if (!artifact.isInstanceOf("plugin")) {
+            if (!artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN)) {
                 continue;
             }
             if (!artifact.getProperties().containsKey("interface") ||

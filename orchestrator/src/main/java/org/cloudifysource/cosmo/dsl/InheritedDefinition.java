@@ -35,15 +35,15 @@ import java.util.Map;
 public abstract class InheritedDefinition extends Definition {
 
     private List<String> superTypes = Lists.newArrayList();
-    private String type;
+    private String derivedFrom;
     private Map<String, Object> properties = Maps.newHashMap();
 
-    public String getType() {
-        return type;
+    public String getDerivedFrom() {
+        return derivedFrom;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setDerivedFrom(String derivedFrom) {
+        this.derivedFrom = derivedFrom;
     }
 
     public Map<String, Object> getProperties() {
@@ -64,6 +64,8 @@ public abstract class InheritedDefinition extends Definition {
         this.superTypes = superTypes;
     }
 
+    public abstract InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent);
+
     protected void inheritPropertiesFrom(InheritedDefinition other) {
         getProperties().putAll(other.getProperties());
     }
@@ -80,7 +82,7 @@ public abstract class InheritedDefinition extends Definition {
     @JsonIgnore
     public boolean isInstanceOf(String otherType) {
         Preconditions.checkState(superTypes != null, "Cannot call this method before super types have been set");
-        if (Objects.equal(otherType, this.type)) {
+        if (Objects.equal(otherType, getName())) {
             return true;
         }
         for (String superType : superTypes) {

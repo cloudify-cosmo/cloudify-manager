@@ -4,19 +4,19 @@ definitions:
 
     types:
         machine:
-            type: "node"
+            derived_from: "node"
             interfaces:
                 - "provisioner"
 
         database_server:
-            type: "node"
+            derived_from: "node"
             properties:
                 port: ""
             interfaces:
                 - "configurer"
 
         database:
-            type: "node"
+            derived_from: "node"
             properties:
                 name: ""
                 schema_file: ""
@@ -42,20 +42,20 @@ definitions:
                 - "delete"
 
     artifacts:
-        plugin:
-            type: "artifact"
+        cloudify.tosca.artifacts.plugin:
+            derived_from: "artifact"
         provisioner_plugin:
-            type: "plugin"
+            derived_from: "cloudify.tosca.artifacts.plugin"
             properties:
                 interface: "provisioner"
                 url: "plugins/provisioner-plugin.zip"
         configurer_plugin:
-            type: "plugin"
+            derived_from: "cloudify.tosca.artifacts.plugin"
             properties:
                 interface: "configurer"
                 url: "plugins/configurer-plugin.zip"
         schema_configurer_plugin:
-            type: "plugin"
+            derived_from: "cloudify.tosca.artifacts.plugin"
             properties:
                 interface: "schema_configurer"
                 url: "plugins/schema-configurer-plugin.zip"
@@ -85,12 +85,12 @@ definitions:
 
     service_template:
         mysql_machine:
-            type: "machine"
+            derived_from: "machine"
             properties:
                 image: "aws149180"
 
         mysql_database_server:
-            type: "database_server"
+            derived_from: "database_server"
             properties:
                 port: "3306"
                 chef_recipe: "mysql_chef_recipe"
@@ -98,7 +98,7 @@ definitions:
                 hosted_on: "mysql_machine"
 
         mysql_schema:
-            type: "database"
+            derived_from: "database"
             properties:
                 name: "petclinic"
             relationships:

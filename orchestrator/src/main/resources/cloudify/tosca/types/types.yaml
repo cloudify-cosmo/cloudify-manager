@@ -1,0 +1,106 @@
+definitions:
+
+    ##################################################################################
+    # Base type definitions
+    ##################################################################################
+    types:
+
+        # A host (physical / virtual or LXC) in a topology
+        cloudify.tosca.types.host:
+            interfaces:
+                - "cloudify.tosca.interfaces.host.provisioner"
+
+        # A middleware component in a topology
+        cloudify.tosca.types.middleware_server:
+            interfaces:
+                - "cloudify.tosca.interfaces.middleware_component.installer"
+
+        cloudify.tosca.types.db_server:
+            derived_from: "cloudify.tosca.types.middleware_server"
+
+        # An application artifact to deploy
+        cloudify.tosca.types.app_module:
+            interfaces:
+                - "cloudify.tosca.interfaces.app_module.installer"
+
+
+    ##################################################################################
+    # Base relationship definitions
+    ##################################################################################
+    relationships:
+
+        cloudify.tosca.relationships.depends_on: { }
+
+        cloudify.tosca.relationships.hosted_on:
+            derived_from: "cloudify.tosca.relationships.depends_on"
+
+        cloudify.tosca.relationships.deployed_on:
+            derived_from: "cloudify.tosca.relationships.depends_on"
+
+
+    ##################################################################################
+    # Base interface definitions
+    ##################################################################################
+    interfaces:
+
+        # provision and manage host lifecycle
+        cloudify.tosca.interfaces.host.provisioner:
+            operations:
+                - "provision"
+                - "terminate"
+                - "start"
+                - "pause"
+                - "restart"
+
+        # installs middleware components
+        cloudify.tosca.interfaces.middleware_component.installer:
+            operations:
+                - "install"
+                - "uninstall"
+                - "start"
+                - "stop"
+                - "restart"
+
+        cloudify.tosca.interfaces.app_module.installer:
+            operations:
+                - "deploy"
+                - "undeploy"
+                - "stop"
+                - "start"
+
+
+    ##################################################################################
+    # Base plan definitions
+    ##################################################################################
+    plans:
+
+        cloudify.tosca.types.host:
+            init:
+                radial: |
+                    define host_init
+                        execute_operation operation: 'provision'
+                        execute_operation operation: 'start'
+
+        cloudify.tosca.types.middleware_server:
+            init:
+                radial: |
+                    define middleware_server_init
+                        execute_operation operation: 'install'
+                        execute_operation operation: 'start'
+
+        cloudify.tosca.types.app_module:
+            init:
+                radial: |
+                    define app_module_init
+                        execute_operation operation: 'deploy'
+                        execute_operation operation: 'start'
+
+
+    ##################################################################################
+    # Base artifact definitions
+    ##################################################################################
+    artifacts:
+
+        # Basic plugin artifact
+        cloudify.tosca.artifacts.plugin: { }
+

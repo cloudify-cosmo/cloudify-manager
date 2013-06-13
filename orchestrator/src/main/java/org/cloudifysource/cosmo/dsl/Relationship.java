@@ -23,6 +23,35 @@ package org.cloudifysource.cosmo.dsl;
 * @author Dan Kilman
 * @since 0.1
 */
-public class Relationship extends Definition {
+public class Relationship extends InheritedDefinition {
+
+    public static final String ROOT_RELATIONSHIP_NAME = "relationship";
+    public static final Relationship ROOT_RELATIONSHIP = initRootRelationship();
+
+    private static Relationship initRootRelationship() {
+        Relationship root = new Relationship();
+        root.setName(ROOT_RELATIONSHIP_NAME);
+        return root;
+    }
+
+    public Relationship() {
+        // Default value
+        setDerivedFrom(ROOT_RELATIONSHIP_NAME);
+    }
+
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        Relationship typedParent = (Relationship) parent;
+        Relationship result = new Relationship();
+        result.inheritPropertiesFrom(typedParent);
+        result.inheritPropertiesFrom(this);
+        result.setName(getName());
+        result.setSuperTypes(parent);
+        return result;
+    }
+
+    protected void inheritPropertiesFrom(Relationship other) {
+        super.inheritPropertiesFrom(other);
+    }
 
 }

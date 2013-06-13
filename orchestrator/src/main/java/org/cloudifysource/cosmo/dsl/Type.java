@@ -45,6 +45,11 @@ public class Type extends InheritedDefinition {
 
     private List<Object> interfaces = Lists.newArrayList();
 
+    public Type() {
+        // Default value
+        setDerivedFrom(ROOT_NODE_TYPE_NAME);
+    }
+
     public List<Object> getInterfaces() {
         return interfaces;
     }
@@ -53,9 +58,11 @@ public class Type extends InheritedDefinition {
         this.interfaces = interfaces;
     }
 
-    public Type newInstanceWithInheritance(Type parent) {
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        Type typedParent = (Type) parent;
         Type result = new Type();
-        result.inheritPropertiesFrom(parent);
+        result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
