@@ -32,6 +32,7 @@ import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 
 /**
@@ -47,14 +48,15 @@ public class DSLProcessor {
     private static final ObjectMapper YAML_OBJECT_MAPPER = newObjectMapper(new YAMLFactory());
 
     /**
-     * @param dsl The dsl in its declarative form
+     * @param dslUri A {@link URI} pointing to the dsl in its declarative form
      * @return A processed json dsl to be used by the workflow engine.
      */
-    public static String process(String dsl, DSLPostProcessor postProcessor) {
+    public static String process(URI dslUri, DSLPostProcessor postProcessor) {
 
         LOG.debug("Starting dsl processing");
 
         try {
+            String dsl = ImportsLoader.load(dslUri.toString());
 
             Definitions definitions = parseDslAndHandleImports(dsl, new ImportContext());
 
