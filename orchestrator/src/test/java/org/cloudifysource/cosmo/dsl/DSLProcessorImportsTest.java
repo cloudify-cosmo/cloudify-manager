@@ -69,6 +69,11 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
         process(readResource(invalidImportsDSLResource));
     }
 
+    @Test
+    public void testRelativeImports() {
+
+    }
+
     private void assertValidNode(Node node, String initWorkflow) {
         Assertions.assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
     }

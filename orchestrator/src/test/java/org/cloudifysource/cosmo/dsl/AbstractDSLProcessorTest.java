@@ -20,11 +20,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
@@ -38,16 +39,16 @@ public abstract class AbstractDSLProcessorTest {
     private static final ObjectMapper OBJECT_MAPPER = newObjectMapper();
     private static final DSLPostProcessor POST_PROCESSOR = new PluginArtifactAwareDSLPostProcessor();
 
-    protected String readResource(String resource) {
+    protected URI readResource(String resource) {
         try {
-            return Resources.toString(Resources.getResource(resource), Charsets.UTF_8);
-        } catch (IOException e) {
+            return Resources.getResource(resource).toURI();
+        } catch (URISyntaxException e) {
             throw Throwables.propagate(e);
         }
     }
 
-    protected Processed process(String dsl) {
-        String processed = DSLProcessor.process(dsl, POST_PROCESSOR);
+    protected Processed process(URI dslUri) {
+        String processed = DSLProcessor.process(dslUri, POST_PROCESSOR);
         try {
             return OBJECT_MAPPER.readValue(processed, Processed.class);
         } catch (IOException e) {
