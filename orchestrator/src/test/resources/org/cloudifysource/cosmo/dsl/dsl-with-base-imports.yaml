@@ -8,12 +8,12 @@ definitions:
 
     service_template:
         mysql_host:
-            derived_from: "cloudify.tosca.types.host"
+            type: "cloudify.tosca.types.host"
             properties:
                 image: "aws149180"
 
         mysql_database_server:
-            derived_from: "cloudify.tosca.types.db_server"
+            type: "cloudify.tosca.types.db_server"
             properties:
                 port: "3306"
                 installer_recipe: "mysql_chef_recipe"
@@ -21,7 +21,7 @@ definitions:
                 cloudify.tosca.relationships.hosted_on: "mysql_host"
 
         mysql_schema:
-            derived_from: "cloudify.tosca.types.app_module"
+            type: "cloudify.tosca.types.app_module"
             properties:
                 name: "petclinic"
             relationships:

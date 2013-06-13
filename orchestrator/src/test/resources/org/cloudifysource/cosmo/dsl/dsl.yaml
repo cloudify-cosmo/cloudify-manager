@@ -85,12 +85,12 @@ definitions:
 
     service_template:
         mysql_machine:
-            derived_from: "machine"
+            type: "machine"
             properties:
                 image: "aws149180"
 
         mysql_database_server:
-            derived_from: "database_server"
+            type: "database_server"
             properties:
                 port: "3306"
                 chef_recipe: "mysql_chef_recipe"
@@ -98,7 +98,7 @@ definitions:
                 hosted_on: "mysql_machine"
 
         mysql_schema:
-            derived_from: "database"
+            type: "database"
             properties:
                 name: "petclinic"
             relationships:

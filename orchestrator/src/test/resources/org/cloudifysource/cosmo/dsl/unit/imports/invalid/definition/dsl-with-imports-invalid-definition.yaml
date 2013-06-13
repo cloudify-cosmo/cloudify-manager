@@ -8,7 +8,7 @@ definitions:
         radial: node_radial_stub
   service_template: 
     type_template: 
-      derived_from: node
+      type: node
   types: 
     type0: 
       derived_from: node

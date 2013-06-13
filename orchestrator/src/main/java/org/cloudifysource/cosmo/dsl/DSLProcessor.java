@@ -64,7 +64,7 @@ public class DSLProcessor {
                     definitions.getRelationships());
 
             Map<String, TypeTemplate> populatedTypeTemplates =
-                    buildPopulatedTemplatesMap(definitions, populatedTypes);
+                    buildPopulatedTemplatesMap(definitions, populatedTypes, populatedRelationships);
 
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
@@ -80,8 +80,10 @@ public class DSLProcessor {
         }
     }
 
-    private static Map<String, TypeTemplate> buildPopulatedTemplatesMap(Definitions definitions,
-                                                                        Map<String, Type> populatedTypes) {
+    private static Map<String, TypeTemplate> buildPopulatedTemplatesMap(
+            Definitions definitions,
+            Map<String, Type> populatedTypes,
+            Map<String, Relationship> populatedRelationships) {
         final Map<String, TypeTemplate> populatedTemplates = Maps.newHashMap();
         for (Map.Entry<String, TypeTemplate> entry : definitions.getServiceTemplate().entrySet()) {
             String templateName = entry.getKey();

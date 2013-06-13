@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
+import org.testng.Assert;
 
 import java.io.IOException;
 import java.util.List;
@@ -67,6 +68,16 @@ public abstract class AbstractDSLProcessorTest {
         return mapper;
     }
 
+    protected Node findNode(List<Node> nodes, String id) {
+        for (Node node : nodes) {
+            if (id.equals(node.getId())) {
+                return node;
+            }
+        }
+        Assert.fail("Failed finding node: " + id);
+        return null;
+    }
+
     /**
      */
     public static class Processed {
@@ -86,7 +97,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> workflows;
         Map<String, Object> operations;
         Map<String, Object> properties;
-        List<String> relationships;
+        List<Object> relationships;
 
         public String getId() {
             return id;
@@ -113,11 +124,11 @@ public abstract class AbstractDSLProcessorTest {
             this.operations = operations;
         }
 
-        public List<String> getRelationships() {
+        public List<Object> getRelationships() {
             return relationships;
         }
 
-        public void setRelationships(List<String> relationships) {
+        public void setRelationships(List<Object> relationships) {
             this.relationships = relationships;
         }
 

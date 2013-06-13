@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.dsl;
 
 import org.fest.assertions.api.Assertions;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -71,16 +70,6 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
 
     private void assertValidNode(Node node, String initWorkflow) {
         Assertions.assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
-    }
-
-    private Node findNode(List<Node> nodes, String id) {
-        for (Node node : nodes) {
-            if (id.equals(node.getId())) {
-                return node;
-            }
-        }
-        Assert.fail("Failed finding node: " + id);
-        return null;
     }
 
 }

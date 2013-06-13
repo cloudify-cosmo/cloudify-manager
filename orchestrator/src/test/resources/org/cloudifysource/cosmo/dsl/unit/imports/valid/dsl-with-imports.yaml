@@ -34,19 +34,19 @@ definitions:
     relationship0: {}
   service_template: 
     type0_template: 
-      derived_from: type0
+      type: type0
     type1_sub_template: 
-      derived_from: type1_sub
+      type: type1_sub
     type1_template: 
-      derived_from: type1
+      type: type1
     type2_sub_template: 
-      derived_from: type2_sub
+      type: type2_sub
     type2_template: 
-      derived_from: type2
+      type: type2
     type3_sub_template: 
-      derived_from: type3_sub
+      type: type3_sub
     type3_template: 
-      derived_from: type3
+      type: type3
   types: 
     type0: 
       derived_from: node

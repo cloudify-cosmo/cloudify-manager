@@ -2,4 +2,4 @@
 definitions: 
   service_template: 
     type_template2: 
-      derived_from: node
+      type: node
