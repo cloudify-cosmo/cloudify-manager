@@ -6,23 +6,26 @@ definitions:
         - "cloudify/tosca/artifacts/plugins/middleware_component-installer.yaml"
         - "cloudify/tosca/artifacts/plugins/app_module-installer.yaml"
 
-    service_template:
-        mysql_host:
-            type: "cloudify.tosca.types.host"
-            properties:
-                image: "aws149180"
+    service_templates:
 
-        mysql_database_server:
-            type: "cloudify.tosca.types.db_server"
-            properties:
-                port: "3306"
-                installer_recipe: "mysql_chef_recipe"
-            relationships:
-                cloudify.tosca.relationships.hosted_on: "mysql_host"
+        mysql_template:
+            topology:
+                mysql_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        image: "aws149180"
 
-        mysql_schema:
-            type: "cloudify.tosca.types.app_module"
-            properties:
-                name: "petclinic"
-            relationships:
-                cloudify.tosca.relationships.deployed_on: "mysql_database_server"
+                mysql_database_server:
+                    type: "cloudify.tosca.types.db_server"
+                    properties:
+                        port: "3306"
+                        installer_recipe: "mysql_chef_recipe"
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "mysql_host"
+
+                mysql_schema:
+                    type: "cloudify.tosca.types.app_module"
+                    properties:
+                        name: "petclinic"
+                    relationships:
+                        cloudify.tosca.relationships.deployed_on: "mysql_database_server"

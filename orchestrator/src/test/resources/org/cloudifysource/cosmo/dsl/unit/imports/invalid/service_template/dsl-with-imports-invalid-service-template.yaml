@@ -6,9 +6,11 @@ definitions:
     node: 
       init: 
         radial: node_radial_stub
-  service_template: 
-    type_template: 
-      type: node
+  service_templates:
+    my_service_template:
+      topology:
+        type_template:
+          type: node
   types: 
     type0: 
       derived_from: node

@@ -1,5 +1,7 @@
 --- 
 definitions: 
-  service_template: 
-    type_template2: 
-      type: node
+  service_templates:
+    some_service_template:
+      topology:
+        type_template2:
+          type: node
