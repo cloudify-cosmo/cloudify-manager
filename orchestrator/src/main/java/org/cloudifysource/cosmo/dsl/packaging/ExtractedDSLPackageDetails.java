@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.dsl.packaging;
 
 import java.net.URI;
+import java.nio.file.Path;
 
 /**
  * The outcome of a {@link DSLPackageProcessor#process(java.io.File, java.io.File)} invocation which contains the
@@ -27,16 +28,16 @@ import java.net.URI;
  */
 public class ExtractedDSLPackageDetails {
 
-    private final String dsl;
+    private final Path dslPath;
     private final URI packageRoot;
 
-    public ExtractedDSLPackageDetails(String dsl, URI packageRoot) {
-        this.dsl = dsl;
+    public ExtractedDSLPackageDetails(Path dslPath, URI packageRoot) {
+        this.dslPath = dslPath;
         this.packageRoot = packageRoot;
     }
 
-    public String getDsl() {
-        return dsl;
+    public Path getDslPath() {
+        return dslPath;
     }
 
     public URI getPackageRoot() {
