@@ -17,15 +17,15 @@ definitions:
                     type: "type_0"
 
     plans:
-        test_a:
+        relative_imports_template.test_a:
             init:
                 radial: "init_stub"
-        test_b:
+        relative_imports_template.test_b:
             init:
                 radial: "init_stub"
-        test_c:
+        relative_imports_template.test_c:
             init:
                 radial: "init_stub"
-        test_0:
+        relative_imports_template.test_0:
             init:
                 radial: "init_stub"
