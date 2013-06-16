@@ -148,7 +148,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 DSLPackageProcessor.process(packagePath.toFile(), temporaryDirectory.get());
 
         OperationsDescriptor[] descriptors = {
-                new OperationsDescriptor("provisioner_plugin", new String[] {"start"}),
+            new OperationsDescriptor("provisioner_plugin", new String[] {"start"})
         };
 
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);

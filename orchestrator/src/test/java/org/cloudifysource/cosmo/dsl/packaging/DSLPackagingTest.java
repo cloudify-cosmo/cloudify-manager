@@ -16,8 +16,8 @@
 
 package org.cloudifysource.cosmo.dsl.packaging;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Charsets;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.testng.annotations.Test;
 

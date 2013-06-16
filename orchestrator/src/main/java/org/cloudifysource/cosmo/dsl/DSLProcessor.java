@@ -34,12 +34,10 @@ import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * Processes dsl in json format into a json form suitable for ruote consumption.

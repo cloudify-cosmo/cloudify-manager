@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
-import com.beust.jcommander.internal.Maps;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.springframework.context.annotation.Bean;
 
@@ -27,6 +27,8 @@ import java.nio.file.Path;
 import java.util.Map;
 
 /**
+ * Creates a new {@link TemporaryDirectory}.
+ *
  * @author Idan Moyal
  * @since 0.1
  */
@@ -37,6 +39,8 @@ public class TemporaryDirectoryConfig {
         return new TemporaryDirectory();
     }
 
+    /**
+     */
     public static class TemporaryDirectory {
 
         private File directory;
