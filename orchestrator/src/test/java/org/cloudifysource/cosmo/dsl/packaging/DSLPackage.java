@@ -79,6 +79,9 @@ public class DSLPackage {
         }
     }
 
+    /**
+     *
+     */
     private static class FileEntry {
 
         private final String filePath;
