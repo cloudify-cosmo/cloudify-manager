@@ -25,6 +25,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.cloudifysource.cosmo.dsl.tree.DSLImport;
 import org.cloudifysource.cosmo.dsl.tree.Node;
 import org.cloudifysource.cosmo.dsl.tree.Tree;
 import org.cloudifysource.cosmo.dsl.tree.Visitor;
@@ -33,6 +34,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -56,9 +58,13 @@ public class DSLProcessor {
         LOG.debug("Starting dsl processing");
 
         try {
-            String dsl = ImportsLoader.load(dslUri.toString());
+            final URI baseUri = extractPathFromURI(dslUri);
+            ImportContext importContext = new ImportContext(baseUri);
+            importContext.setContextUri(baseUri);
 
-            Definitions definitions = parseDslAndHandleImports(dsl, new ImportContext());
+            DSLImport loadedDsl = ImportsLoader.load(dslUri.toString(), importContext);
+
+            Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
             Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getArtifacts());
@@ -161,16 +167,23 @@ public class DSLProcessor {
         return tree;
     }
 
-    private static Definitions parseDslAndHandleImports(String dsl, ImportContext context) {
-
-        Definitions definitions = parseRawDsl(dsl);
+    private static Definitions parseDslAndHandleImports(DSLImport dsl, ImportContext context) {
+        final Definitions definitions = parseRawDsl(dsl.getContent());
+        LOG.debug("Loading imports for dsl: {} [imports={}]", dsl.getUri(), definitions.getImports());
         for (String definitionImport : definitions.getImports()) {
-            if (context.isImported(definitionImport)) {
+
+            DSLImport importedDsl = ImportsLoader.load(definitionImport, context);
+
+            LOG.debug("Loaded import: {}", importedDsl.getUri());
+
+            if (context.isImported(importedDsl.getUri())) {
+                LOG.debug("Filtered import: {} (already imported)", definitionImport);
                 continue;
             }
-            context.addImport(definitionImport);
+            context.addImport(importedDsl.getUri());
 
-            String importedDsl = ImportsLoader.load(definitionImport);
+
+            context.setContextUri(extractPathFromURI(importedDsl.getUri()));
             Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
 
             if (!importedDefinitions.getServiceTemplate().isEmpty()) {
@@ -187,6 +200,10 @@ public class DSLProcessor {
         }
 
         return definitions;
+    }
+
+    private static URI extractPathFromURI(URI dslUri) {
+        return Paths.get(dslUri).getParent().toUri();
     }
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,

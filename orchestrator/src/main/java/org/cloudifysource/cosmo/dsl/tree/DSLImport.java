@@ -14,46 +14,31 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl;
-
-import com.google.common.collect.Sets;
+package org.cloudifysource.cosmo.dsl.tree;
 
 import java.net.URI;
-import java.util.Set;
 
 /**
- * Contains context used during the imports phase of the {@link DSLProcessor}.
+ * A DSL import container which holds the DSL's content and {@link URI}.
  *
- * @author Dan Kilman
+ * @author Idan Moyal
  * @since 0.1
  */
-public class ImportContext {
+public class DSLImport {
 
-    private final Set<URI> imports = Sets.newHashSet();
-    private final URI baseUri;
-    private URI contextUri;
+    private String content;
+    private URI uri;
 
-    public ImportContext(URI baseUri) {
-        this.baseUri = baseUri;
+    public DSLImport(String content, URI uri) {
+        this.content = content;
+        this.uri = uri;
     }
 
-    public void addImport(URI importUri) {
-        imports.add(importUri);
+    public String getContent() {
+        return content;
     }
 
-    public boolean isImported(URI importUri) {
-        return imports.contains(importUri);
-    }
-
-    public URI getBaseUri() {
-        return baseUri;
-    }
-
-    public URI getContextUri() {
-        return contextUri;
-    }
-
-    public void setContextUri(URI contextUri) {
-        this.contextUri = contextUri;
+    public URI getUri() {
+        return uri;
     }
 }

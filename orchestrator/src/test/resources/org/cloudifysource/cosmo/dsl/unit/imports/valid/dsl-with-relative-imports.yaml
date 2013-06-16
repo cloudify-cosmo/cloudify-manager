@@ -1,0 +1,29 @@
+definitions:
+    imports:
+        - "relative/dsl-relatively-imported1.yaml"
+    service_template:
+        test_a:
+            derived_from: "type_a"
+
+        test_b:
+            derived_from: "type_b"
+
+        test_c:
+            derived_from: "type_c"
+
+        test_0:
+            derived_from: "type_0"
+
+    plans:
+        test_a:
+            init:
+                radial: "init_stub"
+        test_b:
+            init:
+                radial: "init_stub"
+        test_c:
+            init:
+                radial: "init_stub"
+        test_0:
+            init:
+                radial: "init_stub"

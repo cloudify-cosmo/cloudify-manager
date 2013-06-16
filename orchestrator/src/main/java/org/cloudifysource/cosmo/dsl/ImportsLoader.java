@@ -20,6 +20,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
+import org.cloudifysource.cosmo.dsl.tree.DSLImport;
 
 import java.io.File;
 import java.net.URI;
@@ -47,40 +48,64 @@ public class ImportsLoader {
      * 3) Resolve as URI
      * 4) Fail.
      *
+     * The import will be first treated as is and on failure a 2nd attempt using a resolved location based on the
+     * current context URI or base URI will take place.
+     *
      * @param anImport the import to load
+     * @param context
      * @return The import as a string
      * @throws IllegalArgumentException if import not found
      */
-    public static String load(String anImport) {
+    public static DSLImport load(String anImport, ImportContext context) {
+
         List<Exception> suppressedException = Lists.newArrayList();
 
-        // First try to load classpath resource
-        try {
-            URL resource = Resources.getResource(anImport);
-            return Resources.toString(resource, Charsets.UTF_8);
-        } catch (Exception e) {
-            suppressedException.add(e);
-        }
+        // Try to locate the import as is and if not found resolve to a URI according to current context and try again
+        String[] imports = new String[] {anImport, resolveDslUri(anImport, context).toString()};
 
-        // next, try to load from file.
-        try {
-            File file = new File(anImport);
-            return Files.toString(file, Charsets.UTF_8);
-        } catch (Exception e) {
-            suppressedException.add(e);
-        }
+        for (String importLocation : imports) {
+            DSLImport dslImport = null;
 
-        // lastly, treat import as URI
-        try {
-            URL url = URI.create(anImport).toURL();
-            return Resources.toString(url, Charsets.UTF_8);
-        } catch (Exception e) {
-            suppressedException.add(e);
+            // First try to load classpath resource
+            try {
+                URL resource = Resources.getResource(importLocation);
+                dslImport = new DSLImport(Resources.toString(resource, Charsets.UTF_8), resource.toURI());
+            } catch (Exception e) {
+                suppressedException.add(e);
+            }
+
+            // next, try to load from file.
+            try {
+                File file = new File(importLocation);
+                dslImport = new DSLImport(Files.toString(file, Charsets.UTF_8), URI.create(importLocation));
+            } catch (Exception e) {
+                suppressedException.add(e);
+            }
+
+            // lastly, treat import as URI
+            try {
+                final URI uri = URI.create(importLocation);
+                dslImport = new DSLImport(Resources.toString(uri.toURL(), Charsets.UTF_8), uri);
+            } catch (Exception e) {
+                suppressedException.add(e);
+            }
+
+            if (dslImport != null) {
+                return dslImport;
+            }
         }
 
         // Not sure what to do about the suppressed exceptions yet (if ever)
         throw new IllegalArgumentException("Could not load import from [" + anImport + "]");
 
     }
+
+    private static URI resolveDslUri(String anImport, ImportContext context) {
+        if (anImport.startsWith("/")) {
+            return URI.create(context.getBaseUri().toString() + anImport.substring(1));
+        }
+        return URI.create(context.getContextUri().toString() + anImport);
+    }
+
 
 }

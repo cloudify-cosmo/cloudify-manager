@@ -16,11 +16,12 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import org.fest.assertions.api.Assertions;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.List;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Tests the import mechanism of the {@link DSLProcessor}.
@@ -71,11 +72,17 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
 
     @Test
     public void testRelativeImports() {
-
+        String resource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-relative-imports.yaml";
+        Processed processed = process(readResource(resource));
+        List<Node> nodes = processed.getNodes();
+        assertThat(findNode(nodes, "test_a")).isNotNull();
+        assertThat(findNode(nodes, "test_b")).isNotNull();
+        assertThat(findNode(nodes, "test_c")).isNotNull();
+        assertThat(findNode(nodes, "test_0")).isNotNull();
     }
 
     private void assertValidNode(Node node, String initWorkflow) {
-        Assertions.assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
+        assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
     }
 
     private Node findNode(List<Node> nodes, String id) {
