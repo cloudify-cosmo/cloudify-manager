@@ -1,0 +1,14 @@
+definitions:
+
+    service_templates:
+
+        service_template2:
+            topology:
+                host1:
+                    type: "cloudify.tosca.types.host"
+
+
+    plans:
+        service_template2.host1:
+            init:
+                radial: "service_template2_host1_override"
