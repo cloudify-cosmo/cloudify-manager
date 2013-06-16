@@ -22,12 +22,16 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
+import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
+import org.cloudifysource.cosmo.dsl.packaging.ExtractedDSLPackageDetails;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
@@ -47,6 +51,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
@@ -65,7 +72,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
             RealTimeStateCacheConfig.class,
-            RuoteRuntimeConfig.class
+            RuoteRuntimeConfig.class,
+            TemporaryDirectoryConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -86,11 +94,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
-
-    @Test(timeOut = 30000)
-    public void testPlanExecutionDslJson() throws IOException, InterruptedException {
-        testPlanExecutionDsl("org/cloudifysource/cosmo/dsl/dsl.json");
-    }
+    @Inject
+    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
     @Test(timeOut = 30000)
     public void testPlanExecutionDslYaml() throws IOException, InterruptedException {
@@ -106,7 +111,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             new OperationsDescriptor("schema_configurer_plugin", new String[] {"create"})
         };
 
-        testPlanExecution(dslFile, machineId, databaseId, descriptors);
+        testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
     }
 
     @Test(timeOut = 30000)
@@ -125,13 +130,33 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 "cloudify.tosca.artifacts.plugin.app_module.installer",
                 new String[]{"deploy", "start"})
         };
-        testPlanExecution(dslFile, machineId, databaseId, descriptors);
+        testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
+    }
+
+    @Test(timeOut = 9990000)
+    public void testPlanExecutionFromPackage() throws IOException, InterruptedException {
+        URL resource = Resources.getResource("org/cloudifysource/cosmo/dsl/unit/packaging/basic-packaging.yaml");
+        String dsl = Resources.toString(
+                resource, Charsets.UTF_8);
+        DSLPackage dslPackage = new DSLPackage.DSLPackageBuilder()
+                .addFile("app.yaml", dsl)
+                .build();
+        final Path packagePath = Paths.get(temporaryDirectory.get().getCanonicalPath(), "app.zip");
+        dslPackage.write(packagePath.toFile());
+
+        final ExtractedDSLPackageDetails processed =
+                DSLPackageProcessor.process(packagePath.toFile(), temporaryDirectory.get());
+
+        OperationsDescriptor[] descriptors = {
+                new OperationsDescriptor("provisioner_plugin", new String[] {"start"}),
+        };
+
+        testPlanExecution(processed.getDslPath().toString(), null, descriptors);
     }
 
     private void testPlanExecution(
             String dslFile,
-            String machineId,
-            String databaseId,
+            String[] reachableIds,
             OperationsDescriptor[] expectedOperations) throws IOException,
             InterruptedException {
 
@@ -139,14 +164,22 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 
         final Map<String, Object> fields = Maps.newHashMap();
-        final String dsl = getResourceAsString(dslFile);
-        fields.put("dsl", dsl);
+        String dslLocation;
+        if (Files.exists(Paths.get(dslFile))) {
+            dslLocation = dslFile;
+        } else {
+            dslLocation = Resources.getResource(dslFile).getFile();
+        }
+        fields.put("dsl", dslLocation);
 
         final Object wfid = workflow.asyncExecute(fields);
 
         Thread.sleep(100);
-        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
-        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(databaseId));
+        if (reachableIds != null) {
+            for (String reachableId : reachableIds) {
+                messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(reachableId));
+            }
+        }
 
         int latchCount = 0;
         for (OperationsDescriptor descriptor : expectedOperations) {

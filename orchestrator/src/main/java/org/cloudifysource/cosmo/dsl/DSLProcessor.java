@@ -62,6 +62,7 @@ public class DSLProcessor {
             importContext.setContextUri(baseUri);
 
             DSLImport loadedDsl = ImportsLoader.load(dslUri.toString(), importContext);
+            LOG.debug("Loaded dsl:\n{}", loadedDsl.getContent());
 
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
@@ -208,7 +209,6 @@ public class DSLProcessor {
             }
             context.addImport(importedDsl.getUri());
 
-
             context.setContextUri(extractPathFromURI(importedDsl.getUri()));
             Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
 
@@ -226,7 +226,7 @@ public class DSLProcessor {
     }
 
     private static URI extractPathFromURI(URI dslUri) {
-        return Paths.get(dslUri).getParent().toUri();
+        return Paths.get(dslUri.toString()).getParent().toUri();
     }
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,

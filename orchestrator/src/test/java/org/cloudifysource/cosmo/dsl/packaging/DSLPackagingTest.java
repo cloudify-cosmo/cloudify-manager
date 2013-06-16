@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.dsl.packaging;
 
 import com.beust.jcommander.internal.Maps;
+import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import org.testng.annotations.Test;
 
@@ -24,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -77,7 +79,7 @@ public class DSLPackagingTest {
                 "\t\t\t\t\tdefine init\n" +
                 "\t\t\t\t\t\texecute_operation operation: 'provision'\n";
         final DSLPackage dslPackage = new DSLPackage.DSLPackageBuilder()
-                .addFile("applications.yaml", application)
+                .addFile("application.yaml", application)
                 .addFile("definitions/vm.yaml", vm)
                 .addFile("definitions/image-vm.yaml", imageVm)
                 .build();
@@ -89,8 +91,13 @@ public class DSLPackagingTest {
             assertThat(packageFile.exists()).isTrue();
 
             final ExtractedDSLPackageDetails result = DSLPackageProcessor.process(packageFile, tempDir);
-            assertThat(result.getDsl()).isEqualTo(application);
+            final Path expectedDslPath = Paths.get(tempDir.toString(), "application.yaml");
+            assertThat(result.getDslPath()).isEqualTo(expectedDslPath);
             assertThat(result.getPackageRoot()).isEqualTo(tempDir.toURI());
+
+            final String dsl = Files.toString(result.getDslPath().toFile(), Charsets.UTF_8);
+            assertThat(dsl).isEqualTo(application);
+
         } finally {
             deleteDirectory(tempDir.toPath());
         }

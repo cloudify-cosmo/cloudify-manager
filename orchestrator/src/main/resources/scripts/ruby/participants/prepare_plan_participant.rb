@@ -24,9 +24,9 @@ class PreparePlanParticipant < Ruote::Participant
     begin
       raise 'dsl not set' unless workitem.params.has_key? 'dsl'
 
-      raw_dsl = workitem.params['dsl']
+      dsl_file = workitem.params['dsl']
 
-      processed_dsl = DSLProcessor.process(raw_dsl, PluginArtifactAwareDSLPostProcessor.new)
+      processed_dsl = DSLProcessor.process(URI.create(dsl_file), PluginArtifactAwareDSLPostProcessor.new)
 
       plan = JSON.parse(processed_dsl)
 

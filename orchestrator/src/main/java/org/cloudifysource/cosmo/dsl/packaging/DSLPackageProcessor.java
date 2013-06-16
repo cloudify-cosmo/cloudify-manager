@@ -24,7 +24,6 @@ import com.google.common.collect.Maps;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -59,8 +58,7 @@ public class DSLPackageProcessor {
         unzip(packageFile, workDirectory);
         try {
             final Path dslPath = getDSLMainFile(workDirectory);
-            final String dsl = com.google.common.io.Files.toString(dslPath.toFile(), Charset.defaultCharset());
-            return new ExtractedDSLPackageDetails(dsl, workDirectory.toURI());
+            return new ExtractedDSLPackageDetails(dslPath, workDirectory.toURI());
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
