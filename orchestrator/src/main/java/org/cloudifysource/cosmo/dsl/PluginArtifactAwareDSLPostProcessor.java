@@ -53,6 +53,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 // Type template name we be prepended with the service template
                 typeTemplate.setName(serviceTemplate.getName() + "." + typeTemplate.getName());
                 nodes.add(processTypeTemplate(
+                        serviceTemplate.getName(),
                         typeTemplate,
                         definitions,
                         interfacePluginImplementations));
@@ -63,7 +64,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         return result;
     }
 
-    private Map<String, Object> processTypeTemplate(TypeTemplate typeTemplate,
+    private Map<String, Object> processTypeTemplate(String serviceTemplateName,
+                                                    TypeTemplate typeTemplate,
                                                     Definitions definitions,
                                                     Map<String, Set<String>> interfacesToPluginImplementations) {
         Map<String, Object> node = Maps.newHashMap();
@@ -72,7 +74,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeProperties(typeTemplate, node);
 
-        setNodeRelationships(typeTemplate, node);
+        setNodeRelationships(typeTemplate, serviceTemplateName, node);
 
         setNodeWorkflows(typeTemplate, definitions, node);
 
@@ -116,7 +118,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("properties", typeTemplate.getProperties());
     }
 
-    private void setNodeRelationships(TypeTemplate typeTemplate, Map<String, Object> node) {
+    private void setNodeRelationships(TypeTemplate typeTemplate, String serviceTemplateName, Map<String, Object> node) {
         List<Object> relationships = Lists.newLinkedList();
         // TODO 1) DSL Handle proper typing for relationship (i.e. should be in sync with relationship
         // inheritance
@@ -129,7 +131,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             Map<String, Object> relationshipMap = Maps.newHashMap();
             relationshipMap.put("type", entry.getKey());
             String targetId = (String) entry.getValue();
-            relationshipMap.put("target_id", targetId);
+            String fullTargetId = serviceTemplateName + "." + targetId;
+            relationshipMap.put("target_id", fullTargetId);
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);
