@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl.tree;
+package org.cloudifysource.cosmo.dsl;
 
 import java.net.URI;
 
