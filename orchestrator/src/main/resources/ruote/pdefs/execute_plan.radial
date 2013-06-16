@@ -5,7 +5,7 @@ define execute_plan
     log message: 'processing nodes: ${plan.nodes}'
     iterator on: '$plan.nodes', to_f: 'node'
         log message: 'processing node: ${f:node}'
-        iterator on: '$v:node.relationships', to_v: 'relationship'
+        iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node dependencies: ${v:relationship}'
             state resource_id: '${v:relationship.target_id}', reachable: "true"
 

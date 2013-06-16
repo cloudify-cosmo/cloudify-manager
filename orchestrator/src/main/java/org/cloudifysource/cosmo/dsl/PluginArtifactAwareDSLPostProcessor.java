@@ -39,7 +39,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
-                                           Map<String, TypeTemplate> populatedTypeTemplates,
+                                           Map<String, ServiceTemplate> populatedServiceTemplates,
                                            Map<String, Artifact> populatedArtifacts) {
 
         Map<String, Set<String>> interfacePluginImplementations =
@@ -48,27 +48,31 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
 
-        for (TypeTemplate typeTemplate : populatedTypeTemplates.values()) {
-            nodes.add(processTypeTemplate(
-                    typeTemplate,
-                    definitions,
-                    interfacePluginImplementations));
+        for (ServiceTemplate serviceTemplate : populatedServiceTemplates.values()) {
+            for (TypeTemplate typeTemplate : serviceTemplate.getTopology().values()) {
+                nodes.add(processTypeTemplate(
+                        serviceTemplate.getName(),
+                        typeTemplate,
+                        definitions,
+                        interfacePluginImplementations));
+            }
         }
 
         result.put("nodes", nodes);
         return result;
     }
 
-    private Map<String, Object> processTypeTemplate(TypeTemplate typeTemplate,
+    private Map<String, Object> processTypeTemplate(String serviceTemplateName,
+                                                    TypeTemplate typeTemplate,
                                                     Definitions definitions,
                                                     Map<String, Set<String>> interfacesToPluginImplementations) {
         Map<String, Object> node = Maps.newHashMap();
 
-        setNodeId(typeTemplate, node);
+        setNodeId(typeTemplate, serviceTemplateName, node);
 
         setNodeProperties(typeTemplate, node);
 
-        setNodeRelationships(typeTemplate, node);
+        setNodeRelationships(typeTemplate, serviceTemplateName, node);
 
         setNodeWorkflows(typeTemplate, definitions, node);
 
@@ -104,22 +108,29 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         return interfacePluginImplementations;
     }
 
-    private void setNodeId(TypeTemplate typeTemplate, Map<String, Object> node) {
-        node.put("id", typeTemplate.getName());
+    private void setNodeId(TypeTemplate typeTemplate, String serviceTemplateName, Map<String, Object> node) {
+        node.put("id", serviceTemplateName + "." + typeTemplate.getName());
     }
 
     private void setNodeProperties(TypeTemplate typeTemplate, Map<String, Object> node) {
         node.put("properties", typeTemplate.getProperties());
     }
 
-    private void setNodeRelationships(TypeTemplate typeTemplate, Map<String, Object> node) {
+    private void setNodeRelationships(TypeTemplate typeTemplate, String serviceTemplateName, Map<String, Object> node) {
         List<Object> relationships = Lists.newLinkedList();
-        // TODO DSL Handle proper typing for relationship (i.e. should be in sync with relationship
+        // TODO 1) DSL Handle proper typing for relationship (i.e. should be in sync with relationship
         // inheritance
+        // 2) Also, currently relation is assumed to be in the same service
+        // should be fixed
+        // 3) the relationship value is currently always String denoting the name of the target
+        // but this should be extended to allow more than one target and perhaps
+        // a complex target with properties that refine the relationship
         for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
             Map<String, Object> relationshipMap = Maps.newHashMap();
             relationshipMap.put("type", entry.getKey());
-            relationshipMap.put("target_id", entry.getValue());
+            String target = (String) entry.getValue();
+            String targetId = serviceTemplateName + "." + target;
+            relationshipMap.put("target_id", targetId);
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);

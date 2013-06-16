@@ -68,7 +68,7 @@ public class DSLProcessor {
 
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
-                    populatedServiceTemplates.values().iterator().next().getTopology(),
+                    populatedServiceTemplates,
                     populatedArtifacts);
 
             String result = JSON_OBJECT_MAPPER.writeValueAsString(plan);

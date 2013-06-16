@@ -38,24 +38,15 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
 
         List<Node> nodes = processed.getNodes();
 
-        assertValidNode(findNode(nodes, "type0_template"), "node_radial_stub");
-        assertValidNode(findNode(nodes, "type1_template"), "type1_radial_stub_override");
-        assertValidNode(findNode(nodes, "type2_template"), "type2_radial_stub");
-        assertValidNode(findNode(nodes, "type3_template"), "type3_radial_stub");
-        assertValidNode(findNode(nodes, "type1_sub_template"), "type1_radial_stub_override");
-        assertValidNode(findNode(nodes, "type2_sub_template"), "type2_sub_radial_stub_override");
-        assertValidNode(findNode(nodes, "type3_sub_template"), "type3_sub_template_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type0_template"), "node_radial_stub");
+        assertValidNode(findNode(nodes, "some_service_template.type1_template"), "type1_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type2_template"), "type2_radial_stub");
+        assertValidNode(findNode(nodes, "some_service_template.type3_template"), "type3_radial_stub");
+        assertValidNode(findNode(nodes, "some_service_template.type1_sub_template"), "type1_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type2_sub_template"), "type2_sub_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type3_sub_template"),
+                "type3_sub_template_radial_stub_override");
 
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class,
-          expectedExceptionsMessageRegExp = ".*service_template.*")
-    public void testInvalidTwoServiceTemplates() {
-
-        String invalidImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/invalid/service_template/" +
-                "dsl-with-imports-invalid-service-template.yaml";
-
-        process(readResource(invalidImportsDSLResource));
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class,
