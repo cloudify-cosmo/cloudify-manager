@@ -201,7 +201,7 @@ public class DSLProcessor {
 
             DSLImport importedDsl = ImportsLoader.load(definitionImport, context);
 
-            LOG.debug("Loaded import: {}", importedDsl.getUri());
+            LOG.debug("Loaded import: {} [uri={}]", definitionImport, importedDsl.getUri());
 
             if (context.isImported(importedDsl.getUri())) {
                 LOG.debug("Filtered import: {} (already imported)", definitionImport);

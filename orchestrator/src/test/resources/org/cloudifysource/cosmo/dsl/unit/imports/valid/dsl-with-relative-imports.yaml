@@ -1,18 +1,20 @@
 definitions:
     imports:
         - "relative/dsl-relatively-imported1.yaml"
-    service_template:
-        test_a:
-            derived_from: "type_a"
+    service_templates:
+        relative_imports_template:
+            topology:
+                test_a:
+                    type: "type_a"
 
-        test_b:
-            derived_from: "type_b"
+                test_b:
+                    type: "type_b"
 
-        test_c:
-            derived_from: "type_c"
+                test_c:
+                    type: "type_c"
 
-        test_0:
-            derived_from: "type_0"
+                test_0:
+                    type: "type_0"
 
     plans:
         test_a:

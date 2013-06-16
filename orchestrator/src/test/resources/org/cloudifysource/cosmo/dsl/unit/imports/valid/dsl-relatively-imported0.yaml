@@ -1,4 +1,6 @@
 definitions:
+    imports:
+        - "org/cloudifysource/cosmo/dsl/unit/imports/valid/relative/dsl-relatively-imported3.yaml"
     types:
         type_0:
             properties:
