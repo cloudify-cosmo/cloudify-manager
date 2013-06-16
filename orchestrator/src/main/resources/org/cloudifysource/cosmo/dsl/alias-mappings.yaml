@@ -1,0 +1,4 @@
+cloudify.types: cloudify/tosca/types/types.yaml
+app_module.installer: cloudify/tosca/artifacts/plugins/app_module-installer.yaml
+host.provisioner: cloudify/tosca/artifacts/plugins/host-provisioner.yaml
+middleware_component.installer: cloudify/tosca/artifacts/plugins/middleware_component-installer.yaml

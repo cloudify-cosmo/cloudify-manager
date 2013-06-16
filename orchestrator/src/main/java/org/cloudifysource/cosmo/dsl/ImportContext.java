@@ -16,9 +16,11 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,6 +31,7 @@ import java.util.Set;
  */
 public class ImportContext {
 
+    private final Map<String, String> aliasMappings = Maps.newHashMap();
     private final Set<URI> imports = Sets.newHashSet();
     private final URI baseUri;
     private URI contextUri;
@@ -56,4 +59,14 @@ public class ImportContext {
     public void setContextUri(URI contextUri) {
         this.contextUri = contextUri;
     }
+
+    public String getMapping(String alias) {
+        String mapping = aliasMappings.get(alias);
+        return mapping != null ? mapping : alias;
+    }
+
+    public void addMapping(Map<String, String> aliasMappings) {
+        this.aliasMappings.putAll(aliasMappings);
+    }
+
 }

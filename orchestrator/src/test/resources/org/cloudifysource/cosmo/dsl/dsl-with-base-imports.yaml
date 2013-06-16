@@ -1,10 +1,10 @@
 definitions:
 
     imports:
-        - "cloudify/tosca/types/types.yaml"
-        - "cloudify/tosca/artifacts/plugins/host-provisioner.yaml"
-        - "cloudify/tosca/artifacts/plugins/middleware_component-installer.yaml"
-        - "cloudify/tosca/artifacts/plugins/app_module-installer.yaml"
+        - "cloudify.types"
+        - "app_module.installer"
+        - "host.provisioner"
+        - "middleware_component.installer"
 
     service_templates:
 

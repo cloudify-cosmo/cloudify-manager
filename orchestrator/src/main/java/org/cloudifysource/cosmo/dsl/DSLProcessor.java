@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.dsl;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.dsl.tree.Node;
 import org.cloudifysource.cosmo.dsl.tree.Tree;
 import org.cloudifysource.cosmo.dsl.tree.Visitor;
@@ -32,9 +34,12 @@ import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * Processes dsl in json format into a json form suitable for ruote consumption.
@@ -48,6 +53,8 @@ public class DSLProcessor {
     private static final ObjectMapper JSON_OBJECT_MAPPER = newObjectMapper(new JsonFactory());
     private static final ObjectMapper YAML_OBJECT_MAPPER = newObjectMapper(new YAMLFactory());
 
+    private static final String ALIAS_MAPPING_RESOURCE = "org/cloudifysource/cosmo/dsl/alias-mappings.yaml";
+
     /**
      * @param dslUri A {@link URI} pointing to the dsl in its declarative form
      * @return A processed json dsl to be used by the workflow engine.
@@ -60,7 +67,7 @@ public class DSLProcessor {
             final URI baseUri = extractPathFromURI(dslUri);
             ImportContext importContext = new ImportContext(baseUri);
             importContext.setContextUri(baseUri);
-
+            importContext.addMapping(loadAliasMapping());
             DSLImport loadedDsl = ImportsLoader.load(dslUri.toString(), importContext);
             LOG.debug("Loaded dsl:\n{}", loadedDsl.getContent());
 
@@ -300,6 +307,15 @@ public class DSLProcessor {
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         return mapper;
+    }
+
+    private static Map<String, String> loadAliasMapping() {
+        URL mappingResource = Resources.getResource(ALIAS_MAPPING_RESOURCE);
+        try {
+            return YAML_OBJECT_MAPPER.readValue(mappingResource, new TypeReference<Map<String, String>>() { });
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
 }

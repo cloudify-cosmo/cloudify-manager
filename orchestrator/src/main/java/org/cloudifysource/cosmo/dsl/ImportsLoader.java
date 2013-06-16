@@ -59,6 +59,8 @@ public class ImportsLoader {
 
         List<Exception> suppressedException = Lists.newArrayList();
 
+        anImport = context.getMapping(anImport);
+
         // Try to locate the import as is and if not found resolve to a URI according to current context and try again
         String[] imports = new String[] {anImport, resolveDslUri(anImport, context).toString()};
 
