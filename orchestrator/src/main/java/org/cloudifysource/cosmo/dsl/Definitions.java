@@ -31,13 +31,13 @@ import java.util.Map;
  */
 public class Definitions {
 
+    private List<String> imports = Lists.newArrayList();
+    private Map<String, ServiceTemplate> serviceTemplates = Maps.newHashMap();
     private Map<String, Type> types = Maps.newHashMap();
     private Map<String, Interface> interfaces = Maps.newHashMap();
     private Map<String, Artifact> artifacts = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
     private Map<String, Plan> plans = Maps.newHashMap();
-    private Map<String, TypeTemplate> serviceTemplate = Maps.newHashMap();
-    private List<String> imports = Lists.newArrayList();
 
     public Map<String, Type> getTypes() {
         return types;
@@ -55,12 +55,12 @@ public class Definitions {
         this.relationships = relationships;
     }
 
-    public Map<String, TypeTemplate> getServiceTemplate() {
-        return serviceTemplate;
+    public Map<String, ServiceTemplate> getServiceTemplates() {
+        return serviceTemplates;
     }
 
-    public void setServiceTemplate(Map<String, TypeTemplate> serviceTemplate) {
-        this.serviceTemplate = serviceTemplate;
+    public void setServiceTemplates(Map<String, ServiceTemplate> serviceTemplates) {
+        this.serviceTemplates = serviceTemplates;
     }
 
     public Map<String, Interface> getInterfaces() {

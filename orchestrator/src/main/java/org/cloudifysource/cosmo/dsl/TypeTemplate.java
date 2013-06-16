@@ -38,6 +38,14 @@ public class TypeTemplate extends Type {
         this.relationships = relationships;
     }
 
+    public String getType() {
+        return getDerivedFrom();
+    }
+
+    public void setType(String type) {
+        setDerivedFrom(type);
+    }
+
     @Override
     public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
         Type typedParent = (Type) parent;

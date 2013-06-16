@@ -16,12 +16,10 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import org.testng.Assert;
+import org.fest.assertions.api.Assertions;
 import org.testng.annotations.Test;
 
 import java.util.List;
-
-import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Tests the import mechanism of the {@link DSLProcessor}.
@@ -40,24 +38,15 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
 
         List<Node> nodes = processed.getNodes();
 
-        assertValidNode(findNode(nodes, "type0_template"), "node_radial_stub");
-        assertValidNode(findNode(nodes, "type1_template"), "type1_radial_stub_override");
-        assertValidNode(findNode(nodes, "type2_template"), "type2_radial_stub");
-        assertValidNode(findNode(nodes, "type3_template"), "type3_radial_stub");
-        assertValidNode(findNode(nodes, "type1_sub_template"), "type1_radial_stub_override");
-        assertValidNode(findNode(nodes, "type2_sub_template"), "type2_sub_radial_stub_override");
-        assertValidNode(findNode(nodes, "type3_sub_template"), "type3_sub_template_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type0_template"), "node_radial_stub");
+        assertValidNode(findNode(nodes, "some_service_template.type1_template"), "type1_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type2_template"), "type2_radial_stub");
+        assertValidNode(findNode(nodes, "some_service_template.type3_template"), "type3_radial_stub");
+        assertValidNode(findNode(nodes, "some_service_template.type1_sub_template"), "type1_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type2_sub_template"), "type2_sub_radial_stub_override");
+        assertValidNode(findNode(nodes, "some_service_template.type3_sub_template"),
+                "type3_sub_template_radial_stub_override");
 
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class,
-          expectedExceptionsMessageRegExp = ".*service_template.*")
-    public void testInvalidTwoServiceTemplates() {
-
-        String invalidImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/invalid/service_template/" +
-                "dsl-with-imports-invalid-service-template.yaml";
-
-        process(readResource(invalidImportsDSLResource));
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class,
@@ -70,29 +59,8 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
         process(readResource(invalidImportsDSLResource));
     }
 
-    @Test
-    public void testRelativeImports() {
-        String resource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-relative-imports.yaml";
-        Processed processed = process(readResource(resource));
-        List<Node> nodes = processed.getNodes();
-        assertThat(findNode(nodes, "test_a")).isNotNull();
-        assertThat(findNode(nodes, "test_b")).isNotNull();
-        assertThat(findNode(nodes, "test_c")).isNotNull();
-        assertThat(findNode(nodes, "test_0")).isNotNull();
-    }
-
     private void assertValidNode(Node node, String initWorkflow) {
-        assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
-    }
-
-    private Node findNode(List<Node> nodes, String id) {
-        for (Node node : nodes) {
-            if (id.equals(node.getId())) {
-                return node;
-            }
-        }
-        Assert.fail("Failed finding node: " + id);
-        return null;
+        Assertions.assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
     }
 
 }

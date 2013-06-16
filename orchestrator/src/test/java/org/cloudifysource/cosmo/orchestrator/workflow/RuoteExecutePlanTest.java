@@ -98,8 +98,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     }
 
     private void testPlanExecutionDsl(String dslFile) throws IOException, InterruptedException {
-        String machineId = "mysql_machine";
-        String databaseId = "mysql_database_server";
+        String machineId = "mysql_template.mysql_machine";
+        String databaseId = "mysql_template.mysql_database_server";
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor("provisioner_plugin", new String[] {"create", "start"}),
             new OperationsDescriptor("configurer_plugin", new String[] {"install", "start"}),
@@ -112,8 +112,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Test(timeOut = 30000)
     public void testPlanExecutionDslWithBaseImports() throws IOException, InterruptedException {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
-        String machineId = "mysql_host";
-        String databaseId = "mysql_database_server";
+        String machineId = "mysql_template.mysql_host";
+        String databaseId = "mysql_template.mysql_database_server";
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                 "cloudify.tosca.artifacts.plugin.host.provisioner",

@@ -83,24 +83,27 @@ definitions:
                     define database_init
                         execute_operation operation: 'create'
 
-    service_template:
-        mysql_machine:
-            derived_from: "machine"
-            properties:
-                image: "aws149180"
+    service_templates:
 
-        mysql_database_server:
-            derived_from: "database_server"
-            properties:
-                port: "3306"
-                chef_recipe: "mysql_chef_recipe"
-            relationships:
-                hosted_on: "mysql_machine"
+        mysql_template:
+            topology:
+                mysql_machine:
+                    type: "machine"
+                    properties:
+                        image: "aws149180"
 
-        mysql_schema:
-            derived_from: "database"
-            properties:
-                name: "petclinic"
-            relationships:
-                deployed_on: "mysql_database_server"
+                mysql_database_server:
+                    type: "database_server"
+                    properties:
+                        port: "3306"
+                        chef_recipe: "mysql_chef_recipe"
+                    relationships:
+                        hosted_on: "mysql_machine"
+
+                mysql_schema:
+                    type: "database"
+                    properties:
+                        name: "petclinic"
+                    relationships:
+                        deployed_on: "mysql_database_server"
 

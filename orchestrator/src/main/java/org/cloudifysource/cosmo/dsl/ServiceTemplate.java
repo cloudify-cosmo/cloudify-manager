@@ -16,18 +16,27 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.collect.Maps;
+
 import java.util.Map;
 
 /**
- * Call by the {@link DSLProcessor} after initial processing, to perform model aware transformations.
+ * A class used to represent a service template.
+ * Used internally only by the dsl processor.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public interface DSLPostProcessor {
+public class ServiceTemplate extends Definition {
 
-    Map<String, Object> postProcess(Definitions definitions,
-                                    Map<String, ServiceTemplate> populatedServiceTemplates,
-                                    Map<String, Artifact> populatedArtifacts);
+    private Map<String, TypeTemplate> topology = Maps.newHashMap();
+
+    public Map<String, TypeTemplate> getTopology() {
+        return topology;
+    }
+
+    public void setTopology(Map<String, TypeTemplate> topology) {
+        this.topology = topology;
+    }
 
 }

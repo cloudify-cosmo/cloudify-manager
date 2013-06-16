@@ -71,12 +71,12 @@ public class DSLProcessor {
             Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
                     definitions.getRelationships());
 
-            Map<String, TypeTemplate> populatedTypeTemplates =
-                    buildPopulatedTemplatesMap(definitions, populatedTypes);
+            Map<String, ServiceTemplate> populatedServiceTemplates =
+                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
 
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
-                    populatedTypeTemplates,
+                    populatedServiceTemplates,
                     populatedArtifacts);
 
             String result = JSON_OBJECT_MAPPER.writeValueAsString(plan);
@@ -88,10 +88,37 @@ public class DSLProcessor {
         }
     }
 
-    private static Map<String, TypeTemplate> buildPopulatedTemplatesMap(Definitions definitions,
-                                                                        Map<String, Type> populatedTypes) {
+    private static Map<String, ServiceTemplate> buildPopulatedServiceTemplatesMap(
+            Definitions definitions,
+            Map<String, Type> populatedTypes,
+            Map<String, Relationship> populatedRelationships) {
+        final Map<String, ServiceTemplate> populatedServiceTemplates = Maps.newHashMap();
+        for (Map.Entry<String, ServiceTemplate> entry : definitions.getServiceTemplates().entrySet()) {
+
+            String serviceTemplateName = entry.getKey();
+            ServiceTemplate serviceTemplate = entry.getValue();
+
+            Map<String, TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
+                    serviceTemplate.getTopology(),
+                    populatedTypes,
+                    populatedRelationships);
+
+            ServiceTemplate populatedServiceTemplate = new ServiceTemplate();
+            populatedServiceTemplate.setName(serviceTemplate.getName());
+            populatedServiceTemplate.setTopology(populatedTopology);
+
+            populatedServiceTemplates.put(serviceTemplateName, populatedServiceTemplate);
+
+        }
+        return populatedServiceTemplates;
+    }
+
+    private static Map<String, TypeTemplate> buildPopulatedTypeTemplatesMap(
+            Map<String, TypeTemplate> topology,
+            Map<String, Type> populatedTypes,
+            Map<String, Relationship> populatedRelationships) {
         final Map<String, TypeTemplate> populatedTemplates = Maps.newHashMap();
-        for (Map.Entry<String, TypeTemplate> entry : definitions.getServiceTemplate().entrySet()) {
+        for (Map.Entry<String, TypeTemplate> entry : topology.entrySet()) {
             String templateName = entry.getKey();
             TypeTemplate typeTemplate = entry.getValue();
             Type typeTemplateParentType = populatedTypes.get(typeTemplate.getDerivedFrom());
@@ -186,11 +213,8 @@ public class DSLProcessor {
             context.setContextUri(extractPathFromURI(importedDsl.getUri()));
             Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
 
-            if (!importedDefinitions.getServiceTemplate().isEmpty()) {
-                throw new IllegalArgumentException("Cannot define a service_templates element in an imported " +
-                        "definition [" + definitionImport + "]");
-            }
 
+            copyDefinitions(importedDefinitions.getServiceTemplates(), definitions.getServiceTemplates());
             copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
             copyDefinitions(importedDefinitions.getArtifacts(), definitions.getArtifacts());
             copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
@@ -252,9 +276,12 @@ public class DSLProcessor {
             setNames(definitions.getArtifacts());
             setNames(definitions.getPlans());
             setNames(definitions.getRelationships());
-            setNames(definitions.getServiceTemplate());
+            setNames(definitions.getServiceTemplates());
             setNames(definitions.getTypes());
             setNames(definitions.getInterfaces());
+            for (ServiceTemplate serviceTemplate : definitions.getServiceTemplates().values()) {
+                setNames(serviceTemplate.getTopology());
+            }
 
             return definitions;
         } catch (IOException e) {
