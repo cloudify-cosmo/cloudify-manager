@@ -133,7 +133,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
     }
 
-    @Test(timeOut = 9990000)
+    @Test(timeOut = 30000)
     public void testPlanExecutionFromPackage() throws IOException, InterruptedException {
         URL resource = Resources.getResource("org/cloudifysource/cosmo/dsl/unit/packaging/basic-packaging.yaml");
         String dsl = Resources.toString(
@@ -150,6 +150,37 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor("provisioner_plugin", new String[] {"start"})
         };
+
+        testPlanExecution(processed.getDslPath().toString(), null, descriptors);
+    }
+
+    @Test(timeOut = 30000)
+    public void testPlanExecutionFromPackageWithImports() throws IOException, InterruptedException {
+        final String root = "org/cloudifysource/cosmo/dsl/unit/packaging/imports/";
+        DSLPackage dslPackage = new DSLPackage.DSLPackageBuilder()
+                .addFile("app.yaml", getResourceAsString(root + "packaging-with-imports.yaml"))
+                .addFile("definitions/packaging-with-imports0.yaml",
+                        getResourceAsString(root + "packaging-with-imports0.yaml"))
+                .addFile("definitions/relative_from_base/packaging-with-imports1.yaml",
+                        getResourceAsString(root + "packaging-with-imports1.yaml"))
+                .addFile("definitions/fixed_from_base/packaging-with-imports2.yaml",
+                        getResourceAsString(root + "packaging-with-imports2.yaml"))
+                .addFile("definitions/packaging-with-imports3.yaml",
+                        getResourceAsString(root + "packaging-with-imports3.yaml"))
+                .addFile("definitions/relative_path/packaging-with-imports4.yaml",
+                        getResourceAsString(root + "packaging-with-imports4.yaml"))
+                .addFile("definitions/fixed_path/packaging-with-imports5.yaml",
+                        getResourceAsString(root + "packaging-with-imports5.yaml"))
+                .build();
+        final Path packagePath = Paths.get(temporaryDirectory.get().getCanonicalPath(), "app-imports.zip");
+        dslPackage.write(packagePath.toFile());
+
+        final ExtractedDSLPackageDetails processed =
+                DSLPackageProcessor.process(packagePath.toFile(), temporaryDirectory.get());
+
+        String[] operations =
+                new String[]{"operation0", "operation1", "operation2", "operation3", "operation4", "operation5"};
+        OperationsDescriptor[] descriptors = {new OperationsDescriptor("provisioner_plugin", operations)};
 
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
     }

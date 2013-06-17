@@ -1,0 +1,6 @@
+definitions:
+    imports:
+        - "cloudify.types"
+    types:
+        vm3:
+            derived_from: "cloudify.tosca.types.host"

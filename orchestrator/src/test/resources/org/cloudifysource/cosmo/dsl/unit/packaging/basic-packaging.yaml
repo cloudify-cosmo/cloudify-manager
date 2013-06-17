@@ -1,16 +1,13 @@
 definitions:
-
     types:
         vm:
             interfaces:
                 - "provisioner"
-
     interfaces:
         provisioner:
             operations:
                 - "start"
                 - "stop"
-
     artifacts:
         cloudify.tosca.artifacts.plugin:
             derived_from: "artifact"
@@ -19,13 +16,11 @@ definitions:
             properties:
                 interface: "provisioner"
                 url: "plugins/provisioner-plugin.zip"
-
     service_templates:
         package_template:
             topology:
                 package_vm:
                     type: "vm"
-
     plans:
         package_template.package_vm:
             init:
