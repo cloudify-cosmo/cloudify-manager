@@ -64,16 +64,15 @@ public class DSLProcessor {
      */
     public static String process(URI dslUri, DSLPostProcessor postProcessor) {
 
-        LOG.debug("Starting dsl processing");
+        LOG.debug("Starting dsl processing: {}", dslUri);
 
         try {
             final URI baseUri = extractPathFromURI(dslUri);
-            ImportsContext importContext = new ImportsContext(baseUri);
-            importContext.addMapping(loadAliasMapping());
-            DSLResource loadedDsl = ResourcesLoader.load(dslUri.toString(), importContext);
+            DSLResource loadedDsl = ResourcesLoader.load(dslUri.toString(), new ImportsContext(baseUri));
             LOG.debug("Loaded dsl:\n{}", loadedDsl.getContent());
 
-            importContext.setContextUri(resolveContextURI(baseUri, "definitions/"));
+            ImportsContext importContext = new ImportsContext(resolveContextURI(baseUri, "definitions/"));
+            importContext.addMapping(loadAliasMapping());
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
@@ -258,7 +257,8 @@ public class DSLProcessor {
     }
 
     private static URI extractPathFromURI(URI dslUri) {
-        return URI.create(Paths.get(dslUri.toString()).getParent().toString());
+        String path = Paths.get(dslUri.toString()).getParent().toString();
+        return URI.create(path.endsWith("/") ? path : path + "/");
     }
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,

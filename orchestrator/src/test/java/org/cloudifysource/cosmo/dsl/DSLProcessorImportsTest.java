@@ -62,7 +62,7 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
 
     @Test
     public void testRelativeImports() {
-        String resource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-relative-imports.yaml";
+        String resource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/relative/dsl-with-relative-imports.yaml";
         Processed processed = process(readResource(resource));
         List<Node> nodes = processed.getNodes();
         assertThat(findNode(nodes, "relative_imports_template.test_a")).isNotNull();
