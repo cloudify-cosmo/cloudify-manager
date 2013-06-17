@@ -83,11 +83,18 @@ public abstract class AbstractDSLProcessorTest {
      */
     public static class Processed {
         List<Node> nodes;
+        String globalWorkflow;
         public List<Node> getNodes() {
             return nodes;
         }
         public void setNodes(List<Node> nodes) {
             this.nodes = nodes;
+        }
+        public String getGlobalWorkflow() {
+            return globalWorkflow;
+        }
+        public void setGlobalWorkflow(String globalWorkflow) {
+            this.globalWorkflow = globalWorkflow;
         }
     }
 

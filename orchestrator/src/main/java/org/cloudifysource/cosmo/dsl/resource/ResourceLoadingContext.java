@@ -14,38 +14,29 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl;
+package org.cloudifysource.cosmo.dsl.resource;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import java.net.URI;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Contains context used during the imports phase of the {@link DSLProcessor}.
+ * Contains context used for different resource loading phases {@link org.cloudifysource.cosmo.dsl.DSLProcessor}.
+ * (imports, workflows, etc...)
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public class ImportContext {
+public class ResourceLoadingContext {
 
     private final Map<String, String> aliasMappings = Maps.newHashMap();
-    private final Set<URI> imports = Sets.newHashSet();
     private final URI baseUri;
     private URI contextUri;
 
-    public ImportContext(URI baseUri) {
+    public ResourceLoadingContext(URI baseUri) {
         this.baseUri = baseUri;
-    }
-
-    public void addImport(URI importUri) {
-        imports.add(importUri);
-    }
-
-    public boolean isImported(URI importUri) {
-        return imports.contains(importUri);
+        this.contextUri = baseUri;
     }
 
     public URI getBaseUri() {

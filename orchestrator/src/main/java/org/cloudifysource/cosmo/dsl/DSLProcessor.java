@@ -24,9 +24,14 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
+import org.cloudifysource.cosmo.dsl.resource.DSLResource;
+import org.cloudifysource.cosmo.dsl.resource.ImportsContext;
+import org.cloudifysource.cosmo.dsl.resource.ResourceLoadingContext;
+import org.cloudifysource.cosmo.dsl.resource.ResourcesLoader;
 import org.cloudifysource.cosmo.dsl.tree.Node;
 import org.cloudifysource.cosmo.dsl.tree.Tree;
 import org.cloudifysource.cosmo.dsl.tree.Visitor;
@@ -63,12 +68,12 @@ public class DSLProcessor {
 
         try {
             final URI baseUri = extractPathFromURI(dslUri);
-            ImportContext importContext = new ImportContext(baseUri);
-            importContext.setContextUri(baseUri);
+            ImportsContext importContext = new ImportsContext(baseUri);
             importContext.addMapping(loadAliasMapping());
-            DSLImport loadedDsl = ImportsLoader.load(dslUri.toString(), importContext);
+            DSLResource loadedDsl = ResourcesLoader.load(dslUri.toString(), importContext);
             LOG.debug("Loaded dsl:\n{}", loadedDsl.getContent());
 
+            importContext.setContextUri(resolveContextURI(baseUri, "definitions/"));
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
@@ -84,6 +89,16 @@ public class DSLProcessor {
                     populatedServiceTemplates,
                     populatedArtifacts);
 
+            if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
+                String globalPlanResourcePath = definitions.getGlobalPlan();
+                ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(baseUri);
+                resourceLoadingContext.setContextUri(resolveContextURI(baseUri, "workflows/"));
+                DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
+                String globalPlanContent = globalPlanResource.getContent();
+                plan.put("global_workflow", globalPlanContent);
+                LOG.debug("Loaded global plan: \n{}", globalPlanContent);
+            }
+
             String result = JSON_OBJECT_MAPPER.writeValueAsString(plan);
             LOG.debug("Processed dsl is: {}", result);
             return result;
@@ -92,6 +107,8 @@ public class DSLProcessor {
             throw Throwables.propagate(e);
         }
     }
+
+
 
     private static Map<String, ServiceTemplate> buildPopulatedServiceTemplatesMap(
             Definitions definitions,
@@ -199,12 +216,13 @@ public class DSLProcessor {
         return tree;
     }
 
-    private static Definitions parseDslAndHandleImports(DSLImport dsl, ImportContext context) {
+    private static Definitions parseDslAndHandleImports(DSLResource dsl, ImportsContext context) {
         final Definitions definitions = parseRawDsl(dsl.getContent());
+        URI currentContext = context.getContextUri();
         LOG.debug("Loading imports for dsl: {} [imports={}]", dsl.getUri(), definitions.getImports());
         for (String definitionImport : definitions.getImports()) {
 
-            DSLImport importedDsl = ImportsLoader.load(definitionImport, context);
+            DSLResource importedDsl = ResourcesLoader.load(definitionImport, context);
 
             LOG.debug("Loaded import: {} [uri={}]", definitionImport, importedDsl.getUri());
 
@@ -216,7 +234,7 @@ public class DSLProcessor {
 
             context.setContextUri(extractPathFromURI(importedDsl.getUri()));
             Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
-
+            context.setContextUri(currentContext);
 
             copyDefinitions(importedDefinitions.getServiceTemplates(), definitions.getServiceTemplates());
             copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
@@ -224,14 +242,23 @@ public class DSLProcessor {
             copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
             copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
             copyPlans(importedDefinitions.getPlans(), definitions.getPlans());
-
+            copyGlobalPlan(importedDefinitions, definitions);
         }
 
         return definitions;
     }
 
+    private static void copyGlobalPlan(Definitions importedDefinitions, Definitions definitions) {
+        if (!Strings.isNullOrEmpty(importedDefinitions.getGlobalPlan())) {
+            if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
+                throw new IllegalArgumentException("Cannot override definitions of global plan");
+            }
+            definitions.setGlobalPlan(importedDefinitions.getGlobalPlan());
+        }
+    }
+
     private static URI extractPathFromURI(URI dslUri) {
-        return Paths.get(dslUri.toString()).getParent().toUri();
+        return URI.create(Paths.get(dslUri.toString()).getParent().toString());
     }
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,
@@ -314,6 +341,20 @@ public class DSLProcessor {
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    private static String loadGlobalPlan(String globalPlanResourcePath) {
+        final URI globalPlanBaseURI = extractPathFromURI(URI.create(globalPlanResourcePath));
+        ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(globalPlanBaseURI);
+        DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
+        return globalPlanResource.getContent();
+    }
+
+    private static URI resolveContextURI(URI baseURI, String context) {
+        if (!baseURI.toString().endsWith("/")) {
+            baseURI = URI.create(baseURI.toString() + "/");
+        }
+        return baseURI.resolve(context);
     }
 
 }

@@ -14,22 +14,22 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl;
+package org.cloudifysource.cosmo.dsl.resource;
 
 import java.net.URI;
 
 /**
- * A DSL import container which holds the DSL's content and {@link URI}.
+ * A DSL resource container which holds the resource content and {@link URI}.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public class DSLImport {
+public class DSLResource {
 
     private String content;
     private URI uri;
 
-    public DSLImport(String content, URI uri) {
+    public DSLResource(String content, URI uri) {
         this.content = content;
         this.uri = uri;
     }
