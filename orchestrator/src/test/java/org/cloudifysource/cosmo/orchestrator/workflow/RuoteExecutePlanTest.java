@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
@@ -54,6 +55,9 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
@@ -111,7 +115,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             new OperationsDescriptor("schema_configurer_plugin", new String[] {"create"})
         };
 
-        testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
+        testPlanExecution(dslFile, new String[]{machineId, databaseId}, descriptors);
     }
 
     @Test(timeOut = 30000)
@@ -183,6 +187,16 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {new OperationsDescriptor("provisioner_plugin", operations)};
 
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
+    }
+
+    @Test(timeOut = 30000)
+    public void testPlanExecutionWithOverriddenGlobalPlan() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-global-plan.yaml";
+        OperationsDescriptor descriptor = new OperationsDescriptor(
+                "cloudify.tosca.artifacts.plugin.host.provisioner",
+                new String[]{"provision", "start", "provision", "start"});
+        OperationsDescriptor[] descriptors = {descriptor};
+        testPlanExecution(dslFile, null, descriptors);
     }
 
     private void testPlanExecution(
@@ -292,10 +306,10 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private static class PluginExecutionMessageConsumerListener
             implements MessageConsumerListener<ExecuteTaskMessage> {
         private CountDownLatch latch;
-        private String[] operations;
+        private List<String> operations;
         PluginExecutionMessageConsumerListener(CountDownLatch latch, String[] operations) {
             this.latch = latch;
-            this.operations = operations;
+            this.operations = Lists.newLinkedList(Arrays.asList(operations));
         }
         public void onMessage(URI uri, ExecuteTaskMessage message) {
             final Optional<Object> exec = message.getPayloadProperty("exec");
@@ -303,9 +317,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 return;
             }
             String actualOperation = exec.get().toString();
-            for (String expectedOperation : operations) {
+            for (Iterator<String> iterator = operations.iterator(); iterator.hasNext();) {
+                String expectedOperation =  iterator.next();
                 if (actualOperation.equals(expectedOperation)) {
                     latch.countDown();
+                    iterator.remove();
                     break;
                 }
             }

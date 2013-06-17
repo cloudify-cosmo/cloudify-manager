@@ -1,5 +1,7 @@
 definitions:
 
+    global_plan: "full_global_workflow.radial"
+
     imports:
         - "cloudify.types"
         - "host.provisioner"
