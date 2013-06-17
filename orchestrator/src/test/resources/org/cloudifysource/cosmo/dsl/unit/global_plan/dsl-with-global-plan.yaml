@@ -1,0 +1,14 @@
+definitions:
+
+  imports:
+    - "cloudify.types"
+    - "host.provisioner"
+
+  service_templates:
+    some_service_template:
+      topology:
+        some_host:
+          type: "cloudify.tosca.types.host"
+
+  global_plan: "some_global_plan.radial"
+

@@ -27,7 +27,7 @@ definitions:
     type2_sub: 
       init: 
         radial: type2_sub_radial_stub_override
-    type3_sub_template: 
+    some_service_template.type3_sub_template:
       init: 
         radial: type3_sub_template_radial_stub_override
   relationships: 
