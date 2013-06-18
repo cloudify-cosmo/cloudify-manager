@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
@@ -54,8 +55,11 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * @author Idan Moyal
@@ -131,6 +135,23 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 new String[]{"deploy", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
+    }
+
+    @Test(timeOut = 30000)
+    public void testPlanExecutionDslWithBaseImportsDependencies() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
+        String machineId = "mysql_template.mysql_host";
+        String databaseId = "mysql_template.mysql_database_server";
+        String schemaId = "mysql_template.mysql_schema";
+        OperationsDescriptor[] descriptors = {
+                new OperationsDescriptor(machineId, "cloudify.tosca.artifacts.plugin.host.provisioner",
+                        new String[]{"provision", "start"}),
+                new OperationsDescriptor(databaseId, "cloudify.tosca.artifacts.plugin.middleware_component.installer",
+                        new String[]{"install", "start"}),
+                new OperationsDescriptor(schemaId, "cloudify.tosca.artifacts.plugin.app_module.installer",
+                        new String[]{"deploy", "start"})
+        };
+        testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors, true);
     }
 
     /**
@@ -219,10 +240,16 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
     }
 
+    private void testPlanExecution(String dslFile, String[] reachableIds, OperationsDescriptor[] expectedOperations)
+            throws IOException, InterruptedException {
+        testPlanExecution(dslFile, reachableIds, expectedOperations, false);
+    }
+
     private void testPlanExecution(
             String dslFile,
             String[] reachableIds,
-            OperationsDescriptor[] expectedOperations) throws IOException,
+            final OperationsDescriptor[] expectedOperations,
+            final boolean assertExecutionOrder) throws IOException,
             InterruptedException {
 
         final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
@@ -237,14 +264,28 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
         fields.put("dsl", dslLocation);
 
-        final Object wfid = workflow.asyncExecute(fields);
-
-        Thread.sleep(100);
-        if (reachableIds != null) {
-            for (String reachableId : reachableIds) {
-                messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(reachableId));
+        final List<String> executions = Lists.newArrayList();
+        final MessageConsumerListener<ExecuteTaskMessage> listener = new MessageConsumerListener<ExecuteTaskMessage>() {
+            @Override
+            public synchronized void onMessage(URI uri, ExecuteTaskMessage message) {
+                final Optional<Object> exec = message.getPayloadProperty("exec");
+                if (!exec.isPresent()) {
+                    return;
+                }
+                executions.add(message.getTarget() + "." + exec.get());
+                if (assertExecutionOrder) {
+                    for (OperationsDescriptor descriptor : expectedOperations) {
+                        String lastOperation = descriptor.operations[descriptor.operations.length - 1];
+                        if (descriptor.target.equals(message.getTarget()) && lastOperation.equals(exec.get())) {
+                            messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.id));
+                        }
+                    }
+                }
             }
-        }
+            @Override
+            public void onFailure(Throwable t) {
+            }
+        };
 
         int latchCount = 0;
         for (OperationsDescriptor descriptor : expectedOperations) {
@@ -252,12 +293,32 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
         final CountDownLatch latch = new CountDownLatch(latchCount);
         for (OperationsDescriptor descriptor : expectedOperations) {
-            messageConsumer.addListener(URI.create(descriptor.target),
-                    new PluginExecutionMessageConsumerListener(latch, descriptor.operations));
+            final URI uri = URI.create(descriptor.target);
+            messageConsumer.addListener(uri, new PluginExecutionMessageConsumerListener(latch, descriptor.operations));
+            messageConsumer.addListener(uri, listener);
+        }
+
+        final Object wfid = workflow.asyncExecute(fields);
+
+        Thread.sleep(100);
+        if (reachableIds != null && !assertExecutionOrder) {
+            for (String reachableId : reachableIds) {
+                messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(reachableId));
+            }
         }
 
         ruoteRuntime.waitForWorkflow(wfid);
         latch.await();
+
+        if (assertExecutionOrder) {
+            List<String> expected = Lists.newArrayList();
+            for (OperationsDescriptor descriptor : expectedOperations) {
+                for (String operation : descriptor.operations) {
+                    expected.add(descriptor.target + "." + operation);
+                }
+            }
+            assertThat(executions).isEqualTo(expected);
+        }
     }
 
     @Test(timeOut = 30000)
@@ -313,9 +374,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     /**
      */
     private static class OperationsDescriptor {
+        final String id;
         final String target;
         final String[] operations;
         private OperationsDescriptor(String target, String[] operations) {
+            this("", target, operations);
+        }
+        private OperationsDescriptor(String id, String target, String[] operations) {
+            this.id = id;
             this.target = target;
             this.operations = operations;
         }
