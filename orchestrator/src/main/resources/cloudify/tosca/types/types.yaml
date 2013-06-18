@@ -18,6 +18,9 @@ definitions:
         cloudify.tosca.types.db_server:
             derived_from: "cloudify.tosca.types.middleware_server"
 
+        cloudify.tosca.types.web_server:
+            derived_from: "cloudify.tosca.types.middleware_server"
+
         # An application artifact to deploy
         cloudify.tosca.types.app_module:
             interfaces:
