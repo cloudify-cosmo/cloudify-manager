@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
@@ -59,6 +60,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * @author Idan Moyal
@@ -294,7 +297,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     for (OperationsDescriptor descriptor : expectedOperations) {
                         String lastOperation = descriptor.operations[descriptor.operations.length - 1];
                         if (descriptor.target.equals(message.getTarget()) && lastOperation.equals(exec.get())) {
-                            messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.id));
+                            messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.nodeId));
                         }
                     }
                 }
@@ -311,7 +314,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final CountDownLatch latch = new CountDownLatch(latchCount);
         for (OperationsDescriptor descriptor : expectedOperations) {
             final URI uri = URI.create(descriptor.target);
-            messageConsumer.addListener(uri, new PluginExecutionMessageConsumerListener(latch, descriptor.operations));
+            messageConsumer.addListener(
+                    uri,
+                    new PluginExecutionMessageConsumerListener(latch, descriptor.operations, !assertExecutionOrder));
             messageConsumer.addListener(uri, listener);
         }
 
@@ -363,7 +368,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final CountDownLatch latch = new CountDownLatch(1);
 
         messageConsumer.addListener(new URI(plugin),
-                new PluginExecutionMessageConsumerListener(latch, new String[] {operation}));
+                new PluginExecutionMessageConsumerListener(latch, new String[] {operation}, false));
 
         workflow.execute(fields);
 
@@ -391,9 +396,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     /**
      */
     private static class OperationsDescriptor {
+        final String nodeId;
         final String target;
         final String[] operations;
         private OperationsDescriptor(String target, String[] operations) {
+            this("", target, operations);
+        }
+        private OperationsDescriptor(String nodeId, String target, String[] operations) {
+            this.nodeId = nodeId;
             this.target = target;
             this.operations = operations;
         }
@@ -404,9 +414,13 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private static class PluginExecutionMessageConsumerListener
             implements MessageConsumerListener<ExecuteTaskMessage> {
         private CountDownLatch latch;
+        private boolean removeExecutedOperations;
         private List<String> operations;
-        PluginExecutionMessageConsumerListener(CountDownLatch latch, String[] operations) {
+        PluginExecutionMessageConsumerListener(CountDownLatch latch,
+                                               String[] operations,
+                                               boolean removeExecutedOperations) {
             this.latch = latch;
+            this.removeExecutedOperations = removeExecutedOperations;
             this.operations = Lists.newLinkedList(Arrays.asList(operations));
         }
         public void onMessage(URI uri, ExecuteTaskMessage message) {
@@ -419,7 +433,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 String expectedOperation =  iterator.next();
                 if (actualOperation.equals(expectedOperation)) {
                     latch.countDown();
-                    iterator.remove();
+                    if (removeExecutedOperations) {
+                        iterator.remove();
+                    }
                     break;
                 }
             }
