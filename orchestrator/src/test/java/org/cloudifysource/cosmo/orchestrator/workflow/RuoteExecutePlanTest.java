@@ -133,6 +133,40 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
     }
 
+    /**
+     * For POC purposes - this test should be disabled.
+     */
+    @Test(timeOut = 60000, enabled = false)
+    public void testPlanExecutionPoc() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/unit/poc/poc-dsl1.yaml";
+        String machineId = "mysql_template.mysql_host";
+        String databaseId = "mysql_template.mysql_database_server";
+        String schemaId = "mysql_template.mysql_schema";
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
+                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
+
+        final Map<String, Object> fields = Maps.newHashMap();
+        String dslLocation;
+        if (Files.exists(Paths.get(dslFile))) {
+            dslLocation = dslFile;
+        } else {
+            dslLocation = Resources.getResource(dslFile).getFile();
+        }
+        fields.put("dsl", dslLocation);
+
+        final Object wfid = workflow.asyncExecute(fields);
+
+        Thread.sleep(10000);
+        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
+        Thread.sleep(10000);
+        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(databaseId));
+        Thread.sleep(5000);
+        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(schemaId));
+
+        ruoteRuntime.waitForWorkflow(wfid);
+    }
+
+
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackage() throws IOException, InterruptedException {
         URL resource = Resources.getResource("org/cloudifysource/cosmo/dsl/unit/packaging/basic-packaging.yaml");
