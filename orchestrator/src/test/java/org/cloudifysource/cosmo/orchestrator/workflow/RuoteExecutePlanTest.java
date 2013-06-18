@@ -144,12 +144,18 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String databaseId = "mysql_template.mysql_database_server";
         String schemaId = "mysql_template.mysql_schema";
         OperationsDescriptor[] descriptors = {
-                new OperationsDescriptor(machineId, "cloudify.tosca.artifacts.plugin.host.provisioner",
-                        new String[]{"provision", "start"}),
-                new OperationsDescriptor(databaseId, "cloudify.tosca.artifacts.plugin.middleware_component.installer",
-                        new String[]{"install", "start"}),
-                new OperationsDescriptor(schemaId, "cloudify.tosca.artifacts.plugin.app_module.installer",
-                        new String[]{"deploy", "start"})
+            new OperationsDescriptor(
+                    machineId,
+                    "cloudify.tosca.artifacts.plugin.host.provisioner",
+                    new String[]{"provision", "start"}),
+            new OperationsDescriptor(
+                    databaseId,
+                    "cloudify.tosca.artifacts.plugin.middleware_component.installer",
+                    new String[]{"install", "start"}),
+            new OperationsDescriptor(
+                    schemaId,
+                    "cloudify.tosca.artifacts.plugin.app_module.installer",
+                    new String[]{"deploy", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors, true);
     }
@@ -240,8 +246,10 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
     }
 
-    private void testPlanExecution(String dslFile, String[] reachableIds, OperationsDescriptor[] expectedOperations)
-            throws IOException, InterruptedException {
+    private void testPlanExecution(
+            String dslFile,
+            String[] reachableIds,
+            OperationsDescriptor[] expectedOperations) throws IOException, InterruptedException {
         testPlanExecution(dslFile, reachableIds, expectedOperations, false);
     }
 
