@@ -38,6 +38,10 @@ class PreparePlanParticipant < Ruote::Participant
 
       workitem.fields['plan'] = plan
 
+      if plan.has_key? 'global_workflow'
+        workitem.fields['global_workflow'] = Ruote::RadialReader.read(plan['global_workflow'])
+      end
+
       reply
 
     rescue Exception => e

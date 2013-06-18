@@ -72,11 +72,18 @@ public class RuoteRuntimeConfig {
         runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
         final Map<String, Object> variables = Maps.newHashMap();
 
-        final URL url = Resources.getResource("ruote/pdefs/execute_operation.radial");
-        final String executePlanRadial = Resources.toString(url, Charsets.UTF_8);
-        variables.put("execute_operation", new RuoteRadialVariable(executePlanRadial));
+        final String executeOperationRadial = getContent("ruote/pdefs/execute_operation.radial");
+        final String defaultGlobalPlanRadial = getContent("ruote/pdefs/default_global_workflow.radial");
+
+        variables.put("execute_operation", new RuoteRadialVariable(executeOperationRadial));
+        variables.put("global_workflow", new RuoteRadialVariable(defaultGlobalPlanRadial));
 
         return RuoteRuntime.createRuntime(runtimeProperties, variables);
+    }
+
+    private static String getContent(String resource) throws IOException {
+        final URL url = Resources.getResource(resource);
+        return Resources.toString(url, Charsets.UTF_8);
     }
 
 }
