@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -38,7 +39,6 @@ import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
-import org.fest.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -400,7 +400,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 Map<?, ?> runtimeProperties = (Map<?, ?>) properties.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
-                    if (Objects.areEqual(ip, machineProperties.get("ip"))) {
+                    if (Objects.equal(ip, machineProperties.get("ip"))) {
                         latch.countDown();
                     }
                 }
