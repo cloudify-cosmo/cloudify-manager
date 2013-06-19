@@ -1,0 +1,29 @@
+definitions:
+    types:
+        vm:
+            interfaces:
+                - "provisioner"
+    interfaces:
+        provisioner:
+            operations:
+                - "start"
+                - "stop"
+    artifacts:
+        cloudify.tosca.artifacts.plugin:
+            derived_from: "artifact"
+        provisioner_plugin:
+            derived_from: "cloudify.tosca.artifacts.plugin"
+            properties:
+                interface: "provisioner"
+                url: "plugins/provisioner-plugin.zip"
+    service_templates:
+        package_template:
+            topology:
+                package_vm:
+                    type: "vm"
+    plans:
+        package_template.package_vm:
+            init:
+                radial: |
+                    define init_method
+                        execute_operation operation: 'start'

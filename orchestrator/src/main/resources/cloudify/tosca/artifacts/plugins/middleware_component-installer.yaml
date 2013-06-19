@@ -1,0 +1,10 @@
+definitions:
+
+    # TODO DSL we should probably add an explicit import here to the base types
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.middleware_component.installer:
+            derived_from: "cloudify.tosca.artifacts.plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.middleware_component.installer"
+                url: "cloudify/tosca/artifacts/plugins/middleware_component-installer.zip"

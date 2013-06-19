@@ -16,17 +16,27 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
+import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
+import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 import java.util.Map;
 
 /**
@@ -38,12 +48,18 @@ import java.util.Map;
 @Configuration
 public class RuoteRuntimeConfig {
 
+    @NotEmpty
+    @Value("${cosmo.ruote.workflows:ruote/workflows.yaml}")
+    private String workflows;
+
     @Value("${cosmo.message-broker.uri}")
     private URI messageBrokerURI;
 
+    @NotEmpty
     @Value("${cosmo.resource-monitor.topic}")
     private String resourceMonitorTopic;
 
+    @NotEmpty
     @Value("${cosmo.resource-provisioner.topic}")
     private String resourceProvisionerTopic;
 
@@ -57,7 +73,7 @@ public class RuoteRuntimeConfig {
     private MessageConsumer messageConsumer;
 
     @Bean
-    public RuoteRuntime ruoteRuntime() {
+    public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
         runtimeProperties.put("state_cache", realTimeStateCache);
         runtimeProperties.put("broker_uri", messageBrokerURI);
@@ -65,7 +81,36 @@ public class RuoteRuntimeConfig {
         runtimeProperties.put("message_consumer", messageConsumer);
         runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
         runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
-        return RuoteRuntime.createRuntime(runtimeProperties);
+
+        final Map<String, Object> variables = Maps.newHashMap();
+        variables.putAll(loadInitialWorkflows());
+
+        return RuoteRuntime.createRuntime(runtimeProperties, variables);
+    }
+
+    private static String getContent(String resource) throws IOException {
+        final URL url = Resources.getResource(resource);
+        return Resources.toString(url, Charsets.UTF_8);
+    }
+
+    private Map<String, RuoteRadialVariable> loadInitialWorkflows() throws IOException {
+        ObjectMapper mapper = newObjectMapper();
+        String workflowsMapping = getContent(workflows);
+        Map<String, String> workflowsMappingMap = mapper.readValue(workflowsMapping,
+                new TypeReference<Map<String, String>>() { });
+        Map<String, RuoteRadialVariable> result = Maps.newHashMap();
+        for (Map.Entry<String, String> entry : workflowsMappingMap.entrySet()) {
+            String bindingName = entry.getKey();
+            String workflowContent = getContent(entry.getValue());
+            result.put(bindingName, new RuoteRadialVariable(workflowContent));
+        }
+        return result;
+    }
+
+    private static ObjectMapper newObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+        return mapper;
     }
 
 }

@@ -1,0 +1,5 @@
+--- 
+definitions: 
+  types: 
+    type0: 
+      derived_from: node

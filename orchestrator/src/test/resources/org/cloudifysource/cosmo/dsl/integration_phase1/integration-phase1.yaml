@@ -1,0 +1,23 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "simple-webserver-installer.yaml"
+        - "vagrant-host-provisioner.yaml"
+
+    service_templates:
+        simple_web_server:
+            topology:
+                webserver_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        some_relevant_property1: "its value"
+                        some_relevant_property2: "its value"
+
+                webserver_middleware:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        some_other_property1: "its value"
+                        some_other_property2: "its value"
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "webserver_host"

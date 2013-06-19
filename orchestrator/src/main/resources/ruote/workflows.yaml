@@ -1,0 +1,2 @@
+execute_operation: "ruote/pdefs/execute_operation.radial"
+global_workflow: "ruote/pdefs/default_global_workflow.radial"

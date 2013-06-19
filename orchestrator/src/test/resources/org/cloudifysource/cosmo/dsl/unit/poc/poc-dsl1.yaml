@@ -1,0 +1,44 @@
+######################
+# Requirements reminder:
+# 1. Create VM - specify OS and HW and let the Cloud driver seek the right image in the Cloud - however allow for Template Alias alternative and specific image alternative as well
+# 2. Configure OS - allow for additional OS patches once VM is up. For example enabling dTrace
+# 3. Install middleware and publish capabilities - Install mySQL. Publish mySQL JDBC connection port and path to my SQL shell
+# 4. Create schema on mySQL using the mySQL shell capability
+#
+definitions:
+    imports:
+        - "cloudify.types"
+        - "host.provisioner"
+        - "app_module.installer"
+
+    artifacts:
+        # this plugin supports the following operations:
+        # install, uninstall, start, stop & restart.
+        cloudify.poc.chef_plugin:
+            derived_from: "cloudify.tosca.artifacts.plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.middleware_component.installer"
+                url: "cloudify/poc/artifacts/plugins/chef-plugin.zip"
+
+    service_templates:
+        mysql_template:
+            topology:
+                mysql_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        image: "aws149180"
+
+                mysql_database_server:
+                    type: "cloudify.tosca.types.db_server"
+                    properties:
+                        port: "3306"
+                        installer_recipe: "mysql_chef_recipe"
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "mysql_host"
+
+                mysql_schema:
+                    type: "cloudify.tosca.types.app_module"
+                    properties:
+                        name: "petclinic"
+                    relationships:
+                        cloudify.tosca.relationships.deployed_on: "mysql_database_server"

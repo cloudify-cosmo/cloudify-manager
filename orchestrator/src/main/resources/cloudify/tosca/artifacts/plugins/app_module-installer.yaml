@@ -1,0 +1,10 @@
+definitions:
+
+    # TODO DSL we should probably add an explicit import here to the base types
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.app_module.installer:
+            derived_from: "cloudify.tosca.artifacts.plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.app_module.installer"
+                url: "cloudify/tosca/artifacts/plugins/app_module-installer.zip"
