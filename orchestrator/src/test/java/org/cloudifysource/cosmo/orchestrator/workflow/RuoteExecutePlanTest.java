@@ -38,6 +38,7 @@ import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
+import org.fest.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -265,6 +266,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(dslFile, reachableIds, expectedOperations, false);
     }
 
+    private RuoteWorkflow createDefaultWorkflowForDsl() {
+        return RuoteWorkflow.createFromResource(
+                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
+    }
+
     private void testPlanExecution(
             String dslFile,
             String[] reachableIds,
@@ -272,16 +278,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             final boolean assertExecutionOrder) throws IOException,
             InterruptedException {
 
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
-
-        final Map<String, Object> fields = Maps.newHashMap();
+        final RuoteWorkflow workflow = createDefaultWorkflowForDsl();
         String dslLocation;
         if (Files.exists(Paths.get(dslFile))) {
             dslLocation = dslFile;
         } else {
             dslLocation = Resources.getResource(dslFile).getFile();
         }
+        Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", dslLocation);
 
         final List<String> executions = Lists.newArrayList();
@@ -371,6 +375,45 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 new PluginExecutionMessageConsumerListener(latch, new String[] {operation}, false));
 
         workflow.execute(fields);
+
+        latch.await();
+    }
+
+    @Test(timeOut = 130000)
+    public void testRuntimePropertiesInjection() throws IOException, InterruptedException {
+        final String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
+        final String machineId = "mysql_template.mysql_host";
+        final String plugin = "cloudify.tosca.artifacts.plugin.middleware_component.installer";
+        final String ip = "10.0.0.1";
+
+        RuoteWorkflow workflow = createDefaultWorkflowForDsl();
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("dsl", Resources.getResource(dslFile).getFile());
+        workflow.asyncExecute(fields);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        messageConsumer.addListener(URI.create(plugin), new MessageConsumerListener<ExecuteTaskMessage>() {
+            @Override
+            public void onMessage(URI uri, ExecuteTaskMessage message) {
+                Map<?, ?> properties = (Map<?, ?>) message.getPayloadProperty("properties").get();
+                Map<?, ?> runtimeProperties = (Map<?, ?>) properties.get("cloudify_runtime");
+                if (runtimeProperties.containsKey(machineId)) {
+                    Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
+                    if (Objects.areEqual(ip, machineProperties.get("ip"))) {
+                        latch.countDown();
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                t.printStackTrace();
+            }
+        });
+
+        StateChangedMessage message = createReachableStateCacheMessage(machineId);
+        message.getState().put("ip", ip);
+        messageProducer.send(stateCacheTopic, message);
 
         latch.await();
     }
