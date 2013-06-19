@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration;
 
-import com.beust.jcommander.internal.Maps;
+import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
