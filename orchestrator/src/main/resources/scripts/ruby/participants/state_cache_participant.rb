@@ -16,6 +16,8 @@
 
 class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChangeCallbackStub
 
+  NODE = 'node'
+  RUNTIME = 'cloudify_runtime'
   @resource_id = nil
 
   def resource_id=(resource_id)
@@ -24,6 +26,7 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
 
   def onStateChange(participant, workitem, cache, new_snapshot)
     matches = true
+    state = nil
     unless @resource_id.nil?
       state = new_snapshot.get(@resource_id)
       if state.java_kind_of?(java::util::Map)
@@ -38,7 +41,19 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
     $logger.debug('RuoteStateChangeCallback invoked: [params={}, snapshot={}, matches={}]',
                   workitem.params, new_snapshot, matches)
     if matches
-      workitem.fields.merge!(new_snapshot)
+      if workitem.fields.has_key? NODE
+        current_node = workitem.fields[NODE]
+        node_state = Hash.new
+        state.each { |key, value| node_state[key] = value }
+        properties = current_node['properties']
+
+        # state cache listener is always invoked by a single thread
+        # and therefore the following code is safe
+        properties[RUNTIME] = Hash.new unless properties.has_key? RUNTIME
+        properties[RUNTIME][@resource_id] = node_state
+      else
+        workitem.fields.merge!(new_snapshot)
+      end
       participant.reply(workitem)
     end
   end
