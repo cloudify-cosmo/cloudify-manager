@@ -39,6 +39,8 @@ public abstract class TestConfig {
     // To enable hibernate validation of Configuration files
     @Bean
     public static BeanValidationPostProcessor beanValidationPostProcessor() {
-        return new BeanValidationPostProcessor();
+        BeanValidationPostProcessor result = new BeanValidationPostProcessor();
+        result.setAfterInitialization(true);
+        return result;
     }
 }
