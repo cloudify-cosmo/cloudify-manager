@@ -16,32 +16,29 @@
 
 package org.cloudifysource.cosmo.fileserver.config;
 
-import org.cloudifysource.cosmo.fileserver.JettyFileServer;
-import org.hibernate.validator.constraints.NotEmpty;
-import org.hibernate.validator.constraints.Range;
+import com.google.common.io.Resources;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.PostConstruct;
+import java.io.File;
+import java.net.URL;
+
 /**
- * Configuration for {@link org.cloudifysource.cosmo.fileserver.JettyFileServer}.
+ * Configuration for {@link org.cloudifysource.cosmo.fileserver.JettyFileServerTest}.
  *
  * @author Eitan Yanovsky
  * @since 0.1
  */
 @Configuration
-public class JettyFileServerConfig {
+public class JettyFileServerTestConfig extends JettyFileServerConfig {
 
-    @Range(min = 1, max = 65535)
-    @Value("${cosmo.file-server.port}")
-    protected int port;
+    @Value("${cosmo.file-server.resource-location}")
+    private String resourceLocation;
 
-    @NotEmpty
-    @Value("${cosmo.file-server.resource-base}")
-    protected String resourceBase;
-
-    @Bean(destroyMethod = "close")
-    public JettyFileServer jettyFileServer() {
-        return new JettyFileServer(port, resourceBase);
+    @PostConstruct
+    public void setResourceBase() {
+        final URL resource = Resources.getResource(resourceLocation);
+        this.resourceBase = new File(resource.getPath()).getParentFile().getAbsolutePath();
     }
 }

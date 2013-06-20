@@ -16,14 +16,22 @@
 
 package org.cloudifysource.cosmo.fileserver;
 
-import com.google.common.io.Resources;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Response;
+import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.fileserver.config.JettyFileServerTestConfig;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.io.File;
+import javax.inject.Inject;
 import java.net.URL;
 
 /**
@@ -33,26 +41,41 @@ import java.net.URL;
  * @since 0.1
  */
 
-public class JettyFileServerTest {
+@ContextConfiguration(classes = { JettyFileServerTest.Config.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class JettyFileServerTest extends AbstractTestNGSpringContextTests {
+
+    /**
+     * Test configuration.
+     */
+    @Configuration
+    @Import({
+            JettyFileServerTestConfig.class
+    })
+    @PropertySource("org/cloudifysource/cosmo/fileserver/config/test.properties")
+    static class Config extends TestConfig {
+    }
+
+    @Value("${cosmo.file-server.port}")
+    private int port;
+
+    @Value("${cosmo.file-server-test.test-file-name}")
+    private String fileName;
+
+    @Inject
+    private JettyFileServer server;
 
     @Test
     public void testStartFileServerAndDownloadFile() throws Exception {
-        final URL resource = Resources.getResource("org/cloudifysource/cosmo/fileserver/test.txt");
-        final String resourcePath = new File(resource.getPath()).getParentFile().getAbsolutePath();
+        AsyncHttpClient client = new AsyncHttpClient();
+        final ListenableFuture<Response> listenableFuture =
+                client.prepareGet(new URL("http://localhost:" + port + "/" + fileName).toURI().toString()).execute();
 
-        JettyFileServer server = new JettyFileServer(53229, resourcePath);
-        try {
-            AsyncHttpClient client = new AsyncHttpClient();
-            final ListenableFuture<Response> listenableFuture =
-                    client.prepareGet(new URL("http://localhost:53229/test.txt").toURI().toString()).execute();
+        final Response response = listenableFuture.get();
+        String responseBody = response.getResponseBody();
 
-            final Response response = listenableFuture.get();
-            String responseBody = response.getResponseBody();
+        Assert.assertEquals("test text file content", responseBody);
 
-            Assert.assertEquals("test text file content", responseBody);
-        } finally {
-            server.close();
-        }
     }
 
 }
