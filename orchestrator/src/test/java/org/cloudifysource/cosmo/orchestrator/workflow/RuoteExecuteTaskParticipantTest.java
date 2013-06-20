@@ -17,7 +17,6 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -26,6 +25,7 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
+import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
 import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
@@ -42,7 +42,6 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
@@ -68,40 +67,10 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
     @Configuration
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     @Import({
-            MockTaskExecutorConfig.class })
+            MockTaskExecutorConfig.class,
+            MockCeleryTaskWorkerConfig.class
+    })
     static class Config extends TestConfig {
-
-        @Bean
-        MockCeleryTaskWorker worker() {
-
-            final Map<String, List<TaskReceivedListener>> listeners = Maps.newConcurrentMap();
-
-            return new MockCeleryTaskWorker() {
-
-                @Override
-                public Object execute(String target, String taskId, String taskName, Map<String,
-                        Object> kwargs) throws Exception {
-                    if (kwargs.get("fail") != null) {
-                        throw new Exception("Failing task");
-                    }
-                    List<TaskReceivedListener> taskReceivedListeners = listeners.get(target);
-                    for (TaskReceivedListener listener : taskReceivedListeners) {
-                        listener.onTaskReceived(target, taskName, kwargs);
-                    }
-                    return "mockResult";
-                }
-
-                @Override
-                public void addListener(String target, TaskReceivedListener taskReceivedListener) {
-                    List<TaskReceivedListener> taskReceivedListeners = listeners.get(target);
-                    if (taskReceivedListeners == null) {
-                        taskReceivedListeners = Lists.newArrayList();
-                        listeners.put(target, taskReceivedListeners);
-                    }
-                    listeners.get(target).add(taskReceivedListener);
-                }
-            };
-        }
 
         @Bean
         public RuoteRuntime ruoteRuntime() {
