@@ -59,6 +59,11 @@
             <artifactId>tasks-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>tasks</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-validator</artifactId>
         </dependency>
@@ -94,6 +99,13 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>tasks</artifactId>
+            <version>0.1-SNAPSHOT</version>
+            <scope>test</scope>
+            <type>test-jar</type>
         </dependency>
         <dependency>
             <groupId>org.easytesting</groupId>
