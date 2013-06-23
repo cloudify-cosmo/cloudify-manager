@@ -16,21 +16,26 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.monitor.Agent;
-import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
-import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.CloudDriver;
 import org.cloudifysource.cosmo.cloud.driver.MachineConfiguration;
 import org.cloudifysource.cosmo.cloud.driver.MachineDetails;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.monitor.Agent;
+import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
+import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.provisioner.config.CloudResourceProvisionerConfig;
-import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
+import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
+import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
+import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
+import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
+import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -45,6 +50,7 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -72,6 +78,8 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
     @Configuration
     @Import({
             CloudResourceProvisionerConfig.class,
+            MockTaskExecutorConfig.class,
+            MockCeleryTaskWorkerConfig.class,
             RuoteRuntimeConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
@@ -121,20 +129,44 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
     @Inject
     private RuoteRuntime runtime;
 
+    @Inject
+    private MessageProducer messageProducer;
+
+    @Inject
+    private MockCeleryTaskWorker worker;
+
     @Test(timeOut = 30000)
     public void testStartAndMonitor() throws ExecutionException, InterruptedException {
 
         // Create radial workflow
         final String flow = String.format(
                 "define flow\n" +
-                        "  execute_task target: \"%s\", continue_on: \"%s\", payload: {\n" +
-                        "    exec: \"start_machine\",\n" +
+                        "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
                         "    resource_id: \"$resource_id\"\n" +
                         "  }\n" +
                         "  state resource_id: \"$resource_id\", reachable: \"true\"\n",
                 resourceProvisionerTopic,
-                TaskStatusMessage.STARTED);
+                "start_machine");
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
+
+        worker.addListener(resourceProvisionerTopic, new TaskReceivedListener() {
+
+            @Override
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+
+                ExecuteTaskMessage message = new ExecuteTaskMessage();
+                message.setTarget(target);
+                message.setPayloadProperty("resource_id", resourceId);
+                message.setPayloadProperty("exec", taskName);
+                try {
+                    messageProducer.send(new URI(target), message);
+                } catch (URISyntaxException e) {
+                    throw Throwables.propagate(e);
+                }
+
+            }
+        });
+
 
         // Execute workflow
         final Map<String, Object> workitem = Maps.newHashMap();

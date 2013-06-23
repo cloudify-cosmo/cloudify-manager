@@ -71,7 +71,7 @@ public class DSLProcessor {
             LOG.debug("Loaded dsl:\n{}", loadedDsl.getContent());
 
             ImportsContext importContext = new ImportsContext(
-                    ResourceLocationHelper.createLocationString(baseLocation, "definitions/"));
+                    ResourceLocationHelper.createLocationString(baseLocation, "definitions"));
             importContext.addMapping(loadAliasMapping());
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
@@ -92,7 +92,7 @@ public class DSLProcessor {
                 String globalPlanResourcePath = definitions.getGlobalPlan();
                 ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(baseLocation);
                 resourceLoadingContext.setContextLocation(
-                        ResourceLocationHelper.createLocationString(baseLocation, "workflows/"));
+                        ResourceLocationHelper.createLocationString(baseLocation, "workflows"));
                 DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
                 String globalPlanContent = globalPlanResource.getContent();
                 plan.put("global_workflow", globalPlanContent);
