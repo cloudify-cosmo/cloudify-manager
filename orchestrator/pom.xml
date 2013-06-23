@@ -61,7 +61,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
-            <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -103,7 +102,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
-            <version>0.1-SNAPSHOT</version>
             <scope>test</scope>
             <type>test-jar</type>
         </dependency>
