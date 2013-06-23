@@ -21,24 +21,26 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
-import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
-import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
-import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.cloud.driver.config.VagrantCloudDriverConfig;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
+import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.provisioner.config.CloudResourceProvisionerConfig;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
-import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
+import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
+import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
+import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
+import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -88,7 +90,9 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
             MessageConsumerTestConfig.class,
             MessageProducerConfig.class,
             RuoteRuntimeConfig.class,
-            VagrantCloudDriverConfig.class
+            VagrantCloudDriverConfig.class,
+            MockTaskExecutorConfig.class,
+            MockCeleryTaskWorkerConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -118,6 +122,9 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
     @Value("${cosmo.agent.topic}")
     private URI agentTopic;
 
+    @Inject
+    private MockCeleryTaskWorker worker;
+
     private static final String RECIPE_PATH = "recipes/json/tomcat/vm_node_recipe.json";
     private MockAgent mockAgent;
 
@@ -139,16 +146,11 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
         final String workflow = loadWorkflow(resourceId, workflowName);
         final RuoteWorkflow ruoteWorkflow = RuoteWorkflow.createFromString(workflow, runtime);
 
-        messageConsumer.addListener(new URI(resourceProvisionerTopic), new MessageConsumerListener<Object>() {
+        worker.addListener(resourceProvisionerTopic, new TaskReceivedListener() {
+
             @Override
-            public void onMessage(URI uri, Object message) {
-                if (message instanceof TaskStatusMessage) {
-                    mockAgent = new MockAgent(messageConsumer, messageProducer, agentTopic, resourceMonitorTopic);
-                }
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                t.printStackTrace();
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                mockAgent = new MockAgent(messageConsumer, messageProducer, agentTopic, resourceMonitorTopic);
             }
         });
 
