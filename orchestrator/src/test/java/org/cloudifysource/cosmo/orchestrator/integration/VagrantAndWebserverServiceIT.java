@@ -78,7 +78,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
-    @Test
+    @Test(groups = "vagrant")
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
 
         final String hostId = "simple_web_server.webserver_host";
