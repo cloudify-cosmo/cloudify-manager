@@ -16,12 +16,11 @@
 
 package org.cloudifysource.cosmo.dsl.packaging;
 
-import java.net.URI;
 import java.nio.file.Path;
 
 /**
  * The outcome of a {@link DSLPackageProcessor#process(java.io.File, java.io.File)} invocation which contains the
- * main DSL of the package and a {@link URI} pointing to the package's root directory.
+ * main DSL of the package and a string pointing to the package's root directory.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -29,18 +28,18 @@ import java.nio.file.Path;
 public class ExtractedDSLPackageDetails {
 
     private final Path dslPath;
-    private final URI packageRoot;
+    private final String packageLocation;
 
-    public ExtractedDSLPackageDetails(Path dslPath, URI packageRoot) {
+    public ExtractedDSLPackageDetails(Path dslPath, String packageLocation) {
         this.dslPath = dslPath;
-        this.packageRoot = packageRoot;
+        this.packageLocation = packageLocation;
     }
 
     public Path getDslPath() {
         return dslPath;
     }
 
-    public URI getPackageRoot() {
-        return packageRoot;
+    public String getPackageLocation() {
+        return packageLocation;
     }
 }
