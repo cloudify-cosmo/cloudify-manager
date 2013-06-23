@@ -17,20 +17,22 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
+import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
+import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
+import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
-import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
 import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
 import org.fest.assertions.api.Assertions;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -65,34 +67,29 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
      * Test configuration.
      */
     @Configuration
-    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     @Import({
+            MockMessageConsumerConfig.class,
+            MockMessageProducerConfig.class,
+            RealTimeStateCacheConfig.class,
+            RuoteRuntimeConfig.class,
+            TemporaryDirectoryConfig.class,
             MockTaskExecutorConfig.class,
             MockCeleryTaskWorkerConfig.class
     })
+    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
-
-        @Bean
-        public RuoteRuntime ruoteRuntime() {
-            Map<String, Object> runtimeProperties = Maps.newHashMap();
-            runtimeProperties.put("executor", executor);
-            return RuoteRuntime.createRuntime(runtimeProperties);
-        }
-
-        @Inject
-        private TaskExecutor executor;
     }
 
     @Inject
     private RuoteRuntime runtime;
 
-
+    @Inject
     private MessageProducer messageProducer;
 
     @Inject
     private MockCeleryTaskWorker worker;
 
-
+    @Inject
     private MessageConsumer messageConsumer;
 
 
