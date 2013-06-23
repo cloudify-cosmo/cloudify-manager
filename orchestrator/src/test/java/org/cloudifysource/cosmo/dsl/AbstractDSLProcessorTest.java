@@ -21,12 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Throwables;
-import com.google.common.io.Resources;
 import org.testng.Assert;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
@@ -40,16 +37,8 @@ public abstract class AbstractDSLProcessorTest {
     private static final ObjectMapper OBJECT_MAPPER = newObjectMapper();
     private static final DSLPostProcessor POST_PROCESSOR = new PluginArtifactAwareDSLPostProcessor();
 
-    protected URI readResource(String resource) {
-        try {
-            return Resources.getResource(resource).toURI();
-        } catch (URISyntaxException e) {
-            throw Throwables.propagate(e);
-        }
-    }
-
-    protected Processed process(URI dslUri) {
-        String processed = DSLProcessor.process(dslUri, POST_PROCESSOR);
+    protected Processed process(String dslLocation) {
+        String processed = DSLProcessor.process(dslLocation, POST_PROCESSOR);
         try {
             return OBJECT_MAPPER.readValue(processed, Processed.class);
         } catch (IOException e) {

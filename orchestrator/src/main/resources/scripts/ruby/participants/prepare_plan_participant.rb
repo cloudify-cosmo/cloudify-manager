@@ -26,7 +26,7 @@ class PreparePlanParticipant < Ruote::Participant
 
       dsl_file = workitem.params['dsl']
 
-      processed_dsl = DSLProcessor.process(URI.create(dsl_file), PluginArtifactAwareDSLPostProcessor.new)
+      processed_dsl = DSLProcessor.process(dsl_file, PluginArtifactAwareDSLPostProcessor.new)
 
       plan = JSON.parse(processed_dsl)
 

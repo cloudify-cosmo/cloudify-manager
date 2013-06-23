@@ -33,7 +33,7 @@ public class DSLProcessorServiceTemplatesTest extends AbstractDSLProcessorTest {
     public void testMultipleServiceTemplates() {
         String validImportsDSLResource =
                 "org/cloudifysource/cosmo/dsl/unit/service_templates/dsl-with-service-templates.yaml";
-        Processed processed = process(readResource(validImportsDSLResource));
+        Processed processed = process(validImportsDSLResource);
         List<Node> nodes = processed.getNodes();
 
         // All we care about here is verifying these nodes exists.
@@ -49,7 +49,7 @@ public class DSLProcessorServiceTemplatesTest extends AbstractDSLProcessorTest {
     public void testMultipleServiceTemplatesPlansOverride() {
         String validImportsDSLResource =
                 "org/cloudifysource/cosmo/dsl/unit/service_templates/dsl-with-service-templates-override-plan.yaml";
-        Processed processed = process(readResource(validImportsDSLResource));
+        Processed processed = process(validImportsDSLResource);
         List<Node> nodes = processed.getNodes();
 
         // All we care about here is verifying these nodes exists.
