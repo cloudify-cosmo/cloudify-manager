@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import java.io.File;
+
 /**
  * Helper methods for handling string based resource locations.
  *
@@ -24,17 +26,20 @@ package org.cloudifysource.cosmo.dsl;
  */
 public class ResourceLocationHelper {
 
+    private static final String CLASSPATH_SEPARATOR = "/";
+
     /**
      * Gets the parent location substring of the provided resource location.
      * @param resourceLocation The resource location
      * @return The resource's parent location.
      */
     public static String getParentLocation(String resourceLocation) {
+        String separator = getSeparator(resourceLocation);
         String location = resourceLocation;
-        if (location.endsWith("/")) {
+        if (location.endsWith(separator)) {
             location = resourceLocation.substring(0, resourceLocation.length() - 1);
         }
-        int index = location.lastIndexOf('/');
+        int index = location.lastIndexOf(separator);
         return index == -1 ? "" : location.substring(0, index);
     }
 
@@ -46,16 +51,28 @@ public class ResourceLocationHelper {
      * @return Concatenated resource location.
      */
     public static String createLocationString(String resourceLocation, String subLocation) {
+        String separator = getSeparator(resourceLocation);
         String location;
-        if (resourceLocation.endsWith("/")) {
+        if (resourceLocation.endsWith(separator)) {
             location = String.format("%s%s",
                     resourceLocation,
-                    subLocation.startsWith("/") ? subLocation.substring(1) : subLocation);
+                    subLocation.startsWith(separator) ? subLocation.substring(1) : subLocation);
         } else {
-            location = String.format("%s/%s",
+            location = String.format("%s%s%s",
                     resourceLocation,
-                    subLocation.startsWith("/") ? subLocation.substring(1) : subLocation);
+                    separator,
+                    subLocation.startsWith(separator) ? subLocation.substring(1) : subLocation);
         }
-        return location.endsWith("/") ? location.substring(0, location.length() - 1) : location;
+        return location.endsWith(separator) ? location.substring(0, location.length() - 1) : location;
     }
+
+    private static String getSeparator(String resourceLocation) {
+        if (resourceLocation.contains(File.separator)) {
+            return File.separator;
+        } else if (resourceLocation.contains(CLASSPATH_SEPARATOR)) {
+            return CLASSPATH_SEPARATOR;
+        }
+        return File.separator;
+    }
+
 }
