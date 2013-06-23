@@ -31,11 +31,11 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyMapOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -59,7 +59,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
     static class Config extends TestConfig {
 
         @Bean
-        public TaskExecutor executor() {
+        public TaskExecutor executor() throws IOException {
             final TaskExecutor taskExecutor = mock(TaskExecutor.class);
             doAnswer(new Answer<Void>() {
                 @Override
@@ -68,7 +68,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
                 }
             })
                     .when(taskExecutor)
-                    .sendTask(anyString(), anyString(), anyString(), anyMapOf(String.class, Object.class),
+                    .sendTask(anyString(), anyString(), anyString(), anyString(),
                             any(EventListener.class));
             return taskExecutor;
         }
@@ -98,7 +98,9 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
 
         final String radial = String.format("define start_node\n" +
                 "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
-                "    resource_id: \"%s\"\n" +
+                "       properties: {\n" +
+                "           resource_id: \"%s\"\n" +
+                "       }\n" +
                 "  }\n", target, execute, resourceId);
 
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
@@ -115,7 +117,9 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
 
         final String radial = String.format("define start_node\n" +
                 "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
-                "    resource_id: \"%s\"\n" +
+                "       properties: {\n" +
+                "           resource_id: \"%s\"\n" +
+                "       }\n" +
                 "  }, on_error: do_nothing\n" +
                 "  define do_nothing\n" +
                 "    echo nop\n",
