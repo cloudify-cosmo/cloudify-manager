@@ -37,19 +37,31 @@ class ExecuteTaskParticipant < Ruote::Participant
       executor = $ruote_properties['executor']
 
       task_id = SecureRandom.uuid
+
       $logger.debug('task id is {}', task_id)
+
       exec = workitem.params['exec']
+
       $logger.debug('exec is {}', exec)
+
       target = workitem.params['target']
+
       $logger.debug('target is {}', target)
+
       payload = to_map(workitem.params['payload'])
+
+      properties = to_map(payload['properties'])
 
       $logger.debug('Executing task {} with payload {}', exec, payload)
 
-      executor.sendTask(target, task_id, exec, payload, self)
+      json_props = JSON.generate(properties)
+
+      $logger.debug('Generated JSON from {} = {}', properties, json_props)
+
+      executor.sendTask(target, task_id, exec, json_props, self)
 
     rescue Exception => e
-      $logger.debug('Exception caught on execute_task participant execution: {}', e)
+      $logger.debug('Exception caught on execute_task participant execution: {}', e.message)
       flunk(workitem, e)
     end
   end
