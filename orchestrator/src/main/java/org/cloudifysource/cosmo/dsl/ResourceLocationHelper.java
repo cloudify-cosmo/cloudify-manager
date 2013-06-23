@@ -72,7 +72,7 @@ public class ResourceLocationHelper {
         } else if (resourceLocation.contains(CLASSPATH_SEPARATOR)) {
             return CLASSPATH_SEPARATOR;
         }
-        return File.separator;
+        return CLASSPATH_SEPARATOR;
     }
 
 }
