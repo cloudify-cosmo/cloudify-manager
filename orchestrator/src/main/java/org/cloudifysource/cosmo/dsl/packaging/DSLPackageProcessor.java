@@ -48,7 +48,7 @@ public class DSLPackageProcessor {
 
     /**
      * Processes a package file and returns the main DSL file and the root folder where the package was extracted to
-     * as a {@link URI}.
+     * as a string representing the file system path.
      * @param packageFile The package file to process.
      * @param workDirectory The directory where the package will be extracted to.
      * @return DSL and package root directory.
@@ -58,7 +58,7 @@ public class DSLPackageProcessor {
         unzip(packageFile, workDirectory);
         try {
             final Path dslPath = getDSLMainFile(workDirectory);
-            return new ExtractedDSLPackageDetails(dslPath, workDirectory.toURI());
+            return new ExtractedDSLPackageDetails(dslPath, workDirectory.toString());
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
@@ -110,7 +110,7 @@ public class DSLPackageProcessor {
         try {
             final Map<String, Object> env = Maps.newHashMap();
             env.put("create", "false");
-            final URI uri = URI.create("jar:file:" + packageFile.getCanonicalPath());
+            final URI uri = URI.create("jar:" + packageFile.toURI());
             try (FileSystem zipfs = FileSystems.newFileSystem(uri, env)) {
                 final Path path = zipfs.getPath("/");
                 Files.walkFileTree(path, new SimpleFileVisitor<Path>() {

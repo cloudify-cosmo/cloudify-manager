@@ -39,9 +39,7 @@ import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
-import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -59,19 +57,21 @@ public class DSLProcessor {
     private static final String ALIAS_MAPPING_RESOURCE = "org/cloudifysource/cosmo/dsl/alias-mappings.yaml";
 
     /**
-     * @param dslUri A {@link URI} pointing to the dsl in its declarative form
+     * @param dslLocation A string pointing to the dsl in its declarative form. Can be either a file system path,
+     *                    url or classpath locations.
      * @return A processed json dsl to be used by the workflow engine.
      */
-    public static String process(URI dslUri, DSLPostProcessor postProcessor) {
+    public static String process(String dslLocation, DSLPostProcessor postProcessor) {
 
-        LOG.debug("Starting dsl processing: {}", dslUri);
+        LOG.debug("Starting dsl processing: {}", dslLocation);
 
         try {
-            final URI baseUri = extractPathFromURI(dslUri);
-            DSLResource loadedDsl = ResourcesLoader.load(dslUri.toString(), new ImportsContext(baseUri));
+            final String baseLocation = ResourceLocationHelper.getParentLocation(dslLocation);
+            DSLResource loadedDsl = ResourcesLoader.load(dslLocation, new ImportsContext(baseLocation));
             LOG.debug("Loaded dsl:\n{}", loadedDsl.getContent());
 
-            ImportsContext importContext = new ImportsContext(resolveContextURI(baseUri, "definitions/"));
+            ImportsContext importContext = new ImportsContext(
+                    ResourceLocationHelper.createLocationString(baseLocation, "definitions/"));
             importContext.addMapping(loadAliasMapping());
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
@@ -90,8 +90,9 @@ public class DSLProcessor {
 
             if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
                 String globalPlanResourcePath = definitions.getGlobalPlan();
-                ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(baseUri);
-                resourceLoadingContext.setContextUri(resolveContextURI(baseUri, "workflows/"));
+                ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(baseLocation);
+                resourceLoadingContext.setContextLocation(
+                        ResourceLocationHelper.createLocationString(baseLocation, "workflows/"));
                 DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
                 String globalPlanContent = globalPlanResource.getContent();
                 plan.put("global_workflow", globalPlanContent);
@@ -217,23 +218,23 @@ public class DSLProcessor {
 
     private static Definitions parseDslAndHandleImports(DSLResource dsl, ImportsContext context) {
         final Definitions definitions = parseRawDsl(dsl.getContent());
-        URI currentContext = context.getContextUri();
-        LOG.debug("Loading imports for dsl: {} [imports={}]", dsl.getUri(), definitions.getImports());
+        String currentContext = context.getContextLocation();
+        LOG.debug("Loading imports for dsl: {} [imports={}]", dsl.getLocation(), definitions.getImports());
         for (String definitionImport : definitions.getImports()) {
 
             DSLResource importedDsl = ResourcesLoader.load(definitionImport, context);
 
-            LOG.debug("Loaded import: {} [uri={}]", definitionImport, importedDsl.getUri());
+            LOG.debug("Loaded import: {} [uri={}]", definitionImport, importedDsl.getLocation());
 
-            if (context.isImported(importedDsl.getUri())) {
+            if (context.isImported(importedDsl.getLocation())) {
                 LOG.debug("Filtered import: {} (already imported)", definitionImport);
                 continue;
             }
-            context.addImport(importedDsl.getUri());
+            context.addImport(importedDsl.getLocation());
 
-            context.setContextUri(extractPathFromURI(importedDsl.getUri()));
+            context.setContextLocation(ResourceLocationHelper.getParentLocation(importedDsl.getLocation()));
             Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
-            context.setContextUri(currentContext);
+            context.setContextLocation(currentContext);
 
             copyDefinitions(importedDefinitions.getServiceTemplates(), definitions.getServiceTemplates());
             copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
@@ -254,11 +255,6 @@ public class DSLProcessor {
             }
             definitions.setGlobalPlan(importedDefinitions.getGlobalPlan());
         }
-    }
-
-    private static URI extractPathFromURI(URI dslUri) {
-        String path = Paths.get(dslUri.toString()).getParent().toString();
-        return URI.create(path.endsWith("/") ? path : path + "/");
     }
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,
@@ -344,17 +340,10 @@ public class DSLProcessor {
     }
 
     private static String loadGlobalPlan(String globalPlanResourcePath) {
-        final URI globalPlanBaseURI = extractPathFromURI(URI.create(globalPlanResourcePath));
-        ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(globalPlanBaseURI);
+        final String globalPlanBaseLocation = ResourceLocationHelper.getParentLocation(globalPlanResourcePath);
+        ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(globalPlanBaseLocation);
         DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
         return globalPlanResource.getContent();
-    }
-
-    private static URI resolveContextURI(URI baseURI, String context) {
-        if (!baseURI.toString().endsWith("/")) {
-            baseURI = URI.create(baseURI.toString() + "/");
-        }
-        return baseURI.resolve(context);
     }
 
 }

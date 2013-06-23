@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.dsl.resource;
 
 import com.google.common.collect.Sets;
 
-import java.net.URI;
 import java.util.Set;
 
 /**
@@ -30,18 +29,18 @@ import java.util.Set;
  */
 public class ImportsContext extends ResourceLoadingContext {
 
-    private final Set<URI> imports = Sets.newHashSet();
+    private final Set<String> imports = Sets.newHashSet();
 
-    public ImportsContext(URI baseUri) {
-        super(baseUri);
+    public ImportsContext(String baseLocation) {
+        super(baseLocation);
     }
 
-    public void addImport(URI importUri) {
-        imports.add(importUri);
+    public void addImport(String importLocation) {
+        imports.add(importLocation);
     }
 
-    public boolean isImported(URI importUri) {
-        return imports.contains(importUri);
+    public boolean isImported(String importLocation) {
+        return imports.contains(importLocation);
     }
 
 }

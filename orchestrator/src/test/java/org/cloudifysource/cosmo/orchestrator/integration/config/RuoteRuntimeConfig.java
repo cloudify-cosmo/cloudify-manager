@@ -28,6 +28,7 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
+import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -72,6 +73,9 @@ public class RuoteRuntimeConfig {
     @Inject
     private MessageConsumer messageConsumer;
 
+    @Inject
+    private TaskExecutor taskExecutor;
+
     @Bean
     public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
@@ -79,6 +83,7 @@ public class RuoteRuntimeConfig {
         runtimeProperties.put("broker_uri", messageBrokerURI);
         runtimeProperties.put("message_producer", messageProducer);
         runtimeProperties.put("message_consumer", messageConsumer);
+        runtimeProperties.put("executor", taskExecutor);
         runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
         runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
 

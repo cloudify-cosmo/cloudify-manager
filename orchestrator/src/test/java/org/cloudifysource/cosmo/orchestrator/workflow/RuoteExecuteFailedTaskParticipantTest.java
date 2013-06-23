@@ -15,16 +15,15 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.messaging.config.MockDisconnectedMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.tasks.EventListener;
+import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.jruby.embed.InvokeFailedException;
-import org.springframework.beans.factory.annotation.Value;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -33,6 +32,13 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.net.URISyntaxException;
+import java.util.Map;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyMapOf;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests ruote "execute task" participant when producer raises exception.
@@ -50,19 +56,34 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
      */
     @Configuration
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
-    @Import({
-            MockMessageConsumerConfig.class,
-            MockDisconnectedMessageProducerConfig.class,
-            RealTimeStateCacheConfig.class,
-            RuoteRuntimeConfig.class })
     static class Config extends TestConfig {
+
+        @Bean
+        public TaskExecutor executor() {
+            final TaskExecutor taskExecutor = mock(TaskExecutor.class);
+            doAnswer(new Answer<Void>() {
+                @Override
+                public Void answer(InvocationOnMock invocation) throws Throwable {
+                    throw new Exception("Failed sending task");
+                }
+            })
+                    .when(taskExecutor)
+                    .sendTask(anyString(), anyString(), anyString(), anyMapOf(String.class, Object.class),
+                            any(EventListener.class));
+            return taskExecutor;
+        }
+
+        @Bean
+        public RuoteRuntime ruoteRuntime() {
+            Map<String, Object> runtimeProperties = Maps.newHashMap();
+            runtimeProperties.put("executor", executor);
+            return RuoteRuntime.createRuntime(runtimeProperties);
+        }
+
+        @Inject
+        private TaskExecutor executor;
+
     }
-
-    @Inject
-    private MessageProducer messageProducer;
-
-    @Value("${cosmo.resource-provisioner.topic}")
-    private String target;
 
     @Inject
     private RuoteRuntime runtime;
@@ -76,8 +97,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
         final String execute = "start_machine";
 
         final String radial = String.format("define start_node\n" +
-                "  execute_task target: \"%s\", payload: {\n" +
-                "    exec: \"%s\",\n" +
+                "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
                 "    resource_id: \"%s\"\n" +
                 "  }\n", target, execute, resourceId);
 
@@ -94,8 +114,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
         final String execute = "start_machine";
 
         final String radial = String.format("define start_node\n" +
-                "  execute_task target: \"%s\", payload: {\n" +
-                "    exec: \"%s\",\n" +
+                "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
                 "    resource_id: \"%s\"\n" +
                 "  }, on_error: do_nothing\n" +
                 "  define do_nothing\n" +
