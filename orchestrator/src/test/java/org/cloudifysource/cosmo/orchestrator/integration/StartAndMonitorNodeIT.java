@@ -142,7 +142,9 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
         final String flow = String.format(
                 "define flow\n" +
                         "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
-                        "    resource_id: \"$resource_id\"\n" +
+                        "    properties: {\n" +
+                        "       resource_id: \"$resource_id\"\n" +
+                        "    }\n" +
                         "  }\n" +
                         "  state resource_id: \"$resource_id\", reachable: \"true\"\n",
                 resourceProvisionerTopic,

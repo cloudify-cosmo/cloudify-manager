@@ -108,7 +108,9 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
 
         final String radial = String.format("define start_node\n" +
                 "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
-                "    resource_id: \"%s\"\n" +
+                "       properties: {\n" +
+                "           resource_id: \"%s\"\n" +
+                "       }\n" +
                 "  }\n", "http://localhost:8080/", execute, resourceId);
 
 

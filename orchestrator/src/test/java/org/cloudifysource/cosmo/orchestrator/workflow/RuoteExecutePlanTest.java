@@ -356,6 +356,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String plugin = "some-plugin";
         operations.put(operation, plugin);
         node.put("operations", operations);
+        node.put("properties", Maps.newHashMap());
         fields.put("node", node);
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -384,8 +385,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         worker.addListener(plugin, new TaskReceivedListener() {
             @Override
             public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                Map<?, ?> nodeProperties = (Map<?, ?>) kwargs.get("properties");
-                Map<?, ?> runtimeProperties = (Map<?, ?>) nodeProperties.get("cloudify_runtime");
+                Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
                     if (Objects.equal(ip, machineProperties.get("ip"))) {

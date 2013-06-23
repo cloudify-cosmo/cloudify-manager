@@ -98,7 +98,9 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
 
         final String radial = String.format("define start_node\n" +
                 "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
-                "    resource_id: \"%s\"\n" +
+                "       properties: {\n" +
+                "           resource_id: \"%s\"\n" +
+                "       }\n" +
                 "  }\n", target, execute, resourceId);
 
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
@@ -115,7 +117,9 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
 
         final String radial = String.format("define start_node\n" +
                 "  execute_task target: \"%s\", exec: \"%s\", payload: {\n" +
-                "    resource_id: \"%s\"\n" +
+                "       properties: {\n" +
+                "           resource_id: \"%s\"\n" +
+                "       }\n" +
                 "  }, on_error: do_nothing\n" +
                 "  define do_nothing\n" +
                 "    echo nop\n",
