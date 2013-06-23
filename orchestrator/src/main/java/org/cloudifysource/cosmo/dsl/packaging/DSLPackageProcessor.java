@@ -110,7 +110,7 @@ public class DSLPackageProcessor {
         try {
             final Map<String, Object> env = Maps.newHashMap();
             env.put("create", "false");
-            final URI uri = URI.create("jar:file:" + packageFile.getCanonicalPath());
+            final URI uri = URI.create("jar:" + packageFile.toURI());
             try (FileSystem zipfs = FileSystems.newFileSystem(uri, env)) {
                 final Path path = zipfs.getPath("/");
                 Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
