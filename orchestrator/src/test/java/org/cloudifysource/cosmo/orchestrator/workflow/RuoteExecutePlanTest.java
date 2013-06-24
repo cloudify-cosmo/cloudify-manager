@@ -297,11 +297,12 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                executions.add(target + "." + taskName);
+                String operationName = extractOperationName(taskName);
+                executions.add(target + "." + operationName);
                 if (assertExecutionOrder) {
                     for (OperationsDescriptor descriptor : expectedOperations) {
                         String lastOperation = descriptor.operations[descriptor.operations.length - 1];
-                        if (descriptor.target.equals(target) && lastOperation.equals(taskName)) {
+                        if (descriptor.target.equals(target) && lastOperation.equals(operationName)) {
                             messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.nodeId));
                         }
                     }
@@ -472,9 +473,10 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         @Override
         public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            String operationName = extractOperationName(taskName);
             for (Iterator<String> iterator = operations.iterator(); iterator.hasNext();) {
                 String expectedOperation =  iterator.next();
-                if (taskName.equals(expectedOperation)) {
+                if (operationName.equals(expectedOperation)) {
                     latch.countDown();
                     if (removeExecutedOperations) {
                         iterator.remove();
@@ -483,6 +485,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 }
             }
         }
+    }
+
+    private static String extractOperationName(String taskName) {
+        String[] splitName = taskName.split("\\.");
+        return splitName[splitName.length - 1];
     }
 
 }
