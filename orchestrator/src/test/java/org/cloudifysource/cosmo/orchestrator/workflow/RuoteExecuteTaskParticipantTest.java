@@ -121,7 +121,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
             @Override
             public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 boolean valid = Objects.equal(target, "http://localhost:8080/");
-                valid &= Objects.equal(taskName, execute);
+                valid &= Objects.equal(taskName, buildTaskName(target, execute));
                 valid &= Objects.equal(kwargs.get("resource_id"), resourceId);
                 if (valid) {
                     latch.countDown();
@@ -133,6 +133,10 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         final Object id = workflow.asyncExecute();
         latch.await();
         runtime.waitForWorkflow(id);
+    }
+
+    private static String buildTaskName(String target, String operation) {
+        return "cosmo." + target + "." + operation;
     }
 
     @Test(timeOut = 30000)

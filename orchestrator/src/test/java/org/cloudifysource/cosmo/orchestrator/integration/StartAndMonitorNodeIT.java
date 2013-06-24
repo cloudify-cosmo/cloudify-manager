@@ -135,7 +135,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
     @Inject
     private MockCeleryTaskWorker worker;
 
-    @Test(timeOut = 30000)
+    @Test(timeOut = 30000_00)
     public void testStartAndMonitor() throws ExecutionException, InterruptedException {
 
         // Create radial workflow
@@ -159,7 +159,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
                 ExecuteTaskMessage message = new ExecuteTaskMessage();
                 message.setTarget(target);
                 message.setPayloadProperty("resource_id", resourceId);
-                message.setPayloadProperty("exec", taskName);
+                message.setPayloadProperty("exec", extractOperationName(taskName));
                 try {
                     messageProducer.send(new URI(target), message);
                 } catch (URISyntaxException e) {
@@ -175,6 +175,11 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
         workitem.put("resource_id", resourceId);
         workflow.execute(workitem);
         mockAgent.validateNoFailures();
+    }
+
+    private static String extractOperationName(String taskName) {
+        String[] splitName = taskName.split("\\.");
+        return splitName[splitName.length - 1];
     }
 
 }

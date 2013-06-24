@@ -489,7 +489,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     private static String extractOperationName(String taskName) {
         String[] splitName = taskName.split("\\.");
-        return splitName[splitName.length -1];
+        return splitName[splitName.length - 1];
     }
 
 }
