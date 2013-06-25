@@ -33,6 +33,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
@@ -81,6 +82,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
             RealTimeStateCacheConfig.class,
+            DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             TemporaryDirectoryConfig.class,
             MockTaskExecutorConfig.class,
@@ -92,6 +94,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Inject
     private RuoteRuntime ruoteRuntime;
+
+    @Inject
+    private RuoteWorkflow ruoteWorkflow;
 
     @Inject
     private RealTimeStateCache stateCache;
@@ -177,8 +182,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
         String schemaId = "mysql_template.mysql_schema";
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 
         final Map<String, Object> fields = Maps.newHashMap();
         String dslLocation;
@@ -189,7 +192,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
         fields.put("dsl", dslLocation);
 
-        final Object wfid = workflow.asyncExecute(fields);
+        final Object wfid = ruoteWorkflow.asyncExecute(fields);
 
         Thread.sleep(10000);
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
@@ -271,11 +274,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(dslFile, reachableIds, expectedOperations, false);
     }
 
-    private RuoteWorkflow createDefaultWorkflowForDsl() {
-        return RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
-    }
-
     private void testPlanExecution(
             String dslFile,
             String[] reachableIds,
@@ -283,7 +281,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             final boolean assertExecutionOrder) throws IOException,
             InterruptedException {
 
-        final RuoteWorkflow workflow = createDefaultWorkflowForDsl();
         String dslLocation;
         if (Files.exists(Paths.get(dslFile))) {
             dslLocation = dslFile;
@@ -322,7 +319,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             worker.addListener(descriptor.target, listener);
         }
 
-        final Object wfid = workflow.asyncExecute(fields);
+        final Object wfid = ruoteWorkflow.asyncExecute(fields);
 
         Thread.sleep(100);
         if (reachableIds != null && !assertExecutionOrder) {
@@ -376,10 +373,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String plugin = "cloudify.tosca.artifacts.plugin.middleware_component.installer";
         final String ip = "10.0.0.1";
 
-        RuoteWorkflow workflow = createDefaultWorkflowForDsl();
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", Resources.getResource(dslFile).getFile());
-        workflow.asyncExecute(fields);
+        ruoteWorkflow.asyncExecute(fields);
 
         final CountDownLatch latch = new CountDownLatch(1);
 
