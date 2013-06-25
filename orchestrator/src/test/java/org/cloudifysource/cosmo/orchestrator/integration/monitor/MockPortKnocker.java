@@ -98,7 +98,7 @@ public class MockPortKnocker implements Runnable {
                     // not connected
                 }
                 if (successfulConnection) {
-                    sendReachableStateCacheMessage(descriptor.getResourceId());
+                    sendReachableStateCacheMessage(descriptor);
                     iterator.remove();
                 }
             }
@@ -106,11 +106,12 @@ public class MockPortKnocker implements Runnable {
         }
     }
 
-    private void sendReachableStateCacheMessage(String resourceId) {
+    private void sendReachableStateCacheMessage(PortKnockingDescriptor descriptor) {
         final StateChangedMessage message = new StateChangedMessage();
-        message.setResourceId(resourceId);
+        message.setResourceId(descriptor.getResourceId());
         final Map<String, Object> state = Maps.newHashMap();
         state.put("reachable", "true");
+        state.put("ip", descriptor.getSocketAddress().getHostName());
         message.setState(state);
         messageProducer.send(stateCacheTopic, message);
     }

@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.Maps;
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
@@ -25,6 +24,7 @@ import org.cloudifysource.cosmo.orchestrator.integration.config.MockPortKnockerC
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
@@ -56,6 +56,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
             RealTimeStateCacheConfig.class,
+            DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             MockPortKnockerConfig.class,
             TaskExecutorConfig.class ,
@@ -70,21 +71,17 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Inject
     private RuoteRuntime ruoteRuntime;
 
+    @Inject
+    private RuoteWorkflow ruoteWorkflow;
+
     @Test(groups = "vagrant")
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
-
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
-
         final String dslLocation = "org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml";
-
         final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("dsl", Resources.getResource(dslLocation).getFile());
+        workitemFields.put("dsl", dslLocation);
 
-        final Object wfid = workflow.asyncExecute(workitemFields);
-
+        final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
-
     }
 
 }

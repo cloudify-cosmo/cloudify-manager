@@ -1,7 +1,7 @@
 definitions:
 
     artifacts:
-        cloudify.tosca.artifacts.plugin.simple_webserver_installer:
+        cloudify.tosca.artifacts.plugin.simple_webserver.installer:
             derived_from: "cloudify.tosca.artifacts.plugin"
             properties:
                 interface: "cloudify.tosca.interfaces.middleware_component.installer"

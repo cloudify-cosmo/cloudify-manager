@@ -38,6 +38,10 @@ def get_machine_ip(cloudify_runtime):
 
 
 @celery.task
+def install(**kwargs):
+    pass
+
+@celery.task
 def start(port=8080, cloudify_runtime=None, **kwargs):
 
     ip = get_machine_ip(cloudify_runtime)
