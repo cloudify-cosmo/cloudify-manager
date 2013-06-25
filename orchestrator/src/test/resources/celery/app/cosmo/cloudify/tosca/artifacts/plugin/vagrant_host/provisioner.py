@@ -26,44 +26,53 @@ import tempfile
 from celery.utils.log import get_task_logger
 
 RUNNING = 'running'
-VAGRANT_PATH = 'vagrant-vms'
+VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
 logger = get_task_logger(__name__)
 
-vagrant_path = os.path.join(tempfile.gettempdir(), VAGRANT_PATH)
-if not os.path.exists(vagrant_path):
-    os.makedirs(vagrant_path)
-v = vagrant.Vagrant(vagrant_path)
+
+def get_vagrant(vm_id, create=False):
+    vm_path = os.path.join(VAGRANT_PATH, vm_id)
+    if not os.path.exists(vm_path):
+        if create:
+            os.makedirs(vm_path)
+        else:
+            raise RuntimeError("vagrant vm with id [{0}] does not exist".format(vm_id))
+    return vagrant.Vagrant(vm_path)
 
 
 @celery.task
-def provision(vagrant_file, **kwargs):
-    logger.info("provisioning vagrant machine:\n{0}".format(vagrant_file))
-    with open("{0}/Vagrantfile".format(vagrant_path), 'w') as output_file:
+def provision(vagrant_file, __cloudify_id, **kwargs):
+    logger.info('provisioning vagrant vm [id=%s, vagrant_file=\n%s]', __cloudify_id, vagrant_file)
+    v = get_vagrant(__cloudify_id, True)
+    with open("{0}/Vagrantfile".format(v.root), 'w') as output_file:
         output_file.write(vagrant_file)
 
 
 @celery.task
-def start(**kwargs):
-    logger.info('calling vagrant up')
-    if status() != RUNNING:
+def start(__cloudify_id, **kwargs):
+    logger.info('calling vagrant up [id=%s]', __cloudify_id)
+    v = get_vagrant(__cloudify_id)
+    if status(v) != RUNNING:
         return v.up()
-    logger.info('vagrant vm is already up')
+    logger.info('vagrant vm is already up [id=%s]', __cloudify_id)
 
 
-def stop(**kwargs):
-    logger.info('calling vagrant halt')
-    if status() == RUNNING:
+def stop(__cloudify_id, **kwargs):
+    logger.info('calling vagrant halt [id=%s]', __cloudify_id)
+    v = get_vagrant(__cloudify_id)
+    if status(v) == RUNNING:
         return v.halt()
-    logger('vagrant vm is not running')
+    logger('vagrant vm is not running [id=%s]', __cloudify_id)
 
 
 @celery.task
-def terminate(**kwargs):
-    logger.info('calling vagrant destroy')
+def terminate(__cloudify_id, **kwargs):
+    logger.info("calling vagrant destroy [id=%s]", __cloudify_id)
+    v = get_vagrant(__cloudify_id)
     return v.destroy()
 
 
-def status():
+def status(v):
     return v.status()
 

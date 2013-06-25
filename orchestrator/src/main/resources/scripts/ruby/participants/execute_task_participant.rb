@@ -24,35 +24,44 @@ require 'securerandom'
 class ExecuteTaskParticipant < Ruote::Participant
   include EventListener
 
+  EXECUTOR = 'executor'
+  TARGET = 'target'
+  EXEC = 'exec'
+  PROPERTIES = 'properties'
+  PAYLOAD = 'payload'
+  NODE = 'node'
+  NODE_ID = '__cloudify_id'
+
   def do_not_thread
     true
   end
 
   def on_workitem
     begin
-      raise 'executor not set' unless $ruote_properties.has_key? 'executor'
-      raise 'target parameter not set' unless workitem.params.has_key? 'target'
-      raise 'exec not set' unless workitem.params.has_key? 'exec'
+      raise 'executor not set' unless $ruote_properties.has_key? EXECUTOR
+      raise 'target parameter not set' unless workitem.params.has_key? TARGET
+      raise 'exec not set' unless workitem.params.has_key? EXEC
+      raise 'node not set' unless workitem.fields.has_key? NODE
 
-      executor = $ruote_properties['executor']
+      executor = $ruote_properties[EXECUTOR]
 
+      exec = workitem.params[EXEC]
+      target = workitem.params[TARGET]
+      payload = to_map(workitem.params[PAYLOAD])
+
+      $logger.debug('Received task execution request [target={}, exec={}, payload={}]', target, exec, payload)
+
+      node = workitem.fields[NODE]
       task_id = SecureRandom.uuid
+      payload_properties = payload[PROPERTIES]
+      payload_properties[NODE_ID] = node['id']
+      properties = to_map(payload_properties)
 
-      $logger.debug('task id is {}', task_id)
-
-      exec = workitem.params['exec']
-
-      $logger.debug('exec is {}', exec)
-
-      target = workitem.params['target']
-
-      $logger.debug('target is {}', target)
-
-      payload = to_map(workitem.params['payload'])
-
-      properties = to_map(payload['properties'])
-
-      $logger.debug('Executing task {} with payload {}', exec, payload)
+      $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
+                    task_id,
+                    target,
+                    exec,
+                    properties)
 
       json_props = JSON.generate(properties)
 
