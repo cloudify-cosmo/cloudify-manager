@@ -41,7 +41,6 @@ class ExecuteTaskParticipant < Ruote::Participant
       raise 'executor not set' unless $ruote_properties.has_key? EXECUTOR
       raise 'target parameter not set' unless workitem.params.has_key? TARGET
       raise 'exec not set' unless workitem.params.has_key? EXEC
-      raise 'node not set' unless workitem.fields.has_key? NODE
 
       executor = $ruote_properties[EXECUTOR]
 
@@ -51,10 +50,12 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       $logger.debug('Received task execution request [target={}, exec={}, payload={}]', target, exec, payload)
 
-      node = workitem.fields[NODE]
       task_id = SecureRandom.uuid
       payload_properties = payload[PROPERTIES]
-      payload_properties[NODE_ID] = node['id']
+      if workitem.fields.has_key? NODE
+        node = workitem.fields[NODE]
+        payload_properties[NODE_ID] = node['id']
+      end
       properties = to_map(payload_properties)
 
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
@@ -72,7 +73,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       executor.sendTask(target, task_id, exec, json_props, self)
 
     rescue Exception => e
-      $logger.debug('Exception caught on execute_task participant', e)
+      $logger.debug('Exception caught on execute_task participant: {}', e)
       flunk(workitem, e)
     end
   end
