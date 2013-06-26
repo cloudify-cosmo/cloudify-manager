@@ -93,7 +93,7 @@ public class DSLPackagingTest {
             final ExtractedDSLPackageDetails result = DSLPackageProcessor.process(packageFile, tempDir);
             final Path expectedDslPath = Paths.get(tempDir.toString(), "application.yaml");
             assertThat(result.getDslPath()).isEqualTo(expectedDslPath);
-            assertThat(result.getPackageRoot()).isEqualTo(tempDir.toURI());
+            assertThat(result.getPackageLocation()).isEqualTo(tempDir.toString());
 
             final String dsl = Files.toString(result.getDslPath().toFile(), Charsets.UTF_8);
             assertThat(dsl).isEqualTo(application);

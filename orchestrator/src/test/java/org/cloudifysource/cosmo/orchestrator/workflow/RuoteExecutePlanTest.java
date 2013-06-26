@@ -29,15 +29,18 @@ import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
 import org.cloudifysource.cosmo.dsl.packaging.ExtractedDSLPackageDetails;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
-import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
+import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
+import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
+import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
 import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -79,8 +82,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
             RealTimeStateCacheConfig.class,
+            DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
-            TemporaryDirectoryConfig.class
+            TemporaryDirectoryConfig.class,
+            MockTaskExecutorConfig.class,
+            MockCeleryTaskWorkerConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -90,19 +96,23 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private RuoteRuntime ruoteRuntime;
 
     @Inject
+    private RuoteWorkflow ruoteWorkflow;
+
+    @Inject
     private RealTimeStateCache stateCache;
 
     @Inject
     private MessageProducer messageProducer;
-
-    @Inject
-    private MessageConsumer messageConsumer;
 
     @Value("${cosmo.state-cache.topic}")
     private URI stateCacheTopic;
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+
+    @Inject
+    private MockCeleryTaskWorker worker;
+
 
     @Test(timeOut = 30000)
     public void testPlanExecutionDslYaml() throws IOException, InterruptedException {
@@ -172,8 +182,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
         String schemaId = "mysql_template.mysql_schema";
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
 
         final Map<String, Object> fields = Maps.newHashMap();
         String dslLocation;
@@ -184,7 +192,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
         fields.put("dsl", dslLocation);
 
-        final Object wfid = workflow.asyncExecute(fields);
+        final Object wfid = ruoteWorkflow.asyncExecute(fields);
 
         Thread.sleep(10000);
         messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
@@ -266,11 +274,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(dslFile, reachableIds, expectedOperations, false);
     }
 
-    private RuoteWorkflow createDefaultWorkflowForDsl() {
-        return RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
-    }
-
     private void testPlanExecution(
             String dslFile,
             String[] reachableIds,
@@ -278,7 +281,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             final boolean assertExecutionOrder) throws IOException,
             InterruptedException {
 
-        final RuoteWorkflow workflow = createDefaultWorkflowForDsl();
         String dslLocation;
         if (Files.exists(Paths.get(dslFile))) {
             dslLocation = dslFile;
@@ -289,25 +291,20 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         fields.put("dsl", dslLocation);
 
         final List<String> executions = Lists.newArrayList();
-        final MessageConsumerListener<ExecuteTaskMessage> listener = new MessageConsumerListener<ExecuteTaskMessage>() {
+        TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public synchronized void onMessage(URI uri, ExecuteTaskMessage message) {
-                final Optional<Object> exec = message.getPayloadProperty("exec");
-                if (!exec.isPresent()) {
-                    return;
-                }
-                executions.add(message.getTarget() + "." + exec.get());
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                String operationName = extractOperationName(taskName);
+                executions.add(target + "." + operationName);
                 if (assertExecutionOrder) {
                     for (OperationsDescriptor descriptor : expectedOperations) {
                         String lastOperation = descriptor.operations[descriptor.operations.length - 1];
-                        if (descriptor.target.equals(message.getTarget()) && lastOperation.equals(exec.get())) {
+                        if (descriptor.target.equals(target) && lastOperation.equals(operationName)) {
                             messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.nodeId));
                         }
                     }
                 }
-            }
-            @Override
-            public void onFailure(Throwable t) {
+
             }
         };
 
@@ -317,14 +314,12 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
         final CountDownLatch latch = new CountDownLatch(latchCount);
         for (OperationsDescriptor descriptor : expectedOperations) {
-            final URI uri = URI.create(descriptor.target);
-            messageConsumer.addListener(
-                    uri,
+            worker.addListener(descriptor.target,
                     new PluginExecutionMessageConsumerListener(latch, descriptor.operations, !assertExecutionOrder));
-            messageConsumer.addListener(uri, listener);
+            worker.addListener(descriptor.target, listener);
         }
 
-        final Object wfid = workflow.asyncExecute(fields);
+        final Object wfid = ruoteWorkflow.asyncExecute(fields);
 
         Thread.sleep(100);
         if (reachableIds != null && !assertExecutionOrder) {
@@ -350,64 +345,50 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Test(timeOut = 30000)
     public void testExecuteOperation() throws URISyntaxException, InterruptedException {
         final String operation = "test";
-        final Map<String, Object> props = Maps.newHashMap();
-        props.put("message_consumer", messageConsumer);
-        props.put("message_producer", messageProducer);
-        final Map<String, Object> variables = Maps.newHashMap();
-        final String executePlanRadial = getResourceAsString("ruote/pdefs/execute_operation.radial");
-        variables.put("execute_operation", new RuoteRadialVariable(executePlanRadial));
-        final RuoteRuntime runtime = RuoteRuntime.createRuntime(props, variables);
         final String radial = "define flow\n" +
                 "  execute_operation operation: '" + operation + "'\n";
-
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, ruoteRuntime);
         final Map<String, Object> fields = Maps.newHashMap();
         final Map<String, Object> node = Maps.newHashMap();
         final Map<String, Object> operations = Maps.newHashMap();
         final String plugin = "some-plugin";
         operations.put(operation, plugin);
         node.put("operations", operations);
+        node.put("properties", Maps.newHashMap());
         fields.put("node", node);
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        messageConsumer.addListener(new URI(plugin),
-                new PluginExecutionMessageConsumerListener(latch, new String[] {operation}, false));
+        worker.addListener(plugin, new PluginExecutionMessageConsumerListener(latch, new String[] {operation}, false));
 
         workflow.execute(fields);
 
         latch.await();
     }
 
-    @Test(timeOut = 130000)
+    @Test(timeOut = 30000)
     public void testRuntimePropertiesInjection() throws IOException, InterruptedException {
         final String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         final String machineId = "mysql_template.mysql_host";
         final String plugin = "cloudify.tosca.artifacts.plugin.middleware_component.installer";
         final String ip = "10.0.0.1";
 
-        RuoteWorkflow workflow = createDefaultWorkflowForDsl();
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", Resources.getResource(dslFile).getFile());
-        workflow.asyncExecute(fields);
+        ruoteWorkflow.asyncExecute(fields);
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        messageConsumer.addListener(URI.create(plugin), new MessageConsumerListener<ExecuteTaskMessage>() {
+        worker.addListener(plugin, new TaskReceivedListener() {
             @Override
-            public void onMessage(URI uri, ExecuteTaskMessage message) {
-                Map<?, ?> properties = (Map<?, ?>) message.getPayloadProperty("properties").get();
-                Map<?, ?> runtimeProperties = (Map<?, ?>) properties.get("cloudify_runtime");
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
                     if (Objects.equal(ip, machineProperties.get("ip"))) {
                         latch.countDown();
                     }
                 }
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                t.printStackTrace();
             }
         });
 
@@ -455,7 +436,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     /**
      */
     private static class PluginExecutionMessageConsumerListener
-            implements MessageConsumerListener<ExecuteTaskMessage> {
+            implements MessageConsumerListener<ExecuteTaskMessage>, TaskReceivedListener {
         private CountDownLatch latch;
         private boolean removeExecutedOperations;
         private List<String> operations;
@@ -485,6 +466,26 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
         public void onFailure(Throwable t) {
         }
+
+        @Override
+        public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            String operationName = extractOperationName(taskName);
+            for (Iterator<String> iterator = operations.iterator(); iterator.hasNext();) {
+                String expectedOperation =  iterator.next();
+                if (operationName.equals(expectedOperation)) {
+                    latch.countDown();
+                    if (removeExecutedOperations) {
+                        iterator.remove();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    private static String extractOperationName(String taskName) {
+        String[] splitName = taskName.split("\\.");
+        return splitName[splitName.length - 1];
     }
 
 }

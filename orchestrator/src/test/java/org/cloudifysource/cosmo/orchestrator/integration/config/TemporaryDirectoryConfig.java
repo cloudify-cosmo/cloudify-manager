@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.orchestrator.integration.config;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +33,7 @@ import java.util.Map;
  * @author Idan Moyal
  * @since 0.1
  */
+@Configuration
 public class TemporaryDirectoryConfig {
 
     @Bean(destroyMethod = "close")

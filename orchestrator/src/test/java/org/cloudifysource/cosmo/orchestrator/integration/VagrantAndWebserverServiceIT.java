@@ -17,18 +17,19 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.collect.Maps;
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.MockPortKnockerConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.monitor.MockPortKnocker;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
+import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
+import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
+import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -55,8 +56,13 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
             RealTimeStateCacheConfig.class,
+            DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             MockPortKnockerConfig.class,
+            TaskExecutorConfig.class ,
+            EventHandlerConfig.class ,
+            JythonProxyConfig.class ,
+            CeleryWorkerProcessConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -66,29 +72,16 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     private RuoteRuntime ruoteRuntime;
 
     @Inject
-    private RealTimeStateCache stateCache;
-
-    @Inject
-    private MessageProducer messageProducer;
-
-    @Inject
-    private MockPortKnocker portKnocker;
+    private RuoteWorkflow ruoteWorkflow;
 
     @Test(groups = "vagrant")
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
-
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromResource(
-                "ruote/pdefs/execute_plan.radial", ruoteRuntime);
-
         final String dslLocation = "org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml";
-
         final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("dsl", Resources.getResource(dslLocation).getFile());
+        workitemFields.put("dsl", dslLocation);
 
-        final Object wfid = workflow.asyncExecute(workitemFields);
-
+        final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
-
     }
 
 }

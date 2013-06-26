@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.dsl.resource;
 
 import com.google.common.collect.Maps;
 
-import java.net.URI;
 import java.util.Map;
 
 /**
@@ -31,24 +30,24 @@ import java.util.Map;
 public class ResourceLoadingContext {
 
     private final Map<String, String> aliasMappings = Maps.newHashMap();
-    private final URI baseUri;
-    private URI contextUri;
+    private final String baseLocation;
+    private String contextLocation;
 
-    public ResourceLoadingContext(URI baseUri) {
-        this.baseUri = baseUri;
-        this.contextUri = baseUri;
+    public ResourceLoadingContext(String baseLocation) {
+        this.baseLocation = baseLocation;
+        this.contextLocation = baseLocation;
     }
 
-    public URI getBaseUri() {
-        return baseUri;
+    public String getBaseLocation() {
+        return baseLocation;
     }
 
-    public URI getContextUri() {
-        return contextUri;
+    public String getContextLocation() {
+        return contextLocation;
     }
 
-    public void setContextUri(URI contextUri) {
-        this.contextUri = contextUri;
+    public void setContextLocation(String contextLocation) {
+        this.contextLocation = contextLocation;
     }
 
     public String getMapping(String alias) {
