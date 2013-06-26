@@ -31,16 +31,6 @@ VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 logger = get_task_logger(__name__)
 
 
-def get_vagrant(vm_id, create=False):
-    vm_path = os.path.join(VAGRANT_PATH, vm_id)
-    if not os.path.exists(vm_path):
-        if create:
-            os.makedirs(vm_path)
-        else:
-            raise RuntimeError("vagrant vm with id [{0}] does not exist".format(vm_id))
-    return vagrant.Vagrant(vm_path)
-
-
 @celery.task
 def provision(vagrant_file, __cloudify_id, **kwargs):
     logger.info('provisioning vagrant vm [id=%s, vagrant_file=\n%s]', __cloudify_id, vagrant_file)
@@ -58,6 +48,7 @@ def start(__cloudify_id, **kwargs):
     logger.info('vagrant vm is already up [id=%s]', __cloudify_id)
 
 
+@celery.task
 def stop(__cloudify_id, **kwargs):
     logger.info('calling vagrant halt [id=%s]', __cloudify_id)
     v = get_vagrant(__cloudify_id)
@@ -71,6 +62,16 @@ def terminate(__cloudify_id, **kwargs):
     logger.info("calling vagrant destroy [id=%s]", __cloudify_id)
     v = get_vagrant(__cloudify_id)
     return v.destroy()
+
+
+def get_vagrant(vm_id, create=False):
+    vm_path = os.path.join(VAGRANT_PATH, vm_id)
+    if not os.path.exists(vm_path):
+        if create:
+            os.makedirs(vm_path)
+        else:
+            raise RuntimeError("vagrant vm with id [{0}] does not exist".format(vm_id))
+    return vagrant.Vagrant(vm_path)
 
 
 def status(v):
