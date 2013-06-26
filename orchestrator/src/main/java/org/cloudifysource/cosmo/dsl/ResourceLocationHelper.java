@@ -67,12 +67,7 @@ public class ResourceLocationHelper {
     }
 
     private static String getSeparator(String resourceLocation) {
-        if (resourceLocation.contains(File.separator)) {
-            return File.separator;
-        } else if (resourceLocation.contains(CLASSPATH_SEPARATOR)) {
-            return CLASSPATH_SEPARATOR;
-        }
-        return CLASSPATH_SEPARATOR;
+        return resourceLocation.contains(File.separator) ? File.separator : CLASSPATH_SEPARATOR;
     }
 
 }
