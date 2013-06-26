@@ -16,10 +16,8 @@
 
 package org.cloudifysource.cosmo.dsl.resource;
 
-import java.net.URI;
-
 /**
- * A DSL resource container which holds the resource content and {@link URI}.
+ * A DSL resource container which holds the resource content and location.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -27,18 +25,18 @@ import java.net.URI;
 public class DSLResource {
 
     private String content;
-    private URI uri;
+    private String location;
 
-    public DSLResource(String content, URI uri) {
+    public DSLResource(String content, String location) {
         this.content = content;
-        this.uri = uri;
+        this.location = location;
     }
 
     public String getContent() {
         return content;
     }
 
-    public URI getUri() {
-        return uri;
+    public String getLocation() {
+        return location;
     }
 }

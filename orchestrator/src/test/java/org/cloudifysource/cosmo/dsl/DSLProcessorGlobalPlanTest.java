@@ -32,7 +32,7 @@ public class DSLProcessorGlobalPlanTest extends AbstractDSLProcessorTest {
     public void testGlobalPlan() {
         String dslResource =
                 "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-global-plan.yaml";
-        Processed processed = process(readResource(dslResource));
+        Processed processed = process(dslResource);
 
         String globalWorkflow = processed.getGlobalWorkflow();
         assertThat(globalWorkflow).isEqualTo("definition_stub");
@@ -43,7 +43,7 @@ public class DSLProcessorGlobalPlanTest extends AbstractDSLProcessorTest {
     public void testInvalidTwoGlobalWorkflows() {
         String dslResource =
                 "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-global-plan-invalid-double-import.yaml";
-        process(readResource(dslResource));
+        process(dslResource);
     }
 
 }

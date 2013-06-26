@@ -11,13 +11,16 @@ definitions:
                 webserver_host:
                     type: "cloudify.tosca.types.host"
                     properties:
-                        some_relevant_property1: "its value"
-                        some_relevant_property2: "its value"
+                        vagrant_file: |
+                            Vagrant.configure("2") do |config|
+                              config.vm.box = "precise32"
+                              config.vm.network :private_network, ip: "10.0.0.5"
+                              config.vm.provision :shell, :inline => "sudo ufw disable"
+                            end
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
                     properties:
-                        some_other_property1: "its value"
-                        some_other_property2: "its value"
+                        port: 8888
                     relationships:
                         cloudify.tosca.relationships.hosted_on: "webserver_host"

@@ -28,6 +28,8 @@ import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.provisioner.config.CloudResourceProvisionerConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
+import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -63,7 +65,9 @@ public class StateCacheWorkflowMessagingIT extends AbstractTestNGSpringContextTe
     @Configuration
     @Import({
             CloudResourceProvisionerConfig.class,
-            RuoteRuntimeConfig.class
+            RuoteRuntimeConfig.class,
+            MockTaskExecutorConfig.class,
+            MockCeleryTaskWorkerConfig.class
     })
     static class Config extends BaseOrchestratorIntegrationTestConfig {
 

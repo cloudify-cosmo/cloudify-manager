@@ -14,33 +14,36 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl.resource;
+package org.cloudifysource.cosmo.orchestrator.integration.monitor;
 
-import com.google.common.collect.Sets;
-
-import java.util.Set;
+import java.net.InetSocketAddress;
 
 /**
- * Extends {@link ResourceLoadingContext} and holds currently loaded imports in context, to avoid duplicate
- * loading.
+ * Simple data holder for the {@link MockPortKnocker}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public class ImportsContext extends ResourceLoadingContext {
+public class PortKnockingDescriptor {
 
-    private final Set<String> imports = Sets.newHashSet();
+    private final InetSocketAddress socketAddress;
+    private final String resourceId;
 
-    public ImportsContext(String baseLocation) {
-        super(baseLocation);
+    public PortKnockingDescriptor(InetSocketAddress socketAddress, String resourceId) {
+        this.socketAddress = socketAddress;
+        this.resourceId = resourceId;
     }
 
-    public void addImport(String importLocation) {
-        imports.add(importLocation);
+    public InetSocketAddress getSocketAddress() {
+        return socketAddress;
     }
 
-    public boolean isImported(String importLocation) {
-        return imports.contains(importLocation);
+    public String getResourceId() {
+        return resourceId;
     }
 
+    @Override
+    public String toString() {
+        return getSocketAddress() + "[" + resourceId + "]";
+    }
 }

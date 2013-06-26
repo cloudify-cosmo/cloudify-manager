@@ -20,6 +20,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
+import org.cloudifysource.cosmo.dsl.ResourceLocationHelper;
 
 import java.io.File;
 import java.net.URI;
@@ -62,7 +63,7 @@ public class ResourcesLoader {
         resource = context.getMapping(resource);
 
         // Try to locate the import as is and if not found resolve to a URI according to current context and try again
-        String[] resources = new String[] {resource, resolveDslUri(resource, context).toString()};
+        String[] resources = new String[] {resource, resolveDslLocation(resource, context)};
 
         for (String resourceLocation : resources) {
             DSLResource dslResource = null;
@@ -71,7 +72,7 @@ public class ResourcesLoader {
             try {
                 URL classPathResource = Resources.getResource(resourceLocation);
                 dslResource = new DSLResource(Resources.toString(classPathResource, Charsets.UTF_8),
-                        classPathResource.toURI());
+                        classPathResource.getFile());
             } catch (Exception e) {
                 suppressedException.add(e);
             }
@@ -79,15 +80,15 @@ public class ResourcesLoader {
             // next, try to load from file.
             try {
                 File file = new File(resourceLocation);
-                dslResource = new DSLResource(Files.toString(file, Charsets.UTF_8), URI.create(resourceLocation));
+                dslResource = new DSLResource(Files.toString(file, Charsets.UTF_8), resourceLocation);
             } catch (Exception e) {
                 suppressedException.add(e);
             }
 
             // lastly, treat resource as URI
             try {
-                final URI uri = URI.create(resourceLocation);
-                dslResource = new DSLResource(Resources.toString(uri.toURL(), Charsets.UTF_8), uri);
+                dslResource = new DSLResource(
+                        Resources.toString(URI.create(resourceLocation).toURL(), Charsets.UTF_8), resourceLocation);
             } catch (Exception e) {
                 suppressedException.add(e);
             }
@@ -102,11 +103,11 @@ public class ResourcesLoader {
 
     }
 
-    private static URI resolveDslUri(String anImport, ResourceLoadingContext context) {
+    private static String resolveDslLocation(String anImport, ResourceLoadingContext context) {
         if (anImport.startsWith("/")) {
-            return URI.create(context.getBaseUri().toString() + anImport.substring(1));
+            return ResourceLocationHelper.createLocationString(context.getBaseLocation(), anImport);
         }
-        return URI.create(context.getContextUri().toString() + anImport);
+        return ResourceLocationHelper.createLocationString(context.getContextLocation(), anImport);
     }
 
 

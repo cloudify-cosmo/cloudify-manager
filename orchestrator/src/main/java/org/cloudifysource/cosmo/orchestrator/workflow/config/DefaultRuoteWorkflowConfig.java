@@ -14,32 +14,34 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl.packaging;
+package org.cloudifysource.cosmo.orchestrator.workflow.config;
 
-import java.nio.file.Path;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.inject.Inject;
 
 /**
- * The outcome of a {@link DSLPackageProcessor#process(java.io.File, java.io.File)} invocation which contains the
- * main DSL of the package and a string pointing to the package's root directory.
+ * A configuration for creating a {@link RuoteWorkflow} instance for the default execute plan workflow.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public class ExtractedDSLPackageDetails {
+@Configuration
+public class DefaultRuoteWorkflowConfig {
 
-    private final Path dslPath;
-    private final String packageLocation;
+    @Value("ruote/pdefs/execute_plan.radial")
+    private String workflowRadialFile;
 
-    public ExtractedDSLPackageDetails(Path dslPath, String packageLocation) {
-        this.dslPath = dslPath;
-        this.packageLocation = packageLocation;
+    @Inject
+    private RuoteRuntime ruoteRuntime;
+
+    @Bean
+    public RuoteWorkflow defaultRuoteWorkflow() {
+        return RuoteWorkflow.createFromResource(workflowRadialFile, ruoteRuntime);
     }
 
-    public Path getDslPath() {
-        return dslPath;
-    }
-
-    public String getPackageLocation() {
-        return packageLocation;
-    }
 }

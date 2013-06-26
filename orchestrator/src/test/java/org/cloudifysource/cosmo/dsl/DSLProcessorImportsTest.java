@@ -35,7 +35,7 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
 
         String validImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports.yaml";
 
-        Processed processed = process(readResource(validImportsDSLResource));
+        Processed processed = process(validImportsDSLResource);
 
         List<Node> nodes = processed.getNodes();
 
@@ -57,13 +57,13 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
         String invalidImportsDSLResource = "org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/" +
                 "dsl-with-imports-invalid-definition.yaml";
 
-        process(readResource(invalidImportsDSLResource));
+        process(invalidImportsDSLResource);
     }
 
     @Test
     public void testRelativeImports() {
         String resource = "org/cloudifysource/cosmo/dsl/unit/imports/valid/relative/dsl-with-relative-imports.yaml";
-        Processed processed = process(readResource(resource));
+        Processed processed = process(resource);
         List<Node> nodes = processed.getNodes();
         assertThat(findNode(nodes, "relative_imports_template.test_a")).isNotNull();
         assertThat(findNode(nodes, "relative_imports_template.test_b")).isNotNull();
