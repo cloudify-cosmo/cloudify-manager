@@ -208,7 +208,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             Set<String> operations = Sets.newHashSet(theInterface.getOperations());
             for (String operation : operations) {
                 // always add fully qualified name to operation
-                operationToPlugin.put(pluginImplementation + "." + operation, pluginImplementation);
+                operationToPlugin.put(interfaceDescription.getName() + "." + operation, pluginImplementation);
 
                 // now try adding operation name on its own to simplify usage in workflow.
                 // if we already find one, remove it so there will be no ambiguities
