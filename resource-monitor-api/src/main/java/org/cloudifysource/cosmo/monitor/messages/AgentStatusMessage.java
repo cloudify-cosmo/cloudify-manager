@@ -16,6 +16,13 @@
 
 package org.cloudifysource.cosmo.monitor.messages;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.google.common.base.Objects;
+import com.google.common.collect.Maps;
+
+import java.util.Map;
+
 /**
  * A message sent from the agent to the resource monitor about a resource.
  * @author itaif
@@ -23,7 +30,8 @@ package org.cloudifysource.cosmo.monitor.messages;
  */
 public class AgentStatusMessage {
 
-    String agentId;
+    private String agentId;
+    private Map<String, Object> payload = Maps.newHashMap();
 
     public String getAgentId() {
         return agentId;
@@ -33,5 +41,23 @@ public class AgentStatusMessage {
         this.agentId = agentId;
     }
 
+    @JsonAnyGetter
+    public Map<String, Object> getPayload() {
+        return payload;
+    }
 
+    public void setPayload(Map<String, Object> state) {
+        this.payload = state;
+    }
+
+
+    @JsonAnySetter
+    protected void handleUnknownProperty(String key, Object value) {
+        payload.put(key, value);
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this).add("agentId", agentId).add("payload", payload).toString();
+    }
 }
