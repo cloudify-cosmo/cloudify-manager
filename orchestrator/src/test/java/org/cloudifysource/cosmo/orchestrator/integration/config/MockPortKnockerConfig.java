@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
 import com.google.common.collect.Lists;
+import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.monitor.MockPortKnocker;
 import org.cloudifysource.cosmo.orchestrator.integration.monitor.PortKnockingDescriptor;
@@ -43,8 +44,14 @@ public class MockPortKnockerConfig {
     @Inject
     private MessageProducer messageProducer;
 
-    @Value("${cosmo.state-cache.topic}")
-    private URI stateCacheTopic;
+    @Inject
+    private MessageConsumer messageConsumer;
+
+    @Value("${cosmo.resource-monitor.topic}")
+    private URI resourceMonitorTopic;
+
+    @Value("${cosmo.agent.topic}")
+    private URI agentTopic;
 
     // format is string delimited list of
     // {host}:{port}:{resourceId}
@@ -62,7 +69,12 @@ public class MockPortKnockerConfig {
             InetSocketAddress socketAddress = new InetSocketAddress(address, port);
             descriptors.add(new PortKnockingDescriptor(socketAddress, resourceId));
         }
-        return new MockPortKnocker(stateCacheTopic, messageProducer, descriptors);
+        return new MockPortKnocker(
+                resourceMonitorTopic,
+                agentTopic,
+                messageProducer,
+                messageConsumer,
+                descriptors);
     }
 
 }
