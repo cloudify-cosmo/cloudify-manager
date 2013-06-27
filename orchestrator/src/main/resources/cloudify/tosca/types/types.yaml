@@ -96,6 +96,7 @@ definitions:
                 radial: |
                     define app_module_init
                         execute_operation operation: 'deploy'
+
                         execute_operation operation: 'start'
 
 
@@ -107,3 +108,10 @@ definitions:
         # Basic plugin artifact
         cloudify.tosca.artifacts.plugin: { }
 
+        # Remote plugin artifact
+        cloudify.tosca.artifacts.remote_plugin:
+            derived_from: "cloudify.tosca.artifacts.plugin"
+
+        # Worker plugin artifact - runs on Cloudify agent
+        cloudify.tosca.artifacts.worker_plugin:
+            derived_from: "cloudify.tosca.artifacts.plugin"
