@@ -26,6 +26,10 @@ import com.google.common.collect.ImmutableMap;
  */
 public interface StateChangeCallback {
 
-    void onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    /**
+     * Notify upon state change.
+     * @return whether this callback should be removed from the state cache after this event is triggered.
+     */
+    boolean onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
 
 }

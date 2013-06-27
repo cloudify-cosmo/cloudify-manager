@@ -24,16 +24,23 @@ package org.cloudifysource.cosmo.statecache;
  */
 class CallbackContext {
 
+    private final String callbackUID;
     private final Object receiver;
     private final Object context;
     private final StateChangeCallback callback;
     private final Condition condition;
 
-    public CallbackContext(Object receiver, Object context, StateChangeCallback callback, Condition condition) {
+    public CallbackContext(String callbackUID, Object receiver, Object context, StateChangeCallback callback,
+                           Condition condition) {
+        this.callbackUID = callbackUID;
         this.receiver = receiver;
         this.context = context;
         this.callback = callback;
         this.condition = condition;
+    }
+
+    public String getCallbackUID() {
+        return callbackUID;
     }
 
     public StateChangeCallback getCallback() {
@@ -51,4 +58,6 @@ class CallbackContext {
     public Condition getCondition() {
         return condition;
     }
+
+
 }
