@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -37,6 +38,8 @@ import java.util.Set;
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     private static final String CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN = "cloudify.tosca.artifacts.plugin";
+    private static final String CLOUDIFY_TOSCA_ARTIFACTS_REMOTE_PLUGIN = "cloudify.tosca.artifacts.remote_plugin";
+    private static final String CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN = "cloudify.tosca.artifacts.agent_plugin";
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
@@ -92,10 +95,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
 
         for (Artifact artifact : populatedArtifacts.values()) {
-            if (!artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN)) {
+            if (!artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN) ||
+                    Objects.equal(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN, artifact.getName())) {
                 continue;
             }
-            Preconditions.checkArgument(!artifact.isTypeOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN),
+            Preconditions.checkArgument(
+                    artifact.isInstanceOf(
+                            CLOUDIFY_TOSCA_ARTIFACTS_REMOTE_PLUGIN) ||
+                            artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN),
                     "Plugin [%s] cannot be derived directly from [%s]", artifact.getName(),
                     CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN);
             if (!artifact.getProperties().containsKey("interface") ||

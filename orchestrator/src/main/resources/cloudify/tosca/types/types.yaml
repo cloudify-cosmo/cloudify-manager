@@ -113,5 +113,5 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.plugin"
 
         # Worker plugin artifact - runs on Cloudify agent
-        cloudify.tosca.artifacts.worker_plugin:
+        cloudify.tosca.artifacts.agent_plugin:
             derived_from: "cloudify.tosca.artifacts.plugin"

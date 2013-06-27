@@ -93,12 +93,4 @@ public abstract class InheritedDefinition extends Definition {
         return false;
     }
 
-    @JsonIgnore
-    public boolean isTypeOf(String otherType) {
-        if (superTypes == null || superTypes.size() == 0) {
-            return false;
-        }
-        return Objects.equal(otherType, superTypes.get(0));
-    }
-
 }
