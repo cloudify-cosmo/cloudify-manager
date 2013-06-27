@@ -1,4 +1,6 @@
 definitions:
+    imports:
+        - "cloudify.types"
     types:
         vm:
             interfaces:
@@ -9,10 +11,8 @@ definitions:
                 - "start"
                 - "stop"
     artifacts:
-        cloudify.tosca.artifacts.plugin:
-            derived_from: "artifact"
         provisioner_plugin:
-            derived_from: "cloudify.tosca.artifacts.plugin"
+            derived_from: "cloudify.tosca.artifacts.remote_plugin"
             properties:
                 interface: "provisioner"
                 url: "plugins/provisioner-plugin.zip"

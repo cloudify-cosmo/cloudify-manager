@@ -1,6 +1,8 @@
 # YAML supports comments :-)
 ---
 definitions:
+    imports:
+        - "cloudify.types"
 
     types:
         machine:
@@ -42,20 +44,18 @@ definitions:
                 - "delete"
 
     artifacts:
-        cloudify.tosca.artifacts.plugin:
-            derived_from: "artifact"
         provisioner_plugin:
-            derived_from: "cloudify.tosca.artifacts.plugin"
+            derived_from: "cloudify.tosca.artifacts.remote_plugin"
             properties:
                 interface: "provisioner"
                 url: "plugins/provisioner-plugin.zip"
         configurer_plugin:
-            derived_from: "cloudify.tosca.artifacts.plugin"
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "configurer"
                 url: "plugins/configurer-plugin.zip"
         schema_configurer_plugin:
-            derived_from: "cloudify.tosca.artifacts.plugin"
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "schema_configurer"
                 url: "plugins/schema-configurer-plugin.zip"

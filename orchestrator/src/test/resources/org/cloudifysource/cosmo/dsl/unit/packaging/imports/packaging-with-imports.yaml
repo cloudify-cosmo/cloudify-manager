@@ -16,7 +16,7 @@ definitions:
                 - "operation5"
     artifacts:
         provisioner_plugin:
-            derived_from: "cloudify.tosca.artifacts.plugin"
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "provisioner"
                 url: "provisioner.zip"
