@@ -51,27 +51,47 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
+        Map<String, Object> nodesExtraData = Maps.newHashMap();
 
         for (ServiceTemplate serviceTemplate : populatedServiceTemplates.values()) {
             for (TypeTemplate typeTemplate : serviceTemplate.getTopology().values()) {
                 // Type template name we be prepended with the service template
-                typeTemplate.setName(serviceTemplate.getName() + "." + typeTemplate.getName());
-                nodes.add(processTypeTemplate(
+                String nodeId = serviceTemplate.getName() + "." + typeTemplate.getName();
+                typeTemplate.setName(nodeId);
+                Map<String, Object> node = processTypeTemplateNode(
                         serviceTemplate.getName(),
                         typeTemplate,
                         definitions,
-                        interfacePluginImplementations));
+                        interfacePluginImplementations);
+                Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
+                        serviceTemplate.getName(),
+                        typeTemplate);
+                nodes.add(node);
+                nodesExtraData.put(nodeId, nodeExtraData);
             }
         }
 
         result.put("nodes", nodes);
+        result.put("nodes_extra", nodesExtraData);
         return result;
     }
 
-    private Map<String, Object> processTypeTemplate(String serviceTemplateName,
-                                                    TypeTemplate typeTemplate,
-                                                    Definitions definitions,
-                                                    Map<String, Set<String>> interfacesToPluginImplementations) {
+    private Map<String, Object> processTypeTemplateNodeExtraData(String serviceTemplateName,
+                                                                 TypeTemplate typeTemplate) {
+        Map<String, Object> nodeExtraData = Maps.newHashMap();
+
+        setNodeSuperTypes(typeTemplate, nodeExtraData);
+
+        setNodeFlattenedRelationships(typeTemplate, serviceTemplateName, nodeExtraData);
+
+        return nodeExtraData;
+    }
+
+
+    private Map<String, Object> processTypeTemplateNode(String serviceTemplateName,
+                                                        TypeTemplate typeTemplate,
+                                                        Definitions definitions,
+                                                        Map<String, Set<String>> interfacesToPluginImplementations) {
         Map<String, Object> node = Maps.newHashMap();
 
         setNodeId(typeTemplate, node);
@@ -141,13 +161,13 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
             Map<String, Object> relationshipMap = Maps.newHashMap();
             relationshipMap.put("type", entry.getKey());
-            String targetId = (String) entry.getValue();
-            String fullTargetId = serviceTemplateName + "." + targetId;
+            String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, entry);
             relationshipMap.put("target_id", fullTargetId);
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);
     }
+
 
     private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
         Map<String, Object> workflows = Maps.newHashMap();
@@ -246,4 +266,24 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("plugins", plugins);
         node.put("operations", operationToPlugin);
     }
+
+    private void setNodeSuperTypes(TypeTemplate typeTemplate, Map<String, Object> nodeExtraData) {
+        nodeExtraData.put("super_types", typeTemplate.getSuperTypes());
+    }
+
+    private void setNodeFlattenedRelationships(TypeTemplate typeTemplate,
+                                               String serviceTemplateName,
+                                               Map<String, Object> nodeExtraData) {
+        List<String> flattenedRelations = Lists.newArrayList();
+        for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
+            flattenedRelations.add(extractFullTargetIdFromRelationship(serviceTemplateName, entry));
+        }
+        nodeExtraData.put("relationships", flattenedRelations);
+    }
+
+    private String extractFullTargetIdFromRelationship(String serviceTemplateName, Map.Entry<String, Object> entry) {
+        String targetId = (String) entry.getValue();
+        return serviceTemplateName + "." + targetId;
+    }
+
 }

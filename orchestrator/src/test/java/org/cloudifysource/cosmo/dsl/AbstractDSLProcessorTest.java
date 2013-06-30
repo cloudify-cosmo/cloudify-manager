@@ -72,6 +72,7 @@ public abstract class AbstractDSLProcessorTest {
      */
     public static class Processed {
         List<Node> nodes;
+        Map<String, NodeExtra> nodesExtra;
         String globalWorkflow;
         public List<Node> getNodes() {
             return nodes;
@@ -84,6 +85,13 @@ public abstract class AbstractDSLProcessorTest {
         }
         public void setGlobalWorkflow(String globalWorkflow) {
             this.globalWorkflow = globalWorkflow;
+        }
+        public Map<String, NodeExtra> getNodesExtra() {
+            return nodesExtra;
+        }
+
+        public void setNodesExtra(Map<String, NodeExtra> nodesExtra) {
+            this.nodesExtra = nodesExtra;
         }
     }
 
@@ -144,6 +152,27 @@ public abstract class AbstractDSLProcessorTest {
         public void setPlugins(Map<String, Object> plugins) {
             this.plugins = plugins;
         }
+    }
+
+    /**
+     */
+    public static class NodeExtra {
+        List<String> superTypes;
+        List<String> relationships;
+
+        public List<String> getSuperTypes() {
+            return superTypes;
+        }
+        public void setSuperTypes(List<String> superTypes) {
+            this.superTypes = superTypes;
+        }
+        public List<String> getRelationships() {
+            return relationships;
+        }
+        public void setRelationships(List<String> relationships) {
+            this.relationships = relationships;
+        }
+
     }
 
 }
