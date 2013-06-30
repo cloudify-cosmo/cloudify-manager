@@ -82,7 +82,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeWorkflows(typeTemplate, definitions, node);
 
-        setNodeOperations(typeTemplate, definitions, interfacesToPluginImplementations, node);
+        setNodeOperationsAndPlugins(typeTemplate, definitions, interfacesToPluginImplementations, node);
 
         return node;
     }
@@ -178,11 +178,12 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         return Optional.fromNullable(initWorkflow);
     }
 
-    private void setNodeOperations(TypeTemplate typeTemplate, Definitions definitions,
-                                   Map<String, Set<String>> interfacesToPluginImplementations,
-                                   Map<String, Object> node) {
+    private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,
+                                             Map<String, Set<String>> interfacesToPluginImplementations,
+                                             Map<String, Object> node) {
         Set<String> sameNameOperations = Sets.newHashSet();
         Map<String, String> operationToPlugin = Maps.newHashMap();
+        Map<String, Map<String, Object>> plugins = Maps.newHashMap();
         for (Object interfaceReference : typeTemplate.getInterfaces()) {
 
             Type.InterfaceDescription interfaceDescription = Type.InterfaceDescription.from(interfaceReference);
@@ -216,6 +217,12 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 pluginImplementation = pluginImplementations.iterator().next();
             }
 
+            Map<String, Object> pluginDetails = Maps.newHashMap();
+            Artifact plugin = definitions.getArtifacts().get(pluginImplementation);
+            boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN);
+            pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));
+            plugins.put(pluginImplementation, pluginDetails);
+
             Set<String> operations = Sets.newHashSet(theInterface.getOperations());
             for (String operation : operations) {
                 // always add fully qualified name to operation
@@ -236,6 +243,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 }
             }
         }
+        node.put("plugins", plugins);
         node.put("operations", operationToPlugin);
     }
 }

@@ -95,6 +95,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, String> operations;
         Map<String, Object> properties;
         List<Object> relationships;
+        Map<String, Object> plugins;
 
         public String getId() {
             return id;
@@ -103,7 +104,6 @@ public abstract class AbstractDSLProcessorTest {
         public void setId(String id) {
             this.id = id;
         }
-
 
         public Map<String, Object> getWorkflows() {
             return workflows;
@@ -135,6 +135,14 @@ public abstract class AbstractDSLProcessorTest {
 
         public void setProperties(Map<String, Object> properties) {
             this.properties = properties;
+        }
+
+        public Map<String, Object> getPlugins() {
+            return plugins;
+        }
+
+        public void setPlugins(Map<String, Object> plugins) {
+            this.plugins = plugins;
         }
     }
 
