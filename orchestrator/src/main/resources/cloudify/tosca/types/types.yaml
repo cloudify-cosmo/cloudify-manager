@@ -71,6 +71,11 @@ definitions:
                 - "stop"
                 - "start"
 
+        # start and manage celery worker lifecycle
+        cloudify.tosca.interfaces.worker.installer:
+            operations:
+                - "install"
+
 
     ##################################################################################
     # Base plan definitions

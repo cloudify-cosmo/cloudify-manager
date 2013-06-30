@@ -74,9 +74,19 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Inject
     private RuoteWorkflow ruoteWorkflow;
 
-    @Test(groups = "vagrant")
+    @Test(groups = "vagrant", enabled = false)
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
         final String dslLocation = "org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml";
+        final Map<String, Object> workitemFields = Maps.newHashMap();
+        workitemFields.put("dsl", dslLocation);
+
+        final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
+        ruoteRuntime.waitForWorkflow(wfid);
+    }
+
+    @Test(groups = "vagrant")
+    public void testWithVagrantHostProvisionerAndRemoteCeleryWorker() {
+        final String dslLocation = "org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml";
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
 
