@@ -173,6 +173,16 @@
             <artifactId>async-http-client</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.cloudifysource.cosmo</groupId>
+            <artifactId>agent-api</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
