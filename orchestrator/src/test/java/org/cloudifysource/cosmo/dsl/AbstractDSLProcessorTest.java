@@ -92,7 +92,7 @@ public abstract class AbstractDSLProcessorTest {
     public static class Node {
         String id;
         Map<String, Object> workflows;
-        Map<String, Object> operations;
+        Map<String, String> operations;
         Map<String, Object> properties;
         List<Object> relationships;
 
@@ -113,11 +113,11 @@ public abstract class AbstractDSLProcessorTest {
             this.workflows = workflows;
         }
 
-        public Map<String, Object> getOperations() {
+        public Map<String, String> getOperations() {
             return operations;
         }
 
-        public void setOperations(Map<String, Object> operations) {
+        public void setOperations(Map<String, String> operations) {
             this.operations = operations;
         }
 
