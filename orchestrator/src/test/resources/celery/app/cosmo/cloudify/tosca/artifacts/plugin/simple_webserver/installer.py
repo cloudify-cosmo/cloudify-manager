@@ -27,19 +27,20 @@ import urllib2
 
 
 def get_machine_ip(cloudify_runtime):
-    if cloudify_runtime is None:
+    if not cloudify_runtime:
         raise ValueError('cannot get machine ip - cloudify_runtime is not set')
-    try:
-        for key in cloudify_runtime:
-            return cloudify_runtime[key]['ip']
-    except:
-        pass
-    raise ValueError('cannot get machine ip - cloudify_runtime format error')
+
+    for value in cloudify_runtime.values():
+        if 'ip' in value:
+            return value['ip']
+    else:
+        raise ValueError('cannot get machine ip - cloudify_runtime format error')
 
 
 @celery.task
 def install(**kwargs):
     pass
+
 
 @celery.task
 def start(port=8080, cloudify_runtime=None, **kwargs):
@@ -60,25 +61,19 @@ def start(port=8080, cloudify_runtime=None, **kwargs):
 
     shell.send(command)
 
-    attempts = 0
-    max_attempts = 10
-    http_server_running = False
-
     # verify http server is up
-    while not http_server_running:
+    for attempt in range(10):
         try:
             response = urllib2.urlopen("http://{0}:{1}".format(ip, port))
             response.read()
-            http_server_running = True
+            break
         except:
-            attempts += 1
-            if attempts > max_attempts:
-                raise RuntimeError("failed to start http server")
             time.sleep(1)
+    else:
+        raise RuntimeError("failed to start http server")
 
 
 def test():
     port = 8000
-    vm = dict([('ip', '10.0.0.5')])
-    cloudify_runtime = dict([('vm', vm)])
+    cloudify_runtime = {'vm': {'ip': '10.0.0.5'}}
     start(port, cloudify_runtime)
