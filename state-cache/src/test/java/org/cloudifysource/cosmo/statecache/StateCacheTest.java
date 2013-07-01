@@ -113,14 +113,15 @@ public class StateCacheTest {
         final String key = "key";
         final Object value = "value";
         stateCache.subscribeToKeyValueStateChanges(reciever, context, key, value, new StateChangeCallback() {
-            public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                      ImmutableMap<String, Object> newSnapshot) {
+            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                         ImmutableMap<String, Object> newSnapshot) {
                 boolean valid;
                 valid = (receiverParam == reciever);
                 valid &= (contextParam == context);
                 valid &= (value.equals(newSnapshot.get(key)));
                 stateChangedProperly.set(valid);
                 callbackCalledLatch.countDown();
+                return true;
             }
         });
 
@@ -144,8 +145,8 @@ public class StateCacheTest {
         final Map<String, String> value = Maps.newHashMap();
         value.put("key", "value");
         stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
-            public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                      ImmutableMap<String, Object> newSnapshot) {
+            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                         ImmutableMap<String, Object> newSnapshot) {
                 boolean valid;
                 valid = (receiverParam == reciever);
                 valid &= (contextParam == context);
@@ -159,6 +160,7 @@ public class StateCacheTest {
                 }
                 stateChangedProperly.set(valid);
                 callbackCalledLatch.countDown();
+                return true;
             }
         });
 
@@ -172,6 +174,40 @@ public class StateCacheTest {
         Assert.assertTrue(stateChangedProperly.get());
     }
 
+    @Test(timeOut = 15000)
+    public void testWaitForKeyValueAlreadyExists() throws InterruptedException {
+        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
+        final AtomicBoolean stateChangedProperly = new AtomicBoolean(false);
+        final Object reciever = new Object();
+        final Object context = new Object();
+        final String key = "key";
+        final Map<String, String> value = Maps.newHashMap();
+        value.put("key", "value");
+        stateCache.put(key, value);
+        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
+            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                         ImmutableMap<String, Object> newSnapshot) {
+                boolean valid;
+                valid = (receiverParam == reciever);
+                valid &= (contextParam == context);
+                final Object changedValue = newSnapshot.get(key);
+                if (changedValue instanceof Map<?, ?>) {
+                    final Map<?, ?> typedValue = (Map<?, ?>) changedValue;
+                    valid &= typedValue.containsKey("key");
+                    valid &= "value".equals(typedValue.get("key"));
+                } else {
+                    valid = false;
+                }
+                stateChangedProperly.set(valid);
+                callbackCalledLatch.countDown();
+                return true;
+            }
+        });
+
+        callbackCalledLatch.await();
+        Assert.assertTrue(stateChangedProperly.get());
+    }
+
 
     @Test(dependsOnMethods = "testWaitForKeyValueState")
     public void testWaitForKeyValueStateIsRemoved() throws InterruptedException {
@@ -180,13 +216,14 @@ public class StateCacheTest {
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
         final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
         stateCache.subscribeToKeyValueStateChanges(null, null, key, value, new StateChangeCallback() {
-            public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                      ImmutableMap<String, Object> newSnapshot) {
+            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                         ImmutableMap<String, Object> newSnapshot) {
                 if (callbackCalledLatch.getCount() > 0) {
                     callbackCalledLatch.countDown();
-                    return;
+                    return true;
                 }
                 callbackCalledAgainLatch.countDown();
+                return true;
             }
         });
 
@@ -197,15 +234,40 @@ public class StateCacheTest {
     }
 
     @Test(dependsOnMethods = "testWaitForKeyValueState")
+    public void testWaitForKeyValueStateIsNotRemoved() throws InterruptedException {
+        final String key = "key";
+        final Object value = "value";
+        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
+        final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
+        stateCache.subscribeToKeyValueStateChanges(null, null, key, value, new StateChangeCallback() {
+            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                         ImmutableMap<String, Object> newSnapshot) {
+                if (callbackCalledLatch.getCount() > 0) {
+                    callbackCalledLatch.countDown();
+                    return false;
+                }
+                callbackCalledAgainLatch.countDown();
+                return false;
+            }
+        });
+
+        stateCache.put(key, value);
+        Assert.assertTrue(callbackCalledLatch.await(5, TimeUnit.SECONDS));
+        stateCache.put(key, value);
+        Assert.assertTrue(callbackCalledAgainLatch.await(5, TimeUnit.SECONDS));
+    }
+
+    @Test(dependsOnMethods = "testWaitForKeyValueState")
     public void testRemoveCallback() throws InterruptedException {
         final String key = "key";
         final Object value = "value";
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
         String callbackUID = stateCache.subscribeToKeyValueStateChanges(null, null, key, value,
                 new StateChangeCallback() {
-                    public void onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                              ImmutableMap<String, Object> newSnapshot) {
+                    public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
+                                                 ImmutableMap<String, Object> newSnapshot) {
                         callbackCalledLatch.countDown();
+                        return false;
                     }
                 });
         stateCache.removeCallback(callbackUID);

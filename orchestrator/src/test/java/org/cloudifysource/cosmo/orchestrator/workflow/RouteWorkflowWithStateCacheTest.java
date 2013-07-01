@@ -171,7 +171,7 @@ public class RouteWorkflowWithStateCacheTest {
 
         final String flow =
                 "define flow\n" +
-                        "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
+                        "  state resource_id: \"$resource_id\", state: {reachable: \"true\"}\n";
 
         final Map<String, Object> props = Maps.newHashMap();
         props.put("state_cache", cache);
@@ -179,8 +179,6 @@ public class RouteWorkflowWithStateCacheTest {
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
         final Map<String, Object> workitem = Maps.newHashMap();
         workitem.put("resource_id", key);
-        workitem.put("property", property);
-        workitem.put("value", value);
 
         final Object workflowId = workflow.asyncExecute(workitem);
 

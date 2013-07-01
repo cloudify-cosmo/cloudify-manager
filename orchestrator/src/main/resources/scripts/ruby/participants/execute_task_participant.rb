@@ -73,7 +73,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       executor.sendTask(target, task_id, exec, json_props, self)
 
     rescue Exception => e
-      $logger.debug('Exception caught on execute_task participant: {}', e)
+      $logger.debug('Exception caught on execute_task participant ->', e)
       flunk(workitem, e)
     end
   end
