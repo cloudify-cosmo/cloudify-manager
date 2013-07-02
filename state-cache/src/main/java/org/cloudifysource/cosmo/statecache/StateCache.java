@@ -103,8 +103,6 @@ public class StateCache {
                 snapshot = snapshot();
             }
 
-            iterator.remove();
-
             submitStateChangeNotificationTask(callbackContext, snapshot);
         }
 
@@ -155,7 +153,7 @@ public class StateCache {
                                            final StateChangeCallback callback) {
         String callbackUID = UUID.randomUUID().toString();
 
-        CallbackContext callbackContext = new CallbackContext(receiver, context, callback, condition);
+        CallbackContext callbackContext = new CallbackContext(callbackUID, receiver, context, callback, condition);
 
         // obtain refernce to named locks relevent for this condition
         // and create locking/unlocking ordered lists.
@@ -174,20 +172,20 @@ public class StateCache {
         }
         try {
 
+            // add listener for condition
+            listeners.put(callbackUID, callbackContext);
+
             synchronized (cacheMapLock) {
                 // if condition already applies, submit notification task now and return.
                 if (condition.applies(conditionStateCacheView)) {
                     submitStateChangeNotificationTask(callbackContext, snapshot());
-                    return callbackUID;
                 }
             }
 
-            // add listener for condition
-            listeners.put(callbackUID, callbackContext);
             return callbackUID;
         } finally {
-            // unlock in reverse locking order
-            for (ReentrantReadWriteLock lock : keysInLockOrder) {
+            // unconditionStateCacheViewlock in reverse locking order
+            for (ReentrantReadWriteLock lock : Lists.reverse(keysInLockOrder)) {
                 lock.readLock().unlock();
             }
         }
@@ -202,10 +200,17 @@ public class StateCache {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
-                callbackContext.getCallback().onStateChange(callbackContext.getReceiver(),
-                        callbackContext.getContext(),
-                        StateCache.this,
-                        snapshot);
+                //If the subscriber was removed on previous callback invocation but a following change occurred,
+                // do not call the callback again
+                if (!listeners.containsKey(callbackContext.getCallbackUID()))
+                    return;
+
+                boolean removeListener = callbackContext.getCallback().onStateChange(callbackContext.getReceiver(),
+                                            callbackContext.getContext(),
+                                            StateCache.this,
+                                            snapshot);
+                if (removeListener)
+                    listeners.remove(callbackContext.getCallbackUID());
             }
         });
     }

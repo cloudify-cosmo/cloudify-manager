@@ -30,11 +30,11 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
     unless @resource_id.nil?
       state = new_snapshot.get(@resource_id)
       if state.java_kind_of?(java::util::Map)
-        workitem.params.each do |key, value|
-          if key != 'resource_id' and key != 'ref'
+        if workitem.params.has_key? 'state'
+          workitem.params['state'].each do |key, value|
             matches = (state.contains_key(key) and state.get(key).to_s.eql? value.to_s)
+            break unless matches
           end
-          break unless matches
         end
       end
     end
@@ -55,6 +55,9 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
         workitem.fields.merge!(new_snapshot)
       end
       participant.reply(workitem)
+      true
+    else
+      false
     end
   end
 

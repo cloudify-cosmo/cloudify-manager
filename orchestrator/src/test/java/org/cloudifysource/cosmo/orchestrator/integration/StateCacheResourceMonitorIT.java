@@ -72,8 +72,8 @@ public class StateCacheResourceMonitorIT extends AbstractTestNGSpringContextTest
                 agentId,
                 new StateChangeCallback() {
                     @Override
-                    public void onStateChange(Object receiver, Object context, StateCache cache,
-                                              ImmutableMap<String, Object> newSnapshot) {
+                    public boolean onStateChange(Object receiver, Object context, StateCache cache,
+                                                 ImmutableMap<String, Object> newSnapshot) {
                         final Object entry = newSnapshot.get(agentId);
                         if (entry instanceof Map<?, ?>) {
                             final Map<?, ?> state = (Map<?, ?>) entry;
@@ -82,6 +82,7 @@ public class StateCacheResourceMonitorIT extends AbstractTestNGSpringContextTest
                                 success.countDown();
                             }
                         }
+                        return false;
                     }
                 });
 
