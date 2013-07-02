@@ -58,6 +58,8 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
       properties = to_map(payload_properties)
 
+      exec = "cosmo.#{target}.tasks.#{exec}"
+
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
                     task_id,
                     target,
@@ -68,9 +70,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       $logger.debug('Generated JSON from {} = {}', properties, json_props)
 
-      exec = "cosmo.#{target}.#{exec}"
-
-      executor.sendTask(target, task_id, exec, json_props, self)
+      executor.send_task(target, task_id, exec, json_props, self)
 
     rescue Exception => e
       $logger.debug('Exception caught on execute_task participant ->', e)

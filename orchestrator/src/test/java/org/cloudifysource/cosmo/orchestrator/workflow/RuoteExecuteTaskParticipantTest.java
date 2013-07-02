@@ -136,7 +136,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
     }
 
     private static String buildTaskName(String target, String operation) {
-        return "cosmo." + target + "." + operation;
+        return "cosmo." + target + ".tasks." + operation;
     }
 
     @Test(timeOut = 30000)

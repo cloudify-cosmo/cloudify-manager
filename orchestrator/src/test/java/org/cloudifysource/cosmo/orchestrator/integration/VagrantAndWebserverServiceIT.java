@@ -93,7 +93,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Value("${cosmo.test.port-knocker.sockets-to-knock}")
     private String[] socketsToKnock;
 
-    @Test(timeOut = 60000 * 5, groups = "vagrant", enabled = false)
+    @Test(timeOut = 60000 * 5, groups = "vagrant")
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
         for (String socket : socketsToKnock) {
             String[] values = socket.split(":");

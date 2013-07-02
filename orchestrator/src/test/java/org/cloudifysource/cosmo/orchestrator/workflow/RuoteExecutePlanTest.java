@@ -18,7 +18,6 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -29,7 +28,6 @@ import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
 import org.cloudifysource.cosmo.dsl.packaging.ExtractedDSLPackageDetails;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
@@ -41,7 +39,6 @@ import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
 import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
-import org.cloudifysource.cosmo.tasks.messages.ExecuteTaskMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -435,8 +432,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     /**
      */
-    private static class PluginExecutionMessageConsumerListener
-            implements MessageConsumerListener<ExecuteTaskMessage>, TaskReceivedListener {
+    private static class PluginExecutionMessageConsumerListener implements TaskReceivedListener {
         private CountDownLatch latch;
         private boolean removeExecutedOperations;
         private List<String> operations;
@@ -446,25 +442,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             this.latch = latch;
             this.removeExecutedOperations = removeExecutedOperations;
             this.operations = Lists.newLinkedList(Arrays.asList(operations));
-        }
-        public void onMessage(URI uri, ExecuteTaskMessage message) {
-            final Optional<Object> exec = message.getPayloadProperty("exec");
-            if (!exec.isPresent()) {
-                return;
-            }
-            String actualOperation = exec.get().toString();
-            for (Iterator<String> iterator = operations.iterator(); iterator.hasNext();) {
-                String expectedOperation =  iterator.next();
-                if (actualOperation.equals(expectedOperation)) {
-                    latch.countDown();
-                    if (removeExecutedOperations) {
-                        iterator.remove();
-                    }
-                    break;
-                }
-            }
-        }
-        public void onFailure(Throwable t) {
         }
 
         @Override
@@ -480,6 +457,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     break;
                 }
             }
+        }
+
+        public void onFailure(Throwable t) {
         }
     }
 
