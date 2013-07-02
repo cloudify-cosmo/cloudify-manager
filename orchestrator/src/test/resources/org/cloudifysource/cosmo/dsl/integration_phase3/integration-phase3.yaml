@@ -20,13 +20,22 @@ definitions:
                               config.vm.network :private_network, ip: "10.0.0.5"
                               config.vm.provision :shell, :inline => "sleep 5;sudo ufw disable;sudo route add -host 192.168.10.104 netmask 0.0.0.0 gw 10.0.2.2"
                             end
+                        ssh_config:
+                            user: 'vagrant'
+                            port: 22
+                            key: '/home/dan/.vagrant.d/insecure_private_key'
+                        celery_config:
+                            user: 'vagrant'
+                            app: 'cosmo'
+                            local-app-dir: '/home/dan/dev/cosmo/cosmo-manager/orchestrator/src/test/resources/celeryremote/app/cosmo'
+                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
 
     plans:
         simple_web_server.webserver_host:
-                init:
-                    radial: |
-                        define host_init
-                            execute_operation operation: 'provision'
-                            execute_operation operation: 'start'
-                            state resource_id: '${node.id}', reachable: "true"
-                            execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.install'
+            init:
+                radial: |
+                    define host_init
+                       execute_operation operation: 'provision'
+                       execute_operation operation: 'start'
+                       state resource_id: '${node.id}', state: { reachable: "true" }
+                       execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.install'

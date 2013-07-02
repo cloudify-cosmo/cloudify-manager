@@ -6,28 +6,15 @@ from cosmo.celery import celery as celery
 from celery.utils.log import get_task_logger
 from fabric.api import settings, sudo, run, put
 import socket
-
+from time import sleep
 
 logger = get_task_logger(__name__)
 
 @celery.task
-def install(__cloudify_id, cloudify_runtime, **kwargs):
+def install(ssh_config, celery_config, __cloudify_id, cloudify_runtime, **kwargs):
     ip = get_machine_ip(cloudify_runtime)
-    ssh_config = {
-        'host': ip,
-        'user': 'vagrant',
-        'port': 22,
-        'key': 'C:\Users\elip\.vagrant.d\insecure_private_key'
-    }
-    celery_config = {
-        'user': 'vagrant',
-        'app': 'cosmo',
-        'local-app-dir': 'C:\Users\elip\dev\cosmo\cosmo-manager\orchestrator\src\\test\\resources\celeryremote\\app'
-                         '\\cosmo',
-        'broker': 'amqp://guest:guest@192.168.10.104:5672//',
-    }
+    ssh_config['host'] = ip
     install_celery_worker(ssh_config, celery_config, __cloudify_id)
-
 
 def install_celery_worker(ssh_conf, celery_conf, node_id):
     print 'celery_config=', celery_conf
@@ -42,50 +29,55 @@ def install_celery_worker(ssh_conf, celery_conf, node_id):
 
 def _install_celery(celery_conf, node_id):
 
-    user = celery_conf['user']
-    broker_url = celery_conf['broker']
-    app = celery_conf['app']
-
-    home = "/home/" + user
-    put(celery_conf['local-app-dir'], home)
-
     sudo("apt-get install -q -y python-pip")
     sudo("pip install billiard==2.7.3.28")
     sudo("pip install celery==3.0.19")
-    run("cd " + home + "; nohup celery worker --events --app=" + app +
-        " --include=cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer" + " --broker=" + broker_url +
-        " -Q " + node_id + " &; cat nohup.out")
 
-"""
-    #daemonize
-    sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
-    sudo("chmod +x /etc/init.d/celeryd")
     user = celery_conf['user']
     broker_url = celery_conf['broker']
-    home = "/home/" + user
     app = celery_conf['app']
-    config_file = StringIO('''
-CELERYD_USER="''' + user + '''"
-CELERY_TASK_SERIALIZER="json"
-CELERY_RESULT_SERIALIZER="json"
-BROKER_URL="''' + broker_url + '''"
-CELERY_RESULT_BACKEND="amqp"
-CELERYD_CHDIR="''' + home + '''"
-CELERYD_OPTS="--events --loglevel=info --app=''' + app + ''' -Q ''' + node_id + ''' --include=cloudify.tosca.artifacts.plugin.plugin_installer.installer"
-    ''')
-    put(config_file, "/etc/default/celeryd", use_sudo=True)
+    home = "/home/" + user
     # copy app folder to remote home directory
     run("rm -rf " + home + "/" + app)
     put(celery_conf['local-app-dir'], home)
+
+    #daemonize
+    sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
+    sudo("chmod +x /etc/init.d/celeryd")
+    config_file = StringIO(build_celeryd_config(user, home, app, node_id,
+        ['cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer'], broker_url))
+    put(config_file, "/etc/default/celeryd", use_sudo=True)
     sudo("service celeryd start")
-    """
+
 
 def get_machine_ip(cloudify_runtime):
-    if cloudify_runtime is None:
+    if not cloudify_runtime:
         raise ValueError('cannot get machine ip - cloudify_runtime is not set')
-    try:
-        for key in cloudify_runtime:
-            return cloudify_runtime[key]['ip']
-    except:
-        pass
+
+    for value in cloudify_runtime.values():
+        if 'ip' in value:
+            return value['ip']
+
     raise ValueError('cannot get machine ip - cloudify_runtime format error')
+
+
+def build_celeryd_config(user, workdir, app, node_id, include, broker_url):
+    return '''
+CELERYD_USER="%(user)s"
+CELERYD_GROUP="%(user)s"
+CELERY_TASK_SERIALIZER="json"
+CELERY_RESULT_SERIALIZER="json"
+CELERY_RESULT_BACKEND="amqp"
+CELERYD_CHDIR="%(workdir)s"
+CELERYD_OPTS="\
+--events\
+--loglevel=info \
+--app=%(app)s \
+-Q %(node_id)s \
+--include=%(include)s \
+--broker=%(broker_url)s''' % dict(user=user,
+                                  workdir=workdir,
+                                  app=app,
+                                  node_id=node_id,
+                                  include=','.join(include),
+                                  broker_url=broker_url)
