@@ -62,7 +62,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                         serviceTemplate.getName(),
                         typeTemplate,
                         definitions,
-                        interfacePluginImplementations);
+                        interfacePluginImplementations,
+                        populatedArtifacts);
                 Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
                         serviceTemplate.getName(),
                         typeTemplate);
@@ -91,7 +92,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     private Map<String, Object> processTypeTemplateNode(String serviceTemplateName,
                                                         TypeTemplate typeTemplate,
                                                         Definitions definitions,
-                                                        Map<String, Set<String>> interfacesToPluginImplementations) {
+                                                        Map<String, Set<String>> interfacesToPluginImplementations,
+                                                        Map<String, Artifact> populatedArtifacts) {
         Map<String, Object> node = Maps.newHashMap();
 
         setNodeId(typeTemplate, node);
@@ -102,7 +104,11 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeWorkflows(typeTemplate, definitions, node);
 
-        setNodeOperationsAndPlugins(typeTemplate, definitions, interfacesToPluginImplementations, node);
+        setNodeOperationsAndPlugins(typeTemplate,
+                                    definitions,
+                                    interfacesToPluginImplementations,
+                                    node,
+                                    populatedArtifacts);
 
         return node;
     }
@@ -200,7 +206,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,
                                              Map<String, Set<String>> interfacesToPluginImplementations,
-                                             Map<String, Object> node) {
+                                             Map<String, Object> node, Map<String, Artifact> populatedArtifacts) {
         Set<String> sameNameOperations = Sets.newHashSet();
         Map<String, String> operationToPlugin = Maps.newHashMap();
         Map<String, Map<String, Object>> plugins = Maps.newHashMap();
@@ -238,7 +244,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             }
 
             Map<String, Object> pluginDetails = Maps.newHashMap();
-            Artifact plugin = definitions.getArtifacts().get(pluginImplementation);
+            Artifact plugin = populatedArtifacts.get(pluginImplementation);
             boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN);
             pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));
             plugins.put(pluginImplementation, pluginDetails);

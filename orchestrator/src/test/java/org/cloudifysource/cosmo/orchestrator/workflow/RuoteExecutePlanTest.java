@@ -51,7 +51,6 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,6 +70,8 @@ import static org.fest.assertions.api.Assertions.assertThat;
 @ContextConfiguration(classes = { RuoteExecutePlanTest.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
+
+    private static final String CLOUDIFY_MANAGEMENT = "cloudify.management";
 
     /**
      */
@@ -111,18 +112,13 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private MockCeleryTaskWorker worker;
 
 
-    @Test(timeOut = 30000)
-    public void testPlanExecutionDslYaml() throws IOException, InterruptedException {
-        testPlanExecutionDsl("org/cloudifysource/cosmo/dsl/dsl.yaml");
-    }
-
     private void testPlanExecutionDsl(String dslFile) throws IOException, InterruptedException {
         String machineId = "mysql_template.mysql_machine";
         String databaseId = "mysql_template.mysql_database_server";
         OperationsDescriptor[] descriptors = {
-            new OperationsDescriptor("provisioner_plugin", new String[] {"create", "start"}),
-            new OperationsDescriptor("configurer_plugin", new String[] {"install", "start"}),
-            new OperationsDescriptor("schema_configurer_plugin", new String[] {"create"})
+            new OperationsDescriptor(CLOUDIFY_MANAGEMENT, "provisioner_plugin", new String[] {"create", "start"}),
+            new OperationsDescriptor(machineId, "configurer_plugin", new String[] {"install", "start"}),
+            new OperationsDescriptor(machineId, "schema_configurer_plugin", new String[] {"create"})
         };
 
         testPlanExecution(dslFile, new String[]{machineId, databaseId}, descriptors);
@@ -135,12 +131,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String databaseId = "mysql_template.mysql_database_server";
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
+                CLOUDIFY_MANAGEMENT,
                 "cloudify.tosca.artifacts.plugin.host.provisioner",
                 new String[]{"provision", "start"}),
             new OperationsDescriptor(
+                machineId,
                 "cloudify.tosca.artifacts.plugin.middleware_component.installer",
                 new String[]{"install", "start"}),
             new OperationsDescriptor(
+                machineId,
                 "cloudify.tosca.artifacts.plugin.app_module.installer",
                 new String[]{"deploy", "start"})
         };
@@ -156,14 +155,17 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                     machineId,
+                    CLOUDIFY_MANAGEMENT,
                     "cloudify.tosca.artifacts.plugin.host.provisioner",
                     new String[]{"provision", "start"}),
             new OperationsDescriptor(
                     databaseId,
+                    machineId,
                     "cloudify.tosca.artifacts.plugin.middleware_component.installer",
                     new String[]{"install", "start"}),
             new OperationsDescriptor(
                     schemaId,
+                    machineId,
                     "cloudify.tosca.artifacts.plugin.app_module.installer",
                     new String[]{"deploy", "start"})
         };
@@ -217,7 +219,10 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 DSLPackageProcessor.process(packagePath.toFile(), temporaryDirectory.get());
 
         OperationsDescriptor[] descriptors = {
-            new OperationsDescriptor("provisioner_plugin", new String[] {"start"})
+            new OperationsDescriptor(
+                    CLOUDIFY_MANAGEMENT,
+                    "provisioner_plugin",
+                    new String[] {"start"})
         };
 
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
@@ -249,7 +254,10 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         String[] operations =
                 new String[]{"operation0", "operation1", "operation2", "operation3", "operation4", "operation5"};
-        OperationsDescriptor[] descriptors = {new OperationsDescriptor("provisioner_plugin", operations)};
+        OperationsDescriptor[] descriptors = {new OperationsDescriptor(
+                CLOUDIFY_MANAGEMENT,
+                "provisioner_plugin",
+                operations)};
 
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
     }
@@ -258,6 +266,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     public void testPlanExecutionWithOverriddenGlobalPlan() throws IOException, InterruptedException {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-global-plan.yaml";
         OperationsDescriptor descriptor = new OperationsDescriptor(
+                CLOUDIFY_MANAGEMENT,
                 "cloudify.tosca.artifacts.plugin.host.provisioner",
                 new String[]{"provision", "start", "provision", "start"});
         OperationsDescriptor[] descriptors = {descriptor};
@@ -290,18 +299,18 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final List<String> executions = Lists.newArrayList();
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                String operationName = extractOperationName(taskName);
-                executions.add(target + "." + operationName);
+            public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                System.out.println(" -- received: [target=" + target + ", task=" + taskName + "]");
+                executions.add(taskName);
                 if (assertExecutionOrder) {
                     for (OperationsDescriptor descriptor : expectedOperations) {
                         String lastOperation = descriptor.operations[descriptor.operations.length - 1];
-                        if (descriptor.target.equals(target) && lastOperation.equals(operationName)) {
+                        String expectedTask = String.format("cosmo.%s.tasks.%s", descriptor.pluginName, lastOperation);
+                        if (Objects.equal(expectedTask, taskName)) {
                             messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.nodeId));
                         }
                     }
                 }
-
             }
         };
 
@@ -332,35 +341,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             List<String> expected = Lists.newArrayList();
             for (OperationsDescriptor descriptor : expectedOperations) {
                 for (String operation : descriptor.operations) {
-                    expected.add(descriptor.target + "." + operation);
+                    expected.add("cosmo." + descriptor.pluginName + ".tasks." + operation);
                 }
             }
             assertThat(executions).isEqualTo(expected);
         }
-    }
-
-    @Test(timeOut = 30000)
-    public void testExecuteOperation() throws URISyntaxException, InterruptedException {
-        final String operation = "test";
-        final String radial = "define flow\n" +
-                "  execute_operation operation: '" + operation + "'\n";
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, ruoteRuntime);
-        final Map<String, Object> fields = Maps.newHashMap();
-        final Map<String, Object> node = Maps.newHashMap();
-        final Map<String, Object> operations = Maps.newHashMap();
-        final String plugin = "some-plugin";
-        operations.put(operation, plugin);
-        node.put("operations", operations);
-        node.put("properties", Maps.newHashMap());
-        fields.put("node", node);
-
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        worker.addListener(plugin, new PluginExecutionMessageConsumerListener(latch, new String[] {operation}, false));
-
-        workflow.execute(fields);
-
-        latch.await();
     }
 
     @Test(timeOut = 30000)
@@ -396,6 +381,44 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         latch.await();
     }
 
+    @Test(timeOut = 30000)
+    public void testExecuteOperation() throws InterruptedException {
+        final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
+        final String machineId = "plugins_template.host_template";
+        final String remotePluginTarget = "cloudify.management";
+        final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks";
+        final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host.provisioner.tasks";
+
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("dsl", Resources.getResource(dslFile).getFile());
+        ruoteWorkflow.asyncExecute(fields);
+
+        final CountDownLatch latch = new CountDownLatch(3);
+
+        worker.addListener(remotePluginTarget, new TaskReceivedListener() {
+            @Override
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                if (taskName.startsWith(remoteTaskPrefix) && taskName.endsWith("provision")) {
+                    latch.countDown();
+                }
+            }
+        });
+        worker.addListener(machineId, new TaskReceivedListener() {
+            @Override
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                if (taskName.startsWith(agentTaskPrefix) &&
+                        (taskName.endsWith("install") || taskName.endsWith("start"))) {
+                    latch.countDown();
+                }
+            }
+        });
+
+        StateChangedMessage message = createReachableStateCacheMessage(machineId);
+        messageProducer.send(stateCacheTopic, message);
+
+        latch.await();
+    }
+
     private String getResourceAsString(String resourceName) {
         final URL resource = Resources.getResource(resourceName);
         try {
@@ -419,13 +442,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private static class OperationsDescriptor {
         final String nodeId;
         final String target;
+        final String pluginName;
         final String[] operations;
-        private OperationsDescriptor(String target, String[] operations) {
-            this("", target, operations);
+        private OperationsDescriptor(String target, String pluginName, String[] operations) {
+            this("", target, pluginName, operations);
         }
-        private OperationsDescriptor(String nodeId, String target, String[] operations) {
+        private OperationsDescriptor(String nodeId, String target, String pluginName, String[] operations) {
             this.nodeId = nodeId;
             this.target = target;
+            this.pluginName = pluginName;
             this.operations = operations;
         }
     }
@@ -457,9 +482,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     break;
                 }
             }
-        }
-
-        public void onFailure(Throwable t) {
         }
     }
 

@@ -101,7 +101,6 @@ definitions:
                 radial: |
                     define app_module_init
                         execute_operation operation: 'deploy'
-
                         execute_operation operation: 'start'
 
 

@@ -58,8 +58,6 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
       properties = to_map(payload_properties)
 
-      exec = "cosmo.#{target}.tasks.#{exec}"
-
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
                     task_id,
                     target,
