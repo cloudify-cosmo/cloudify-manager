@@ -6,46 +6,71 @@ from cosmo.celery import celery as celery
 from celery.utils.log import get_task_logger
 from fabric.api import settings, sudo, run, put
 import socket
-from time import sleep
+from os import path
 
 logger = get_task_logger(__name__)
 
 @celery.task
-def install(ssh_config, celery_config, __cloudify_id, cloudify_runtime, **kwargs):
+def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
+    prepare_configuration(worker_config, cloudify_runtime)
+    install_celery_worker(worker_config, __cloudify_id)
+
+@celery.task
+def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
+    prepare_configuration(worker_config, cloudify_runtime)
+    restart_celery_worker(worker_config, __cloudify_id)
+
+
+def prepare_configuration(worker_config, cloudify_runtime):
     ip = get_machine_ip(cloudify_runtime)
-    ssh_config['host'] = ip
-    install_celery_worker(ssh_config, celery_config, __cloudify_id)
+    worker_config['host'] = ip
+    worker_config['app'] = 'cosmo'
 
-def install_celery_worker(ssh_conf, celery_conf, node_id):
-    print 'celery_config=', celery_conf
-    print 'ssh_config=', ssh_conf
+
+def install_celery_worker(worker_config, node_id):
+    print 'worker_config=', worker_config
     print 'node_id=', node_id
-    host_string = '%(user)s@%(host)s:%(port)s' % ssh_conf
-    key_filename = ssh_conf['key']
+    host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+    key_filename = worker_config['key']
     with settings(host_string=host_string,
-        key_filename=key_filename,
-        disable_known_hosts=True):
-        _install_celery(celery_conf, node_id)
+                  key_filename=key_filename,
+                  disable_known_hosts=True):
+        _install_celery(worker_config, node_id)
 
-def _install_celery(celery_conf, node_id):
 
+def restart_celery_worker(worker_config, node_id):
+    print 'worker_config=', worker_config
+    print 'node_id=', node_id
+    host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+    key_filename = worker_config['key']
+    with settings(host_string=host_string,
+                  key_filename=key_filename,
+                  disable_known_hosts=True):
+        sudo('service celeryd restart')
+
+
+def _install_celery(worker_config, node_id):
     sudo("apt-get install -q -y python-pip")
     sudo("pip install billiard==2.7.3.28")
     sudo("pip install celery==3.0.19")
 
-    user = celery_conf['user']
-    broker_url = celery_conf['broker']
-    app = celery_conf['app']
+    user = worker_config['user']
+    broker_url = worker_config['broker']
+    app = worker_config['app']
     home = "/home/" + user
-    # copy app folder to remote home directory
+
+    # copy remote app folder to remote home directory (contains init code and plugin installer code)
     run("rm -rf " + home + "/" + app)
-    put(celery_conf['local-app-dir'], home)
+    script_path = path.realpath(__file__)
+    script_dir = path.dirname(script_path)
+    copy_dir = path.join(script_dir, 'remote')
+    copy_dir = path.join(copy_dir, app)
+    put(copy_dir, home)
 
     #daemonize
     sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     sudo("chmod +x /etc/init.d/celeryd")
-    config_file = StringIO(build_celeryd_config(user, home, app, node_id,
-        ['cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer'], broker_url))
+    config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
     put(config_file, "/etc/default/celeryd", use_sudo=True)
     sudo("service celeryd start")
 
@@ -60,24 +85,22 @@ def get_machine_ip(cloudify_runtime):
 
     raise ValueError('cannot get machine ip - cloudify_runtime format error')
 
-
-def build_celeryd_config(user, workdir, app, node_id, include, broker_url):
+def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
 CELERY_RESULT_SERIALIZER="json"
-CELERY_RESULT_BACKEND="amqp"
+CELERY_RESULT_BACKEND="%(broker_url)s"
 CELERYD_CHDIR="%(workdir)s"
 CELERYD_OPTS="\
---events\
+--events \
 --loglevel=info \
 --app=%(app)s \
 -Q %(node_id)s \
---include=%(include)s \
---broker=%(broker_url)s''' % dict(user=user,
-                                  workdir=workdir,
-                                  app=app,
-                                  node_id=node_id,
-                                  include=','.join(include),
-                                  broker_url=broker_url)
+--broker=%(broker_url)s"''' % dict(user=user,
+                                   workdir=workdir,
+                                   app=app,
+                                   node_id=node_id,
+                                   broker_url=broker_url)
+

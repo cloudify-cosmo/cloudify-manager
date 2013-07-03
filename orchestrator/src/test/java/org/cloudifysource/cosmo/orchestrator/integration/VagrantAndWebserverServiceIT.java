@@ -95,6 +95,15 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
     @Test(timeOut = 60000 * 5, groups = "vagrant")
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
+        test("org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml");
+    }
+
+    @Test(groups = "vagrant")
+    public void testWithVagrantHostProvisionerAndRemoteCeleryWorker() {
+        test("org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml");
+    }
+
+    private void test(String dslLocation) {
         for (String socket : socketsToKnock) {
             String[] values = socket.split(":");
             Agent agent = new Agent();
@@ -102,22 +111,10 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             resourceMonitor.insertFact(agent);
         }
 
-        final String dslLocation = "org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml";
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
     }
-
-    @Test(groups = "vagrant")
-    public void testWithVagrantHostProvisionerAndRemoteCeleryWorker() {
-        final String dslLocation = "org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml";
-        final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("dsl", dslLocation);
-
-        final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
-        ruoteRuntime.waitForWorkflow(wfid);
-    }
-
 }
