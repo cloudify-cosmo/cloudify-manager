@@ -62,7 +62,7 @@ public class StateCache {
 
     private static TrieMap<String, Object> createCache(Map<String, Object> initialState) {
         final TrieMap<String, Object> trieMap = TrieMap.empty();
-        for (Map.Entry<String,Object> entry : initialState.entrySet())
+        for (Map.Entry<String, Object> entry : initialState.entrySet())
             trieMap.put(entry.getKey(), entry.getValue());
         return trieMap;
     }
@@ -118,7 +118,7 @@ public class StateCache {
         Preconditions.checkNotNull(key);
         Condition condition = new Condition() {
             @Override
-            public boolean applies(Map<String,Object > snapshot) {
+            public boolean applies(Map<String, Object> snapshot) {
                 return snapshot.containsKey(key);
             }
 

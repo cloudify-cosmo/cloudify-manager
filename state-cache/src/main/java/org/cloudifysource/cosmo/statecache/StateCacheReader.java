@@ -16,8 +16,6 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.util.Map;
 
 /**
