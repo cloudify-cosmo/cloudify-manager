@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
+import java.util.Map;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
@@ -30,6 +30,6 @@ public interface StateChangeCallback {
      * Notify upon state change.
      * @return whether this callback should be removed from the state cache after this event is triggered.
      */
-    boolean onStateChange(Object receiver, Object context, StateCache cache, ImmutableMap<String, Object> newSnapshot);
+    boolean onStateChange(Object receiver, Object context, StateCache cache, Map<String, Object> newSnapshot);
 
 }

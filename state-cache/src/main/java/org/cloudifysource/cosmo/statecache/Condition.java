@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.statecache;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO javadoc.
@@ -26,7 +27,7 @@ import java.util.List;
  */
 interface Condition {
 
-    boolean applies(StateCacheView snapshot);
+    boolean applies(Map<String, Object> snapshot);
 
     List<String> keysToLock();
 

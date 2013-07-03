@@ -19,9 +19,9 @@ package org.cloudifysource.cosmo.statecache;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.romix.scala.collection.concurrent.TrieMap;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -44,22 +44,27 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class StateCache {
 
-    private final Object cacheMapLock = new Object();
     private final NamedLockProvider lockProvider = new NamedLockProvider();
 
-    private final Map<String, Object> cache;
-    private final SynchronizedStateCacheView conditionStateCacheView;
+    private final TrieMap<String, Object> cache;
     private final ExecutorService executorService;
     private final ConcurrentMap<String, CallbackContext> listeners;
 
     private StateCache(Map<String, Object> initialState) {
         this.executorService = Executors.newSingleThreadExecutor();
-        this.cache = Maps.newHashMap(initialState);
-        this.conditionStateCacheView = new SynchronizedStateCacheView(cache, cacheMapLock);
+        this.cache = createCache(initialState);
 
         // Concurrent - listeners are queried and added on subscribeToStateChanges
         //              listeners are iterated and removed on put
+
         this.listeners = Maps.newConcurrentMap();
+    }
+
+    private static TrieMap<String, Object> createCache(Map<String, Object> initialState) {
+        final TrieMap<String, Object> trieMap = TrieMap.empty();
+        for (Map.Entry<String,Object> entry : initialState.entrySet())
+            trieMap.put(entry.getKey(), entry.getValue());
+        return trieMap;
     }
 
     public void close() {
@@ -75,15 +80,12 @@ public class StateCache {
         // before modifying this key, check if it is not locked by any wait for state calls
         lockForKey.writeLock().lock();
         try {
-            // protected the underlying map (a call to snapshot might be going on).
-            synchronized (cacheMapLock) {
-                previous = cache.put(key, value);
-            }
+            previous = cache.put(key, value);
         } finally {
             lockForKey.writeLock().unlock();
         }
 
-        ImmutableMap<String, Object> snapshot = null;
+        final Map<String, Object> snapshot = snapshot();
 
         Iterator<Map.Entry<String, CallbackContext>> iterator = listeners.entrySet().iterator();
 
@@ -94,13 +96,8 @@ public class StateCache {
             Condition condition = callbackContext.getCondition();
 
             // if condition doesn't apply, move to next one
-            if (!condition.applies(conditionStateCacheView)) {
+            if (!condition.applies(snapshot)) {
                 continue;
-            }
-
-            // only create snapshot once as it will not change.
-            if (snapshot == null) {
-                snapshot = snapshot();
             }
 
             submitStateChangeNotificationTask(callbackContext, snapshot);
@@ -110,21 +107,8 @@ public class StateCache {
 
     }
 
-    public ImmutableMap<String, Object> snapshot() {
-        synchronized (cacheMapLock) {
-            return ImmutableMap.copyOf(cache);
-        }
-    }
-
-    public String subscribeToKeyValueStateChanges(final Object receiver,
-                                                  final Object context,
-                                                  final String key,
-                                                  final Object value,
-                                                  final StateChangeCallback callback) {
-        Preconditions.checkNotNull(key);
-        Preconditions.checkNotNull(value);
-        Condition condition = new KeyValueCondition(key, value);
-        return subscribeToStateChanges(receiver, context, condition, callback);
+    public Map<String, Object> snapshot() {
+        return Collections.unmodifiableMap(cache.readOnlySnapshot());
     }
 
     public String subscribeToKeyValueStateChanges(Object receiver,
@@ -134,7 +118,7 @@ public class StateCache {
         Preconditions.checkNotNull(key);
         Condition condition = new Condition() {
             @Override
-            public boolean applies(StateCacheView snapshot) {
+            public boolean applies(Map<String,Object > snapshot) {
                 return snapshot.containsKey(key);
             }
 
@@ -175,11 +159,9 @@ public class StateCache {
             // add listener for condition
             listeners.put(callbackUID, callbackContext);
 
-            synchronized (cacheMapLock) {
-                // if condition already applies, submit notification task now and return.
-                if (condition.applies(conditionStateCacheView)) {
-                    submitStateChangeNotificationTask(callbackContext, snapshot());
-                }
+            // if condition already applies, submit notification task now and return.
+            if (condition.applies(snapshot())) {
+                submitStateChangeNotificationTask(callbackContext, snapshot());
             }
 
             return callbackUID;
@@ -196,7 +178,7 @@ public class StateCache {
     }
 
     private void submitStateChangeNotificationTask(final CallbackContext callbackContext,
-                                                   final ImmutableMap<String, Object> snapshot) {
+                                                   final Map<String, Object> snapshot) {
         executorService.submit(new Runnable() {
             @Override
             public void run() {

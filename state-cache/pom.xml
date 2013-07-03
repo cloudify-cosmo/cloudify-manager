@@ -62,6 +62,12 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.romix</groupId>
+            <artifactId>java-concurrent-hash-trie-map</artifactId>
+            <!--TODO Remove version once everyone update dev pom.xml-->
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
