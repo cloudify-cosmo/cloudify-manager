@@ -22,6 +22,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.romix.scala.collection.concurrent.TrieMap;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -49,6 +51,8 @@ public class StateCache {
     private final TrieMap<String, Object> cache;
     private final ExecutorService executorService;
     private final ConcurrentMap<String, CallbackContext> listeners;
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private StateCache(Map<String, Object> initialState) {
         this.executorService = Executors.newSingleThreadExecutor();
@@ -187,12 +191,21 @@ public class StateCache {
                 if (!listeners.containsKey(callbackContext.getCallbackUID()))
                     return;
 
-                boolean removeListener = callbackContext.getCallback().onStateChange(callbackContext.getReceiver(),
+                boolean removeListener = false;
+                try {
+                    removeListener = callbackContext.getCallback().onStateChange(callbackContext.getReceiver(),
                                             callbackContext.getContext(),
                                             StateCache.this,
                                             snapshot);
-                if (removeListener)
-                    listeners.remove(callbackContext.getCallbackUID());
+                } catch (Exception e) {
+                    removeListener = true;
+                    logger.debug("Exception while invoking state change listener, listener will be removed", e);
+                } finally {
+                    if (removeListener)
+                        listeners.remove(callbackContext.getCallbackUID());
+                }
+
+
             }
         });
     }

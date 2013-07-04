@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration;
 
-import com.google.common.collect.ImmutableMap;
 import org.cloudifysource.cosmo.monitor.Agent;
 import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
 import org.cloudifysource.cosmo.monitor.mock.MockAgent;
@@ -73,7 +72,7 @@ public class StateCacheResourceMonitorIT extends AbstractTestNGSpringContextTest
                 new StateChangeCallback() {
                     @Override
                     public boolean onStateChange(Object receiver, Object context, StateCache cache,
-                                                 ImmutableMap<String, Object> newSnapshot) {
+                                                 Map<String, Object> newSnapshot) {
                         final Object entry = newSnapshot.get(agentId);
                         if (entry instanceof Map<?, ?>) {
                             final Map<?, ?> state = (Map<?, ?>) entry;

@@ -1,6 +1,6 @@
 define use_workitems
 
-  participant ref: "state", key: 'general_status', value: 'good'
+  participant ref: "state", resource_id: 'general_status', state: {value: 'good'}
 
   set field: 'state0_id_processed', value: '$state0.id'
   set field: 'state0_status_processed', value: '$state0.status'
