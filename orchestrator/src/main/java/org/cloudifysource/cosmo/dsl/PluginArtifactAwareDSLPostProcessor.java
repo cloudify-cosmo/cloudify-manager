@@ -246,6 +246,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             Map<String, Object> pluginDetails = Maps.newHashMap();
             Artifact plugin = populatedArtifacts.get(pluginImplementation);
             boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN);
+            pluginDetails.putAll(plugin.getProperties());
+            pluginDetails.put("name", pluginImplementation);
             pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));
             plugins.put(pluginImplementation, pluginDetails);
 

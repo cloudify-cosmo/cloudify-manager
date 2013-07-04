@@ -28,6 +28,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   TARGET = 'target'
   EXEC = 'exec'
   PROPERTIES = 'properties'
+  PARAMS = 'params'
   PAYLOAD = 'payload'
   NODE = 'node'
   NODE_ID = '__cloudify_id'
@@ -55,6 +56,10 @@ class ExecuteTaskParticipant < Ruote::Participant
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
         payload_properties[NODE_ID] = node['id']
+      end
+      if payload.has_key? PARAMS
+        payload_params = payload[PARAMS]
+        payload_properties.merge! payload_params if payload_params.respond_to? 'merge'
       end
       properties = to_map(payload_properties)
 

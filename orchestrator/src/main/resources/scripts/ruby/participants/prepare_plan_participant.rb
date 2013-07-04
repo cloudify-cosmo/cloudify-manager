@@ -20,6 +20,7 @@ require 'json'
 
 class PreparePlanParticipant < Ruote::Participant
 
+  DSL = 'dsl'
   HOST_TYPE = 'cloudify.tosca.types.host'
 
   def on_workitem
@@ -31,7 +32,12 @@ class PreparePlanParticipant < Ruote::Participant
       processed_dsl = DSLProcessor.process(dsl_file, PluginArtifactAwareDSLPostProcessor.new)
 
       plan = JSON.parse(processed_dsl)
-      plan['nodes'].each {|node| process_node(plan['nodes_extra'], node) }
+      nodes = plan['nodes']
+      nodes_extra = plan['nodes_extra']
+      nodes.each {|node| process_node(nodes_extra, node) }
+      nodes.each do |node|
+        add_plugins_to_install(node, nodes) if nodes_extra[node['id']]['super_types'].include? HOST_TYPE
+      end
 
       workitem.fields['plan'] = plan
 
@@ -72,6 +78,21 @@ class PreparePlanParticipant < Ruote::Participant
       nil
     end
 
+  end
+
+  def add_plugins_to_install(host_node, nodes)
+    plugins_to_install = Hash.new
+    nodes.each do |node|
+      if node['host_id'] == host_node['id']
+        # ok to override here since we assume it is the same plugin
+        node['plugins'].each do |name, plugin|
+          if plugin['agent_plugin'] == 'true'
+            plugins_to_install[name] = plugin
+          end
+        end
+      end
+    end
+    host_node['plugins_to_install'] = plugins_to_install.values
   end
 
 end

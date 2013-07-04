@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -53,7 +54,17 @@ public class RealTimeStateCache implements StateCacheReader {
             public void onMessage(URI uri, Object message) {
                 if (message instanceof StateChangedMessage) {
                     final StateChangedMessage update = (StateChangedMessage) message;
-                    RealTimeStateCache.this.stateCache.put(update.getResourceId(), update.getState());
+
+                    Object state = null; // stateCache.get(update.getResourceId());
+                    Map<String, Object> updatedState = update.getState();
+                    Map<String, Object> finalState = Maps.newHashMap();
+
+                    if (state != null) {
+                        finalState.putAll((Map<String, Object>) state);
+                    }
+
+                    finalState.putAll(updatedState);
+                    RealTimeStateCache.this.stateCache.put(update.getResourceId(), finalState);
                 } else {
                     throw new IllegalArgumentException("Cannot handle message " + message);
                 }
