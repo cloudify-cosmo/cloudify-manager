@@ -151,20 +151,16 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
-        String schemaId = "mysql_template.mysql_schema";
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
-                    machineId,
                     CLOUDIFY_MANAGEMENT,
                     "cloudify.tosca.artifacts.plugin.host.provisioner",
                     new String[]{"provision", "start"}),
             new OperationsDescriptor(
-                    databaseId,
                     machineId,
                     "cloudify.tosca.artifacts.plugin.middleware_component.installer",
                     new String[]{"install", "start"}),
             new OperationsDescriptor(
-                    schemaId,
                     machineId,
                     "cloudify.tosca.artifacts.plugin.app_module.installer",
                     new String[]{"deploy", "start"})
@@ -296,18 +292,27 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", dslLocation);
 
+        final List<String> expectedTasks = Lists.newArrayList();
+        for (OperationsDescriptor pluginOperations : expectedOperations) {
+            for (String operationName : pluginOperations.operations) {
+                expectedTasks.add(String.format("cosmo.%s.tasks.%s", pluginOperations.pluginName, operationName));
+            }
+            expectedTasks.add("");
+        }
+
         final List<String> executions = Lists.newArrayList();
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 System.out.println(" -- received: [target=" + target + ", task=" + taskName + "]");
-                executions.add(taskName);
                 if (assertExecutionOrder) {
-                    for (OperationsDescriptor descriptor : expectedOperations) {
-                        String lastOperation = descriptor.operations[descriptor.operations.length - 1];
-                        String expectedTask = String.format("cosmo.%s.tasks.%s", descriptor.pluginName, lastOperation);
-                        if (Objects.equal(expectedTask, taskName)) {
-                            messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(descriptor.nodeId));
+                    executions.add(taskName);
+                    if (Objects.equal(expectedTasks.get(0), taskName)) {
+                        expectedTasks.remove(0);
+                        if (expectedTasks.get(0).length() == 0) {
+                            String nodeId = kwargs.get("__cloudify_id").toString();
+                            messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(nodeId));
+                            expectedTasks.remove(0);
                         }
                     }
                 }
@@ -338,13 +343,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         latch.await();
 
         if (assertExecutionOrder) {
-            List<String> expected = Lists.newArrayList();
-            for (OperationsDescriptor descriptor : expectedOperations) {
-                for (String operation : descriptor.operations) {
-                    expected.add("cosmo." + descriptor.pluginName + ".tasks." + operation);
-                }
-            }
-            assertThat(executions).isEqualTo(expected);
+            assertThat(expectedTasks).isEmpty();
         }
     }
 
@@ -352,7 +351,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     public void testRuntimePropertiesInjection() throws IOException, InterruptedException {
         final String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         final String machineId = "mysql_template.mysql_host";
-        final String plugin = "cloudify.tosca.artifacts.plugin.middleware_component.installer";
         final String ip = "10.0.0.1";
 
         Map<String, Object> fields = Maps.newHashMap();
@@ -361,7 +359,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        worker.addListener(plugin, new TaskReceivedListener() {
+        worker.addListener(machineId, new TaskReceivedListener() {
             @Override
             public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
@@ -440,15 +438,10 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     /**
      */
     private static class OperationsDescriptor {
-        final String nodeId;
         final String target;
         final String pluginName;
         final String[] operations;
         private OperationsDescriptor(String target, String pluginName, String[] operations) {
-            this("", target, pluginName, operations);
-        }
-        private OperationsDescriptor(String nodeId, String target, String pluginName, String[] operations) {
-            this.nodeId = nodeId;
             this.target = target;
             this.pluginName = pluginName;
             this.operations = operations;
