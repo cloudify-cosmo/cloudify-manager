@@ -16,10 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.romix.scala.collection.concurrent.TrieMap;
 import org.cloudifysource.cosmo.logging.Logger;
@@ -27,7 +24,6 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -75,6 +71,10 @@ public class StateCache {
         executorService.shutdown();
     }
 
+    public Object get(String key) {
+        return cache.get(key);
+    }
+
     public Object put(String key, Object value) {
 
         Object previous;
@@ -97,10 +97,9 @@ public class StateCache {
             Map.Entry<String, CallbackContext> entry = iterator.next();
 
             CallbackContext callbackContext = entry.getValue();
-            Condition condition = callbackContext.getCondition();
 
             // if condition doesn't apply, move to next one
-            if (!condition.applies(snapshot)) {
+            if (!callbackContext.getKey().equals(key)) {
                 continue;
             }
 
@@ -120,62 +119,30 @@ public class StateCache {
                                                   final String key,
                                                   StateChangeCallback callback) {
         Preconditions.checkNotNull(key);
-        Condition condition = new Condition() {
-            @Override
-            public boolean applies(Map<String, Object> snapshot) {
-                return snapshot.containsKey(key);
-            }
 
-            @Override
-            public List<String> keysToLock() {
-                return ImmutableList.of(key);
-            }
-        };
-        return subscribeToStateChanges(receiver, context, condition, callback);
-    }
+        final String callbackUID = UUID.randomUUID().toString();
 
+        final CallbackContext callbackContext = new CallbackContext(callbackUID, receiver, context, callback, key
+        );
 
-    private String subscribeToStateChanges(final Object receiver,
-                                           final Object context,
-                                           final Condition condition,
-                                           final StateChangeCallback callback) {
-        String callbackUID = UUID.randomUUID().toString();
-
-        CallbackContext callbackContext = new CallbackContext(callbackUID, receiver, context, callback, condition);
-
-        // obtain refernce to named locks relevent for this condition
-        // and create locking/unlocking ordered lists.
-        List<String> keyNamesToLock = Lists.newArrayList(condition.keysToLock());
-        Collections.sort(keyNamesToLock);
-        List<ReentrantReadWriteLock> keysInLockOrder = Lists.transform(keyNamesToLock, new Function<String,
-                ReentrantReadWriteLock>() {
-            public ReentrantReadWriteLock apply(String key) {
-                return lockProvider.forName(key);
-            }
-        });
-
-        // lock in locking order
-        for (ReentrantReadWriteLock lock : keysInLockOrder) {
-            lock.readLock().lock();
-        }
+        final ReentrantReadWriteLock lock = lockProvider.forName(key);
+        lock.readLock().lock();
         try {
 
             // add listener for condition
             listeners.put(callbackUID, callbackContext);
 
             // if condition already applies, submit notification task now and return.
-            if (condition.applies(snapshot())) {
+            if (snapshot().containsKey(key)) {
                 submitStateChangeNotificationTask(callbackContext, snapshot());
             }
 
             return callbackUID;
         } finally {
-            // unconditionStateCacheViewlock in reverse locking order
-            for (ReentrantReadWriteLock lock : Lists.reverse(keysInLockOrder)) {
-                lock.readLock().unlock();
-            }
+            lock.readLock().unlock();
         }
     }
+
 
     public void removeCallback(final String callbackUID) {
         listeners.remove(callbackUID);
