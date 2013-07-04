@@ -18,6 +18,7 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
 
   NODE = 'node'
   RUNTIME = 'cloudify_runtime'
+  STATE = 'state'
   @resource_id = nil
 
   def resource_id=(resource_id)
@@ -30,8 +31,8 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
     unless @resource_id.nil?
       state = new_snapshot.get(@resource_id)
       if state.java_kind_of?(java::util::Map)
-        if workitem.params.has_key? 'state'
-          workitem.params['state'].each do |key, value|
+        if workitem.params.has_key? STATE
+          workitem.params[STATE].each do |key, value|
             matches = (state.contains_key(key) and state.get(key).to_s.eql? value.to_s)
             break unless matches
           end
