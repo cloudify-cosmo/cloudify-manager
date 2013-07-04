@@ -3,6 +3,7 @@ definitions:
     imports:
         - "cloudify.types"
         - "vagrant-host-provisioner.yaml"
+        - "python-webserver-installer.yaml"
 
     service_templates:
         simple_web_server:
@@ -22,3 +23,10 @@ definitions:
                             port: '22'
                             key: '/home/dan/.vagrant.d/insecure_private_key'
                             broker: 'amqp://guest:guest@10.0.0.1:5672//'
+
+                webserver_middleware:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        port: 8888
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "webserver_host"
