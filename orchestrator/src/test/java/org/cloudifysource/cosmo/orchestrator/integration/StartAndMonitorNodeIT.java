@@ -146,7 +146,7 @@ public class StartAndMonitorNodeIT extends AbstractTestNGSpringContextTests {
                         "       resource_id: \"$resource_id\"\n" +
                         "    }\n" +
                         "  }\n" +
-                        "  state resource_id: \"$resource_id\", reachable: \"true\"\n",
+                        "  state resource_id: \"$resource_id\", state: {reachable: \"true\"}\n",
                 resourceProvisionerTopic,
                 "start_machine");
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);

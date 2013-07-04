@@ -128,7 +128,7 @@ public class StateCacheWorkflowMessagingIT extends AbstractTestNGSpringContextTe
         final String flow =
                 "define flow\n" +
                 "  resource resource_id: \"$resource_id\", action: \"start_machine\"\n" +
-                "  state resource_id: \"$resource_id\", reachable: \"true\"\n";
+                "  state resource_id: \"$resource_id\", state: { reachable: \"true\"}\n";
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
 
         // Execute workflow

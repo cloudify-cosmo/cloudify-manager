@@ -28,15 +28,15 @@ class CallbackContext {
     private final Object receiver;
     private final Object context;
     private final StateChangeCallback callback;
-    private final Condition condition;
+    private final String key;
 
     public CallbackContext(String callbackUID, Object receiver, Object context, StateChangeCallback callback,
-                           Condition condition) {
+                           String key) {
         this.callbackUID = callbackUID;
         this.receiver = receiver;
         this.context = context;
         this.callback = callback;
-        this.condition = condition;
+        this.key = key;
     }
 
     public String getCallbackUID() {
@@ -55,8 +55,8 @@ class CallbackContext {
         return receiver;
     }
 
-    public Condition getCondition() {
-        return condition;
+    String getKey() {
+        return key;
     }
 
 

@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -24,6 +23,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 
 import java.net.URI;
+import java.util.Map;
 
 /**
  * Holds a cache of the distributed system state. The state
@@ -76,17 +76,8 @@ public class RealTimeStateCache implements StateCacheReader {
     }
 
     @Override
-    public ImmutableMap<String, Object> snapshot() {
+    public Map<String, Object> snapshot() {
         return stateCache.snapshot();
-    }
-
-    @Override
-    public String subscribeToKeyValueStateChanges(Object receiver,
-                                                  Object context,
-                                                  String key,
-                                                  Object value,
-                                                  StateChangeCallback callback) {
-        return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, value, callback);
     }
 
     @Override
