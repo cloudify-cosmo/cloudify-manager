@@ -16,8 +16,12 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
+import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.monitor.Agent;
@@ -25,6 +29,7 @@ import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
 import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.MockPortKnockerConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
@@ -42,8 +47,19 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 
 /**
@@ -63,6 +79,8 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
      */
     @Configuration
     @Import({
+            TemporaryDirectoryConfig.class,
+            JettyFileServerForPluginsConfig.class,
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
             RealTimeStateCacheConfig.class,
@@ -79,6 +97,20 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     static class Config extends TestConfig {
     }
 
+    /**
+     */
+    @Configuration
+    public static class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
+
+        @Inject
+        private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+
+        @PostConstruct
+        public void setResourceBase() {
+            this.resourceBase = temporaryDirectory.get().getAbsolutePath();
+        }
+    }
+
     @Inject
     private RuoteRuntime ruoteRuntime;
 
@@ -88,10 +120,14 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Inject
     private ResourceMonitorServer resourceMonitor;
 
+    @Inject
+    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+
     // format is: host:port:id
     @NotNull
     @Value("${cosmo.test.port-knocker.sockets-to-knock}")
     private String[] socketsToKnock;
+
 
     @Test(timeOut = 60000 * 5, groups = "vagrant")
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
@@ -104,6 +140,8 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     }
 
     private void test(String dslLocation) {
+
+        // Add resource to be probed by resource monitor
         for (String socket : socketsToKnock) {
             String[] values = socket.split(":");
             Agent agent = new Agent();
@@ -111,10 +149,40 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             resourceMonitor.insertFact(agent);
         }
 
+        // zip webserver plugin
+        createZipForPlugin(
+                "celery/app/cosmo/cloudify/tosca/artifacts/plugin/python_webserver/installer",
+                temporaryDirectory.get(),
+                "python-webserver-installer.zip");
+
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
     }
+
+    private static void createZipForPlugin(String resourceRoot,
+                                           File targetDir, String targetName) {
+        final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
+        URL visitorRootUrl = Resources.getResource(resourceRoot);
+        final Path visitorRootPath = Paths.get(URI.create("file://" + visitorRootUrl.getPath()));
+        try {
+            Files.walkFileTree(visitorRootPath, new SimpleFileVisitor<Path>() {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    if (file.toString().endsWith(".pyc")) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    byte[] content = com.google.common.io.Files.toByteArray(file.toFile());
+                    String targetFile = visitorRootPath.relativize(file).toString();
+                    packagedPluginBuilder.addFile(targetFile, content);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
+        packagedPluginBuilder.build().write(new File(targetDir, targetName));
+    }
+
 }

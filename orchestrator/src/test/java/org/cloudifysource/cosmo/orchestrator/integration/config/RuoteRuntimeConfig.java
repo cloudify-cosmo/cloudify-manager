@@ -66,7 +66,7 @@ public class RuoteRuntimeConfig {
 
     @NotEmpty
     @Value("${cosmo.state-cache.topic}")
-    private URI stateCacheTopic;
+    private String stateCacheTopic;
 
     @Inject
     private RealTimeStateCache realTimeStateCache;

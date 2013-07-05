@@ -18,18 +18,18 @@
 A celery task for starting a simple http server using a python command.
 """
 
-from cosmo.celery import celery.task
+from cosmo.celery import celery
 import time
 import urllib2
 import os
 
 
-@task
+@celery.task
 def install(**kwargs):
     pass
 
 
-@task
+@celery.task
 def start(port=8080, **kwargs):
     os.system("nohup python -m SimpleHTTPServer {0} &".format(port))
 

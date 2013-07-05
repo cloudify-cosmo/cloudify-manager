@@ -46,7 +46,7 @@ public class DSLPackage {
             zipOutputStream = new ZipOutputStream(new FileOutputStream(file));
             for (FileEntry entry : entries) {
                 zipOutputStream.putNextEntry(new ZipEntry(entry.getFilePath()));
-                zipOutputStream.write(entry.getContent().getBytes());
+                zipOutputStream.write(entry.getContent());
             }
         } catch (Exception e) {
             throw Throwables.propagate(e);
@@ -69,8 +69,13 @@ public class DSLPackage {
 
         private final List<FileEntry> entries = Lists.newLinkedList();
 
-        public DSLPackageBuilder addFile(String filePath, String content) {
+        public DSLPackageBuilder addFile(String filePath, byte[] content) {
             entries.add(new FileEntry(filePath, content));
+            return this;
+        }
+
+        public DSLPackageBuilder addFile(String filePath, String content) {
+            entries.add(new FileEntry(filePath, content.getBytes()));
             return this;
         }
 
@@ -85,9 +90,9 @@ public class DSLPackage {
     private static class FileEntry {
 
         private final String filePath;
-        private final String content;
+        private final byte[] content;
 
-        public FileEntry(String filePath, String content) {
+        public FileEntry(String filePath, byte[] content) {
             this.filePath = filePath;
             this.content = content;
         }
@@ -96,7 +101,7 @@ public class DSLPackage {
             return filePath;
         }
 
-        public String getContent() {
+        public byte[] getContent() {
             return content;
         }
     }

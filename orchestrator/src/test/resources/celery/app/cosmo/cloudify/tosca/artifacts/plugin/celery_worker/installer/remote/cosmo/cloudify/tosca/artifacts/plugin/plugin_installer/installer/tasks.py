@@ -21,7 +21,7 @@ import zipfile
 import shutil
 from subprocess import check_call as call
 from subprocess import CalledProcessError
-from celery.decorators import task
+from cosmo.celery import celery
 
 CELERY_TASKS_PATH = "/home/vagrant/cosmo"
 
@@ -32,7 +32,7 @@ REQUIREMENTS_FILE = "requirements.txt"
 TASKS_MODULE = "tasks.py"
 
 
-@task
+@celery.task
 def install(plugin, **kwargs):
     """
     Installs plugin as celery task according to the provided plugins details.

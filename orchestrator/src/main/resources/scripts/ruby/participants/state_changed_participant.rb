@@ -24,9 +24,9 @@ class StateChangedParticipant < Ruote::Participant
 
   def on_workitem
     begin
-      resource_id = workitem.fields['resource_id']
       producer = $ruote_properties['message_producer']
       state_cache_topic = $ruote_properties['state_cache_topic']
+      resource_id = workitem.params['resource_id']
       state = workitem.params['state']
 
       $logger.debug('Executing StateChangedParticipant [resourceId={}, state={}]', resource_id, state)
@@ -41,7 +41,7 @@ class StateChangedParticipant < Ruote::Participant
       message.set_resource_id(resource_id)
       message.set_state(state)
 
-      $logger.debug('Sending state changed message [uri={}, message={}]', uri, message)
+      $logger.debug('StateChangedParticipant: Sending state changed message [uri={}, message={}]', uri, message)
 
       future = producer.send(uri, message)
       Futures.add_callback(future, self)

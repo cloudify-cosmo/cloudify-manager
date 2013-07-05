@@ -55,12 +55,12 @@ public class RealTimeStateCache implements StateCacheReader {
                 if (message instanceof StateChangedMessage) {
                     final StateChangedMessage update = (StateChangedMessage) message;
 
-                    Object state = null; // stateCache.get(update.getResourceId());
+                    Object currentState = RealTimeStateCache.this.stateCache.get(update.getResourceId());
                     Map<String, Object> updatedState = update.getState();
                     Map<String, Object> finalState = Maps.newHashMap();
 
-                    if (state != null) {
-                        finalState.putAll((Map<String, Object>) state);
+                    if (currentState != null) {
+                        finalState.putAll((Map<String, Object>) currentState);
                     }
 
                     finalState.putAll(updatedState);
