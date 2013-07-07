@@ -55,6 +55,9 @@ public class RealTimeStateCache implements StateCacheReader {
                 if (message instanceof StateChangedMessage) {
                     final StateChangedMessage update = (StateChangedMessage) message;
 
+                    // TODO remove this merge logic. It is only here to provide a quick
+                    // solution to reach phase 3 integration. when monitoring is properly
+                    // introduced, this logic is expected to happen there and not here
                     Object currentState = RealTimeStateCache.this.stateCache.get(update.getResourceId());
                     Map<String, Object> updatedState = update.getState();
                     Map<String, Object> finalState = Maps.newHashMap();
