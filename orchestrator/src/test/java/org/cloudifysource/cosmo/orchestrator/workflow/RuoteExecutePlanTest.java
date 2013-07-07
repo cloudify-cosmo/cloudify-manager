@@ -293,11 +293,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         fields.put("dsl", dslLocation);
 
         final List<String> expectedTasks = Lists.newArrayList();
+        final List<String> expectedTasksWithSeparator = Lists.newArrayList();
         for (OperationsDescriptor pluginOperations : expectedOperations) {
             for (String operationName : pluginOperations.operations) {
-                expectedTasks.add(String.format("cosmo.%s.tasks.%s", pluginOperations.pluginName, operationName));
+                String expectedTask = String.format("cosmo.%s.tasks.%s", pluginOperations.pluginName, operationName);
+                expectedTasks.add(expectedTask);
+                expectedTasksWithSeparator.add(expectedTask);
             }
-            expectedTasks.add("");
+            expectedTasksWithSeparator.add("");
         }
 
         final List<String> executions = Lists.newArrayList();
@@ -307,12 +310,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 System.out.println(" -- received: [target=" + target + ", task=" + taskName + "]");
                 if (assertExecutionOrder) {
                     executions.add(taskName);
-                    if (Objects.equal(expectedTasks.get(0), taskName)) {
-                        expectedTasks.remove(0);
-                        if (expectedTasks.get(0).length() == 0) {
+                    if (expectedTasksWithSeparator.isEmpty()) {
+                        return;
+                    }
+                    if (Objects.equal(expectedTasksWithSeparator.get(0), taskName)) {
+                        expectedTasksWithSeparator.remove(0);
+                        if (expectedTasksWithSeparator.get(0).length() == 0) {
                             String nodeId = kwargs.get("__cloudify_id").toString();
                             messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(nodeId));
-                            expectedTasks.remove(0);
+                            expectedTasksWithSeparator.remove(0);
                         }
                     }
                 }
@@ -343,7 +349,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         latch.await();
 
         if (assertExecutionOrder) {
-            assertThat(expectedTasks).isEmpty();
+            assertThat(executions).isEqualTo(expectedTasks);
+            assertThat(expectedTasksWithSeparator).isEmpty();
         }
     }
 
