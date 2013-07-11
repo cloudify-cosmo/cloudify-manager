@@ -92,4 +92,5 @@ public abstract class InheritedDefinition extends Definition {
         }
         return false;
     }
+
 }

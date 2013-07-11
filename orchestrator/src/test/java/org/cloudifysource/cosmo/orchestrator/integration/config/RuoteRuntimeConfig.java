@@ -64,6 +64,10 @@ public class RuoteRuntimeConfig {
     @Value("${cosmo.resource-provisioner.topic}")
     private String resourceProvisionerTopic;
 
+    @NotEmpty
+    @Value("${cosmo.state-cache.topic}")
+    private String stateCacheTopic;
+
     @Inject
     private RealTimeStateCache realTimeStateCache;
 
@@ -80,6 +84,7 @@ public class RuoteRuntimeConfig {
     public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
         runtimeProperties.put("state_cache", realTimeStateCache);
+        runtimeProperties.put("state_cache_topic", stateCacheTopic);
         runtimeProperties.put("broker_uri", messageBrokerURI);
         runtimeProperties.put("message_producer", messageProducer);
         runtimeProperties.put("message_consumer", messageConsumer);

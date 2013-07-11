@@ -20,6 +20,10 @@ require 'json'
 
 class PreparePlanParticipant < Ruote::Participant
 
+  DSL = 'dsl'
+  HOST_TYPE = 'cloudify.tosca.types.host'
+  PLUGIN_INSTALLER_PLUGIN = 'cloudify.tosca.artifacts.plugin.plugin_installer.installer'
+
   def on_workitem
     begin
       raise 'dsl not set' unless workitem.params.has_key? 'dsl'
@@ -29,12 +33,19 @@ class PreparePlanParticipant < Ruote::Participant
       processed_dsl = DSLProcessor.process(dsl_file, PluginArtifactAwareDSLPostProcessor.new)
 
       plan = JSON.parse(processed_dsl)
-
-      plan['nodes'].each do |node|
-        workflows = Hash.new
-        node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value)  }
-        node['workflows'] = workflows
+      nodes = plan['nodes']
+      nodes_extra = plan['nodes_extra']
+      nodes.each {|node| process_node(nodes_extra, node) }
+      hosts_with_plugins = []
+      nodes.each do |node|
+        if nodes_extra[node['id']]['super_types'].include? HOST_TYPE
+          add_plugins_to_install(node, nodes)
+          if node['properties']['install_agent'] == 'true'
+            hosts_with_plugins << node['id']
+          end
+        end
       end
+      nodes.each {|node| add_relationship_to_state(node, hosts_with_plugins)}
 
       workitem.fields['plan'] = plan
 
@@ -47,6 +58,55 @@ class PreparePlanParticipant < Ruote::Participant
     rescue Exception => e
       $logger.debug('Exception caught on prepare_plan participant execution: {}', e)
       raise e
+    end
+  end
+
+  def process_node(nodes_extra, node)
+
+    # parse workflows
+    workflows = Hash.new
+    node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value)  }
+    node['workflows'] = workflows
+
+    # extract host node id
+    host_id = extract_host_id(nodes_extra, node['id'])
+    node['host_id'] = host_id unless host_id.nil?
+
+  end
+
+  def extract_host_id(nodes_extra, node_id)
+    current_node_extra = nodes_extra[node_id]
+    if current_node_extra['super_types'].include? HOST_TYPE
+      node_id
+    else
+      current_node_extra['relationships'].each do |relationship|
+        relationship_host_id = extract_host_id(nodes_extra, relationship)
+        return relationship_host_id unless relationship_host_id.nil?
+      end
+      nil
+    end
+
+  end
+
+  def add_plugins_to_install(host_node, nodes)
+    plugins_to_install = Hash.new
+    nodes.each do |node|
+      if node['host_id'] == host_node['id']
+        # ok to override here since we assume it is the same plugin
+        node['plugins'].each do |name, plugin|
+          if plugin['agent_plugin'] == 'true' and plugin['name'] != PLUGIN_INSTALLER_PLUGIN
+            plugins_to_install[name] = plugin
+          end
+        end
+      end
+    end
+    host_node['plugins_to_install'] = plugins_to_install.values
+  end
+
+  def add_relationship_to_state(node, hosts_with_plugins)
+    node['relationships'].each do |relationship|
+      target_id = relationship['target_id']
+      relationship['state'] = hosts_with_plugins.include?(target_id) ? 'ready_for_plugins' : 'reachable'
     end
   end
 

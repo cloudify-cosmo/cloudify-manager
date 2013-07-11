@@ -20,6 +20,10 @@ class PrepareOperationParticipant < Ruote::Participant
   OPERATION = 'operation'
   OPERATIONS = 'operations'
   TARGET = 'target'
+  PLUGINS = 'plugins'
+  AGENT_PLUGIN = 'agent_plugin'
+  HOST_ID = 'host_id'
+  CLOUDIFY_MANAGEMENT = 'cloudify.management'
 
   def on_workitem
     begin
@@ -32,10 +36,19 @@ class PrepareOperationParticipant < Ruote::Participant
       operations = node[OPERATIONS]
       raise "Node has no operations: #{node}" unless operations != nil
       raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
+      raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
 
-      workitem.fields[TARGET] = operations[operation]
+      plugin_name = operations[operation]
+
+      $logger.debug('Executing operation [operation={}, plugin={}]', operation, plugin_name)
+
+      workitem.fields[TARGET] = CLOUDIFY_MANAGEMENT
+      if node[PLUGINS][plugin_name][AGENT_PLUGIN].to_s.eql? 'true'
+        raise 'node does not contain a host_id property' unless node.has_key? HOST_ID
+        workitem.fields[TARGET] = node[HOST_ID]
+      end
       # operation can have the interface name as its prefix: 'control.start' or just 'start'
-      workitem.fields[OPERATION] = operation.split('.')[-1]
+      workitem.fields[OPERATION] = "cosmo.#{plugin_name}.tasks.#{operation.split('.')[-1]}"
 
       reply
     rescue Exception => e

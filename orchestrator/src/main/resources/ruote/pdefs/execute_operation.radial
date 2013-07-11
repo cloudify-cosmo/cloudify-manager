@@ -1,5 +1,6 @@
 define execute_operation
     prepare_operation operation: "${v:operation}"
     execute_task target: '${target}', exec: '${operation}', payload: {
-        properties: '$node.properties'
+        properties: '$node.properties',
+        params: '$v:params'
     }

@@ -17,6 +17,7 @@ package org.cloudifysource.cosmo.monitor;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -262,9 +263,15 @@ public class ResourceMonitorServer implements AutoCloseable {
                 try {
                     ksession.fireUntilHalt();
                 } catch (Throwable t) {
-                    ResourceMonitorServer.this.onDroolsFailure(t);
-                    //don't leave this component in a zombie state
-                    close();
+                    try {
+                        ResourceMonitorServer.this.onDroolsFailure(t);
+                    } catch (Exception e) {
+                        t.addSuppressed(e);
+                        throw Throwables.propagate(e);
+                    } finally {
+                        //don't leave this component in a zombie state
+                        close();
+                    }
                 }
                 return null;
             }

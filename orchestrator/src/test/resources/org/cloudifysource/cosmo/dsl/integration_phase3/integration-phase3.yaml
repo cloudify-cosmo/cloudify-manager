@@ -1,0 +1,32 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "vagrant-host-provisioner.yaml"
+        - "python-webserver-installer.yaml"
+
+    service_templates:
+        simple_web_server:
+            topology:
+                webserver_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        install_agent: 'true'
+                        vagrant_file: |
+                            Vagrant.configure("2") do |config|
+                              config.vm.box = "precise32"
+                              config.vm.network :private_network, ip: "10.0.0.5"
+                              config.vm.provision :shell, :inline => "sudo ufw disable"
+                            end
+                        worker_config:
+                            user: 'vagrant'
+                            port: '22'
+                            key: '/home/dan/.vagrant.d/insecure_private_key'
+                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
+
+                webserver_middleware:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        port: 8888
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "webserver_host"

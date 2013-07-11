@@ -112,9 +112,9 @@ public class StateCacheTest {
         final Object context = new Object();
         final String key = "key";
         final Object value = "value";
-        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, value, new StateChangeCallback() {
+        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
             public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         ImmutableMap<String, Object> newSnapshot) {
+                                         Map<String, Object> newSnapshot) {
                 boolean valid;
                 valid = (receiverParam == reciever);
                 valid &= (contextParam == context);
@@ -146,7 +146,7 @@ public class StateCacheTest {
         value.put("key", "value");
         stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
             public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         ImmutableMap<String, Object> newSnapshot) {
+                                         Map<String, Object> newSnapshot) {
                 boolean valid;
                 valid = (receiverParam == reciever);
                 valid &= (contextParam == context);
@@ -186,7 +186,7 @@ public class StateCacheTest {
         stateCache.put(key, value);
         stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
             public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         ImmutableMap<String, Object> newSnapshot) {
+                                         Map<String, Object> newSnapshot) {
                 boolean valid;
                 valid = (receiverParam == reciever);
                 valid &= (contextParam == context);
@@ -215,9 +215,9 @@ public class StateCacheTest {
         final Object value = "value";
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
         final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
-        stateCache.subscribeToKeyValueStateChanges(null, null, key, value, new StateChangeCallback() {
+        stateCache.subscribeToKeyValueStateChanges(null, null, key, new StateChangeCallback() {
             public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         ImmutableMap<String, Object> newSnapshot) {
+                                         Map<String, Object> newSnapshot) {
                 if (callbackCalledLatch.getCount() > 0) {
                     callbackCalledLatch.countDown();
                     return true;
@@ -239,9 +239,9 @@ public class StateCacheTest {
         final Object value = "value";
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
         final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
-        stateCache.subscribeToKeyValueStateChanges(null, null, key, value, new StateChangeCallback() {
+        stateCache.subscribeToKeyValueStateChanges(null, null, key, new StateChangeCallback() {
             public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         ImmutableMap<String, Object> newSnapshot) {
+                                         Map<String, Object> newSnapshot) {
                 if (callbackCalledLatch.getCount() > 0) {
                     callbackCalledLatch.countDown();
                     return false;
@@ -262,10 +262,10 @@ public class StateCacheTest {
         final String key = "key";
         final Object value = "value";
         final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        String callbackUID = stateCache.subscribeToKeyValueStateChanges(null, null, key, value,
+        String callbackUID = stateCache.subscribeToKeyValueStateChanges(null, null, key,
                 new StateChangeCallback() {
                     public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                                 ImmutableMap<String, Object> newSnapshot) {
+                                                 Map<String, Object> newSnapshot) {
                         callbackCalledLatch.countDown();
                         return false;
                     }

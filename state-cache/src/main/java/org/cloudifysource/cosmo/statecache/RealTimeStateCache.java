@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -24,6 +24,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 
 import java.net.URI;
+import java.util.Map;
 
 /**
  * Holds a cache of the distributed system state. The state
@@ -53,7 +54,20 @@ public class RealTimeStateCache implements StateCacheReader {
             public void onMessage(URI uri, Object message) {
                 if (message instanceof StateChangedMessage) {
                     final StateChangedMessage update = (StateChangedMessage) message;
-                    RealTimeStateCache.this.stateCache.put(update.getResourceId(), update.getState());
+
+                    // TODO remove this merge logic. It is only here to provide a quick
+                    // solution to reach phase 3 integration. when monitoring is properly
+                    // introduced, this logic is expected to happen there and not here
+                    Object currentState = RealTimeStateCache.this.stateCache.get(update.getResourceId());
+                    Map<String, Object> updatedState = update.getState();
+                    Map<String, Object> finalState = Maps.newHashMap();
+
+                    if (currentState != null) {
+                        finalState.putAll((Map<String, Object>) currentState);
+                    }
+
+                    finalState.putAll(updatedState);
+                    RealTimeStateCache.this.stateCache.put(update.getResourceId(), finalState);
                 } else {
                     throw new IllegalArgumentException("Cannot handle message " + message);
                 }
@@ -76,17 +90,8 @@ public class RealTimeStateCache implements StateCacheReader {
     }
 
     @Override
-    public ImmutableMap<String, Object> snapshot() {
+    public Map<String, Object> snapshot() {
         return stateCache.snapshot();
-    }
-
-    @Override
-    public String subscribeToKeyValueStateChanges(Object receiver,
-                                                  Object context,
-                                                  String key,
-                                                  Object value,
-                                                  StateChangeCallback callback) {
-        return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, value, callback);
     }
 
     @Override

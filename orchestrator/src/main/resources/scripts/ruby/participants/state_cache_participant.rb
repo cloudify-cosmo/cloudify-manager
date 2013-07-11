@@ -25,21 +25,21 @@ class RuoteStateChangeCallback < org.cloudifysource.cosmo.statecache.StateChange
   end
 
   def onStateChange(participant, workitem, cache, new_snapshot)
-    matches = true
-    state = nil
-    unless @resource_id.nil?
-      state = new_snapshot.get(@resource_id)
-      if state.java_kind_of?(java::util::Map)
-        if workitem.params.has_key? 'state'
-          workitem.params['state'].each do |key, value|
-            matches = (state.contains_key(key) and state.get(key).to_s.eql? value.to_s)
-            break unless matches
-          end
-        end
-      end
+    matches = false
+    $logger.debug('RuoteStateChangeCallback invoked: [resource_id={}, params={}, snapshot={}]',
+                  @resource_id, workitem.params, new_snapshot)
+
+    state = new_snapshot.get(@resource_id)
+    raise "state is not of type map #{state.get_class}" unless state.java_kind_of?(java::util::Map)
+    required_state = workitem.params[StateCacheParticipant::STATE]
+    $logger.debug('RuoteStateChangeCallback checking state: [state={}, required_state={}]',
+                  state, required_state)
+    required_state.each do |key, value|
+      matches = (state.contains_key(key) and state.get(key).to_s.eql? value.to_s)
+      break unless matches
     end
-    $logger.debug('RuoteStateChangeCallback invoked: [params={}, snapshot={}, matches={}]',
-                  workitem.params, new_snapshot, matches)
+
+
     if matches
       if workitem.fields.has_key? NODE
         current_node = workitem.fields[NODE]
@@ -65,38 +65,22 @@ end
 
 class StateCacheParticipant < Ruote::Participant
 
+  STATE = 'state'
   def on_workitem
     begin
       state_cache = $ruote_properties['state_cache']
-      raise 'state_cache property is not set' unless defined? state_cache
-
       resource_id = workitem.params['resource_id']
-      resource_id = nil unless defined? resource_id
+      raise 'state_cache property is not set' unless defined? state_cache
+      raise 'resource_id property is not set' unless defined? resource_id
+      raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
-      if resource_id.nil?
-        condition_key = workitem.params['key']
-        condition_value = workitem.params['value']
-        raise 'key parameter is not defined for state cache participant' unless defined? condition_key and not
-          condition_key.to_s.empty?
-        raise 'value parameter is not defined for state cache participant' unless defined? condition_value and not
-          condition_value.to_s.empty?
-        callback = RuoteStateChangeCallback.new
-        callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
-                                                                        workitem,
-                                                                        condition_key,
-                                                                        condition_value,
-                                                                        callback)
-        $logger.debug('StateCacheParticipant: subscribed with [key={}, value={}]', condition_key, condition_value)
-      else
-        callback = RuoteStateChangeCallback.new
-        callback.resource_id = resource_id
-        callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
-                                                                        workitem,
-                                                                        resource_id,
-                                                                        callback)
-        $logger.debug('StateCacheParticipant: subscribed with [resource_id={}]', resource_id)
-      end
-
+      callback = RuoteStateChangeCallback.new
+      callback.resource_id = resource_id
+      callback_uid = state_cache.subscribe_to_key_value_state_changes(self,
+                                                                      workitem,
+                                                                      resource_id,
+                                                                      callback)
+      $logger.debug('StateCacheParticipant: subscribed with [resource_id={}]', resource_id)
       put('callback_uid', callback_uid)
     rescue Exception => e
       $logger.debug(e.message)

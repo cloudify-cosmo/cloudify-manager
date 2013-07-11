@@ -42,7 +42,7 @@ public class RouteWorkflowWithStateCacheTest {
         StateCache cache = new StateCache.Builder().build();
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot();
+        Map<String, Object> cacheSnapshot = cache.snapshot();
 
         // insert state into jruby runtime properties so that state participant can access it
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
@@ -101,7 +101,7 @@ public class RouteWorkflowWithStateCacheTest {
                 .build();
 
         // hold initial state snapshot
-        ImmutableMap<String, Object> cacheSnapshot = cache.snapshot();
+        Map<String, Object> cacheSnapshot = cache.snapshot();
 
         // insert state into jruby runtime properties so that state participant can access it
         Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
@@ -128,7 +128,8 @@ public class RouteWorkflowWithStateCacheTest {
         Assert.assertTrue(RuoteStateCacheTestDummyJavaParticipant.latch.await(5, TimeUnit.SECONDS));
 
         // the use_workitems workflow waits on this state, this will release the use_workitems workflow
-        cache.put("general_status", "good");
+        final ImmutableMap<Object, Object> value = ImmutableMap.builder().put("value", "good").build();
+        cache.put("general_status", value);
 
         // assert workflow continued properly
         RuoteStateCacheTestJavaParticipant.latch.await(60, TimeUnit.SECONDS);
@@ -153,7 +154,8 @@ public class RouteWorkflowWithStateCacheTest {
         }
 
         // assert workflow after waiting on state change, includes the new state
-        Assert.assertEquals("good", receivedWorkItemFields.get("general_status"));
+        Assert.assertEquals(value,
+                receivedWorkItemFields.get("general_status"));
     }
 
     @Test(timeOut = 60000)

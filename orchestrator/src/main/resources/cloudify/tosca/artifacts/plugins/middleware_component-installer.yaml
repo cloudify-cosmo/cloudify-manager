@@ -4,7 +4,7 @@ definitions:
 
     artifacts:
         cloudify.tosca.artifacts.plugin.middleware_component.installer:
-            derived_from: "cloudify.tosca.artifacts.plugin"
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "cloudify.tosca.interfaces.middleware_component.installer"
                 url: "cloudify/tosca/artifacts/plugins/middleware_component-installer.zip"

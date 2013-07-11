@@ -16,7 +16,9 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -36,6 +38,8 @@ import java.util.Set;
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     private static final String CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN = "cloudify.tosca.artifacts.plugin";
+    private static final String CLOUDIFY_TOSCA_ARTIFACTS_REMOTE_PLUGIN = "cloudify.tosca.artifacts.remote_plugin";
+    private static final String CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN = "cloudify.tosca.artifacts.agent_plugin";
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
@@ -47,27 +51,49 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
+        Map<String, Object> nodesExtraData = Maps.newHashMap();
 
         for (ServiceTemplate serviceTemplate : populatedServiceTemplates.values()) {
             for (TypeTemplate typeTemplate : serviceTemplate.getTopology().values()) {
                 // Type template name we be prepended with the service template
-                typeTemplate.setName(serviceTemplate.getName() + "." + typeTemplate.getName());
-                nodes.add(processTypeTemplate(
+                String nodeId = serviceTemplate.getName() + "." + typeTemplate.getName();
+                typeTemplate.setName(nodeId);
+                Map<String, Object> node = processTypeTemplateNode(
                         serviceTemplate.getName(),
                         typeTemplate,
                         definitions,
-                        interfacePluginImplementations));
+                        interfacePluginImplementations,
+                        populatedArtifacts);
+                Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
+                        serviceTemplate.getName(),
+                        typeTemplate);
+                nodes.add(node);
+                nodesExtraData.put(nodeId, nodeExtraData);
             }
         }
 
         result.put("nodes", nodes);
+        result.put("nodes_extra", nodesExtraData);
         return result;
     }
 
-    private Map<String, Object> processTypeTemplate(String serviceTemplateName,
-                                                    TypeTemplate typeTemplate,
-                                                    Definitions definitions,
-                                                    Map<String, Set<String>> interfacesToPluginImplementations) {
+    private Map<String, Object> processTypeTemplateNodeExtraData(String serviceTemplateName,
+                                                                 TypeTemplate typeTemplate) {
+        Map<String, Object> nodeExtraData = Maps.newHashMap();
+
+        setNodeSuperTypes(typeTemplate, nodeExtraData);
+
+        setNodeFlattenedRelationships(typeTemplate, serviceTemplateName, nodeExtraData);
+
+        return nodeExtraData;
+    }
+
+
+    private Map<String, Object> processTypeTemplateNode(String serviceTemplateName,
+                                                        TypeTemplate typeTemplate,
+                                                        Definitions definitions,
+                                                        Map<String, Set<String>> interfacesToPluginImplementations,
+                                                        Map<String, Artifact> populatedArtifacts) {
         Map<String, Object> node = Maps.newHashMap();
 
         setNodeId(typeTemplate, node);
@@ -78,7 +104,11 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeWorkflows(typeTemplate, definitions, node);
 
-        setNodeOperations(typeTemplate, definitions, interfacesToPluginImplementations, node);
+        setNodeOperationsAndPlugins(typeTemplate,
+                                    definitions,
+                                    interfacesToPluginImplementations,
+                                    node,
+                                    populatedArtifacts);
 
         return node;
     }
@@ -91,9 +121,16 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
 
         for (Artifact artifact : populatedArtifacts.values()) {
-            if (!artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN)) {
+            if (!artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN) ||
+                    Objects.equal(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN, artifact.getName())) {
                 continue;
             }
+            Preconditions.checkArgument(
+                    artifact.isInstanceOf(
+                            CLOUDIFY_TOSCA_ARTIFACTS_REMOTE_PLUGIN) ||
+                            artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN),
+                    "Plugin [%s] cannot be derived directly from [%s]", artifact.getName(),
+                    CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN);
             if (!artifact.getProperties().containsKey("interface") ||
                 !(artifact.getProperties().get("interface") instanceof String)) {
                 continue;
@@ -130,13 +167,13 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
             Map<String, Object> relationshipMap = Maps.newHashMap();
             relationshipMap.put("type", entry.getKey());
-            String targetId = (String) entry.getValue();
-            String fullTargetId = serviceTemplateName + "." + targetId;
+            String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, entry);
             relationshipMap.put("target_id", fullTargetId);
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);
     }
+
 
     private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
         Map<String, Object> workflows = Maps.newHashMap();
@@ -167,11 +204,12 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         return Optional.fromNullable(initWorkflow);
     }
 
-    private void setNodeOperations(TypeTemplate typeTemplate, Definitions definitions,
-                                   Map<String, Set<String>> interfacesToPluginImplementations,
-                                   Map<String, Object> node) {
+    private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,
+                                             Map<String, Set<String>> interfacesToPluginImplementations,
+                                             Map<String, Object> node, Map<String, Artifact> populatedArtifacts) {
         Set<String> sameNameOperations = Sets.newHashSet();
         Map<String, String> operationToPlugin = Maps.newHashMap();
+        Map<String, Map<String, Object>> plugins = Maps.newHashMap();
         for (Object interfaceReference : typeTemplate.getInterfaces()) {
 
             Type.InterfaceDescription interfaceDescription = Type.InterfaceDescription.from(interfaceReference);
@@ -205,6 +243,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 pluginImplementation = pluginImplementations.iterator().next();
             }
 
+            Map<String, Object> pluginDetails = Maps.newHashMap();
+            Artifact plugin = populatedArtifacts.get(pluginImplementation);
+            boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN);
+            pluginDetails.putAll(plugin.getProperties());
+            pluginDetails.put("name", pluginImplementation);
+            pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));
+            plugins.put(pluginImplementation, pluginDetails);
+
             Set<String> operations = Sets.newHashSet(theInterface.getOperations());
             for (String operation : operations) {
                 // always add fully qualified name to operation
@@ -225,6 +271,27 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 }
             }
         }
+        node.put("plugins", plugins);
         node.put("operations", operationToPlugin);
     }
+
+    private void setNodeSuperTypes(TypeTemplate typeTemplate, Map<String, Object> nodeExtraData) {
+        nodeExtraData.put("super_types", typeTemplate.getSuperTypes());
+    }
+
+    private void setNodeFlattenedRelationships(TypeTemplate typeTemplate,
+                                               String serviceTemplateName,
+                                               Map<String, Object> nodeExtraData) {
+        List<String> flattenedRelations = Lists.newArrayList();
+        for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
+            flattenedRelations.add(extractFullTargetIdFromRelationship(serviceTemplateName, entry));
+        }
+        nodeExtraData.put("relationships", flattenedRelations);
+    }
+
+    private String extractFullTargetIdFromRelationship(String serviceTemplateName, Map.Entry<String, Object> entry) {
+        String targetId = (String) entry.getValue();
+        return serviceTemplateName + "." + targetId;
+    }
+
 }

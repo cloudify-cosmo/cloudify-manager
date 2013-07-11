@@ -4,7 +4,9 @@ define global_workflow
         log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node dependencies: ${v:relationship}'
-            state resource_id: '${v:relationship.target_id}', state: { reachable: "true" }
+            state resource_id: '${v:relationship.target_id}', state: {
+                '${v:relationship.state}' : "true"
+            }
 
         log message: 'executing init workflow'
         set 'v:init': "$f:node.workflows.init"

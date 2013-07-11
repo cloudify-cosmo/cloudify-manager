@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.ImmutableMap;
+import java.util.Map;
 
 /**
  * Exposes data consumption operations on the {@link StateCache}.
@@ -29,21 +29,7 @@ public interface StateCacheReader {
     /**
      * @return An immutable copy of the state cache.
      */
-    ImmutableMap<String, Object> snapshot();
-
-    /**
-     * @param receiver - ruote participant
-     * @param context - ruote work item
-     * @param key - the value to listen to
-     * @param value - the exact value to wait for
-     * @param callback - the method called when the condition is satisfied
-     * @return callback UID, used in case the callback needs to be removed
-     */
-    String subscribeToKeyValueStateChanges(Object receiver,
-                                           Object context,
-                                           String key,
-                                           Object value,
-                                           StateChangeCallback callback);
+    Map<String, Object> snapshot();
 
     /**
      *
