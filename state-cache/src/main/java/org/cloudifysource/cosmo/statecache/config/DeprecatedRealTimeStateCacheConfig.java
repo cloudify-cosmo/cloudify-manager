@@ -17,8 +17,8 @@
 package org.cloudifysource.cosmo.statecache.config;
 
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
-import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.DeprecatedRealTimeStateCache;
+import org.cloudifysource.cosmo.statecache.DeprecatedStateCache;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,13 +27,13 @@ import javax.inject.Inject;
 import java.net.URI;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.statecache.RealTimeStateCache}.
+ * Creates a new {@link org.cloudifysource.cosmo.statecache.DeprecatedRealTimeStateCache}.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-public class RealTimeStateCacheConfig {
+public class DeprecatedRealTimeStateCacheConfig {
 
     @Value("${cosmo.state-cache.topic}")
     private URI messageTopic;
@@ -42,11 +42,16 @@ public class RealTimeStateCacheConfig {
     private MessageConsumer messageConsumer;
 
     @Inject
-    private StateCache stateCache;
+    private DeprecatedStateCache stateCache;
 
     @Bean(destroyMethod = "close")
-    public RealTimeStateCache realTimeStateCache() {
-        return new RealTimeStateCache(messageTopic, messageConsumer, stateCache);
+    public DeprecatedStateCache stateCache() {
+        return new DeprecatedStateCache.Builder().build();
+    }
+
+    @Bean(destroyMethod = "close")
+    public DeprecatedRealTimeStateCache realTimeStateCache() {
+        return new DeprecatedRealTimeStateCache(messageTopic, messageConsumer, stateCache);
     }
 
 

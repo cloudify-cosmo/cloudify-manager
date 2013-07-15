@@ -25,7 +25,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
@@ -70,7 +70,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
     @Import({
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
-            RealTimeStateCacheConfig.class,
+            DeprecatedRealTimeStateCacheConfig.class,
             RuoteRuntimeConfig.class,
             TemporaryDirectoryConfig.class,
             MockTaskExecutorConfig.class,

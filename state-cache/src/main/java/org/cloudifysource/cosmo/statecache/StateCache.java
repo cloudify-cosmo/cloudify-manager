@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.romix.scala.collection.concurrent.TrieMap;
@@ -96,7 +97,28 @@ public class StateCache implements AutoCloseable {
             public void run() {
                 boolean remove = true;
                 try {
-                    remove = listener.onResourceStateChange(snapshot);
+                    remove = listener.onResourceStateChange(new StateCacheSnapshot() {
+                        @Override
+                        public boolean containsProperty(String resourceId, String property) {
+                            return snapshot.containsKey(new StateCacheProperty(resourceId, property));
+                        }
+
+                        @Override
+                        public String getProperty(String resourceId, String property) {
+                            return snapshot.get(new StateCacheProperty(resourceId, property));
+                        }
+
+                        @Override
+                        public ImmutableMap<String, String> getResourceProperties(String resourceId) {
+                            final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+                            for (Map.Entry<StateCacheProperty, String> entry : snapshot
+                                    .entrySet()) {
+                                if (entry.getKey().getResourceId().equals(resourceId))
+                                    builder.put(entry.getKey().getResourceId(), entry.getValue());
+                            }
+                            return builder.build();
+                        }
+                    });
                 } catch (Exception e) {
                     logger.debug("Exception while invoking state change listener, listener will be removed", e);
                 } finally {
@@ -108,7 +130,7 @@ public class StateCache implements AutoCloseable {
         });
     }
 
-    public void remove(String resourceId, StateCacheListener listener) {
+    public void removeSubscription(String resourceId, StateCacheListener listener) {
         listeners.remove(resourceId, listener);
     }
 }

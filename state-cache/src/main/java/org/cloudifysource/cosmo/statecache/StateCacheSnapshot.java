@@ -16,17 +16,19 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.collect.ImmutableMap;
+
 /**
- * Listener of {@link StateCache} events.
+ * A snapshot of a {@link StateCache}.
  *
  * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface StateCacheListener {
+public interface StateCacheSnapshot {
 
-    /**
-     * Notify upon resource state change.
-     * @return whether this callback should be removed from the state cache after this event is triggered.
-     */
-    boolean onResourceStateChange(StateCacheSnapshot snapshot);
+    boolean containsProperty(String resourceId, String property);
+
+    String getProperty(String resourceId, String property);
+
+    ImmutableMap<String, String> getResourceProperties(String resourceId);
 }

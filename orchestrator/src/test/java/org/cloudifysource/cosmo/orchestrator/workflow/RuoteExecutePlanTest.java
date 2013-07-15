@@ -32,8 +32,8 @@ import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.DeprecatedRealTimeStateCache;
+import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
@@ -79,7 +79,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Import({
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
-            RealTimeStateCacheConfig.class,
+            DeprecatedRealTimeStateCacheConfig.class,
             DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             TemporaryDirectoryConfig.class,
@@ -97,7 +97,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private RuoteWorkflow ruoteWorkflow;
 
     @Inject
-    private RealTimeStateCache stateCache;
+    private DeprecatedRealTimeStateCache stateCache;
 
     @Inject
     private MessageProducer messageProducer;

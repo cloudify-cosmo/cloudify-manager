@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
@@ -29,19 +30,21 @@ import java.util.Map;
  * Holds a cache of the distributed system state. The state
  * is updated in real-time by listening to {@link org.cloudifysource.cosmo.statecache.messages.StateChangedMessage}s
  *
- * @author Eitan Yanovsky
+ * @author itaif
  * @since 0.1
  */
-public class RealTimeStateCache implements StateCacheReader {
+public class DeprecatedRealTimeStateCache implements DeprecatedStateCacheReader {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final MessageConsumer consumer;
     private final URI messageTopic;
-    private final StateCache stateCache;
+    private final DeprecatedStateCache stateCache;
     private final MessageConsumerListener messageConsumerListener;
 
-    public RealTimeStateCache(URI messageTopic, MessageConsumer messageConsumer, StateCache stateCache) {
+    public DeprecatedRealTimeStateCache(URI messageTopic,
+                                        MessageConsumer messageConsumer,
+                                        DeprecatedStateCache stateCache) {
         this.consumer = messageConsumer;
         this.messageTopic = messageTopic;
         this.stateCache = stateCache;
@@ -51,12 +54,20 @@ public class RealTimeStateCache implements StateCacheReader {
             public void onMessage(URI uri, Object message) {
                 if (message instanceof StateChangedMessage) {
                     final StateChangedMessage update = (StateChangedMessage) message;
-                    final String resourceId = update.getResourceId();
-                    final Map<String, Object> state = update.getState();
-                    for (Map.Entry<String, Object> entry : state.entrySet()) {
-                        RealTimeStateCache.this.stateCache.put(resourceId, entry.getKey(),
-                                entry.getValue().toString());
+
+                    // TODO remove this merge logic. It is only here to provide a quick
+                    // solution to reach phase 3 integration. when monitoring is properly
+                    // introduced, this logic is expected to happen there and not here
+                    Object currentState = DeprecatedRealTimeStateCache.this.stateCache.get(update.getResourceId());
+                    Map<String, Object> updatedState = update.getState();
+                    Map<String, Object> finalState = Maps.newHashMap();
+
+                    if (currentState != null) {
+                        finalState.putAll((Map<String, Object>) currentState);
                     }
+
+                    finalState.putAll(updatedState);
+                    DeprecatedRealTimeStateCache.this.stateCache.put(update.getResourceId(), finalState);
                 } else {
                     throw new IllegalArgumentException("Cannot handle message " + message);
                 }
@@ -64,20 +75,10 @@ public class RealTimeStateCache implements StateCacheReader {
 
             @Override
             public void onFailure(Throwable t) {
-                RealTimeStateCache.this.messageConsumerFailure(t);
+                DeprecatedRealTimeStateCache.this.messageConsumerFailure(t);
             }
         };
         this.consumer.addListener(messageTopic, messageConsumerListener);
-    }
-
-    @Override
-    public void subscribe(String resourceId, StateCacheListener listener) {
-        this.stateCache.subscribe(resourceId, listener);
-    }
-
-    @Override
-    public void removeSubscription(String resourceId, StateCacheListener listener) {
-        this.stateCache.removeSubscription(resourceId, listener);
     }
 
     public void close() {
@@ -86,6 +87,24 @@ public class RealTimeStateCache implements StateCacheReader {
 
     private void messageConsumerFailure(Throwable t) {
         logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, t);
+    }
+
+    @Override
+    public Map<String, Object> snapshot() {
+        return stateCache.snapshot();
+    }
+
+    @Override
+    public String subscribeToKeyValueStateChanges(Object receiver,
+                                                  Object context,
+                                                  String key,
+                                                  StateChangeCallback stateChangeCallback) {
+        return stateCache.subscribeToKeyValueStateChanges(receiver, context, key, stateChangeCallback);
+    }
+
+    @Override
+    public void removeCallback(String callbackUID) {
+        stateCache.removeCallback(callbackUID);
     }
 
 }

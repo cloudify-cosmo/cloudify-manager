@@ -36,7 +36,7 @@ import org.cloudifysource.cosmo.orchestrator.recipe.JsonRecipe;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.provisioner.config.CloudResourceProvisionerConfig;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
@@ -83,7 +83,7 @@ public class StartVirtualMachineNodeIT extends AbstractTestNGSpringContextTests 
      */
     @Configuration
     @Import({
-            RealTimeStateCacheConfig.class,
+            DeprecatedRealTimeStateCacheConfig.class,
             CloudResourceProvisionerConfig.class,
             ResourceMonitorServerConfig.class,
             MessageBrokerServerConfig.class,

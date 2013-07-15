@@ -17,16 +17,11 @@
 package org.cloudifysource.cosmo.statecache;
 
 /**
- * Listener of {@link StateCache} events.
+ * Empty implementation used by state_cache_participant_new.rb.
  *
  * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface StateCacheListener {
+public abstract class StateCacheListenerStub implements StateCacheListener {
 
-    /**
-     * Notify upon resource state change.
-     * @return whether this callback should be removed from the state cache after this event is triggered.
-     */
-    boolean onResourceStateChange(StateCacheSnapshot snapshot);
 }

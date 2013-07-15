@@ -16,37 +16,16 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import java.util.Map;
-
 /**
- * Exposes data consumption operations on the {@link DeprecatedStateCache}.
+ * TODO: Write a short summary of this type's roles and responsibilities.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
 public interface StateCacheReader {
 
-    /**
-     * @return An immutable copy of the state cache.
-     */
-    Map<String, Object> snapshot();
+    void subscribe(String resourceId, StateCacheListener listener);
 
-    /**
-     *
-     * @param receiver - ruote participant
-     * @param context - ruote work item
-     * @param key - the value to listen to
-     * @param callback - the method called when the condition is satisfied
-     * @return callback UID, used in case the callback needs to be removed
-     */
-    String subscribeToKeyValueStateChanges(Object receiver,
-                                           Object context,
-                                           String key,
-                                           StateChangeCallback callback);
+    void removeSubscription(String resourceId, StateCacheListener listener);
 
-    /**
-     * Un-subscribe callback for state changes represented by the callback UID.
-     * @param callbackUID - The return value of subscribeToKeyValueStateChanges.
-     */
-    void removeCallback(String callbackUID);
 }

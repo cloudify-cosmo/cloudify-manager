@@ -22,7 +22,7 @@ import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -35,7 +35,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Configuration
 @Import({
-        RealTimeStateCacheConfig.class,
+        DeprecatedRealTimeStateCacheConfig.class,
         ResourceMonitorServerConfig.class,
         MessageBrokerServerConfig.class,
         MessageConsumerTestConfig.class,

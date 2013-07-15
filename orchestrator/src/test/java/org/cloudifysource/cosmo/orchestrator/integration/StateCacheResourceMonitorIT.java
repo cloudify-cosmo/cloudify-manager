@@ -21,7 +21,7 @@ import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
 import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
 import org.cloudifysource.cosmo.statecache.DeprecatedStateCache;
-import org.cloudifysource.cosmo.statecache.StateCacheReader;
+import org.cloudifysource.cosmo.statecache.DeprecatedStateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateChangeCallback;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.annotation.DirtiesContext;
@@ -35,7 +35,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 /**
-* Tests integration of {@link org.cloudifysource.cosmo.statecache.RealTimeStateCache} with {@link
+* Tests integration of {@link org.cloudifysource.cosmo.statecache.DeprecatedRealTimeStateCache} with {@link
 * org.cloudifysource.cosmo.monitor.ResourceMonitorServer}.
 * @author itaif
 * @since 0.1
@@ -51,7 +51,7 @@ public class StateCacheResourceMonitorIT extends AbstractTestNGSpringContextTest
 
     //components under test
     @Inject
-    private StateCacheReader cache;
+    private DeprecatedStateCacheReader cache;
 
     @Inject
     private ResourceMonitorServer resourceMonitor;
