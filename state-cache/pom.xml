@@ -37,6 +37,10 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>message-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.romix</groupId>
+            <artifactId>java-concurrent-hash-trie-map</artifactId>
+        </dependency>
         <!-- include when a constraint is added to real time state cache
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -62,10 +66,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.romix</groupId>
-            <artifactId>java-concurrent-hash-trie-map</artifactId>
-        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
@@ -87,6 +87,16 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
             <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easytesting</groupId>
+            <artifactId>fest-assert-core</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>

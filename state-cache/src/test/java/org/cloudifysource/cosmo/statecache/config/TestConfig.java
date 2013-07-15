@@ -14,22 +14,28 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.statecache;
+package org.cloudifysource.cosmo.statecache.config;
 
-import java.util.Map;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface StateChangeCallback {
+@Configuration
+public class TestConfig {
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+        return new PropertySourcesPlaceholderConfigurer();
+    }
 
-    /**
-     * Notify upon state change.
-     * @return whether this callback should be removed from the state cache after this event is triggered.
-     */
-    boolean onStateChange(Object receiver, Object context, DeprecatedStateCache cache, Map<String, Object> newSnapshot);
-
+    @Bean
+    public static BeanValidationPostProcessor beanValidationPostProcessor() {
+        return new BeanValidationPostProcessor();
+    }
 }

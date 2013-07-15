@@ -21,15 +21,9 @@ import java.util.Map;
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface StateChangeCallback {
-
-    /**
-     * Notify upon state change.
-     * @return whether this callback should be removed from the state cache after this event is triggered.
-     */
-    boolean onStateChange(Object receiver, Object context, DeprecatedStateCache cache, Map<String, Object> newSnapshot);
-
+public interface StateCacheListener {
+    boolean onResourceStateChange(Map<StateCacheProperty, String> snapshot);
 }

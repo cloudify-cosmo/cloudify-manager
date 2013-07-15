@@ -17,8 +17,8 @@
 package org.cloudifysource.cosmo.statecache.config;
 
 import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
+import org.cloudifysource.cosmo.statecache.DeprecatedStateCache;
 import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
-import org.cloudifysource.cosmo.statecache.StateCache;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,11 +42,11 @@ public class RealTimeStateCacheConfig {
     private MessageConsumer messageConsumer;
 
     @Inject
-    private StateCache stateCache;
+    private DeprecatedStateCache stateCache;
 
     @Bean(destroyMethod = "close")
-    public StateCache stateCache() {
-        return new StateCache.Builder().build();
+    public DeprecatedStateCache stateCache() {
+        return new DeprecatedStateCache.Builder().build();
     }
 
     @Bean(destroyMethod = "close")

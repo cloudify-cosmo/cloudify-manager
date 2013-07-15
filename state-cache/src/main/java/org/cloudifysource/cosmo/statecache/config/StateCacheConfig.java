@@ -14,22 +14,23 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.statecache;
+package org.cloudifysource.cosmo.statecache.config;
 
-import java.util.Map;
+import org.cloudifysource.cosmo.statecache.StateCache;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Creates a new {@link org.cloudifysource.cosmo.statecache.StateCache}.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface StateChangeCallback {
+@Configuration
+public class StateCacheConfig {
 
-    /**
-     * Notify upon state change.
-     * @return whether this callback should be removed from the state cache after this event is triggered.
-     */
-    boolean onStateChange(Object receiver, Object context, DeprecatedStateCache cache, Map<String, Object> newSnapshot);
-
+    @Bean(destroyMethod = "close")
+    public StateCache stateCache() {
+        return new StateCache();
+    }
 }

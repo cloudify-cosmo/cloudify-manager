@@ -39,12 +39,12 @@ public class RealTimeStateCache implements StateCacheReader {
 
     private final MessageConsumer consumer;
     private final URI messageTopic;
-    private final StateCache stateCache;
+    private final DeprecatedStateCache stateCache;
     private final MessageConsumerListener messageConsumerListener;
 
     public RealTimeStateCache(URI messageTopic,
                               MessageConsumer messageConsumer,
-                              StateCache stateCache) {
+                              DeprecatedStateCache stateCache) {
         this.consumer = messageConsumer;
         this.messageTopic = messageTopic;
         this.stateCache = stateCache;

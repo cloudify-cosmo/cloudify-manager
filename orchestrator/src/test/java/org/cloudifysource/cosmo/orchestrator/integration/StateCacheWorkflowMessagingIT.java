@@ -52,7 +52,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests integration of {@link org.cloudifysource.cosmo.statecache.StateCache} with messaging consumer.
+ * Tests integration of {@link org.cloudifysource.cosmo.statecache.DeprecatedStateCache} with messaging consumer.
  * @author itaif
  * @since 0.1
  */

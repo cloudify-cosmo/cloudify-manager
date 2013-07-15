@@ -19,7 +19,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.DeprecatedStateCache;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -39,7 +39,7 @@ public class RouteWorkflowWithStateCacheTest {
     public void testStateCacheWithWorkflowsAndTimeout() throws Exception {
 
         // create new state cache
-        StateCache cache = new StateCache.Builder().build();
+        DeprecatedStateCache cache = new DeprecatedStateCache.Builder().build();
 
         // hold initial state snapshot
         Map<String, Object> cacheSnapshot = cache.snapshot();
@@ -96,7 +96,7 @@ public class RouteWorkflowWithStateCacheTest {
                 .build();
 
         // create new state cache
-        StateCache cache = new StateCache.Builder()
+        DeprecatedStateCache cache = new DeprecatedStateCache.Builder()
                 .initialState(state)
                 .build();
 
@@ -163,7 +163,7 @@ public class RouteWorkflowWithStateCacheTest {
         final String key = "node";
         final String property = "reachable";
         final String value = "true";
-        final StateCache cache = new StateCache.Builder().build();
+        final DeprecatedStateCache cache = new DeprecatedStateCache.Builder().build();
 
         final StateChangedMessage message = new StateChangedMessage();
         final Map<String, Object> state = Maps.newHashMap();

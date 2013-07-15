@@ -20,7 +20,7 @@ import org.cloudifysource.cosmo.monitor.Agent;
 import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
 import org.cloudifysource.cosmo.monitor.mock.MockAgent;
 import org.cloudifysource.cosmo.orchestrator.integration.config.BaseOrchestratorIntegrationTestConfig;
-import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.DeprecatedStateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheReader;
 import org.cloudifysource.cosmo.statecache.StateChangeCallback;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,7 +71,7 @@ public class StateCacheResourceMonitorIT extends AbstractTestNGSpringContextTest
                 agentId,
                 new StateChangeCallback() {
                     @Override
-                    public boolean onStateChange(Object receiver, Object context, StateCache cache,
+                    public boolean onStateChange(Object receiver, Object context, DeprecatedStateCache cache,
                                                  Map<String, Object> newSnapshot) {
                         final Object entry = newSnapshot.get(agentId);
                         if (entry instanceof Map<?, ?>) {

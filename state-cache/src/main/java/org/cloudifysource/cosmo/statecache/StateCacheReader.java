@@ -19,7 +19,7 @@ package org.cloudifysource.cosmo.statecache;
 import java.util.Map;
 
 /**
- * Exposes data consumption operations on the {@link StateCache}.
+ * Exposes data consumption operations on the {@link DeprecatedStateCache}.
  *
  * @author Dan Kilman
  * @since 0.1
