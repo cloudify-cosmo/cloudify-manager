@@ -5,6 +5,10 @@ jdk:
   
 before_script:
    - "gem install travis-artifacts"
+   - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
+   - "sudo dpkg -i riemann_0.2.2_all.deb"
+   - "sudo touch /var/log/riemann/riemann.log"
+   - "sudo chmod 666 /var/log/riemann/riemann.log"
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!

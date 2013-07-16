@@ -17,10 +17,9 @@
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
 import com.google.common.collect.Lists;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.monitor.MockPortKnocker;
 import org.cloudifysource.cosmo.orchestrator.integration.monitor.PortKnockingDescriptor;
+import org.robotninjas.riemann.client.RiemannTcpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +27,6 @@ import org.springframework.context.annotation.Configuration;
 import javax.inject.Inject;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.List;
 
@@ -41,25 +39,17 @@ import java.util.List;
 @Configuration
 public class MockPortKnockerConfig {
 
-    @Inject
-    private MessageProducer messageProducer;
-
-    @Inject
-    private MessageConsumer messageConsumer;
-
-    @Value("${cosmo.resource-monitor.topic}")
-    private URI resourceMonitorTopic;
-
-    @Value("${cosmo.agent.topic}")
-    private URI agentTopic;
-
     // format is string delimited list of
     // {host}:{port}:{resourceId}
     @Value("${cosmo.test.port-knocker.sockets-to-knock}")
     private String[] socketsToKnock;
 
+    @Inject
+    RiemannTcpClient riemannTcpClient;
+
     @Bean(destroyMethod = "close")
     public MockPortKnocker mockPortKnocker() throws UnknownHostException {
+
         List<PortKnockingDescriptor> descriptors = Lists.newArrayList();
         for (String socketToKnock : socketsToKnock) {
             String[] hostPortAndResourceId = socketToKnock.split(":");
@@ -70,11 +60,8 @@ public class MockPortKnockerConfig {
             descriptors.add(new PortKnockingDescriptor(socketAddress, resourceId));
         }
         return new MockPortKnocker(
-                resourceMonitorTopic,
-                agentTopic,
-                messageProducer,
-                messageConsumer,
-                descriptors);
+            riemannTcpClient,
+            descriptors);
     }
 
 }

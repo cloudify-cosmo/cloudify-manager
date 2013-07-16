@@ -16,43 +16,21 @@
 
 package org.cloudifysource.cosmo.statecache.config;
 
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
 import org.cloudifysource.cosmo.statecache.StateCache;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.inject.Inject;
-import java.net.URI;
-
 /**
- * Creates a new {@link org.cloudifysource.cosmo.statecache.RealTimeStateCache}.
+ * Creates a new {@link StateCache}.
  *
- * @author Dan Kilman
+ * @author Itai Frenkel
  * @since 0.1
  */
 @Configuration
-public class RealTimeStateCacheConfig {
-
-    @Value("${cosmo.state-cache.topic}")
-    private URI messageTopic;
-
-    @Inject
-    private MessageConsumer messageConsumer;
-
-    @Inject
-    private StateCache stateCache;
+public class StateCacheConfig {
 
     @Bean(destroyMethod = "close")
     public StateCache stateCache() {
         return new StateCache.Builder().build();
     }
-
-    @Bean(destroyMethod = "close")
-    public RealTimeStateCache realTimeStateCache() {
-        return new RealTimeStateCache(messageTopic, messageConsumer, stateCache);
-    }
-
-
 }

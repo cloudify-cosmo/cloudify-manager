@@ -70,6 +70,29 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>state-cache</artifactId>
+        </dependency>
+        <!-- Riemann -->
+        <dependency>
+            <groupId>org.robotninjas.riemann</groupId>
+            <artifactId>client</artifactId>
+            <!-- TODO: Remove version -->
+            <version>3.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.robotninjas.riemann</groupId>
+            <artifactId>json</artifactId>
+            <!-- TODO: Remove version -->
+            <version>3.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
+            <!-- TODO: Remove version from here -->
+            <version>3.6.2.Final</version>
+        </dependency>
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -89,11 +112,6 @@
         </dependency>
 
         <!-- Tests -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>message-broker</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -127,28 +145,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>state-cache</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>state-cache-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>resource-monitor</artifactId>
-            <scope>test</scope>
-            <type>test-jar</type>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>resource-monitor</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>resource-monitor-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -174,14 +171,19 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
+            <groupId>org.robotninjas.riemann</groupId>
+            <artifactId>spring</artifactId>
             <scope>test</scope>
+            <type>test-jar</type>
+            <!-- TODO: Remove version -->
+            <version>3.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>org.cloudifysource.cosmo</groupId>
-            <artifactId>agent-api</artifactId>
+            <groupId>org.robotninjas.riemann</groupId>
+            <artifactId>spring</artifactId>
             <scope>test</scope>
+            <!-- TODO: Remove version -->
+            <version>3.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -284,6 +286,7 @@
                                 <usedDependency>org.apache.logging.log4j.adapters:log4j-slf4j-impl</usedDependency>
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
+                                <usedDependency>org.robotninjas.riemann:spring</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
