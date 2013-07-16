@@ -1,4 +1,0 @@
-define use_workitems
-  participant ref: "state", resource_id: 'general_status',  state: {value: 'good'}, timeout: '1s',
-  on_timeout: 'error'
-  participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteStateCacheTimeoutTestJavaParticipant"

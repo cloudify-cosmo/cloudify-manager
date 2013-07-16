@@ -59,12 +59,18 @@ public class RouteWorkflowWithStateCacheTest {
     @Test(timeOut = 120000)
     public void testStateCacheWithWorkflowsAndTimeout() throws Exception {
 
-        RuoteWorkflow useWorkItemsWorkflow =
-                RuoteWorkflow.createFromResource("workflows/radial/use_workitems_with_timeout.radial", ruoteRuntime);
+        final String flow =
+            "define flow\n" +
+            "  participant ref: \"state\", resource_id: 'general_status',  state: {value: 'good'}, timeout: '1s', " +
+                    "on_timeout: 'error'";
 
-        // execute workflow that works with workitems and waits on state
-        useWorkItemsWorkflow.execute();
-        //TODO: Catch expected exception
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, ruoteRuntime);
+
+        try {
+            workflow.execute();
+        } catch (org.jruby.embed.InvokeFailedException e) {
+            assertThat(e.getMessage()).contains("error triggered from process definition");
+        }
     }
 
     @Test(timeOut = 120000)
