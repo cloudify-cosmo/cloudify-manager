@@ -19,7 +19,6 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
@@ -29,13 +28,18 @@ import java.util.concurrent.CountDownLatch;
  */
 public class RuoteStateCacheTestJavaParticipant {
 
-    public static volatile CountDownLatch latch = new CountDownLatch(1);
-    public static volatile Map<String, Object> lastWorkitems;
+    private static final Map<String, Object> LAST_WORK_ITEMS = Maps.newLinkedHashMap();
 
-    public void execute(Map<String, Object> workItemFields) {
-        lastWorkitems = Maps.newHashMap(workItemFields);
-        latch.countDown();
-        latch = new CountDownLatch(1);
+    public static Map<String, Object> getAndClearLastWorkItems() {
+        try {
+            return Maps.newLinkedHashMap(LAST_WORK_ITEMS);
+        } finally {
+            LAST_WORK_ITEMS.clear();
+        }
     }
 
+    public void execute(Map<String, Object> workItemFields) {
+        LAST_WORK_ITEMS.clear();
+        LAST_WORK_ITEMS.putAll(workItemFields);
+    }
 }

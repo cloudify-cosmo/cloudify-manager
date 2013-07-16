@@ -30,6 +30,6 @@ public interface StateChangeCallback {
      * Notify upon state change.
      * @return whether this callback should be removed from the state cache after this event is triggered.
      */
-    boolean onStateChange(Object receiver, Object context, DeprecatedStateCache cache, Map<String, Object> newSnapshot);
+    boolean onStateChange(Object receiver, Object context, StateCache cache, Map<String, Object> newSnapshot);
 
 }
