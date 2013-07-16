@@ -33,7 +33,8 @@ import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirecto
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
-import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
@@ -83,7 +84,8 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             JettyFileServerForPluginsConfig.class,
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
-            DeprecatedRealTimeStateCacheConfig.class,
+            RealTimeStateCacheConfig.class,
+            StateCacheConfig.class,
             DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             ResourceMonitorServerConfig.class,

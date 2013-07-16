@@ -76,8 +76,8 @@ public class RealTimeStateCache implements StateCacheReader {
     }
 
     @Override
-    public void removeSubscription(String resourceId, StateCacheListener listener) {
-        this.stateCache.removeSubscription(resourceId, listener);
+    public void removeSubscription(String resourceId, String listenerId) {
+        this.stateCache.removeSubscription(resourceId, listenerId);
     }
 
     public void close() {

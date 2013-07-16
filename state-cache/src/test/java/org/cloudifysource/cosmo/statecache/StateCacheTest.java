@@ -198,8 +198,8 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
                 return false;
             }
         };
-        stateCache.subscribe(resourceId1, listener);
-        stateCache.removeSubscription(resourceId1, listener);
+        final String id = stateCache.subscribe(resourceId1, listener);
+        stateCache.removeSubscription(resourceId1, id);
         stateCache.put(resourceId1, property1, value1);
         assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }

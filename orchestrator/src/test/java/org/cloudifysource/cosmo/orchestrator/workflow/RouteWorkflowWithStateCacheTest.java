@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.statecache.DeprecatedStateCache;
+import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -163,13 +164,13 @@ public class RouteWorkflowWithStateCacheTest {
         final String key = "node";
         final String property = "reachable";
         final String value = "true";
-        final DeprecatedStateCache cache = new DeprecatedStateCache.Builder().build();
+        final StateCache cache = new StateCache();
 
         final StateChangedMessage message = new StateChangedMessage();
         final Map<String, Object> state = Maps.newHashMap();
         state.put(property, value);
         message.setState(state);
-        cache.put(key, state);
+        cache.put(key, property, value);
 
         final String flow =
                 "define flow\n" +

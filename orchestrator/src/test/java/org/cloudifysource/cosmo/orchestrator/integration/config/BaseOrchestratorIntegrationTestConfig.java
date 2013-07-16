@@ -16,13 +16,14 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration.config;
 
-import org.cloudifysource.cosmo.monitor.config.MockAgentConfig;
-import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageBrokerServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageConsumerTestConfig;
 import org.cloudifysource.cosmo.messaging.config.MessageProducerConfig;
-import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.monitor.config.MockAgentConfig;
+import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -35,7 +36,8 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Configuration
 @Import({
-        DeprecatedRealTimeStateCacheConfig.class,
+        RealTimeStateCacheConfig.class,
+        StateCacheConfig.class,
         ResourceMonitorServerConfig.class,
         MessageBrokerServerConfig.class,
         MessageConsumerTestConfig.class,

@@ -26,6 +26,6 @@ public interface StateCacheReader {
 
     void subscribe(String resourceId, StateCacheListener listener);
 
-    void removeSubscription(String resourceId, StateCacheListener listener);
+    void removeSubscription(String resourceId, String listenerId);
 
 }

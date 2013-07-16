@@ -26,6 +26,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -40,17 +41,65 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class StateCache implements AutoCloseable {
 
     private final TrieMap<StateCacheProperty, String> cache;
-    private final SetMultimap<String, StateCacheListener> listeners;
+    private final SetMultimap<String, StateCacheListenerHolder> listeners;
     private final NamedLockProvider lockProvider;
     private final ExecutorService executorService;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    /**
+     * Holds a listener and it's id, used for scanning the listeners multimap and remove the listener
+     * according to its id.
+     */
+    private static class StateCacheListenerHolder {
+
+        private final StateCacheListener listener;
+        private final String listenerId;
+
+        public static StateCacheListenerHolder removeTemplate(String listenerId) {
+            return new StateCacheListenerHolder(null, listenerId);
+        }
+
+        public static StateCacheListenerHolder create(StateCacheListener listener, String listenerId) {
+            return new StateCacheListenerHolder(listener, listenerId);
+        }
+
+        private StateCacheListenerHolder(StateCacheListener listener, String listenerId) {
+            this.listener = listener;
+            this.listenerId = listenerId;
+        }
+
+        public StateCacheListener getListener() {
+            return listener;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            StateCacheListenerHolder that = (StateCacheListenerHolder) o;
+
+            if (listenerId != null ? !listenerId.equals(that.listenerId) : that.listenerId != null) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return listenerId != null ? listenerId.hashCode() : 0;
+        }
+
+        public String getListenerId() {
+            return listenerId;
+        }
+    }
+
     public StateCache() {
         this.cache = TrieMap.empty();
         this.lockProvider = new NamedLockProvider();
         this.executorService = Executors.newSingleThreadExecutor();
-        this.listeners = Multimaps.synchronizedSetMultimap(HashMultimap.<String, StateCacheListener>create());
+        this.listeners = Multimaps.synchronizedSetMultimap(HashMultimap.<String, StateCacheListenerHolder>create());
     }
 
     @Override
@@ -64,34 +113,37 @@ public class StateCache implements AutoCloseable {
         try {
             cache.put(new StateCacheProperty(resourceId, property), value);
             final TrieMap<StateCacheProperty, String> snapshot = cache.snapshot();
-            final Set<StateCacheListener> resourceListeners = listeners.get(resourceId);
-            for (StateCacheListener listener : resourceListeners) {
-                submitTriggerEventTask(resourceId, listener, snapshot);
+            final Set<StateCacheListenerHolder> resourceListeners = listeners.get(resourceId);
+            for (StateCacheListenerHolder listenerHolder : resourceListeners) {
+                submitTriggerEventTask(resourceId, listenerHolder.getListener(), listenerHolder.getListenerId(),
+                        snapshot);
             }
         } finally {
             writeLock.unlock();
         }
     }
 
-    public void subscribe(String resourceId, StateCacheListener listener) {
+    public String subscribe(String resourceId, StateCacheListener listener) {
         final ReentrantReadWriteLock.ReadLock readLock = lockProvider.forName(resourceId).readLock();
         readLock.lock();
         try {
-            listeners.put(resourceId, listener);
+            final String listenerId = UUID.randomUUID().toString();
+            listeners.put(resourceId, StateCacheListenerHolder.create(listener, listenerId));
             final TrieMap<StateCacheProperty, String> snapshot = cache.snapshot();
             for (Map.Entry<StateCacheProperty, String> entry : snapshot.entrySet()) {
                 if (entry.getKey().getResourceId().equals(resourceId)) {
-                    submitTriggerEventTask(resourceId, listener, snapshot);
+                    submitTriggerEventTask(resourceId, listener, listenerId, snapshot);
                     break;
                 }
             }
+            return listenerId;
         } finally {
             readLock.unlock();
         }
     }
 
     private void submitTriggerEventTask(final String resourceId, final StateCacheListener listener,
-                                        final TrieMap<StateCacheProperty, String> snapshot) {
+                                        final String listenerId, final TrieMap<StateCacheProperty, String> snapshot) {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
@@ -123,14 +175,14 @@ public class StateCache implements AutoCloseable {
                     logger.debug("Exception while invoking state change listener, listener will be removed", e);
                 } finally {
                     if (remove) {
-                        listeners.remove(resourceId, listener);
+                        removeSubscription(resourceId, listenerId);
                     }
                 }
             }
         });
     }
 
-    public void removeSubscription(String resourceId, StateCacheListener listener) {
-        listeners.remove(resourceId, listener);
+    public void removeSubscription(String resourceId, String listenerId) {
+        listeners.remove(resourceId, StateCacheListenerHolder.removeTemplate(listenerId));
     }
 }
