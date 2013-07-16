@@ -22,17 +22,18 @@ class RuoteStateChangeListener < org.cloudifysource.cosmo.statecache.StateCacheL
 
   @participant = nil
   @resource_id = nil
-  @parameters = nil
-  @fields = nil
   @workitem = nil
 
-  def resource_id=(participant, resource_id, workitem)
-    @participant = participant
+  def resource_id=(resource_id)
     @resource_id = resource_id
-    @workitem = workitem
+  end
 
-    $logger.debug('RuoteStateChangeListener created: [resource_id={}, parameters={}]',
-                  @resource_id, @workitem.params)
+  def participant=(participant)
+    @participant = participant
+  end
+
+  def workitem=(workitem)
+    @workitem = workitem
   end
 
   def onResourceStateChange(snapshot)
@@ -76,7 +77,7 @@ class StateCacheParticipant < Ruote::Participant
 
   STATE_CACHE = 'state_cache'
   RESOURCE_ID = 'resource_id'
-  LISTENER = 'listener'
+  LISTENER_ID = 'listener_id'
   STATE = 'state'
 
   def on_workitem
@@ -87,10 +88,13 @@ class StateCacheParticipant < Ruote::Participant
       raise "#{RESOURCE_ID} property is not set" unless defined? resource_id
       raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
-      listener = RuoteStateChangeListener.new(self, resource_id, workitem)
-      state_cache.subscribe(resource_id, listener)
-      $logger.debug('StateCacheParticipant: subscribed with [resource_id={}]', resource_id)
-      put(LISTENER, listener)
+      listener = RuoteStateChangeListener.new
+      listener.participant = self
+      listener.resource_id = resource_id
+      listener.workitem = workitem
+      listener_id = state_cache.subscribe(resource_id, listener)
+      $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, workitem={}]', resource_id, workitem)
+      put(LISTENER_ID, listener_id)
     rescue Exception => e
       $logger.debug(e.message)
       raise e
@@ -100,8 +104,8 @@ class StateCacheParticipant < Ruote::Participant
   def on_cancel
     begin
       state_cache = $ruote_properties[STATE_CACHE]
-      listener = get(LISTENER)
-      state_cache.remove_subscription(workitem.params[RESOURCE_ID], listener)
+      listener_id = get(LISTENER_ID)
+      state_cache.remove_subscription(workitem.params[RESOURCE_ID], listener_id)
     rescue Exception => e
       $logger.debug(e.message)
       raise
