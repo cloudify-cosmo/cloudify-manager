@@ -21,9 +21,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.statecache.StateCache}.
+ * Creates a new {@link StateCache}.
  *
- * @author Eitan Yanovsky
+ * @author Itai Frenkel
  * @since 0.1
  */
 @Configuration

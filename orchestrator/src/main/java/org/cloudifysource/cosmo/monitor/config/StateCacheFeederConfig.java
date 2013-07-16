@@ -16,47 +16,47 @@
 
 package org.cloudifysource.cosmo.monitor.config;
 
-import org.cloudifysource.cosmo.monitor.mock.MockAgent;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.hibernate.validator.constraints.NotEmpty;
+import org.cloudifysource.cosmo.monitor.StateCacheFeeder;
+import org.cloudifysource.cosmo.statecache.StateCache;
+import org.robobninjas.riemann.json.RiemannEventObjectMapper;
+import org.robotninjas.riemann.pubsub.RiemannPubSubClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
-import java.net.URI;
 
 /**
- * Creates a new {@link org.cloudifysource.cosmo.monitor.mock.MockAgent}.
+ * Creates a new {@link org.cloudifysource.cosmo.monitor.StateCacheFeeder}.
  *
  * @author Itai Frenkel
  * @since 0.1
  */
 @Configuration
-public class MockAgentConfig {
-
-    @NotEmpty
-    @Value("${cosmo.resource-monitor.topic}")
-    private String resourceMonitorTopic;
-
-    @NotEmpty
-    @Value("${cosmo.agent.topic}")
-    private String agentTopic;
+public class StateCacheFeederConfig {
 
     @Inject
-    MessageProducer producer;
+    private StateCache stateCache;
 
     @Inject
-    MessageConsumer consumer;
+    private RiemannPubSubClient riemannClient;
+
+    @Inject
+    private RiemannEventObjectMapper objectMapper;
+
+    @Value("${riemann.client.connection.number-of-connection-attempts:60}")
+    int numberOfConnectionAttempts;
+
+    @Value("${riemann.client.connection.sleep-before-connection-attempt-milliseconds:1000}")
+    int sleepBeforeConnectionAttemptMilliseconds;
 
     @Bean(destroyMethod = "close")
-    public MockAgent mockAgent() {
-        return new MockAgent(
-                consumer,
-                producer,
-                URI.create(agentTopic),
-                URI.create(resourceMonitorTopic));
+    public StateCacheFeeder realTimeStateCache() {
+        return new StateCacheFeeder(
+                riemannClient,
+                objectMapper,
+                stateCache,
+                numberOfConnectionAttempts,
+                sleepBeforeConnectionAttemptMilliseconds);
     }
-
 }

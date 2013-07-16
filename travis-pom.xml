@@ -14,8 +14,6 @@
     <modules>
     	<module>bootstrapper</module>
         <module>orchestrator</module>
-        <module>resource-monitor</module>
-        <module>resource-monitor-api</module>
         <module>state-cache</module>
         <module>state-cache-api</module>
     </modules>
