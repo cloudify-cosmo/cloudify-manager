@@ -17,9 +17,7 @@
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.statecache.StateCache;
-import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
