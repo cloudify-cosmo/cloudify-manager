@@ -307,7 +307,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                System.out.println(" -- received: [target=" + target + ", task=" + taskName + "]");
+                if (taskName.endsWith("verify_plugin")) {
+                    return;
+                }
                 if (assertExecutionOrder) {
                     executions.add(taskName);
                     if (expectedTasksWithSeparator.isEmpty()) {
@@ -369,6 +371,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         worker.addListener(machineId, new TaskReceivedListener() {
             @Override
             public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                if (taskName.endsWith("verify_plugin")) {
+                    return;
+                }
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
@@ -421,7 +426,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     if (executedTasksCount == 0) {
                         assertThat(target).isEqualTo(remotePluginTarget);
                         assertThat(pluginName).isEqualTo(remoteTaskPrefix);
-                    } if (executedTasksCount == 2 || executedTasksCount == 4) {
+                    } else if (executedTasksCount == 2 || executedTasksCount == 4) {
                         assertThat(target).isEqualTo(machineId);
                         assertThat(pluginName).isEqualTo(agentTaskPrefix);
                     }
