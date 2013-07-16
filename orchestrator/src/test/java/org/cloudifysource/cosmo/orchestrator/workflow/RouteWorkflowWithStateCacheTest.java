@@ -106,8 +106,7 @@ public class RouteWorkflowWithStateCacheTest {
                 .isEqualTo("good");
 
         // assert state modified by workflow exists
-        assertThat(((Map<String, String>) receivedWorkItemFields.get("state0_status_processed")).get("status"))
-                .isEqualTo("good");
+        assertThat(receivedWorkItemFields.get("state0_status_processed")).isEqualTo("good");
 
         // assert workflow after waiting on state change, includes the new state
         assertThat(((Map<String, String>) receivedWorkItemFields.get("general_status")).get("value"))
