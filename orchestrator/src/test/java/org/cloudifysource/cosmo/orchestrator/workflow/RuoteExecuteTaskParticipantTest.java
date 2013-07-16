@@ -23,11 +23,7 @@ import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
 import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
-<<<<<<< HEAD
-import org.cloudifysource.cosmo.statecache.config.DeprecatedRealTimeStateCacheConfig;
-=======
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
->>>>>>> CLOUDIFY-1896-riemann
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
