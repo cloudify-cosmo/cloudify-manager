@@ -393,35 +393,72 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String remotePluginTarget = "cloudify.management";
         final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks";
         final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host.provisioner.tasks";
+        final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks";
 
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", Resources.getResource(dslFile).getFile());
-        ruoteWorkflow.asyncExecute(fields);
+        Object wfid = ruoteWorkflow.asyncExecute(fields);
 
-        final CountDownLatch latch = new CountDownLatch(3);
+        final CountDownLatch latch = new CountDownLatch(6);
 
-        worker.addListener(remotePluginTarget, new TaskReceivedListener() {
+        final List<String> executedTasks = Lists.newArrayList();
+
+        // Execution order should be:
+        // 0-verify [management]
+        // 1-provision
+        // 2-verify [agent]
+        // 3-install
+        // 4-verify [agent]
+        // 5-start
+        TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.startsWith(remoteTaskPrefix) && taskName.endsWith("provision")) {
+            public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                final int executedTasksCount = executedTasks.size();
+                if (taskName.startsWith(pluginInstallerPrefix)) {
+                    assertThat(kwargs).containsKey("plugin_name");
+                    assertThat(executedTasksCount).isIn(0, 2, 4);
+                    String pluginName = "cosmo." + kwargs.get("plugin_name").toString() + ".tasks";
+                    if (executedTasksCount == 0) {
+                        assertThat(target).isEqualTo(remotePluginTarget);
+                        assertThat(pluginName).isEqualTo(remoteTaskPrefix);
+                    } if (executedTasksCount == 2 || executedTasksCount == 4) {
+                        assertThat(target).isEqualTo(machineId);
+                        assertThat(pluginName).isEqualTo(agentTaskPrefix);
+                    }
                     latch.countDown();
+                    executedTasks.add(taskName);
+                } else if (taskName.startsWith(remoteTaskPrefix)) {
+                    assertThat(target).isEqualTo(remotePluginTarget);
+                    assertThat(executedTasksCount).isEqualTo(1);
+                    assertThat(taskName).endsWith(".provision");
+                    latch.countDown();
+                    executedTasks.add(taskName);
+                } else if (taskName.startsWith(agentTaskPrefix)) {
+                    assertThat(target).isEqualTo(machineId);
+                    assertThat(executedTasksCount).isIn(3, 5);
+                    if (executedTasksCount == 3) {
+                        assertThat(taskName).endsWith(".install");
+                    } else {
+                        assertThat(taskName).endsWith(".start");
+                    }
+                    latch.countDown();
+                    executedTasks.add(taskName);
                 }
             }
-        });
-        worker.addListener(machineId, new TaskReceivedListener() {
-            @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.startsWith(agentTaskPrefix) &&
-                        (taskName.endsWith("install") || taskName.endsWith("start"))) {
-                    latch.countDown();
-                }
-            }
-        });
+        };
+
+        worker.addListener(machineId, listener);
+        worker.addListener(remotePluginTarget, listener);
+        worker.addListener(machineId, listener);
 
         StateChangedMessage message = createReachableStateCacheMessage(machineId);
         messageProducer.send(stateCacheTopic, message);
 
+        ruoteRuntime.waitForWorkflow(wfid);
+
         latch.await();
+
+        assertThat(executedTasks.size()).isEqualTo(6);
     }
 
     private String getResourceAsString(String resourceName) {

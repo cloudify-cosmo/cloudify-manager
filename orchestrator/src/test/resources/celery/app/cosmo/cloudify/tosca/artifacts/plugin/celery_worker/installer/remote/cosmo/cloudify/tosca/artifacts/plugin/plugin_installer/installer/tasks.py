@@ -19,6 +19,7 @@ import urllib2
 import tarfile
 import zipfile
 import shutil
+import subprocess
 from subprocess import check_call as call
 from subprocess import CalledProcessError
 from cosmo.celery import celery
@@ -73,6 +74,25 @@ def install(plugin, **kwargs):
     except (CalledProcessError, Exception) as error:
         call(["sudo", "rm", "-rf", plugin_path])
         raise error
+
+
+@celery.task
+def verify_plugin(plugin_name, **kwargs):
+    p = subprocess.Popen(["celery", "inspect", "registered", "--no-color"], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+
+    if p.returncode != 0:
+        raise RuntimeError("unable to get celery worker registered tasks [returncode={0}]".format(returncode))
+
+    lines = out.splitlines()
+    for line in lines:
+        processed_line = line.strip()
+        if processed_line.startswith("*"):
+            task = processed_line[1:].strip()
+            if task.startswith(plugin_name):
+                return True
+
+    raise RuntimeError("plugin [{0}] is not installed in celery worker".format(plugin_name))
 
 
 def download_plugin(url, path):
