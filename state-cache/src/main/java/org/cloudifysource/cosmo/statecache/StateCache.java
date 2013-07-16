@@ -75,6 +75,17 @@ public class StateCache {
         return cache.get(key);
     }
 
+    public void put(String nodeId, String property, String value) {
+        final Map<String, Object> currentState =
+                (Map<String, Object>) get(nodeId);
+        final Map<String, Object> updatedState = Maps.newHashMap();
+        if (currentState != null) {
+            updatedState.putAll(currentState);
+        }
+        updatedState.put(property, value);
+        put(nodeId, updatedState);
+    }
+
     public Object put(String key, Object value) {
 
         Object previous;
@@ -196,5 +207,4 @@ public class StateCache {
         }
 
     }
-
 }

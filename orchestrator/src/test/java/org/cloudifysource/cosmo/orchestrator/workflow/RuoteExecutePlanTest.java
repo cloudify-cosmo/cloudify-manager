@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -26,20 +27,19 @@ import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
 import org.cloudifysource.cosmo.dsl.packaging.ExtractedDSLPackageDetails;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
-import org.cloudifysource.cosmo.statecache.RealTimeStateCache;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
-import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
+import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
 import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -50,7 +50,6 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -72,6 +71,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     private static final String CLOUDIFY_MANAGEMENT = "cloudify.management";
+    protected Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      */
@@ -79,12 +79,12 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Import({
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
-            RealTimeStateCacheConfig.class,
             DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             TemporaryDirectoryConfig.class,
             MockTaskExecutorConfig.class,
-            MockCeleryTaskWorkerConfig.class
+            MockCeleryTaskWorkerConfig.class,
+            StateCacheConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -97,13 +97,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private RuoteWorkflow ruoteWorkflow;
 
     @Inject
-    private RealTimeStateCache stateCache;
-
-    @Inject
-    private MessageProducer messageProducer;
-
-    @Value("${cosmo.state-cache.topic}")
-    private URI stateCacheTopic;
+    private StateCache stateCache;
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
@@ -111,6 +105,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MockCeleryTaskWorker worker;
 
+    //Test disabled since file not found
+    @Test(timeOut = 30000, enabled = false)
+    public void testPlanExecutionDslYaml() throws IOException, InterruptedException {
+        testPlanExecutionDsl("org/cloudifysource/cosmo/dsl/dsl.yaml");
+    }
 
     private void testPlanExecutionDsl(String dslFile) throws IOException, InterruptedException {
         String machineId = "mysql_template.mysql_machine";
@@ -190,11 +189,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final Object wfid = ruoteWorkflow.asyncExecute(fields);
 
         Thread.sleep(10000);
-        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(machineId));
+        reachable(machineId);
         Thread.sleep(10000);
-        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(databaseId));
+        reachable(databaseId);
         Thread.sleep(5000);
-        messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(schemaId));
+        reachable(schemaId);
 
         ruoteRuntime.waitForWorkflow(wfid);
     }
@@ -317,7 +316,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                         expectedTasksWithSeparator.remove(0);
                         if (expectedTasksWithSeparator.get(0).length() == 0) {
                             String nodeId = kwargs.get("__cloudify_id").toString();
-                            messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(nodeId));
+                            reachable(nodeId);
                             expectedTasksWithSeparator.remove(0);
                         }
                     }
@@ -341,7 +340,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         Thread.sleep(100);
         if (reachableIds != null && !assertExecutionOrder) {
             for (String reachableId : reachableIds) {
-                messageProducer.send(stateCacheTopic, createReachableStateCacheMessage(reachableId));
+                reachable(reachableId);
             }
         }
 
@@ -379,10 +378,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             }
         });
 
-        StateChangedMessage message = createReachableStateCacheMessage(machineId);
-        message.getState().put("ip", ip);
-        messageProducer.send(stateCacheTopic, message);
-
+        discoveredIpAddress(machineId, ip);
+        reachable(machineId);
         latch.await();
     }
 
@@ -418,9 +415,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             }
         });
 
-        StateChangedMessage message = createReachableStateCacheMessage(machineId);
-        messageProducer.send(stateCacheTopic, message);
-
+        reachable(machineId);
         latch.await();
     }
 
@@ -433,13 +428,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
     }
 
-    private StateChangedMessage createReachableStateCacheMessage(String resourceId) {
-        final StateChangedMessage message = new StateChangedMessage();
-        message.setResourceId(resourceId);
-        final Map<String, Object> state = Maps.newHashMap();
-        state.put("reachable", "true");
-        message.setState(state);
-        return message;
+    private void reachable(String nodeId) {
+        Preconditions.checkNotNull(nodeId);
+        stateCache.put(nodeId, "reachable", "true");
+    }
+
+    private void discoveredIpAddress(String nodeId, String ipAddress) {
+        Preconditions.checkNotNull(nodeId);
+        Preconditions.checkNotNull(ipAddress);
+        stateCache.put(nodeId, "ip", ipAddress);
     }
 
     /**

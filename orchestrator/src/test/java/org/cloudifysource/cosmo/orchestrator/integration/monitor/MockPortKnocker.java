@@ -16,23 +16,18 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration.monitor;
 
+import com.aphyr.riemann.Proto;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.agent.messages.ProbeAgentMessage;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumerListener;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
-import org.cloudifysource.cosmo.monitor.messages.AgentStatusMessage;
+import org.robotninjas.riemann.client.RiemannTcpClient;
+import org.robotninjas.riemann.client.RiemannTcpConnection;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,32 +39,27 @@ import java.util.concurrent.Executors;
  * @author Dan Kilman
  * @since 0.1
  */
-public class MockPortKnocker implements Runnable {
+public class MockPortKnocker implements Runnable, AutoCloseable {
 
     private Logger logger = LoggerFactory.getLogger(getClass());
     private static final int SLEEP_INTERVAL = 1000;
     private static final int CONNECT_TIMEOUT = 1000;
 
-    private final URI agentTopic;
-    private final MessageConsumer messageConsumer;
-    private final URI resourceMonitorTopic;
-    private final MessageProducer messageProducer;
     private final List<PortKnockingDescriptor> descriptors;
     private final ExecutorService executor;
-    private final Map<String, AgentStatusMessage> agentStatusMessages = Maps.newConcurrentMap();
 
-    public MockPortKnocker(URI resourceMonitorTopic,
-                           URI agentTopic,
-                           MessageProducer messageProducer,
-                           MessageConsumer messageConsumer,
+    private RiemannTcpConnection riemannTcpConnection;
+
+
+    public MockPortKnocker(RiemannTcpClient riemannTcpClient,
                            List<PortKnockingDescriptor> descriptors) {
-        this.agentTopic = agentTopic;
-        this.messageConsumer = messageConsumer;
+        try {
+            this.riemannTcpConnection = riemannTcpClient.makeConnection();
+        } catch (InterruptedException e) {
+            throw Throwables.propagate(e);
+        }
         this.executor = Executors.newSingleThreadExecutor();
-        this.resourceMonitorTopic = resourceMonitorTopic;
-        this.messageProducer = messageProducer;
         this.descriptors = descriptors;
-        registerForProbeMessages();
         executor.execute(this);
     }
 
@@ -84,8 +74,16 @@ public class MockPortKnocker implements Runnable {
         }
     }
 
+    @Override
     public void close() {
         executor.shutdownNow();
+        if (riemannTcpConnection != null) {
+            try {
+                riemannTcpConnection.close();
+            } catch (IOException e) {
+                throw Throwables.propagate(e);
+            }
+        }
     }
 
     public void doMonitor() throws Exception {
@@ -116,30 +114,23 @@ public class MockPortKnocker implements Runnable {
         }
     }
 
-    private void registerForProbeMessages() {
-        messageConsumer.addListener(agentTopic, new MessageConsumerListener<ProbeAgentMessage>() {
-            @Override
-            public void onMessage(URI uri, ProbeAgentMessage message) {
-                if (agentStatusMessages.containsKey(message.getAgentId())) {
-                    AgentStatusMessage statusMessage = agentStatusMessages.get(message.getAgentId());
-                    logger.debug("Received probe message: {} -> sending agent status message: {}",
-                            message,
-                            statusMessage);
-                    messageProducer.send(resourceMonitorTopic, statusMessage);
-                }
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                t.printStackTrace();
-            }
-        });
-    }
-
     private void sendReachableStateCacheMessage(PortKnockingDescriptor descriptor) {
-        final AgentStatusMessage message = new AgentStatusMessage();
-        message.setAgentId(descriptor.getResourceId());
-        message.getPayload().put("ip", descriptor.getSocketAddress().getHostName());
-        agentStatusMessages.put(descriptor.getResourceId(), message);
-    }
+        final String resourceId = descriptor.getResourceId();
+        final String ipAddress = descriptor.getSocketAddress().getHostName();
+        final Proto.Event ipEvent = Proto.Event.newBuilder()
+                .setHost(resourceId)
+                .setService("ip")
+                .setState(ipAddress)
+                .addTags("resource-state")
+                .build();
+        riemannTcpConnection.send(ipEvent);
 
+        final Proto.Event reachableEvent = Proto.Event.newBuilder()
+                .setHost(resourceId)
+                .setService("reachable")
+                .setState("true")
+                .addTags("resource-state")
+                .build();
+        riemannTcpConnection.send(reachableEvent);
+    }
 }

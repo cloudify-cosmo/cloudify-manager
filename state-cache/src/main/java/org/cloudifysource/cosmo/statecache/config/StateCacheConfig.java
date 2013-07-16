@@ -12,24 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
-package org.cloudifysource.cosmo.monitor;
+ ******************************************************************************/
+
+package org.cloudifysource.cosmo.statecache.config;
+
+import org.cloudifysource.cosmo.statecache.StateCache;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * A drools fact that an agent has been discovered.
+ * Creates a new {@link StateCache}.
  *
- * @author itaif
+ * @author Itai Frenkel
  * @since 0.1
  */
-public class Agent {
+@Configuration
+public class StateCacheConfig {
 
-    String agentId;
-
-    public String getAgentId() {
-        return agentId;
-    }
-
-    public void setAgentId(String agentId) {
-        this.agentId = agentId;
+    @Bean(destroyMethod = "close")
+    public StateCache stateCache() {
+        return new StateCache.Builder().build();
     }
 }

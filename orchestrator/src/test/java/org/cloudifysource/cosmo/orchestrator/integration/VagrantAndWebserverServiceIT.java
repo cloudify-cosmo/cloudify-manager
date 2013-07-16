@@ -24,21 +24,19 @@ import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.monitor.Agent;
-import org.cloudifysource.cosmo.monitor.ResourceMonitorServer;
-import org.cloudifysource.cosmo.monitor.config.ResourceMonitorServerConfig;
+import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.MockPortKnockerConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
-import org.cloudifysource.cosmo.statecache.config.RealTimeStateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
-import org.springframework.beans.factory.annotation.Value;
+import org.robobninjas.riemann.spring.RiemannTestConfiguration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -49,7 +47,6 @@ import org.testng.annotations.Test;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -83,10 +80,11 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             JettyFileServerForPluginsConfig.class,
             MockMessageConsumerConfig.class,
             MockMessageProducerConfig.class,
-            RealTimeStateCacheConfig.class,
+            StateCacheConfig.class,
+            StateCacheFeederConfig.class,
+            RiemannTestConfiguration.class,
             DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
-            ResourceMonitorServerConfig.class,
             MockPortKnockerConfig.class,
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
@@ -118,36 +116,19 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     private RuoteWorkflow ruoteWorkflow;
 
     @Inject
-    private ResourceMonitorServer resourceMonitor;
-
-    @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
-    // format is: host:port:id
-    @NotNull
-    @Value("${cosmo.test.port-knocker.sockets-to-knock}")
-    private String[] socketsToKnock;
-
-
-    @Test(timeOut = 60000 * 5, groups = "vagrant")
+    @Test(timeOut = 60000 * 5, groups = "vagrant", enabled = false)
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
         test("org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml");
     }
 
-    @Test(groups = "vagrant")
+    @Test(groups = "vagrant", enabled = true)
     public void testWithVagrantHostProvisionerAndRemoteCeleryWorker() {
         test("org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml");
     }
 
     private void test(String dslLocation) {
-
-        // Add resource to be probed by resource monitor
-        for (String socket : socketsToKnock) {
-            String[] values = socket.split(":");
-            Agent agent = new Agent();
-            agent.setAgentId(values[2]);
-            resourceMonitor.insertFact(agent);
-        }
 
         // zip webserver plugin
         createZipForPlugin(
