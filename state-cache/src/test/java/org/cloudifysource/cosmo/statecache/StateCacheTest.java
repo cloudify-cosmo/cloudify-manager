@@ -17,262 +17,272 @@
 package org.cloudifysource.cosmo.statecache;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
+import org.cloudifysource.cosmo.statecache.config.TestConfig;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
-import java.util.Collections;
-import java.util.Map;
+import javax.inject.Inject;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.fest.assertions.api.Assertions.assertThat;
+import static org.fest.assertions.api.Assertions.entry;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public class StateCacheTest {
+@ContextConfiguration(classes = { StateCacheTest.Config.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class StateCacheTest extends AbstractTestNGSpringContextTests {
 
+    /**
+     */
+    @Configuration
+    @Import({
+            StateCacheConfig.class
+    })
+    static class Config extends TestConfig {
+    }
+
+    @Inject
     private StateCache stateCache;
-
-    @BeforeMethod
-    public void before() {
-        stateCache = new StateCache.Builder()
-                .build();
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void after() {
-        if (stateCache != null) {
-            stateCache.close();
-        }
-    }
-
-    @Test
-    public void testInitialState() {
-        stateCache.close();
-        String key = "key";
-        Object value = "value";
-        stateCache = new StateCache.Builder().initialState(ImmutableMap.<String, Object>builder().put(key,
-                value).build()).build();
-        Object stateCacheValue = stateCache.snapshot().get(key);
-        Assert.assertEquals(stateCacheValue, value);
-    }
 
     @Test
     public void testPut() {
-        String key = "key";
-        Object value = "value";
-        stateCache.put(key, value);
-        Object stateCacheValue = stateCache.snapshot().get(key);
-        Assert.assertEquals(stateCacheValue, value);
-        value = "newValue";
-        stateCache.put(key, value);
-        stateCacheValue = stateCache.snapshot().get(key);
-        Assert.assertEquals(stateCacheValue, value);
+        final String resourceId = "resource";
+        final String property = "property";
+        final String value = "value";
+        stateCache.put(resourceId, property, value);
     }
 
     @Test
-    public void testSnapshotContains() {
-        String key = "key";
-        Object value = "value";
-        Assert.assertFalse(stateCache.snapshot().containsKey(key));
-        stateCache.put(key, value);
-        Assert.assertTrue(stateCache.snapshot().containsKey(key));
+    public void testListenerResourceIdEventAfterPut() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final String resourceId2 = "resource2";
+        final String property2 = "property2";
+        final String value2 = "value2";
+        final AtomicReference<StateCacheSnapshot> eventValue = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId2, property2, value2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+                eventValue.set(snapshot);
+                latch.countDown();
+                return false;
+            }
+        };
+        stateCache.subscribe(resourceId1, listener);
+        assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+        assertThat(eventValue.get().getProperty(resourceId1, property1).get()).isEqualTo(value1);
+        assertThat(eventValue.get().getProperty(resourceId2, property2).get()).isEqualTo(value2);
+        assertThat(eventValue.get().getProperty("bla", "bla").isPresent()).isFalse();
     }
 
     @Test
-    public void testSnapshotGet() {
-        String key = "key";
-        Object value = "value";
-        Assert.assertNull(stateCache.snapshot().get(key));
-        stateCache.put(key, value);
-        Assert.assertEquals(stateCache.snapshot().get(key), value);
+    public void testListenerResourceIdBeforeAfterPut() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final String resourceId2 = "resource2";
+        final String property2 = "property2";
+        final String value2 = "value2";
+        final AtomicReference<StateCacheSnapshot> eventValue = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        stateCache.put(resourceId2, property2, value2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+                eventValue.set(snapshot);
+                latch.countDown();
+                return false;
+            }
+        };
+        stateCache.subscribe(resourceId1, listener);
+
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
+
+        stateCache.put(resourceId1, property1, value1);
+
+        assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
+        assertThat(eventValue.get().getProperty(resourceId1, property1).get()).isEqualTo(value1);
+        assertThat(eventValue.get().getProperty(resourceId2, property2).get()).isEqualTo(value2);
+        assertThat(eventValue.get().getProperty("bla", "bla").isPresent()).isFalse();
+
     }
 
     @Test
-    public void testSnapshotAsMap() {
-        Assert.assertEquals(stateCache.snapshot(), Collections.emptyMap());
-        String key = "key";
-        Object value = "value";
-        stateCache.put(key, value);
-        Assert.assertEquals(stateCache.snapshot(), ImmutableMap.<String, Object>builder().put(key,
-                value).build());
-    }
+    public void testListenerRemovedResourceIdEventAfterPut() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final CountDownLatch latch = new CountDownLatch(2);
+        stateCache.put(resourceId1, property1, value1);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
 
-    @Test(timeOut = 5000)
-    public void testWaitForKeyValueState() throws InterruptedException {
-        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        final AtomicBoolean stateChangedProperly = new AtomicBoolean(false);
-        final Object reciever = new Object();
-        final Object context = new Object();
-        final String key = "key";
-        final Object value = "value";
-        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
-            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         Map<String, Object> newSnapshot) {
-                boolean valid;
-                valid = (receiverParam == reciever);
-                valid &= (contextParam == context);
-                valid &= (value.equals(newSnapshot.get(key)));
-                stateChangedProperly.set(valid);
-                callbackCalledLatch.countDown();
+                latch.countDown();
                 return true;
             }
-        });
-
-        Thread.sleep(100);
-
-        Assert.assertEquals(callbackCalledLatch.getCount(), 1);
-
-        stateCache.put(key, value);
-
-        callbackCalledLatch.await();
-        Assert.assertTrue(stateChangedProperly.get());
+        };
+        stateCache.subscribe(resourceId1, listener);
+        Thread.sleep(50);
+        assertThat(latch.getCount()).isEqualTo(1);
+        stateCache.put(resourceId1, property1, value1);
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
-    @Test(timeOut = 15000)
-    public void testWaitForKeyValueChange() throws InterruptedException {
-        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        final AtomicBoolean stateChangedProperly = new AtomicBoolean(false);
-        final Object reciever = new Object();
-        final Object context = new Object();
-        final String key = "key";
-        final Map<String, String> value = Maps.newHashMap();
-        value.put("key", "value");
-        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
-            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         Map<String, Object> newSnapshot) {
-                boolean valid;
-                valid = (receiverParam == reciever);
-                valid &= (contextParam == context);
-                final Object changedValue = newSnapshot.get(key);
-                if (changedValue instanceof Map<?, ?>) {
-                    final Map<?, ?> typedValue = (Map<?, ?>) changedValue;
-                    valid &= typedValue.containsKey("key");
-                    valid &= "value".equals(typedValue.get("key"));
-                } else {
-                    valid = false;
-                }
-                stateChangedProperly.set(valid);
-                callbackCalledLatch.countDown();
+    @Test
+    public void testListenerRemovedResourceIdEventBeforePut() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final CountDownLatch latch = new CountDownLatch(2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+
+                latch.countDown();
                 return true;
             }
-        });
-
-        Thread.sleep(100);
-
-        Assert.assertEquals(callbackCalledLatch.getCount(), 1);
-
-        stateCache.put(key, value);
-
-        callbackCalledLatch.await();
-        Assert.assertTrue(stateChangedProperly.get());
+        };
+        stateCache.subscribe(resourceId1, listener);
+        stateCache.put(resourceId1, property1, value1);
+        Thread.sleep(50);
+        assertThat(latch.getCount()).isEqualTo(1);
+        stateCache.put(resourceId1, property1, value1);
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
-    @Test(timeOut = 15000)
-    public void testWaitForKeyValueAlreadyExists() throws InterruptedException {
-        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        final AtomicBoolean stateChangedProperly = new AtomicBoolean(false);
-        final Object reciever = new Object();
-        final Object context = new Object();
-        final String key = "key";
-        final Map<String, String> value = Maps.newHashMap();
-        value.put("key", "value");
-        stateCache.put(key, value);
-        stateCache.subscribeToKeyValueStateChanges(reciever, context, key, new StateChangeCallback() {
-            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         Map<String, Object> newSnapshot) {
-                boolean valid;
-                valid = (receiverParam == reciever);
-                valid &= (contextParam == context);
-                final Object changedValue = newSnapshot.get(key);
-                if (changedValue instanceof Map<?, ?>) {
-                    final Map<?, ?> typedValue = (Map<?, ?>) changedValue;
-                    valid &= typedValue.containsKey("key");
-                    valid &= "value".equals(typedValue.get("key"));
-                } else {
-                    valid = false;
-                }
-                stateChangedProperly.set(valid);
-                callbackCalledLatch.countDown();
-                return true;
+    @Test
+    public void testListenerThrowsExceptionIsRemoved() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final CountDownLatch latch = new CountDownLatch(2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+
+                latch.countDown();
+                throw new RuntimeException();
             }
-        });
-
-        callbackCalledLatch.await();
-        Assert.assertTrue(stateChangedProperly.get());
+        };
+        stateCache.subscribe(resourceId1, listener);
+        stateCache.put(resourceId1, property1, value1);
+        Thread.sleep(50);
+        assertThat(latch.getCount()).isEqualTo(1);
+        stateCache.put(resourceId1, property1, value1);
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
+    @Test
+    public void testRemoveListener() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final CountDownLatch latch = new CountDownLatch(1);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
 
-    @Test(dependsOnMethods = "testWaitForKeyValueState")
-    public void testWaitForKeyValueStateIsRemoved() throws InterruptedException {
-        final String key = "key";
-        final Object value = "value";
-        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
-        stateCache.subscribeToKeyValueStateChanges(null, null, key, new StateChangeCallback() {
-            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         Map<String, Object> newSnapshot) {
-                if (callbackCalledLatch.getCount() > 0) {
-                    callbackCalledLatch.countDown();
-                    return true;
-                }
-                callbackCalledAgainLatch.countDown();
-                return true;
+                latch.countDown();
+                return false;
             }
-        });
-
-        stateCache.put(key, value);
-        Assert.assertTrue(callbackCalledLatch.await(5, TimeUnit.SECONDS));
-        stateCache.put(key, value);
-        Assert.assertFalse(callbackCalledAgainLatch.await(100, TimeUnit.MILLISECONDS));
+        };
+        final String id = stateCache.subscribe(resourceId1, listener);
+        stateCache.removeSubscription(resourceId1, id);
+        stateCache.put(resourceId1, property1, value1);
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
-    @Test(dependsOnMethods = "testWaitForKeyValueState")
-    public void testWaitForKeyValueStateIsNotRemoved() throws InterruptedException {
-        final String key = "key";
-        final Object value = "value";
-        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        final CountDownLatch callbackCalledAgainLatch = new CountDownLatch(1);
-        stateCache.subscribeToKeyValueStateChanges(null, null, key, new StateChangeCallback() {
-            public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                         Map<String, Object> newSnapshot) {
-                if (callbackCalledLatch.getCount() > 0) {
-                    callbackCalledLatch.countDown();
-                    return false;
-                }
-                callbackCalledAgainLatch.countDown();
+    @Test
+    public void testSnapshotOfEventAPI() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final String resourceId2 = "resource2";
+        final String property2 = "property2";
+        final String value2 = "value2";
+        final AtomicReference<StateCacheSnapshot> eventValue = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property2, value2);
+        stateCache.put(resourceId2, property2, value2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+                eventValue.set(snapshot);
+                latch.countDown();
+                return false;
+            }
+        };
+        stateCache.subscribe(resourceId1, listener);
+
+        latch.await(3, TimeUnit.SECONDS);
+        final ImmutableMap<String, String> resourceProperties1 = eventValue.get().getResourceProperties(resourceId1);
+        assertThat(resourceProperties1).hasSize(2);
+        assertThat(resourceProperties1).contains(entry(property1, value1), entry(property2, value2));
+        final ImmutableMap<String, String> resourceProperties2 = eventValue.get().getResourceProperties(resourceId2);
+        assertThat(resourceProperties2).hasSize(1);
+        assertThat(resourceProperties2).contains(entry(property2, value2));
+
+        assertThat(eventValue.get().containsProperty(resourceId1, property1)).isTrue();
+        assertThat(eventValue.get().containsProperty(resourceId1, property2)).isTrue();
+        assertThat(eventValue.get().containsProperty(resourceId2, property2)).isTrue();
+        assertThat(eventValue.get().containsProperty(resourceId2, property1)).isFalse();
+    }
+
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectInsertionOfNullResourceId() {
+        stateCache.put(null, "property", "value");
+    }
+
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectInsertionOfNullProperty() {
+        stateCache.put("resource", null, "value");
+    }
+
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectInsertionOfNullValue() {
+        stateCache.put("resource", "property", null);
+    }
+
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectSubscribeNullResourceId() {
+        stateCache.subscribe(null, new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
                 return false;
             }
         });
-
-        stateCache.put(key, value);
-        Assert.assertTrue(callbackCalledLatch.await(5, TimeUnit.SECONDS));
-        stateCache.put(key, value);
-        Assert.assertTrue(callbackCalledAgainLatch.await(5, TimeUnit.SECONDS));
     }
 
-    @Test(dependsOnMethods = "testWaitForKeyValueState")
-    public void testRemoveCallback() throws InterruptedException {
-        final String key = "key";
-        final Object value = "value";
-        final CountDownLatch callbackCalledLatch = new CountDownLatch(1);
-        String callbackUID = stateCache.subscribeToKeyValueStateChanges(null, null, key,
-                new StateChangeCallback() {
-                    public boolean onStateChange(Object receiverParam, Object contextParam, StateCache cache,
-                                                 Map<String, Object> newSnapshot) {
-                        callbackCalledLatch.countDown();
-                        return false;
-                    }
-                });
-        stateCache.removeCallback(callbackUID);
-        stateCache.put(key, value);
-        Assert.assertFalse(callbackCalledLatch.await(100, TimeUnit.MILLISECONDS));
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectSubscribeNullListener() {
+        stateCache.subscribe("resource", null);
     }
 
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectRemoveSubscribeNullResourceId() {
+        stateCache.removeSubscription(null, "id");
+    }
+
+    @Test(expectedExceptions = RuntimeException.class)
+    public void testRejectRemoveSubscribeNullListener() {
+        stateCache.removeSubscription("resource", null);
+    }
 }
