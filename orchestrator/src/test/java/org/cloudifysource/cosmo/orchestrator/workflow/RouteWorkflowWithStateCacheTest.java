@@ -16,180 +16,76 @@
 
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.statecache.StateCache;
-import org.cloudifysource.cosmo.statecache.messages.StateChangedMessage;
-import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Tests the integration of ruote workflows and state cache.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 public class RouteWorkflowWithStateCacheTest {
 
-    @Test
-    public void testStateCacheWithWorkflowsAndTimeout() throws Exception {
+    StateCache cache;
+    RuoteRuntime ruoteRuntime;
 
-        // create new state cache
-        StateCache cache = new StateCache.Builder().build();
+    @BeforeMethod
+    public void createRuoteRuntime() {
 
-        // hold initial state snapshot
-        Map<String, Object> cacheSnapshot = cache.snapshot();
+        cache = new StateCache();
 
         // insert state into jruby runtime properties so that state participant can access it
-        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
-                .put("state_cache", cache).build();
+        Map<String, Object> routeProperties = newMap("state_cache", (Object) cache);
 
-        // start jruby runtime and load test workflows
-        RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
-        RuoteWorkflow useWorkItemsWorkflow =
-                RuoteWorkflow.createFromResource("workflows/radial/use_workitems_with_timeout.radial", ruoteRuntime);
-
-        // execute workflow that works with workitems and waits on state
-        useWorkItemsWorkflow.asyncExecute(cacheSnapshot);
-
-        // sleep twice to state particiant timeout parameter
-        System.out.println("sleep 2000 ms from test");
-        Thread.sleep(2000);
-
-        // the use_workitems workflow waits on this state, this wuold have released the workflow
-        // in the normal case where it didn't time out.
-        cache.put("general_status", "good");
-
-        // assert workflow did not continue
-        Assert.assertFalse(RuoteStateCacheTimeoutTestJavaParticipant.latch.await(1, TimeUnit.SECONDS));
-
+        // start jruby runtime
+        ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
     }
 
-    @Test
-    public void testStateCacheWithWorkflows() throws InterruptedException {
-
-        Map<String, Object> state = new ImmutableMap.Builder<String, Object>()
-                .put("state0", new ImmutableMap.Builder<String, Object>()
-                        .put("id", "state0")
-                        .put("status", "good")
-                        .put("substates", new ImmutableList.Builder<String>()
-                                .add("state0/substates/substate0")
-                                .add("state0/substates/substate1")
-                                .build())
-                        .build())
-                .put("state0/substates/substate0", new ImmutableMap.Builder<String, Object>()
-                        .put("id", "state0/substates/substate0")
-                        .put("status", "good")
-                        .put("substates", new ImmutableList.Builder<String>()
-                                .build())
-                        .build())
-                .put("state0/substates/substate1", new ImmutableMap.Builder<String, Object>()
-                        .put("id", "state0/substates/substate1")
-                        .put("status", "failed")
-                        .put("substates", new ImmutableList.Builder<String>()
-                                .build())
-                        .build())
-                .build();
-
-        // create new state cache
-        StateCache cache = new StateCache.Builder()
-                .initialState(state)
-                .build();
-
-        // hold initial state snapshot
-        Map<String, Object> cacheSnapshot = cache.snapshot();
-
-        // insert state into jruby runtime properties so that state participant can access it
-        Map<String, Object> routeProperties = ImmutableMap.<String, Object>builder()
-                .put("state_cache", cache).build();
-
-        // start jruby runtime and load test workflows
-        RuoteRuntime ruoteRuntime = RuoteRuntime.createRuntime(routeProperties);
-        RuoteWorkflow useWorkItemsWorkflow =
-                RuoteWorkflow.createFromResource("workflows/radial/use_workitems.radial", ruoteRuntime);
-        RuoteWorkflow echoWorkflow =
-                RuoteWorkflow.createFromResource("workflows/radial/echo_workflow.radial", ruoteRuntime);
-
-        // execute workflow that works with workitems and waits on state
-        useWorkItemsWorkflow.asyncExecute(cacheSnapshot);
-
-        // sleep some to make sure the above work flow is executed first
-        System.out.println("sleep 2000 ms from test");
-        Thread.sleep(2000);
-
-        // execute workflow that does almost nothing
-        echoWorkflow.asyncExecute();
-
-        // make sure the echo workflow occured and was not blocked
-        Assert.assertTrue(RuoteStateCacheTestDummyJavaParticipant.latch.await(5, TimeUnit.SECONDS));
-
-        // the use_workitems workflow waits on this state, this will release the use_workitems workflow
-        final ImmutableMap<Object, Object> value = ImmutableMap.builder().put("value", "good").build();
-        cache.put("general_status", value);
-
-        // assert workflow continued properly
-        RuoteStateCacheTestJavaParticipant.latch.await(60, TimeUnit.SECONDS);
-        Map<String, Object> receivedWorkItemFields = RuoteStateCacheTestJavaParticipant.lastWorkitems;
-        Assert.assertNotNull(receivedWorkItemFields);
-
-        // assert original state exists
-        for (Map.Entry<String, Object> entry : cacheSnapshot.entrySet()) {
-            Assert.assertEquals(receivedWorkItemFields.get(entry.getKey()), entry.getValue());
+    @AfterMethod(alwaysRun = true)
+    public void closeRuoteRuntime() throws Exception {
+        if (cache != null) {
+            cache.close();
         }
+    }
 
-        // assert state modified by workflow exists
-        Assert.assertEquals(receivedWorkItemFields.get("state0_id_processed"),
-                asMap(state.get("state0")).get("id"));
-        Assert.assertEquals(receivedWorkItemFields.get("state0_status_processed"),
-                asMap(state.get("state0")).get("status"));
-        for (int i = 0; i <= 1; i++) {
-            Assert.assertEquals(receivedWorkItemFields.get("state0/substates/substate" + i + "_id_processed"),
-                    asMap(state.get("state0/substates/substate" + i)).get("id"));
-            Assert.assertEquals(receivedWorkItemFields.get("state0/substates/substate" + i + "_status_processed"),
-                    asMap(state.get("state0/substates/substate" + i)).get("status"));
+    @Test(timeOut = 120000)
+    public void testStateCacheWithWorkflowsAndTimeout() throws Exception {
+
+        final String flow =
+            "define flow\n" +
+            "  participant ref: \"state\", resource_id: 'general_status',  state: {value: 'good'}, timeout: '1s', " +
+                    "on_timeout: 'error'";
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, ruoteRuntime);
+
+        try {
+            workflow.execute();
+        } catch (org.jruby.embed.InvokeFailedException e) {
+            assertThat(e.getMessage()).contains("error triggered from process definition");
         }
-
-        // assert workflow after waiting on state change, includes the new state
-        Assert.assertEquals(value,
-                receivedWorkItemFields.get("general_status"));
     }
 
     @Test(timeOut = 60000)
     public void testStateCacheParticipantWithResourceIdParameter() {
-        final String key = "node";
-        final String property = "reachable";
-        final String value = "true";
-        final StateCache cache = new StateCache.Builder().build();
-
-        final StateChangedMessage message = new StateChangedMessage();
-        final Map<String, Object> state = Maps.newHashMap();
-        state.put(property, value);
-        message.setState(state);
-        cache.put(key, state);
+        cache.put("node1", "reachable", "true");
 
         final String flow =
                 "define flow\n" +
                         "  state resource_id: \"$resource_id\", state: {reachable: \"true\"}\n";
 
-        final Map<String, Object> props = Maps.newHashMap();
-        props.put("state_cache", cache);
-        final RuoteRuntime runtime = RuoteRuntime.createRuntime(props);
-        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, runtime);
-        final Map<String, Object> workitem = Maps.newHashMap();
-        workitem.put("resource_id", key);
-
-        final Object workflowId = workflow.asyncExecute(workitem);
-
-        runtime.waitForWorkflow(workflowId);
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(flow, ruoteRuntime);
+        workflow.execute(newMap("resource_id", (Object) "node1"));
     }
 
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> asMap(Object object) {
-        return (Map<String, Object>) object;
+    private static <T> Map<String, T> newMap(String key, T value) {
+        return new ImmutableMap.Builder<String, T>().put(key, value).build();
     }
-
 }

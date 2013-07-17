@@ -16,20 +16,17 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import java.util.Map;
-
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Listener of {@link StateCache} events.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface StateChangeCallback {
+public interface StateCacheListener {
 
     /**
-     * Notify upon state change.
+     * Notify upon resource state change.
      * @return whether this callback should be removed from the state cache after this event is triggered.
      */
-    boolean onStateChange(Object receiver, Object context, StateCache cache, Map<String, Object> newSnapshot);
-
+    boolean onResourceStateChange(StateCacheSnapshot snapshot);
 }

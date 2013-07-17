@@ -31,6 +31,6 @@ public class StateCacheConfig {
 
     @Bean(destroyMethod = "close")
     public StateCache stateCache() {
-        return new StateCache.Builder().build();
+        return new StateCache();
     }
 }

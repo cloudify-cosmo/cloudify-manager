@@ -22,7 +22,7 @@ import org.testng.annotations.Test;
 
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.Lock;
 
 /**
  *
@@ -34,7 +34,7 @@ public class NamedLockProviderTest {
     private final Random random = new Random();
 
     private final NamedLockProvider namedLock = new NamedLockProvider();
-    private final Map<ReentrantReadWriteLock, ReentrantReadWriteLock> locks = Maps.newConcurrentMap();
+    private final Map<Lock, Lock> locks = Maps.newConcurrentMap();
     private final Map<Integer, Integer> lockIDs = Maps.newConcurrentMap();
 
     private volatile boolean wait = true;
@@ -75,7 +75,7 @@ public class NamedLockProviderTest {
             while (run) {
                 int maxID = 500;
                 int lockID = random.nextInt(maxID);
-                ReentrantReadWriteLock lock = namedLock.forName("" + lockID);
+                Lock lock = namedLock.forName("" + lockID);
                 locks.put(lock, lock);
                 lockIDs.put(lockID, lockID);
             }

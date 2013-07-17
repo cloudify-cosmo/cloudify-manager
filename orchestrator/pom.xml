@@ -287,6 +287,7 @@
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
                                 <usedDependency>org.robotninjas.riemann:spring</usedDependency>
+                                <usedDependency>org.cloudifysource.cosmo:state-cache-api</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
