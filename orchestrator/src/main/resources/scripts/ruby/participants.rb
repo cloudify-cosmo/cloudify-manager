@@ -15,7 +15,7 @@
 # *******************************************************************************/
 
 require 'participants/java_participant'
-require 'participants/state_cache_participant_new'
+require 'participants/state_cache_participant'
 require 'participants/resource_manager'
 require 'participants/execute_task_participant'
 require 'participants/prepare_plan_participant'
