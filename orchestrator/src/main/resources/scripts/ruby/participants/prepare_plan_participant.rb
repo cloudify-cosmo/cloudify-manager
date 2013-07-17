@@ -51,9 +51,7 @@ class PreparePlanParticipant < Ruote::Participant
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
         end
-
       end
-      nodes.each {|node| add_relationship_to_state(node, hosts_with_plugins)}
 
       workitem.fields['plan'] = plan
 
