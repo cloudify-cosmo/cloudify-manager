@@ -16,6 +16,7 @@
 
 java_import org.cloudifysource::cosmo::statecache::StateCacheListener
 
+#TODO: Collapse listener into participant in order to reduce code size
 class RuoteStateCacheListener
   include StateCacheListener
 
@@ -63,6 +64,7 @@ required_state={}]', @resource_id, @workitem.params, snapshot, required_state)
 
         # state cache listener is always invoked by a single thread
         # and therefore the following code is safe
+        # TODO: Consider initializing RUNTIME hashmap explicitly outside this participant and not eagerly
         properties[RUNTIME] = Hash.new unless properties.has_key? RUNTIME
         properties[RUNTIME][@resource_id] = node_state
       end
