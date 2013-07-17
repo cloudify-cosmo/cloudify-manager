@@ -117,7 +117,6 @@ definitions:
                               }
                             }
                           execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.restart'
-                          state_changed resource_id: '${node.id}', state: { ready_for_plugins: "true" }
 
         cloudify.tosca.types.middleware_server:
             init:

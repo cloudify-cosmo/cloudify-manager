@@ -105,23 +105,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MockCeleryTaskWorker worker;
 
-    //Test disabled since file not found
-    @Test(timeOut = 30000, enabled = false)
-    public void testPlanExecutionDslYaml() throws IOException, InterruptedException {
-        testPlanExecutionDsl("org/cloudifysource/cosmo/dsl/dsl.yaml");
-    }
-
-    private void testPlanExecutionDsl(String dslFile) throws IOException, InterruptedException {
-        String machineId = "mysql_template.mysql_machine";
-        String databaseId = "mysql_template.mysql_database_server";
-        OperationsDescriptor[] descriptors = {
-            new OperationsDescriptor(CLOUDIFY_MANAGEMENT, "provisioner_plugin", new String[] {"create", "start"}),
-            new OperationsDescriptor(machineId, "configurer_plugin", new String[] {"install", "start"}),
-            new OperationsDescriptor(machineId, "schema_configurer_plugin", new String[] {"create"})
-        };
-
-        testPlanExecution(dslFile, new String[]{machineId, databaseId}, descriptors);
-    }
 
     @Test(timeOut = 30000)
     public void testPlanExecutionDslWithBaseImports() throws IOException, InterruptedException {
@@ -306,7 +289,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                System.out.println(" -- received: [target=" + target + ", task=" + taskName + "]");
+                if (taskName.endsWith("verify_plugin")) {
+                    return;
+                }
                 if (assertExecutionOrder) {
                     executions.add(taskName);
                     if (expectedTasksWithSeparator.isEmpty()) {
@@ -368,6 +353,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         worker.addListener(machineId, new TaskReceivedListener() {
             @Override
             public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                if (taskName.endsWith("verify_plugin")) {
+                    return;
+                }
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
@@ -390,33 +378,70 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String remotePluginTarget = "cloudify.management";
         final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks";
         final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host.provisioner.tasks";
+        final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks";
 
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", Resources.getResource(dslFile).getFile());
-        ruoteWorkflow.asyncExecute(fields);
+        Object wfid = ruoteWorkflow.asyncExecute(fields);
 
-        final CountDownLatch latch = new CountDownLatch(3);
+        final CountDownLatch latch = new CountDownLatch(6);
 
-        worker.addListener(remotePluginTarget, new TaskReceivedListener() {
+        final List<String> executedTasks = Lists.newArrayList();
+
+        // Execution order should be:
+        // 0-verify [management]
+        // 1-provision
+        // 2-verify [agent]
+        // 3-install
+        // 4-verify [agent]
+        // 5-start
+        TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.startsWith(remoteTaskPrefix) && taskName.endsWith("provision")) {
+            public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                final int executedTasksCount = executedTasks.size();
+                if (taskName.startsWith(pluginInstallerPrefix)) {
+                    assertThat(kwargs).containsKey("plugin_name");
+                    assertThat(executedTasksCount).isIn(0, 2, 4);
+                    String pluginName = kwargs.get("plugin_name").toString();
+                    if (executedTasksCount == 0) {
+                        assertThat(target).isEqualTo(remotePluginTarget);
+                        assertThat(pluginName).isEqualTo(remoteTaskPrefix);
+                    } else if (executedTasksCount == 2 || executedTasksCount == 4) {
+                        assertThat(target).isEqualTo(machineId);
+                        assertThat(pluginName).isEqualTo(agentTaskPrefix);
+                    }
                     latch.countDown();
+                    executedTasks.add(taskName);
+                } else if (taskName.startsWith(remoteTaskPrefix)) {
+                    assertThat(target).isEqualTo(remotePluginTarget);
+                    assertThat(executedTasksCount).isEqualTo(1);
+                    assertThat(taskName).endsWith(".provision");
+                    latch.countDown();
+                    executedTasks.add(taskName);
+                } else if (taskName.startsWith(agentTaskPrefix)) {
+                    assertThat(target).isEqualTo(machineId);
+                    assertThat(executedTasksCount).isIn(3, 5);
+                    if (executedTasksCount == 3) {
+                        assertThat(taskName).endsWith(".install");
+                    } else {
+                        assertThat(taskName).endsWith(".start");
+                    }
+                    latch.countDown();
+                    executedTasks.add(taskName);
                 }
             }
-        });
-        worker.addListener(machineId, new TaskReceivedListener() {
-            @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.startsWith(agentTaskPrefix) &&
-                        (taskName.endsWith("install") || taskName.endsWith("start"))) {
-                    latch.countDown();
-                }
-            }
-        });
+        };
+
+        worker.addListener(machineId, listener);
+        worker.addListener(remotePluginTarget, listener);
+        worker.addListener(machineId, listener);
 
         reachable(machineId);
+        ruoteRuntime.waitForWorkflow(wfid);
+
         latch.await();
+
+        assertThat(executedTasks.size()).isEqualTo(6);
     }
 
     private String getResourceAsString(String resourceName) {
