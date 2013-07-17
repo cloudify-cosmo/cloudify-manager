@@ -14,7 +14,10 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-class RuoteStateChangeListener < org.cloudifysource.cosmo.statecache.StateCacheListenerStub
+java_import org.cloudifysource::cosmo::statecache::StateCacheListener
+
+class RuoteStateCacheListener
+  include StateCacheListener
 
   NODE = 'node'
   RUNTIME = 'cloudify_runtime'
@@ -88,7 +91,7 @@ class StateCacheParticipant < Ruote::Participant
       raise "#{RESOURCE_ID} property is not set" unless defined? resource_id
       raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
-      listener = RuoteStateChangeListener.new
+      listener = RuoteStateCacheListener.new
       listener.participant = self
       listener.resource_id = resource_id
       listener.workitem = workitem
