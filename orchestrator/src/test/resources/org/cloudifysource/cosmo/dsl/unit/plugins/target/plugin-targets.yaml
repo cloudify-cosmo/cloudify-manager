@@ -19,12 +19,13 @@ definitions:
                         cloudify.tosca.relationships.hosted_on: "host_template"
 
     plans:
-        host_template:
+        plugins_template.host_template:
             init:
                 radial: |
                     define host_init
+                        echo '!! overridden host_template init workflow !!'
                         execute_operation operation: 'provision'
-        server_template:
+        plugins_template.server_template:
             init:
                 radial: |
                     define server_init

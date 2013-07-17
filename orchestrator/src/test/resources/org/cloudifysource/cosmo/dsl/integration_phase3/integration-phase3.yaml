@@ -21,7 +21,7 @@ definitions:
                         worker_config:
                             user: 'vagrant'
                             port: '22'
-                            key: '/home/dan/.vagrant.d/insecure_private_key'
+                            key: '~/.vagrant.d/insecure_private_key'
                             broker: 'amqp://guest:guest@10.0.0.1:5672//'
 
                 webserver_middleware:
