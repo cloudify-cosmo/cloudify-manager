@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimaps;
@@ -108,6 +110,9 @@ public class StateCache implements AutoCloseable {
     }
 
     public void put(String resourceId, String property, String value) {
+        Preconditions.checkNotNull(resourceId);
+        Preconditions.checkNotNull(property);
+        Preconditions.checkNotNull(value);
         final ReentrantReadWriteLock.WriteLock writeLock = lockProvider.forName(resourceId).writeLock();
         writeLock.lock();
         try {
@@ -124,6 +129,8 @@ public class StateCache implements AutoCloseable {
     }
 
     public String subscribe(String resourceId, StateCacheListener listener) {
+        Preconditions.checkNotNull(resourceId);
+        Preconditions.checkNotNull(listener);
         final ReentrantReadWriteLock.ReadLock readLock = lockProvider.forName(resourceId).readLock();
         readLock.lock();
         try {
@@ -156,8 +163,9 @@ public class StateCache implements AutoCloseable {
                         }
 
                         @Override
-                        public String getProperty(String resourceId, String property) {
-                            return snapshot.get(new StateCacheProperty(resourceId, property));
+                        public Optional<String> getProperty(String resourceId, String property) {
+                            final StateCacheProperty stateCacheProperty = new StateCacheProperty(resourceId, property);
+                            return Optional.fromNullable(snapshot.get(stateCacheProperty));
                         }
 
                         @Override
@@ -166,7 +174,7 @@ public class StateCache implements AutoCloseable {
                             for (Map.Entry<StateCacheProperty, String> entry : snapshot
                                     .entrySet()) {
                                 if (entry.getKey().getResourceId().equals(resourceId))
-                                    builder.put(entry.getKey().getResourceId(), entry.getValue());
+                                    builder.put(entry.getKey().getProperty(), entry.getValue());
                             }
                             return builder.build();
                         }
@@ -183,6 +191,8 @@ public class StateCache implements AutoCloseable {
     }
 
     public void removeSubscription(String resourceId, String listenerId) {
+        Preconditions.checkNotNull(resourceId);
+        Preconditions.checkNotNull(listenerId);
         listeners.remove(resourceId, StateCacheListenerHolder.removeTemplate(listenerId));
     }
 }

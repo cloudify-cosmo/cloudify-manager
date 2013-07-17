@@ -45,7 +45,7 @@ class RuoteStateChangeListener < org.cloudifysource.cosmo.statecache.StateCacheL
 required_state={}]', @resource_id, @workitem.params, snapshot, required_state)
     required_state.each do |key, value|
       matches = (snapshot.contains_property(@resource_id, key) and snapshot.get_property(@resource_id,
-                                                                                 key).to_s.eql? value.to_s)
+                                                                                 key).get.to_s.eql? value.to_s)
       break unless matches
     end
 

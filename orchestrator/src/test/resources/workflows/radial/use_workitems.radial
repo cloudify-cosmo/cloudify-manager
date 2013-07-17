@@ -1,9 +1,0 @@
-define use_workitems
-  echo 'from use_workitems'
-  participant ref: "state", resource_id: 'general_status', state: {value: 'good'}
-
-  set field: 'state0_status_processed', value: '$state0.status'
-
-  participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteStateCacheTestJavaParticipant"
-  echo 'goodbye use_workitems'
-

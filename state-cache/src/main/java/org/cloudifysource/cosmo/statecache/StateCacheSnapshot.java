@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -28,7 +29,7 @@ public interface StateCacheSnapshot {
 
     boolean containsProperty(String resourceId, String property);
 
-    String getProperty(String resourceId, String property);
+    Optional<String> getProperty(String resourceId, String property);
 
     ImmutableMap<String, String> getResourceProperties(String resourceId);
 }

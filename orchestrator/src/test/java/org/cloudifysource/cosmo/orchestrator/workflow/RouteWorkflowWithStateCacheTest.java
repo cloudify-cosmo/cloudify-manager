@@ -73,46 +73,6 @@ public class RouteWorkflowWithStateCacheTest {
         }
     }
 
-    @Test(timeOut = 120000)
-    public void testStateCacheWithWorkflows() throws InterruptedException {
-
-        // create new state cache
-        cache.put("state0", "status", "good");
-
-        RuoteWorkflow useWorkItemsWorkflow =
-                RuoteWorkflow.createFromResource("workflows/radial/use_workitems.radial", ruoteRuntime);
-        RuoteWorkflow echoWorkflow =
-                RuoteWorkflow.createFromResource("workflows/radial/echo_workflow.radial", ruoteRuntime);
-
-        // execute workflow that works with workitems and waits on state
-        final Object useWorkItemsWorkflowId = useWorkItemsWorkflow.asyncExecute(
-                newMap("state0", (Object) newMap("status", "good")));
-
-
-        // sleep some to make sure the above work flow is executed first
-        System.out.println("sleep 2000 ms from test");
-        Thread.sleep(2000);
-
-        // execute workflow that does almost nothing
-        echoWorkflow.execute();
-
-        // the use_workitems workflow waits on this state, this will release the use_workitems workflow
-        cache.put("general_status", "value", "good");
-
-        // assert workflow continued properly
-        ruoteRuntime.waitForWorkflow(useWorkItemsWorkflowId);
-        Map<String, Object> receivedWorkItemFields = RuoteStateCacheTestJavaParticipant.getAndClearLastWorkItems();
-        assertThat(((Map<String, String>) receivedWorkItemFields.get("state0")).get("status"))
-                .isEqualTo("good");
-
-        // assert state modified by workflow exists
-        assertThat(receivedWorkItemFields.get("state0_status_processed")).isEqualTo("good");
-
-        // assert workflow after waiting on state change, includes the new state
-        assertThat(((Map<String, String>) receivedWorkItemFields.get("general_status")).get("value"))
-                .isEqualTo("good");
-    }
-
     @Test(timeOut = 60000)
     public void testStateCacheParticipantWithResourceIdParameter() {
         cache.put("node1", "reachable", "true");
