@@ -112,18 +112,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     private MockCeleryTaskWorker worker;
 
 
-    private void testPlanExecutionDsl(String dslFile) throws IOException, InterruptedException {
-        String machineId = "mysql_template.mysql_machine";
-        String databaseId = "mysql_template.mysql_database_server";
-        OperationsDescriptor[] descriptors = {
-            new OperationsDescriptor(CLOUDIFY_MANAGEMENT, "provisioner_plugin", new String[] {"create", "start"}),
-            new OperationsDescriptor(machineId, "configurer_plugin", new String[] {"install", "start"}),
-            new OperationsDescriptor(machineId, "schema_configurer_plugin", new String[] {"create"})
-        };
-
-        testPlanExecution(dslFile, new String[]{machineId, databaseId}, descriptors);
-    }
-
     @Test(timeOut = 30000)
     public void testPlanExecutionDslWithBaseImports() throws IOException, InterruptedException {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
@@ -422,7 +410,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 if (taskName.startsWith(pluginInstallerPrefix)) {
                     assertThat(kwargs).containsKey("plugin_name");
                     assertThat(executedTasksCount).isIn(0, 2, 4);
-                    String pluginName = "cosmo." + kwargs.get("plugin_name").toString() + ".tasks";
+                    String pluginName = kwargs.get("plugin_name").toString();
                     if (executedTasksCount == 0) {
                         assertThat(target).isEqualTo(remotePluginTarget);
                         assertThat(pluginName).isEqualTo(remoteTaskPrefix);
