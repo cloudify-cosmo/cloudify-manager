@@ -77,22 +77,25 @@ def install(plugin, **kwargs):
 
 
 @celery.task
-def verify_plugin(plugin_name, **kwargs):
-    p = subprocess.Popen(["celery", "inspect", "registered", "--no-color"], stdout=subprocess.PIPE)
+def verify_plugin(worker_id, plugin_name, **kwargs):
+    p = subprocess.Popen(["celery", "inspect", "registered", "-d", worker_id, "--no-color"], stdout=subprocess.PIPE)
     out, err = p.communicate()
 
     if p.returncode != 0:
-        raise RuntimeError("unable to get celery worker registered tasks [returncode={0}]".format(returncode))
+        raise RuntimeError("unable to get celery worker registered tasks [returncode={0}]".format(p.returncode))
 
     lines = out.splitlines()
+    registered_tasks = list()
     for line in lines:
         processed_line = line.strip()
         if processed_line.startswith("*"):
             task = processed_line[1:].strip()
             if task.startswith(plugin_name):
                 return True
+            else:
+                registered_tasks.append(task)
 
-    raise RuntimeError("plugin [{0}] is not installed in celery worker".format(plugin_name))
+    raise RuntimeError("plugin [{0}] is not installed in celery worker [registered_tasks={1}]".format(plugin_name, registered_tasks))
 
 
 def download_plugin(url, path):
