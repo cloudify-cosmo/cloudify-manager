@@ -43,7 +43,6 @@ def create_dashboard(dashboard_variables)
   dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
   dashboard.register_participant 'java', JavaClassParticipant
   dashboard.register_participant 'state', StateCacheParticipant
-  dashboard.register_participant 'resource', ResourceManagerParticipant
   dashboard.register_participant 'execute_task', ExecuteTaskParticipant
   dashboard.register_participant 'prepare_plan', PreparePlanParticipant
   dashboard.register_participant 'prepare_operation', PrepareOperationParticipant
