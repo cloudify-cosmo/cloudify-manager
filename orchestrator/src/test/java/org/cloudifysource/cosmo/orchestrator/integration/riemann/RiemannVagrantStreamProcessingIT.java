@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.orchestrator.integration.riemann;
 import com.aphyr.riemann.Proto;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Queues;
+import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.robobninjas.riemann.json.RiemannEvent;
@@ -29,11 +30,9 @@ import org.robotninjas.riemann.client.RiemannTcpConnection;
 import org.robotninjas.riemann.pubsub.QueryResultListener;
 import org.robotninjas.riemann.pubsub.RiemannPubSubClient;
 import org.robotninjas.riemann.pubsub.RiemannPubSubConnection;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
@@ -76,12 +75,7 @@ public class RiemannVagrantStreamProcessingIT extends AbstractTestNGSpringContex
     @Configuration
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/riemann-vagrant-test.properties")
     @Import({ RiemannTestConfiguration.class })
-    static class Config {
-
-        @Bean
-        public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-            return new PropertySourcesPlaceholderConfigurer();
-        }
+    static class Config extends TestConfig {
     }
 
     @Inject
