@@ -5,6 +5,10 @@ jdk:
   
 before_script:
    - "gem install travis-artifacts"
+   - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
+   - "sudo dpkg -i riemann_0.2.2_all.deb"
+   - "sudo touch /var/log/riemann/riemann.log"
+   - "sudo chmod 666 /var/log/riemann/riemann.log"
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
@@ -17,8 +21,6 @@ script:
 after_success:
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/bootstrapper --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
-  - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/resource-monitor --target-path travisci"
-  - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/resource-monitor-api --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache-api --target-path travisci"
 

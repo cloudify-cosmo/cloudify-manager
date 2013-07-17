@@ -12,28 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
-package org.cloudifysource.cosmo.cloud.driver;
+ ******************************************************************************/
+
+package org.cloudifysource.cosmo.statecache.config;
+
+import org.cloudifysource.cosmo.statecache.StateCache;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * @author Idan Moyal
+ * Creates a new {@link StateCache}.
+ *
+ * @author Itai Frenkel
  * @since 0.1
  */
-public class MachineConfiguration {
+@Configuration
+public class StateCacheConfig {
 
-    private String id;
-    private String image;
-
-    public MachineConfiguration(String id, String image) {
-        this.id = id;
-        this.image = image;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getImage() {
-        return image;
+    @Bean(destroyMethod = "close")
+    public StateCache stateCache() {
+        return new StateCache.Builder().build();
     }
 }
