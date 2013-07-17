@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.Lock;
 
 /**
  * The state cache holds the state of each resource, the state of each resource is a collection of properties
@@ -113,26 +113,30 @@ public class StateCache implements AutoCloseable {
         Preconditions.checkNotNull(resourceId);
         Preconditions.checkNotNull(property);
         Preconditions.checkNotNull(value);
-        final ReentrantReadWriteLock.WriteLock writeLock = lockProvider.forName(resourceId).writeLock();
-        writeLock.lock();
+        final Lock lock = lockProvider.forName(resourceId);
+        lock.lock();
         try {
             cache.put(new StateCacheProperty(resourceId, property), value);
             final TrieMap<StateCacheProperty, String> snapshot = cache.snapshot();
             final Set<StateCacheListenerHolder> resourceListeners = listeners.get(resourceId);
+            /** Ignoring instruction appearing on
+             * {@link Multimaps#synchronizedMultimap(com.google.common.collect.Multimap)} because when this multi-value
+             * is accessed it is always under a specific lock for this resource id, meaning there aren't two concurrent
+             * threads accessing it hence we get a legit snapshot of the values */
             for (StateCacheListenerHolder listenerHolder : resourceListeners) {
                 submitTriggerEventTask(resourceId, listenerHolder.getListener(), listenerHolder.getListenerId(),
                         snapshot);
             }
         } finally {
-            writeLock.unlock();
+            lock.unlock();
         }
     }
 
     public String subscribe(String resourceId, StateCacheListener listener) {
         Preconditions.checkNotNull(resourceId);
         Preconditions.checkNotNull(listener);
-        final ReentrantReadWriteLock.ReadLock readLock = lockProvider.forName(resourceId).readLock();
-        readLock.lock();
+        final Lock lock = lockProvider.forName(resourceId);
+        lock.lock();
         try {
             final String listenerId = UUID.randomUUID().toString();
             listeners.put(resourceId, StateCacheListenerHolder.create(listener, listenerId));
@@ -145,7 +149,7 @@ public class StateCache implements AutoCloseable {
             }
             return listenerId;
         } finally {
-            readLock.unlock();
+            lock.unlock();
         }
     }
 
@@ -193,6 +197,12 @@ public class StateCache implements AutoCloseable {
     public void removeSubscription(String resourceId, String listenerId) {
         Preconditions.checkNotNull(resourceId);
         Preconditions.checkNotNull(listenerId);
-        listeners.remove(resourceId, StateCacheListenerHolder.removeTemplate(listenerId));
+        final Lock lock = lockProvider.forName(resourceId);
+        lock.lock();
+        try {
+            listeners.remove(resourceId, StateCacheListenerHolder.removeTemplate(listenerId));
+        } finally {
+            lock.unlock();
+        }
     }
 }
