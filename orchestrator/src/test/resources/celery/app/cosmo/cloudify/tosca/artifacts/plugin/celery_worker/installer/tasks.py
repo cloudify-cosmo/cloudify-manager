@@ -6,9 +6,12 @@ from cosmo.celery import celery as celery
 from celery.utils.log import get_task_logger
 from fabric.api import settings, sudo, run, put
 import socket
+import os
 from os import path
 
 logger = get_task_logger(__name__)
+
+_plugins_to_install = ["plugin_installer"]
 
 @celery.task
 def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
@@ -58,14 +61,31 @@ def _install_celery(worker_config, node_id):
     broker_url = worker_config['broker']
     app = worker_config['app']
     home = "/home/" + user
+    app_dir = home + "/" + app
 
-    # copy remote app folder to remote home directory (contains init code and plugin installer code)
-    run("rm -rf " + home + "/" + app)
+    run("rm -rf " + app_dir)
+
+    # create app directory and copy necessary files to it
+    run("mkdir " + app_dir)
     script_path = path.realpath(__file__)
     script_dir = path.dirname(script_path)
-    copy_dir = path.join(script_dir, 'remote')
-    copy_dir = path.join(copy_dir, app)
-    put(copy_dir, home)
+    put(script_dir + "/remote/__init__.py", app_dir)
+    put(script_dir + "/remote/celery.py", app_dir)
+
+    # create app/cloudify/tosca/artifacts/plugin with __init__.py file in each directory
+    remote_plugin_path = app_dir
+    for dir in ["cloudify", "tosca", "artifacts", "plugin"]:
+        remote_plugin_path = path.join(remote_plugin_path, dir)
+        run("mkdir " + remote_plugin_path)
+        run('echo "" > ' + remote_plugin_path + '/__init__.py')
+
+    # install plugins (from ../*) according to _plugins_to_install
+    plugins_dir = path.abspath(path.join(script_dir, "../.."))
+    for plugin in _plugins_to_install:
+        plugin_dir = path.join(plugins_dir, plugin)
+        if not path.exists(plugin_dir):
+            raise RuntimeError("plugin [{0}] does not exist [path={1}]".format(plugin, plugin_dir))
+        put(plugin_dir, remote_plugin_path)
 
     #daemonize
     sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
@@ -98,7 +118,8 @@ CELERYD_OPTS="\
 --loglevel=info \
 --app=%(app)s \
 -Q %(node_id)s \
---broker=%(broker_url)s"''' % dict(user=user,
+--broker=%(broker_url)s \
+--hostname=%(node_id)s"''' % dict(user=user,
                                    workdir=workdir,
                                    app=app,
                                    node_id=node_id,

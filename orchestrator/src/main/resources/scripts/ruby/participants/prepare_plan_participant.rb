@@ -48,6 +48,10 @@ class PreparePlanParticipant < Ruote::Participant
           end
         end
         node['properties']['cloudify_runtime'] = Hash.new
+        node['relationships'].each do |relationship|
+          relationship['state'] = 'reachable'
+        end
+
       end
       nodes.each {|node| add_relationship_to_state(node, hosts_with_plugins)}
 
@@ -105,13 +109,6 @@ class PreparePlanParticipant < Ruote::Participant
       end
     end
     host_node['plugins_to_install'] = plugins_to_install.values
-  end
-
-  def add_relationship_to_state(node, hosts_with_plugins)
-    node['relationships'].each do |relationship|
-      target_id = relationship['target_id']
-      relationship['state'] = hosts_with_plugins.include?(target_id) ? 'ready_for_plugins' : 'reachable'
-    end
   end
 
 end
