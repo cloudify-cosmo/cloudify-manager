@@ -59,6 +59,7 @@ class VagrantStatusMonitor(object):
                               abort_on_prompts=True,
                               remote_interrupt=False):
                 with api.hide('aborts', 'running', 'stdout', 'stderr'):
+                    # TODO: test this.
                     # extract ip from ifconfig output
                     return api.run("ifconfig {0} | \
                                     grep 'inet addr:' | \
