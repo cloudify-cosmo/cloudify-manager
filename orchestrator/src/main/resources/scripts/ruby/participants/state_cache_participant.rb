@@ -23,9 +23,6 @@ class StateCacheParticipant < Ruote::Participant
   RESOURCE_ID = 'resource_id'
   LISTENER_ID = 'listener_id'
   STATE = 'state'
-  NODE = 'node'
-  RUNTIME = 'cloudify_runtime'
-  PROPERTIES = 'properties'
 
   def on_workitem
     begin
@@ -75,18 +72,13 @@ required_state={}]', resource_id, workitem.params, snapshot, required_state)
 
 
     if matches
-      if workitem.fields.has_key? NODE
-        current_node = workitem.fields[NODE]
+      if workitem.fields.has_key? PreparePlanParticipant::NODE
+        current_node = workitem.fields[PreparePlanParticipant::NODE]
         state = snapshot.get_resource_properties(resource_id)
         node_state = Hash.new
         state.each { |key, value| node_state[key] = value }
-        properties = current_node[PROPERTIES]
-
-        # state cache listener is always invoked by a single thread
-        # and therefore the following code is safe
-        # TODO: Consider initializing RUNTIME hashmap explicitly outside this participant and not eagerly
-        properties[RUNTIME] = Hash.new unless properties.has_key? RUNTIME
-        properties[RUNTIME][resource_id] = node_state
+        properties = current_node[PreparePlanParticipant::PROPERTIES]
+        properties[PreparePlanParticipant::RUNTIME][resource_id] = node_state
       end
       reply(workitem)
       true
