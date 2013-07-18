@@ -23,9 +23,9 @@ import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.config.MockPortKnockerConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
+import org.cloudifysource.cosmo.orchestrator.integration.config.VagrantRiemannMonitorProcessConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
@@ -81,14 +81,19 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             RiemannTestConfiguration.class,
             DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
-            MockPortKnockerConfig.class,
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
             JythonProxyConfig.class,
-            CeleryWorkerProcessConfig.class
+            CeleryWorkerProcessConfig.class,
+            VagrantRiemannMonitorProcessConfig.class
     })
-    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
+    @PropertySource({
+        "org/cloudifysource/cosmo/orchestrator/integration/config/test.properties",
+        "org/cloudifysource/cosmo/orchestrator/integration/config/vagrant-riemann-monitor.properties",
+        "org/cloudifysource/cosmo/orchestrator/integration/config/riemann-vagrant-test.properties"
+    })
     static class Config extends TestConfig {
+
     }
 
     /**

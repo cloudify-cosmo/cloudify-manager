@@ -118,11 +118,8 @@ public class StateCacheFeeder {
         };
     }
 
-
     private String queryString() {
-        //TODO: Filter only processed events
-        final String allEvents = "true";
-        return allEvents;
+        return "tagged \"cosmo\"";
     }
 
     public void close() {
