@@ -43,11 +43,11 @@ class PreparePlanParticipant < Ruote::Participant
       nodes.each do |node|
         if nodes_extra[node['id']]['super_types'].include? HOST_TYPE
           add_plugins_to_install(node, nodes)
-          if node['properties']['install_agent'] == 'true'
+          if node[PROPERTIES]['install_agent'] == 'true'
             hosts_with_plugins << node['id']
           end
         end
-        node['properties']['cloudify_runtime'] = Hash.new
+        node[PROPERTIES][RUNTIME] = Hash.new
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
         end
