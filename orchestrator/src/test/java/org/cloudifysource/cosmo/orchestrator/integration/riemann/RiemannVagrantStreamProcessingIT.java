@@ -73,7 +73,7 @@ public class RiemannVagrantStreamProcessingIT extends AbstractTestNGSpringContex
     /**
      */
     @Configuration
-    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/riemann-vagrant-test.properties")
+    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     @Import({ RiemannTestConfiguration.class })
     static class Config extends TestConfig {
     }
