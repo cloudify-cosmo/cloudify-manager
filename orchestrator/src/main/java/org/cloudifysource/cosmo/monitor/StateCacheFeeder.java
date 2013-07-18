@@ -95,15 +95,13 @@ public class StateCacheFeeder {
             public void handleResult(String result) {
                 try {
                     final RiemannEvent event = objectMapper.readEvent(result);
-                    if (event.getService().equals("events/sec")) {
+                    // TODO: filter by event
+                    if (event.getService().equals("events/sec") || event.getState() == null) {
                         //Filter out "events/sec" events
                         return;
                     }
                     final String resourceId = event.getHost();
                     Preconditions.checkNotNull(resourceId, "RiemannEvent host field cannot be null");
-                    // TODO remove this merge logic. It is only here to provide a quick
-                    // solution to reach phase 3 integration. when monitoring is properly
-                    // introduced, this logic is expected to happen there and not here
                     StateCacheFeeder.this.stateCache.put(resourceId, event.getService(), event.getState());
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);

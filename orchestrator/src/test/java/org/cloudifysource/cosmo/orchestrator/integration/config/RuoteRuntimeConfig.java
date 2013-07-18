@@ -23,8 +23,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.StateCache;
@@ -72,12 +70,6 @@ public class RuoteRuntimeConfig {
     private StateCache stateCache;
 
     @Inject
-    private MessageProducer messageProducer;
-
-    @Inject
-    private MessageConsumer messageConsumer;
-
-    @Inject
     private TaskExecutor taskExecutor;
 
     @Bean
@@ -86,8 +78,6 @@ public class RuoteRuntimeConfig {
         runtimeProperties.put("state_cache", stateCache);
         runtimeProperties.put("state_cache_topic", stateCacheTopic);
         runtimeProperties.put("broker_uri", messageBrokerURI);
-        runtimeProperties.put("message_producer", messageProducer);
-        runtimeProperties.put("message_consumer", messageConsumer);
         runtimeProperties.put("executor", taskExecutor);
         runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
         runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);

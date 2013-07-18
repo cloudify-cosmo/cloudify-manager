@@ -29,8 +29,6 @@ import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
 import org.cloudifysource.cosmo.dsl.packaging.ExtractedDSLPackageDetails;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
@@ -77,8 +75,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
      */
     @Configuration
     @Import({
-            MockMessageConsumerConfig.class,
-            MockMessageProducerConfig.class,
             DefaultRuoteWorkflowConfig.class,
             RuoteRuntimeConfig.class,
             TemporaryDirectoryConfig.class,

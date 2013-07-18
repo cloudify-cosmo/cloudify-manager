@@ -22,8 +22,6 @@ import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
@@ -78,8 +76,6 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Import({
             TemporaryDirectoryConfig.class,
             JettyFileServerForPluginsConfig.class,
-            MockMessageConsumerConfig.class,
-            MockMessageProducerConfig.class,
             StateCacheConfig.class,
             StateCacheFeederConfig.class,
             RiemannTestConfiguration.class,

@@ -17,10 +17,6 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Objects;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
-import org.cloudifysource.cosmo.messaging.config.MockMessageProducerConfig;
-import org.cloudifysource.cosmo.messaging.consumer.MessageConsumer;
-import org.cloudifysource.cosmo.messaging.producer.MessageProducer;
 import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
@@ -59,8 +55,6 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
      */
     @Configuration
     @Import({
-            MockMessageConsumerConfig.class,
-            MockMessageProducerConfig.class,
             StateCacheConfig.class,
             RuoteRuntimeConfig.class,
             TemporaryDirectoryConfig.class,
@@ -75,14 +69,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
     private RuoteRuntime runtime;
 
     @Inject
-    private MessageProducer messageProducer;
-
-    @Inject
     private MockCeleryTaskWorker worker;
-
-    @Inject
-    private MessageConsumer messageConsumer;
-
 
     /**
      * Scenario 1:

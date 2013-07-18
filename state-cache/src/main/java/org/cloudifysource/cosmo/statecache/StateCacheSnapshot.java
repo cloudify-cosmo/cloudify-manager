@@ -16,12 +16,20 @@
 
 package org.cloudifysource.cosmo.statecache;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
+
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * A snapshot of a {@link StateCache}.
  *
- * @author Dan Kilman
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public abstract class StateChangeCallbackStub implements StateChangeCallback {
+public interface StateCacheSnapshot {
 
+    boolean containsProperty(String resourceId, String property);
+
+    Optional<String> getProperty(String resourceId, String property);
+
+    ImmutableMap<String, String> getResourceProperties(String resourceId);
 }

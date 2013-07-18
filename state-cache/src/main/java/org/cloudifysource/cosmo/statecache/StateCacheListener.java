@@ -12,20 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
-package org.cloudifysource.cosmo.tasks.executor;
+ ******************************************************************************/
 
-import org.cloudifysource.cosmo.tasks.messages.TaskStatusMessage;
+package org.cloudifysource.cosmo.statecache;
 
 /**
- * A listener for task execution status messages.
+ * Listener of {@link StateCache} events.
  *
- * @author Idan Moyal
+ * @author Eitan Yanovsky
  * @since 0.1
  */
-public interface TaskExecutorListener {
+public interface StateCacheListener {
 
-    void onTaskStatusReceived(TaskStatusMessage message);
-    void onFailure(Throwable t);
-
+    /**
+     * Notify upon resource state change.
+     * @return whether this callback should be removed from the state cache after this event is triggered.
+     */
+    boolean onResourceStateChange(StateCacheSnapshot snapshot);
 }

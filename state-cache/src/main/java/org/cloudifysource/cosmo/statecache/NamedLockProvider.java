@@ -19,7 +19,8 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *
@@ -30,25 +31,25 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class NamedLockProvider {
 
-    private final LoadingCache<String, ReentrantReadWriteLock> lockCache;
+    private final LoadingCache<String, ReentrantLock> lockCache;
 
     public NamedLockProvider() {
-        lockCache = CacheBuilder.newBuilder().build(new CacheLoader<String, ReentrantReadWriteLock>() {
-            public ReentrantReadWriteLock load(String name) {
-                return new ReentrantReadWriteLock();
+        lockCache = CacheBuilder.newBuilder().build(new CacheLoader<String, ReentrantLock>() {
+            public ReentrantLock load(String name) {
+                return new ReentrantLock();
             }
         });
     }
 
     /**
      * @param name The name of the lock to get
-     * @return The shared {@link java.util.concurrent.locks.ReentrantReadWriteLock} matching the provided name.
+     * @return The shared {@link java.util.concurrent.locks.Lock} matching the provided name.
      * One is created if it doesn't already exist.
-     * Note that the returned {@link java.util.concurrent.locks.ReentrantReadWriteLock}
+     * Note that the returned {@link java.util.concurrent.locks.Lock}
      *   should still be aquired and released by the client
      * calling this method.
      */
-    public ReentrantReadWriteLock forName(String name) {
+    public Lock forName(String name) {
         return lockCache.getUnchecked(name);
     }
 }
