@@ -15,7 +15,6 @@
     	<module>bootstrapper</module>
         <module>orchestrator</module>
         <module>state-cache</module>
-        <module>state-cache-api</module>
     </modules>
 
 </project>

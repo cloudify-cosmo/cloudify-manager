@@ -52,14 +52,6 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>message-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>tasks-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
         </dependency>
         <dependency>
@@ -151,18 +143,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>state-cache-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>logger</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>message-client</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -293,7 +274,6 @@
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
                                 <usedDependency>org.robotninjas.riemann:spring</usedDependency>
-                                <usedDependency>org.cloudifysource.cosmo:state-cache-api</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
