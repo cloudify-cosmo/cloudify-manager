@@ -21,6 +21,10 @@
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
 
+    <properties>
+        <mainClass>org.cloudifysource.cosmo.manager.Manager</mainClass>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -134,12 +138,10 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -180,7 +182,7 @@
                 <artifactId>maven-install-plugin</artifactId>
                 <version>2.3.1</version>
                 <configuration>
-                  <createChecksum>true</createChecksum>
+                    <createChecksum>true</createChecksum>
                 </configuration>
             </plugin>
             <plugin>
@@ -189,13 +191,13 @@
                 <version>2.2.1</version>
                 <executions>
                     <execution>
-                      <id>attach-sources</id>
-                      <phase>verify</phase>
-                      <goals>
-                        <goal>jar-no-fork</goal>
-                      </goals>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
                     </execution>
-                  </executions>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -308,4 +310,78 @@
             </snapshots>
         </repository>
     </repositories>
+    <profiles>
+
+        <profile>
+            <!--
+                Profile for building a management jar with all dependencies included.
+                Logging implementation is also included in this jar
+            -->
+            <id>all</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-core</artifactId>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <!--
+                        We are using the shade plugin instead of assembly because it provides a mechanism
+                        for merging duplicate META-INF/services/SomeRandomService entries
+                        which is required due to transitive dependencies jersey-core and jersey-server
+                        which both contain a different META-INF/services/javax.ws.rs.ext.MessageBodyWriter in their
+                        jar
+                    -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>2.1</version>
+                        <configuration>
+
+                            <filters>
+                                <!-- Don't want resulting jar to fail signature validation -->
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>all</shadedClassifierName>
+                            <minimizeJar>false</minimizeJar>
+                            <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${mainClass}</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
