@@ -28,8 +28,6 @@ import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
-import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
-import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +38,6 @@ import org.springframework.context.annotation.PropertySource;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 
