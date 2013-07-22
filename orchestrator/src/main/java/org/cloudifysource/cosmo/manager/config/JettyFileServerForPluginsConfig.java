@@ -17,12 +17,9 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -39,18 +36,8 @@ import javax.inject.Inject;
 @Import({
         TemporaryDirectoryConfig.class,
 })
-@PropertySource("org/cloudifysource/cosmo/manager/fileserver/config/test.properties")
+@PropertySource("org/cloudifysource/cosmo/manager/fileserver/jetty.properties")
 public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
-
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-        return new PropertySourcesPlaceholderConfigurer();
-    }
-
-    @Bean
-    public static BeanValidationPostProcessor beanValidationPostProcessor() {
-        return new BeanValidationPostProcessor();
-    }
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
