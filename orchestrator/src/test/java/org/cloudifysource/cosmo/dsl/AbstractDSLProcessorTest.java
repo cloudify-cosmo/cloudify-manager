@@ -46,10 +46,6 @@ public abstract class AbstractDSLProcessorTest {
         }
     }
 
-    protected ObjectMapper getObjectMapper() {
-        return OBJECT_MAPPER;
-    }
-
     protected static ObjectMapper newObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);

@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.dsl.resource.DSLResource;
 import org.cloudifysource.cosmo.dsl.resource.ImportsContext;
@@ -41,6 +42,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Processes dsl in json format into a json form suitable for ruote consumption.
@@ -83,6 +85,8 @@ public class DSLProcessor {
             Map<String, ServiceTemplate> populatedServiceTemplates =
                     buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
 
+            validatePlans(definitions, populatedTypes);
+
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
                     populatedServiceTemplates,
@@ -108,6 +112,24 @@ public class DSLProcessor {
         }
     }
 
+    private static void validatePlans(Definitions definitions, Map<String, Type> populatedTypes) {
+        final Set<String> nodeTemplates = Sets.newHashSet();
+        for (Map.Entry<String, Plan> planEntry : definitions.getPlans().entrySet()) {
+            String planName = planEntry.getKey();
+            if (!populatedTypes.containsKey(planName)) {
+                for (Map.Entry<String, ServiceTemplate> serviceTemplateEntry : definitions
+                        .getServiceTemplates().entrySet()) {
+                    for (String nodeName : serviceTemplateEntry.getValue().getTopology().keySet()) {
+                        nodeTemplates.add(String.format("%s.%s", serviceTemplateEntry.getKey(), nodeName));
+                    }
+                }
+            }
+        }
+        for (String plan : definitions.getPlans().keySet()) {
+            Preconditions.checkArgument(populatedTypes.containsKey(plan) || nodeTemplates.contains(plan),
+                    "Plan [%s] does not match any node type or template", plan);
+        }
+    }
 
 
     private static Map<String, ServiceTemplate> buildPopulatedServiceTemplatesMap(
