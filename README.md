@@ -38,7 +38,7 @@ Build
 
 - git clone https://github.com/CloudifySource/cosmo-manager.git
 - cd cosmo-manager/orchestrator
-- mvn -DskipTests -Pall
+- mvn -DskipTests package -Pall
 
 Run
 ===
