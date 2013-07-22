@@ -61,7 +61,9 @@ public class Manager {
         try {
             deployDSL(dslPath);
         } finally {
+            context.close();
             Files.delete(extractionPath);
+            System.exit(0);
         }
 
     }
@@ -73,8 +75,6 @@ public class Manager {
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
-        System.exit(0);
-
     }
 
     private AnnotationConfigApplicationContext registerConfig() throws IOException {
