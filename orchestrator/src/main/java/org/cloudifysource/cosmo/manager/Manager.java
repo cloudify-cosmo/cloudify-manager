@@ -17,16 +17,17 @@
 package org.cloudifysource.cosmo.manager;
 
 import com.google.common.collect.Maps;
-import org.cloudifysource.cosmo.fileserver.JettyFileServer;
+import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
+import org.cloudifysource.cosmo.manager.process.CeleryWorkerProcess;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -49,6 +50,7 @@ public class Manager {
 
     private RuoteWorkflow ruoteWorkflow;
     private RuoteRuntime ruoteRuntime;
+    private CeleryWorkerProcess celeryWorkerProcess;
 
     public static void main(String[] args) throws Exception {
         new Manager("asd");
@@ -58,11 +60,13 @@ public class Manager {
         context = registerConfig();
         ruoteWorkflow = (RuoteWorkflow) context.getBean("defaultRuoteWorkflow");
         ruoteRuntime = (RuoteRuntime) context.getBean("ruoteRuntime");
+        celeryWorkerProcess = (CeleryWorkerProcess) context.getBean("celeryWorkerProcess");
         try {
             deployDSL(dslPath);
         } finally {
             context.close();
-            Files.delete(extractionPath);
+            FileUtils.deleteDirectory(extractionPath.toFile());
+            FileUtils.deleteDirectory(new File(celeryWorkerProcess.getWorkingDir()));
             System.exit(0);
         }
 
