@@ -33,7 +33,8 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
 @Import({
         JettyFileServerForPluginsConfig.class,
         DefaultRuoteWorkflowConfig.class,
-        RuoteRuntimeConfig.class
+        RuoteRuntimeConfig.class,
+        CeleryWorkerProcessConfig.class
 })
 public class MainManagerConfig {
 
