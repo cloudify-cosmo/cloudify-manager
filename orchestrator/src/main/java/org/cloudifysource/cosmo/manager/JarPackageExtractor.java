@@ -85,21 +85,13 @@ public class JarPackageExtractor {
 
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                System.out.println("preVisiting directory : " + dir);
-                Path dir1 = resolveTarget(dir);
-                System.out.println("resolved target : " + dir1);
-                Files.createDirectories(dir1);
-                System.out.println("Created dirs : " + dir1);
+                Files.createDirectories(resolveTarget(dir));
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                System.out.println("visiting file : " + file);
-                Path target1 = resolveTarget(file);
-                System.out.println("resolved target : " + target1);
-                Files.copy(file, target1, StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("copied file " + file + " to " + target1);
+                Files.copy(file, resolveTarget(file), StandardCopyOption.REPLACE_EXISTING);
                 return FileVisitResult.CONTINUE;
             }
 
@@ -112,7 +104,6 @@ public class JarPackageExtractor {
         };
 
         Path source = createSourcePath(absolutePackagePath, containedResource);
-        System.out.println(source.toString());
 
         Files.walkFileTree(source, visitor);
     }
@@ -127,7 +118,6 @@ public class JarPackageExtractor {
             case "jar":
                 Preconditions.checkArgument(protocol.equals("jar"),
                         "resource must be contained in a jar file [%s]", containedResource);
-                System.out.println("contained resource is : " + containedResource);
                 String[] splitContainedResource = containedResource.toString().split("!");
                 Preconditions.checkArgument(splitContainedResource.length == 2,
                         "Invalid contained resource %s for package %s",
