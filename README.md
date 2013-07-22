@@ -6,8 +6,42 @@ The Cloudify Cosmo Management project is the scafolding for the deployment, moni
 installed on the cloud.
 
 
-Cosmo Management contains the following main components:
+If you want to see it in action, keep reading...
 
-* Orchestrator - Reacts to service state changes by running custom workflows (uses Ruote)
-* Resource Monitor - Continously evaluates service state by reacting to incoming events (uses Drools Fusion).
-* Message Broker - Decouples the different components by providing a central messaging endpoint (uses Atmosphere).
+Requirements
+============
+
+- Linux/MAC operation system.
+- Git
+- JAVA runtime 1.7 (openjdk or oracle).
+- Python2 with the following packages installed: (Use pip to install)
+	- celery
+	- fabric
+    - vagrant
+- Riemann (http://riemann.io)
+- RabbitMQ (http://www.rabbitmq.com/download.html)
+
+
+Setup
+=====
+
+- Riemann process running:	
+	- run "wget https://raw.github.com/CloudifySource/cosmo-manager/develop/orchestrator/src/test/resources/org/cloudifysource/cosmo/orchestrator/integration/config/riemann.vagrant.config"
+	- include riemann in your path and run the following command : "riemann riemann.vagrant.config"		
+
+- RabbitMQ process running:	
+	- Start RabbitMQ as a service, no configuration is required.
+
+
+Build
+=====
+
+- git clone https://github.com/CloudifySource/cosmo-manager.git
+- cd cosmo-manager/orchestrator
+- mvn -DskipTests -Pall
+
+Run
+===
+
+- cd target
+- java -jar orchestrator-0.1-SNAPSHOT-all.jar
