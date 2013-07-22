@@ -26,11 +26,17 @@ import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
+import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
+import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
+import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -45,26 +51,16 @@ import java.util.Map;
  * @since 0.1
  */
 @Configuration
+@Import({
+        StateCacheConfig.class,
+        TaskExecutorConfig.class
+})
+@PropertySource("org/cloudifysource/cosmo/manager/ruote/ruote.properties")
 public class RuoteRuntimeConfig {
 
     @NotEmpty
     @Value("${cosmo.ruote.workflows:ruote/workflows.yaml}")
     private String workflows;
-
-    @Value("${cosmo.message-broker.uri}")
-    private URI messageBrokerURI;
-
-    @NotEmpty
-    @Value("${cosmo.resource-monitor.topic}")
-    private String resourceMonitorTopic;
-
-    @NotEmpty
-    @Value("${cosmo.resource-provisioner.topic}")
-    private String resourceProvisionerTopic;
-
-    @NotEmpty
-    @Value("${cosmo.state-cache.topic}")
-    private String stateCacheTopic;
 
     @Inject
     private StateCache stateCache;
@@ -76,11 +72,7 @@ public class RuoteRuntimeConfig {
     public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
         runtimeProperties.put("state_cache", stateCache);
-        runtimeProperties.put("state_cache_topic", stateCacheTopic);
-        runtimeProperties.put("broker_uri", messageBrokerURI);
         runtimeProperties.put("executor", taskExecutor);
-        runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
-        runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
 
         final Map<String, Object> variables = Maps.newHashMap();
         variables.putAll(loadInitialWorkflows());
