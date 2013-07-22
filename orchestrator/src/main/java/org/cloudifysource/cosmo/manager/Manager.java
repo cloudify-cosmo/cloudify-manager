@@ -16,14 +16,20 @@
 
 package org.cloudifysource.cosmo.manager;
 
+import com.google.common.collect.Maps;
+import org.cloudifysource.cosmo.fileserver.JettyFileServer;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 /**
  * Starts several manager based components.
@@ -37,18 +43,42 @@ public class Manager {
     private static final String SCRIPTS_RESOURCE_PATH = "scripts";
     private static final String RUOTE_GEMS_RESOURCE_PATH = "ruote-gems/gems";
 
+    private Path extractionPath;
+
     private AnnotationConfigApplicationContext context;
 
+    private RuoteWorkflow ruoteWorkflow;
+    private RuoteRuntime ruoteRuntime;
+
     public static void main(String[] args) throws Exception {
-        new Manager();
+        new Manager("asd");
     }
 
-    private Manager() throws IOException {
+    private Manager(String dslPath) throws IOException {
         context = registerConfig();
+        ruoteWorkflow = (RuoteWorkflow) context.getBean("defaultRuoteWorkflow");
+        ruoteRuntime = (RuoteRuntime) context.getBean("ruoteRuntime");
+        try {
+            deployDSL(dslPath);
+        } finally {
+            Files.delete(extractionPath);
+        }
+
+    }
+
+    private void deployDSL(String dslPath) {
+
+        final Map<String, Object> workitemFields = Maps.newHashMap();
+        workitemFields.put("dsl", dslPath);
+
+        final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
+        ruoteRuntime.waitForWorkflow(wfid);
+        System.exit(0);
+
     }
 
     private AnnotationConfigApplicationContext registerConfig() throws IOException {
-        Path extractionPath = Paths.get("extracted").toAbsolutePath();
+        extractionPath = Paths.get("extracted").toAbsolutePath();
         JarPackageExtractor.extractPackage(SCRIPTS_RESOURCE_PATH, extractionPath);
         JarPackageExtractor.extractPackage(RUOTE_GEMS_RESOURCE_PATH, extractionPath);
         URLClassLoader ruoteClassLoader = new URLClassLoader(new URL[] {
