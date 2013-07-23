@@ -62,11 +62,17 @@ public class RuoteRuntime {
 
     public static RuoteRuntime createRuntime(Map<String, Object> globalProperties,
                                              Map<String, Object> dashboardVariables) {
+        return createRuntime(globalProperties, dashboardVariables, null);
+    }
+
+    public static RuoteRuntime createRuntime(Map<String, Object> globalProperties,
+                                             Map<String, Object> dashboardVariables,
+                                             ClassLoader rubyClassLoader) {
         try {
             LOGGER.debug("Creating ruote runtime...");
             final ScriptingContainer container = new ScriptingContainer(LocalVariableBehavior.PERSISTENT);
-            updateLibraryPath(container, "ruote-gems/gems");
-            updateLibraryPath(container, "scripts");
+            updateLibraryPath(container, "ruote-gems/gems", rubyClassLoader);
+            updateLibraryPath(container, "scripts", rubyClassLoader);
             container.put("$ruote_properties", globalProperties != null ? globalProperties : Maps.newHashMap());
             container.put("$logger", LOGGER);
             final Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
@@ -82,8 +88,13 @@ public class RuoteRuntime {
         return createRuntime(globalProperties, Collections.<String, Object>emptyMap());
     }
 
-    private static void updateLibraryPath(ScriptingContainer container, String resourcesRoot) {
-        final URL gemsResource = Resources.getResource(resourcesRoot);
+    private static void updateLibraryPath(ScriptingContainer container, String resourcesRoot, ClassLoader loader) {
+        URL gemsResource;
+        if (loader == null) {
+            gemsResource = Resources.getResource(resourcesRoot);
+        } else {
+            gemsResource = loader.getResource(resourcesRoot);
+        }
         Preconditions.checkNotNull(gemsResource);
         final String resourcePath = gemsResource.getPath();
         container.runScriptlet("Dir['" + resourcePath + "/**/*'].each { |dir| $: << dir }");
