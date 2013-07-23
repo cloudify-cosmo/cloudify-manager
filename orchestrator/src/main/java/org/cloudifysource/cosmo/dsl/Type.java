@@ -44,6 +44,7 @@ public class Type extends InheritedDefinition {
     }
 
     private List<Object> interfaces = Lists.newArrayList();
+    private String policies;
 
     public Type() {
         // Default value
@@ -56,6 +57,14 @@ public class Type extends InheritedDefinition {
 
     public void setInterfaces(List<Object> interfaces) {
         this.interfaces = interfaces;
+    }
+
+    public String getPolicies() {
+        return policies;
+    }
+
+    public void setPolicies(String policies) {
+        this.policies = policies;
     }
 
     @Override
