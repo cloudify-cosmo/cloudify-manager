@@ -21,7 +21,6 @@ import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
-import org.cloudifysource.cosmo.manager.process.CeleryWorkerProcess;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -55,7 +54,6 @@ public class Manager {
 
     private RuoteWorkflow ruoteWorkflow;
     private RuoteRuntime ruoteRuntime;
-    private CeleryWorkerProcess celeryWorkerProcess;
 
     public static void main(String[] args) throws Exception {
 
@@ -83,7 +81,6 @@ public class Manager {
         context = registerConfig();
         ruoteWorkflow = (RuoteWorkflow) context.getBean("defaultRuoteWorkflow");
         ruoteRuntime = (RuoteRuntime) context.getBean("ruoteRuntime");
-        celeryWorkerProcess = (CeleryWorkerProcess) context.getBean("celeryWorkerProcess");
     }
 
     public void deployDSL(String dslPath) {
