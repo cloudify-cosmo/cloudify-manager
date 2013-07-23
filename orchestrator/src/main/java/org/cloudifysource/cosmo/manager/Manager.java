@@ -26,9 +26,11 @@ import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -57,10 +59,19 @@ public class Manager {
 
     public static void main(String[] args) throws Exception {
 
+        if (args.length != 1) {
+            throw new IllegalArgumentException("Invalid number of arguments");
+        }
+        String dslPath = args[0];
+        File dsl = new File(dslPath);
+        if (!dsl.exists()) {
+            throw new NoSuchFileException("Could not find file : " + dsl.getAbsolutePath());
+        }
+
         Manager manager = null;
         try {
             manager = new Manager();
-            manager.deployDSL("asd");
+            manager.deployDSL(dslPath);
         } finally {
             if (manager != null) {
                 manager.close();
