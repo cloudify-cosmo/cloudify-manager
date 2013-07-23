@@ -18,17 +18,21 @@ package org.cloudifysource.cosmo.manager.config;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
+import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.DSLPackage;
+import org.cloudifysource.cosmo.manager.ResourceExtractor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -52,8 +56,17 @@ import java.nio.file.attribute.BasicFileAttributes;
 @PropertySource("org/cloudifysource/cosmo/manager/fileserver/jetty.properties")
 public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
 
+    private Logger logger = LoggerFactory.getLogger(JettyFileServerForPluginsConfig.class);
+
+
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+
+    private final Path pluginExtractionPath;
+
+    public JettyFileServerForPluginsConfig() {
+        pluginExtractionPath = Paths.get("cosmo-celery-plugins");
+    }
 
     @PostConstruct
     public void setResourceBase() {
@@ -65,27 +78,36 @@ public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
         this.resourceBase = temporaryDirectory.get().getAbsolutePath();
     }
 
-    private static void createZipForPlugin(String resourceRoot,
+    @PreDestroy
+    public void close() throws IOException {
+        logger.debug("Closing Bean[" + JettyFileServerForPluginsConfig.class.getName() +
+                "] - deleting directory : " +
+                pluginExtractionPath.toAbsolutePath());
+        FileUtils.deleteDirectory(pluginExtractionPath.toFile());
+    }
+
+    private void createZipForPlugin(final String resourceRoot,
                                            File targetDir, String targetName) {
-        final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
-        URL visitorRootUrl = Resources.getResource(resourceRoot);
-        final Path visitorRootPath = Paths.get(URI.create("file://" + visitorRootUrl.getPath()));
+
         try {
-            Files.walkFileTree(visitorRootPath, new SimpleFileVisitor<Path>() {
+            final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
+            URL visitorRootUrl = Resources.getResource(resourceRoot);
+
+            ResourceExtractor.extractResource(resourceRoot, pluginExtractionPath, visitorRootUrl);
+            Files.walkFileTree(pluginExtractionPath.resolve(resourceRoot), new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     if (file.toString().endsWith(".pyc")) {
                         return FileVisitResult.CONTINUE;
                     }
                     byte[] content = com.google.common.io.Files.toByteArray(file.toFile());
-                    String targetFile = visitorRootPath.relativize(file).toString();
+                    String targetFile = pluginExtractionPath.resolve(resourceRoot).relativize(file).toString();
                     packagedPluginBuilder.addFile(targetFile, content);
                     return FileVisitResult.CONTINUE;
                 }
             });
+            packagedPluginBuilder.build().write(new File(targetDir, targetName));
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
-        packagedPluginBuilder.build().write(new File(targetDir, targetName));
     }
-
 }
