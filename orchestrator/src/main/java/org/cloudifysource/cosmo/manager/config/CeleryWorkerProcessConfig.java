@@ -17,11 +17,8 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.manager.process.CeleryWorkerProcess;
-import org.hibernate.validator.constraints.NotEmpty;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 
 /**
  * Creates a new {@link org.cloudifysource.cosmo.manager.process.CeleryWorkerProcess}.
@@ -30,15 +27,12 @@ import org.springframework.context.annotation.PropertySource;
  * @since 0.1
  */
 @Configuration
-@PropertySource("org/cloudifysource/cosmo/manager/celery/celery.properties")
 public class CeleryWorkerProcessConfig {
 
-    @NotEmpty
-    @Value("${celery.workdir}")
-    private String workingDir;
+    private static final String USER_HOME = System.getProperty("user.home");
 
     @Bean
     CeleryWorkerProcess celeryWorkerProcess() {
-        return new CeleryWorkerProcess("cosmo", workingDir);
+        return new CeleryWorkerProcess("cosmo", USER_HOME + "/celeryworker");
     }
 }
