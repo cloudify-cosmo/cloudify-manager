@@ -54,6 +54,7 @@ public class TypeTemplate extends Type {
         result.inheritPropertiesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
+        result.setPolicies(getPolicies());
         return result;
     }
 

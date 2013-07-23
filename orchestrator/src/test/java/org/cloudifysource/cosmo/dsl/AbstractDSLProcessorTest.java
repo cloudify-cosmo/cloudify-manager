@@ -100,6 +100,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> properties;
         List<Object> relationships;
         Map<String, Object> plugins;
+        String policies;
 
         public String getId() {
             return id;
@@ -147,6 +148,10 @@ public abstract class AbstractDSLProcessorTest {
 
         public void setPlugins(Map<String, Object> plugins) {
             this.plugins = plugins;
+        }
+
+        public String getPolicies() {
+            return policies;
         }
     }
 
