@@ -18,6 +18,7 @@ Requirements
 	- celery
 	- fabric
     - vagrant
+    - bernhard
 - Riemann (http://riemann.io)
 - RabbitMQ (http://www.rabbitmq.com/download.html)
 
@@ -44,4 +45,5 @@ Run
 ===
 
 - cd target
-- java -jar orchestrator-0.1-SNAPSHOT-all.jar
+- wget https://raw.github.com/CloudifySource/cosmo-manager/develop/orchestrator/src/test/resources/org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml
+- java -jar orchestrator-0.1-SNAPSHOT-all.jar integration-phase3.yaml
