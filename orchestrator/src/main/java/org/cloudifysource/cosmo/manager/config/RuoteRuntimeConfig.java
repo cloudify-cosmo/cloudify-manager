@@ -39,6 +39,7 @@ import org.springframework.context.annotation.PropertySource;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Map;
 
 /**
@@ -65,6 +66,9 @@ public class RuoteRuntimeConfig {
     @Inject
     private TaskExecutor taskExecutor;
 
+    @Inject
+    private URLClassLoader rubyResourcesClassLoader;
+
     @Bean
     public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
@@ -74,7 +78,7 @@ public class RuoteRuntimeConfig {
         final Map<String, Object> variables = Maps.newHashMap();
         variables.putAll(loadInitialWorkflows());
 
-        return RuoteRuntime.createRuntime(runtimeProperties, variables);
+        return RuoteRuntime.createRuntime(runtimeProperties, variables, rubyResourcesClassLoader);
     }
 
     private static String getContent(String resource) throws IOException {
