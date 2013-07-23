@@ -32,7 +32,7 @@ import java.nio.file.Path;
  * @author Dan Kilman
  * @since 0.1
  */
-public class JarPackageExtractorTest {
+public class ResourceExtractorTest {
 
     @Test
     public void testPackageExtractor() throws IOException, URISyntaxException {
@@ -48,7 +48,7 @@ public class JarPackageExtractorTest {
         // We need some resource contained in that jar to pinpoint a specific jar
         URL containedResource = Resources.getResource(firstResource);
 
-        JarPackageExtractor.extractPackage(packagePath, target, containedResource);
+        ResourceExtractor.extractPackage(packagePath, target, containedResource);
 
         Assertions.assertThat(target.resolve(firstResource).toFile()).exists();
         Assertions.assertThat(target.resolve(secondResource).toFile()).exists();

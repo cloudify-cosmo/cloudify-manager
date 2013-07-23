@@ -43,9 +43,9 @@ import java.util.HashMap;
  * @author Dan Kilman
  * @since 0.1
  */
-public class JarPackageExtractor {
+public class ResourceExtractor {
 
-    private static final Logger LOG = LoggerFactory.getLogger(JarPackageExtractor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ResourceExtractor.class);
 
     /**
      * Extracts `absolutePackagePath` to `target`. This method assumes the JAR containing the package
@@ -54,7 +54,7 @@ public class JarPackageExtractor {
      * @param target The target to extract files to.
      */
     public static void extractPackage(String absolutePackagePath, final Path target) throws IOException {
-        String rawResource = JarPackageExtractor.class.getName().replace('.', '/') + ".class";
+        String rawResource = ResourceExtractor.class.getName().replace('.', '/') + ".class";
         URL resource = Resources.getResource(rawResource);
         extractPackage(absolutePackagePath, target, resource);
     }
