@@ -16,7 +16,9 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
+import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -35,7 +37,9 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         DefaultRuoteWorkflowConfig.class,
         RuoteRuntimeConfig.class,
         CeleryWorkerProcessConfig.class,
-        VagrantRiemannMonitorProcessConfig.class
+        VagrantRiemannMonitorProcessConfig.class,
+        StateCacheConfig.class,
+        StateCacheFeederConfig.class
 })
 public class MainManagerConfig {
 
