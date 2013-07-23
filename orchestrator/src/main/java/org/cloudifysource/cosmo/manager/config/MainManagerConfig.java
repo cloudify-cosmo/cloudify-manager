@@ -34,7 +34,8 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         JettyFileServerForPluginsConfig.class,
         DefaultRuoteWorkflowConfig.class,
         RuoteRuntimeConfig.class,
-        CeleryWorkerProcessConfig.class
+        CeleryWorkerProcessConfig.class,
+        VagrantRiemannMonitorProcessConfig.class
 })
 public class MainManagerConfig {
 
