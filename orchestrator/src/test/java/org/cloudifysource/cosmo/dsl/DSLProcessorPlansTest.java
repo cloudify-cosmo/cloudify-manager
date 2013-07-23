@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.beust.jcommander.internal.Maps;
+import com.google.common.collect.Maps;
 import org.testng.annotations.Test;
 
 import java.util.Map;
