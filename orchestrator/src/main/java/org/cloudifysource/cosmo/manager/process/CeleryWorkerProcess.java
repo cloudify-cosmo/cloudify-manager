@@ -19,15 +19,15 @@ package org.cloudifysource.cosmo.manager.process;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.manager.JarPackageExtractor;
+import org.cloudifysource.cosmo.manager.ResourceExtractor;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,16 +45,19 @@ import java.util.Arrays;
  */
 public class CeleryWorkerProcess implements AutoCloseable {
 
-    private String celeryPidFileName;
+    private static final String RESOURCE_PATH = "celery/app";
     private static final String CELERY_LOG_LEVEL = "debug";
+
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     private ProcessOutputLogger processOutputLogger;
-    private String workingDir;
+    private String celeryPidFileName;
+    private String appDir;
 
     public CeleryWorkerProcess(final String app, final String workingDir) {
         long currentTime = System.currentTimeMillis();
         this.celeryPidFileName = "celery_worker.pid" + currentTime;
-        this.workingDir = workingDir;
+        this.appDir = extractCeleryApp(workingDir);
 
         String[] command = new String[] {"celery",
                                          "worker",
@@ -80,6 +83,17 @@ public class CeleryWorkerProcess implements AutoCloseable {
             Thread.sleep(5000);
 
         } catch (InterruptedException e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    private String extractCeleryApp(String workingDir) {
+        try {
+            // This will extract the celery app from the resources to the working directory
+            ResourceExtractor.extractResource(RESOURCE_PATH, Paths.get(workingDir),
+                    Resources.getResource(RESOURCE_PATH));
+            return workingDir + "/" + RESOURCE_PATH;
+        } catch (IOException e) {
             throw Throwables.propagate(e);
         }
     }
@@ -124,37 +138,26 @@ public class CeleryWorkerProcess implements AutoCloseable {
 
     private Process runProcess(String[] command) {
         ProcessBuilder pb = new ProcessBuilder();
-
-        // copy the app to the working dir
-        Path appExtractionPath = Paths.get(getWorkingDir());
-        try {
-            JarPackageExtractor.extractPackage("celery/app", appExtractionPath, Resources.getResource("celery/app"));
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
-
-        pb.directory(new File(getWorkingDir()));
+        pb.directory(getAppDirectory());
         pb.command(Lists.newArrayList(command));
         processOutputLogger = new ProcessOutputLogger(pb, logger);
         return processOutputLogger.getProcess();
     }
 
     private File getAppDirectory() {
-        URL resource = Resources.getResource("celery/app");
-        String path = resource.getPath();
-        return new File(path);
+        return new File(appDir);
     }
 
     private static boolean isWindows() {
         return System.getProperty("os.name").startsWith("Windows");
     }
 
-    public String getWorkingDir() {
-        return this.workingDir;
-    }
-
     @Override
     public void close() throws Exception {
+        logger.debug("Closing Bean[" + CeleryWorkerProcess.class.getName() +
+                "] - deleting directory : " +
+                appDir);
+
         processOutputLogger.close();
 
         final int pid = getPid();
@@ -172,11 +175,8 @@ public class CeleryWorkerProcess implements AutoCloseable {
             throw new IllegalStateException("Failed to close celery worker process");
         }
 
-        File celeryPid = new File(getWorkingDir(), celeryPidFileName);
-        boolean deleted = celeryPid.delete();
-        if (!deleted) {
-            celeryPid.deleteOnExit();
-        }
+        FileUtils.deleteDirectory(new File(appDir));
+
     }
 
     /**
