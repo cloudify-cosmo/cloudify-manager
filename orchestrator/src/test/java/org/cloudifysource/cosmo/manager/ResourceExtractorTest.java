@@ -48,7 +48,7 @@ public class ResourceExtractorTest {
         // We need some resource contained in that jar to pinpoint a specific jar
         URL containedResource = Resources.getResource(firstResource);
 
-        ResourceExtractor.extractPackage(packagePath, target, containedResource);
+        ResourceExtractor.extractResource(packagePath, target, containedResource);
 
         Assertions.assertThat(target.resolve(firstResource).toFile()).exists();
         Assertions.assertThat(target.resolve(secondResource).toFile()).exists();
