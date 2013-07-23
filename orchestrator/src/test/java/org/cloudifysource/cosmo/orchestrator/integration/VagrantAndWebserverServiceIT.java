@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
@@ -35,6 +36,8 @@ import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.robobninjas.riemann.spring.RiemannTestConfiguration;
+import org.robobninjas.riemann.spring.server.RiemannProcess;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -87,11 +90,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             CeleryWorkerProcessConfig.class,
             VagrantRiemannMonitorProcessConfig.class
     })
-    @PropertySource({
-        "org/cloudifysource/cosmo/orchestrator/integration/config/test.properties",
-        "org/cloudifysource/cosmo/orchestrator/integration/config/vagrant-riemann-monitor.properties",
-        "org/cloudifysource/cosmo/orchestrator/integration/config/riemann-vagrant-test.properties"
-    })
+    @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
 
     }
@@ -119,6 +118,12 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
+    @Value("${riemann.server.config-resource}")
+    private String riemannConfigResourcePath;
+
+    @Inject
+    private RiemannProcess riemannProcess;
+
     @Test(timeOut = 60000 * 5, groups = "vagrant", enabled = false)
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
         test("org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml");
@@ -139,6 +144,9 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
+        workitemFields.put("riemann_pid", String.valueOf(riemannProcess.getPid()));
+        workitemFields.put("riemann_config_path", Resources.getResource(riemannConfigResourcePath).getPath());
+        workitemFields.put("riemann_config_template", readRiemannConfigTemplate());
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
@@ -165,6 +173,16 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             throw Throwables.propagate(e);
         }
         packagedPluginBuilder.build().write(new File(targetDir, targetName));
+    }
+
+    private static String readRiemannConfigTemplate() {
+        URL resource = Resources.getResource("org/cloudifysource/cosmo/orchestrator/integration/config/riemann.config" +
+                ".template");
+        try {
+            return Resources.toString(resource, Charsets.UTF_8);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
 }

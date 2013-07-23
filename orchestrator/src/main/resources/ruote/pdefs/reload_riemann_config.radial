@@ -1,0 +1,10 @@
+define reload_riemann_config
+  set "v:reload_riemann_config_task": "cosmo.cloudify.tosca.artifacts.plugin.celery_worker.installer.tasks.reload_riemann_config"
+  execute_task target: 'cloudify.management', exec: "${v:reload_riemann_config_task}", payload: {
+    properties: {
+      policies: "${v:policies}",
+      riemann_pid: "${riemann_pid}",
+      riemann_config_template: "${riemann_config_template}",
+      riemann_config_path: "${riemann_config_path}"
+    }
+  }
