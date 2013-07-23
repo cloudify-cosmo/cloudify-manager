@@ -38,7 +38,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 
 /**
- * Utility methods to extract files based on their package from JAR files.
+ * Utility methods to extract files based on their resource path from JAR files or from the development env.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -48,37 +48,37 @@ public class ResourceExtractor {
     private static final Logger LOG = LoggerFactory.getLogger(ResourceExtractor.class);
 
     /**
-     * Extracts `absolutePackagePath` to `target`. This method assumes the JAR containing the package
+     * Extracts `absoluteResourcePath` to `target`. This method assumes the JAR containing the package
      * is the same JAR this class belongs to
-     * @param absolutePackagePath The package to extract.
+     * @param absoluteResourcePath The package to extract.
      * @param target The target to extract files to.
      */
-    public static void extractPackage(String absolutePackagePath, final Path target) throws IOException {
+    public static void extractResource(String absoluteResourcePath, final Path target) throws IOException {
         String rawResource = ResourceExtractor.class.getName().replace('.', '/') + ".class";
         URL resource = Resources.getResource(rawResource);
-        extractPackage(absolutePackagePath, target, resource);
+        extractResource(absoluteResourcePath, target, resource);
     }
 
     /**
-     * Extracts `absolutePackagePath` to `target` using `containedResource` as means of locating the JAR file to
+     * Extracts `absoluteResourcePath` to `target` using `containedResource` as means of locating the JAR file to
      * extract from.
-     * @param absolutePackagePath The package to extract.
+     * @param absoluteResourcePath The package to extract.
      * @param target The target to extract files to.
      * @param containedResource A {@link URL} pointing to a resource that is inside a jar file. It is used
      *                          to extract the JAR from which the extraction should be made.
      */
-    public static void extractPackage(String absolutePackagePath, final Path target,
-                                      URL containedResource) throws IOException {
+    public static void extractResource(String absoluteResourcePath, final Path target,
+                                       URL containedResource) throws IOException {
         LOG.debug("Extracting package [{}] to [{}]. Using resource [{}] to locate a suitable jar file",
-                absolutePackagePath, target, containedResource);
+                absoluteResourcePath, target, containedResource);
 
         // validations and setup
-        Preconditions.checkNotNull(absolutePackagePath, "absolutePackagePath");
+        Preconditions.checkNotNull(absoluteResourcePath, "absoluteResourcePath");
         Preconditions.checkNotNull(containedResource, "containedResource");
         Preconditions.checkNotNull(target, "target");
 
-        if (!absolutePackagePath.startsWith("/")) {
-            absolutePackagePath = "/" + absolutePackagePath;
+        if (!absoluteResourcePath.startsWith("/")) {
+            absoluteResourcePath = "/" + absoluteResourcePath;
         }
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
@@ -103,7 +103,7 @@ public class ResourceExtractor {
             }
         };
 
-        Path source = createSourcePath(absolutePackagePath, containedResource);
+        Path source = createSourcePath(absoluteResourcePath, containedResource);
 
         Files.walkFileTree(source, visitor);
     }
