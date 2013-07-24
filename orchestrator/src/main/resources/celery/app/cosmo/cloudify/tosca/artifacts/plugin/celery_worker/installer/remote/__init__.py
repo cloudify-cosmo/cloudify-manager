@@ -3,7 +3,6 @@ __author__ = 'elip'
 import fnmatch
 import os
 
-
 def build_includes(workdir, app):
     includes = []
     for root, dirnames, filenames in os.walk(os.path.join(workdir, app)):
