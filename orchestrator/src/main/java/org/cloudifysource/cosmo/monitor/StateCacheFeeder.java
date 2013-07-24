@@ -102,6 +102,7 @@ public class StateCacheFeeder {
                     }
                     final String resourceId = event.getHost();
                     Preconditions.checkNotNull(resourceId, "RiemannEvent host field cannot be null");
+                    logger.debug("StateCacheListener received event: {}", event.getState());
                     StateCacheFeeder.this.stateCache.put(resourceId, event.getService(), event.getState());
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);

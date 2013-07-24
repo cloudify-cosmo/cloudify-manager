@@ -42,8 +42,6 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         DefaultRuoteWorkflowConfig.class,
         RuoteRuntimeConfig.class,
         CeleryWorkerProcessConfig.class,
-        VagrantRiemannMonitorProcessConfig.class,
-        RiemannProcessConfiguration.class,
         StateCacheConfig.class,
         StateCacheFeederConfig.class
 })
