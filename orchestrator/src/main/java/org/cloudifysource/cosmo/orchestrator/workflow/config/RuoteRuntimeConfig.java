@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.orchestrator.integration.config;
+package org.cloudifysource.cosmo.orchestrator.workflow.config;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,15 +26,20 @@ import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
+import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 
 import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Map;
 
 /**
@@ -44,6 +49,11 @@ import java.util.Map;
  * @since 0.1
  */
 @Configuration
+@Import({
+        StateCacheConfig.class,
+        TaskExecutorConfig.class
+})
+@PropertySource("org/cloudifysource/cosmo/manager/ruote/ruote.properties")
 public class RuoteRuntimeConfig {
 
     @NotEmpty
@@ -56,6 +66,9 @@ public class RuoteRuntimeConfig {
     @Inject
     private TaskExecutor taskExecutor;
 
+    @Inject
+    private URLClassLoader rubyResourcesClassLoader;
+
     @Bean
     public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
@@ -65,7 +78,7 @@ public class RuoteRuntimeConfig {
         final Map<String, Object> variables = Maps.newHashMap();
         variables.putAll(loadInitialWorkflows());
 
-        return RuoteRuntime.createRuntime(runtimeProperties, variables);
+        return RuoteRuntime.createRuntime(runtimeProperties, variables, rubyResourcesClassLoader);
     }
 
     private static String getContent(String resource) throws IOException {
@@ -92,5 +105,4 @@ public class RuoteRuntimeConfig {
         mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
         return mapper;
     }
-
 }

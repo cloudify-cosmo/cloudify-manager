@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.manager.config;
+package org.cloudifysource.cosmo.utils.config;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -27,9 +27,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.Map;
 
-
 /**
- * Creates a new {@link org.cloudifysource.cosmo.manager.config.TemporaryDirectoryConfig.TemporaryDirectory}.
+ * Creates a new {@link TemporaryDirectory}.
  *
  * @author Idan Moyal
  * @since 0.1
@@ -77,4 +76,5 @@ public class TemporaryDirectoryConfig {
         }
 
     }
+
 }
