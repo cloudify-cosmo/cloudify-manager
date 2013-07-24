@@ -337,7 +337,11 @@
                     <!-- TODO: Remove version -->
                     <version>3.0.1-SNAPSHOT</version>
                 </dependency>
-
+                <dependency>
+                    <groupId>${project.groupId}</groupId>
+                    <artifactId>tasks</artifactId>
+                    <type>test-jar</type>
+                </dependency>
             </dependencies>
 
             <build>
