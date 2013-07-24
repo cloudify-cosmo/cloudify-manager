@@ -6,6 +6,7 @@ definitions:
     imports:
         - 'celery_worker_installer'
         - 'celery_plugin_installer'
+        - 'cloudify.rules'
 
     ##################################################################################
     # Base type definitions
