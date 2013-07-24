@@ -167,6 +167,7 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
+            <scope>test</scope>
             <type>test-jar</type>
             <!-- TODO: Remove version -->
             <version>3.0.1-SNAPSHOT</version>
@@ -329,7 +330,16 @@
                     <groupId>org.apache.logging.log4j</groupId>
                     <artifactId>log4j-core</artifactId>
                 </dependency>
+                <dependency>
+                    <groupId>org.robotninjas.riemann</groupId>
+                    <artifactId>spring</artifactId>
+                    <type>test-jar</type>
+                    <!-- TODO: Remove version -->
+                    <version>3.0.1-SNAPSHOT</version>
+                </dependency>
+
             </dependencies>
+
             <build>
                 <plugins>
                     <!--
