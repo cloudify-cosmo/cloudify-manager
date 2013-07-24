@@ -18,10 +18,7 @@ package org.cloudifysource.cosmo.manager.config;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
-import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
-import org.cloudifysource.cosmo.logging.Logger;
-import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.DSLPackage;
 import org.cloudifysource.cosmo.manager.ResourceExtractor;
 import org.springframework.context.annotation.Configuration;
@@ -29,7 +26,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
@@ -56,8 +52,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 @PropertySource("org/cloudifysource/cosmo/manager/fileserver/jetty.properties")
 public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
 
-    private Logger logger = LoggerFactory.getLogger(JettyFileServerForPluginsConfig.class);
-
+    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
@@ -65,7 +60,7 @@ public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
     private final Path pluginExtractionPath;
 
     public JettyFileServerForPluginsConfig() {
-        pluginExtractionPath = Paths.get("cosmo-celery-plugins");
+        pluginExtractionPath = Paths.get(TEMP + "/plugins");
     }
 
     @PostConstruct
@@ -76,14 +71,6 @@ public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
                 temporaryDirectory.get(),
                 "python-webserver-installer.zip");
         this.resourceBase = temporaryDirectory.get().getAbsolutePath();
-    }
-
-    @PreDestroy
-    public void close() throws IOException {
-        logger.debug("Closing Bean[" + JettyFileServerForPluginsConfig.class.getName() +
-                "] - deleting directory : " +
-                pluginExtractionPath.toAbsolutePath());
-        FileUtils.deleteDirectory(pluginExtractionPath.toFile());
     }
 
     private void createZipForPlugin(final String resourceRoot,
