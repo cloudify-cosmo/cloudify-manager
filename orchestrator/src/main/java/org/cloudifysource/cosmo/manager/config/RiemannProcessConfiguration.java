@@ -17,11 +17,13 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,8 +37,10 @@ import java.nio.file.Paths;
 @Configuration
 public class RiemannProcessConfiguration {
 
-    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
     private static final String RIEMANN_RESOURCES_PATH = "riemann";
+
+    @Inject
+    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
 
     @Value("${riemann.server.config-resource}")
@@ -44,8 +48,9 @@ public class RiemannProcessConfiguration {
 
     @Bean(destroyMethod = "close")
     public RiemannProcess riemann() throws IOException {
-        ResourceExtractor.extractResource(RIEMANN_RESOURCES_PATH, Paths.get(TEMP));
-        Path configPath = Paths.get(TEMP, riemannConfigResourcePath);
+        ResourceExtractor.extractResource(RIEMANN_RESOURCES_PATH, Paths.get(temporaryDirectory.get().getAbsolutePath()));
+        Path configPath = Paths.get(temporaryDirectory.get().getAbsolutePath(),
+                riemannConfigResourcePath);
         return new RiemannProcess(configPath);
     }
 }
