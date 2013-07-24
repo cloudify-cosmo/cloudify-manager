@@ -82,10 +82,15 @@ def status(v):
 
 
 def start_monitor(v, host_id):
+    # ssh_conf = v.conf()
     command = [
         sys.executable,
         os.path.join(os.path.dirname(__file__), "monitor.py"),
         "--tag=name={0}".format(host_id),
+        # "--ssh_host={0}".format(ssh_conf['HostName']),
+        # "--ssh_port={0}".format(ssh_conf['Port']),
+        # "--ssh_user={0}".format(ssh_conf['User']),
+        # "--ssh_keyfile={0}".format(ssh_conf['IdentityFile']),
         "--pid_file={0}".format(os.path.join(v.root, "monitor.pid"))
     ]
     logger.info('starting vagrant monitoring [cmd=%s]', command)

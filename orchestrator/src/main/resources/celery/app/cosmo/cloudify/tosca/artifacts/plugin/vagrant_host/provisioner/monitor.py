@@ -102,6 +102,7 @@ class VagrantStatusMonitor(object):
         signal.signal(signal.SIGQUIT, handle)
 
     def close(self):
+        sys.stdout.write("Trying to shutdown monitor process")
         self.client.disconnect()
         if self.timer:
             self.timer.cancel()
@@ -188,4 +189,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
