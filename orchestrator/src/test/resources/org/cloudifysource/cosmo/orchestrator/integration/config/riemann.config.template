@@ -70,12 +70,8 @@
     (expired
       (fn [event] (info "expired" event)))
 
-    (where
-        (and
-            (service "vagrant machine status")
-            (state "running")
-            (tagged_with_name event))
-        (create_reacahble_with_ip index))
+    $events_mapping
+
   )
 
 )

@@ -34,7 +34,6 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 
@@ -51,21 +50,6 @@ public class RuoteRuntimeConfig {
     @Value("${cosmo.ruote.workflows:ruote/workflows.yaml}")
     private String workflows;
 
-    @Value("${cosmo.message-broker.uri}")
-    private URI messageBrokerURI;
-
-    @NotEmpty
-    @Value("${cosmo.resource-monitor.topic}")
-    private String resourceMonitorTopic;
-
-    @NotEmpty
-    @Value("${cosmo.resource-provisioner.topic}")
-    private String resourceProvisionerTopic;
-
-    @NotEmpty
-    @Value("${cosmo.state-cache.topic}")
-    private String stateCacheTopic;
-
     @Inject
     private StateCache stateCache;
 
@@ -76,11 +60,7 @@ public class RuoteRuntimeConfig {
     public RuoteRuntime ruoteRuntime() throws IOException {
         Map<String, Object> runtimeProperties = Maps.newHashMap();
         runtimeProperties.put("state_cache", stateCache);
-        runtimeProperties.put("state_cache_topic", stateCacheTopic);
-        runtimeProperties.put("broker_uri", messageBrokerURI);
         runtimeProperties.put("executor", taskExecutor);
-        runtimeProperties.put("resource_monitor_topic", resourceMonitorTopic);
-        runtimeProperties.put("resource_provisioner_topic", resourceProvisionerTopic);
 
         final Map<String, Object> variables = Maps.newHashMap();
         variables.putAll(loadInitialWorkflows());

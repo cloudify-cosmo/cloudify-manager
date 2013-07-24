@@ -14,36 +14,26 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.orchestrator.integration.monitor;
+package org.cloudifysource.cosmo.dsl;
 
-import java.net.InetSocketAddress;
+import org.testng.annotations.Test;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
- * Simple data holder for the {@link MockPortKnocker}.
- *
- * @author Dan Kilman
+ * @author Idan Moyal
  * @since 0.1
  */
-public class PortKnockingDescriptor {
+public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
 
-    private final InetSocketAddress socketAddress;
-    private final String resourceId;
-
-    public PortKnockingDescriptor(InetSocketAddress socketAddress, String resourceId) {
-        this.socketAddress = socketAddress;
-        this.resourceId = resourceId;
+    @Test
+    public void testPolicies() {
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/policies/dsl-with-policies.yaml";
+        Processed processed = process(dslPath);
+        Node node1 = findNode(processed.getNodes(), "web_server.webserver_host");
+        assertThat(node1.getPolicies()).isEqualTo("host policy stub..");
+        Node node2 = findNode(processed.getNodes(), "web_server.webserver_middleware");
+        assertThat(node2.getPolicies()).isEmpty();
     }
 
-    public InetSocketAddress getSocketAddress() {
-        return socketAddress;
-    }
-
-    public String getResourceId() {
-        return resourceId;
-    }
-
-    @Override
-    public String toString() {
-        return getSocketAddress() + "[" + resourceId + "]";
-    }
 }

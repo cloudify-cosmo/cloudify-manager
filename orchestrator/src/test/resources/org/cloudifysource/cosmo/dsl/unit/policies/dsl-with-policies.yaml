@@ -1,0 +1,18 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "host.provisioner"
+        - "middleware_component.installer"
+
+    service_templates:
+        web_server:
+            topology:
+                webserver_host:
+                    type: "cloudify.tosca.types.host"
+                    policies: host policy stub..
+
+                webserver_middleware:
+                    type: "cloudify.tosca.types.web_server"
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "webserver_host"

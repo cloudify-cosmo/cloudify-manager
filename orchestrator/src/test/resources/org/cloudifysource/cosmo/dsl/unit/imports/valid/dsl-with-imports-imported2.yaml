@@ -14,10 +14,7 @@ definitions:
     type2: 
       init: 
         radial: type2_radial_stub
-    type2_1: 
-      init: 
-        radial: type2_1_radial_stub
-  relationships: 
+  relationships:
     relationship2: {}
   types: 
     type2: 

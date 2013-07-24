@@ -7,21 +7,33 @@ from celery.utils.log import get_task_logger
 from fabric.api import settings, sudo, run, put
 import socket
 import os
+import string
+import signal
 from os import path
 
 logger = get_task_logger(__name__)
 
 _plugins_to_install = ["plugin_installer"]
 
+
 @celery.task
 def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
     prepare_configuration(worker_config, cloudify_runtime)
     install_celery_worker(worker_config, __cloudify_id)
 
+
 @celery.task
 def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
     prepare_configuration(worker_config, cloudify_runtime)
     restart_celery_worker(worker_config, __cloudify_id)
+
+
+@celery.task
+def reload_riemann_config(policies, riemann_config_template, riemann_config_path, riemann_pid, **kwargs):
+    with open(riemann_config_path, 'w') as config:
+        config.write(string.Template(riemann_config_template).substitute(dict(events_mapping=policies)))
+    # causes riemann server to reload the configuration
+    os.kill(int(riemann_pid), signal.SIGHUP)
 
 
 def prepare_configuration(worker_config, cloudify_runtime):
@@ -104,6 +116,7 @@ def get_machine_ip(cloudify_runtime):
             return value['ip']
 
     raise ValueError('cannot get machine ip - cloudify_runtime format error')
+
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
