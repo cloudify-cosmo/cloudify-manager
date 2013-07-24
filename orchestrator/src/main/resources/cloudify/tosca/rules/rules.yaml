@@ -3,10 +3,15 @@ definitions:
     ##################################################################################
     # Policies rules definitions
     ##################################################################################
-    rules:
-        status_equal:
+    policies:
+        types:
+            start_detection_policy: { }
+            failure_detection_policy: { }
 
-        status_not_equal:
+        rules:
+            status_equal:
 
-        metric_greater_than:
+            status_not_equal:
+
+            metric_greater_than:
 
