@@ -40,6 +40,9 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         StateCacheConfig.class,
         StateCacheFeederConfig.class
 })
+
+// adding this prop file here since riemann configuration is not part of the orchestrator
+@PropertySource("org/cloudifysource/cosmo/manager/riemann/riemann.properties")
 public class MainManagerConfig {
 
     @Bean

@@ -16,23 +16,36 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
-import org.cloudifysource.cosmo.manager.process.CeleryWorkerProcess;
+import org.cloudifysource.cosmo.manager.ResourceExtractor;
+import org.robobninjas.riemann.spring.server.RiemannProcess;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
- * Creates a new {@link org.cloudifysource.cosmo.manager.process.CeleryWorkerProcess}.
+ * A spring bean that starts and stops the riemann process.
  *
- * @author Itai Frenkel
+ * @author Eli Polonsky
  * @since 0.1
  */
 @Configuration
-public class CeleryWorkerProcessConfig {
+public class RiemannProcessConfiguration {
 
     private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
+    private static final String RIEMANN_RESOURCES_PATH = "riemann";
 
-    @Bean
-    CeleryWorkerProcess celeryWorkerProcess() {
-        return new CeleryWorkerProcess("cosmo", TEMP);
+
+    @Value("${riemann.server.config-resource}")
+    private String riemannConfigResourcePath;
+
+    @Bean(destroyMethod = "close")
+    public RiemannProcess riemann() throws IOException {
+        ResourceExtractor.extractResource(RIEMANN_RESOURCES_PATH, Paths.get(TEMP));
+        Path configPath = Paths.get(TEMP, riemannConfigResourcePath);
+        return new RiemannProcess(configPath);
     }
 }

@@ -112,8 +112,12 @@ public class RuoteRuntime {
         }
     }
 
+    public void waitForWorkflow(Object wfid, long timeoutInSeconds) {
+        container.callMethod(receiver, WAIT_FOR_WORKFLOW_METHOD_NAME, dashboard, wfid, timeoutInSeconds);
+    }
+
     public void waitForWorkflow(Object wfid) {
-        container.callMethod(receiver, WAIT_FOR_WORKFLOW_METHOD_NAME, dashboard, wfid);
+        container.callMethod(receiver, WAIT_FOR_WORKFLOW_METHOD_NAME, dashboard, wfid, -1);
     }
 
     public Object parseWorkflow(String workflow) {

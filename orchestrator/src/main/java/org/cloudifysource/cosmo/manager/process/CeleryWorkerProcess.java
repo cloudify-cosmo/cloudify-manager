@@ -19,7 +19,6 @@ package org.cloudifysource.cosmo.manager.process;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
-import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.ResourceExtractor;
@@ -154,9 +153,7 @@ public class CeleryWorkerProcess implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        logger.debug("Closing Bean[" + CeleryWorkerProcess.class.getName() +
-                "] - deleting directory : " +
-                appDir);
+        logger.debug("Closing Bean[" + CeleryWorkerProcess.class.getName());
 
         processOutputLogger.close();
 
@@ -174,8 +171,6 @@ public class CeleryWorkerProcess implements AutoCloseable {
         if (exitCode != 0) {
             throw new IllegalStateException("Failed to close celery worker process");
         }
-
-        FileUtils.deleteDirectory(new File(appDir));
 
     }
 

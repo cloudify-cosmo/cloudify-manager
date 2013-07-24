@@ -26,10 +26,6 @@ Requirements
 Setup
 =====
 
-- Riemann process running:	
-	- run "wget https://raw.github.com/CloudifySource/cosmo-manager/develop/orchestrator/src/test/resources/org/cloudifysource/cosmo/orchestrator/integration/config/riemann.vagrant.config"
-	- include riemann in your path and run the following command : "riemann riemann.vagrant.config"		
-
 - RabbitMQ process running:	
 	- Start RabbitMQ as a service, no configuration is required.
 
@@ -40,10 +36,3 @@ Build
 - git clone https://github.com/CloudifySource/cosmo-manager.git
 - cd cosmo-manager/orchestrator
 - mvn -DskipTests package -Pall
-
-Run
-===
-
-- cd target
-- wget https://raw.github.com/CloudifySource/cosmo-manager/develop/orchestrator/src/test/resources/org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml
-- java -jar orchestrator-0.1-SNAPSHOT-all.jar integration-phase3.yaml
