@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
-import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.ResourceExtractor;
@@ -28,7 +27,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -43,6 +41,8 @@ import java.nio.file.Paths;
 @Configuration
 @PropertySource("org/cloudifysource/cosmo/manager/monitor/vagrant-riemann-monitor.properties")
 public class VagrantRiemannMonitorProcessConfig {
+
+    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
 
     private static final String MONITOR_RESOURCE = "monitor";
     private Logger logger = LoggerFactory.getLogger(JettyFileServerForPluginsConfig.class);
@@ -115,22 +115,13 @@ public class VagrantRiemannMonitorProcessConfig {
             "--vagrant_nic=" + vagrantNic,
             "--pid_file=" + pidFileName
         };
-        return new VagrantRiemannMonitorProcess(command, pidFileName, new File(System.getProperty("java.io.tmpdir")));
+        return new VagrantRiemannMonitorProcess(command, pidFileName, new File(TEMP));
     }
 
     @PostConstruct
     public void extractMonitorFile() throws IOException {
-        monitorExtractionPath = Paths.get("cosmo-riemann-monitor");
+        monitorExtractionPath = Paths.get(TEMP);
         ResourceExtractor.extractResource(MONITOR_RESOURCE, monitorExtractionPath);
 
     }
-
-    @PreDestroy
-    public void close() throws IOException {
-        logger.debug("Closing Bean[" + VagrantRiemannMonitorProcessConfig.class.getName() +
-                "] - deleting directory : " +
-                monitorExtractionPath.toAbsolutePath());
-        FileUtils.deleteDirectory(monitorExtractionPath.toFile());
-    }
-
 }

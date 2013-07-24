@@ -29,10 +29,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class CeleryWorkerProcessConfig {
 
-    private static final String USER_HOME = System.getProperty("user.home");
+    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
 
     @Bean
     CeleryWorkerProcess celeryWorkerProcess() {
-        return new CeleryWorkerProcess("cosmo", USER_HOME + "/celeryworker");
+        return new CeleryWorkerProcess("cosmo", TEMP);
     }
 }
