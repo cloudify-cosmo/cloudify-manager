@@ -18,12 +18,14 @@ package org.cloudifysource.cosmo.manager.config;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
-import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.tasks.CeleryWorkerProcess;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Paths;
 
@@ -38,14 +40,16 @@ public class CeleryWorkerProcessConfig {
 
     private static final String RESOURCE_PATH = "celery/app";
 
-    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
+    @Inject
+    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+
 
     @PostConstruct
     public void extractCeleryApp() {
 
         try {
             // This will extract the celery app from the resources to the working directory
-            ResourceExtractor.extractResource(RESOURCE_PATH, Paths.get(TEMP),
+            ResourceExtractor.extractResource(RESOURCE_PATH, Paths.get(temporaryDirectory.get().getAbsolutePath()),
                     Resources.getResource(RESOURCE_PATH));
         } catch (IOException e) {
             throw Throwables.propagate(e);
@@ -54,6 +58,6 @@ public class CeleryWorkerProcessConfig {
 
     @Bean
     CeleryWorkerProcess celeryWorkerProcess() {
-        return new CeleryWorkerProcess("cosmo", TEMP + "/" + RESOURCE_PATH);
+        return new CeleryWorkerProcess("cosmo", temporaryDirectory.get().getAbsolutePath() + "/" + RESOURCE_PATH);
     }
 }

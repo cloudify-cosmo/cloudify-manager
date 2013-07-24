@@ -27,6 +27,7 @@ import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -34,7 +35,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -51,21 +51,25 @@ public class Manager {
     private static final String SCRIPTS_RESOURCE_PATH = "scripts";
     private static final String RUOTE_GEMS_RESOURCE_PATH = "ruote-gems/gems";
 
-    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
-
-
-    private Path extractionPath;
-    private AnnotationConfigApplicationContext context;
+    private AnnotationConfigApplicationContext mainContext;
+    private AnnotationConfigApplicationContext bootContext;
     private boolean closed;
     private RuoteWorkflow ruoteWorkflow;
     private RuoteRuntime ruoteRuntime;
     private RiemannProcess riemannProcess;
+    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectoryForFileServer;
+    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
     public Manager() throws IOException {
-        context = registerConfig();
-        ruoteWorkflow = (RuoteWorkflow) context.getBean("defaultRuoteWorkflow");
-        ruoteRuntime = (RuoteRuntime) context.getBean("ruoteRuntime");
-        riemannProcess = (RiemannProcess) context.getBean("riemann");
+        this.bootContext = registerTempDirectoryConfig();
+        this.temporaryDirectoryForFileServer =
+                (TemporaryDirectoryConfig.TemporaryDirectory) bootContext.getBean("temporaryDirectory");
+        this.mainContext = registerConfig(temporaryDirectoryForFileServer.get().toPath());
+        this.ruoteWorkflow = (RuoteWorkflow) mainContext.getBean("defaultRuoteWorkflow");
+        this.ruoteRuntime = (RuoteRuntime) mainContext.getBean("ruoteRuntime");
+        this.riemannProcess = (RiemannProcess) mainContext.getBean("riemann");
+        this.temporaryDirectory =
+                (TemporaryDirectoryConfig.TemporaryDirectory) mainContext.getBean("temporaryDirectory");
     }
 
     public void deployDSL(String dslPath, long timeoutInSeconds) {
@@ -73,7 +77,8 @@ public class Manager {
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslPath);
         workitemFields.put("riemann_pid", String.valueOf(riemannProcess.getPid()));
-        workitemFields.put("riemann_config_path", TEMP + "/riemann/riemann.config");
+        workitemFields.put("riemann_config_path", temporaryDirectory.get()
+                .getAbsolutePath() + "/riemann/riemann.config");
         workitemFields.put("riemann_config_template", readRiemannConfigTemplate());
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
@@ -81,14 +86,19 @@ public class Manager {
     }
 
     public void close() throws Exception {
-        LOGGER.debug("Closing [" + Manager.class.getName());
+        closeContext(bootContext, temporaryDirectoryForFileServer);
+        closeContext(mainContext, temporaryDirectory);
+        this.closed = true;
+    }
+
+    private void closeContext(AnnotationConfigApplicationContext context,
+                              TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory) throws IOException {
         if (context != null && context.isActive()) {
-            LOGGER.debug("Closing spring application context");
+            LOGGER.debug("Closing spring application context : " + context);
             context.close();
         }
-        LOGGER.debug("Deleting directory : " + extractionPath.toAbsolutePath());
-        FileUtils.deleteDirectory(extractionPath.toFile());
-        this.closed = true;
+        LOGGER.debug("Deleting directory : " + temporaryDirectory.get().getAbsolutePath());
+        FileUtils.deleteDirectory(temporaryDirectory.get());
     }
 
     public boolean isClosed() {
@@ -104,8 +114,7 @@ public class Manager {
         }
     }
 
-    private AnnotationConfigApplicationContext registerConfig() throws IOException {
-        extractionPath = Paths.get(TEMP).toAbsolutePath();
+    private AnnotationConfigApplicationContext registerConfig(Path extractionPath) throws IOException {
         ResourceExtractor.extractResource(SCRIPTS_RESOURCE_PATH, extractionPath);
         ResourceExtractor.extractResource(RUOTE_GEMS_RESOURCE_PATH, extractionPath);
         URLClassLoader ruoteClassLoader = new URLClassLoader(new URL[] {
@@ -115,5 +124,12 @@ public class Manager {
         context.register(MainManagerConfig.class);
         context.refresh();
         return context;
+    }
+
+    private AnnotationConfigApplicationContext registerTempDirectoryConfig() {
+        AnnotationConfigApplicationContext contextForTempDir = new AnnotationConfigApplicationContext();
+        contextForTempDir.register(TemporaryDirectoryConfig.class);
+        contextForTempDir.refresh();
+        return contextForTempDir;
     }
 }

@@ -16,8 +16,8 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.manager.DSLPackage;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
@@ -30,11 +30,9 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 
@@ -53,25 +51,27 @@ import java.nio.file.attribute.BasicFileAttributes;
 @PropertySource("org/cloudifysource/cosmo/manager/fileserver/jetty.properties")
 public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
 
-    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
+    private static final String PLUGIN_RESOURCE_PATH =
+            "celery/app/cosmo/cloudify/tosca/artifacts/plugin/python_webserver/installer";
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
-    private final Path pluginExtractionPath;
-
-    public JettyFileServerForPluginsConfig() {
-        pluginExtractionPath = Paths.get(TEMP + "/plugins");
-    }
-
     @PostConstruct
-    public void setResourceBase() {
-        // zip webserver plugin
-        createZipForPlugin(
-                "celery/app/cosmo/cloudify/tosca/artifacts/plugin/python_webserver/installer",
-                temporaryDirectory.get(),
-                "python-webserver-installer.zip");
-        this.resourceBase = temporaryDirectory.get().getAbsolutePath();
+    public void setResourceBase() throws IOException {
+
+        // create a directory for the file server inside the temp folder.
+        File resourceBase = new File(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
+        Preconditions.checkArgument(resourceBase.mkdirs());
+
+        // extract the plugin to the temp folder
+        ResourceExtractor.extractResource(PLUGIN_RESOURCE_PATH, temporaryDirectory.get().toPath());
+
+        // zip up the plugin and move the zip file to the file server resource base.
+        createZipForPlugin(PLUGIN_RESOURCE_PATH,
+                           resourceBase,
+                           "python-webserver-installer.zip");
+        this.resourceBase = resourceBase.getAbsolutePath();
     }
 
     private void createZipForPlugin(final String resourceRoot,
@@ -79,16 +79,13 @@ public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
 
         try {
             final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
-            URL visitorRootUrl = Resources.getResource(resourceRoot);
-
-            ResourceExtractor.extractResource(resourceRoot, pluginExtractionPath, visitorRootUrl);
-            Files.walkFileTree(pluginExtractionPath.resolve(resourceRoot), new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(temporaryDirectory.get().toPath().resolve(resourceRoot), new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     if (file.toString().endsWith(".pyc")) {
                         return FileVisitResult.CONTINUE;
                     }
                     byte[] content = com.google.common.io.Files.toByteArray(file.toFile());
-                    String targetFile = pluginExtractionPath.resolve(resourceRoot).relativize(file).toString();
+                    String targetFile = temporaryDirectory.get().toPath().resolve(resourceRoot).relativize(file).toString();
                     packagedPluginBuilder.addFile(targetFile, content);
                     return FileVisitResult.CONTINUE;
                 }
