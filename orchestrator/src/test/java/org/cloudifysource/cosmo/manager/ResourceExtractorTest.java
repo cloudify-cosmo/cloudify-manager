@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.manager;
 
 import com.google.common.io.Resources;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.fest.assertions.api.Assertions;
 import org.testng.annotations.Test;
 

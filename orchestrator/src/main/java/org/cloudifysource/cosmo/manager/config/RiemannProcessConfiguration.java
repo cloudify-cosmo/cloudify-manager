@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
-import org.cloudifysource.cosmo.manager.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.manager;
+package org.cloudifysource.cosmo.utils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;

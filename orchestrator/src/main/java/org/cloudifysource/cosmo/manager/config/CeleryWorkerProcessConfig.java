@@ -18,7 +18,7 @@ package org.cloudifysource.cosmo.manager.config;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
-import org.cloudifysource.cosmo.manager.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.tasks.CeleryWorkerProcess;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

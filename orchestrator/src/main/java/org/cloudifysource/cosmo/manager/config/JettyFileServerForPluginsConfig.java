@@ -20,7 +20,7 @@ import com.google.common.base.Throwables;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.manager.DSLPackage;
-import org.cloudifysource.cosmo.manager.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;

@@ -18,7 +18,7 @@ package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.manager.ResourceExtractor;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.manager.process.VagrantRiemannMonitorProcess;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;

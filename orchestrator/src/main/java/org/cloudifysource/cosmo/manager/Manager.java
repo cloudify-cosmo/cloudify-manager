@@ -26,6 +26,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
+import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
