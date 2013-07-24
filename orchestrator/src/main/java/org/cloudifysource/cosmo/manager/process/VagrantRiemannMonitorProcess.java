@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
+import org.cloudifysource.cosmo.tasks.ProcessOutputLogger;
 
 import java.io.File;
 import java.io.IOException;
