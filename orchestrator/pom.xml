@@ -22,7 +22,7 @@
     <version>0.1-SNAPSHOT</version>
 
     <properties>
-        <mainClass>org.cloudifysource.cosmo.manager.Manager</mainClass>
+        <mainClass>org.cloudifysource.cosmo.manager.ManagerBoot</mainClass>
     </properties>
 
     <dependencies>
@@ -167,7 +167,6 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
-            <scope>test</scope>
             <type>test-jar</type>
             <!-- TODO: Remove version -->
             <version>3.0.1-SNAPSHOT</version>
