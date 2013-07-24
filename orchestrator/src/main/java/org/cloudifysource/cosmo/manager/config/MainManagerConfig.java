@@ -20,6 +20,7 @@ import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
+import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -35,6 +36,8 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
  */
 @Configuration
 @Import({
+        StateCacheConfig.class,
+        TaskExecutorConfig.class,
         JettyFileServerForPluginsConfig.class,
         DefaultRuoteWorkflowConfig.class,
         RuoteRuntimeConfig.class,

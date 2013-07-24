@@ -49,10 +49,6 @@ import java.util.Map;
  * @since 0.1
  */
 @Configuration
-@Import({
-        StateCacheConfig.class,
-        TaskExecutorConfig.class
-})
 @PropertySource("org/cloudifysource/cosmo/manager/ruote/ruote.properties")
 public class RuoteRuntimeConfig {
 
