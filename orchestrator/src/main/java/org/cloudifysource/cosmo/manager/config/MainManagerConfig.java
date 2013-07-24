@@ -22,6 +22,7 @@ import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
 
@@ -38,9 +39,13 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         RuoteRuntimeConfig.class,
         CeleryWorkerProcessConfig.class,
         VagrantRiemannMonitorProcessConfig.class,
+        RiemannProcessConfiguration.class,
         StateCacheConfig.class,
         StateCacheFeederConfig.class
 })
+
+// adding this prop file here since riemann configuration is not part of the orchestrator
+@PropertySource("org/cloudifysource/cosmo/manager/riemann/riemann.properties")
 public class MainManagerConfig {
 
     @Bean
