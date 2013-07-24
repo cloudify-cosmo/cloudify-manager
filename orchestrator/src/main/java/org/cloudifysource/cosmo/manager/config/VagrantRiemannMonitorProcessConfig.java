@@ -18,110 +18,64 @@ package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.utils.ResourceExtractor;
-import org.cloudifysource.cosmo.manager.process.VagrantRiemannMonitorProcess;
-import org.hibernate.validator.constraints.NotEmpty;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
+import org.cloudifysource.cosmo.tasks.ProcessOutputLogger;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 
-import javax.annotation.PostConstruct;
-import java.io.File;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
- * Configuration for creating a new {@link org.cloudifysource.cosmo.manager.process.VagrantRiemannMonitorProcess}.
+ * Configuration for shutting down the riemann monitor process.
  *
  * @author Dan Kilman
  * @since 0.1
  */
 @Configuration
-@PropertySource("org/cloudifysource/cosmo/manager/monitor/vagrant-riemann-monitor.properties")
 public class VagrantRiemannMonitorProcessConfig {
 
-    private static final String TEMP = System.getProperty("java.io.tmpdir") + "/cosmo";
+    private Logger logger = LoggerFactory.getLogger(VagrantRiemannMonitorProcessConfig.class);
 
-    private static final String MONITOR_RESOURCE = "monitor";
-    private Logger logger = LoggerFactory.getLogger(JettyFileServerForPluginsConfig.class);
+    @PreDestroy
+    public void killMonitor() throws IOException, InterruptedException {
 
-    private Path monitorExtractionPath;
+        logger.debug("Killing vagrant monitor process");
 
-    private static final String VAGRANT_MONITOR_NAME = "vagrant-riemann-monitor.py";
+        int retryCount = 0;
+        // workaround signaling issue with vagrant-riemann monitor.
+        // sometimes, the kill signal gets caught by an underlying layer and
+        // never reaches our signal handler.
 
-
-    // Configuration to execute the monitor
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.python_interpreter:python}")
-    private String pythonInterpreter;
-
-    // Configuration passed to the monitor process
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.ssh_host:127.0.0.1}")
-    private String vagrantSSHHost;
-
-    @Value("${cosmo.monitor.vagrant.ssh_port:2222}")
-    private Integer vagrantSSHPort;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.ssh_user:vagrant}")
-    private String vagrantSSHUser;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.ssh_keyfile:~/.vagrant.d/insecure_private_key}")
-    private String vagrantSSHKeyFile;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.host_id}")
-    private String hostId;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.riemann_host:localhost}")
-    private String riemannHost;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.riemann_port:5555}")
-    private String riemannPort;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.riemann_transport:tcp}")
-    private String riemannTransport;
-
-    @Value("${cosmo.monitor.vagrant.monitor_interval:5}")
-    private Integer monitorInterval;
-
-    @NotEmpty
-    @Value("${cosmo.monitor.vagrant.nic:eth1}")
-    private String vagrantNic;
-
-    @Bean(destroyMethod = "close")
-    public VagrantRiemannMonitorProcess vagrantRiemannMonitorProcess() {
-        long currentTime = System.currentTimeMillis();
-        String pidFileName = "process.pid." + currentTime;
-        String[] command = {
-            pythonInterpreter,
-            monitorExtractionPath.toAbsolutePath().toString() + "/" + MONITOR_RESOURCE + "/" + VAGRANT_MONITOR_NAME,
-            "--tag=" + "name=" + hostId,
-            "--riemann_host=" + riemannHost,
-            "--riemann_port=" + riemannPort,
-            "--riemann_transport=" + riemannTransport,
-            "--ssh_host=" + vagrantSSHHost,
-            "--ssh_port=" + vagrantSSHPort,
-            "--ssh_user=" + vagrantSSHUser,
-            "--ssh_keyfile=" + vagrantSSHKeyFile,
-            "--monitor_interval=" + monitorInterval,
-            "--vagrant_nic=" + vagrantNic,
-            "--pid_file=" + pidFileName
-        };
-        return new VagrantRiemannMonitorProcess(command, pidFileName, new File(TEMP));
+        Process process = null;
+        while (retryCount < 3) {
+            process = runProcess();
+            process.waitFor();
+            Thread.sleep(100);
+            if (!isProcessAlive(process)) {
+                break;
+            }
+            retryCount++;
+            Thread.sleep(5000);
+        }
+        if (process != null && isProcessAlive(process)) {
+            throw new IllegalStateException("Failed closing vagrant monitor process");
+        }
     }
 
-    @PostConstruct
-    public void extractMonitorFile() throws IOException {
-        monitorExtractionPath = Paths.get(TEMP);
-        ResourceExtractor.extractResource(MONITOR_RESOURCE, monitorExtractionPath);
-
+    private Process runProcess() {
+        String[] command = {"/bin/sh", "-c", "kill $(ps aux | grep '[m]onitor.py' | awk '{print $2}')"};
+        ProcessBuilder builder = new ProcessBuilder();
+        builder.command(command);
+        ProcessOutputLogger processOutputLogger = new ProcessOutputLogger(builder, logger);
+        return processOutputLogger.getProcess();
     }
+
+    private boolean isProcessAlive(Process process) {
+        try {
+            process.exitValue();
+            return false;
+        } catch (IllegalThreadStateException e) {
+            return true;
+        }
+    }
+
 }
