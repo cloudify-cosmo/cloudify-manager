@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.manager;
+package org.cloudifysource.cosmo.manager.cli;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -24,7 +24,7 @@ import org.cloudifysource.cosmo.manager.cli.validator.FileExistValidator;
 /**
  * Command line arguments passed to the ManagerBoot.
  *
- * @see {@link ManagerBoot}
+ * @see {@link org.cloudifysource.cosmo.manager.ManagerBoot}
  *
  * @author Eli Polonsky
  * @since 0.1

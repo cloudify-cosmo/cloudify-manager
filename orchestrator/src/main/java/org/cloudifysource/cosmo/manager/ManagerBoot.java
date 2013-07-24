@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.manager;
 import com.beust.jcommander.JCommander;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
+import org.cloudifysource.cosmo.manager.cli.Args;
 
 /**
  * Boots up the manager with spring dependency injection and deploys the specified DSL.
