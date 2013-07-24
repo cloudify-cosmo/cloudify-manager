@@ -87,8 +87,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
             JythonProxyConfig.class,
-            CeleryWorkerProcessConfig.class,
-            VagrantRiemannMonitorProcessConfig.class
+            CeleryWorkerProcessConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {

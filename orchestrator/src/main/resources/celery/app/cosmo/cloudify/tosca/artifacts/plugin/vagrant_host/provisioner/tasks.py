@@ -23,6 +23,8 @@ from cosmo.celery import celery
 import os
 import vagrant
 import tempfile
+import subprocess
+import sys
 from celery.utils.log import get_task_logger
 
 RUNNING = 'running'
@@ -37,6 +39,7 @@ def provision(vagrant_file, __cloudify_id, **kwargs):
     v = get_vagrant(__cloudify_id, True)
     with open("{0}/Vagrantfile".format(v.root), 'w') as output_file:
         output_file.write(vagrant_file)
+    start_monitor(v, __cloudify_id)
 
 
 @celery.task
@@ -54,7 +57,7 @@ def stop(__cloudify_id, **kwargs):
     v = get_vagrant(__cloudify_id)
     if status(v) == RUNNING:
         return v.halt()
-    logger('vagrant vm is not running [id=%s]', __cloudify_id)
+    logger.info('vagrant vm is not running [id=%s]', __cloudify_id)
 
 
 @celery.task
@@ -76,4 +79,15 @@ def get_vagrant(vm_id, create=False):
 
 def status(v):
     return v.status()
+
+
+def start_monitor(v, host_id):
+    command = [
+        sys.executable,
+        os.path.join(os.path.dirname(__file__), "monitor.py"),
+        "--tag=name={0}".format(host_id),
+        "--pid_file={0}".format(os.path.join(v.root, "monitor.pid"))
+    ]
+    logger.info('starting vagrant monitoring [cmd=%s]', command)
+    subprocess.Popen(command)
 
