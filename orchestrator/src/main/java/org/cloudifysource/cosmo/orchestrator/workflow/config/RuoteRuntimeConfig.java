@@ -28,6 +28,7 @@ import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.hibernate.validator.constraints.NotEmpty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -59,7 +60,7 @@ public class RuoteRuntimeConfig {
     @Inject
     private TaskExecutor taskExecutor;
 
-    @Inject
+    @Autowired(required = false)
     private URLClassLoader rubyResourcesClassLoader;
 
     @Bean
