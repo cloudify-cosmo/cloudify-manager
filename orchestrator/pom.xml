@@ -117,6 +117,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.30</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -127,7 +132,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
-            <scope>test</scope>
             <type>test-jar</type>
         </dependency>
         <dependency>
@@ -167,7 +171,6 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
-            <scope>test</scope>
             <type>test-jar</type>
             <!-- TODO: Remove version -->
             <version>3.0.1-SNAPSHOT</version>
