@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl.packaging;
+package org.cloudifysource.cosmo.utils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -30,11 +30,11 @@ import java.util.zip.ZipOutputStream;
  * @author Idan Moyal
  * @since 0.1
  */
-public class DSLPackage {
+public class Archive {
 
     private final List<FileEntry> entries;
 
-    private DSLPackage(List<FileEntry> entries) {
+    private Archive(List<FileEntry> entries) {
         Preconditions.checkNotNull(entries);
         this.entries = entries;
     }
@@ -65,22 +65,22 @@ public class DSLPackage {
      * @author Idan Moyal
      * @since 0.1
      */
-    public static class DSLPackageBuilder {
+    public static class ArchiveBuilder {
 
         private final List<FileEntry> entries = Lists.newLinkedList();
 
-        public DSLPackageBuilder addFile(String filePath, byte[] content) {
+        public ArchiveBuilder addFile(String filePath, byte[] content) {
             entries.add(new FileEntry(filePath, content));
             return this;
         }
 
-        public DSLPackageBuilder addFile(String filePath, String content) {
+        public ArchiveBuilder addFile(String filePath, String content) {
             entries.add(new FileEntry(filePath, content.getBytes()));
             return this;
         }
 
-        public DSLPackage build() {
-            return new DSLPackage(entries);
+        public Archive build() {
+            return new Archive(entries);
         }
     }
 

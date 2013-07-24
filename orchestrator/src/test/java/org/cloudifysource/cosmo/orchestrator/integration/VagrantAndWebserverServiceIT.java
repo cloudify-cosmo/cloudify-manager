@@ -21,7 +21,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
@@ -33,6 +32,7 @@ import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
+import org.cloudifysource.cosmo.utils.Archive;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.robobninjas.riemann.spring.RiemannTestConfiguration;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
@@ -152,7 +152,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
     private static void createZipForPlugin(String resourceRoot,
                                            File targetDir, String targetName) {
-        final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
+        final Archive.ArchiveBuilder packagedPluginBuilder = new Archive.ArchiveBuilder();
         URL visitorRootUrl = Resources.getResource(resourceRoot);
         final Path visitorRootPath = Paths.get(URI.create("file://" + visitorRootUrl.getPath()));
         try {

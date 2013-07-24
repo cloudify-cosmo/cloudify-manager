@@ -19,7 +19,7 @@ package org.cloudifysource.cosmo.manager.config;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
-import org.cloudifysource.cosmo.manager.DSLPackage;
+import org.cloudifysource.cosmo.utils.Archive;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.springframework.context.annotation.Configuration;
@@ -78,7 +78,7 @@ public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
                                            File targetDir, String targetName) {
 
         try {
-            final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
+            final Archive.ArchiveBuilder packagedPluginBuilder = new Archive.ArchiveBuilder();
             Files.walkFileTree(temporaryDirectory.get().toPath().resolve(resourceRoot), new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     if (file.toString().endsWith(".pyc")) {

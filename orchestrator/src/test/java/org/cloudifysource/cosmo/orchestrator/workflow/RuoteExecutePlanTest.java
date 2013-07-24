@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
 import org.cloudifysource.cosmo.dsl.packaging.ExtractedDSLPackageDetails;
 import org.cloudifysource.cosmo.logging.Logger;
@@ -37,6 +36,7 @@ import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
 import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
+import org.cloudifysource.cosmo.utils.Archive;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -183,7 +183,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         URL resource = Resources.getResource("org/cloudifysource/cosmo/dsl/unit/packaging/basic-packaging.yaml");
         String dsl = Resources.toString(
                 resource, Charsets.UTF_8);
-        DSLPackage dslPackage = new DSLPackage.DSLPackageBuilder()
+        Archive dslPackage = new Archive.ArchiveBuilder()
                 .addFile("app.yaml", dsl)
                 .build();
         final Path packagePath = Paths.get(temporaryDirectory.get().getCanonicalPath(), "app.zip");
@@ -205,7 +205,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackageWithImports() throws IOException, InterruptedException {
         final String root = "org/cloudifysource/cosmo/dsl/unit/packaging/imports/";
-        DSLPackage dslPackage = new DSLPackage.DSLPackageBuilder()
+        Archive dslPackage = new Archive.ArchiveBuilder()
                 .addFile("app.yaml", getResourceAsString(root + "packaging-with-imports.yaml"))
                 .addFile("definitions/packaging-with-imports0.yaml",
                         getResourceAsString(root + "packaging-with-imports0.yaml"))
