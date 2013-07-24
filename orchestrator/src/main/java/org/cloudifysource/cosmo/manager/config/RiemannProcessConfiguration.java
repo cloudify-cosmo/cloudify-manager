@@ -48,7 +48,8 @@ public class RiemannProcessConfiguration {
 
     @Bean(destroyMethod = "close")
     public RiemannProcess riemann() throws IOException {
-        ResourceExtractor.extractResource(RIEMANN_RESOURCES_PATH, Paths.get(temporaryDirectory.get().getAbsolutePath()));
+        ResourceExtractor.extractResource(RIEMANN_RESOURCES_PATH,
+                Paths.get(temporaryDirectory.get().getAbsolutePath()));
         Path configPath = Paths.get(temporaryDirectory.get().getAbsolutePath(),
                 riemannConfigResourcePath);
         return new RiemannProcess(configPath);

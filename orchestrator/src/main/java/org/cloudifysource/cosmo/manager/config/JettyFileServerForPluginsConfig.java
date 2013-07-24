@@ -85,7 +85,8 @@ public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
                         return FileVisitResult.CONTINUE;
                     }
                     byte[] content = com.google.common.io.Files.toByteArray(file.toFile());
-                    String targetFile = temporaryDirectory.get().toPath().resolve(resourceRoot).relativize(file).toString();
+                    String targetFile = temporaryDirectory.get().toPath()
+                            .resolve(resourceRoot).relativize(file).toString();
                     packagedPluginBuilder.addFile(targetFile, content);
                     return FileVisitResult.CONTINUE;
                 }
