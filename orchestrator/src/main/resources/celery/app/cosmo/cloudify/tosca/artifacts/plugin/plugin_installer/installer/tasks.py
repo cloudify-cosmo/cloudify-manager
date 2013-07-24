@@ -70,7 +70,7 @@ def install(plugin, **kwargs):
         requirements_file = os.path.join(plugin_path, REQUIREMENTS_FILE)
         if os.path.exists(requirements_file):
             os.chdir(plugin_path)
-            call(["sudo", "pip", "--default-timeout=120" "install", "-r", requirements_file])
+            call(["sudo", "pip", "--default-timeout=120", "install", "-r", requirements_file])
     except (CalledProcessError, Exception) as error:
         call(["sudo", "rm", "-rf", plugin_path])
         raise error
