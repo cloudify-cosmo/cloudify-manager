@@ -10,7 +10,31 @@ definitions:
             topology:
                 webserver_host:
                     type: "cloudify.tosca.types.host"
-                    policies: host policy stub..
+                    policies:
+                        start_detection:
+                            rules:
+                                host_status:
+                                    type: "state_equals"
+                                    properties:
+                                        state: "host_state"
+                                        value: "running"
+                                ping_latency:
+                                    type: "metric_below"
+                                    properties:
+                                        metric: "latency"
+                                        value: "100"
+                            on_event:
+                                reachable: "true"
+                                ip: "10.0.0.1"
+                        failure_detection:
+                            rules:
+                                host_status:
+                                    type: "state_not_equals"
+                                    properties:
+                                        state: "host_state"
+                                        value: "running"
+                            on_event:
+                                reachable: "false"
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"

@@ -37,14 +37,14 @@ public class Type extends InheritedDefinition {
     public static final String ROOT_NODE_TYPE_NAME = "node";
     public static final Type ROOT_NODE_TYPE = initRootNodeType();
 
+    private List<Object> interfaces = Lists.newArrayList();
+    private Map<String, Policy> policies;
+
     private static Type initRootNodeType() {
         Type root = new Type();
         root.setName(ROOT_NODE_TYPE_NAME);
         return root;
     }
-
-    private List<Object> interfaces = Lists.newArrayList();
-    private String policies;
 
     public Type() {
         // Default value
@@ -59,11 +59,11 @@ public class Type extends InheritedDefinition {
         this.interfaces = interfaces;
     }
 
-    public String getPolicies() {
+    public Map<String, Policy> getPolicies() {
         return policies;
     }
 
-    public void setPolicies(String policies) {
+    public void setPolicies(Map<String, Policy> policies) {
         this.policies = policies;
     }
 

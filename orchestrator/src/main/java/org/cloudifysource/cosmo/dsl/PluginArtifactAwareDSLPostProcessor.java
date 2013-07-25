@@ -19,7 +19,6 @@ package org.cloudifysource.cosmo.dsl;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -209,7 +208,9 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {
-        node.put("policies", Strings.nullToEmpty(typeTemplate.getPolicies()));
+        final Map<String, Policy> policies =
+                typeTemplate.getPolicies() != null ? typeTemplate.getPolicies() : Maps.<String, Policy>newHashMap();
+        node.put("policies", policies);
     }
 
     private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,
