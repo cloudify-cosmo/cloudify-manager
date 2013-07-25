@@ -23,6 +23,7 @@
 
     <properties>
         <mainClass>org.cloudifysource.cosmo.manager.ManagerBoot</mainClass>
+        <build.skipTests>false</build.skipTests>
     </properties>
 
     <dependencies>
@@ -242,6 +243,7 @@
                 <configuration>
                     <!-- http://maven.apache.org/surefire/maven-surefire-plugin/examples/class-loading.html -->
                     <useSystemClassLoader>false</useSystemClassLoader>
+                    <skipTests>${build.skipTests}</skipTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -253,6 +255,7 @@
                     <useSystemClassLoader>false</useSystemClassLoader>
                     <forkCount>1</forkCount>
                     <excludedGroups>vagrant</excludedGroups>
+                    <skipTests>${build.skipTests}</skipTests>
                 </configuration>
                 <executions>
                     <execution>
@@ -324,6 +327,11 @@
                 Logging implementation is also included in this jar
             -->
             <id>all</id>
+
+            <properties>
+                <build.skipTests>true</build.skipTests>
+            </properties>
+
             <dependencies>
                 <dependency>
                     <groupId>org.apache.logging.log4j</groupId>
@@ -405,6 +413,7 @@
 
                     </plugin>
                 </plugins>
+                <finalName>cosmo</finalName>
             </build>
         </profile>
     </profiles>
