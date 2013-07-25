@@ -67,7 +67,7 @@ def restart_celery_worker(worker_config, node_id):
 def _install_celery(worker_config, node_id):
     sudo("apt-get install -q -y python-pip")
     sudo("pip install billiard==2.7.3.28")
-    sudo("pip install celery==3.0.19")
+    sudo("pip install --default-timeout=120 celery==3.0.19")
 
     user = worker_config['user']
     broker_url = worker_config['broker']
