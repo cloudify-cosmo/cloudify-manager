@@ -25,7 +25,7 @@ import java.util.Map;
  * @author Idan Moyal
  * @since 0.1
  */
-public class Policy extends InheritedDefinition {
+public class Policy {
 
     private Map<String, Rule> rules;
     private Map<String, Object> onEvent;
@@ -46,9 +46,4 @@ public class Policy extends InheritedDefinition {
         this.rules = rules;
     }
 
-    @Override
-    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
-        // TODO: implement this.
-        return this;
-    }
 }
