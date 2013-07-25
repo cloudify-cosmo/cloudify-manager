@@ -31,6 +31,7 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -76,7 +77,7 @@ public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringCon
     private int port;
 
     @Test
-    public void testImportDSL() throws Exception {
+    public void testImportDSLAsResource() throws Exception {
 
         String expectedFullDSLPath = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + "/" +
                 EXPECTED_RELATIVE_DSL_PATH;
@@ -93,6 +94,28 @@ public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringCon
         assertThat(pluginPath.toFile()).exists();
         assertThat(dslPath.toFile()).exists();
         assertThat(dslLocation).isEqualTo(expectedFullDSLPath);
+
+    }
+
+    @Test
+    public void testImportDSLAsFullPath() throws Exception {
+
+        String expectedFullDSLPath = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + "/" +
+                EXPECTED_RELATIVE_DSL_PATH;
+
+        Path fullPathToDSL = Paths.get(Resources.getResource(dslPath).getPath());
+
+        String dslLocation = jettyFileServerForPluginsConfig.importDSL(fullPathToDSL);
+
+        Path expectedResourceBase = Paths.get(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
+
+        Path pluginPath = Paths.get(expectedResourceBase.toAbsolutePath().toString(), EXPECTED_PLUGIN_NAME);
+        Path dslPath = Paths.get(expectedResourceBase.toAbsolutePath().toString(), EXPECTED_RELATIVE_DSL_PATH);
+
+        assertThat(pluginPath.toFile()).exists();
+        assertThat(dslPath.toFile()).exists();
+        assertThat(dslLocation).isEqualTo(expectedFullDSLPath);
+
 
     }
 }
