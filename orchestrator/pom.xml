@@ -23,7 +23,7 @@
 
     <properties>
         <mainClass>org.cloudifysource.cosmo.manager.ManagerBoot</mainClass>
-        <build.skipTests>false</build.skipTests>
+        <skipTests>false</skipTests>
     </properties>
 
     <dependencies>
@@ -75,8 +75,6 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>client</artifactId>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>ch.qos.logback</groupId>
@@ -87,8 +85,6 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>json</artifactId>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -167,14 +163,10 @@
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
             <type>test-jar</type>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -237,7 +229,7 @@
                 <configuration>
                     <!-- http://maven.apache.org/surefire/maven-surefire-plugin/examples/class-loading.html -->
                     <useSystemClassLoader>false</useSystemClassLoader>
-                    <skipTests>${build.skipTests}</skipTests>
+                    <skipTests>${skipTests}</skipTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -249,7 +241,7 @@
                     <useSystemClassLoader>false</useSystemClassLoader>
                     <forkCount>1</forkCount>
                     <excludedGroups>vagrant</excludedGroups>
-                    <skipTests>${build.skipTests}</skipTests>
+                    <skipTests>${skipTests}</skipTests>
                 </configuration>
                 <executions>
                     <execution>
@@ -339,8 +331,6 @@
                     <groupId>org.robotninjas.riemann</groupId>
                     <artifactId>spring</artifactId>
                     <type>test-jar</type>
-                    <!-- TODO: Remove version -->
-                    <version>3.0.1-SNAPSHOT</version>
                 </dependency>
                 <dependency>
                     <groupId>${project.groupId}</groupId>
@@ -350,7 +340,6 @@
                 <dependency>
                     <groupId>com.beust</groupId>
                     <artifactId>jcommander</artifactId>
-                    <version>1.30</version>
                 </dependency>
             </dependencies>
 
