@@ -19,12 +19,13 @@ package org.cloudifysource.cosmo.dsl;
 import java.util.Map;
 
 /**
- * Represents a
+ * Represents a node type/template policy.
+ * Used internally only by the dsl processor.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public class Policy {
+public class Policy extends InheritedDefinition {
 
     private Map<String, Rule> rules;
     private Map<String, Object> onEvent;
@@ -43,5 +44,11 @@ public class Policy {
 
     public void setRules(Map<String, Rule> rules) {
         this.rules = rules;
+    }
+
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        // TODO: implement this.
+        return this;
     }
 }

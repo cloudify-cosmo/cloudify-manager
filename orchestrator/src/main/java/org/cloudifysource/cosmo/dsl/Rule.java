@@ -19,6 +19,9 @@ package org.cloudifysource.cosmo.dsl;
 import java.util.Map;
 
 /**
+ * Represents a node type/template policy rule.
+ * Used internally only by the dsl processor.
+ *
  * @author Idan Moyal
  * @since 0.1
  */
