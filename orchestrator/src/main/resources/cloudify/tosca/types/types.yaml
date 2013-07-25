@@ -152,4 +152,10 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.plugin"
 
 
-
+    ##################################################################################
+    # Policies
+    ##################################################################################
+    policies:
+        types:
+            start_detection_policy: { }
+            failure_detection_policy: { }

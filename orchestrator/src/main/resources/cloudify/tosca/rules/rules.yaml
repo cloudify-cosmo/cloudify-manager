@@ -4,14 +4,12 @@ definitions:
     # Policies rules definitions
     ##################################################################################
     policies:
-        types:
-            start_detection_policy: { }
-            failure_detection_policy: { }
-
         rules:
-            status_equal:
+            status_equal: |
+                (rule stub)
 
-            status_not_equal:
+            status_not_equal: |
+                (rule stub)
 
-            metric_greater_than:
-
+            metric_greater_than: |
+                (rule stub)

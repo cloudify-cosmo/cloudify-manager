@@ -263,6 +263,8 @@ public class DSLProcessor {
             copyDefinitions(importedDefinitions.getArtifacts(), definitions.getArtifacts());
             copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
             copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
+            copyMapNoOverride(importedDefinitions.getPolicies().getRules(), definitions.getPolicies().getRules());
+            copyMapNoOverride(importedDefinitions.getPolicies().getTypes(), definitions.getPolicies().getTypes());
             copyPlans(importedDefinitions.getPlans(), definitions.getPlans());
             copyGlobalPlan(importedDefinitions, definitions);
         }
@@ -281,6 +283,11 @@ public class DSLProcessor {
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,
                                                                Map<String, T> copyToDefinitions) {
+        copyMapNoOverride(copyFromDefinitions, copyToDefinitions);
+    }
+
+    private static <T extends Object> void copyMapNoOverride(Map<String, T> copyFromDefinitions,
+                                                             Map<String, T> copyToDefinitions) {
         for (Map.Entry<String, T> entry : copyFromDefinitions.entrySet()) {
             String name = entry.getKey();
             T definition = entry.getValue();
