@@ -23,6 +23,8 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
+import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
+import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
@@ -77,7 +79,8 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             RuoteRuntimeConfig.class,
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
-            JythonProxyConfig.class
+            JythonProxyConfig.class,
+            JettyDSLImporterConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -96,6 +99,9 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
         }
 
     }
+
+    @Inject
+    private DSLImporter dslImporter;
 
     @Inject
     private RuoteRuntime ruoteRuntime;
@@ -129,7 +135,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
         String rawResource = VagrantAndWebserverServiceIT.class.getName().replace('.', '/') + ".class";
 
-        String dslLocation = jettyFileServerForPluginsConfig.importDSL(dslPath, Resources.getResource(rawResource));
+        String dslLocation = dslImporter.importDSL(dslPath, Resources.getResource(rawResource));
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);

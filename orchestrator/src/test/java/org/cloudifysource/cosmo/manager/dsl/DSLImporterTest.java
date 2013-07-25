@@ -14,10 +14,11 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.manager.config;
+package org.cloudifysource.cosmo.manager.dsl;
 
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,21 +32,20 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
- * Test for the jetty file server config we use to import dsl and plugins.
+ * Test for the dsl importer we use to import dsl and plugins.
  *
  * @author Eli Polonsky
  * @since 0.1
  */
-@ContextConfiguration(classes = { JettyFileServerForPluginsConfigTest.Config.class })
+@ContextConfiguration(classes = { DSLImporterTest.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringContextTests {
+public class DSLImporterTest extends AbstractTestNGSpringContextTests {
 
     private static final String EXPECTED_PLUGIN_NAME = "python_webserver_installer.zip";
     private static final String EXPECTED_RELATIVE_DSL_PATH = "integration_phase3/integration-phase3.yaml";
@@ -56,7 +56,7 @@ public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringCon
     @Configuration
     @Import({
             TemporaryDirectoryConfig.class,
-            JettyFileServerForPluginsConfig.class
+            JettyDSLImporterConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/fileserver/config/test.properties")
     static class Config extends TestConfig {
@@ -64,7 +64,7 @@ public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringCon
     }
 
     @Inject
-    private JettyFileServerForPluginsConfig jettyFileServerForPluginsConfig;
+    private DSLImporter dslImporter;
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
@@ -82,9 +82,9 @@ public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringCon
         String expectedFullDSLPath = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + "/" +
                 EXPECTED_RELATIVE_DSL_PATH;
 
-        String rawResource = JettyFileServerForPluginsConfigTest.class.getName().replace('.', '/') + ".class";
+        String rawResource = DSLImporterTest.class.getName().replace('.', '/') + ".class";
 
-        String dslLocation = jettyFileServerForPluginsConfig.importDSL(dslPath, Resources.getResource(rawResource));
+        String dslLocation = dslImporter.importDSL(dslPath, Resources.getResource(rawResource));
 
         Path expectedResourceBase = Paths.get(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
 
@@ -105,7 +105,7 @@ public class JettyFileServerForPluginsConfigTest extends AbstractTestNGSpringCon
 
         Path fullPathToDSL = Paths.get(Resources.getResource(dslPath).getPath());
 
-        String dslLocation = jettyFileServerForPluginsConfig.importDSL(fullPathToDSL);
+        String dslLocation = dslImporter.importDSL(fullPathToDSL);
 
         Path expectedResourceBase = Paths.get(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
 

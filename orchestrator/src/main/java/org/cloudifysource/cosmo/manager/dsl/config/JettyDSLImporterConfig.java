@@ -14,34 +14,42 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.manager.config;
+package org.cloudifysource.cosmo.manager.dsl.config;
 
-import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
+import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
+import org.hibernate.validator.constraints.Range;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
- * Creates a new {@link JettyFileServerConfig}.
- *
- * Sets the resourceBase of the file server to a temporary directory created by {@link TemporaryDirectoryConfig}
+ * Creates a new {@link org.cloudifysource.cosmo.manager.dsl.DSLImporter}.
  *
  * @author Eli Polonsky
  * @since 0.1
  */
 @Configuration
 @PropertySource("org/cloudifysource/cosmo/manager/fileserver/jetty.properties")
-public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
+public class JettyDSLImporterConfig {
+
+    @Range(min = 1, max = 65535)
+    @Value("${cosmo.file-server.port}")
+    protected int port;
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
-    @PostConstruct
-    public void setResourceBase() throws IOException {
-        this.resourceBase = temporaryDirectory.get().getAbsolutePath() + "/fileserver";
+    @Bean
+    public DSLImporter dslImporter() throws UnknownHostException {
+        String hostAddress = InetAddress.getLocalHost().getHostAddress();
+        String locatorPrefix = "http://" + hostAddress + ":" + port + "/";
+        return new DSLImporter(temporaryDirectory.get().getAbsolutePath() + "/fileserver",
+                temporaryDirectory.get(), locatorPrefix);
     }
 }

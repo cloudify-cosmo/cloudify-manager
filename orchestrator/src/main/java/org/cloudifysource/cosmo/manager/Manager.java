@@ -22,8 +22,8 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
+import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
@@ -60,7 +60,7 @@ public class Manager {
     private RuoteRuntime ruoteRuntime;
     private RiemannProcess riemannProcess;
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
-    private JettyFileServerForPluginsConfig jettyFileServerForPluginsConfig;
+    private DSLImporter dslImporter;
 
     public void init() throws IOException {
         this.bootContext = registerTempDirectoryConfig();
@@ -72,12 +72,12 @@ public class Manager {
         this.riemannProcess = (RiemannProcess) mainContext.getBean("riemann");
         this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) mainContext.getBean("temporaryDirectory");
-        this.jettyFileServerForPluginsConfig = mainContext.getBean(JettyFileServerForPluginsConfig.class);
+        this.dslImporter = (DSLImporter) mainContext.getBean("dslImporter");
     }
 
     public void deployDSL(String dslPath, long timeoutInSeconds) throws IOException {
 
-        String dslLocation = jettyFileServerForPluginsConfig.importDSL(Paths.get(dslPath));
+        String dslLocation = dslImporter.importDSL(Paths.get(dslPath));
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
