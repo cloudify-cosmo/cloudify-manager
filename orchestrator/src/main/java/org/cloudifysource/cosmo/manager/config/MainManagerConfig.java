@@ -21,7 +21,6 @@ import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflo
 import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
-import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -37,7 +36,6 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
  */
 @Configuration
 @Import({
-        TemporaryDirectoryConfig.class,
         StateCacheConfig.class,
         TaskExecutorConfig.class,
         JettyFileServerForPluginsConfig.class,

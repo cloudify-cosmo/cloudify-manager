@@ -20,7 +20,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
-import org.apache.commons.io.FileUtils;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
@@ -50,6 +49,7 @@ public class Manager {
     private static final String RUBY_RESOURCES_CLASS_LOADER_BEAN_NAME = "rubyResourcesClassLoader";
     private static final String SCRIPTS_RESOURCE_PATH = "scripts";
     private static final String RUOTE_GEMS_RESOURCE_PATH = "ruote-gems/gems";
+    private static final String TEMPORARY_DIRECTORY_BEAN_NAME = "temporaryDirectory";
 
     private AnnotationConfigApplicationContext mainContext;
     private AnnotationConfigApplicationContext bootContext;
@@ -57,14 +57,13 @@ public class Manager {
     private RuoteWorkflow ruoteWorkflow;
     private RuoteRuntime ruoteRuntime;
     private RiemannProcess riemannProcess;
-    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectoryForFileServer;
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
     public Manager() throws IOException {
         this.bootContext = registerTempDirectoryConfig();
-        this.temporaryDirectoryForFileServer =
+        this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) bootContext.getBean("temporaryDirectory");
-        this.mainContext = registerConfig(temporaryDirectoryForFileServer.get().toPath());
+        this.mainContext = registerConfig(temporaryDirectory.get().toPath(), temporaryDirectory);
         this.ruoteWorkflow = (RuoteWorkflow) mainContext.getBean("defaultRuoteWorkflow");
         this.ruoteRuntime = (RuoteRuntime) mainContext.getBean("ruoteRuntime");
         this.riemannProcess = (RiemannProcess) mainContext.getBean("riemann");
@@ -86,19 +85,21 @@ public class Manager {
     }
 
     public void close() throws Exception {
-        closeContext(bootContext, temporaryDirectoryForFileServer);
-        closeContext(mainContext, temporaryDirectory);
+
+        closeContext(mainContext);
+
+        // very important. close this context after the main one.
+        // since this contains the temporary directory holding all the process pid files.
+
+        closeContext(bootContext);
         this.closed = true;
     }
 
-    private void closeContext(AnnotationConfigApplicationContext context,
-                              TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory) throws IOException {
+    private void closeContext(AnnotationConfigApplicationContext context) throws IOException {
         if (context != null && context.isActive()) {
             LOGGER.debug("Closing spring application context : " + context);
             context.close();
         }
-        LOGGER.debug("Deleting directory : " + temporaryDirectory.get().getAbsolutePath());
-        FileUtils.deleteDirectory(temporaryDirectory.get());
     }
 
     public boolean isClosed() {
@@ -114,13 +115,17 @@ public class Manager {
         }
     }
 
-    private AnnotationConfigApplicationContext registerConfig(Path extractionPath) throws IOException {
+    private AnnotationConfigApplicationContext registerConfig(
+            Path extractionPath,
+            TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory) throws IOException {
+
         ResourceExtractor.extractResource(SCRIPTS_RESOURCE_PATH, extractionPath);
         ResourceExtractor.extractResource(RUOTE_GEMS_RESOURCE_PATH, extractionPath);
         URLClassLoader ruoteClassLoader = new URLClassLoader(new URL[] {
                 extractionPath.toAbsolutePath().toUri().toURL() }, null);
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
         context.getBeanFactory().registerSingleton(RUBY_RESOURCES_CLASS_LOADER_BEAN_NAME, ruoteClassLoader);
+        context.getBeanFactory().registerSingleton(TEMPORARY_DIRECTORY_BEAN_NAME, temporaryDirectory);
         context.register(MainManagerConfig.class);
         context.refresh();
         return context;

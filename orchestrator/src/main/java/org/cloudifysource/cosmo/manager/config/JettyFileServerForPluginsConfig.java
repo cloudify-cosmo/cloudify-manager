@@ -23,7 +23,6 @@ import org.cloudifysource.cosmo.utils.Archive;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 
 import javax.annotation.PostConstruct;
@@ -45,9 +44,6 @@ import java.nio.file.attribute.BasicFileAttributes;
  * @since 0.1
  */
 @Configuration
-@Import({
-        TemporaryDirectoryConfig.class,
-})
 @PropertySource("org/cloudifysource/cosmo/manager/fileserver/jetty.properties")
 public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
 
