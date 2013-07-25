@@ -22,6 +22,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
+import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -58,8 +60,9 @@ public class Manager {
     private RuoteRuntime ruoteRuntime;
     private RiemannProcess riemannProcess;
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+    private JettyFileServerForPluginsConfig jettyFileServerForPluginsConfig;
 
-    public Manager() throws IOException {
+    public void init() throws IOException {
         this.bootContext = registerTempDirectoryConfig();
         this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) bootContext.getBean("temporaryDirectory");
@@ -69,12 +72,15 @@ public class Manager {
         this.riemannProcess = (RiemannProcess) mainContext.getBean("riemann");
         this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) mainContext.getBean("temporaryDirectory");
+        this.jettyFileServerForPluginsConfig = mainContext.getBean(JettyFileServerForPluginsConfig.class);
     }
 
-    public void deployDSL(String dslPath, long timeoutInSeconds) {
+    public void deployDSL(String dslPath, long timeoutInSeconds) throws IOException {
+
+        String dslLocation = jettyFileServerForPluginsConfig.importDSL(Paths.get(dslPath));
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("dsl", dslPath);
+        workitemFields.put("dsl", dslLocation);
         workitemFields.put("riemann_pid", String.valueOf(riemannProcess.getPid()));
         workitemFields.put("riemann_config_path", temporaryDirectory.get()
                 .getAbsolutePath() + "/riemann/riemann.config");

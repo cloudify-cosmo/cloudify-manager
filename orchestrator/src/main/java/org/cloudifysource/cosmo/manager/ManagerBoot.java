@@ -47,6 +47,7 @@ public class ManagerBoot {
         try {
             LOGGER.info(ManagerLogDescription.BOOTING_MANAGER);
             manager = new Manager();
+            manager.init();
             LOGGER.info(ManagerLogDescription.DEPLOYING_DSL, dslPath);
             manager.deployDSL(dslPath, timeout);
         } finally {
