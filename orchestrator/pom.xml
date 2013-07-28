@@ -315,7 +315,7 @@
             <id>all</id>
 
             <properties>
-                <build.skipTests>true</build.skipTests>
+                <skipTests>true</skipTests>
             </properties>
 
             <dependencies>
@@ -372,6 +372,7 @@
 
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <finalName>cosmo</finalName>
                             <shadedClassifierName>all</shadedClassifierName>
                             <minimizeJar>false</minimizeJar>
                             <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
@@ -396,7 +397,6 @@
 
                     </plugin>
                 </plugins>
-                <finalName>cosmo</finalName>
             </build>
         </profile>
     </profiles>
