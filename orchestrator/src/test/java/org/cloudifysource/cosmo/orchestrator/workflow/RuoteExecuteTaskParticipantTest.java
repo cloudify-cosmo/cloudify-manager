@@ -17,13 +17,13 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.base.Objects;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
 import org.cloudifysource.cosmo.tasks.config.MockCeleryTaskWorkerConfig;
 import org.cloudifysource.cosmo.tasks.config.MockTaskExecutorConfig;
+import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.fest.assertions.api.Assertions;
 import org.jruby.embed.InvokeFailedException;
 import org.springframework.context.annotation.Configuration;

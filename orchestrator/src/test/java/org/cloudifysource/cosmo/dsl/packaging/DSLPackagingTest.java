@@ -19,6 +19,7 @@ package org.cloudifysource.cosmo.dsl.packaging;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import org.cloudifysource.cosmo.utils.Archive;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -78,7 +79,7 @@ public class DSLPackagingTest {
                 "\t\t\t\tradial: |\n" +
                 "\t\t\t\t\tdefine init\n" +
                 "\t\t\t\t\t\texecute_operation operation: 'provision'\n";
-        final DSLPackage dslPackage = new DSLPackage.DSLPackageBuilder()
+        final Archive dslPackage = new Archive.ArchiveBuilder()
                 .addFile("application.yaml", application)
                 .addFile("definitions/vm.yaml", vm)
                 .addFile("definitions/image-vm.yaml", imageVm)
