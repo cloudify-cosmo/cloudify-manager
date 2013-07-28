@@ -11,7 +11,6 @@ class TestConfigBuilder(unittest.TestCase):
                 'start_detection_policy': {
                     'on_event': {
                         'reachable': 'true',
-                        'ip': '10.0.0.5'
                     },
                     'rules': {
                         'rule1': {
@@ -33,7 +32,7 @@ class TestConfigBuilder(unittest.TestCase):
                 'failure_detection_policy': {
                     'on_event': {
                         'reachable': 'false',
-                        'ip': '10.0.0.5'
+                        'end_of_the_world': 'true'
                     },
                     'rules': {
                         'rule1': {
@@ -50,7 +49,6 @@ class TestConfigBuilder(unittest.TestCase):
                 'start_detection_policy': {
                     'on_event': {
                         'reachable': 'true',
-                        'ip': '10.0.0.5'
                     },
                     'rules': {
                         'rule1': {

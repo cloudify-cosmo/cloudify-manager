@@ -34,8 +34,10 @@ def build_node_policy_config(node_id, node_policy, rules):
         rule_config = build_node_policy_rule_config(rule_template, rule_properties)
         node_policy_rules.append(rule_config)
 
-    # currently hardcoded
-    node_policy_events = "(create_reacahble_with_ip index)"
+    node_policy_on_event = node_policy['on_event']
+    node_policy_events = "(create_events %(clojure_on_event)s index)" % dict(
+        clojure_on_event = to_clojure_map(node_policy_on_event)
+    )
 
     return string.Template(policy_config_template).substitute(dict(
         node_id = node_id,
@@ -46,3 +48,10 @@ def build_node_policy_config(node_id, node_policy, rules):
 
 def build_node_policy_rule_config(rule_template, properties):
     return string.Template(rule_template).substitute(properties)
+
+
+def to_clojure_map(py_map):
+    entries = []
+    for key, value in py_map.items():
+        entries.append('"%(key)s" "%(value)s"' % dict(key=key, value=value))
+    return '{%(entries)s}' % dict(entries=' '.join(entries))
