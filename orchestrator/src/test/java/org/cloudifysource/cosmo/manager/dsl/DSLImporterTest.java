@@ -82,9 +82,7 @@ public class DSLImporterTest extends AbstractTestNGSpringContextTests {
         String expectedFullDSLPath = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + "/" +
                 EXPECTED_RELATIVE_DSL_PATH;
 
-        String rawResource = DSLImporterTest.class.getName().replace('.', '/') + ".class";
-
-        String dslLocation = dslImporter.importDSL(dslPath, Resources.getResource(rawResource));
+        String dslLocation = dslImporter.importDSL(dslPath);
 
         Path expectedResourceBase = Paths.get(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
 

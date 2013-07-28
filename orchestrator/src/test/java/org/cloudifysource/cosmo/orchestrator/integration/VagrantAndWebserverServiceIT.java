@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
@@ -31,7 +30,7 @@ import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
-import org.cloudifysource.cosmo.tasks.CeleryWorkerProcess;
+import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
@@ -39,7 +38,6 @@ import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.robobninjas.riemann.spring.RiemannTestConfiguration;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
@@ -72,6 +70,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Import({
             TemporaryDirectoryConfig.class,
             JettyFileServerForPluginsConfig.class,
+            CeleryWorkerProcessConfig.class,
             StateCacheConfig.class,
             StateCacheFeederConfig.class,
             RiemannTestConfiguration.class,
@@ -84,20 +83,6 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
-
-        /**
-         * Define a new celery worker process here to load the celery app from the source package.
-         * @return
-         */
-        @Bean
-        CeleryWorkerProcess celeryWorkerProcess() {
-
-            URL resource = RuoteRuntime.class.getClassLoader().getResource("celery/app");
-            Preconditions.checkNotNull(resource, "celery/app");
-            String path = resource.getPath();
-            return new CeleryWorkerProcess("cosmo", path);
-        }
-
     }
 
     @Inject
@@ -133,9 +118,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
     private void test(String dslPath) throws IOException {
 
-        String rawResource = VagrantAndWebserverServiceIT.class.getName().replace('.', '/') + ".class";
-
-        String dslLocation = dslImporter.importDSL(dslPath, Resources.getResource(rawResource));
+        String dslLocation = dslImporter.importDSL(dslPath);
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);

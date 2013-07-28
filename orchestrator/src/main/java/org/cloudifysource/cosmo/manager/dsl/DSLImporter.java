@@ -24,7 +24,6 @@ import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,7 +65,7 @@ public class DSLImporter {
      * 2. Zip up the plugins and copy them to the filer server resource base.
      *
      * @param dslPath - Absolute path to the dsl resource. if you want to pass a dsl classpath resource locator use
-     * {@link #importDSL(String, java.net.URL)}
+     * {@link #importDSL(String)}
      * @return Location to the dsl file.
      */
     public String importDSL(Path dslPath) throws IOException {
@@ -80,17 +79,16 @@ public class DSLImporter {
      * 2. Zip up the plugins and copy them to the filer server resource base.
      *
      * @param dslResourcePath - resource locator of the dsl package.
-     * @param containingResource - a URL to a resource that is contained within the same jar/dir as the dsl.
      * @return Location to the dsl file.
      * @throws IOException
      */
-    public String importDSL(String dslResourcePath, URL containingResource) throws IOException {
+    public String importDSL(String dslResourcePath) throws IOException {
 
         int lastSeparator = dslResourcePath.lastIndexOf("/");
         String dslParent = dslResourcePath.substring(0, lastSeparator);
 
         ResourceExtractor
-                .extractResource(dslParent, temporaryDirectory.toPath(), containingResource);
+                .extractResource(dslParent, temporaryDirectory.toPath());
         Path path = Paths.get(temporaryDirectory.toString() + "/" + dslResourcePath);
         return copyDSLFiles(path);
 

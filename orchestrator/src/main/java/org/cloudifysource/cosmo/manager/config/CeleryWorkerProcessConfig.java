@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import com.google.common.base.Throwables;
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.tasks.CeleryWorkerProcess;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
@@ -49,8 +48,7 @@ public class CeleryWorkerProcessConfig {
 
         try {
             // This will extract the celery app from the resources to the working directory
-            ResourceExtractor.extractResource(RESOURCE_PATH, Paths.get(temporaryDirectory.get().getAbsolutePath()),
-                    Resources.getResource(RESOURCE_PATH));
+            ResourceExtractor.extractResource(RESOURCE_PATH, Paths.get(temporaryDirectory.get().getAbsolutePath()));
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

@@ -54,8 +54,7 @@ public class ResourceExtractor {
      * @param target The target to extract files to.
      */
     public static void extractResource(String absoluteResourcePath, final Path target) throws IOException {
-        String rawResource = ResourceExtractor.class.getName().replace('.', '/') + ".class";
-        URL resource = Resources.getResource(rawResource);
+        URL resource = Resources.getResource(absoluteResourcePath);
         extractResource(absoluteResourcePath, target, resource);
     }
 

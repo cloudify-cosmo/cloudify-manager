@@ -16,14 +16,12 @@
 
 package org.cloudifysource.cosmo.manager;
 
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.fest.assertions.api.Assertions;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -43,16 +41,15 @@ public class ResourceExtractorTest {
         // This is the package we want to extract from a certain jar
         String packagePath = "org/cloudifysource/cosmo";
 
-        String firstResource = "org/cloudifysource/cosmo/logging/Logger.class";
-        String secondResource = "org/cloudifysource/cosmo/logging/LoggerFactory.class";
+        String firstResource = "org/cloudifysource/cosmo/dsl";
+        String secondResource = "org/cloudifysource/cosmo/fileserver";
+        String thirdResource = "org/cloudifysource/cosmo/orchestrator";
 
-        // We need some resource contained in that jar to pinpoint a specific jar
-        URL containedResource = Resources.getResource(firstResource);
-
-        ResourceExtractor.extractResource(packagePath, target, containedResource);
+        ResourceExtractor.extractResource(packagePath, target);
 
         Assertions.assertThat(target.resolve(firstResource).toFile()).exists();
         Assertions.assertThat(target.resolve(secondResource).toFile()).exists();
+        Assertions.assertThat(target.resolve(thirdResource).toFile()).exists();
 
     }
 
