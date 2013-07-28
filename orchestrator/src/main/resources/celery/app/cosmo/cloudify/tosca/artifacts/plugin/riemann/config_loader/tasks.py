@@ -21,6 +21,5 @@ def reload_riemann_config(policies,
 
     with open(riemann_config_path, 'w') as config:
         config.write(new_riemann_config)
-        config.write(string.Template(riemann_config_template).substitute(dict(events_mapping=policies)))
     # causes riemann server to reload the configuration
     os.kill(int(riemann_pid), signal.SIGHUP)
