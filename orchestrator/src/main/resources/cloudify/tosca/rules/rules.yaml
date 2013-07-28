@@ -5,14 +5,14 @@ definitions:
     ##################################################################################
     policies:
         rules:
-            status_equal: |
+            state_equals: |
                 (service "${service}")
                 (state "${state}")
 
-            status_not_equal: |
+            state_not_equals: |
                  (service "${service}")
                  (not (state "${state}"))
 
-            metric_greater_than: |
+            metric_below: |
                  (service "${service}")
-                 (> (metric "${metric}"))
+                 (< (metric "${metric}"))
