@@ -18,11 +18,15 @@ package org.cloudifysource.cosmo.monitor.config;
 
 import org.cloudifysource.cosmo.monitor.StateCacheFeeder;
 import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.robobninjas.riemann.json.RiemannEventObjectMapper;
+import org.robobninjas.riemann.spring.RiemannTcpClientConfiguration;
+import org.robobninjas.riemann.spring.RiemannWebsocketClientConfiguration;
 import org.robotninjas.riemann.pubsub.RiemannPubSubClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
 
@@ -33,6 +37,11 @@ import javax.inject.Inject;
  * @since 0.1
  */
 @Configuration
+@Import({
+        StateCacheConfig.class,
+        RiemannWebsocketClientConfiguration.class,
+        RiemannTcpClientConfiguration.class
+})
 public class StateCacheFeederConfig {
 
     @Inject

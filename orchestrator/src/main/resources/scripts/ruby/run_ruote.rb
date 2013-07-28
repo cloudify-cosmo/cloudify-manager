@@ -68,17 +68,19 @@ end
 def execute_ruote_workflow(dashboard, workflow, workitem_fields, wait_for_workflow = true)
   wfid = dashboard.launch(workflow, to_map(workitem_fields))
   if wait_for_workflow
-    wait_for_workflow(dashboard, wfid)
+    wait_for_workflow(dashboard, wfid, -1) # -1 => unlimited.
   else
     wfid
   end
 end
 
-def wait_for_workflow(dashboard, wfid)
-  dashboard.wait_for(wfid, :timeout => -1)  # -1 => unlimited.
+def wait_for_workflow(dashboard, wfid, timeout)
+  dashboard.wait_for(wfid, :timeout => timeout)
   status = dashboard.process(wfid)
   unless status.nil? or status.errors.nil?
     raise java.lang.RuntimeException.new(status.errors.first.message)
   end
 
 end
+
+

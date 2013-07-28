@@ -21,20 +21,20 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
-import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
+import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
+import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
+import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.config.RuoteRuntimeConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.config.TemporaryDirectoryConfig;
-import org.cloudifysource.cosmo.orchestrator.integration.config.VagrantRiemannMonitorProcessConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
+import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.robobninjas.riemann.spring.RiemannTestConfiguration;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,18 +46,9 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 
 /**
@@ -79,6 +70,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Import({
             TemporaryDirectoryConfig.class,
             JettyFileServerForPluginsConfig.class,
+            CeleryWorkerProcessConfig.class,
             StateCacheConfig.class,
             StateCacheFeederConfig.class,
             RiemannTestConfiguration.class,
@@ -87,27 +79,14 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
             JythonProxyConfig.class,
-            CeleryWorkerProcessConfig.class,
-            VagrantRiemannMonitorProcessConfig.class
+            JettyDSLImporterConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
-
     }
 
-    /**
-     */
-    @Configuration
-    public static class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
-
-        @Inject
-        private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
-
-        @PostConstruct
-        public void setResourceBase() {
-            this.resourceBase = temporaryDirectory.get().getAbsolutePath();
-        }
-    }
+    @Inject
+    private DSLImporter dslImporter;
 
     @Inject
     private RuoteRuntime ruoteRuntime;
@@ -124,23 +103,22 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     @Inject
     private RiemannProcess riemannProcess;
 
+    @Inject
+    private JettyFileServerForPluginsConfig jettyFileServerForPluginsConfig;
+
     @Test(timeOut = 60000 * 5, groups = "vagrant", enabled = false)
-    public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() {
+    public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() throws IOException {
         test("org/cloudifysource/cosmo/dsl/integration_phase1/integration-phase1.yaml");
     }
 
     @Test(groups = "vagrant", enabled = true)
-    public void testWithVagrantHostProvisionerAndRemoteCeleryWorker() {
+    public void testWithVagrantHostProvisionerAndRemoteCeleryWorker() throws IOException {
         test("org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml");
     }
 
-    private void test(String dslLocation) {
+    private void test(String dslPath) throws IOException {
 
-        // zip webserver plugin
-        createZipForPlugin(
-                "celery/app/cosmo/cloudify/tosca/artifacts/plugin/python_webserver/installer",
-                temporaryDirectory.get(),
-                "python-webserver-installer.zip");
+        String dslLocation = dslImporter.importDSL(dslPath);
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
@@ -150,29 +128,6 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
-    }
-
-    private static void createZipForPlugin(String resourceRoot,
-                                           File targetDir, String targetName) {
-        final DSLPackage.DSLPackageBuilder packagedPluginBuilder = new DSLPackage.DSLPackageBuilder();
-        URL visitorRootUrl = Resources.getResource(resourceRoot);
-        final Path visitorRootPath = Paths.get(URI.create("file://" + visitorRootUrl.getPath()));
-        try {
-            Files.walkFileTree(visitorRootPath, new SimpleFileVisitor<Path>() {
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    if (file.toString().endsWith(".pyc")) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    byte[] content = com.google.common.io.Files.toByteArray(file.toFile());
-                    String targetFile = visitorRootPath.relativize(file).toString();
-                    packagedPluginBuilder.addFile(targetFile, content);
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
-        packagedPluginBuilder.build().write(new File(targetDir, targetName));
     }
 
     private static String readRiemannConfigTemplate() {

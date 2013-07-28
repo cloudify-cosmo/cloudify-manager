@@ -21,6 +21,11 @@
     <packaging>jar</packaging>
     <version>0.1-SNAPSHOT</version>
 
+    <properties>
+        <mainClass>org.cloudifysource.cosmo.manager.ManagerBoot</mainClass>
+        <skipTests>false</skipTests>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -70,8 +75,6 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>client</artifactId>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>ch.qos.logback</groupId>
@@ -82,8 +85,6 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>json</artifactId>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -108,6 +109,10 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -118,7 +123,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
-            <scope>test</scope>
             <type>test-jar</type>
         </dependency>
         <dependency>
@@ -134,12 +138,10 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -160,17 +162,11 @@
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
-            <scope>test</scope>
             <type>test-jar</type>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
-            <scope>test</scope>
-            <!-- TODO: Remove version -->
-            <version>3.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -180,7 +176,7 @@
                 <artifactId>maven-install-plugin</artifactId>
                 <version>2.3.1</version>
                 <configuration>
-                  <createChecksum>true</createChecksum>
+                    <createChecksum>true</createChecksum>
                 </configuration>
             </plugin>
             <plugin>
@@ -189,13 +185,13 @@
                 <version>2.2.1</version>
                 <executions>
                     <execution>
-                      <id>attach-sources</id>
-                      <phase>verify</phase>
-                      <goals>
-                        <goal>jar-no-fork</goal>
-                      </goals>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
                     </execution>
-                  </executions>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -233,6 +229,7 @@
                 <configuration>
                     <!-- http://maven.apache.org/surefire/maven-surefire-plugin/examples/class-loading.html -->
                     <useSystemClassLoader>false</useSystemClassLoader>
+                    <skipTests>${skipTests}</skipTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -244,6 +241,7 @@
                     <useSystemClassLoader>false</useSystemClassLoader>
                     <forkCount>1</forkCount>
                     <excludedGroups>vagrant</excludedGroups>
+                    <skipTests>${skipTests}</skipTests>
                 </configuration>
                 <executions>
                     <execution>
@@ -273,7 +271,6 @@
                                 <usedDependency>org.apache.logging.log4j:log4j-slf4j-impl</usedDependency>
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
-                                <usedDependency>org.robotninjas.riemann:spring</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
@@ -308,4 +305,99 @@
             </snapshots>
         </repository>
     </repositories>
+    <profiles>
+
+        <profile>
+            <!--
+                Profile for building a management jar with all dependencies included.
+                Logging implementation is also included in this jar
+            -->
+            <id>all</id>
+
+            <properties>
+                <skipTests>true</skipTests>
+            </properties>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-core</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.robotninjas.riemann</groupId>
+                    <artifactId>spring</artifactId>
+                    <type>test-jar</type>
+                </dependency>
+                <dependency>
+                    <groupId>${project.groupId}</groupId>
+                    <artifactId>tasks</artifactId>
+                    <type>test-jar</type>
+                </dependency>
+                <dependency>
+                    <groupId>com.beust</groupId>
+                    <artifactId>jcommander</artifactId>
+                </dependency>
+            </dependencies>
+
+            <build>
+                <plugins>
+                    <!--
+                        We are using the shade plugin instead of assembly because it provides a mechanism
+                        for merging duplicate META-INF/services/SomeRandomService entries
+                        which is required due to transitive dependencies jersey-core and jersey-server
+                        which both contain a different META-INF/services/javax.ws.rs.ext.MessageBodyWriter in their
+                        jar
+                    -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>2.1</version>
+                        <configuration>
+
+                            <filters>
+                                <!-- Don't want resulting jar to fail signature validation -->
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <finalName>cosmo</finalName>
+                            <shadedClassifierName>all</shadedClassifierName>
+                            <minimizeJar>false</minimizeJar>
+                            <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${mainClass}</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
