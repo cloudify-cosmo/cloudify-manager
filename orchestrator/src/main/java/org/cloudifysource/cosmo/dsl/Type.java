@@ -21,6 +21,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.util.List;
 import java.util.Map;
@@ -73,9 +74,20 @@ public class Type extends InheritedDefinition {
         Type result = new Type();
         result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
+        result.inheritPoliciesFrom(typedParent);
+        result.inheritPoliciesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
         return result;
+    }
+
+    protected void inheritPoliciesFrom(Type other) {
+        if (policies == null) {
+            policies = Maps.newHashMap();
+        }
+        if (other.getPolicies() != null) {
+            policies.putAll(other.getPolicies());
+        }
     }
 
     protected void inheritPropertiesFrom(Type other) {

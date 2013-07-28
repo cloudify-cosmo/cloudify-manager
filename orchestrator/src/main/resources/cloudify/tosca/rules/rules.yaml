@@ -5,11 +5,11 @@ definitions:
     ##################################################################################
     policies:
         rules:
-            status_equal: |
+            state_equals: |
                 (rule stub)
 
-            status_not_equal: |
+            state_not_equals: |
                 (rule stub)
 
-            metric_greater_than: |
+            metric_below: |
                 (rule stub)
