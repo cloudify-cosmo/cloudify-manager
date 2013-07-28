@@ -14,44 +14,40 @@
 ; Expire old events from the index every 5 seconds.
 (periodically-expire 5)
 
+
 (defn prefix_predicate [prefix]
   (fn [string]
-    (.startsWith string prefix)
-  )
-)
+    (.startsWith string prefix)))
+
 
 (defn extract_name_tag [event]
     (first
-        (filter
-            (prefix_predicate "name=") (get event :tags)
-        )
-    )
-)
+        (filter 
+            (prefix_predicate "name=") 
+            (get event :tags))))
 
-(defn get_machine_name [event]
 
+(defn get_node_id [event]
   (def nameTag (extract_name_tag event))
-  (get (clojure.string/split nameTag #"=") 1)
+  (if (nil? nameTag) 
+    nil
+    (get (clojure.string/split nameTag #"=") 1)))
 
-)
 
-(defn tagged_with_name [event]
+(defn tagged_with_name [event, node_id]
+  (def nameTag (get_node_id event))
+  (= nameTag node_id))
 
-  (def nameTag (extract_name_tag event))
-  (not (nil? nameTag))
-
-)
 
 (defn create_reacahble_with_ip [& children]
   (fn [e]
-    (def machine_name (get_machine_name e))
-    (let [ip-event (assoc e :host machine_name :service "ip" :state (get e :host) :tags ["cosmo"])]
+    (def node_id (get_node_id e))
+    (let [ip-event (assoc e :host node_id :service "ip" :state (get e :host) :tags ["cosmo"])]
             (call-rescue ip-event children)
     )
-    (let [reachable-event (assoc e :host machine_name :service "reachable" :state "true" :tags ["cosmo"])]
+    (let [reachable-event (assoc e :host node_id :service "reachable" :state "true" :tags ["cosmo"])]
             (call-rescue reachable-event children)
     )
-
   )
 )
 

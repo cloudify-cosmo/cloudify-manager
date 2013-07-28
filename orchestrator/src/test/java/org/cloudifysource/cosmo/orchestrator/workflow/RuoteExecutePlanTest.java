@@ -285,7 +285,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.endsWith("verify_plugin")) {
+                if (taskName.endsWith("verify_plugin") || taskName.endsWith("reload_riemann_config")) {
                     return;
                 }
                 if (assertExecutionOrder) {

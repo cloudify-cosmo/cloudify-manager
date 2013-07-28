@@ -6,10 +6,13 @@ definitions:
     policies:
         rules:
             status_equal: |
-                (rule stub)
+                (service "${service}")
+                (state "${state}")
 
             status_not_equal: |
-                (rule stub)
+                 (service "${service}")
+                 (not (state "${state}"))
 
             metric_greater_than: |
-                (rule stub)
+                 (service "${service}")
+                 (> (metric "${metric}"))

@@ -1,4 +1,8 @@
 define global_workflow
+
+    log message: 'Reloading policies'
+    reload_riemann_config policies: '$plan.policies', rules: '$plan.rules'
+
     log message: 'processing nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node'
         log message: 'processing node: ${f:node}'
@@ -7,7 +11,6 @@ define global_workflow
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
-
         log message: 'executing init workflow'
         set 'v:init': "$f:node.workflows.init"
         init
