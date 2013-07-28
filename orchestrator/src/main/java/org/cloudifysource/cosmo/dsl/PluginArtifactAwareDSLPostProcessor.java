@@ -52,6 +52,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
         Map<String, Object> nodesExtraData = Maps.newHashMap();
+        Map<String, Map<String, Policy>> policies = Maps.newHashMap();
 
         for (ServiceTemplate serviceTemplate : populatedServiceTemplates.values()) {
             for (TypeTemplate typeTemplate : serviceTemplate.getTopology().values()) {
@@ -69,11 +70,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                         typeTemplate);
                 nodes.add(node);
                 nodesExtraData.put(nodeId, nodeExtraData);
+                policies.put(nodeId, typeTemplate.getPolicies());
             }
         }
 
         result.put("nodes", nodes);
         result.put("nodes_extra", nodesExtraData);
+        result.put("rules_content", definitions.getPolicies().getRules());
+        result.put("policies", policies);
         return result;
     }
 

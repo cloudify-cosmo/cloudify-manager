@@ -5,15 +5,52 @@ definitions:
         - "host.provisioner"
         - "middleware_component.installer"
 
+    types:
+        type_with_policy:
+            derived_from: "cloudify.tosca.types.host"
+            policies:
+                start_detection_policy:
+                    rules:
+                        host_state:
+                            type: "state_equals"
+                            properties:
+                                state: "host_state"
+                                value: "running"
+                    on_event:
+                        reachable: "true"
+
+        2nd_type_with_policy:
+            derived_from: "type_with_policy"
+            policies:
+                # override
+                start_detection_policy:
+                    rules:
+                        host_state:
+                            type: "state_not_equals"
+                            properties:
+                                state: "host_state"
+                                value: "terminated"
+                    on_event:
+                        reachable: "true"
+                failure_detection_policy:
+                    rules:
+                        host_state:
+                            type: "state_equals"
+                            properties:
+                                state: "host_state"
+                                value: "terminated"
+                    on_event:
+                        reachable: "false"
+
     service_templates:
         web_server:
             topology:
                 webserver_host:
                     type: "cloudify.tosca.types.host"
                     policies:
-                        start_detection:
+                        start_detection_policy:
                             rules:
-                                host_status:
+                                host_state:
                                     type: "state_equals"
                                     properties:
                                         state: "host_state"
@@ -26,15 +63,48 @@ definitions:
                             on_event:
                                 reachable: "true"
                                 ip: "10.0.0.1"
-                        failure_detection:
+                        failure_detection_policy:
                             rules:
-                                host_status:
+                                host_state:
                                     type: "state_not_equals"
                                     properties:
                                         state: "host_state"
                                         value: "running"
                             on_event:
                                 reachable: "false"
+
+                template_with_inherited_policy:
+                    type: "type_with_policy"
+
+                template_with_inherited_policy_and_additional_policy:
+                    type: "type_with_policy"
+                    policies:
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        state: "host_state"
+                                        value: "terminated"
+                            on_event:
+                                reachable: "false"
+
+                2nd_template_with_inherited_policy:
+                    type: "2nd_type_with_policy"
+
+                2nd_template_with_overridden_policy:
+                    type: "2nd_type_with_policy"
+                    policies:
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        state: "host_state"
+                                        value: "terminated"
+                            on_event:
+                                reachable: "true"
+
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
