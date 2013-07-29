@@ -39,7 +39,7 @@ public class Type extends InheritedDefinition {
     public static final Type ROOT_NODE_TYPE = initRootNodeType();
 
     private List<Object> interfaces = Lists.newArrayList();
-    private Map<String, Policy> policies;
+    private Map<String, Policy> policies = Maps.newHashMap();
 
     private static Type initRootNodeType() {
         Type root = new Type();
@@ -82,12 +82,7 @@ public class Type extends InheritedDefinition {
     }
 
     protected void inheritPoliciesFrom(Type other) {
-        if (policies == null) {
-            policies = Maps.newHashMap();
-        }
-        if (other.getPolicies() != null) {
-            policies.putAll(other.getPolicies());
-        }
+        policies.putAll(other.getPolicies());
     }
 
     protected void inheritPropertiesFrom(Type other) {

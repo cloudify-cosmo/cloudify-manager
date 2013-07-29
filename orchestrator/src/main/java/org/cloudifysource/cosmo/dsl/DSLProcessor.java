@@ -295,7 +295,6 @@ public class DSLProcessor {
             copyMapNoOverride(importedDefinitions.getPolicies().getRules(), definitions.getPolicies().getRules());
             copyMapNoOverride(importedDefinitions.getPolicies().getTypes(), definitions.getPolicies().getTypes());
             copyPlans(importedDefinitions.getPlans(), definitions.getPlans());
-            copyPolicies(importedDefinitions.getPolicies(), definitions.getPolicies());
             copyGlobalPlan(importedDefinitions, definitions);
         }
 
@@ -348,11 +347,6 @@ public class DSLProcessor {
                 }
             }
         }
-    }
-
-    private static void copyPolicies(Policies importedPolicies, Policies policies) {
-        policies.getTypes().putAll(importedPolicies.getTypes());
-        policies.getRules().putAll(importedPolicies.getRules());
     }
 
     private static Definitions parseRawDsl(String dsl) {

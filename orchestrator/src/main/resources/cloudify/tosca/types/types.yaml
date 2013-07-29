@@ -158,3 +158,4 @@ definitions:
         types:
             start_detection_policy: { }
             failure_detection_policy: { }
+
