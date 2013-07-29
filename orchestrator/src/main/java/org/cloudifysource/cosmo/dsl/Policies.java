@@ -21,7 +21,8 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * A class used to represent a policy of the dsl.
+ * Used internally only by the dsl processor.
  *
  * @author Dan Kilman
  * @since 0.1
