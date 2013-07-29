@@ -71,7 +71,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, NodeExtra> nodesExtra;
         String globalWorkflow;
         Map<String, Map<String, Policy>> policies;
-        Map<String, String> rulesContent;
+        Map<String, String> rules;
 
         public List<Node> getNodes() {
             return nodes;
@@ -101,12 +101,12 @@ public abstract class AbstractDSLProcessorTest {
             this.policies = policies;
         }
 
-        public Map<String, String> getRulesContent() {
-            return rulesContent;
+        public Map<String, String> getRules() {
+            return rules;
         }
 
-        public void setRulesContent(Map<String, String> rulesContent) {
-            this.rulesContent = rulesContent;
+        public void setRules(Map<String, String> rules) {
+            this.rules = rules;
         }
     }
 

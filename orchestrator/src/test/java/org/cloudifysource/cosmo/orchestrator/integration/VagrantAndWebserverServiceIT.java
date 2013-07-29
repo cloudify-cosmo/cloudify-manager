@@ -131,8 +131,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
     }
 
     private static String readRiemannConfigTemplate() {
-        URL resource = Resources.getResource("org/cloudifysource/cosmo/orchestrator/integration/config/riemann.config" +
-                ".template");
+        URL resource = Resources.getResource("riemann/riemann.config.template");
         try {
             return Resources.toString(resource, Charsets.UTF_8);
         } catch (IOException e) {

@@ -7,11 +7,11 @@ definitions:
         rules:
             state_equals: |
                 (service "${service}")
-                (state "${state}")
+                (status "${state}")
 
             state_not_equals: |
                  (service "${service}")
-                 (not (state "${state}"))
+                 (not (status "${state}"))
 
             metric_below: |
                  (service "${service}")
