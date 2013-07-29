@@ -19,7 +19,6 @@ package org.cloudifysource.cosmo.dsl;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -53,6 +52,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
         Map<String, Object> nodesExtraData = Maps.newHashMap();
+        Map<String, Map<String, Policy>> policies = Maps.newHashMap();
 
         for (ServiceTemplate serviceTemplate : populatedServiceTemplates.values()) {
             for (TypeTemplate typeTemplate : serviceTemplate.getTopology().values()) {
@@ -70,11 +70,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                         typeTemplate);
                 nodes.add(node);
                 nodesExtraData.put(nodeId, nodeExtraData);
+                policies.put(nodeId, typeTemplate.getPolicies());
             }
         }
 
         result.put("nodes", nodes);
         result.put("nodes_extra", nodesExtraData);
+        result.put("rules", definitions.getPolicies().getRules());
+        result.put("policies", policies);
         return result;
     }
 
@@ -209,7 +212,9 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {
-        node.put("policies", Strings.nullToEmpty(typeTemplate.getPolicies()));
+        final Map<String, Policy> policies =
+                typeTemplate.getPolicies() != null ? typeTemplate.getPolicies() : Maps.<String, Policy>newHashMap();
+        node.put("policies", policies);
     }
 
     private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,

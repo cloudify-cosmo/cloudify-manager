@@ -6,6 +6,7 @@ definitions:
     imports:
         - 'celery_worker_installer'
         - 'celery_plugin_installer'
+        - 'cloudify.rules'
 
     ##################################################################################
     # Base type definitions
@@ -106,7 +107,6 @@ definitions:
                       execute_operation operation: 'start'
                       given
                         that '${node.properties.install_agent} == true'
-                          reload_riemann_config policies: '${node.policies}'
                           state resource_id: '${node.id}', state: { reachable: "true" }
                           execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.install'
                           iterator on: '$node.plugins_to_install', to_v: 'plugin'
@@ -151,4 +151,11 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.plugin"
 
 
+    ##################################################################################
+    # Policies
+    ##################################################################################
+    policies:
+        types:
+            start_detection_policy: { }
+            failure_detection_policy: { }
 

@@ -70,6 +70,9 @@ public abstract class AbstractDSLProcessorTest {
         List<Node> nodes;
         Map<String, NodeExtra> nodesExtra;
         String globalWorkflow;
+        Map<String, Map<String, Policy>> policies;
+        Map<String, String> rules;
+
         public List<Node> getNodes() {
             return nodes;
         }
@@ -89,6 +92,22 @@ public abstract class AbstractDSLProcessorTest {
         public void setNodesExtra(Map<String, NodeExtra> nodesExtra) {
             this.nodesExtra = nodesExtra;
         }
+
+        public Map<String, Map<String, Policy>> getPolicies() {
+            return policies;
+        }
+
+        public void setPolicies(Map<String, Map<String, Policy>> policies) {
+            this.policies = policies;
+        }
+
+        public Map<String, String> getRules() {
+            return rules;
+        }
+
+        public void setRules(Map<String, String> rules) {
+            this.rules = rules;
+        }
     }
 
     /**
@@ -100,7 +119,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> properties;
         List<Object> relationships;
         Map<String, Object> plugins;
-        String policies;
+        Map<String, Policy> policies;
 
         public String getId() {
             return id;
@@ -150,8 +169,77 @@ public abstract class AbstractDSLProcessorTest {
             this.plugins = plugins;
         }
 
-        public String getPolicies() {
+        public Map<String, Policy> getPolicies() {
             return policies;
+        }
+    }
+
+    /**
+     */
+    public static class Policy {
+        private Map<String, Rule> rules;
+        private Map<String, Object> onEvent;
+
+        public void setRules(Map<String, Rule> rules) {
+            this.rules = rules;
+        }
+
+        public void setOnEvent(Map<String, Object> onEvent) {
+            this.onEvent = onEvent;
+        }
+
+        public Map<String, Rule> getRules() {
+            return rules;
+        }
+
+        public Map<String, Object> getOnEvent() {
+            return onEvent;
+        }
+    }
+
+    /**
+     */
+    public static class RuleDefinition {
+        private String type;
+        private String content;
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
+        }
+    }
+
+    /**
+     */
+    public static class Rule {
+        private String type;
+        private Map<String, Object> properties;
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public Map<String, Object> getProperties() {
+            return properties;
         }
     }
 

@@ -23,13 +23,16 @@ definitions:
                             port: '22'
                             key: '~/.vagrant.d/insecure_private_key'
                             broker: 'amqp://guest:guest@10.0.0.1:5672//'
-                    policies: |
-                        (where
-                            (and
-                                (service "vagrant machine status")
-                                (state "running")
-                                (tagged_with_name event))
-                            (create_reacahble_with_ip index))
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                            on_event:
+                                reachable: "true"
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"

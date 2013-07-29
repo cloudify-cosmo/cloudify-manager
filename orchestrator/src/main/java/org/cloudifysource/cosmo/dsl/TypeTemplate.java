@@ -52,9 +52,10 @@ public class TypeTemplate extends Type {
         TypeTemplate result = new TypeTemplate();
         result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
+        result.inheritPoliciesFrom(typedParent);
+        result.inheritPoliciesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
-        result.setPolicies(getPolicies());
         return result;
     }
 

@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.dsl.resource.DSLResource;
 import org.cloudifysource.cosmo.dsl.resource.ImportsContext;
@@ -42,7 +41,6 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Processes dsl in json format into a json form suitable for ruote consumption.
@@ -85,7 +83,9 @@ public class DSLProcessor {
             Map<String, ServiceTemplate> populatedServiceTemplates =
                     buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
 
-            validatePlans(definitions, populatedTypes);
+            Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
+            validatePlans(nodeTemplates, definitions, populatedTypes);
+            validatePolicies(nodeTemplates, definitions.getPolicies());
 
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
@@ -112,23 +112,52 @@ public class DSLProcessor {
         }
     }
 
-    private static void validatePlans(Definitions definitions, Map<String, Type> populatedTypes) {
-        final Set<String> nodeTemplates = Sets.newHashSet();
-        for (Map.Entry<String, Plan> planEntry : definitions.getPlans().entrySet()) {
-            String planName = planEntry.getKey();
-            if (!populatedTypes.containsKey(planName)) {
-                for (Map.Entry<String, ServiceTemplate> serviceTemplateEntry : definitions
-                        .getServiceTemplates().entrySet()) {
-                    for (String nodeName : serviceTemplateEntry.getValue().getTopology().keySet()) {
-                        nodeTemplates.add(String.format("%s.%s", serviceTemplateEntry.getKey(), nodeName));
-                    }
+    private static void validatePolicies(Map<String, TypeTemplate> nodeTemplates, Policies policies) {
+        for (TypeTemplate template : nodeTemplates.values()) {
+            if (template.getPolicies() == null) {
+                return;
+            }
+            for (Map.Entry<String, Policy> policyEntry : template.getPolicies().entrySet()) {
+                Preconditions.checkArgument(
+                        policies.getTypes().containsKey(
+                                policyEntry.getKey()),
+                        "Policy not defined [%s] in template: %s - available policies: %s",
+                        template.getName(), policyEntry, policies.getTypes());
+                final Policy policy = policyEntry.getValue();
+                Preconditions.checkArgument(policy.getOnEvent() != null,
+                        "Missing 'on_event' declaration for policy [%s] in template: %s",
+                        policyEntry.getKey(),
+                        template.getName());
+                for (Map.Entry<String, Rule> ruleEntry : policy.getRules().entrySet()) {
+                    Preconditions.checkArgument(policies.getRules().containsKey(ruleEntry.getValue().getType()),
+                            "Unknown rule type [%s] for rule: '%s' in template: %s", ruleEntry.getValue().getType(),
+                            ruleEntry.getKey(), template.getName());
                 }
             }
         }
+    }
+
+    private static void validatePlans(Map<String, TypeTemplate> nodeTemplates,
+                                      Definitions definitions,
+                                      Map<String, Type> populatedTypes) {
         for (String plan : definitions.getPlans().keySet()) {
-            Preconditions.checkArgument(populatedTypes.containsKey(plan) || nodeTemplates.contains(plan),
+            Preconditions.checkArgument(populatedTypes.containsKey(plan) || nodeTemplates.containsKey(plan),
                     "Plan [%s] does not match any node type or template", plan);
         }
+    }
+
+    private static Map<String, TypeTemplate> extractNodeTemplates(Definitions definitions) {
+        final Map<String, TypeTemplate> nodeTemplates = Maps.newHashMap();
+        for (Map.Entry<String, ServiceTemplate> serviceTemplateEntry : definitions
+                .getServiceTemplates().entrySet()) {
+            for (Map.Entry<String, TypeTemplate> nodeTemplateEntry :
+                    serviceTemplateEntry.getValue().getTopology().entrySet()) {
+                nodeTemplates.put(
+                        String.format("%s.%s", serviceTemplateEntry.getKey(),
+                                nodeTemplateEntry.getKey()), nodeTemplateEntry.getValue());
+            }
+        }
+        return nodeTemplates;
     }
 
 
@@ -263,6 +292,8 @@ public class DSLProcessor {
             copyDefinitions(importedDefinitions.getArtifacts(), definitions.getArtifacts());
             copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
             copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
+            copyMapNoOverride(importedDefinitions.getPolicies().getRules(), definitions.getPolicies().getRules());
+            copyMapNoOverride(importedDefinitions.getPolicies().getTypes(), definitions.getPolicies().getTypes());
             copyPlans(importedDefinitions.getPlans(), definitions.getPlans());
             copyGlobalPlan(importedDefinitions, definitions);
         }
@@ -281,6 +312,11 @@ public class DSLProcessor {
 
     private static <T extends Definition> void copyDefinitions(Map<String, T> copyFromDefinitions,
                                                                Map<String, T> copyToDefinitions) {
+        copyMapNoOverride(copyFromDefinitions, copyToDefinitions);
+    }
+
+    private static <T extends Object> void copyMapNoOverride(Map<String, T> copyFromDefinitions,
+                                                             Map<String, T> copyToDefinitions) {
         for (Map.Entry<String, T> entry : copyFromDefinitions.entrySet()) {
             String name = entry.getKey();
             T definition = entry.getValue();

@@ -21,6 +21,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.util.List;
 import java.util.Map;
@@ -37,14 +38,14 @@ public class Type extends InheritedDefinition {
     public static final String ROOT_NODE_TYPE_NAME = "node";
     public static final Type ROOT_NODE_TYPE = initRootNodeType();
 
+    private List<Object> interfaces = Lists.newArrayList();
+    private Map<String, Policy> policies = Maps.newHashMap();
+
     private static Type initRootNodeType() {
         Type root = new Type();
         root.setName(ROOT_NODE_TYPE_NAME);
         return root;
     }
-
-    private List<Object> interfaces = Lists.newArrayList();
-    private String policies;
 
     public Type() {
         // Default value
@@ -59,11 +60,11 @@ public class Type extends InheritedDefinition {
         this.interfaces = interfaces;
     }
 
-    public String getPolicies() {
+    public Map<String, Policy> getPolicies() {
         return policies;
     }
 
-    public void setPolicies(String policies) {
+    public void setPolicies(Map<String, Policy> policies) {
         this.policies = policies;
     }
 
@@ -73,9 +74,15 @@ public class Type extends InheritedDefinition {
         Type result = new Type();
         result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
+        result.inheritPoliciesFrom(typedParent);
+        result.inheritPoliciesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
         return result;
+    }
+
+    protected void inheritPoliciesFrom(Type other) {
+        policies.putAll(other.getPolicies());
     }
 
     protected void inheritPropertiesFrom(Type other) {

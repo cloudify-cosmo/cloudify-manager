@@ -38,6 +38,7 @@ public class Definitions {
     private Map<String, Artifact> artifacts = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
     private Map<String, Plan> plans = Maps.newHashMap();
+    private Policies policies = new Policies();
     private String globalPlan;
 
     public Map<String, Type> getTypes() {
@@ -103,4 +104,13 @@ public class Definitions {
     public void setGlobalPlan(String globalPlan) {
         this.globalPlan = globalPlan;
     }
+
+    public Policies getPolicies() {
+        return policies;
+    }
+
+    public void setPolicies(Policies policies) {
+        this.policies = policies;
+    }
+
 }

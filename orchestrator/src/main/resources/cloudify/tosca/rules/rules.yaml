@@ -1,0 +1,18 @@
+definitions:
+
+    ##################################################################################
+    # Policies rules definitions
+    ##################################################################################
+    policies:
+        rules:
+            state_equals: |
+                (service "${service}")
+                (status "${state}")
+
+            state_not_equals: |
+                 (service "${service}")
+                 (not (status "${state}"))
+
+            metric_below: |
+                 (service "${service}")
+                 (< (metric "${metric}"))
