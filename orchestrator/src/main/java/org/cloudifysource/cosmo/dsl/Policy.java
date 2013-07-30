@@ -28,15 +28,6 @@ import java.util.Map;
 public class Policy {
 
     private Map<String, Rule> rules;
-    private Map<String, Object> onEvent;
-
-    public Map<String, Object> getOnEvent() {
-        return onEvent;
-    }
-
-    public void setOnEvent(Map<String, Object> onEvent) {
-        this.onEvent = onEvent;
-    }
 
     public Map<String, Rule> getRules() {
         return rules;

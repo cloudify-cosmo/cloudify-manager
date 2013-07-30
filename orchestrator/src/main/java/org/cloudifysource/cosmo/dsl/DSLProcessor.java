@@ -124,10 +124,6 @@ public class DSLProcessor {
                         "Policy not defined [%s] in template: %s - available policies: %s",
                         template.getName(), policyEntry, policies.getTypes());
                 final Policy policy = policyEntry.getValue();
-                Preconditions.checkArgument(policy.getOnEvent() != null,
-                        "Missing 'on_event' declaration for policy [%s] in template: %s",
-                        policyEntry.getKey(),
-                        template.getName());
                 for (Map.Entry<String, Rule> ruleEntry : policy.getRules().entrySet()) {
                     Preconditions.checkArgument(policies.getRules().containsKey(ruleEntry.getValue().getType()),
                             "Unknown rule type [%s] for rule: '%s' in template: %s", ruleEntry.getValue().getType(),

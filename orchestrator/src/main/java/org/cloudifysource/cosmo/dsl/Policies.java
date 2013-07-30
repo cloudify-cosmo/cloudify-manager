@@ -30,7 +30,7 @@ import java.util.Map;
 public class Policies {
 
     private Map<String, String> rules = Maps.newHashMap();
-    private Map<String, Map<String, Object>> types = Maps.newHashMap();
+    private Map<String, String> types = Maps.newHashMap();
 
     public Map<String, String> getRules() {
         return rules;
@@ -40,11 +40,11 @@ public class Policies {
         this.rules = rules;
     }
 
-    public Map<String, Map<String, Object>> getTypes() {
+    public Map<String, String> getTypes() {
         return types;
     }
 
-    public void setTypes(Map<String, Map<String, Object>> types) {
+    public void setTypes(Map<String, String> types) {
         this.types = types;
     }
 

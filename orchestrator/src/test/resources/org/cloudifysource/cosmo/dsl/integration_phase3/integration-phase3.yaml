@@ -31,8 +31,6 @@ definitions:
                                     properties:
                                         service: "vagrant machine status"
                                         state: "running"
-                            on_event:
-                                reachable: "true"
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"

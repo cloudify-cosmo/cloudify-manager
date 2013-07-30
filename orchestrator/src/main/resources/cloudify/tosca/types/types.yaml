@@ -6,7 +6,7 @@ definitions:
     imports:
         - 'celery_worker_installer'
         - 'celery_plugin_installer'
-        - 'cloudify.rules'
+        - 'cloudify.policies'
 
     ##################################################################################
     # Base type definitions
@@ -151,11 +151,4 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.plugin"
 
 
-    ##################################################################################
-    # Policies
-    ##################################################################################
-    policies:
-        types:
-            start_detection_policy: { }
-            failure_detection_policy: { }
 

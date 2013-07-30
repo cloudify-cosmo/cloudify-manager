@@ -16,8 +16,6 @@ definitions:
                             properties:
                                 state: "host_state"
                                 value: "running"
-                    on_event:
-                        reachable: "true"
 
         2nd_type_with_policy:
             derived_from: "type_with_policy"
@@ -30,8 +28,6 @@ definitions:
                             properties:
                                 state: "host_state"
                                 value: "terminated"
-                    on_event:
-                        reachable: "true"
                 failure_detection_policy:
                     rules:
                         host_state:
@@ -39,8 +35,6 @@ definitions:
                             properties:
                                 state: "host_state"
                                 value: "terminated"
-                    on_event:
-                        reachable: "false"
 
     service_templates:
         web_server:
@@ -60,9 +54,6 @@ definitions:
                                     properties:
                                         metric: "latency"
                                         value: "100"
-                            on_event:
-                                reachable: "true"
-                                ip: "10.0.0.1"
                         failure_detection_policy:
                             rules:
                                 host_state:
@@ -70,8 +61,6 @@ definitions:
                                     properties:
                                         state: "host_state"
                                         value: "running"
-                            on_event:
-                                reachable: "false"
 
                 template_with_inherited_policy:
                     type: "type_with_policy"
@@ -86,8 +75,6 @@ definitions:
                                     properties:
                                         state: "host_state"
                                         value: "terminated"
-                            on_event:
-                                reachable: "false"
 
                 2nd_template_with_inherited_policy:
                     type: "2nd_type_with_policy"
@@ -102,9 +89,6 @@ definitions:
                                     properties:
                                         state: "host_state"
                                         value: "terminated"
-                            on_event:
-                                reachable: "true"
-
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"

@@ -1,9 +1,16 @@
 definitions:
 
     ##################################################################################
-    # Policies rules definitions
+    # Policies & rules definitions
     ##################################################################################
     policies:
+        types:
+            start_detection_policy: |
+                abcdefg...
+
+            failure_detection_policy: |
+                12345676...
+
         rules:
             state_equals: |
                 (service "${service}")
