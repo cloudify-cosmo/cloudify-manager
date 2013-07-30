@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
+import com.google.common.base.Optional;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.tasks.ProcessOutputLogger;
@@ -65,7 +66,7 @@ public class VagrantRiemannMonitorProcessConfig {
         String[] command = {"/bin/sh", "-c", "kill $(ps aux | grep '[m]onitor.py' | awk '{print $2}')"};
         ProcessBuilder builder = new ProcessBuilder();
         builder.command(command);
-        ProcessOutputLogger processOutputLogger = new ProcessOutputLogger(builder, logger);
+        ProcessOutputLogger processOutputLogger = new ProcessOutputLogger(builder, logger, Optional.<String>absent());
         return processOutputLogger.getProcess();
     }
 
