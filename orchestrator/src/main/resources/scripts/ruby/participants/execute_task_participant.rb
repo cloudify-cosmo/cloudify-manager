@@ -82,13 +82,24 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def onTaskSucceeded(success_event)
-    $logger.debug('Task Succeeded:' + success_event)
+    log_event(success_event)
     reply(workitem)
   end
 
   def onTaskFailed(fail_event)
-    $logger.debug('Task Failed:' + fail_event)
+    log_event(fail_event)
     flunk(workitem, Exception.new(JSON.parse(fail_event)['exception']))
+  end
+
+  def log_event(event)
+    begin
+      enriched_event = JSON.parse(event.to_s)
+      enriched_event['wfid'] = workitem.wfid
+      $logger.debug('[event] ' +JSON.generate(enriched_event))
+    rescue => e
+      backtrace = e.backtrace if e.respond_to?(:backtrace)
+      $logger.debug("error logging event: #{e.to_s} / #{backtrace}")
+    end
   end
 
 end
