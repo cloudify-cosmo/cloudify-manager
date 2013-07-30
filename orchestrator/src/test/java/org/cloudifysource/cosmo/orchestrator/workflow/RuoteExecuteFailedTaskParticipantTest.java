@@ -89,7 +89,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
     private RuoteRuntime runtime;
 
 
-    @Test(timeOut = 30000, expectedExceptions = { InvokeFailedException.class })
+    @Test(timeOut = 60000, expectedExceptions = { InvokeFailedException.class })
     public void testFailedTaskExecution() throws URISyntaxException, InterruptedException {
 
         final String target = "http://localhost:8080/";
@@ -108,7 +108,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
         runtime.waitForWorkflow(id);
     }
 
-    @Test(timeOut = 30000)
+    @Test(timeOut = 60000)
     public void testIgnoredFailedTaskExecution() throws URISyntaxException, InterruptedException {
 
         final String target = "http://localhost:8080/";
