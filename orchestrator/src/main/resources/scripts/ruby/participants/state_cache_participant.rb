@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 java_import org.cloudifysource::cosmo::statecache::StateCacheListener
+require 'json'
 
 class StateCacheParticipant < Ruote::Participant
   include StateCacheListener
@@ -65,8 +66,8 @@ class StateCacheParticipant < Ruote::Participant
 snapshot={},
 required_state={}]', resource_id, workitem.params, snapshot, required_state)
     required_state.each do |key, value|
-      matches = (snapshot.contains_property(resource_id, key) and snapshot.get_property(resource_id,
-                                                                                        key).get.to_s.eql? value.to_s)
+      matches = (snapshot.contains_property(resource_id, key) and
+          snapshot.get_property(resource_id, key).get.get_state.to_s.eql? value.to_s)
       break unless matches
     end
 
@@ -76,7 +77,14 @@ required_state={}]', resource_id, workitem.params, snapshot, required_state)
         current_node = workitem.fields[PreparePlanParticipant::NODE]
         state = snapshot.get_resource_properties(resource_id)
         node_state = Hash.new
-        state.each { |key, value| node_state[key] = value }
+        state.each do |key, value|
+          node_state[key] = value.get_state
+          unless value.get_description.to_s == ''
+            description = JSON.parse(value.get_description)
+            description['state'] = value.get_state
+            $logger.debug('[event] {}', JSON.generate(description))
+          end
+        end
         properties = current_node[PreparePlanParticipant::PROPERTIES]
         properties[PreparePlanParticipant::RUNTIME][resource_id] = node_state
       end

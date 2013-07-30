@@ -16,20 +16,34 @@
 
 package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
+import java.io.Serializable;
 
 /**
- * A snapshot of a {@link StateCache}.
+ * A state cache properties value wrapper.
  *
- * @author Eitan Yanovsky
+ * @author Idan Moyal
  * @since 0.1
  */
-public interface StateCacheSnapshot {
+public class StateCacheValue implements Serializable {
 
-    boolean containsProperty(String resourceId, String property);
+    private static final long serialVersionUID = 1L;
+    private String state;
+    private String description;
 
-    Optional<StateCacheValue> getProperty(String resourceId, String property);
+    public StateCacheValue(String state) {
+        this(state, null);
+    }
 
-    ImmutableMap<String, StateCacheValue> getResourceProperties(String resourceId);
+    public StateCacheValue(String state, String description) {
+        this.state = state;
+        this.description = description;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public String getDescription() {
+        return description;
+    }
 }

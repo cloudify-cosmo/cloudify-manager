@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.ImmutableMap;
 import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.StateCacheValue;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -75,7 +76,7 @@ public class RouteWorkflowWithStateCacheTest {
 
     @Test(timeOut = 60000)
     public void testStateCacheParticipantWithResourceIdParameter() {
-        cache.put("node1", "reachable", "true");
+        cache.put("node1", "reachable", new StateCacheValue("true"));
 
         final String flow =
                 "define flow\n" +

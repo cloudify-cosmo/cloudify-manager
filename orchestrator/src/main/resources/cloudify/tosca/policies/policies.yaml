@@ -14,11 +14,11 @@ definitions:
         rules:
             state_equals: |
                 (service "${service}")
-                (status "${state}")
+                (state "${state}")
 
             state_not_equals: |
                  (service "${service}")
-                 (not (status "${state}"))
+                 (not (state "${state}"))
 
             metric_below: |
                  (service "${service}")

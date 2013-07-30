@@ -31,6 +31,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.StateCache;
+import org.cloudifysource.cosmo.statecache.StateCacheValue;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
@@ -451,13 +452,13 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     private void reachable(String nodeId) {
         Preconditions.checkNotNull(nodeId);
-        stateCache.put(nodeId, "reachable", "true");
+        stateCache.put(nodeId, "reachable", new StateCacheValue("true"));
     }
 
     private void discoveredIpAddress(String nodeId, String ipAddress) {
         Preconditions.checkNotNull(nodeId);
         Preconditions.checkNotNull(ipAddress);
-        stateCache.put(nodeId, "ip", ipAddress);
+        stateCache.put(nodeId, "ip", new StateCacheValue(ipAddress));
     }
 
     /**

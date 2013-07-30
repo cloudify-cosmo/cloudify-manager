@@ -42,7 +42,7 @@ import java.util.concurrent.locks.Lock;
  */
 public class StateCache implements AutoCloseable {
 
-    private final TrieMap<StateCacheProperty, String> cache;
+    private final TrieMap<StateCacheProperty, StateCacheValue> cache;
     private final SetMultimap<String, StateCacheListenerHolder> listeners;
     private final NamedLockProvider lockProvider;
     private final ExecutorService executorService;
@@ -109,15 +109,16 @@ public class StateCache implements AutoCloseable {
         executorService.shutdownNow();
     }
 
-    public void put(String resourceId, String property, String value) {
+    public void put(String resourceId, String property, StateCacheValue value) {
         Preconditions.checkNotNull(resourceId);
         Preconditions.checkNotNull(property);
         Preconditions.checkNotNull(value);
+        Preconditions.checkNotNull(value.getState());
         final Lock lock = lockProvider.forName(resourceId);
         lock.lock();
         try {
             cache.put(new StateCacheProperty(resourceId, property), value);
-            final TrieMap<StateCacheProperty, String> snapshot = cache.snapshot();
+            final TrieMap<StateCacheProperty, StateCacheValue> snapshot = cache.snapshot();
             final Set<StateCacheListenerHolder> resourceListeners = listeners.get(resourceId);
             /** Ignoring instruction appearing on
              * {@link Multimaps#synchronizedMultimap(com.google.common.collect.Multimap)} because when this multi-value
@@ -140,8 +141,8 @@ public class StateCache implements AutoCloseable {
         try {
             final String listenerId = UUID.randomUUID().toString();
             listeners.put(resourceId, StateCacheListenerHolder.create(listener, listenerId));
-            final TrieMap<StateCacheProperty, String> snapshot = cache.snapshot();
-            for (Map.Entry<StateCacheProperty, String> entry : snapshot.entrySet()) {
+            final TrieMap<StateCacheProperty, StateCacheValue> snapshot = cache.snapshot();
+            for (Map.Entry<StateCacheProperty, StateCacheValue> entry : snapshot.entrySet()) {
                 if (entry.getKey().getResourceId().equals(resourceId)) {
                     submitTriggerEventTask(resourceId, listener, listenerId, snapshot);
                     break;
@@ -153,8 +154,11 @@ public class StateCache implements AutoCloseable {
         }
     }
 
-    private void submitTriggerEventTask(final String resourceId, final StateCacheListener listener,
-                                        final String listenerId, final TrieMap<StateCacheProperty, String> snapshot) {
+    private void submitTriggerEventTask(
+            final String resourceId,
+            final StateCacheListener listener,
+            final String listenerId,
+            final TrieMap<StateCacheProperty, StateCacheValue> snapshot) {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
@@ -167,16 +171,15 @@ public class StateCache implements AutoCloseable {
                         }
 
                         @Override
-                        public Optional<String> getProperty(String resourceId, String property) {
+                        public Optional<StateCacheValue> getProperty(String resourceId, String property) {
                             final StateCacheProperty stateCacheProperty = new StateCacheProperty(resourceId, property);
                             return Optional.fromNullable(snapshot.get(stateCacheProperty));
                         }
 
                         @Override
-                        public ImmutableMap<String, String> getResourceProperties(String resourceId) {
-                            final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-                            for (Map.Entry<StateCacheProperty, String> entry : snapshot
-                                    .entrySet()) {
+                        public ImmutableMap<String, StateCacheValue> getResourceProperties(String resourceId) {
+                            final ImmutableMap.Builder<String, StateCacheValue> builder = ImmutableMap.builder();
+                            for (Map.Entry<StateCacheProperty, StateCacheValue> entry : snapshot.entrySet()) {
                                 if (entry.getKey().getResourceId().equals(resourceId))
                                     builder.put(entry.getKey().getProperty(), entry.getValue());
                             }

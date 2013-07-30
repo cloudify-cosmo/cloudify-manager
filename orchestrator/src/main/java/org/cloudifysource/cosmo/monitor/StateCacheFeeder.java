@@ -22,6 +22,7 @@ import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheLogDescription;
+import org.cloudifysource.cosmo.statecache.StateCacheValue;
 import org.jboss.netty.channel.ChannelException;
 import org.robobninjas.riemann.json.RiemannEvent;
 import org.robobninjas.riemann.json.RiemannEventObjectMapper;
@@ -103,7 +104,10 @@ public class StateCacheFeeder {
                     final String resourceId = event.getHost();
                     Preconditions.checkNotNull(resourceId, "RiemannEvent host field cannot be null");
                     logger.debug("StateCacheListener received event: {}", event.getState());
-                    StateCacheFeeder.this.stateCache.put(resourceId, event.getService(), event.getState());
+                    StateCacheFeeder.this.stateCache.put(
+                            resourceId,
+                            event.getService(),
+                            new StateCacheValue(event.getState(), event.getDescription()));
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);
                     throw Throwables.propagate(e);
