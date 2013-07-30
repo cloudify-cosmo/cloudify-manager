@@ -1,3 +1,4 @@
 integration_phase3/
 *.iml
 .vagrant
+.pyc
