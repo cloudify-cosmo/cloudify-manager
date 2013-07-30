@@ -24,6 +24,12 @@ Run
 
 
 - vagrant ssh.
+- add vagrant boxes
+
+    * vagrant box add precise64 http://dl.dropbox.com/u/13510779/lxc-precise-amd64-2013-07-12.box
+
+    see a list of pre-packaged images for vagrant-lxc : https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes
+
 - type cosmo --help to see the usage.
 
     Note :

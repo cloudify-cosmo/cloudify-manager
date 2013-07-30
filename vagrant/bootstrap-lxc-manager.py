@@ -160,7 +160,6 @@ def main():
     install_java()
     install_maven()
     install_vagrant()
-    add_precise64_lxc_box()
     install_vagrant_lxc()
     install_java()
     install_cosmo()
