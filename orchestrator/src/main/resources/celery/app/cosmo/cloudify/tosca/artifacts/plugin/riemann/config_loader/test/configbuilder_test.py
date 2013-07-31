@@ -4,14 +4,11 @@ from configbuilder import build_riemann_config
 class TestConfigBuilder(unittest.TestCase):
 
     def setUp(self):
-        with open('../../../../../../../../../org/cloudifysource/cosmo/orchestrator/integration/config/riemann.config.template', 'r') as f:
+        with open('../../../../../../../../../riemann/riemann.config.template', 'r') as f:
             self.template = f.read()
         self.policies = {
             'node1': {
                 'start_detection_policy': {
-                    'on_event': {
-                        'reachable': 'true',
-                    },
                     'rules': {
                         'rule1': {
                             'type': 'status_equals',
@@ -30,10 +27,6 @@ class TestConfigBuilder(unittest.TestCase):
                     }
                 },
                 'failure_detection_policy': {
-                    'on_event': {
-                        'reachable': 'false',
-                        'end_of_the_world': 'true'
-                    },
                     'rules': {
                         'rule1': {
                             'type': 'status_not_equals',
@@ -47,9 +40,6 @@ class TestConfigBuilder(unittest.TestCase):
             },
             'node2': {
                 'start_detection_policy': {
-                    'on_event': {
-                        'reachable': 'true',
-                    },
                     'rules': {
                         'rule1': {
                             'type': 'status_equals',
@@ -80,10 +70,42 @@ class TestConfigBuilder(unittest.TestCase):
                 (not (metric ${metric}))
             '''
         }
+        self.policies_events = {
+            'start_detection_policy': '''
+                (fn [event]
+                    (let [ip-event (assoc event :host "$node_id"
+                                                :service "ip"
+                                                :state (get event :host)
+                                                :description "$event"
+                                                :tags ["cosmo"])]
+                        (call-rescue ip-event [index prn]))
+                    (let [reachable-event (assoc event :host "$node_id"
+                                                       :service "reachable"
+                                                       :state "true"
+                                                       :description "$event"
+                                                       :tags ["cosmo"])]
+                        (call-rescue reachable-event [index prn])))
+            ''',
+            'failure_detection_policy':'''
+                (fn [event]
+                    (let [ip-event (assoc event :host "$node_id"
+                                                :service "ip"
+                                                :state (get event :host)
+                                                :description "$event"
+                                                :tags ["cosmo"])]
+                        (call-rescue ip-event [index prn]))
+                    (let [reachable-event (assoc event :host "$node_id"
+                                                       :service "reachable"
+                                                       :state "true"
+                                                       :description "$event"
+                                                       :tags ["cosmo"])]
+                        (call-rescue reachable-event [index prn])))
+            '''
+        }
 
 
     def test_build_riemann_config(self):
-        print build_riemann_config(self.template, self.policies, self.rules)
+        print build_riemann_config(self.template, self.policies, self.rules, self.policies_events)
 
 if __name__ == '__main__':
     unittest.main()
