@@ -19,6 +19,7 @@ script:
    - "mvn verify -f travis-pom.xml"
 
 after_success:
+  - "cd orchestrator;mvn install -Pall"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/bootstrapper --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"

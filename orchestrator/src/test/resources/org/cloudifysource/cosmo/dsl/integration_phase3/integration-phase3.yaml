@@ -2,7 +2,7 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "vagrant-host-provisioner.yaml"
+        - "vagrant.host.provisioner"
         - "python-webserver-installer.yaml"
 
     service_templates:
