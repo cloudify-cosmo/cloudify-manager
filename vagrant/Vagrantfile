@@ -4,24 +4,27 @@
 BOX_NAME = 'precise64'
 BOX_URI = 'http://files.vagrantup.com/precise64.box'
 
-Vagrant.configure("2") do |config|
+Vagrant.configure('2') do |config|
 
   config.vm.define :manager do |manager_config|    
 
     manager_config.vm.box = BOX_NAME
     manager_config.vm.box_url = BOX_URI
     manager_config.vm.hostname = 'cosmo-manager'
+    manager_config.vm.provider :virtualbox do |vb|
+      vb.customize ['modifyvm', :id, '--memory', '2048']
+    end
 
-    command = '
+    command = "
         sudo apt-get -y update;
         sudo apt-get install -y python-dev;
         sudo apt-get install -q -y python-pip;
-        sudo pip install fabric;
+        sudo pip install retrying;
         sudo pip install timeout-decorator;
-        mkdir /home/vagrant/cosmo-work;
+        su vagrant -c 'mkdir /home/vagrant/cosmo-work';
         cd /home/vagrant/cosmo-work;
-        sudo python2.7 /vagrant/bootstrap-lxc-manager.py
-    '
+        su vagrant -c 'python2.7 /vagrant/bootstrap-lxc-manager.py'
+    "
 
     manager_config.vm.provision :shell, :inline => command
 
