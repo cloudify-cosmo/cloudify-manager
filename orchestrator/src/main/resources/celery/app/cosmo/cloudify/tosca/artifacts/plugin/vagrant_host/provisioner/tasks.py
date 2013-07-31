@@ -18,14 +18,14 @@
 Vagrant provisioner tasks.
 """
 
-from cosmo.celery import celery
-
 import os
 import vagrant
 import tempfile
 import subprocess
 import sys
 from celery.utils.log import get_task_logger
+
+from cosmo.celery import celery
 
 RUNNING = 'running'
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
@@ -34,12 +34,12 @@ logger = get_task_logger(__name__)
 
 
 @celery.task
-def provision(vagrant_file, __cloudify_id, **kwargs):
+def provision(vagrant_file, ssh_conf, __cloudify_id, **kwargs):
     logger.info('provisioning vagrant vm [id=%s, vagrant_file=\n%s]', __cloudify_id, vagrant_file)
     v = get_vagrant(__cloudify_id, True)
     with open("{0}/Vagrantfile".format(v.root), 'w') as output_file:
         output_file.write(vagrant_file)
-    start_monitor(v, __cloudify_id)
+    start_monitor(v, __cloudify_id, ssh_conf)
 
 
 @celery.task
@@ -81,14 +81,22 @@ def status(v):
     return v.status()
 
 
-def start_monitor(v, host_id):
+def start_monitor(v, host_id, ssh_conf=None):
     # ssh_conf = v.conf()
+
+    host_arg = port_arg = nic_arg = ""
+    if ssh_conf is not None:  # allow to pass specific host and port (useful for lxc environment)
+        host_arg = "--ssh_host={0}".format(ssh_conf['host'])
+        port_arg = "--ssh_port={0}".format(ssh_conf['port'])
+        nic_arg = "--vagrant_nic={0}".format(ssh_conf['nic'])
+
     command = [
         sys.executable,
         os.path.join(os.path.dirname(__file__), "monitor.py"),
         "--tag=name={0}".format(host_id),
-        # "--ssh_host={0}".format(ssh_conf['HostName']),
-        # "--ssh_port={0}".format(ssh_conf['Port']),
+        host_arg,
+        port_arg,
+        nic_arg,
         # "--ssh_user={0}".format(ssh_conf['User']),
         # "--ssh_keyfile={0}".format(ssh_conf['IdentityFile']),
         "--pid_file={0}".format(os.path.join(v.root, "monitor.pid"))
