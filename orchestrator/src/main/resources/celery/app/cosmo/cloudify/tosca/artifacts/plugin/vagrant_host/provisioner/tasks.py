@@ -34,7 +34,7 @@ logger = get_task_logger(__name__)
 
 
 @celery.task
-def provision(vagrant_file, ssh_conf, __cloudify_id, **kwargs):
+def provision(vagrant_file, __cloudify_id, ssh_conf=None, **kwargs):
     logger.info('provisioning vagrant vm [id=%s, vagrant_file=\n%s]', __cloudify_id, vagrant_file)
     v = get_vagrant(__cloudify_id, True)
     with open("{0}/Vagrantfile".format(v.root), 'w') as output_file:
@@ -81,14 +81,18 @@ def status(v):
     return v.status()
 
 
-def start_monitor(v, host_id, ssh_conf=None):
+def start_monitor(v, host_id, ssh_conf):
     # ssh_conf = v.conf()
 
     host_arg = port_arg = nic_arg = ""
     if ssh_conf is not None:  # allow to pass specific host and port (useful for lxc environment)
-        host_arg = "--ssh_host={0}".format(ssh_conf['host'])
-        port_arg = "--ssh_port={0}".format(ssh_conf['port'])
-        nic_arg = "--vagrant_nic={0}".format(ssh_conf['nic'])
+
+        if 'host' in ssh_conf:
+            host_arg = "--ssh_host={0}".format(ssh_conf['host'])
+        if 'port' in ssh_conf:
+            port_arg = "--ssh_port={0}".format(ssh_conf['port'])
+        if 'nic' in ssh_conf:
+            nic_arg = "--vagrant_nic={0}".format(ssh_conf['nic'])
 
     command = [
         sys.executable,
@@ -101,6 +105,8 @@ def start_monitor(v, host_id, ssh_conf=None):
         # "--ssh_keyfile={0}".format(ssh_conf['IdentityFile']),
         "--pid_file={0}".format(os.path.join(v.root, "monitor.pid"))
     ]
+    command = filter(lambda s: len(s) > 0, command)
+
     logger.info('starting vagrant monitoring [cmd=%s]', command)
     subprocess.Popen(command)
 
