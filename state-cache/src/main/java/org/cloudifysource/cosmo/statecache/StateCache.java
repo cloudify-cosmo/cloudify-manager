@@ -58,7 +58,7 @@ public class StateCache implements AutoCloseable {
         private final StateCacheListener listener;
         private final String listenerId;
 
-        public static StateCacheListenerHolder removeTemplate(String listenerId) {
+        public static StateCacheListenerHolder template(String listenerId) {
             return new StateCacheListenerHolder(null, listenerId);
         }
 
@@ -162,6 +162,9 @@ public class StateCache implements AutoCloseable {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
+                if (!listeners.containsEntry(resourceId, StateCacheListenerHolder.template(listenerId))) {
+                    return;
+                }
                 boolean remove = true;
                 try {
                     remove = listener.onResourceStateChange(new StateCacheSnapshot() {
@@ -203,7 +206,7 @@ public class StateCache implements AutoCloseable {
         final Lock lock = lockProvider.forName(resourceId);
         lock.lock();
         try {
-            listeners.remove(resourceId, StateCacheListenerHolder.removeTemplate(listenerId));
+            listeners.remove(resourceId, StateCacheListenerHolder.template(listenerId));
         } finally {
             lock.unlock();
         }

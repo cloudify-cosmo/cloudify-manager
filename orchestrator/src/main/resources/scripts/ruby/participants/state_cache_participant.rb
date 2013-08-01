@@ -34,7 +34,7 @@ class StateCacheParticipant < Ruote::Participant
       raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
       listener_id = state_cache.subscribe(resource_id, self)
-      $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, workitem={}]', resource_id, workitem)
+      $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, params={}]', resource_id, workitem.params)
       put(LISTENER_ID, listener_id)
     rescue Exception => e
       $logger.debug(e.message)
@@ -77,14 +77,17 @@ required_state={}]', resource_id, workitem.params, snapshot, required_state)
         current_node = workitem.fields[PreparePlanParticipant::NODE]
         state = snapshot.get_resource_properties(resource_id)
         node_state = Hash.new
+
         state.each do |key, value|
           node_state[key] = value.get_state
           unless value.get_description.to_s == ''
             description = JSON.parse(value.get_description)
             description['state'] = value.get_state
+            description['wfid'] = workitem.wfid
             $logger.debug('[event] {}', JSON.generate(description))
           end
         end
+
         properties = current_node[PreparePlanParticipant::PROPERTIES]
         properties[PreparePlanParticipant::RUNTIME][resource_id] = node_state
       end

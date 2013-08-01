@@ -291,4 +291,26 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
     public void testRejectRemoveSubscribeNullListener() {
         stateCache.removeSubscription("resource", null);
     }
+
+    @Test
+    public void testListenerTriggeredOnceIfRemove() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final CountDownLatch latch = new CountDownLatch(2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+                latch.countDown();
+                return true;
+            }
+        };
+        stateCache.subscribe(resourceId1, listener);
+        for (int i = 0; i < 100; i++) {
+            stateCache.put(resourceId1, property1, new StateCacheValue(value1));
+        }
+        Thread.sleep(50);
+        assertThat(latch.getCount()).isEqualTo(1);
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
+    }
 }

@@ -24,6 +24,8 @@ import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
 import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
 import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
+import org.cloudifysource.cosmo.monitor.RiemannEventsLogger;
+import org.cloudifysource.cosmo.monitor.config.RiemannEventsLoggerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
@@ -79,7 +81,9 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
             JythonProxyConfig.class,
-            JettyDSLImporterConfig.class
+            JettyDSLImporterConfig.class,
+            RiemannEventsLoggerConfig.class
+
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -105,6 +109,9 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
     @Inject
     private JettyFileServerForPluginsConfig jettyFileServerForPluginsConfig;
+
+    @Inject
+    private RiemannEventsLogger riemannEventsLogger;
 
     @Test(timeOut = 60000 * 5, groups = "vagrant", enabled = false)
     public void testWithVagrantHostProvisionerAndSimpleWebServerInstaller() throws IOException {
