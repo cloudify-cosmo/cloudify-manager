@@ -17,7 +17,6 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
-import org.cloudifysource.cosmo.monitor.RiemannEventsLogger;
 import org.cloudifysource.cosmo.monitor.config.RiemannEventsLoggerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;

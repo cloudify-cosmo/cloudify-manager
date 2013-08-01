@@ -24,7 +24,8 @@ class LoggingObserver
 
   def on_msg(msg)
     begin
-      $logger.debug('[event] {}', JSON.generate(msg))
+      # enable for ruote event logging..
+      #$logger.debug('[event] {}', JSON.generate(msg))
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
       $logger.debug("error logging event: #{e.to_s} / #{backtrace}")
