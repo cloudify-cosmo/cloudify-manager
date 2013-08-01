@@ -48,11 +48,14 @@ Run
 Update
 ======
 
-To update the cosmo management jar:
+In case a new version of cosmo was released, you will probably want to upgrade.
+It a simple matter of replacing a jar file.
+
+To update the cosmo management jar: (replace place holders with your values)
 
     - cd {working_dir}
-    - rm orchestrator-0.1-SNAPSHOT-all.jar
-    - wget wget https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/0.1-SNAPSHOT/orchestrator-0.1-SNAPSHOT-all.jar
+    - rm orchestrator-{cosmo_version}-all.jar
+    - wget wget https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
 
 Stop
 ====
