@@ -26,8 +26,11 @@ Run
 - vagrant ssh.
 - add vagrant boxes
 
-    * A default box called 'precise64' is automatically added. to add more boxes see a list of pre-packaged images
-      for vagrant-lxc: https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes
+    * A default box called 'precise64' is automatically added.
+      This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
+
+    To add more boxes see a list of pre-packaged images for vagrant-lxc: https://github
+    .com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes
 
 - type cosmo --help to see the usage.
 
