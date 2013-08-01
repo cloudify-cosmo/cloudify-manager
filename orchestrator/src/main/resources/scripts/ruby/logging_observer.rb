@@ -24,7 +24,8 @@ class LoggingObserver
 
   def on_msg(msg)
     begin
-      $logger.debug('[event] ' + JSON.generate(msg))
+      $logger.debug('[event] ' + msg['_id'])
+      # $logger.debug('[event] ' + JSON.generate(msg)) This causes the log to blowup
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
       $logger.debug("error logging event: #{e.to_s} / #{backtrace}")
