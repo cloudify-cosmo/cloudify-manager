@@ -45,7 +45,7 @@ Run
     It is accessible on the guest machine in /vagrant, which is mounted to the root directory of the vagrant file.
 
 
-Update
+Upgrade
 ======
 
 In case a new version of cosmo was released, you will probably want to upgrade.
