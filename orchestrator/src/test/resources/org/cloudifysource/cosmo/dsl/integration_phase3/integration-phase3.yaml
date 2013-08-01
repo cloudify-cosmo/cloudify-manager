@@ -31,6 +31,13 @@ definitions:
                                     properties:
                                         service: "vagrant machine status"
                                         state: "running"
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_not_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"

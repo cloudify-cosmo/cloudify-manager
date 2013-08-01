@@ -30,11 +30,13 @@ def build_node_policy_config(node_id,
                              node_policy_name):
 
     policy_config_template = '''
-        (where 
-            (and
-                $node_policy_rules
-                (tagged "name=$node_id"))
-            $node_policy_events)
+        (changed-state
+            (where
+                (and
+                    $node_policy_rules
+                    (tagged "name=$node_id"))
+                $node_policy_events)
+        )
     '''
     
     node_policy_rules = []
