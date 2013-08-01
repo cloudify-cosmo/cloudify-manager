@@ -1,3 +1,19 @@
+#/*******************************************************************************
+# * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# *
+# * Licensed under the Apache License, Version 2.0 (the "License");
+# * you may not use this file except in compliance with the License.
+# * You may obtain a copy of the License at
+# *
+# *       http://www.apache.org/licenses/LICENSE-2.0
+# *
+# * Unless required by applicable law or agreed to in writing, software
+# * distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+# *******************************************************************************/
+
 import argparse
 from os.path import expanduser
 import subprocess
@@ -38,7 +54,12 @@ class VagrantLxcBoot:
         except SystemExit:  # lrun does not throw exception, but just exists the process
             raise CalledProcessError(cmd=command, returncode=1, output=sys.stderr)
 
-    @timeout_decorator.timeout(60 * 10)  # 10 minute default command timeout
+    """
+    Runs the command with a timeout of 10 minutes.
+    Since most command are downloads, we assume that if 10 minutes are not enough
+    then something is wrong. so we kill the process and let the retry decorator execute it again.
+    """
+    @timeout_decorator.timeout(60 * 10)
     def run_with_timeout(self, command):
         self.run_fabric(command)
 
@@ -110,6 +131,10 @@ class VagrantLxcBoot:
     def install_vagrant_lxc(self):
         self.run_fabric("vagrant plugin install vagrant-lxc")
 
+    """
+    Currently not used. provides some more functionallity between the actual host and the virtual box vagrant guest.
+    See http://www.virtualbox.org/manual/ch04.html
+    """
     def install_guest_additions(self):
         self.apt_get("install -q -y linux-headers-3.8.0-19-generic dkms")
         self.run_fabric("echo 'Downloading VBox Guest Additions...'")
