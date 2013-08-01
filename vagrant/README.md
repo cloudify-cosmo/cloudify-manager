@@ -16,11 +16,14 @@ Run
 
     Note :
 
-    This process may be very long (estimated time of 20 minutes) it is highly recommended you to create a snapshot of
+    This process may be very long (estimated time of 20 minutes) it is highly recommended that you create a snapshot of
     this machine immediately after it is finished.
 
-        1. Take the snapshot : run "vagrant snapshot take manager"
-        2. To revert the machine back to its original state : run "vagrant snapshot go manager"
+        vagrant snapshot take manager
+
+    To revert back to the snapshot
+
+        vagrant snapshot go manager
 
 
 - vagrant ssh.
@@ -29,8 +32,8 @@ Run
     * A default box called 'precise64' is automatically added.
       This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
 
-    To add more boxes see a list of pre-packaged images for vagrant-lxc: https://github
-    .com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes
+    To add more boxes see a list of pre-packaged images for vagrant-lxc :
+    https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes
 
 - type cosmo --help to see the usage.
 
@@ -45,7 +48,7 @@ Update
 
 To update the cosmo management jar:
 
-    - cd /home/vagrant/cosmo-work
+    - cd {working_dir}
     - rm orchestrator-0.1-SNAPSHOT-all.jar
     - wget wget https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/0.1-SNAPSHOT/orchestrator-0.1-SNAPSHOT-all.jar
 
@@ -54,7 +57,7 @@ Stop
 
 Take a look at the vagrant teardown method and choose the one you like:
 
-    http://docs-v1.vagrantup.com/v1/docs/getting-started/teardown.html
+http://docs-v1.vagrantup.com/v1/docs/getting-started/teardown.html
 
 Please note that running "vagrant destroy" will completely terminate the environment,
 and another bootstrapping process will be needed.
