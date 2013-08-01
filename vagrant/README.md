@@ -54,8 +54,9 @@ It a simple matter of replacing a jar file.
 To update the cosmo management jar: (replace place holders with your values)
 
     - cd {working_dir}
-    - rm orchestrator-{cosmo_version}-all.jar
+    - rm cosmo.jar
     - wget https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
+    - mv orchestrator-{cosmo_version}-all.jar cosmo.jar
 
 
 Stop
