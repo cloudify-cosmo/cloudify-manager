@@ -19,7 +19,6 @@ definitions:
                         vagrant_file: |
                             Vagrant.configure("2") do |config|
                               config.vm.box = "precise64"
-                              config.vm.hostname = 'simple_web_server'
                               config.vm.provision :shell, :inline => "sudo apt-get -y install ufw && sudo ufw disable"
                               config.vm.provider :lxc do |lxc|
 
