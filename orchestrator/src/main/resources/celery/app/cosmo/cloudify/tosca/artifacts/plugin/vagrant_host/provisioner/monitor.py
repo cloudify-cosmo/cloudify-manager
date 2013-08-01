@@ -24,6 +24,10 @@ import os
 import logging
 from fabric import api
 
+class VagrantStatusMonitorState(object):
+    def __init__(self):
+        self.host = None
+        self.state = None
 
 class VagrantStatusMonitor(object):
 
@@ -40,6 +44,7 @@ class VagrantStatusMonitor(object):
         self.client = self.create_riemann_client(args.riemann_host,
                                                  args.riemann_port,
                                                  args.riemann_transport)
+        self.state = VagrantStatusMonitorState()
         self.register_signal_handlers()
         self.monitor()
 
@@ -52,12 +57,20 @@ class VagrantStatusMonitor(object):
         try:
             host = self.extract_nic_address()
             if len(host) == 0:
-                return
+                # This is the state before we connect for the first time
+                if not self.state.host:
+                    return
+                # We get here when the vagrant machine was destroyed after initial discovery
+                self.state.state = 'not running'
+            else:
+                self.state.host = host
+                self.state.state = 'running'
+
             event = {
-                'host': host,
+                'host': self.state.host,
                 'service': 'vagrant machine status',
                 'time': int(time.time()),
-                'state': 'running',
+                'state': self.state.state,
                 'tags': self.tags,
                 'ttl': self.interval * 3
             }
