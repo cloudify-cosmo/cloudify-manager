@@ -57,6 +57,7 @@ To update the cosmo management jar: (replace place holders with your values)
     - rm orchestrator-{cosmo_version}-all.jar
     - wget https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
 
+
 Stop
 ====
 
@@ -68,4 +69,32 @@ Please note that running "vagrant destroy" will completely terminate the environ
 and another bootstrapping process will be needed.
 There is really no need for this since you can always go back to a clean machine using the snapshot mechanism.
 
+Contribute
+==========
 
+You will need Maven and Git in order to develop the cosmo project.
+
+- clone this repo.
+
+        git clone https://github.com/CloudifySource/cosmo-manager.git
+
+- make changes.
+- make sure nothing is broken.
+    
+    Running unit and integration tests
+        
+        cd ../orchestrator
+        mvn clean install
+    
+    Running the example dsl
+        
+        cd ../orchestrator
+        mvn clean package -Pall
+        cp -r target/orchestrator-{cosmo_version}-all.jar ../vagrant
+        vagrant ssh
+        cd {working_dir}
+        rm orchestrator-{cosmo_version}-all.jar
+        cp -r /vagrant/orchestrator-{cosmo_version}-all.jar .
+        cosmo --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+
+- pull request
