@@ -134,14 +134,16 @@ rm /root/guest_additions.sh
         run_script = """#!/bin/sh
 ARGS=\"$@\"
 export VAGRANT_DEFAULT_PROVIDER=lxc
-java {0} -jar {1}/{2}.jar $ARGS
-""".format(JAVA_OPTS, self.working_dir, self.jar_name)
+java {0} -jar {1}/cosmo.jar $ARGS
+""".format(JAVA_OPTS, self.working_dir)
 
         get_cosmo = "https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/" \
                     ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + self.cosmo_version + "/" + self\
             .jar_name + ".jar"
 
         self.wget(get_cosmo)
+
+        self.run_fabric("mv {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
 
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")
@@ -184,6 +186,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--cosmo_version',
         help='Version of cosmo that will be used to deploy the dsl',
+        default='0.1-SNAPSHOT'
     )
 
     vagrant_boot = VagrantLxcBoot(parser.parse_args())

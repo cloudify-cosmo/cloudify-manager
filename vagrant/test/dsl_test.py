@@ -23,7 +23,7 @@ class VagrantBootTest(unittest.TestCase):
         local("cd ../../orchestrator && mvn clean package -Pall")
 
         # copy to shared directory
-        local("cd ../../orchestrator && cp -r target/orchestrator-0.1-SNAPSHOT-all.jar ../vagrant")
+        local("cd ../../orchestrator && cp -r target/cosmo.jar ../vagrant")
 
         with settings(host_string=host_string,
                       key_filename=self.KEY,
@@ -31,8 +31,8 @@ class VagrantBootTest(unittest.TestCase):
 
             # replace orchestrator jar on the management host
             run("cd /home/vagrant/cosmo-work "
-                "&& rm orchestrator-0.1-SNAPSHOT-all.jar "
-                "&& cp -r /vagrant/orchestrator-0.1-SNAPSHOT-all.jar .")
+                "&& rm cosmo.jar "
+                "&& cp -r /vagrant/cosmo.jar .")
 
             """
             This should install out python web server on 10.0.3.5 lxc agent.
