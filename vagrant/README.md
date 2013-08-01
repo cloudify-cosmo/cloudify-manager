@@ -1,6 +1,8 @@
 # Booting up the management machine #
 
-This will create a vagrant host with all the necessary components for the cosmo management machine
+This will create a vagrant host with all the necessary components for the cosmo management machine.
+
+Clone this repo and cd into the current file directory.
 
 Requirements
 ============
