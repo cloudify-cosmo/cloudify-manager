@@ -1,0 +1,52 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "vagrant.host.provisioner"
+        - "python-webserver-installer.yaml"
+
+    service_templates:
+        simple_web_server:
+            topology:
+                webserver_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        install_agent: 'true'
+                        ssh_conf:
+                            host: '10.0.3.5'
+                            port: '22' # needed since the default port for the vagrant monitor uses 2222(virtual box)
+                            nic:  'eth0'
+                        vagrant_file: |
+                            Vagrant.configure("2") do |config|
+                              config.vm.box = "precise64"
+                              config.vm.provision :shell, :inline => "sudo apt-get -y install ufw && sudo ufw disable"
+                              config.vm.provider :lxc do |lxc|
+
+                                lxc.customize 'network.ipv4', '10.0.3.5'
+
+                              end
+
+                            end
+                        worker_config:
+                            user: 'vagrant'
+                            port: '22'
+                            key: '~/.vagrant.d/insecure_private_key'
+                            broker: 'amqp://guest:guest@10.0.3.1:5672//' # vagrant-lxc creates an 10.0.3.0/24 subnet for
+                                                                         # communication with the lxc container
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                            on_event:
+                                reachable: "true"
+
+                webserver_middleware:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        port: 8888
+                    relationships:
+                        cloudify.tosca.relationships.hosted_on: "webserver_host"
