@@ -17,6 +17,8 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
+import org.cloudifysource.cosmo.monitor.RiemannEventsLogger;
+import org.cloudifysource.cosmo.monitor.config.RiemannEventsLoggerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
@@ -47,7 +49,8 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         RiemannProcessConfiguration.class,
         StateCacheConfig.class,
         StateCacheFeederConfig.class,
-        VagrantRiemannMonitorProcessConfig.class
+        VagrantRiemannMonitorProcessConfig.class,
+        RiemannEventsLoggerConfig.class
 })
 
 // adding this prop file here since riemann configuration is not part of the orchestrator
