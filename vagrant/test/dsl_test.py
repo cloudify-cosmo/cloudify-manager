@@ -15,23 +15,32 @@ class VagrantBootTest(unittest.TestCase):
     USERNAME = "vagrant"
     KEY = "~/.vagrant.d/insecure_private_key"
 
-    def test_bootstrap(self):
-
-        local("vagrant up")
-
+    def test_deploy_with_local_changes(self):
         host_string = "{0}@{1}:{2}".format(self.USERNAME, self.HOST, self.PORT)
         print host_string
+
+        # package the orchestrator
+        local("cd ../../orchestrator && mvn clean package -Pall")
+
+        # copy to shared directory
+        local("cd ../../orchestrator && cp -r target/orchestrator-0.1-SNAPSHOT-all.jar ../vagrant")
+
         with settings(host_string=host_string,
                       key_filename=self.KEY,
                       disable_known_hosts=True):
+
+            # replace orchestrator jar on the management host
+            run("cd /home/vagrant/cosmo-work "
+                "&& rm orchestrator-0.1-SNAPSHOT-all.jar "
+                "&& cp -r /vagrant/orchestrator-0.1-SNAPSHOT-all.jar .")
+
             """
             This should install out python web server on 10.0.3.5 lxc agent.
             """
-            run("/home/vagrant/cosmo-work/cosmo.sh -dsl=/vagrant/test/python_webserver/python-webserver.yaml",
+            run("/home/vagrant/cosmo-work/cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml",
                 stdout=sys.stdout)
 
-            run("wget http://10.0.3.5:8888")
-
+            run("wget http://10.0.3.5:8888;")
 
 if __name__ == '__main__':
     unittest.main()
