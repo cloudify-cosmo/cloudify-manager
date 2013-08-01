@@ -20,6 +20,7 @@ import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.tasks.CeleryWorkerProcess;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +28,7 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Creates a new {@link org.cloudifysource.cosmo.tasks.CeleryWorkerProcess}.
@@ -38,6 +40,9 @@ import java.nio.file.Paths;
 public class CeleryWorkerProcessConfig {
 
     private static final String RESOURCE_PATH = "celery/app";
+
+    @Value("${celery-worker.timeout-seconds:60}")
+    long timeout;
 
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
@@ -56,6 +61,7 @@ public class CeleryWorkerProcessConfig {
 
     @Bean
     CeleryWorkerProcess celeryWorkerProcess() {
-        return new CeleryWorkerProcess("cosmo", temporaryDirectory.get().getAbsolutePath() + "/" + RESOURCE_PATH);
+        return new CeleryWorkerProcess("cosmo", temporaryDirectory.get().getAbsolutePath() + "/" + RESOURCE_PATH,
+                timeout, TimeUnit.SECONDS);
     }
 }

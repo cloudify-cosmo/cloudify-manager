@@ -29,6 +29,7 @@ require 'ruote'
 require 'net/http'
 require 'java'
 require 'participants'
+require 'logging_observer'
 
 java_import com.google.common.io.Resources
 java_import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable
@@ -41,6 +42,7 @@ end
 
 def create_dashboard(dashboard_variables)
   dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
+  dashboard.add_service 'logging_observer', LoggingObserver
   dashboard.register_participant 'java', JavaClassParticipant
   dashboard.register_participant 'state', StateCacheParticipant
   dashboard.register_participant 'execute_task', ExecuteTaskParticipant
