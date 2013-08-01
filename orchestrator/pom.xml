@@ -372,6 +372,7 @@
 
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <finalName>cosmo</finalName>
                             <shadedClassifierName>all</shadedClassifierName>
                             <minimizeJar>false</minimizeJar>
                             <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
