@@ -17,7 +17,7 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.tasks.EventListener;
+import org.cloudifysource.cosmo.tasks.TaskEventListener;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.jruby.embed.InvokeFailedException;
 import org.mockito.invocation.InvocationOnMock;
@@ -69,7 +69,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
             })
                     .when(taskExecutor)
                     .sendTask(anyString(), anyString(), anyString(), anyString(),
-                            any(EventListener.class));
+                            any(TaskEventListener.class));
             return taskExecutor;
         }
 

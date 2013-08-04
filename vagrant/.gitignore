@@ -1,0 +1,4 @@
+*.iml
+.vagrant
+*.pyc
+*.jar

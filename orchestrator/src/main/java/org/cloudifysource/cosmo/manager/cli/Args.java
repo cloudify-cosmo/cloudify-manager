@@ -32,12 +32,12 @@ import org.cloudifysource.cosmo.manager.cli.validator.FileExistValidator;
 @Parameters(separators = "=")
 public class Args {
 
-    @Parameter(names = "-dsl",
+    @Parameter(names = "--dsl",
                description = "Path to a TOSCA yaml describing the deployment.",
                validateWith = FileExistValidator.class, required = true)
     private String dslPath;
 
-    @Parameter(names = "-timeout",
+    @Parameter(names = "--timeout",
                description = "timeout for the deployment in seconds.",
                validateWith = PositiveInteger.class)
     private int timeout = 5 * 60; // defaults to 5 minutes.
