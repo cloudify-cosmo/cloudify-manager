@@ -47,7 +47,6 @@ public class CeleryWorkerProcessConfig {
     @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
-
     @PostConstruct
     public void extractCeleryApp() {
 

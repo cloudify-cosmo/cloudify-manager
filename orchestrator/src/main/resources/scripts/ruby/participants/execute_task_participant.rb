@@ -14,7 +14,7 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-java_import org.cloudifysource::cosmo::tasks::EventListener
+java_import org.cloudifysource::cosmo::tasks::TaskEventListener
 java_import org.cloudifysource::cosmo::tasks::TaskExecutor
 
 require 'json'
@@ -22,7 +22,7 @@ require 'securerandom'
 
 
 class ExecuteTaskParticipant < Ruote::Participant
-  include EventListener
+  include TaskEventListener
 
   EXECUTOR = 'executor'
   TARGET = 'target'
@@ -81,25 +81,19 @@ class ExecuteTaskParticipant < Ruote::Participant
     end
   end
 
-  def onTaskSucceeded(success_event)
-    log_event(success_event)
-    reply(workitem)
-  end
-
-  def onTaskFailed(fail_event)
-    log_event(fail_event)
-    flunk(workitem, Exception.new(JSON.parse(fail_event)['exception']))
-  end
-
-  def log_event(event)
+  def onTaskEvent(taskId, eventType, jsonEvent)
     begin
       enriched_event = JSON.parse(event.to_s)
       enriched_event['wfid'] = workitem.wfid
       $logger.debug('[event] ' +JSON.generate(enriched_event))
+      if eventType == 'task-succeeded'
+        reply(workitem)
+      elsif eventType == 'task-failed' || eventType == 'task-revoked'
+        flunk(workitem, Exception.new(enriched_event['exception']))
+      end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
-      $logger.debug("error logging event: #{e.to_s} / #{backtrace}")
+      $logger.debug("Exception logging task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
     end
   end
-
 end
