@@ -16,14 +16,7 @@ class TestConfigBuilder(unittest.TestCase):
                                 'service': 'vagrant machine status',
                                 'state': 'running'
                             }
-                        },
-                        'rule2': {
-                            'type': 'metric_equals',
-                            'properties': {
-                                'service': 'vagrant machine status',
-                                'metric': '100.0'
-                            }
-                        },
+                        }
                     }
                 },
                 'failure_detection_policy': {
@@ -50,24 +43,51 @@ class TestConfigBuilder(unittest.TestCase):
                         },
                     }
                 },
+            },
+            'node3': {
+                'performance_policy': {
+                    'rules': {
+                        'rule1': {
+                            'type': 'metric_below',
+                            'properties': {
+                                'service': 'vagrant machine status',
+                                'metric': '10'
+                            }
+                        },
+                    }
+                },
             }
         }
         self.rules = {
             'status_equals': '''
-                (service "${service}")
-                (state "${state}")
+                (changed-state
+                    (where
+                        (and
+                            (service "${service}")
+                            (state "${state}")
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                )
             ''',
             'status_not_equals': '''
-                (service "${service}")
-                (not (state "${state}"))
+                (changed-state
+                    (where
+                        (and
+                            (service "${service}")
+                            (not (state "${state}"))
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                )
             ''',
-            'metric_equals': '''
-                (service "${service}")
-                (metric ${metric})
-            ''',
-            'metric_not_equals': '''
-                (service "${service}")
-                (not (metric ${metric}))
+            'metric_below': '''
+                (by [:host :service] (changed (fn [e] (> ${metric} (:metric e))) {:init false}
+                    (where
+                        (and
+                            (service "${service}")
+                            (> (${metric} metric))
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                ))
             '''
         }
         self.policies_events = {
@@ -87,6 +107,21 @@ class TestConfigBuilder(unittest.TestCase):
                         (call-rescue reachable-event [index prn])))
             ''',
             'failure_detection_policy':'''
+                (fn [event]
+                    (let [ip-event (assoc event :host "$node_id"
+                                                :service "ip"
+                                                :state (get event :host)
+                                                :description "$event"
+                                                :tags ["cosmo"])]
+                        (call-rescue ip-event [index prn]))
+                    (let [reachable-event (assoc event :host "$node_id"
+                                                       :service "reachable"
+                                                       :state "true"
+                                                       :description "$event"
+                                                       :tags ["cosmo"])]
+                        (call-rescue reachable-event [index prn])))
+            ''',
+            'performance_policy':'''
                 (fn [event]
                     (let [ip-event (assoc event :host "$node_id"
                                                 :service "ip"

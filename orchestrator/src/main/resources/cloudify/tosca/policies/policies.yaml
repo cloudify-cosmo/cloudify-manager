@@ -37,15 +37,65 @@ definitions:
                                                       :tags ["cosmo"])]
                         (call-rescue reachable-event [index])))
 
+            performance_policy: |
+                (fn [evnt]
+                    (let [ip-event (assoc evnt :host "$node_id"
+                                               :service "ip"
+                                               :state (get evnt :host)
+                                               :description "$event"
+                                               :tags ["cosmo"])]
+                        (call-rescue ip-event [index]))
+                    (let [reachable-event (assoc evnt :host "$node_id"
+                                                      :service "reachable"
+                                                      :state "false"
+                                                      :description "$event"
+                                                      :tags ["cosmo"])]
+                        (call-rescue reachable-event [index])))
+
+
         rules:
+            #node_policy_events will be injected with the matching policy (see above)
+            #node_id will be injected with the current node id
             state_equals: |
-                (service "${service}")
-                (state "${state}")
+                (changed-state
+                    (where
+                        (and
+                            (service "${service}")
+                            (state "${state}")
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                )
 
             state_not_equals: |
-                 (service "${service}")
-                 (not (state "${state}"))
+                (changed-state
+                    (where
+                        (and
+                            (service "${service}")
+                            (not (state "${state}"))
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                )
 
             metric_below: |
-                 (service "${service}")
-                 (< (metric "${metric}"))
+                (by [:host :service]
+                    (changed 
+                        (fn [e]
+                            (and
+                                (not (nil? (:metric e)))
+                                (< (:metric e) ${metric})
+                            )
+                        )
+                        {:init false}
+                        (where
+                            (and
+                                (service "${service}")
+                                (and
+                                    (not (nil? metric))
+                                    (< metric ${metric})
+                                )
+                                (tagged "name=$node_id")
+                            )
+                            $node_policy_events
+                        )
+                    )
+                )

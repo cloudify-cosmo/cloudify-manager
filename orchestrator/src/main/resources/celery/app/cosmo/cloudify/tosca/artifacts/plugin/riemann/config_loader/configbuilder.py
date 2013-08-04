@@ -29,23 +29,6 @@ def build_node_policy_config(node_id,
                              node_policy_events_template,
                              node_policy_name):
 
-    policy_config_template = '''
-        (changed-state
-            (where
-                (and
-                    $node_policy_rules
-                    (tagged "name=$node_id"))
-                $node_policy_events)
-        )
-    '''
-    
-    node_policy_rules = []
-    for rule in node_policy['rules'].values():
-        rule_template = rules[rule['type']]
-        rule_properties = rule['properties']
-        rule_config = build_node_policy_rule_config(rule_template, rule_properties)
-        node_policy_rules.append(rule_config)
-
     event_json = build_node_policy_event(
         node_id,
         node_policy_name,
@@ -55,11 +38,16 @@ def build_node_policy_config(node_id,
         node_id = node_id
     ))
 
-    return string.Template(policy_config_template).substitute(dict(
-        node_id = node_id,
-        node_policy_rules = ''.join(node_policy_rules),
-        node_policy_events = node_policy_events
-    ))
+    node_policy_rules = []
+    for rule in node_policy['rules'].values():
+        rule_template = rules[rule['type']]
+        rule_properties = rule['properties']
+        rule_properties['node_id'] = node_id
+        rule_properties['node_policy_events'] = node_policy_events
+        rule_config = build_node_policy_rule_config(rule_template, rule_properties)
+        node_policy_rules.append(rule_config)
+
+    return node_policy_rules[0]
 
 
 def build_node_policy_event(node_id, node_policy_name, node_policy_rules):
