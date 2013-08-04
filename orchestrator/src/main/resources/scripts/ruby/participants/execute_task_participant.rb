@@ -83,9 +83,9 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   def onTaskEvent(taskId, eventType, jsonEvent)
     begin
-      enriched_event = JSON.parse(event.to_s)
+      enriched_event = JSON.parse(jsonEvent.to_s)
       enriched_event['wfid'] = workitem.wfid
-      $logger.debug('[event] ' +JSON.generate(enriched_event))
+      $logger.debug('[event] {}', JSON.generate(enriched_event))
       if eventType == 'task-succeeded'
         reply(workitem)
       elsif eventType == 'task-failed' || eventType == 'task-revoked'
@@ -93,7 +93,8 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
-      $logger.debug("Exception logging task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
+      $logger.debug("Exception handling task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
+      flunk(workitem, e)
     end
   end
 end
