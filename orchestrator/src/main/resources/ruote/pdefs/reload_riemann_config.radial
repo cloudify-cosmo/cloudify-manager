@@ -4,6 +4,7 @@ define reload_riemann_config
     properties: {
       policies: "$v:policies",
       rules: "$v:rules",
+      policies_events: "$v:policies_events",
       riemann_pid: "${riemann_pid}",
       riemann_config_template: "${riemann_config_template}",
       riemann_config_path: "${riemann_config_path}"

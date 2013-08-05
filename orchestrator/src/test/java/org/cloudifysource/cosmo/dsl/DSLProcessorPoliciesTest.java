@@ -29,6 +29,15 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
     private static final String DSL_PATH = "org/cloudifysource/cosmo/dsl/unit/policies/dsl-with-policies.yaml";
 
     @Test
+    public void testPoliciesEventsDefinition() {
+        Processed processed = process(DSL_PATH);
+        assertThat(processed.getPoliciesEvents()).isNotNull().isNotEmpty();
+        String policyEvent = processed.getPoliciesEvents().get("start_detection_policy");
+        assertThat(policyEvent).isNotNull();
+        assertThat(policyEvent).isNotEmpty();
+    }
+
+    @Test
     public void testPolicies() {
         Processed processed = process(DSL_PATH);
         Node node1 = findNode(processed.getNodes(), "web_server.webserver_host");
@@ -36,9 +45,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy1 = node1.getPolicies().get("start_detection_policy");
         assertThat(policy1).isNotNull();
         assertThat(policy1.getRules()).hasSize(2);
-        assertThat(policy1.getOnEvent()).hasSize(2);
-        assertThat(policy1.getOnEvent().get("reachable")).isEqualTo("true");
-        assertThat(policy1.getOnEvent().get("ip")).isEqualTo("10.0.0.1");
         Rule rule1 = policy1.getRules().get("host_state");
         assertThat(rule1).isNotNull();
         assertThat(rule1.getType()).isEqualTo("state_equals");
@@ -54,8 +60,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy2 = node1.getPolicies().get("failure_detection_policy");
         assertThat(policy2).isNotNull();
         assertThat(policy2.getRules()).hasSize(1);
-        assertThat(policy2.getOnEvent()).hasSize(1);
-        assertThat(policy2.getOnEvent().get("reachable")).isEqualTo("false");
         Rule rule3 = policy2.getRules().get("host_state");
         assertThat(rule3).isNotNull();
         assertThat(rule3.getType()).isEqualTo("state_not_equals");
@@ -79,8 +83,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy1 = node1.getPolicies().get("start_detection_policy");
         assertThat(policy1).isNotNull();
         assertThat(policy1.getRules()).hasSize(1);
-        assertThat(policy1.getOnEvent()).hasSize(1);
-        assertThat(policy1.getOnEvent().get("reachable")).isEqualTo("true");
         Rule rule1 = policy1.getRules().get("host_state");
         assertThat(rule1).isNotNull();
         assertThat(rule1.getType()).isEqualTo("state_equals");
@@ -97,8 +99,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy1 = node1.getPolicies().get("start_detection_policy");
         assertThat(policy1).isNotNull();
         assertThat(policy1.getRules()).hasSize(1);
-        assertThat(policy1.getOnEvent()).hasSize(1);
-        assertThat(policy1.getOnEvent().get("reachable")).isEqualTo("true");
         Rule rule1 = policy1.getRules().get("host_state");
         assertThat(rule1).isNotNull();
         assertThat(rule1.getType()).isEqualTo("state_equals");
@@ -108,8 +108,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy2 = node1.getPolicies().get("failure_detection_policy");
         assertThat(policy2).isNotNull();
         assertThat(policy2.getRules()).hasSize(1);
-        assertThat(policy2.getOnEvent()).hasSize(1);
-        assertThat(policy2.getOnEvent().get("reachable")).isEqualTo("false");
         Rule rule3 = policy2.getRules().get("host_state");
         assertThat(rule3).isNotNull();
         assertThat(rule3.getType()).isEqualTo("state_equals");
@@ -122,8 +120,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy3 = node2.getPolicies().get("start_detection_policy");
         assertThat(policy3).isNotNull();
         assertThat(policy3.getRules()).hasSize(1);
-        assertThat(policy3.getOnEvent()).hasSize(1);
-        assertThat(policy3.getOnEvent().get("reachable")).isEqualTo("true");
         Rule rule4 = policy3.getRules().get("host_state");
         assertThat(rule4).isNotNull();
         assertThat(rule4.getType()).isEqualTo("state_not_equals");
@@ -133,8 +129,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy4 = node2.getPolicies().get("failure_detection_policy");
         assertThat(policy4).isNotNull();
         assertThat(policy4.getRules()).hasSize(1);
-        assertThat(policy4.getOnEvent()).hasSize(1);
-        assertThat(policy4.getOnEvent().get("reachable")).isEqualTo("false");
         Rule rule5 = policy4.getRules().get("host_state");
         assertThat(rule5).isNotNull();
         assertThat(rule5.getType()).isEqualTo("state_equals");
@@ -147,8 +141,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy5 = node3.getPolicies().get("start_detection_policy");
         assertThat(policy5).isNotNull();
         assertThat(policy5.getRules()).hasSize(1);
-        assertThat(policy5.getOnEvent()).hasSize(1);
-        assertThat(policy5.getOnEvent().get("reachable")).isEqualTo("true");
         Rule rule6 = policy5.getRules().get("host_state");
         assertThat(rule6).isNotNull();
         assertThat(rule6.getType()).isEqualTo("state_not_equals");
@@ -158,8 +150,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy6 = node3.getPolicies().get("failure_detection_policy");
         assertThat(policy6).isNotNull();
         assertThat(policy6.getRules()).hasSize(1);
-        assertThat(policy6.getOnEvent()).hasSize(1);
-        assertThat(policy6.getOnEvent().get("reachable")).isEqualTo("true");
         Rule rule7 = policy6.getRules().get("host_state");
         assertThat(rule7).isNotNull();
         assertThat(rule7.getType()).isEqualTo("state_equals");
@@ -178,11 +168,5 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
     public void testUnknownRuleValidation() {
         process("org/cloudifysource/cosmo/dsl/unit/policies/dsl-with-unknown-rule.yaml");
     }
-
-    @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testPolicyWithoutOnEventValidation() {
-        process("org/cloudifysource/cosmo/dsl/unit/policies/dsl-without-on-event.yaml");
-    }
-
 
 }

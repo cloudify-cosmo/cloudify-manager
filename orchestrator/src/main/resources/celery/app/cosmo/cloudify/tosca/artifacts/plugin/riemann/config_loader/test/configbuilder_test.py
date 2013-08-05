@@ -4,14 +4,11 @@ from configbuilder import build_riemann_config
 class TestConfigBuilder(unittest.TestCase):
 
     def setUp(self):
-        with open('../../../../../../../../../org/cloudifysource/cosmo/orchestrator/integration/config/riemann.config.template', 'r') as f:
+        with open('../../../../../../../../../riemann/riemann.config.template', 'r') as f:
             self.template = f.read()
         self.policies = {
             'node1': {
                 'start_detection_policy': {
-                    'on_event': {
-                        'reachable': 'true',
-                    },
                     'rules': {
                         'rule1': {
                             'type': 'status_equals',
@@ -19,21 +16,10 @@ class TestConfigBuilder(unittest.TestCase):
                                 'service': 'vagrant machine status',
                                 'state': 'running'
                             }
-                        },
-                        'rule2': {
-                            'type': 'metric_equals',
-                            'properties': {
-                                'service': 'vagrant machine status',
-                                'metric': '100.0'
-                            }
-                        },
+                        }
                     }
                 },
                 'failure_detection_policy': {
-                    'on_event': {
-                        'reachable': 'false',
-                        'end_of_the_world': 'true'
-                    },
                     'rules': {
                         'rule1': {
                             'type': 'status_not_equals',
@@ -47,9 +33,6 @@ class TestConfigBuilder(unittest.TestCase):
             },
             'node2': {
                 'start_detection_policy': {
-                    'on_event': {
-                        'reachable': 'true',
-                    },
                     'rules': {
                         'rule1': {
                             'type': 'status_equals',
@@ -60,30 +43,104 @@ class TestConfigBuilder(unittest.TestCase):
                         },
                     }
                 },
+            },
+            'node3': {
+                'performance_policy': {
+                    'rules': {
+                        'rule1': {
+                            'type': 'metric_below',
+                            'properties': {
+                                'service': 'vagrant machine status',
+                                'metric': '10'
+                            }
+                        },
+                    }
+                },
             }
         }
         self.rules = {
             'status_equals': '''
-                (service "${service}")
-                (state "${state}")
+                (changed-state
+                    (where
+                        (and
+                            (service "${service}")
+                            (state "${state}")
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                )
             ''',
             'status_not_equals': '''
-                (service "${service}")
-                (not (state "${state}"))
+                (changed-state
+                    (where
+                        (and
+                            (service "${service}")
+                            (not (state "${state}"))
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                )
             ''',
-            'metric_equals': '''
-                (service "${service}")
-                (metric ${metric})
+            'metric_below': '''
+                (by [:host :service] (changed (fn [e] (> ${metric} (:metric e))) {:init false}
+                    (where
+                        (and
+                            (service "${service}")
+                            (> (${metric} metric))
+                            (tagged "name=$node_id"))
+                        $node_policy_events)
+                ))
+            '''
+        }
+        self.policies_events = {
+            'start_detection_policy': '''
+                (fn [event]
+                    (let [ip-event (assoc event :host "$node_id"
+                                                :service "ip"
+                                                :state (get event :host)
+                                                :description "$event"
+                                                :tags ["cosmo"])]
+                        (call-rescue ip-event [index prn]))
+                    (let [reachable-event (assoc event :host "$node_id"
+                                                       :service "reachable"
+                                                       :state "true"
+                                                       :description "$event"
+                                                       :tags ["cosmo"])]
+                        (call-rescue reachable-event [index prn])))
             ''',
-            'metric_not_equals': '''
-                (service "${service}")
-                (not (metric ${metric}))
+            'failure_detection_policy':'''
+                (fn [event]
+                    (let [ip-event (assoc event :host "$node_id"
+                                                :service "ip"
+                                                :state (get event :host)
+                                                :description "$event"
+                                                :tags ["cosmo"])]
+                        (call-rescue ip-event [index prn]))
+                    (let [reachable-event (assoc event :host "$node_id"
+                                                       :service "reachable"
+                                                       :state "true"
+                                                       :description "$event"
+                                                       :tags ["cosmo"])]
+                        (call-rescue reachable-event [index prn])))
+            ''',
+            'performance_policy':'''
+                (fn [event]
+                    (let [ip-event (assoc event :host "$node_id"
+                                                :service "ip"
+                                                :state (get event :host)
+                                                :description "$event"
+                                                :tags ["cosmo"])]
+                        (call-rescue ip-event [index prn]))
+                    (let [reachable-event (assoc event :host "$node_id"
+                                                       :service "reachable"
+                                                       :state "true"
+                                                       :description "$event"
+                                                       :tags ["cosmo"])]
+                        (call-rescue reachable-event [index prn])))
             '''
         }
 
 
     def test_build_riemann_config(self):
-        print build_riemann_config(self.template, self.policies, self.rules)
+        print build_riemann_config(self.template, self.policies, self.rules, self.policies_events)
 
 if __name__ == '__main__':
     unittest.main()

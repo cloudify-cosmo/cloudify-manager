@@ -18,5 +18,3 @@ definitions:
                                     properties:
                                         state: "host_state"
                                         value: "running"
-                            on_event:
-                                reachable: "true"

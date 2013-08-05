@@ -29,7 +29,7 @@ public interface StateCacheSnapshot {
 
     boolean containsProperty(String resourceId, String property);
 
-    Optional<String> getProperty(String resourceId, String property);
+    Optional<StateCacheValue> getProperty(String resourceId, String property);
 
-    ImmutableMap<String, String> getResourceProperties(String resourceId);
+    ImmutableMap<String, StateCacheValue> getResourceProperties(String resourceId);
 }

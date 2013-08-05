@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.fest.assertions.api.Assertions.assertThat;
-import static org.fest.assertions.api.Assertions.entry;
 
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
@@ -61,7 +60,7 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         final String resourceId = "resource";
         final String property = "property";
         final String value = "value";
-        stateCache.put(resourceId, property, value);
+        stateCache.put(resourceId, property, new StateCacheValue(value));
     }
 
     @Test
@@ -74,8 +73,8 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         final String value2 = "value2";
         final AtomicReference<StateCacheSnapshot> eventValue = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
-        stateCache.put(resourceId1, property1, value1);
-        stateCache.put(resourceId2, property2, value2);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
+        stateCache.put(resourceId2, property2, new StateCacheValue(value2));
         StateCacheListener listener = new StateCacheListener() {
             @Override
             public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
@@ -86,8 +85,8 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         };
         stateCache.subscribe(resourceId1, listener);
         assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
-        assertThat(eventValue.get().getProperty(resourceId1, property1).get()).isEqualTo(value1);
-        assertThat(eventValue.get().getProperty(resourceId2, property2).get()).isEqualTo(value2);
+        assertThat(eventValue.get().getProperty(resourceId1, property1).get().getState()).isEqualTo(value1);
+        assertThat(eventValue.get().getProperty(resourceId2, property2).get().getState()).isEqualTo(value2);
         assertThat(eventValue.get().getProperty("bla", "bla").isPresent()).isFalse();
     }
 
@@ -101,7 +100,7 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         final String value2 = "value2";
         final AtomicReference<StateCacheSnapshot> eventValue = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
-        stateCache.put(resourceId2, property2, value2);
+        stateCache.put(resourceId2, property2, new StateCacheValue(value2));
         StateCacheListener listener = new StateCacheListener() {
             @Override
             public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
@@ -114,11 +113,11 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
 
         assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
 
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
 
         assertThat(latch.await(3, TimeUnit.SECONDS)).isTrue();
-        assertThat(eventValue.get().getProperty(resourceId1, property1).get()).isEqualTo(value1);
-        assertThat(eventValue.get().getProperty(resourceId2, property2).get()).isEqualTo(value2);
+        assertThat(eventValue.get().getProperty(resourceId1, property1).get().getState()).isEqualTo(value1);
+        assertThat(eventValue.get().getProperty(resourceId2, property2).get().getState()).isEqualTo(value2);
         assertThat(eventValue.get().getProperty("bla", "bla").isPresent()).isFalse();
 
     }
@@ -129,7 +128,7 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         final String property1 = "property1";
         final String value1 = "value1";
         final CountDownLatch latch = new CountDownLatch(2);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         StateCacheListener listener = new StateCacheListener() {
             @Override
             public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
@@ -141,7 +140,7 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         stateCache.subscribe(resourceId1, listener);
         Thread.sleep(50);
         assertThat(latch.getCount()).isEqualTo(1);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
@@ -160,10 +159,10 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
             }
         };
         stateCache.subscribe(resourceId1, listener);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         Thread.sleep(50);
         assertThat(latch.getCount()).isEqualTo(1);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
@@ -182,10 +181,10 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
             }
         };
         stateCache.subscribe(resourceId1, listener);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         Thread.sleep(50);
         assertThat(latch.getCount()).isEqualTo(1);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
@@ -205,7 +204,7 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         };
         final String id = stateCache.subscribe(resourceId1, listener);
         stateCache.removeSubscription(resourceId1, id);
-        stateCache.put(resourceId1, property1, value1);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1));
         assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 
@@ -214,14 +213,16 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         final String resourceId1 = "resource1";
         final String property1 = "property1";
         final String value1 = "value1";
+        final String description1 = "desc1";
         final String resourceId2 = "resource2";
         final String property2 = "property2";
         final String value2 = "value2";
+        final String description2 = "desc2";
         final AtomicReference<StateCacheSnapshot> eventValue = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
-        stateCache.put(resourceId1, property1, value1);
-        stateCache.put(resourceId1, property2, value2);
-        stateCache.put(resourceId2, property2, value2);
+        stateCache.put(resourceId1, property1, new StateCacheValue(value1, description1));
+        stateCache.put(resourceId1, property2, new StateCacheValue(value2, description2));
+        stateCache.put(resourceId2, property2, new StateCacheValue(value2, description2));
         StateCacheListener listener = new StateCacheListener() {
             @Override
             public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
@@ -233,12 +234,17 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
         stateCache.subscribe(resourceId1, listener);
 
         latch.await(3, TimeUnit.SECONDS);
-        final ImmutableMap<String, String> resourceProperties1 = eventValue.get().getResourceProperties(resourceId1);
+        final ImmutableMap<String, StateCacheValue> resourceProperties1 =
+                eventValue.get().getResourceProperties(resourceId1);
         assertThat(resourceProperties1).hasSize(2);
-        assertThat(resourceProperties1).contains(entry(property1, value1), entry(property2, value2));
-        final ImmutableMap<String, String> resourceProperties2 = eventValue.get().getResourceProperties(resourceId2);
+        assertThat(resourceProperties1.get(property1).getState()).isEqualTo(value1);
+        assertThat(resourceProperties1.get(property1).getDescription()).isEqualTo(description1);
+        assertThat(resourceProperties1.get(property2).getState()).isEqualTo(value2);
+        assertThat(resourceProperties1.get(property2).getDescription()).isEqualTo(description2);
+        final ImmutableMap<String, StateCacheValue> resourceProperties2 =
+                eventValue.get().getResourceProperties(resourceId2);
         assertThat(resourceProperties2).hasSize(1);
-        assertThat(resourceProperties2).contains(entry(property2, value2));
+        assertThat(resourceProperties2.get(property2).getState()).isEqualTo(value2);
 
         assertThat(eventValue.get().containsProperty(resourceId1, property1)).isTrue();
         assertThat(eventValue.get().containsProperty(resourceId1, property2)).isTrue();
@@ -248,12 +254,12 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
 
     @Test(expectedExceptions = RuntimeException.class)
     public void testRejectInsertionOfNullResourceId() {
-        stateCache.put(null, "property", "value");
+        stateCache.put(null, "property", new StateCacheValue("value"));
     }
 
     @Test(expectedExceptions = RuntimeException.class)
     public void testRejectInsertionOfNullProperty() {
-        stateCache.put("resource", null, "value");
+        stateCache.put("resource", null, new StateCacheValue("value"));
     }
 
     @Test(expectedExceptions = RuntimeException.class)
@@ -284,5 +290,27 @@ public class StateCacheTest extends AbstractTestNGSpringContextTests {
     @Test(expectedExceptions = RuntimeException.class)
     public void testRejectRemoveSubscribeNullListener() {
         stateCache.removeSubscription("resource", null);
+    }
+
+    @Test
+    public void testListenerTriggeredOnceIfRemove() throws InterruptedException {
+        final String resourceId1 = "resource1";
+        final String property1 = "property1";
+        final String value1 = "value1";
+        final CountDownLatch latch = new CountDownLatch(2);
+        StateCacheListener listener = new StateCacheListener() {
+            @Override
+            public boolean onResourceStateChange(StateCacheSnapshot snapshot) {
+                latch.countDown();
+                return true;
+            }
+        };
+        stateCache.subscribe(resourceId1, listener);
+        for (int i = 0; i < 100; i++) {
+            stateCache.put(resourceId1, property1, new StateCacheValue(value1));
+        }
+        Thread.sleep(50);
+        assertThat(latch.getCount()).isEqualTo(1);
+        assertThat(latch.await(50, TimeUnit.MILLISECONDS)).isFalse();
     }
 }

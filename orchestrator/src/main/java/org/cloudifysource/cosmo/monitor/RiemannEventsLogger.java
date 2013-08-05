@@ -20,9 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
-import org.cloudifysource.cosmo.statecache.StateCache;
 import org.cloudifysource.cosmo.statecache.StateCacheLogDescription;
-import org.cloudifysource.cosmo.statecache.StateCacheValue;
 import org.jboss.netty.channel.ChannelException;
 import org.robobninjas.riemann.json.RiemannEvent;
 import org.robobninjas.riemann.json.RiemannEventObjectMapper;
@@ -36,24 +34,18 @@ import java.net.URISyntaxException;
 import static java.lang.Thread.sleep;
 
 /**
- * Updates the {@link StateCache} with events received from Riemann.
- *
- * @author Itai Frenkel
+ * @author Idan Moyal
  * @since 0.1
  */
-public class StateCacheFeeder {
+public class RiemannEventsLogger {
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final StateCache stateCache;
     private final RiemannPubSubConnection connection;
 
-    public StateCacheFeeder(final RiemannPubSubClient riemannClient,
-                            final RiemannEventObjectMapper objectMapper,
-                            final StateCache stateCache,
-                            final int numberOfConnectionAttempts,
-                            final int sleepBeforeConnectionAttemptMilliseconds) {
-
-        this.stateCache = stateCache;
+    public RiemannEventsLogger(final RiemannPubSubClient riemannClient,
+                               final RiemannEventObjectMapper objectMapper,
+                               final int numberOfConnectionAttempts,
+                               final int sleepBeforeConnectionAttemptMilliseconds) {
         final QueryResultListener queryResultListener = queryResultListener(objectMapper);
         this.connection = connect(
                 riemannClient,
@@ -91,35 +83,24 @@ public class StateCacheFeeder {
 
     private QueryResultListener queryResultListener(final RiemannEventObjectMapper objectMapper) {
         return new QueryResultListener() {
-
             @Override
             public void handleResult(String result) {
                 try {
                     final RiemannEvent event = objectMapper.readEvent(result);
-                    // TODO: filter by event
                     if (event.getService().equals("events/sec") || event.getState() == null) {
-                        //Filter out "events/sec" events
                         return;
                     }
-                    final String resourceId = event.getHost();
-                    Preconditions.checkNotNull(resourceId, "RiemannEvent host field cannot be null");
-                    logger.debug("StateCacheListener received event: {}", event.getState());
-                    StateCacheFeeder.this.stateCache.put(
-                            resourceId,
+                    Preconditions.checkNotNull(event.getHost(), "RiemannEvent host field cannot be null");
+                    logger.debug("[event] host={}, service={}, state={}, description={}",
+                            event.getHost(),
                             event.getService(),
-                            new StateCacheValue(event.getState(), event.getDescription()));
+                            event.getState(),
+                            event.getDescription());
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);
                     throw Throwables.propagate(e);
                 }
             }
-
-            //TODO: See https://github.com/mgodave/riemann-client/issues/2
-            //@Override
-            //public void onFailure(Throwable t) {
-            //RealTimeStateCache.this.messageConsumerFailure(t);
-            //}
-
         };
     }
 
@@ -136,4 +117,7 @@ public class StateCacheFeeder {
             }
         }
     }
+
+
+
 }

@@ -1,7 +1,9 @@
 define global_workflow
 
     log message: 'Reloading policies'
-    reload_riemann_config policies: '$plan.policies', rules: '$plan.rules'
+    reload_riemann_config policies: '$plan.policies',
+                          rules: '$plan.rules',
+                          policies_events: '$plan.policies_events'
 
     log message: 'processing nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node'

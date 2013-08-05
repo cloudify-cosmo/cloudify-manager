@@ -78,6 +78,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         result.put("nodes_extra", nodesExtraData);
         result.put("rules", definitions.getPolicies().getRules());
         result.put("policies", policies);
+        result.put("policies_events", definitions.getPolicies().getTypes());
         return result;
     }
 

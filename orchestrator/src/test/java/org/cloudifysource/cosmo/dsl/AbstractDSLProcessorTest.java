@@ -72,6 +72,7 @@ public abstract class AbstractDSLProcessorTest {
         String globalWorkflow;
         Map<String, Map<String, Policy>> policies;
         Map<String, String> rules;
+        private Map<String, String> policiesEvents;
 
         public List<Node> getNodes() {
             return nodes;
@@ -107,6 +108,14 @@ public abstract class AbstractDSLProcessorTest {
 
         public void setRules(Map<String, String> rules) {
             this.rules = rules;
+        }
+
+        public void setPoliciesEvents(Map<String, String> policiesEvents) {
+            this.policiesEvents = policiesEvents;
+        }
+
+        public Map<String, String> getPoliciesEvents() {
+            return policiesEvents;
         }
     }
 
@@ -178,22 +187,13 @@ public abstract class AbstractDSLProcessorTest {
      */
     public static class Policy {
         private Map<String, Rule> rules;
-        private Map<String, Object> onEvent;
 
         public void setRules(Map<String, Rule> rules) {
             this.rules = rules;
         }
 
-        public void setOnEvent(Map<String, Object> onEvent) {
-            this.onEvent = onEvent;
-        }
-
         public Map<String, Rule> getRules() {
             return rules;
-        }
-
-        public Map<String, Object> getOnEvent() {
-            return onEvent;
         }
     }
 

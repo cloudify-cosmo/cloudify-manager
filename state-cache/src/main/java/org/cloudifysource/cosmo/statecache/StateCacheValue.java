@@ -14,38 +14,36 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl;
+package org.cloudifysource.cosmo.statecache;
 
-import com.google.common.collect.Maps;
-
-import java.util.Map;
+import java.io.Serializable;
 
 /**
- * A class used to represent a policy of the dsl.
- * Used internally only by the dsl processor.
+ * A state cache properties value wrapper.
  *
- * @author Dan Kilman
+ * @author Idan Moyal
  * @since 0.1
  */
-public class Policies {
+public class StateCacheValue implements Serializable {
 
-    private Map<String, String> rules = Maps.newHashMap();
-    private Map<String, String> types = Maps.newHashMap();
+    private static final long serialVersionUID = 1L;
+    private String state;
+    private String description;
 
-    public Map<String, String> getRules() {
-        return rules;
+    public StateCacheValue(String state) {
+        this(state, null);
     }
 
-    public void setRules(Map<String, String> rules) {
-        this.rules = rules;
+    public StateCacheValue(String state, String description) {
+        this.state = state;
+        this.description = description;
     }
 
-    public Map<String, String> getTypes() {
-        return types;
+    public String getState() {
+        return state;
     }
 
-    public void setTypes(Map<String, String> types) {
-        this.types = types;
+    public String getDescription() {
+        return description;
     }
-
 }
