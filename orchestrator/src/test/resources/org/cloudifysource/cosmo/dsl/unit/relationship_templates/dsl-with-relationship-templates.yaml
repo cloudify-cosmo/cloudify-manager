@@ -1,0 +1,44 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "host.provisioner"
+        - "middleware_component.installer"
+
+    service_templates:
+
+        service_template:
+            topology:
+                host1:
+                    type: "cloudify.tosca.types.host"
+                host2:
+                    type: "cloudify.tosca.types.host"
+                host3:
+                    type: "cloudify.tosca.types.host"
+                webserver1:
+                    type: "cloudify.tosca.types.web_server"
+                    relationships:
+                        - type: "cloudify.tosca.relationships.hosted_on"
+                          target: "host1"
+                          execution_order:
+                            - "source"
+                            - "target"
+                          late_binding: false
+                webserver2:
+                    type: "cloudify.tosca.types.web_server"
+                    relationships:
+                        - type: "cloudify.tosca.relationships.hosted_on"
+                          target: "host1"
+                          execution_order:
+                            - "target"
+                            - "source"
+                          late_binding: true
+                webserver3:
+                    type: "cloudify.tosca.types.web_server"
+                    relationships:
+                        - type: "cloudify.tosca.relationships.hosted_on"
+                          target: "host1"
+                        - type: "cloudify.tosca.relationships.hosted_on"
+                          target: "host2"
+                        - type: "cloudify.tosca.relationships.hosted_on"
+                          target: "host3"

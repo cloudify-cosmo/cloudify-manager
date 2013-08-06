@@ -16,7 +16,9 @@ definitions:
                 server_template:
                     type: "cloudify.tosca.types.db_server"
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "host_template"
+                        - type: "cloudify.tosca.relationships.hosted_on"
+                          target: "host_template"
+
 
     plans:
         plugins_template.host_template:
