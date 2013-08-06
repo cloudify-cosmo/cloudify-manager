@@ -1,0 +1,106 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "vagrant.host.provisioner"
+        - "pickle-db-installer.yaml"
+        - "flask-installer.yaml"
+        - "flask-app-installer.yaml"
+
+    relationships:
+        connected_to_pickle_db:
+            derived_from: "cloudify.tosca.relationships.connected_to"
+            workflow: |
+                ...
+        contained_in_flask:
+            derived_from: "cloudify.tosca.relationships.contained_in"
+            workflow: |
+                ...
+
+    service_templates:
+        phase4:
+            topology:
+                vagrant_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        install_agent: 'true'
+                        vagrant_file: |
+                            Vagrant.configure("2") do |config|
+                              config.vm.box = "precise32"
+                              config.vm.network :private_network, ip: "10.0.0.5"
+                              config.vm.provision :shell, :inline => "sudo ufw disable"
+                            end
+                        worker_config:
+                            user: 'vagrant'
+                            port: '22'
+                            key: '~/.vagrant.d/insecure_private_key'
+                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_not_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+
+                pickle_db:
+                    type: "cloudify.tosca.types.db_server"
+                    properties:
+                        db_name: "phase4"
+                        db_data:
+                            hello: "world"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                pickle_db_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "pickle db status"
+                                        state: "running"
+                    relationships:
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "phase4.vagrant_host"
+
+                flask:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        port: "8888"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                flask_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "flask status"
+                                        state: "running"
+                    relationships:
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "phase4.vagrant_host"
+
+                flask_app:
+                    type: "cloudify.tosca.types.app_module"
+                    properties:
+                        application_name: "phase4-app"
+                        application_code: |
+                            ...
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                flask_app_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "flask app status"
+                                        state: "running"
+                    relationships:
+                        -   type: "contained_in_flask"
+                            target: "phase4.flask"
+                        -   type: "connected_to_pickle_db"
+                            target: "phase4.pickle_db"
