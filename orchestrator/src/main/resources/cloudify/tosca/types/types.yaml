@@ -13,6 +13,9 @@ definitions:
     ##################################################################################
     types:
 
+        # A tier in a topology
+        cloudify.tosca.types.tier: { }
+
         # A host (physical / virtual or LXC) in a topology
         cloudify.tosca.types.host:
             interfaces:
