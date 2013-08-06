@@ -31,13 +31,13 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTest {
 
-    private static final String DSL_PATH = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
-            "dsl-with-relationship-templates.yaml";
-
     @Test
     public void testRelationshipTemplate() {
 
-        Processed processed = process(DSL_PATH);
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-templates.yaml";
+
+        Processed processed = process(dslPath);
 
         List<ProcessedRelationshipTemplate> relationshipTemplates1 = findNode(processed.getNodes(),
                 "service_template.webserver1").getRelationships();
@@ -70,5 +70,18 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
 
     }
 
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testRelationshipTemplateInvalidType() {
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-templates-invalid-type.yaml";
+        process(dslPath);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testRelationshipTemplateInvalidTarget() {
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-templates-invalid-target.yaml";
+        process(dslPath);
+    }
 
 }

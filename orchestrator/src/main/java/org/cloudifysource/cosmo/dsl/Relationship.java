@@ -54,7 +54,9 @@ public class Relationship extends InheritedDefinition {
 
     protected void inheritPropertiesFrom(Relationship other) {
         super.inheritPropertiesFrom(other);
-        setWorkflow(other.getWorkflow());
+        if (other.getWorkflow() != null) {
+            setWorkflow(other.getWorkflow());
+        }
     }
 
     public String getWorkflow() {
