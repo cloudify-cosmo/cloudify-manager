@@ -15,15 +15,12 @@
 # *******************************************************************************/
 
 from cosmo.celery import celery
-import tempfile
-import os
-from os import path
-import sys
-import subprocess
+import urllib
+import urllib2
 
 
 @celery.task
-def install(**kwargs):
+def deploy(**kwargs):
     pass
 
 
@@ -33,28 +30,14 @@ def start(**kwargs):
 
 
 @celery.task
-def deploy_application(application_name, application_code, port=8080, **kwargs):
-    application_path = path.join(tempfile.gettempdir(), 'flask-apps', application_name)
-    os.makedirs(application_path)
-    application_file = path.join(application_path, 'app.py')
-    with open(application_file, "w") as f: f.write(application_code.replace("${port}", port))
-    command = [sys.executable, application_file]
-    subprocess.Popen(command)
+def set_db_properties(db_file, port=8080, **kwargs):
+    url = "http://localhost:{0}".format(port)
+    data = urllib.urlencode({"db_file": db_file})
+    request = urllib2.Request(url, data)
+    response = urllib2.urlopen(request)
+    if response.getcode() != 200:
+        raise RuntimeError("request [{0}] return code is: {1}".format(request, response.getcode()))
 
 
 def test():
-    application_name = 'test-app'
-    application_code = """
-from flask import Flask
-app = Flask(__name__)
-
-@app.route("/")
-def hello():
-    return "Hello World!"
-
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=${port})
-    """
-
-    deploy_application(application_name, application_code, 8080)
-
+    set_db_properties("test.db", 5000)
