@@ -52,13 +52,13 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(relationshipTemplates2.size()).isEqualTo(1);
         assertThat(relationshipTemplates3.size()).isEqualTo(3);
 
-        assertThat(relationshipTemplates1.get(0).getType()).isEqualTo("cloudify.tosca.relationships.hosted_on");
+        assertThat(relationshipTemplates1.get(0).getType()).isEqualTo("cloudify.tosca.relationships.contained_in");
         assertThat(relationshipTemplates1.get(0).getTargetId()).isEqualTo("service_template.host1");
         assertThat(relationshipTemplates1.get(0).isLateBinding()).isFalse();
         assertThat(relationshipTemplates1.get(0).getExecutionOrder()).isEqualTo(
                 Lists.newArrayList("source", "target"));
 
-        assertThat(relationshipTemplates2.get(0).getType()).isEqualTo("cloudify.tosca.relationships.hosted_on");
+        assertThat(relationshipTemplates2.get(0).getType()).isEqualTo("cloudify.tosca.relationships.contained_in");
         assertThat(relationshipTemplates2.get(0).getTargetId()).isEqualTo("service_template.host1");
         assertThat(relationshipTemplates2.get(0).isLateBinding()).isTrue();
         assertThat(relationshipTemplates2.get(0).getExecutionOrder()).isEqualTo(

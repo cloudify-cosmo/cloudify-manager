@@ -14,7 +14,7 @@ definitions:
                 webserver1:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "non_existent_target"
                           execution_order:
                             - "source"

@@ -49,10 +49,10 @@ definitions:
 
         cloudify.tosca.relationships.depends_on: { }
 
-        cloudify.tosca.relationships.hosted_on:
+        cloudify.tosca.relationships.connected_to:
             derived_from: "cloudify.tosca.relationships.depends_on"
 
-        cloudify.tosca.relationships.deployed_on:
+        cloudify.tosca.relationships.contained_in:
             derived_from: "cloudify.tosca.relationships.depends_on"
 
 

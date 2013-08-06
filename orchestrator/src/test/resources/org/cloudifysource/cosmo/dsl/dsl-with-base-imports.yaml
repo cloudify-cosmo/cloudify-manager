@@ -21,7 +21,7 @@ definitions:
                         port: "3306"
                         installer_recipe: "mysql_chef_recipe"
                     relationships:
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "mysql_host"
 
                 mysql_schema:
@@ -29,5 +29,5 @@ definitions:
                     properties:
                         name: "petclinic"
                     relationships:
-                        - type: "cloudify.tosca.relationships.deployed_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "mysql_database_server"

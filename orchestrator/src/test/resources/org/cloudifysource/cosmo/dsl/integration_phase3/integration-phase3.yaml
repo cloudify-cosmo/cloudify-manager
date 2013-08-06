@@ -51,4 +51,4 @@ definitions:
                     properties:
                         port: 8888
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "webserver_host"
+                        cloudify.tosca.relationships.contained_in: "webserver_host"

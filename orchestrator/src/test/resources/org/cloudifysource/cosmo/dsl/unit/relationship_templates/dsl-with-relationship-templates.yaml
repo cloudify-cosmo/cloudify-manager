@@ -18,7 +18,7 @@ definitions:
                 webserver1:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "host1"
                           execution_order:
                             - "source"
@@ -27,7 +27,7 @@ definitions:
                 webserver2:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "host1"
                           execution_order:
                             - "target"
@@ -36,9 +36,9 @@ definitions:
                 webserver3:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "host1"
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "host2"
-                        - type: "cloudify.tosca.relationships.hosted_on"
+                        - type: "cloudify.tosca.relationships.contained_in"
                           target: "host3"
