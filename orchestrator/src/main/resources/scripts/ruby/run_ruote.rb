@@ -36,7 +36,9 @@ java_import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVari
 
 def to_map(java_map)
   map = Hash.new
-  java_map.each { |key, value| map[key] = value }
+  unless java_map.nil?
+    java_map.each { |key, value| map[key] = value }
+  end
   map
 end
 
