@@ -123,6 +123,12 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
         test("org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml");
     }
 
+    @Test(groups = "vagrant", enabled = true)
+    public void testPhase4() throws IOException {
+        test("org/cloudifysource/cosmo/dsl/integration_phase4/integration-phase4.yaml");
+    }
+
+
     private void test(String dslPath) throws IOException {
 
         String dslLocation = dslImporter.importDSL(dslPath);
