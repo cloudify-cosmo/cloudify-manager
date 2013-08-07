@@ -126,7 +126,7 @@ public class DSLProcessor {
                                             "No relationship of type [%s] found for node [%s]",
                                             relationshipTemplate.getType(), template.getName());
                 Preconditions.checkArgument(nodeTemplates.containsKey(targetName),
-                        "No node template [%s] for found for relationship [%s] in node [%s]",
+                        "No node template [%s] found for relationship [%s] in node [%s]",
                         targetName, relationshipTemplate.getType(), typeTemplateName);
             }
         }
