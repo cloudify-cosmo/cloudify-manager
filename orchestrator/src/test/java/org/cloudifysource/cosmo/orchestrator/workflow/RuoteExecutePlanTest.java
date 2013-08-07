@@ -387,33 +387,32 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         reachable(webServerId);
         reachable(webApplicationId);
 
-
         final Object[][] expectedTasks =
         {
-                {
-                        cloudifyManagement,
-                        "cosmo.test.host.provisioner2.tasks.provision",
-                        host2Id,
-                        new CountDownLatch(1)
-                },
-                {
-                        host1Id,
-                        "cosmo.test.host.provisioner.tasks.provision",
-                        host1Id,
-                        new CountDownLatch(1)
-                },
-                {
-                        host1Id,
-                        "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks.install",
-                        webServerId,
-                        new CountDownLatch(1)
-                },
-                {
-                        host1Id,
-                        "cosmo.cloudify.tosca.artifacts.plugin.app_module.installer.tasks.deploy",
-                        webApplicationId,
-                        new CountDownLatch(1)
-                },
+            {
+                cloudifyManagement,
+                "cosmo.test.host.provisioner2.tasks.provision",
+                host2Id,
+                new CountDownLatch(1)
+            },
+            {
+                host1Id,
+                "cosmo.test.host.provisioner.tasks.provision",
+                host1Id,
+                new CountDownLatch(1)
+            },
+            {
+                host1Id,
+                "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks.install",
+                webServerId,
+                new CountDownLatch(1)
+            },
+            {
+                host1Id,
+                "cosmo.cloudify.tosca.artifacts.plugin.app_module.installer.tasks.deploy",
+                webApplicationId,
+                new CountDownLatch(1)
+            }
         };
 
         final TaskReceivedListener listener = new TaskReceivedListener() {

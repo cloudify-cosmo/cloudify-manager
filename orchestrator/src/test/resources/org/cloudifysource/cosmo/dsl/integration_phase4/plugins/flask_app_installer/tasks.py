@@ -31,9 +31,10 @@ def start(**kwargs):
 
 @celery.task
 def set_db_properties(db_file, port=8080, **kwargs):
-    url = "http://localhost:{0}".format(port)
+    url = "http://localhost:{0}/admin".format(port)
     data = urllib.urlencode({"db_file": db_file})
     request = urllib2.Request(url, data)
+    request.get_method = lambda: 'PUT'
     response = urllib2.urlopen(request)
     if response.getcode() != 200:
         raise RuntimeError("request [{0}] return code is: {1}".format(request, response.getcode()))
