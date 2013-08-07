@@ -34,7 +34,8 @@ definitions:
                             user: 'vagrant'
                             port: '22'
                             key: '~/.vagrant.d/insecure_private_key'
-                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
+                            management_ip: "10.0.0.1"
+                            broker: 'amqp://guest:guest@${management_ip}:5672//'
                     policies:
                         start_detection_policy:
                             rules:
@@ -53,6 +54,8 @@ definitions:
 
                 pickle_db:
                     type: "cloudify.tosca.types.db_server"
+                    interfaces:
+                        - cloudify.tosca.interfaces.middleware_component.installer: "cloudify.tosca.artifacts.plugin.pickledb.installer"
                     properties:
                         db_name: "phase4"
                         db_data:
@@ -67,10 +70,12 @@ definitions:
                                         state: "running"
                     relationships:
                         -   type: "cloudify.tosca.relationships.contained_in"
-                            target: "phase4.vagrant_host"
+                            target: "vagrant_host"
 
                 flask:
                     type: "cloudify.tosca.types.web_server"
+                    interfaces:
+                        - cloudify.tosca.interfaces.middleware_component.installer: "cloudify.tosca.artifacts.plugin.flask.installer"
                     properties:
                         port: "8888"
                     policies:
@@ -83,7 +88,7 @@ definitions:
                                         state: "running"
                     relationships:
                         -   type: "cloudify.tosca.relationships.contained_in"
-                            target: "phase4.vagrant_host"
+                            target: "vagrant_host"
 
                 flask_app:
                     type: "cloudify.tosca.types.app_module"
@@ -101,6 +106,6 @@ definitions:
                                         state: "running"
                     relationships:
                         -   type: "contained_in_flask"
-                            target: "phase4.flask"
+                            target: "flask"
                         -   type: "connected_to_pickle_db"
-                            target: "phase4.pickle_db"
+                            target: "pickle_db"
