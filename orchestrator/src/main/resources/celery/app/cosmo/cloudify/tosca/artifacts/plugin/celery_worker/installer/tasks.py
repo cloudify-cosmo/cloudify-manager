@@ -60,6 +60,7 @@ def _install_celery(worker_config, node_id):
     sudo("pip install --timeout=120 celery==3.0.19")
 
     user = worker_config['user']
+    management_ip = worker_config['management_ip']
     broker_url = worker_config['broker']
     app = worker_config['app']
     home = "/home/" + user
