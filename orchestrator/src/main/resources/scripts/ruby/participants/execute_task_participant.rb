@@ -32,6 +32,11 @@ class ExecuteTaskParticipant < Ruote::Participant
   PAYLOAD = 'payload'
   NODE = 'node'
   NODE_ID = '__cloudify_id'
+  EVENT_RESULT = 'result'
+  RESULT_WORKITEM_FIELD = 'to_f'
+  TASK_SUCCEEDED = 'task-succeeded'
+  TASK_FAILED = 'task-failed'
+  TASK_REVOKED = 'task-revoked'
 
   def do_not_thread
     true
@@ -76,20 +81,24 @@ class ExecuteTaskParticipant < Ruote::Participant
       executor.send_task(target, task_id, exec, json_props, self)
 
     rescue Exception => e
-      $logger.debug('Exception caught on execute_task participant ->', e)
+      $logger.debug("Exception caught on execute_task participant: #{e}")
       flunk(workitem, e)
     end
   end
 
   def onTaskEvent(taskId, eventType, jsonEvent)
     begin
-      enriched_event = JSON.parse(jsonEvent.to_s)
-      enriched_event['wfid'] = workitem.wfid
-      $logger.debug('[event] {}', JSON.generate(enriched_event))
-      if eventType == 'task-succeeded'
+      event_data = JSON.parse(jsonEvent.to_s)
+      event_data['wfid'] = workitem.wfid
+      $logger.debug('[event] {}', JSON.generate(event_data))
+      if eventType == TASK_SUCCEEDED
+        if workitem.params.has_key? RESULT_WORKITEM_FIELD
+          result_field = workitem.params[RESULT_WORKITEM_FIELD]
+          workitem.fields[result_field] = event_data[EVENT_RESULT]
+        end
         reply(workitem)
-      elsif eventType == 'task-failed' || eventType == 'task-revoked'
-        flunk(workitem, Exception.new(enriched_event['exception']))
+      elsif eventType == TASK_FAILED || eventType == TASK_REVOKED
+        flunk(workitem, Exception.new(event_data['exception']))
       end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
