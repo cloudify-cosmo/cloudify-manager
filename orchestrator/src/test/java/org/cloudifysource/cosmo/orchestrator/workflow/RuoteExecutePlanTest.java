@@ -369,6 +369,76 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     }
 
     @Test(timeOut = 30000)
+    public void testHostExtractionFromRelationships() throws InterruptedException {
+        final String dslFile = "org/cloudifysource/cosmo/dsl/unit/relationships/dsl-for-host-extraction.yaml";
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("dsl", Resources.getResource(dslFile).getFile());
+        Object wfid = ruoteWorkflow.asyncExecute(fields);
+
+        final String cloudifyManagement = "cloudify.management";
+        final String serviceTemplate = "service_template";
+        final String host1Id = String.format("%s.%s", serviceTemplate, "host1");
+        final String host2Id = String.format("%s.%s", serviceTemplate, "host2");
+        final String webServerId = String.format("%s.%s", serviceTemplate, "webserver1");
+        final String webApplicationId = String.format("%s.%s", serviceTemplate, "webapplication1");
+
+        reachable(host1Id);
+        reachable(host2Id);
+        reachable(webServerId);
+        reachable(webApplicationId);
+
+
+        final Object[][] expectedTasks =
+        {
+                {
+                        cloudifyManagement,
+                        "cosmo.test.host.provisioner2.tasks.provision",
+                        host2Id,
+                        new CountDownLatch(1)
+                },
+                {
+                        host1Id,
+                        "cosmo.test.host.provisioner.tasks.provision",
+                        host1Id,
+                        new CountDownLatch(1)
+                },
+                {
+                        host1Id,
+                        "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks.install",
+                        webServerId,
+                        new CountDownLatch(1)
+                },
+                {
+                        host1Id,
+                        "cosmo.cloudify.tosca.artifacts.plugin.app_module.installer.tasks.deploy",
+                        webApplicationId,
+                        new CountDownLatch(1)
+                },
+        };
+
+        final TaskReceivedListener listener = new TaskReceivedListener() {
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                for (Object[] expectedTask : expectedTasks) {
+                    if (expectedTask[0].equals(target) && expectedTask[1].equals(taskName) &&
+                        expectedTask[2].equals(kwargs.get("__cloudify_id"))) {
+                        ((CountDownLatch) expectedTask[3]).countDown();
+                    }
+                }
+            }
+        };
+
+        worker.addListener(cloudifyManagement, listener);
+        worker.addListener(host1Id, listener);
+        worker.addListener(host2Id, listener);
+
+        ruoteRuntime.waitForWorkflow(wfid);
+
+        for (Object[] expectedTask : expectedTasks) {
+            ((CountDownLatch) expectedTask[3]).await();
+        }
+    }
+
+    @Test(timeOut = 30000)
     public void testExecuteOperation() throws InterruptedException {
         final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
         final String machineId = "plugins_template.host_template";
