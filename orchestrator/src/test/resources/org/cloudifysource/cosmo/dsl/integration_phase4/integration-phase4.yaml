@@ -94,8 +94,7 @@ definitions:
                     type: "cloudify.tosca.types.app_module"
                     properties:
                         application_name: "phase4-app"
-                        application_code: |
-                            ...
+                        application_url: "http://10.0.0.1:53229/data/flask_app.py"
                     policies:
                         start_detection_policy:
                             rules:
