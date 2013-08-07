@@ -35,7 +35,7 @@ definitions:
                             port: '22'
                             key: '~/.vagrant.d/insecure_private_key'
                             management_ip: "10.0.0.1"
-                            broker: 'amqp://guest:guest@${management_ip}:5672//'
+                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
                     policies:
                         start_detection_policy:
                             rules:
