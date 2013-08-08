@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 from cosmo.celery import celery
+from cosmo.events import send_task
 import tempfile
 from os import path
 import pickledb
@@ -26,12 +27,13 @@ def install(**kwargs):
 
 
 @celery.task
-def start(db_name='pickle', db_data={}, **kwargs):
+def start(__cloudify_id, db_name='pickle', db_data={}, **kwargs):
     db_file = get_db_file_location(db_name)
     db = pickledb.load(db_file, False)
     for key, value in db_data.iteritems():
     	db.set(key, value)
     db.dump()
+    send_task(__cloudify_id, "10.0.0.5", "pickle db status", "running")
 
 
 @celery.task
