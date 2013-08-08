@@ -74,6 +74,11 @@ def _install_celery(worker_config, node_id):
     script_dir = path.dirname(script_path)
     put(script_dir + "/remote/__init__.py", app_dir)
     put(script_dir + "/remote/celery.py", app_dir)
+    put(script_dir + "/remote/events.py", app_dir)
+
+    # write management ip
+    management_ip_path = path.join(app_dir, "management-ip.txt")
+    run("echo {0} > {1}".format(management_ip, management_ip_path))
 
     # create app/cloudify/tosca/artifacts/plugin with __init__.py file in each directory
     remote_plugin_path = app_dir
