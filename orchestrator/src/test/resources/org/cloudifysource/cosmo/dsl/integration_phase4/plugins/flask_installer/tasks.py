@@ -20,7 +20,8 @@ import os
 from os import path
 import sys
 import subprocess
-
+import urllib2
+import errno
 
 @celery.task
 def install(**kwargs):
@@ -33,28 +34,24 @@ def start(**kwargs):
 
 
 @celery.task
-def deploy_application(application_name, application_code, port=8080, **kwargs):
+def deploy_application(application_name, application_url, port=8080, **kwargs):
+    response = urllib2.urlopen(application_url)
     application_path = path.join(tempfile.gettempdir(), 'flask-apps', application_name)
-    os.makedirs(application_path)
+
+    try:
+        os.makedirs(application_path)
+    except OSError as e:
+        if not (e.errno == errno.EEXIST):
+            raise
+
     application_file = path.join(application_path, 'app.py')
-    with open(application_file, "w") as f: f.write(application_code.replace("${port}", port))
-    command = [sys.executable, application_file]
+    with open(application_file, "w") as f: 
+        f.write(response.read())
+
+    command = [sys.executable, application_file, str(port)]
     subprocess.Popen(command)
 
 
 def test():
-    application_name = 'test-app'
-    application_code = """
-from flask import Flask
-app = Flask(__name__)
-
-@app.route("/")
-def hello():
-    return "Hello World!"
-
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=${port})
-    """
-
-    deploy_application(application_name, application_code, 8080)
+    deploy_application('my-crazy-app', 'http://localhost:8000/data/flask_app.py', 9000)
 
