@@ -136,12 +136,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -267,10 +264,9 @@
                         <configuration>
                             <failOnWarning>true</failOnWarning>
                             <usedDependencies>
-                                <usedDependency>org.apache.logging.log4j:log4j-core</usedDependency>
-                                <usedDependency>org.apache.logging.log4j:log4j-slf4j-impl</usedDependency>
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
+                                <usedDependency>org.slf4j:slf4j-log4j12</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
