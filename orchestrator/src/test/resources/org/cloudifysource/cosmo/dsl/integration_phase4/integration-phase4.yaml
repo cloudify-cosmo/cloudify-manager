@@ -11,11 +11,21 @@ definitions:
         connected_to_pickle_db:
             derived_from: "cloudify.tosca.relationships.connected_to"
             workflow: |
-                ...
+              define connected_pickel
+                given
+                  that '${v:late_binding} == true'
+                    execute_operation operation: 'target.get_db_file_location',
+                                      target_node_id: '${v:target_node_id}'
+                    execute_operation operation: 'source.set_db_properties',
+                                      target_node_id '${v:target_node_id}'
         contained_in_flask:
             derived_from: "cloudify.tosca.relationships.contained_in"
             workflow: |
-                ...
+               define contained_flask
+                given
+                  that '${v:late_binding} == false'
+                    execute_operation operation: 'target.deploy_application',
+                                      target_node_id: '${v:target_node_id}'
 
     service_templates:
         phase4:

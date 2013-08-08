@@ -19,7 +19,7 @@ java_import org.cloudifysource::cosmo::tasks::TaskExecutor
 
 require 'json'
 require 'securerandom'
-
+require 'prepare_operation_participant'
 
 class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
@@ -65,6 +65,9 @@ class ExecuteTaskParticipant < Ruote::Participant
       if payload.has_key? PARAMS
         payload_params = payload[PARAMS]
         payload_properties.merge! payload_params if payload_params.respond_to? 'merge'
+      end
+      if workitem.fields.has_key? PrepareOperationParticipant::RELATIONSHIP_OTHER_NODE
+        relationship_node = workitem.fields[PrepareOperationParticipant::RELATIONSHIP_OTHER_NODE]
       end
       properties = to_map(payload_properties)
 
