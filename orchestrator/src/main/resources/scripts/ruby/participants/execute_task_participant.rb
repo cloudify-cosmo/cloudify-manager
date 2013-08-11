@@ -28,6 +28,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   TARGET = 'target'
   EXEC = 'exec'
   PROPERTIES = 'properties'
+  RELATIONSHIP_PROPERTIES = 'relationship_properties'
   PARAMS = 'params'
   PAYLOAD = 'payload'
   NODE = 'node'
@@ -64,10 +65,11 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
       if payload.has_key? PARAMS
         payload_params = payload[PARAMS]
-        payload_properties.merge! payload_params if payload_params.respond_to? 'merge'
+        safe_merge!(payload_properties, payload_params)
       end
-      if workitem.fields.has_key? PrepareOperationParticipant::RELATIONSHIP_OTHER_NODE
-        relationship_node = workitem.fields[PrepareOperationParticipant::RELATIONSHIP_OTHER_NODE]
+      if payload.has_key? RELATIONSHIP_PROPERTIES
+        relationship_properties = payload[RELATIONSHIP_PROPERTIES]
+        safe_merge!(payload_properties, relationship_properties)
       end
       properties = to_map(payload_properties)
 
@@ -97,7 +99,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       if eventType == TASK_SUCCEEDED
         if workitem.params.has_key? RESULT_WORKITEM_FIELD
           result_field = workitem.params[RESULT_WORKITEM_FIELD]
-          workitem.fields[result_field] = event_data[EVENT_RESULT]
+          workitem.fields[result_field] = event_data[EVENT_RESULT] unless result_field.empty?
         end
         reply(workitem)
       elsif eventType == TASK_FAILED || eventType == TASK_REVOKED
@@ -109,4 +111,15 @@ class ExecuteTaskParticipant < Ruote::Participant
       flunk(workitem, e)
     end
   end
+
+  def safe_merge!(merge_into, merge_from)
+    merge_from.each do |key, value|
+      if merge_into.has_key? key
+        raise "Target map already contains key: #{key}"
+      end
+      merge_into[key] = value
+    end
+    merge_into
+  end
+
 end
