@@ -419,14 +419,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         };
 
         final TaskReceivedListener listener = new TaskReceivedListener() {
-            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 for (Object[] expectedTask : expectedTasks) {
                     if (expectedTask[0].equals(target) && expectedTask[1].equals(taskName) &&
                         expectedTask[2].equals(kwargs.get("__cloudify_id"))) {
                         ((CountDownLatch) expectedTask[3]).countDown();
                     }
                 }
-                return null;
+                return "True";
             }
         };
 
@@ -485,7 +485,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         ruoteRuntime.waitForWorkflow(wfid);
     }
 
-    @Test(timeOut = 990000)
+    @Test(timeOut = 30000)
     public void testExecuteOperation() throws InterruptedException {
         final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
         final String machineId = "plugins_template.host_template";
@@ -512,8 +512,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                System.out.println("-- executing target: " + target + ", task=" + taskName);
-                System.out.println("-- exected tasks: " + executedTasks);
+                System.out.println("-- executing " + target + " -> " + taskName + " :: " + kwargs);
+                System.out.println("-- executed tasks: " + executedTasks);
                 final int executedTasksCount = executedTasks.size();
                 if (taskName.startsWith(pluginInstallerPrefix)) {
                     assertThat(kwargs).containsKey("plugin_name");
@@ -535,6 +535,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     assertThat(taskName).endsWith(".provision");
                     latch.countDown();
                     executedTasks.add(taskName);
+                    // in this stage make the host reachable so its dependent nodes would start firing tasks.
+                    reachable(machineId);
                 } else if (taskName.startsWith(agentTaskPrefix)) {
                     assertThat(target).isEqualTo(machineId);
                     assertThat(executedTasksCount).isIn(3, 5);
@@ -554,7 +556,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         worker.addListener(remotePluginTarget, listener);
         worker.addListener(machineId, listener);
 
-        reachable(machineId);
         ruoteRuntime.waitForWorkflow(wfid);
 
         latch.await();
