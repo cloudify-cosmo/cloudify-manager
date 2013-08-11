@@ -73,7 +73,7 @@ class ExecuteTaskParticipant < Ruote::Participant
         relationship_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
         safe_merge!(final_properties, relationship_properties)
       end
-      properties = to_map(payload_properties)
+      properties = to_map(final_properties)
 
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
                     task_id,
