@@ -20,17 +20,17 @@ import cosmo
 
 
 def send_event(node_id, host, service, state):
-	client = bernhard.Client(host=_get_management_ip())
-	event = {
-		'host': host,
-		'service': service,
-		'state': state,
-		'tags': 'name={0}'.format(node_id)
-	}
-	try:
-		client.send(event)
-	finally:
-		client.disconnect()
+    client = bernhard.Client(host=_get_management_ip())
+    event = {
+        'host': host,
+        'service': service,
+        'state': state,
+        'tags': ['name={0}'.format(node_id)]
+    }
+    try:
+        client.send(event)
+    finally:
+        client.disconnect()
 
 
 def _get_management_ip():
@@ -40,5 +40,5 @@ def _get_management_ip():
 
 
 def test():
-	send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'running')
+    send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'running')
 

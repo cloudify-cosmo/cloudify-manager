@@ -97,7 +97,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     begin
       event_data = JSON.parse(jsonEvent.to_s)
       event_data['wfid'] = workitem.wfid
-      $logger.debug('[event] {}', JSON.generate(event_data))
+      $logger.debug('[event][{}][{}] {}', taskId, eventType, JSON.generate(event_data))
       if eventType == TASK_SUCCEEDED
         if workitem.params.has_key? RESULT_WORKITEM_FIELD
           result_field = workitem.params[RESULT_WORKITEM_FIELD]

@@ -31,7 +31,7 @@ def install(**kwargs):
 
 @celery.task
 def start(__cloudify_id, **kwargs):
-    send_task(__cloudify_id, "10.0.0.5", "flask status", "running")
+    send_event(__cloudify_id, "10.0.0.5", "flask status", "running")
 
 
 @celery.task
@@ -51,9 +51,7 @@ def deploy_application(application_name, application_url, port=8080, **kwargs):
 
     command = [sys.executable, application_file, str(port)]
     subprocess.Popen(command)
-    # TODO: how deployed application node id is passed here?
-    app_node_id = "???"
-    send_event(app_node_id, "10.0.0.5", "flask app status", "running")
+
 
 
 def test():

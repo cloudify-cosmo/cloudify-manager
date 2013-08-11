@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 from cosmo.celery import celery
+from cosmo.events import send_event
 import urllib
 import urllib2
 
@@ -25,8 +26,8 @@ def deploy(**kwargs):
 
 
 @celery.task
-def start(**kwargs):
-    pass
+def start(__cloudify_id, **kwargs):
+    send_event(__cloudify_id, "10.0.0.5", "flask app status", "running")
 
 
 @celery.task

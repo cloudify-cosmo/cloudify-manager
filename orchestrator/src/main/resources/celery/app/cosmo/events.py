@@ -24,7 +24,7 @@ def send_event(node_id, host, service, state):
         'host': host,
         'service': service,
         'state': state,
-        'tags': 'name={0}'.format(node_id)
+        'tags': ['name={0}'.format(node_id)]
     }
     try:
         client.send(event)
