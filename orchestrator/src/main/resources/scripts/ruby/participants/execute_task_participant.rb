@@ -63,13 +63,15 @@ class ExecuteTaskParticipant < Ruote::Participant
         node = workitem.fields[NODE]
         payload_properties[NODE_ID] = node['id']
       end
+      final_properties = Hash.new
+      safe_merge!(final_properties, payload_properties)
       if payload.has_key? PARAMS
         payload_params = payload[PARAMS] || Hash.new
-        safe_merge!(payload_properties, payload_params)
+        safe_merge!(final_properties, payload_params)
       end
       if payload.has_key? RELATIONSHIP_PROPERTIES
         relationship_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
-        safe_merge!(payload_properties, relationship_properties)
+        safe_merge!(final_properties, relationship_properties)
       end
       properties = to_map(payload_properties)
 
