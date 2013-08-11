@@ -288,7 +288,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             @Override
             public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 if (taskName.endsWith("verify_plugin") || taskName.endsWith("reload_riemann_config")) {
-                    return null;
+                    return "True";
                 }
                 if (assertExecutionOrder) {
                     executions.add(taskName);
@@ -353,7 +353,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             @Override
             public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 if (taskName.endsWith("verify_plugin")) {
-                    return null;
+                    return "True";
                 }
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
@@ -485,7 +485,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         ruoteRuntime.waitForWorkflow(wfid);
     }
 
-    @Test(timeOut = 30000)
+    @Test(timeOut = 990000)
     public void testExecuteOperation() throws InterruptedException {
         final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
         final String machineId = "plugins_template.host_template";
@@ -512,6 +512,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                System.out.println("-- executing target: " + target + ", task=" + taskName);
+                System.out.println("-- exected tasks: " + executedTasks);
                 final int executedTasksCount = executedTasks.size();
                 if (taskName.startsWith(pluginInstallerPrefix)) {
                     assertThat(kwargs).containsKey("plugin_name");
@@ -526,6 +528,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     }
                     latch.countDown();
                     executedTasks.add(taskName);
+                    return taskName.contains("verify_plugin") ? "True" : "False";
                 } else if (taskName.startsWith(remoteTaskPrefix)) {
                     assertThat(target).isEqualTo(remotePluginTarget);
                     assertThat(executedTasksCount).isEqualTo(1);
