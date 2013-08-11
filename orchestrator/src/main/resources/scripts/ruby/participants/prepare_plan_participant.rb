@@ -51,7 +51,8 @@ class PreparePlanParticipant < Ruote::Participant
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
           relationship_workflow = 'define stub_workflow\n\t'
-          relationship_workflow = relationship['workflow'] unless relationship['workflow'] == ''
+          relationship_workflow = relationship['workflow'] unless relationship['workflow'].nil? or
+                                                                  relationship['workflow'] == ''
           relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
         end
       end
