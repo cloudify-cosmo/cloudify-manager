@@ -109,6 +109,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
+        reachable("mysql_template.mysql_schema");
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
@@ -131,6 +132,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
+        reachable("mysql_template.mysql_schema");
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                     CLOUDIFY_MANAGEMENT,
@@ -182,6 +184,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackage() throws IOException, InterruptedException {
+
+        reachable("package_template.package_vm");
+
         URL resource = Resources.getResource("org/cloudifysource/cosmo/dsl/unit/packaging/basic-packaging.yaml");
         String dsl = Resources.toString(
                 resource, Charsets.UTF_8);
@@ -206,6 +211,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackageWithImports() throws IOException, InterruptedException {
+
+        reachable("test_template.test_vm00");
+        reachable("test_template.test_vm1");
+        reachable("test_template.test_vm2");
+        reachable("test_template.test_vm03");
+        reachable("test_template.test_vm04");
+        reachable("test_template.test_vm05");
+
         final String root = "org/cloudifysource/cosmo/dsl/unit/packaging/imports/";
         Archive dslPackage = new Archive.ArchiveBuilder()
                 .addFile("app.yaml", getResourceAsString(root + "packaging-with-imports.yaml"))
@@ -493,6 +506,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks";
         final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host.provisioner.tasks";
         final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks";
+
+        reachable("plugins_template.server_template");
 
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", Resources.getResource(dslFile).getFile());
