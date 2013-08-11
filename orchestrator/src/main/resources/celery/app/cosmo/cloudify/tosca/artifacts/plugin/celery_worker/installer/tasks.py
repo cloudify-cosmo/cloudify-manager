@@ -58,6 +58,7 @@ def _install_celery(worker_config, node_id):
     sudo("apt-get install -q -y python-pip")
     sudo("pip install billiard==2.7.3.28")
     sudo("pip install --timeout=120 celery==3.0.19")
+    sudo("pip install --timeout=120 bernhard==0.1.0")
 
     user = worker_config['user']
     management_ip = worker_config['management_ip']

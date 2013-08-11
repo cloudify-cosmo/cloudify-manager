@@ -58,6 +58,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -435,6 +436,49 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         for (Object[] expectedTask : expectedTasks) {
             ((CountDownLatch) expectedTask[3]).await();
         }
+    }
+
+    @Test(timeOut = 60000)
+    public void testExecuteOperationFailure() {
+        String radial = "define workflow\n" +
+                "  execute_operation operation: 'op'";
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, ruoteRuntime);
+        Map<String, Object> plugin = Maps.newHashMap();
+        plugin.put("agent_plugin", "true");
+        Map<String, Object> plugins = Maps.newHashMap();
+        plugins.put("plugin", plugin);
+        Map<String, Object> operations = Maps.newHashMap();
+        operations.put("op", "plugin");
+        Map<String, Object> node = Maps.newHashMap();
+        node.put("id", "id");
+        node.put("host_id", "host");
+        node.put("operations", operations);
+        node.put("plugins", plugins);
+        node.put("properties", Maps.newHashMap());
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("node", node);
+
+
+        final AtomicInteger counter = new AtomicInteger(0);
+        TaskReceivedListener listener = new TaskReceivedListener() {
+            @Override
+            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                System.out.println(
+                        "-- " + counter.get() + " received task: " + target + ", " + taskName + ", " + kwargs);
+                if (taskName.contains("verify_plugin")) {
+                    if (counter.get() < 2) {
+                        counter.incrementAndGet();
+                        throw new RuntimeException("verify_plugin failure");
+                    }
+                }
+            }
+        };
+
+        worker.addListener("host", listener);
+
+        Object wfid = workflow.asyncExecute(fields);
+        ruoteRuntime.waitForWorkflow(wfid);
     }
 
     @Test(timeOut = 30000)

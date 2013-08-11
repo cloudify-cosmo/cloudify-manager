@@ -59,6 +59,8 @@ class PreparePlanParticipant < Ruote::Participant
         workitem.fields['global_workflow'] = Ruote::RadialReader.read(plan['global_workflow'])
       end
 
+      $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
+
       reply
 
     rescue Exception => e
