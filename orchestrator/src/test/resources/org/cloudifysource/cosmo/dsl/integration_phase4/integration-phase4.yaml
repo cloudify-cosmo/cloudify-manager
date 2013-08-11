@@ -39,6 +39,9 @@ definitions:
                               config.vm.box = "precise32"
                               config.vm.network :private_network, ip: "10.0.0.5"
                               config.vm.provision :shell, :inline => "sudo ufw disable"
+                              config.vm.provider "virtualbox" do |v|
+                                v.destroy_unused_network_interfaces = true
+                              end
                             end
                         worker_config:
                             user: 'vagrant'
