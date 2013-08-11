@@ -58,17 +58,17 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug('Received task execution request [target={}, exec={}, payload={}]', target, exec, payload)
 
       task_id = SecureRandom.uuid
-      payload_properties = payload[PROPERTIES]
+      payload_properties = payload[PROPERTIES] || Hash.new
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
         payload_properties[NODE_ID] = node['id']
       end
       if payload.has_key? PARAMS
-        payload_params = payload[PARAMS]
+        payload_params = payload[PARAMS] || Hash.new
         safe_merge!(payload_properties, payload_params)
       end
       if payload.has_key? RELATIONSHIP_PROPERTIES
-        relationship_properties = payload[RELATIONSHIP_PROPERTIES]
+        relationship_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
         safe_merge!(payload_properties, relationship_properties)
       end
       properties = to_map(payload_properties)
