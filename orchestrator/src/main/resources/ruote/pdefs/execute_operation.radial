@@ -16,5 +16,6 @@ define execute_operation
 
     execute_task target: '${target}', exec: '${operation}', payload: {
         properties: '$node.properties',
-        params: '$v:params'
-    }
+        params: '$v:params',
+        relationship_properties: '$relationship_other_node.properties'
+    }, to_f: '${v:to_f}'
