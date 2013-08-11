@@ -13,6 +13,16 @@ define global_workflow
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
+            log message: 'performing relationship bindings'
+            set 'v:relationship_workflow': '$f:relationship.workflow'
+            relationship_workflow late_binding: 'false', target_node_id: ${v:relationship.target_id}
+
         log message: 'executing init workflow'
         set 'v:init': "$f:node.workflows.init"
         init
+
+        state resource_id: '${node.id}', state: { reachable: "true" }
+        iterator on: '$f:node.relationships', to_v: 'relationship'
+            log message: 'performing late relationship bindings'
+            set 'v:relationship_workflow': '$f:relationship.workflow'
+            relationship_workflow late_binding: 'true', target_node_id: ${v:relationship.target_id}

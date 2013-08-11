@@ -16,6 +16,14 @@
 
 class PrepareOperationParticipant < Ruote::Participant
 
+  PLAN = 'plan'
+  NODES = 'nodes'
+  TARGET_ID = 'target_node_id'
+  NODE_ID = 'id'
+  SOURCE_PREFIX = 'source.'
+  TARGET_PREFIX = 'target.'
+  RELATIONSHIP_OTHER_NODE = 'relationship_other_node'
+
   NODE = 'node'
   OPERATION = 'operation'
   OPERATIONS = 'operations'
@@ -32,8 +40,29 @@ class PrepareOperationParticipant < Ruote::Participant
       raise "#{NODE} field not set" unless workitem.fields.has_key? NODE
       raise "#{OPERATION} parameter not set" unless workitem.params.has_key? OPERATION
 
-      node = workitem.fields[NODE]
       operation = workitem.params[OPERATION]
+
+      if workitem.params.has_key? TARGET_ID and workitem.params[TARGET_ID] != ''
+        target_id = workitem.params[TARGET_ID]
+        source_node = workitem.fields[NODE]
+        target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
+        raise "Node missing with id #{target_id}" if target_node.nil?
+        if operation.start_with? SOURCE_PREFIX
+          operation = operation[SOURCE_PREFIX.length, operation.length]
+          node = source_node
+          workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
+        elsif operation.start_with? TARGET_PREFIX
+          operation = operation[TARGET_PREFIX.length, operation.length]
+          node = target_node
+          workitem.fields[RELATIONSHIP_OTHER_NODE] = source_node
+        else
+          raise "Invalid execution destination specified in operation: #{operation}"
+        end
+      else
+        node = workitem.fields[NODE]
+        workitem.fields[RELATIONSHIP_OTHER_NODE] = nil
+      end
+
 
       operations = node[OPERATIONS]
       raise "Node has no operations: #{node}" unless operations != nil
