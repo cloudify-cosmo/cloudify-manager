@@ -52,7 +52,7 @@ class PreparePlanParticipant < Ruote::Participant
           relationship['state'] = 'reachable'
           relationship_workflow = 'define stub_workflow\n\t'
           relationship_workflow = relationship['workflow'] unless relationship['workflow'] == ''
-          relationship['workflow'] = Ruote::RadialReader.reader(relationship_workflow)
+          relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
         end
       end
 
