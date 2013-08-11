@@ -2,12 +2,17 @@ define execute_operation
     prepare_operation operation: "${v:operation}", target_node_id: "${v:target_node_id}"
 
     set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks.verify_plugin"
-    execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
-        properties: {
-            worker_id: "${worker_id}",
-            plugin_name: "${plugin_name}"
-        }
-    }, on_error: "5s: retry"
+    repeat
+        log message: 'verifying plugin: ${plugin_name} is installed on target: ${target}'
+        execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
+            properties: {
+                worker_id: "${worker_id}",
+                plugin_name: "${plugin_name}"
+            }
+        }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
+        log message: 'plugin verification result for ${plugin_name} on ${target} is: ${verified}'
+        break 'if verified == True'
+        sleep '10s'
 
     execute_task target: '${target}', exec: '${operation}', payload: {
         properties: '$node.properties',

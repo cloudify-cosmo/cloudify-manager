@@ -20,9 +20,11 @@ import tarfile
 import zipfile
 import shutil
 import subprocess
-from subprocess import check_call as call
 from subprocess import CalledProcessError
 from cosmo.celery import celery
+from celery.utils.log import get_task_logger
+
+logger = get_task_logger(__name__)
 
 CELERY_TASKS_PATH = "/home/vagrant/cosmo"
 
@@ -69,8 +71,14 @@ def install(plugin, **kwargs):
 
         requirements_file = os.path.join(plugin_path, REQUIREMENTS_FILE)
         if os.path.exists(requirements_file):
+            logger.info('installing packages from requirements.txt file')
             os.chdir(plugin_path)
-            call(["sudo", "pip", "--default-timeout=120", "install", "-r", requirements_file])
+            command = ["sudo", "pip", "--default-timeout=120", "install", "-r", requirements_file]
+            p = subprocess.Popen(command)
+            out, err = p.communicate()
+            print("command={0}, output={1}, err={2}".format(command, out, err))
+            if p.returncode != 0:
+                raise RuntimeError("unable to get celery worker registered tasks [returncode={0}]".format(p.returncode))
     except (CalledProcessError, Exception) as error:
         call(["sudo", "rm", "-rf", plugin_path])
         raise error
@@ -94,8 +102,7 @@ def verify_plugin(worker_id, plugin_name, **kwargs):
                 return True
             else:
                 registered_tasks.append(task)
-
-    raise RuntimeError("plugin [{0}] is not installed in celery worker [registered_tasks={1}]".format(plugin_name, registered_tasks))
+    return False
 
 
 def download_plugin(url, path):

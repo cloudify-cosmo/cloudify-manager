@@ -111,15 +111,19 @@ definitions:
                       given
                         that '${node.properties.install_agent} == true'
                           state resource_id: '${node.id}', state: { reachable: "true" }
+                          log message: 'installing agent on host: ${node.id}'
                           execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.install'
+                          log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
                           iterator on: '$node.plugins_to_install', to_v: 'plugin'
-                            log message: 'installing plugin: ${v:plugin.name}'
+                            log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
                             execute_operation operation: 'cloudify.tosca.interfaces.worker.plugin_installer.install', params: {
                               plugin: {
                                 name: '${v:plugin.name}',
                                 url: '${v:plugin.url}'
-                              }
+                               }
                             }
+                            log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
+                          log message: 'restarting worker on host: ${node.id}'
                           execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.restart'
 
         cloudify.tosca.types.middleware_server:

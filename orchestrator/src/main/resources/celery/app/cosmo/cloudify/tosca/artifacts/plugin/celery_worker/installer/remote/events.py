@@ -14,22 +14,29 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-require 'json'
+import bernhard
+import os
 
-class LoggingObserver
 
-  def initialize(context)
-    @context = context
-  end
+def send_event(node_id, host, service, state):
+	client = bernhard.Client(host=_get_management_ip())
+	event = {
+		'host': host,
+		'service': service,
+		'state': state,
+		'tags': 'name={0}'.format(node_id)
+	}
+	try:
+		client.send(event)
+	finally:
+		client.disconnect()
 
-  def on_msg(msg)
-    begin
-      #$logger.debug('[event] ' + msg['_id'])
-      # $logger.debug('[event] ' + JSON.generate(msg)) This causes the log to blowup
-    rescue => e
-      backtrace = e.backtrace if e.respond_to?(:backtrace)
-      $logger.debug("error logging event: #{e.to_s} / #{backtrace}")
-    end
-  end
 
-end
+def _get_management_ip():
+	with open('management-ip.txt', 'r') as f:
+		return f.readlines()[0]
+
+
+def test():
+	send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'running')
+
