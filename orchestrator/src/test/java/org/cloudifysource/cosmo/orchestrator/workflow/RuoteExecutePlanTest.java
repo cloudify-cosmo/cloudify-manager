@@ -286,14 +286,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final List<String> executions = Lists.newArrayList();
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 if (taskName.endsWith("verify_plugin") || taskName.endsWith("reload_riemann_config")) {
-                    return;
+                    return null;
                 }
                 if (assertExecutionOrder) {
                     executions.add(taskName);
                     if (expectedTasksWithSeparator.isEmpty()) {
-                        return;
+                        return null;
                     }
                     if (Objects.equal(expectedTasksWithSeparator.get(0), taskName)) {
                         expectedTasksWithSeparator.remove(0);
@@ -304,6 +304,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                         }
                     }
                 }
+                return null;
             }
         };
 
@@ -350,9 +351,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         worker.addListener(machineId, new TaskReceivedListener() {
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 if (taskName.endsWith("verify_plugin")) {
-                    return;
+                    return null;
                 }
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
@@ -361,6 +362,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                         latch.countDown();
                     }
                 }
+                return null;
             }
         });
 
@@ -417,13 +419,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         };
 
         final TaskReceivedListener listener = new TaskReceivedListener() {
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 for (Object[] expectedTask : expectedTasks) {
                     if (expectedTask[0].equals(target) && expectedTask[1].equals(taskName) &&
                         expectedTask[2].equals(kwargs.get("__cloudify_id"))) {
                         ((CountDownLatch) expectedTask[3]).countDown();
                     }
                 }
+                return null;
             }
         };
 
@@ -463,15 +466,16 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final AtomicInteger counter = new AtomicInteger(0);
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 System.out.println(
                         "-- " + counter.get() + " received task: " + target + ", " + taskName + ", " + kwargs);
                 if (taskName.contains("verify_plugin")) {
                     if (counter.get() < 2) {
                         counter.incrementAndGet();
-                        throw new RuntimeException("verify_plugin failure");
+                        return "False";
                     }
                 }
+                return "True";
             }
         };
 
@@ -507,7 +511,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         // 5-start
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
-            public synchronized void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 final int executedTasksCount = executedTasks.size();
                 if (taskName.startsWith(pluginInstallerPrefix)) {
                     assertThat(kwargs).containsKey("plugin_name");
@@ -539,6 +543,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     latch.countDown();
                     executedTasks.add(taskName);
                 }
+                return null;
             }
         };
 
@@ -602,7 +607,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         }
 
         @Override
-        public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+        public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
             String operationName = extractOperationName(taskName);
             for (Iterator<String> iterator = operations.iterator(); iterator.hasNext();) {
                 String expectedOperation =  iterator.next();
@@ -614,6 +619,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     break;
                 }
             }
+            return null;
         }
     }
 

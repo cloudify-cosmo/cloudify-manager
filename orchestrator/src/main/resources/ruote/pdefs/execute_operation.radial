@@ -11,8 +11,8 @@ define execute_operation
             }
         }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
         log message: 'plugin verification result for ${plugin_name} on ${target} is: ${verified}'
-        break 'if verified == True'
-        sleep '10s'
+        break if: '${verified} == True'
+        wait for: '5s'
 
     execute_task target: '${target}', exec: '${operation}', payload: {
         properties: '$node.properties',

@@ -16,6 +16,7 @@
 
 import bernhard
 import os
+import cosmo
 
 
 def send_event(node_id, host, service, state):
@@ -33,8 +34,9 @@ def send_event(node_id, host, service, state):
 
 
 def _get_management_ip():
-	with open('management-ip.txt', 'r') as f:
-		return f.readlines()[0]
+    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'management-ip.txt')
+    with open(file_path, 'r') as f:
+        return f.readlines()[0]
 
 
 def test():

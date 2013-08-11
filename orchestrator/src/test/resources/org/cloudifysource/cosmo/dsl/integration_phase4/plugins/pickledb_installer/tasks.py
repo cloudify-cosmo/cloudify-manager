@@ -15,7 +15,7 @@
 # *******************************************************************************/
 
 from cosmo.celery import celery
-from cosmo.events import send_task
+from cosmo.events import send_event
 import tempfile
 from os import path
 import pickledb
@@ -33,7 +33,7 @@ def start(__cloudify_id, db_name='pickle', db_data={}, **kwargs):
     for key, value in db_data.iteritems():
     	db.set(key, value)
     db.dump()
-    send_task(__cloudify_id, "10.0.0.5", "pickle db status", "running")
+    send_event(__cloudify_id, "10.0.0.5", "pickle db status", "running")
 
 
 @celery.task

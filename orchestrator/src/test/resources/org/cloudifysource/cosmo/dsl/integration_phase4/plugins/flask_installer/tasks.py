@@ -15,7 +15,7 @@
 # *******************************************************************************/
 
 from cosmo.celery import celery
-from cosmo.events import send_task
+from cosmo.events import send_event
 import tempfile
 import os
 from os import path
@@ -53,7 +53,7 @@ def deploy_application(application_name, application_url, port=8080, **kwargs):
     subprocess.Popen(command)
     # TODO: how deployed application node id is passed here?
     app_node_id = "???"
-    send_task(app_node_id, "10.0.0.5", "flask app status", "running")
+    send_event(app_node_id, "10.0.0.5", "flask app status", "running")
 
 
 def test():
