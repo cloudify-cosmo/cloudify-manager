@@ -33,6 +33,7 @@ definitions:
                             key: '~/.vagrant.d/insecure_private_key'
                             broker: 'amqp://guest:guest@10.0.3.1:5672//' # vagrant-lxc creates an 10.0.3.0/24 subnet for
                                                                          # communication with the lxc container
+
                     policies:
                         start_detection_policy:
                             rules:
@@ -41,8 +42,20 @@ definitions:
                                     properties:
                                         service: "vagrant machine status"
                                         state: "running"
-                            on_event:
-                                reachable: "true"
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_not_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                        performance_policy:
+                            rules:
+                                host_state:
+                                    type: "metric_below"
+                                    properties:
+                                        service: "vagrant machine bytes/sec"
+                                        metric: "500.0"
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
