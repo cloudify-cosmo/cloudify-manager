@@ -71,6 +71,7 @@ definitions:
                     type: "cloudify.tosca.types.db_server"
                     interfaces:
                         - cloudify.tosca.interfaces.middleware_component.installer: "cloudify.tosca.artifacts.plugin.pickledb.installer"
+                        - "db_properties_getter"
                     properties:
                         db_name: "phase4"
                         db_data:
@@ -91,8 +92,7 @@ definitions:
                     type: "cloudify.tosca.types.web_server"
                     interfaces:
                         - cloudify.tosca.interfaces.middleware_component.installer: "cloudify.tosca.artifacts.plugin.flask.installer"
-                    properties:
-                        port: "8888"
+                        - "application_deployer"
                     policies:
                         start_detection_policy:
                             rules:
@@ -107,9 +107,12 @@ definitions:
 
                 flask_app:
                     type: "cloudify.tosca.types.app_module"
+                    interfaces:
+                        - "db_properties_setter"
                     properties:
                         application_name: "phase4-app"
-                        application_url: "http://10.0.0.1:53229/data/flask_app.py"
+                        application_url: "http://10.0.0.1:53229/integration_phase4/data/flask_app.py"
+                        port: "8888"
                     policies:
                         start_detection_policy:
                             rules:
@@ -123,3 +126,27 @@ definitions:
                             target: "flask"
                         -   type: "connected_to_pickle_db"
                             target: "pickle_db"
+
+    interfaces:
+        db_properties_setter:
+            operations:
+                - "set_db_properties"
+        db_properties_getter:
+            operations:
+                - "get_db_file_location"
+        application_deployer:
+            operations:
+                - "deploy_application"
+    artifacts:
+        db_properties_setter:
+            derived_from: "cloudify.tosca.artifacts.plugin.flask_app.installer"
+            properties:
+                interface: "db_properties_setter"
+        db_properties_getter:
+            derived_from: "cloudify.tosca.artifacts.plugin.pickledb.installer"
+            properties:
+                interface: "db_properties_getter"
+        application_deployer:
+            derived_from: "cloudify.tosca.artifacts.plugin.flask.installer"
+            properties:
+                interface: "application_deployer"

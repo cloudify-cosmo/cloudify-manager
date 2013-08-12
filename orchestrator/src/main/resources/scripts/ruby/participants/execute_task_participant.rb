@@ -33,6 +33,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   PAYLOAD = 'payload'
   NODE = 'node'
   NODE_ID = '__cloudify_id'
+  CLOUDIFY_RUNTIME = 'cloudify_runtime'
   EVENT_RESULT = 'result'
   RESULT_WORKITEM_FIELD = 'to_f'
   TASK_SUCCEEDED = 'task-succeeded'
@@ -116,10 +117,15 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   def safe_merge!(merge_into, merge_from)
     merge_from.each do |key, value|
-      if merge_into.has_key? key
+      if key == CLOUDIFY_RUNTIME
+        # TODO maybe also merge cloudify_runtime items with the same id
+        merge_into[CLOUDIFY_RUNTIME] = Hash.new unless merge_into.has_key? CLOUDIFY_RUNTIME
+        merge_into[CLOUDIFY_RUNTIME].merge!(value)
+      elsif merge_into.has_key? key
         raise "Target map already contains key: #{key}"
+      else
+        merge_into[key] = value
       end
-      merge_into[key] = value
     end
     merge_into
   end

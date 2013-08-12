@@ -46,15 +46,14 @@ class PrepareOperationParticipant < Ruote::Participant
         target_id = workitem.params[TARGET_ID]
         source_node = workitem.fields[NODE]
         target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
+        workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
         raise "Node missing with id #{target_id}" if target_node.nil?
         if operation.start_with? SOURCE_PREFIX
           operation = operation[SOURCE_PREFIX.length, operation.length]
           node = source_node
-          workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
         elsif operation.start_with? TARGET_PREFIX
           operation = operation[TARGET_PREFIX.length, operation.length]
           node = target_node
-          workitem.fields[RELATIONSHIP_OTHER_NODE] = source_node
         else
           raise "Invalid execution destination specified in operation: #{operation}"
         end
