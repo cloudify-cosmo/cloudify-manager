@@ -97,13 +97,14 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         worker.addListener("http://localhost:8080/", new TaskReceivedListener() {
 
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 boolean valid = Objects.equal(target, "http://localhost:8080/");
                 valid &= Objects.equal(taskName, execute);
                 valid &= Objects.equal(kwargs.get("resource_id"), resourceId);
                 if (valid) {
                     latch.countDown();
                 }
+                return null;
             }
         });
 
