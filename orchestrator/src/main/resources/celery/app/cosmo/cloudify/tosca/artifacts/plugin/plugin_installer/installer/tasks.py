@@ -80,7 +80,7 @@ def install(plugin, **kwargs):
             if p.returncode != 0:
                 raise RuntimeError("unable to get celery worker registered tasks [returncode={0}]".format(p.returncode))
     except (CalledProcessError, Exception) as error:
-        call(["sudo", "rm", "-rf", plugin_path])
+        subprocess.Popen(["sudo", "rm", "-rf", plugin_path])
         raise error
 
 
