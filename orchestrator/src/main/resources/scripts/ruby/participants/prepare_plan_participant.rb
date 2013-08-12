@@ -50,9 +50,10 @@ class PreparePlanParticipant < Ruote::Participant
         node[PROPERTIES][RUNTIME] = Hash.new
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
-          relationship_workflow = 'define stub_workflow\n\t'
-          relationship_workflow = relationship['workflow'] unless relationship['workflow'].nil? or
-                                                                  relationship['workflow'] == ''
+          relationship_workflow = plan['relationships'][relationship['type']]['workflow']
+          if relationship_workflow.nil? or relationship_workflow.empty?
+            relationship_workflow = 'define stub_workflow\n\t'
+          end
           relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
         end
       end

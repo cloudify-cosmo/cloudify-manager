@@ -18,7 +18,7 @@ definitions:
                                       target_node_id: '${v:target_node_id}',
                                       to_f: 'db_file'
                     execute_operation operation: 'source.set_db_properties',
-                                      target_node_id '${v:target_node_id}',
+                                      target_node_id: '${v:target_node_id}',
                                       params: { db_file: '${db_file}' }
         contained_in_flask:
             derived_from: "cloudify.tosca.relationships.contained_in"
