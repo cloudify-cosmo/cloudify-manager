@@ -142,7 +142,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
             @Override
             public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 // do nothing..
-                return null;
+                return "mockResult";
             }
         });
         final String radial = "define start_node\n" +
@@ -157,7 +157,6 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
 
         final Map<String, Object> workitemFields = RuoteJavaParticipant.getWorkitemFields();
         assertThat(workitemFields).containsKey("result");
-        // 'mockResult' is hardcoded in worker mock
         assertThat(workitemFields.get("result")).isEqualTo("mockResult");
     }
 
