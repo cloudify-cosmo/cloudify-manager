@@ -19,6 +19,7 @@ java_import org.cloudifysource::cosmo::tasks::TaskExecutor
 
 require 'json'
 require 'securerandom'
+require 'set'
 
 
 class ExecuteTaskParticipant < Ruote::Participant
@@ -32,6 +33,29 @@ class ExecuteTaskParticipant < Ruote::Participant
   PAYLOAD = 'payload'
   NODE = 'node'
   NODE_ID = '__cloudify_id'
+
+  RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.riemann.config_loader.tasks.reload_riemann_config'
+  VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks.verify_plugin'
+  RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.celery_worker.installer.tasks.restart'
+
+  TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME, RESTART_CELERY_WORKER_TASK_NAME]
+
+  def colorize(color_code, message)
+    "\e[#{color_code}m#{message}\e[0m"
+  end
+
+  def red(message)
+    colorize(31, message)
+  end
+
+  def green(message)
+    colorize(32, message)
+  end
+
+  def yellow(message)
+    colorize(33, message)
+  end
+
 
   def do_not_thread
     true
@@ -86,10 +110,56 @@ class ExecuteTaskParticipant < Ruote::Participant
       enriched_event = JSON.parse(jsonEvent.to_s)
       enriched_event['wfid'] = workitem.wfid
       $logger.debug('[event] {}', JSON.generate(enriched_event))
-      if eventType == 'task-succeeded'
-        reply(workitem)
-      elsif eventType == 'task-failed' || eventType == 'task-revoked'
-        flunk(workitem, Exception.new(enriched_event['exception']))
+
+      case eventType
+
+        when 'task-received'
+
+        # worker received the task and is about to execute it
+        # lets print the task name
+
+          task_name = enriched_event['name']
+          put(enriched_event['uuid'], task_name)
+          unless TASK_TO_FILTER.include? task_name
+            $user_logger.debug('Task {} was received by worker on host {}', task_name,
+                               enriched_event['hostname'])
+          end
+
+        when 'task-started'
+
+          # worker is starting to execute the task
+          # lets print the task name
+
+          task_name = get(enriched_event['uuid'])
+          unless TASK_TO_FILTER.include? task_name
+            $user_logger.debug('Starting execution of task {}', task_name)
+          end
+
+
+        when 'task-succeeded'
+
+          # task was finished successfully
+          # lets print the task name
+
+          task_name = get(enriched_event['uuid'])
+          unless TASK_TO_FILTER.include? task_name
+            $user_logger.debug(green('Task {} ended successfully'), task_name)
+          end
+          reply(workitem)
+
+        when 'task-failed' || 'task-revoked'
+
+          # task failed
+          # lets print the task name and the error
+
+          task_name = get(enriched_event['uuid'])
+          exception = enriched_event['exception']
+          unless TASK_TO_FILTER.include? task_name
+            $user_logger.debug(red('Task {} failed. Error was : {}'), task_name, exception)
+          end
+          flunk(workitem, Exception.new(exception))
+        else
+
       end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
@@ -97,4 +167,5 @@ class ExecuteTaskParticipant < Ruote::Participant
       flunk(workitem, e)
     end
   end
+
 end
