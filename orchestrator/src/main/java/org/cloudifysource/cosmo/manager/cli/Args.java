@@ -45,8 +45,16 @@ public class Args {
     @Parameter(names = "--help", help = true, hidden = true)
     private boolean help;
 
+    @Parameter(names = "--validate",
+               description = "Specifies the yaml should only be validated and not deployed.")
+    private boolean validate;
+
     public boolean isHelp() {
         return help;
+    }
+
+    public boolean isValidate() {
+        return validate;
     }
 
     public String getDslPath() {
