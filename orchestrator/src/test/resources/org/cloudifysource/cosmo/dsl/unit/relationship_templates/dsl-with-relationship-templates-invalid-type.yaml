@@ -16,7 +16,3 @@ definitions:
                     relationships:
                         - type: "non_existent_type"
                           target: "host1"
-                          execution_order:
-                            - "source"
-                            - "target"
-                          late_binding: false

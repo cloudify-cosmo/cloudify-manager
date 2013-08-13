@@ -278,8 +278,6 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
-        boolean lateBinding;
-        List<String> executionOrder;
 
         public String getType() {
             return type;
@@ -297,21 +295,6 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
-        public boolean isLateBinding() {
-            return lateBinding;
-        }
-
-        public void setLateBinding(boolean lateBinding) {
-            this.lateBinding = lateBinding;
-        }
-
-        public List<String> getExecutionOrder() {
-            return executionOrder;
-        }
-
-        public void setExecutionOrder(List<String> executionOrder) {
-            this.executionOrder = executionOrder;
-        }
     }
 
 }

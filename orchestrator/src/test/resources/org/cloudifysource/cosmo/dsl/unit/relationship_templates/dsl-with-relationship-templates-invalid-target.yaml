@@ -16,7 +16,3 @@ definitions:
                     relationships:
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "non_existent_target"
-                          execution_order:
-                            - "source"
-                            - "target"
-                          late_binding: false

@@ -20,19 +20,11 @@ definitions:
                     relationships:
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "host1"
-                          execution_order:
-                            - "source"
-                            - "target"
-                          late_binding: false
                 webserver2:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "host1"
-                          execution_order:
-                            - "target"
-                            - "source"
-                          late_binding: true
                 webserver3:
                     type: "cloudify.tosca.types.web_server"
                     relationships:

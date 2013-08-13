@@ -172,8 +172,6 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             relationshipMap.put("type", relationship.getType());
             String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget());
             relationshipMap.put("target_id", fullTargetId);
-            relationshipMap.put("late_binding", relationship.isLateBinding());
-            relationshipMap.put("execution_order", relationship.getExecutionOrder());
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);

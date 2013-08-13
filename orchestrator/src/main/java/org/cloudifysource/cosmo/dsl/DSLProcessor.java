@@ -81,7 +81,7 @@ public class DSLProcessor {
                     definitions.getRelationships());
 
             Map<String, ServiceTemplate> populatedServiceTemplates =
-                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
+                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes);
 
             Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
             validatePlans(nodeTemplates, definitions, populatedTypes);
@@ -179,8 +179,7 @@ public class DSLProcessor {
 
     private static Map<String, ServiceTemplate> buildPopulatedServiceTemplatesMap(
             Definitions definitions,
-            Map<String, Type> populatedTypes,
-            Map<String, Relationship> populatedRelationships) {
+            Map<String, Type> populatedTypes) {
         final Map<String, ServiceTemplate> populatedServiceTemplates = Maps.newHashMap();
         for (Map.Entry<String, ServiceTemplate> entry : definitions.getServiceTemplates().entrySet()) {
 
@@ -189,8 +188,7 @@ public class DSLProcessor {
 
             Map<String, TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
                     serviceTemplate.getTopology(),
-                    populatedTypes,
-                    populatedRelationships);
+                    populatedTypes);
 
             ServiceTemplate populatedServiceTemplate = new ServiceTemplate();
             populatedServiceTemplate.setName(serviceTemplate.getName());
@@ -204,8 +202,7 @@ public class DSLProcessor {
 
     private static Map<String, TypeTemplate> buildPopulatedTypeTemplatesMap(
             Map<String, TypeTemplate> topology,
-            Map<String, Type> populatedTypes,
-            Map<String, Relationship> populatedRelationships) {
+            Map<String, Type> populatedTypes) {
         final Map<String, TypeTemplate> populatedTemplates = Maps.newHashMap();
         for (Map.Entry<String, TypeTemplate> entry : topology.entrySet()) {
             String templateName = entry.getKey();

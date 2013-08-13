@@ -30,8 +30,6 @@ public class RelationshipTemplate {
 
     private String type;
     private String target;
-    private boolean lateBinding;
-    private List<String> executionOrder = Lists.newArrayList();
 
     public String getType() {
         return type;
@@ -47,22 +45,6 @@ public class RelationshipTemplate {
 
     public void setTarget(String target) {
         this.target = target;
-    }
-
-    public boolean isLateBinding() {
-        return lateBinding;
-    }
-
-    public void setLateBinding(boolean lateBinding) {
-        this.lateBinding = lateBinding;
-    }
-
-    public List<String> getExecutionOrder() {
-        return executionOrder;
-    }
-
-    public void setExecutionOrder(List<String> executionOrder) {
-        this.executionOrder = executionOrder;
     }
 
 }
