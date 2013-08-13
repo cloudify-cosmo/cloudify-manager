@@ -16,10 +16,6 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.beust.jcommander.internal.Lists;
-
-import java.util.List;
-
 /**
  * TODO: Write a short summary of this type's roles and responsibilities.
  *
