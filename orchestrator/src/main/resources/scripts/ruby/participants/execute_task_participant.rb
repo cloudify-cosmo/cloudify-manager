@@ -102,7 +102,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       if eventType == TASK_SUCCEEDED
         if workitem.params.has_key? RESULT_WORKITEM_FIELD
           result_field = workitem.params[RESULT_WORKITEM_FIELD]
-          workitem.fields[result_field] = event_data[EVENT_RESULT] unless result_field.empty?
+          workitem.fields[result_field] = fix_task_result(event_data[EVENT_RESULT]) unless result_field.empty?
         end
         reply(workitem)
       elsif eventType == TASK_FAILED || eventType == TASK_REVOKED
@@ -113,6 +113,15 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug("Exception handling task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
       flunk(workitem, e)
     end
+  end
+
+  # temporary workaround to fix literal results of python tasks
+  def fix_task_result(raw_result)
+    final_result = raw_result
+    if raw_result.length >= 2 && raw_result[0] == "'" && raw_result[-1] == "'"
+      final_result = raw_result[1...-1]
+    end
+    final_result
   end
 
   def safe_merge!(merge_into, merge_from)
