@@ -167,7 +167,6 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             request = client.prepareGet(service + "/" + key).build();
             String result = client.executeRequest(request).get().getResponseBody();
             assertThat(result).isEqualTo(value);
-            assertThat(true).isFalse();
         } finally {
             client.close();
         }
