@@ -44,15 +44,21 @@ public class ManagerBoot {
         String dslPath = parsed.getDslPath();
         int timeout = parsed.getTimeout();
 
-        try {
-            LOGGER.info(ManagerLogDescription.BOOTING_MANAGER);
-            manager = new Manager();
-            manager.init();
-            LOGGER.info(ManagerLogDescription.DEPLOYING_DSL, dslPath);
-            manager.deployDSL(dslPath, timeout);
-        } finally {
-            if (manager != null) {
-                manager.close();
+        if (parsed.isValidate()) {
+            LOGGER.info(ManagerLogDescription.VALIDATING_DSL, dslPath);
+            Validator.validateDSL(dslPath);
+            LOGGER.info(ManagerLogDescription.DSL_VALIDATED, dslPath);
+        } else {
+            try {
+                LOGGER.info(ManagerLogDescription.BOOTING_MANAGER);
+                manager = new Manager();
+                manager.init();
+                LOGGER.info(ManagerLogDescription.DEPLOYING_DSL, dslPath);
+                manager.deployDSL(dslPath, timeout);
+            } finally {
+                if (manager != null) {
+                    manager.close();
+                }
             }
         }
     }

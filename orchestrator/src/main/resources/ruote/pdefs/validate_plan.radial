@@ -1,0 +1,3 @@
+define validate_plan
+    log message: 'parsing plan from dsl'
+    prepare_plan dsl: $dsl

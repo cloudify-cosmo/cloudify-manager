@@ -70,8 +70,17 @@ class VagrantBootTest(unittest.TestCase):
             """
             This should install out python web server on 10.0.3.5 lxc agent.
             """
+            run("{0}/cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml --validate".format(
+                remote_working_dir),
+                stdout=sys.stdout)
             run("{0}/cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml".format(remote_working_dir),
                 stdout=sys.stdout)
+            try:
+                run("{0}/cosmo.sh --dsl=/vagrant/test/corrupted_dsl.yaml --validate".format(remote_working_dir),
+                    stdout=sys.stdout)
+                sys.exit("Expected validation exception but none occurred")
+            except (Error, SystemExit):
+                pass
 
             run("wget http://10.0.3.5:8888;")
 
