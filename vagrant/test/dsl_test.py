@@ -17,6 +17,7 @@
 import unittest
 import sys
 import os
+import shutil
 from os.path import expanduser
 
 from fabric.context_managers import settings
@@ -42,7 +43,6 @@ class VagrantBootTest(unittest.TestCase):
         vagrant_dir = os.path.abspath(os.path.join(vagrant_test_dir, os.pardir))
         manager_dir = os.path.abspath(os.path.join(vagrant_dir, os.pardir))
 
-
         remote_working_dir = "/home/vagrant/cosmo-work"
 
         local("cd {0} && vagrant up".format(vagrant_dir))
@@ -51,12 +51,12 @@ class VagrantBootTest(unittest.TestCase):
                                            self.SSH_CONFIG['host'],
                                            self.SSH_CONFIG['port'])
 
-
         # package the orchestrator
         local("cd {0}/orchestrator && mvn clean package -Pall".format(manager_dir))
 
         # copy to shared directory
-        local("cd {0}/orchestrator && cp -r target/cosmo.jar ../vagrant".format(manager_dir))
+        shutil.copyfile("{0}/orchestrator/target/cosmo.jar".format(manager_dir),
+                        "{0}/vagrant/cosmo.jar".format(manager_dir))
 
         with settings(host_string=host_string,
                       key_filename=self.SSH_CONFIG['key'],
