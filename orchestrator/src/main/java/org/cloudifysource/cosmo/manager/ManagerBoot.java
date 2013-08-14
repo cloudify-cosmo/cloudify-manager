@@ -47,6 +47,7 @@ public class ManagerBoot {
         if (parsed.isValidate()) {
             LOGGER.info(ManagerLogDescription.VALIDATING_DSL, dslPath);
             Validator.validateDSL(dslPath);
+            LOGGER.info(ManagerLogDescription.DSL_VALIDATED, dslPath);
         } else {
             try {
                 LOGGER.info(ManagerLogDescription.BOOTING_MANAGER);
