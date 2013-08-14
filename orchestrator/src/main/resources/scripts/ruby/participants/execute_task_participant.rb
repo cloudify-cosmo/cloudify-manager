@@ -110,12 +110,13 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       enriched_event = JSON.parse(jsonEvent.to_s)
       enriched_event['wfid'] = workitem.wfid
+      enriched_event['wfname'] = workitem.wf_name
 
       # if we are in the context of a node
       # we should enrich the event even further.
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
-        enriched_event['node_id'] = node['id']
+        enriched_event['node_id'] = node['id'].split('.')[1]
         enriched_event['app_id'] = node['id'].split('.')[0]
       end
 
@@ -175,9 +176,9 @@ class ExecuteTaskParticipant < Ruote::Participant
   def event_to_s(event)
 
     new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
-                 'node' => event['node_id'], 'worflow_id' => event['wfid']}
+                 'node' => event['node_id'], 'worflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
     unless event['exception'].nil?
-      new_event['error' => event['exception']]
+      new_event['error'] = event['exception']
     end
 
     "[#{event['type']}] - #{new_event}"
