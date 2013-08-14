@@ -107,57 +107,61 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   def onTaskEvent(taskId, eventType, jsonEvent)
     begin
+
       enriched_event = JSON.parse(jsonEvent.to_s)
       enriched_event['wfid'] = workitem.wfid
+
+      # if we are in the context of a node
+      # we should enrich the event even further.
+      if workitem.fields.has_key? NODE
+        node = workitem.fields[NODE]
+        enriched_event['node_id'] = node['id']
+        enriched_event['app_id'] = node['id'].split('.')[0]
+      end
+
+      # log every event coming from task executions.
+      # this log will not be displayed to the user by default
       $logger.debug('[event] {}', JSON.generate(enriched_event))
+
+      full_task_name = get(taskId)
+      if full_task_name.nil?
+        full_task_name = enriched_event['name']
+      end
+      unless full_task_name.nil?
+        enriched_event['plugin'] = get_plugin_name_from_task(full_task_name)
+        enriched_event['task_name'] = get_short_name_from_task_name(full_task_name)
+      end
+
+      description = event_to_s(enriched_event)
 
       case eventType
 
         when 'task-received'
 
-        # worker received the task and is about to execute it
-        # lets print the task name
+          # worker received the task and is about to execute it
+          # save the task name for future reference
 
-          task_name = enriched_event['name']
-          put(enriched_event['uuid'], task_name)
-          unless TASK_TO_FILTER.include? task_name
-            $user_logger.debug('Task {} was received by worker on host {}', task_name,
-                               enriched_event['hostname'])
-          end
+          put(taskId, full_task_name)
 
         when 'task-started'
 
-          # worker is starting to execute the task
-          # lets print the task name
-
-          task_name = get(enriched_event['uuid'])
-          unless TASK_TO_FILTER.include? task_name
-            $user_logger.debug('Starting execution of task {}', task_name)
+          unless TASK_TO_FILTER.include? full_task_name
+            $user_logger.debug(description)
           end
-
 
         when 'task-succeeded'
 
-          # task was finished successfully
-          # lets print the task name
-
-          task_name = get(enriched_event['uuid'])
-          unless TASK_TO_FILTER.include? task_name
-            $user_logger.debug(green('Task {} ended successfully'), task_name)
+          unless TASK_TO_FILTER.include? full_task_name
+            $user_logger.debug(green(description))
           end
           reply(workitem)
 
         when 'task-failed' || 'task-revoked'
 
-          # task failed
-          # lets print the task name and the error
-
-          task_name = get(enriched_event['uuid'])
-          exception = enriched_event['exception']
-          unless TASK_TO_FILTER.include? task_name
-            $user_logger.debug(red('Task {} failed. Error was : {}'), task_name, exception)
+          unless TASK_TO_FILTER.include? full_task_name
+            $user_logger.debug(red(description))
           end
-          flunk(workitem, Exception.new(exception))
+          flunk(workitem, Exception.new(enriched_event['exception']))
         else
 
       end
@@ -166,6 +170,26 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug("Exception handling task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
       flunk(workitem, e)
     end
+  end
+
+  def event_to_s(event)
+
+    new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
+                 'node' => event['node_id'], 'worflow_id' => event['wfid']}
+    unless event['exception'].nil?
+      new_event['error' => event['exception']]
+    end
+
+    "[#{event['type']}] - #{new_event}"
+
+  end
+
+  def get_plugin_name_from_task(full_task_name)
+    full_task_name.split('cosmo.cloudify.tosca.artifacts.plugin.')[1].split('.tasks.')[0]
+  end
+
+  def get_short_name_from_task_name(full_task_name)
+    full_task_name.split('.tasks.')[1]
   end
 
 end
