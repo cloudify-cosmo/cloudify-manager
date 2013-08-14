@@ -176,7 +176,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   def event_to_s(event)
 
     new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
-                 'node' => event['node_id'], 'worflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
+                 'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
     unless event['exception'].nil?
       new_event['error'] = event['exception']
     end
