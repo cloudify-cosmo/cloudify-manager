@@ -79,7 +79,7 @@ class VagrantBootTest(unittest.TestCase):
                 run("{0}/cosmo.sh --dsl=/vagrant/test/corrupted_dsl.yaml --validate".format(remote_working_dir),
                     stdout=sys.stdout)
                 sys.exit("Expected validation exception but none occurred")
-            except (Exception, SystemExit):
+            except BaseException:
                 pass
 
             run("wget http://10.0.3.5:8888;")
