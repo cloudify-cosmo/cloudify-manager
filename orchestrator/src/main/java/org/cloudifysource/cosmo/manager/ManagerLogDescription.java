@@ -25,5 +25,5 @@ import org.cloudifysource.cosmo.logging.LogDescription;
  * @since 0.1
  */
 public enum ManagerLogDescription implements LogDescription {
-    MANAGER_STARTED, BOOTING_MANAGER, FAILED_SHUTTING_DOWN_MANAGER, DEPLOYING_DSL
+    MANAGER_STARTED, BOOTING_MANAGER, FAILED_SHUTTING_DOWN_MANAGER, DEPLOYING_DSL, APPLICATION_DEPLOYED
 }
