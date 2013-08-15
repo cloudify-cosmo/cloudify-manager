@@ -157,9 +157,25 @@ rm /root/guest_additions.sh
     def install_cosmo(self):
 
         run_script = """#!/bin/sh
-ARGS=\"$@\"
-export VAGRANT_DEFAULT_PROVIDER=lxc
-java {0} -jar {1}/cosmo.jar $ARGS
+if [ $# -gt 0 ] && [ "$1" = "undeploy" ]
+then
+        echo "Undeploying..."
+        curdir=`pwd`
+        for dir in /tmp/vagrant-vms/*/
+        do
+                if [ -d "$dir" ]; then
+                        cd $dir
+                        vagrant destroy -f > /dev/null 2>&1
+                fi
+        done
+        cd $curdir
+        rm -rf /tmp/vagrant-vms/*
+        echo "done!"
+else
+        ARGS="$@"
+        export VAGRANT_DEFAULT_PROVIDER=lxc
+        java -Xms512m -Xmx1024m -XX:PermSize=128m -jar /home/vagrant/cosmo-work/cosmo.jar $ARGS
+fi
 """.format(JAVA_OPTS, self.working_dir)
 
         get_cosmo = "https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/" \
