@@ -30,7 +30,9 @@ class CollectParamsParticipant < Ruote::Participant
         value = workitem.fields[name]
         result[name] = value unless value.nil?
       end
-      workitem.fields[workitem.params[output_field_name]] = result
+      $logger.debug('CollectParamsParticipant: names: [{}], to_f:[{}], result: [{}]',
+                    param_names, output_field_name, result)
+      workitem.fields[output_field_name] = result
       reply
     rescue Exception => e
       $logger.debug('Exception caught on collect_params participant execution: {}', e)
