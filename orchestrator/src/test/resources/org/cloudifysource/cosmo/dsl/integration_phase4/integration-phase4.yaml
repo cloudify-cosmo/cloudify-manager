@@ -99,9 +99,9 @@ definitions:
                         -   type: "cloudify.tosca.relationships.contained_in"
                             target: "flask"
                             execution_list:
-                                - target.deploy_application
+                                - target.cloudify.tosca.artifacts.plugin.flask.installer.deploy_application
                         -   type: "cloudify.tosca.relationships.connected_to"
                             target: "pickle_db"
                             late_execution_list:
-                                - target.get_db_file_location: "db_file"
-                                - source.set_db_properties
+                                - target.cloudify.tosca.artifacts.plugin.pickledb.installer.get_db_file_location: "db_file"
+                                - source.cloudify.tosca.artifacts.plugin.flask_app.installer.set_db_properties

@@ -42,7 +42,9 @@ class PrepareOperationParticipant < Ruote::Participant
 
       operation = workitem.params[OPERATION]
 
+      allow_dynamic_operations = false
       if workitem.params.has_key? TARGET_ID and workitem.params[TARGET_ID] != ''
+        allow_dynamic_operations = true
         target_id = workitem.params[TARGET_ID]
         source_node = workitem.fields[NODE]
         target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
@@ -62,13 +64,24 @@ class PrepareOperationParticipant < Ruote::Participant
         workitem.fields[RELATIONSHIP_OTHER_NODE] = nil
       end
 
-
       operations = node[OPERATIONS]
       raise "Node has no operations: #{node}" unless operations != nil
-      raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
       raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
 
-      plugin_name = operations[operation]
+      if allow_dynamic_operations
+        if operations.has_key? operation
+          plugin_name = operations[operation]
+        else
+          split_op = operation.split('.')
+          operation = split_op[-1]
+          plugin_name = split_op[0, split_op.length - 1].join('.')
+          raise "Node does not have a plugin named: #{plugin_name}" unless node[PLUGINS].has_key? plugin_name
+        end
+      else
+        raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
+        plugin_name = operations[operation]
+      end
+
 
       $logger.debug('Executing operation [operation={}, plugin={}]', operation, plugin_name)
 
