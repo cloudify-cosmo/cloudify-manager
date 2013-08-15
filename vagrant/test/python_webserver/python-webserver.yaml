@@ -31,6 +31,7 @@ definitions:
                             user: 'vagrant'
                             port: '22'
                             key: '~/.vagrant.d/insecure_private_key'
+                            management_ip: "10.0.3.1"
                             broker: 'amqp://guest:guest@10.0.3.1:5672//' # vagrant-lxc creates an 10.0.3.0/24 subnet for
                                                                          # communication with the lxc container
 
