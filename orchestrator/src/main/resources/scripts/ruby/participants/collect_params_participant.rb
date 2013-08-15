@@ -14,10 +14,28 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-require 'participants/java_participant'
-require 'participants/state_cache_participant'
-require 'participants/execute_task_participant'
-require 'participants/prepare_plan_participant'
-require 'participants/logger_participant'
-require 'participants/prepare_operation_participant'
-require 'participants/collect_params_participant'
+class CollectParamsParticipant < Ruote::Participant
+
+  NAMES = 'names'
+  OUTPUT_FIELD_NAME = 'to_f'
+
+  def on_workitem
+    begin
+      raise "Missing 'names' parameter" unless workitem.params.has_key? NAMES
+      raise "Missing 'to_f' parameter" unless workitem.params.has_key? OUTPUT_FIELD_NAME
+      param_names = workitem.params[NAMES]
+      output_field_name = workitem.params[OUTPUT_FIELD_NAME]
+      result = {}
+      param_names.each do |name|
+        value = workitem.fields[name]
+        result[name] = value unless value.nil?
+      end
+      workitem.fields[workitem.params[output_field_name]] = result
+      reply
+    rescue Exception => e
+      $logger.debug('Exception caught on collect_params participant execution: {}', e)
+      raise e
+    end
+  end
+
+end

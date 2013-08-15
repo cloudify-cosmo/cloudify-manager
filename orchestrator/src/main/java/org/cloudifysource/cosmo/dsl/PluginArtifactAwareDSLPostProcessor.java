@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.cloudifysource.cosmo.dsl.RelationshipTemplate.ExecutionListItem;
+
 /**
  * Post processor the prepares the map for the workflow consumption.
  * Auto wires interfaces to plugins.
@@ -172,10 +174,24 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             relationshipMap.put("type", relationship.getType());
             String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget());
             relationshipMap.put("target_id", fullTargetId);
+
+            List<Map<String, String>> executionList = Lists.newArrayList();
+            for (Object rawItem : relationship.getExecutionList()) {
+                executionList.add(ExecutionListItem.fromObject(rawItem));
+            }
+            relationshipMap.put("execution_list", executionList);
+            List<Map<String, String>> lateExecutionList = Lists.newArrayList();
+            for (Object rawItem : relationship.getLateExecutionList()) {
+                lateExecutionList.add(ExecutionListItem.fromObject(rawItem));
+            }
+            relationshipMap.put("late_execution_list", lateExecutionList);
+
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);
     }
+
+
 
     private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
         Map<String, Object> workflows = Maps.newHashMap();

@@ -278,6 +278,8 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
+        List<ProcessedExecutionListItem> executionList;
+        List<ProcessedExecutionListItem> lateExecutionList;
 
         public String getType() {
             return type;
@@ -295,6 +297,42 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
+        public List<ProcessedExecutionListItem> getExecutionList() {
+            return executionList;
+        }
+
+        public void setExecutionList(List<ProcessedExecutionListItem> executionList) {
+            this.executionList = executionList;
+        }
+
+        public List<ProcessedExecutionListItem> getLateExecutionList() {
+            return lateExecutionList;
+        }
+
+        public void setLateExecutionList(List<ProcessedExecutionListItem> lateExecutionList) {
+            this.lateExecutionList = lateExecutionList;
+        }
+
+    }
+
+    /**
+     */
+    public static class ProcessedExecutionListItem {
+        private String operation;
+        private String outputField;
+        public String getOperation() {
+            return operation;
+        }
+        public void setOperation(String operation) {
+            this.operation = operation;
+        }
+
+        public String getOutputField() {
+            return outputField;
+        }
+        public void setOutputField(String outputField) {
+            this.outputField = outputField;
+        }
     }
 
 }

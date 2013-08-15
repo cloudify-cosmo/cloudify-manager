@@ -16,8 +16,14 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+
+import java.util.List;
+import java.util.Map;
+
 /**
- * TODO: Write a short summary of this type's roles and responsibilities.
+ * Data container for a relationship template in a node template of the dsl.
  *
  * @author Dan Kilman
  * @since 0.1
@@ -26,6 +32,8 @@ public class RelationshipTemplate {
 
     private String type;
     private String target;
+    private List<Object> executionList = Lists.newArrayList();
+    private List<Object> lateExecutionList = Lists.newArrayList();
 
     public String getType() {
         return type;
@@ -43,4 +51,52 @@ public class RelationshipTemplate {
         this.target = target;
     }
 
+    public List<Object> getExecutionList() {
+        return executionList;
+    }
+
+    public void setExecutionList(List<Object> executionList) {
+        this.executionList = executionList;
+    }
+
+    public List<Object> getLateExecutionList() {
+        return lateExecutionList;
+    }
+
+    public void setLateExecutionList(List<Object> lateExecutionList) {
+        this.lateExecutionList = lateExecutionList;
+    }
+
+    /**
+     */
+    static class ExecutionListItem {
+        private final String operation;
+        private final String outputField;
+        ExecutionListItem(String operation, String outputField) {
+            this.operation = operation;
+            this.outputField = outputField;
+        }
+        String getOperation() {
+            return operation;
+        }
+        String getOutputField() {
+            return outputField;
+        }
+        static Map<String, String> fromObject(Object rawItem) {
+            if (rawItem instanceof String) {
+                return new ExecutionListItem((String) rawItem, "").toMap();
+            } else if (rawItem instanceof Map) {
+                Map.Entry<String, String> entry =
+                        (Map.Entry<String, String>) ((Map) rawItem).entrySet().iterator().next();
+                return new ExecutionListItem(entry.getKey(), entry.getValue()).toMap();
+            } else {
+                throw new IllegalArgumentException("Cannot convert [" + rawItem + "] to an execution list item");
+            }
+        }
+        Map<String, String> toMap() {
+            return ImmutableMap.<String, String>builder().put("operation", operation)
+                                                         .put("output_field", outputField)
+                                                         .build();
+        }
+    }
 }

@@ -30,7 +30,17 @@ definitions:
                     relationships:
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "host1"
+                          execution_list:
+                            - source.operation1: "result1"
+                            - target.operation1: "result2"
+                            - source.operation2
+                            - target.operation2: "result3"
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "host2"
+                          late_execution_list:
+                             - source.operation3: "result4"
+                             - target.operation3: "result5"
+                             - source.operation4
+                             - target.operation4: "result6"
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "host3"
