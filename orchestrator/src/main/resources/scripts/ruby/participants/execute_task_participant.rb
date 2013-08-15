@@ -186,11 +186,17 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def get_plugin_name_from_task(full_task_name)
-    full_task_name.split('cosmo.cloudify.tosca.artifacts.plugin.')[1].split('.tasks.')[0]
+    if full_task_name.include?('.tasks.')
+      return full_task_name.split('.tasks.')[0].split('.')[-1]
+    end
+    full_task_name
   end
 
   def get_short_name_from_task_name(full_task_name)
-    full_task_name.split('.tasks.')[1]
+    if full_task_name.include?('.tasks.')
+      return full_task_name.split('.tasks.')[1]
+    end
+    full_task_name
   end
 
 end
