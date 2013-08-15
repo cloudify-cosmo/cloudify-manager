@@ -4,8 +4,8 @@
 definitions:
     imports:
         - "cloudify.types"
-        - "host.provisioner"
-        - "middleware_component.installer"
+        - "host_provisioner"
+        - "middleware_component_installer"
 
     service_templates:
         plugins_template:

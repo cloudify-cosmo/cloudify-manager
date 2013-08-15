@@ -4,5 +4,5 @@ definitions:
         cloudify.tosca.artifacts.plugin.python_webserver.installer:
             derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
-                interface: "cloudify.tosca.interfaces.middleware_component.installer"
+                interface: "cloudify.tosca.interfaces.middleware_component_installer"
                 url: "http://10.0.3.1:53229/python_webserver_installer.zip"

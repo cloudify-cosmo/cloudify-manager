@@ -89,7 +89,7 @@ def _install_celery(worker_config, node_id):
         run('echo "" > ' + remote_plugin_path + '/__init__.py')
 
     # install plugins (from ../*) according to _plugins_to_install
-    plugins_dir = path.abspath(path.join(script_dir, "../.."))
+    plugins_dir = path.abspath(path.join(script_dir, "../"))
     for plugin in _plugins_to_install:
         plugin_dir = path.join(plugins_dir, plugin)
         if not path.exists(plugin_dir):

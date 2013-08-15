@@ -2,7 +2,7 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "host.provisioner"
+        - "host_provisioner"
 
     service_templates:
         test_service_template:

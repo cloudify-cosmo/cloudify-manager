@@ -1,7 +1,7 @@
 definitions:
     imports:
         - "cloudify.types"
-        - "host.provisioner"
+        - "host_provisioner"
         - "packaging-with-imports0.yaml"
         - "relative_from_base/packaging-with-imports1.yaml"
         - "/fixed_from_base/packaging-with-imports2.yaml"
