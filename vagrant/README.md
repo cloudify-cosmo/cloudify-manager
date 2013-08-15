@@ -46,6 +46,14 @@ Run
     It is accessible on the guest machine in /vagrant, which is mounted to the root directory of the Vagrantfile.
 
 
+Undeploy
+========
+
+In order to undeploy your application, run: `cosmo undeploy`
+
+The undeploy command will destroy any vagrant lxc machines provisioned within the management machine.
+
+
 Upgrade
 ======
 
