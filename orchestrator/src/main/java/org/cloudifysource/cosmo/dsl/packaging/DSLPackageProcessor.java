@@ -95,7 +95,7 @@ public class DSLPackageProcessor {
     }
 
 
-    private static Path getDSLMainFile(File workDirectory) {
+    public static Path getDSLMainFile(File workDirectory) {
         final List<Path> yamlFiles = getFiles(workDirectory.toPath(), "*.yaml", false);
         Preconditions.checkArgument(yamlFiles.size() > 0,
                 "No yaml file found in package root");

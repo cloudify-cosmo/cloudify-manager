@@ -49,6 +49,7 @@ public class DSLImporterTest extends AbstractTestNGSpringContextTests {
 
     private static final String EXPECTED_PLUGIN_NAME = "python_webserver_installer.zip";
     private static final String EXPECTED_RELATIVE_DSL_PATH = "integration_phase3/integration-phase3.yaml";
+    private static final String EXPECTED_RELATIVE_DSL_NO_PLUGINS_PATH = "noplugins/integration-phase3.yaml";
 
     /**
      * Test Config.
@@ -72,6 +73,10 @@ public class DSLImporterTest extends AbstractTestNGSpringContextTests {
     @NotEmpty
     @Value("${cosmo.plugin-config.dsl}")
     private String dslPath;
+
+    @NotEmpty
+    @Value("${cosmo.plugin-config.dsl-no-plugins}")
+    private String dslPathNoPlugins;
 
     @Value("${cosmo.file-server.port}")
     private int port;
@@ -114,6 +119,52 @@ public class DSLImporterTest extends AbstractTestNGSpringContextTests {
         assertThat(dslPath.toFile()).exists();
         assertThat(dslLocation).isEqualTo(expectedFullDSLPath);
 
+
+    }
+
+    @Test
+    public void testImportDSLAsFullPathPointingToDirectory() throws Exception {
+
+
+        int lastSeparator = dslPath.lastIndexOf("/");
+        String dslParent = dslPath.substring(0, lastSeparator);
+
+        String expectedFullDSLPath = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + "/" +
+                EXPECTED_RELATIVE_DSL_PATH;
+
+        Path fullPathToDSL = Paths.get(Resources.getResource(dslParent).getPath());
+
+        String dslLocation = dslImporter.importDSL(fullPathToDSL);
+
+        Path expectedResourceBase = Paths.get(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
+
+        Path pluginPath = Paths.get(expectedResourceBase.toAbsolutePath().toString(), EXPECTED_PLUGIN_NAME);
+        Path dslPath = Paths.get(expectedResourceBase.toAbsolutePath().toString(), EXPECTED_RELATIVE_DSL_PATH);
+
+        assertThat(pluginPath.toFile()).exists();
+        assertThat(dslPath.toFile()).exists();
+        assertThat(dslLocation).isEqualTo(expectedFullDSLPath);
+
+    }
+
+    @Test
+    public void testImportDSLAsFullPathNoPlugins() throws Exception {
+
+
+        String expectedFullDSLPath = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + "/" +
+                EXPECTED_RELATIVE_DSL_NO_PLUGINS_PATH;
+
+        Path fullPathToDSL = Paths.get(Resources.getResource(dslPathNoPlugins).getPath());
+
+        String dslLocation = dslImporter.importDSL(fullPathToDSL);
+
+        Path expectedResourceBase = Paths.get(temporaryDirectory.get().getAbsolutePath() + "/fileserver");
+
+        Path dslPath = Paths.get(expectedResourceBase.toAbsolutePath().toString(),
+                EXPECTED_RELATIVE_DSL_NO_PLUGINS_PATH);
+
+        assertThat(dslPath.toFile()).exists();
+        assertThat(dslLocation).isEqualTo(expectedFullDSLPath);
 
     }
 }
