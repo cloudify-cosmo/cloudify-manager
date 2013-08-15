@@ -1,0 +1,32 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "host.provisioner"
+        - "middleware_component.installer"
+
+    service_templates:
+
+        service_template:
+            topology:
+                host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        host_prop1: "host_value1"
+                webserver:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        webserver_prop1: "webserver_value1"
+                    relationships:
+                        - type: "cloudify.tosca.relationships.contained_in"
+                          target: "host"
+                          execution_list:
+                            - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation1: "result1"
+                            - target.cloudify.tosca.artifacts.plugin.host.provisioner.operation2: "result2"
+                            - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation3
+                            - target.pause: "result3"
+                          late_execution_list:
+                             - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation4: "result4"
+                             - target.cloudify.tosca.artifacts.plugin.host.provisioner.operation5: "result5"
+                             - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation6
+                             - target.cloudify.tosca.artifacts.plugin.host.provisioner.operation7: "result6"
