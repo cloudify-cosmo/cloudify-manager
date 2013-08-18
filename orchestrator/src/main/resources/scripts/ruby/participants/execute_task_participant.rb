@@ -21,7 +21,6 @@ require 'json'
 require 'securerandom'
 require 'set'
 
-
 class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
 
@@ -29,10 +28,17 @@ class ExecuteTaskParticipant < Ruote::Participant
   TARGET = 'target'
   EXEC = 'exec'
   PROPERTIES = 'properties'
+  RELATIONSHIP_PROPERTIES = 'relationship_properties'
   PARAMS = 'params'
   PAYLOAD = 'payload'
   NODE = 'node'
   NODE_ID = '__cloudify_id'
+  CLOUDIFY_RUNTIME = 'cloudify_runtime'
+  EVENT_RESULT = 'result'
+  RESULT_WORKITEM_FIELD = 'to_f'
+  TASK_SUCCEEDED = 'task-succeeded'
+  TASK_FAILED = 'task-failed'
+  TASK_REVOKED = 'task-revoked'
 
   RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.riemann_config_loader.tasks.reload_riemann_config'
   VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin'
@@ -76,16 +82,22 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug('Received task execution request [target={}, exec={}, payload={}]', target, exec, payload)
 
       task_id = SecureRandom.uuid
-      payload_properties = payload[PROPERTIES]
+      payload_properties = payload[PROPERTIES] || Hash.new
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
         payload_properties[NODE_ID] = node['id']
       end
+      final_properties = Hash.new
+      safe_merge!(final_properties, payload_properties)
       if payload.has_key? PARAMS
-        payload_params = payload[PARAMS]
-        payload_properties.merge! payload_params if payload_params.respond_to? 'merge'
+        payload_params = payload[PARAMS] || Hash.new
+        safe_merge!(final_properties, payload_params)
       end
-      properties = to_map(payload_properties)
+      if payload.has_key? RELATIONSHIP_PROPERTIES
+        relationship_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
+        safe_merge!(final_properties, relationship_properties)
+      end
+      properties = to_map(final_properties)
 
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
                     task_id,
@@ -100,7 +112,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       executor.send_task(target, task_id, exec, json_props, self)
 
     rescue Exception => e
-      $logger.debug('Exception caught on execute_task participant ->', e)
+      $logger.debug("Exception caught on execute_task participant: #{e}")
       flunk(workitem, e)
     end
   end
@@ -152,6 +164,10 @@ class ExecuteTaskParticipant < Ruote::Participant
 
         when 'task-succeeded'
 
+          if workitem.params.has_key? RESULT_WORKITEM_FIELD
+            result_field = workitem.params[RESULT_WORKITEM_FIELD]
+            workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
+          end
           unless TASK_TO_FILTER.include? full_task_name
             $user_logger.debug(green(description))
           end
@@ -171,6 +187,30 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug("Exception handling task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
       flunk(workitem, e)
     end
+  end
+
+  # temporary workaround to fix literal results of python tasks
+  def fix_task_result(raw_result)
+    final_result = raw_result
+    if raw_result.length >= 2 && raw_result[0] == "'" && raw_result[-1] == "'"
+      final_result = raw_result[1...-1]
+    end
+    final_result
+  end
+
+  def safe_merge!(merge_into, merge_from)
+    merge_from.each do |key, value|
+      if key == CLOUDIFY_RUNTIME
+        # TODO maybe also merge cloudify_runtime items with the same id
+        merge_into[CLOUDIFY_RUNTIME] = Hash.new unless merge_into.has_key? CLOUDIFY_RUNTIME
+        merge_into[CLOUDIFY_RUNTIME].merge!(value)
+      elsif merge_into.has_key? key
+        raise "Target map already contains key: #{key}"
+      else
+        merge_into[key] = value
+      end
+    end
+    merge_into
   end
 
   def event_to_s(event)

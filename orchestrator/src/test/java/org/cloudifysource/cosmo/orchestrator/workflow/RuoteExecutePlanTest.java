@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
@@ -57,7 +58,9 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -108,6 +111,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
+        reachable("mysql_template.mysql_schema");
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
@@ -130,6 +134,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
         String machineId = "mysql_template.mysql_host";
         String databaseId = "mysql_template.mysql_database_server";
+        reachable("mysql_template.mysql_schema");
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                     CLOUDIFY_MANAGEMENT,
@@ -181,6 +186,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackage() throws IOException, InterruptedException {
+
+        reachable("package_template.package_vm");
+
         URL resource = Resources.getResource("org/cloudifysource/cosmo/dsl/unit/packaging/basic-packaging.yaml");
         String dsl = Resources.toString(
                 resource, Charsets.UTF_8);
@@ -205,6 +213,14 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackageWithImports() throws IOException, InterruptedException {
+
+        reachable("test_template.test_vm00");
+        reachable("test_template.test_vm1");
+        reachable("test_template.test_vm2");
+        reachable("test_template.test_vm03");
+        reachable("test_template.test_vm04");
+        reachable("test_template.test_vm05");
+
         final String root = "org/cloudifysource/cosmo/dsl/unit/packaging/imports/";
         Archive dslPackage = new Archive.ArchiveBuilder()
                 .addFile("app.yaml", getResourceAsString(root + "packaging-with-imports.yaml"))
@@ -236,6 +252,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         testPlanExecution(processed.getDslPath().toString(), null, descriptors);
     }
+
 
     @Test(timeOut = 30000)
     public void testPlanExecutionWithOverriddenGlobalPlan() throws IOException, InterruptedException {
@@ -371,6 +388,235 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     }
 
     @Test(timeOut = 30000)
+    public void testHostExtractionFromRelationships() throws InterruptedException {
+        final String dslFile = "org/cloudifysource/cosmo/dsl/unit/relationships/dsl-for-host-extraction.yaml";
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("dsl", Resources.getResource(dslFile).getFile());
+        Object wfid = ruoteWorkflow.asyncExecute(fields);
+
+        final String serviceTemplate = "service_template";
+        final String host1Id = String.format("%s.%s", serviceTemplate, "host1");
+        final String host2Id = String.format("%s.%s", serviceTemplate, "host2");
+        final String webServerId = String.format("%s.%s", serviceTemplate, "webserver1");
+        final String webApplicationId = String.format("%s.%s", serviceTemplate, "webapplication1");
+
+        reachable(host1Id);
+        reachable(host2Id);
+        reachable(webServerId);
+        reachable(webApplicationId);
+
+        final Object[][] expectedTasks =
+        {
+            {
+                CLOUDIFY_MANAGEMENT,
+                "cosmo.test_host_provisioner2.tasks.provision",
+                host2Id,
+                new CountDownLatch(1)
+            },
+            {
+                host1Id,
+                "cosmo.test_host_provisioner.tasks.provision",
+                host1Id,
+                new CountDownLatch(1)
+            },
+            {
+                host1Id,
+                "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks.install",
+                webServerId,
+                new CountDownLatch(1)
+            },
+            {
+                host1Id,
+                "cosmo.cloudify.tosca.artifacts.plugin.app_module_installer.tasks.deploy",
+                webApplicationId,
+                new CountDownLatch(1)
+            }
+        };
+
+        final TaskReceivedListener listener = new TaskReceivedListener() {
+            public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                for (Object[] expectedTask : expectedTasks) {
+                    if (expectedTask[0].equals(target) && expectedTask[1].equals(taskName) &&
+                        expectedTask[2].equals(kwargs.get("__cloudify_id"))) {
+                        ((CountDownLatch) expectedTask[3]).countDown();
+                    }
+                }
+                return "True";
+            }
+        };
+
+        worker.addListener(CLOUDIFY_MANAGEMENT, listener);
+        worker.addListener(host1Id, listener);
+        worker.addListener(host2Id, listener);
+
+        ruoteRuntime.waitForWorkflow(wfid);
+
+        for (Object[] expectedTask : expectedTasks) {
+            ((CountDownLatch) expectedTask[3]).await();
+        }
+    }
+
+    /**
+     */
+    static class TaskDescriptor {
+
+
+        TaskDescriptor(String endsWith, String result, Map<String, String> expectedInArgs,
+                       Set<String> notExpectedInArgs, int expectedIndex,
+                       String expectedTarget) {
+            this.endsWith = endsWith;
+            this.result = result;
+            this.expectedInArgs = expectedInArgs;
+            this.notExpectedInArgs = notExpectedInArgs;
+            this.expectedIndex = expectedIndex;
+            this.expectedTarget = expectedTarget;
+        }
+
+        String endsWith;
+        String result;
+        Map<String, String> expectedInArgs;
+        Set<String> notExpectedInArgs;
+        int expectedIndex;
+        String expectedTarget;
+        CountDownLatch latch = new CountDownLatch(1);
+    }
+
+    private static TaskDescriptor buildRelationshipsTemplateTaskDescriptor(
+        String endsWith,
+        String result,
+        int maxExpectedResult,
+        int index,
+        String target
+    ) {
+        Map<String, String> expectedProps = Maps.newHashMap();
+        expectedProps.put("host_prop1", "host_value1");
+        expectedProps.put("webserver_prop1", "webserver_value1");
+        for (int i = 1; i <= maxExpectedResult; i++) {
+            expectedProps.put("result" + i + "", "result" + i + "_value");
+        }
+        Set<String> notExpectedProps = Sets.newHashSet();
+        for (int i = maxExpectedResult + 1; i <= 6; i++) {
+            notExpectedProps.add("result" + i + "");
+        }
+        return new TaskDescriptor(endsWith, result, expectedProps, notExpectedProps, index, target);
+    }
+
+    @Test(timeOut = 30000_000)
+    public void testRelationshipTemplates() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-templates-ruote.yaml";
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("dsl", Resources.getResource(dslFile).getFile());
+        Object wfid = ruoteWorkflow.asyncExecute(fields);
+
+        final String hostId = "service_template.host";
+        final String webServerId = "service_template.webserver";
+
+        final TaskDescriptor[] descriptors = new TaskDescriptor[] {
+            buildRelationshipsTemplateTaskDescriptor(".operation1", "result1_value", 0, 0, hostId),
+            buildRelationshipsTemplateTaskDescriptor(".operation2", "result2_value", 1, 1, CLOUDIFY_MANAGEMENT),
+            buildRelationshipsTemplateTaskDescriptor(".operation3", "", 2, 2, hostId),
+            buildRelationshipsTemplateTaskDescriptor(".pause", "result3_value", 2, 3, CLOUDIFY_MANAGEMENT),
+            buildRelationshipsTemplateTaskDescriptor(".operation4", "result4_value", 3, 4, hostId),
+            buildRelationshipsTemplateTaskDescriptor(".operation5", "result5_value", 4, 5, CLOUDIFY_MANAGEMENT),
+            buildRelationshipsTemplateTaskDescriptor(".operation6", "", 5, 6, hostId),
+            buildRelationshipsTemplateTaskDescriptor(".operation7", "result6_value", 5, 7, CLOUDIFY_MANAGEMENT),
+        };
+
+        final AtomicInteger currentIndex = new AtomicInteger(0);
+        final TaskReceivedListener listener = new TaskReceivedListener() {
+
+            public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                for (TaskDescriptor descriptor : descriptors) {
+                    if (taskName.endsWith(descriptor.endsWith)) {
+                        boolean valid = true;
+                        for (Map.Entry<String, String> entry : descriptor.expectedInArgs.entrySet()) {
+                            if (!entry.getValue().equals(kwargs.get(entry.getKey()))) {
+                                valid = false;
+                            }
+                        }
+                        for (String notExpected : descriptor.notExpectedInArgs) {
+                            if (kwargs.containsKey(notExpected)) {
+                                valid = false;
+                            }
+                        }
+                        if (!target.equals(descriptor.expectedTarget)) {
+                            valid = false;
+                        }
+                        if (descriptor.expectedIndex != currentIndex.get()) {
+                            valid = false;
+                        }
+                        if (valid) {
+                            descriptor.latch.countDown();
+                        }
+                        currentIndex.incrementAndGet();
+                        return descriptor.result;
+                    }
+                }
+
+                // For verify_plugin
+                return "True";
+            }
+        };
+
+        worker.addListener(CLOUDIFY_MANAGEMENT, listener);
+        worker.addListener(hostId, listener);
+
+        reachable(hostId);
+        reachable(webServerId);
+
+        ruoteRuntime.waitForWorkflow(wfid);
+
+        for (TaskDescriptor taskDescriptor : descriptors) {
+            taskDescriptor.latch.await();
+        }
+    }
+
+    @Test(timeOut = 60000)
+    public void testExecuteOperationFailure() {
+        String radial = "define workflow\n" +
+                "  execute_operation operation: 'op'";
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, ruoteRuntime);
+        Map<String, Object> plugin = Maps.newHashMap();
+        plugin.put("agent_plugin", "true");
+        Map<String, Object> plugins = Maps.newHashMap();
+        plugins.put("plugin", plugin);
+        Map<String, Object> operations = Maps.newHashMap();
+        operations.put("op", "plugin");
+        Map<String, Object> node = Maps.newHashMap();
+        node.put("id", "id");
+        node.put("host_id", "host");
+        node.put("operations", operations);
+        node.put("plugins", plugins);
+        node.put("properties", Maps.newHashMap());
+        Map<String, Object> fields = Maps.newHashMap();
+        fields.put("node", node);
+
+
+        final AtomicInteger counter = new AtomicInteger(0);
+        TaskReceivedListener listener = new TaskReceivedListener() {
+            @Override
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                System.out.println(
+                        "-- " + counter.get() + " received task: " + target + ", " + taskName + ", " + kwargs);
+                if (taskName.contains("verify_plugin")) {
+                    if (counter.get() < 2) {
+                        counter.incrementAndGet();
+                        return "False";
+                    }
+                }
+                return "True";
+            }
+        };
+
+        worker.addListener("host", listener);
+
+        Object wfid = workflow.asyncExecute(fields);
+        ruoteRuntime.waitForWorkflow(wfid);
+    }
+
+    @Test(timeOut = 30000)
     public void testExecuteOperation() throws InterruptedException {
         final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
         final String machineId = "plugins_template.host_template";
@@ -378,6 +624,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks";
         final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host_provisioner.tasks";
         final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks";
+
+        reachable("plugins_template.server_template");
 
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("dsl", Resources.getResource(dslFile).getFile());
@@ -411,12 +659,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     }
                     latch.countDown();
                     executedTasks.add(taskName);
+                    return taskName.contains("verify_plugin") ? "True" : "False";
                 } else if (taskName.startsWith(remoteTaskPrefix)) {
                     assertThat(target).isEqualTo(remotePluginTarget);
                     assertThat(executedTasksCount).isEqualTo(1);
                     assertThat(taskName).endsWith(".provision");
                     latch.countDown();
                     executedTasks.add(taskName);
+                    // in this stage make the host reachable so its dependent nodes would start firing tasks.
+                    reachable(machineId);
                 } else if (taskName.startsWith(agentTaskPrefix)) {
                     assertThat(target).isEqualTo(machineId);
                     assertThat(executedTasksCount).isIn(3, 5);
@@ -436,7 +687,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         worker.addListener(remotePluginTarget, listener);
         worker.addListener(machineId, listener);
 
-        reachable(machineId);
         ruoteRuntime.waitForWorkflow(wfid);
 
         latch.await();

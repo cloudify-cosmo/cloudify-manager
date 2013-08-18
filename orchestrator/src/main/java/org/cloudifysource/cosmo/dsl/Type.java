@@ -74,15 +74,9 @@ public class Type extends InheritedDefinition {
         Type result = new Type();
         result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
-        result.inheritPoliciesFrom(typedParent);
-        result.inheritPoliciesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
         return result;
-    }
-
-    protected void inheritPoliciesFrom(Type other) {
-        policies.putAll(other.getPolicies());
     }
 
     protected void inheritPropertiesFrom(Type other) {
@@ -111,6 +105,7 @@ public class Type extends InheritedDefinition {
             newInterfaces.add(interfaceDescription.toInterfaceRep());
         }
         setInterfaces(newInterfaces);
+        policies.putAll(other.getPolicies());
     }
 
     private Optional<InterfaceDescription> findInterface(List<InterfaceDescription> interfacesDescriptions,

@@ -81,16 +81,18 @@ public class DSLProcessor {
                     definitions.getRelationships());
 
             Map<String, ServiceTemplate> populatedServiceTemplates =
-                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
+                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes);
 
             Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
             validatePlans(nodeTemplates, definitions, populatedTypes);
             validatePolicies(nodeTemplates, definitions.getPolicies());
+            validateRelationships(nodeTemplates, populatedRelationships);
 
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
                     populatedServiceTemplates,
-                    populatedArtifacts);
+                    populatedArtifacts,
+                    populatedRelationships);
 
             if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
                 String globalPlanResourcePath = definitions.getGlobalPlan();
@@ -109,6 +111,24 @@ public class DSLProcessor {
 
         } catch (IOException e) {
             throw Throwables.propagate(e);
+        }
+    }
+
+    private static void validateRelationships(Map<String, TypeTemplate> nodeTemplates,
+                                              Map<String, Relationship> populatedRelationships) {
+        for (Map.Entry<String, TypeTemplate> templateEntry : nodeTemplates.entrySet()) {
+            String typeTemplateName = templateEntry.getKey();
+            TypeTemplate template = templateEntry.getValue();
+            String serviceTemplate = typeTemplateName.split("\\.")[0];
+            for (RelationshipTemplate relationshipTemplate : template.getRelationships()) {
+                String targetName = String.format("%s.%s", serviceTemplate, relationshipTemplate.getTarget());
+                Preconditions.checkArgument(populatedRelationships.containsKey(relationshipTemplate.getType()),
+                                            "No relationship of type [%s] found for node [%s]",
+                                            relationshipTemplate.getType(), template.getName());
+                Preconditions.checkArgument(nodeTemplates.containsKey(targetName),
+                        "No node template [%s] found for relationship [%s] in node [%s]",
+                        targetName, relationshipTemplate.getType(), typeTemplateName);
+            }
         }
     }
 
@@ -159,8 +179,7 @@ public class DSLProcessor {
 
     private static Map<String, ServiceTemplate> buildPopulatedServiceTemplatesMap(
             Definitions definitions,
-            Map<String, Type> populatedTypes,
-            Map<String, Relationship> populatedRelationships) {
+            Map<String, Type> populatedTypes) {
         final Map<String, ServiceTemplate> populatedServiceTemplates = Maps.newHashMap();
         for (Map.Entry<String, ServiceTemplate> entry : definitions.getServiceTemplates().entrySet()) {
 
@@ -169,8 +188,7 @@ public class DSLProcessor {
 
             Map<String, TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
                     serviceTemplate.getTopology(),
-                    populatedTypes,
-                    populatedRelationships);
+                    populatedTypes);
 
             ServiceTemplate populatedServiceTemplate = new ServiceTemplate();
             populatedServiceTemplate.setName(serviceTemplate.getName());
@@ -184,8 +202,7 @@ public class DSLProcessor {
 
     private static Map<String, TypeTemplate> buildPopulatedTypeTemplatesMap(
             Map<String, TypeTemplate> topology,
-            Map<String, Type> populatedTypes,
-            Map<String, Relationship> populatedRelationships) {
+            Map<String, Type> populatedTypes) {
         final Map<String, TypeTemplate> populatedTemplates = Maps.newHashMap();
         for (Map.Entry<String, TypeTemplate> entry : topology.entrySet()) {
             String templateName = entry.getKey();
