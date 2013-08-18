@@ -2,8 +2,8 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "host.provisioner"
-        - "middleware_component.installer"
+        - "host_provisioner"
+        - "middleware_component_installer"
 
     service_templates:
 
@@ -21,12 +21,12 @@ definitions:
                         - type: "cloudify.tosca.relationships.contained_in"
                           target: "host"
                           execution_list:
-                            - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation1: "result1"
-                            - target.cloudify.tosca.artifacts.plugin.host.provisioner.operation2: "result2"
-                            - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation3
+                            - source.cloudify.tosca.artifacts.plugin.middleware_component_installer.operation1: "result1"
+                            - target.cloudify.tosca.artifacts.plugin.host_provisioner.operation2: "result2"
+                            - source.cloudify.tosca.artifacts.plugin.middleware_component_installer.operation3
                             - target.pause: "result3"
                           late_execution_list:
-                             - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation4: "result4"
-                             - target.cloudify.tosca.artifacts.plugin.host.provisioner.operation5: "result5"
-                             - source.cloudify.tosca.artifacts.plugin.middleware_component.installer.operation6
-                             - target.cloudify.tosca.artifacts.plugin.host.provisioner.operation7: "result6"
+                             - source.cloudify.tosca.artifacts.plugin.middleware_component_installer.operation4: "result4"
+                             - target.cloudify.tosca.artifacts.plugin.host_provisioner.operation5: "result5"
+                             - source.cloudify.tosca.artifacts.plugin.middleware_component_installer.operation6
+                             - target.cloudify.tosca.artifacts.plugin.host_provisioner.operation7: "result6"

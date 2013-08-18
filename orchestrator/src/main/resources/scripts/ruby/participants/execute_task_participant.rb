@@ -166,7 +166,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
           if workitem.params.has_key? RESULT_WORKITEM_FIELD
             result_field = workitem.params[RESULT_WORKITEM_FIELD]
-            workitem.fields[result_field] = fix_task_result(event_data[EVENT_RESULT]) unless result_field.empty?
+            workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
           end
           unless TASK_TO_FILTER.include? full_task_name
             $user_logger.debug(green(description))

@@ -409,25 +409,25 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         {
             {
                 CLOUDIFY_MANAGEMENT,
-                "cosmo.test.host.provisioner2.tasks.provision",
+                "cosmo.test_host_provisioner2.tasks.provision",
                 host2Id,
                 new CountDownLatch(1)
             },
             {
                 host1Id,
-                "cosmo.test.host.provisioner.tasks.provision",
+                "cosmo.test_host_provisioner.tasks.provision",
                 host1Id,
                 new CountDownLatch(1)
             },
             {
                 host1Id,
-                "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks.install",
+                "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks.install",
                 webServerId,
                 new CountDownLatch(1)
             },
             {
                 host1Id,
-                "cosmo.cloudify.tosca.artifacts.plugin.app_module.installer.tasks.deploy",
+                "cosmo.cloudify.tosca.artifacts.plugin.app_module_installer.tasks.deploy",
                 webApplicationId,
                 new CountDownLatch(1)
             }
