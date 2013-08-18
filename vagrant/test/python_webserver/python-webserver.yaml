@@ -2,8 +2,8 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "vagrant.host_provisioner"
-        - "python-webserver-installer.yaml"
+        - "vagrant_host_provisioner"
+        - "python_webserver_installer.yaml"
 
     service_templates:
         simple_web_server:
@@ -43,6 +43,7 @@ definitions:
                                     properties:
                                         service: "vagrant machine status"
                                         state: "running"
+                            message: "Vagrant host is running"
                         failure_detection_policy:
                             rules:
                                 host_state:
@@ -50,6 +51,7 @@ definitions:
                                     properties:
                                         service: "vagrant machine status"
                                         state: "running"
+                            message: "Vagrant host failed"
                         performance_policy:
                             rules:
                                 host_state:
@@ -57,6 +59,8 @@ definitions:
                                     properties:
                                         service: "vagrant machine bytes/sec"
                                         metric: "500.0"
+                            message: "vagrant machine bytes/sec crossed below a threshold of 500.0 with a value of
+                                                        ${metric.value}
 
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
