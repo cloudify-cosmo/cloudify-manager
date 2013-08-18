@@ -22,7 +22,7 @@ import shutil
 import subprocess
 from subprocess import check_call as call
 from subprocess import CalledProcessError
-from cosmo.celery import celery
+from cosmo.celery import celery, get_management_ip
 
 CELERY_TASKS_PATH = "/home/vagrant/cosmo"
 
@@ -43,6 +43,11 @@ def install(plugin, **kwargs):
     """
     name = plugin["name"]
     url = plugin["url"]
+
+    management_ip = get_management_ip()
+
+    if management_ip != None:
+        url = url.replace("${plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
     extract = None
     plugin_file = None
