@@ -34,9 +34,9 @@ class ExecuteTaskParticipant < Ruote::Participant
   NODE = 'node'
   NODE_ID = '__cloudify_id'
 
-  RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.riemann.config_loader.tasks.reload_riemann_config'
-  VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks.verify_plugin'
-  RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.celery_worker.installer.tasks.restart'
+  RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.riemann_config_loader.tasks.reload_riemann_config'
+  VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin'
+  RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.worker_installer.tasks.restart'
 
   TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME, RESTART_CELERY_WORKER_TASK_NAME]
 

@@ -3,7 +3,7 @@ definitions:
     imports:
         - "cloudify.types"
         - "simple-webserver-installer.yaml"
-        - "vagrant-host-provisioner.yaml"
+        - "vagrant-host_provisioner.yaml"
 
     service_templates:
         simple_web_server:

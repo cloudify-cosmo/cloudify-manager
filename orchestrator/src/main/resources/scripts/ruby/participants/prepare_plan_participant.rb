@@ -22,7 +22,7 @@ class PreparePlanParticipant < Ruote::Participant
 
   DSL = 'dsl'
   HOST_TYPE = 'cloudify.tosca.types.host'
-  PLUGIN_INSTALLER_PLUGIN = 'cloudify.tosca.artifacts.plugin.plugin_installer.installer'
+  PLUGIN_INSTALLER_PLUGIN = 'cloudify.tosca.artifacts.plugin.plugin_installer'
   NODE = 'node'
   RUNTIME = 'cloudify_runtime'
   PROPERTIES = 'properties'
