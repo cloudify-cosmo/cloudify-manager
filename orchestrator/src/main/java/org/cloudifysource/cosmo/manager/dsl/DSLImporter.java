@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.manager.dsl;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import org.cloudifysource.cosmo.dsl.packaging.DSLPackageProcessor;
 import org.cloudifysource.cosmo.utils.Archive;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 
@@ -69,6 +70,10 @@ public class DSLImporter {
      * @return Location to the dsl file.
      */
     public String importDSL(Path dslPath) throws IOException {
+        File dslFile = dslPath.toFile();
+        if (dslFile.isDirectory()) {
+            dslPath = DSLPackageProcessor.getDSLMainFile(dslFile);
+        }
         return copyDSLFiles(dslPath);
     }
 
@@ -104,7 +109,10 @@ public class DSLImporter {
 
     private void copyPlugins(Path pluginsPath) throws IOException {
 
-        String[] plugins = pluginsPath.toFile().list(new FilenameFilter() {
+        File pluginsDirectory = pluginsPath.toFile();
+        if (!pluginsDirectory.exists())
+            return;
+        String[] plugins = pluginsDirectory.list(new FilenameFilter() {
 
             @Override
             public boolean accept(File dir, String name) {
