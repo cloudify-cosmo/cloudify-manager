@@ -33,7 +33,7 @@ def start(__cloudify_id, db_name='pickle', db_data={}, **kwargs):
     for key, value in db_data.iteritems():
     	db.set(key, value)
     db.dump()
-    send_event(__cloudify_id, "10.0.0.5", "pickle db status", "running")
+    send_event(__cloudify_id, "10.0.0.5", "pickle db status", "state", "running")
 
 
 @celery.task

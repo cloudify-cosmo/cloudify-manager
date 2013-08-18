@@ -27,7 +27,7 @@ def deploy(**kwargs):
 
 @celery.task
 def start(__cloudify_id, **kwargs):
-    send_event(__cloudify_id, "10.0.0.5", "flask app status", "running")
+    send_event(__cloudify_id, "10.0.0.5", "flask app status", "state", "running")
 
 
 @celery.task
