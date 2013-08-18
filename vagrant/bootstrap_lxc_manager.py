@@ -26,7 +26,6 @@ from retrying import retry
 import timeout_decorator
 
 USER_HOME = expanduser('~')
-JAVA_OPTS = "-Xms512m -Xmx1024m -XX:PermSize=128m"
 
 
 class VagrantLxcBoot:
@@ -174,9 +173,9 @@ then
 else
         ARGS="$@"
         export VAGRANT_DEFAULT_PROVIDER=lxc
-        java -Xms512m -Xmx1024m -XX:PermSize=128m -Dlog4j.configuration=file:///home/vagrant/cosmo-work/log4j.properties -jar /home/vagrant/cosmo-work/cosmo.jar $ARGS
+        java -Xms512m -Xmx1024m -XX:PermSize=128m -Dlog4j.configuration=file://{0}/log4j.properties -jar {0}/cosmo.jar $ARGS
 fi
-""".format(JAVA_OPTS, self.working_dir)
+""".format(self.working_dir)
 
         get_cosmo = "https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/" \
                     ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + self.cosmo_version + "/" + self\
