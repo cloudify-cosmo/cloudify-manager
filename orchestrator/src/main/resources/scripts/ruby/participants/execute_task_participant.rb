@@ -116,7 +116,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       # we should enrich the event even further.
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
-        parts = [node['id'].split('.')]
+        parts = node['id'].split('.')
         enriched_event['node_id'] = parts[1]
         enriched_event['app_id'] = parts[0]
       end
