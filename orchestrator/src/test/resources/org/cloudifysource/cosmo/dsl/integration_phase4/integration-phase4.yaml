@@ -2,10 +2,10 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "vagrant.host.provisioner"
-        - "pickle-db-installer.yaml"
-        - "flask-installer.yaml"
-        - "flask-app-installer.yaml"
+        - "vagrant_host_provisioner"
+        - "pickle_db_installer.yaml"
+        - "flask_installer.yaml"
+        - "flask_app_installer.yaml"
 
     service_templates:
         phase4:
@@ -48,7 +48,7 @@ definitions:
                 pickle_db:
                     type: "cloudify.tosca.types.db_server"
                     interfaces:
-                        - cloudify.tosca.interfaces.middleware_component.installer: "cloudify.tosca.artifacts.plugin.pickledb.installer"
+                        - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.tosca.artifacts.plugin.pickledb_installer"
                     properties:
                         db_name: "phase4"
                         db_data:
@@ -68,7 +68,7 @@ definitions:
                 flask:
                     type: "cloudify.tosca.types.web_server"
                     interfaces:
-                        - cloudify.tosca.interfaces.middleware_component.installer: "cloudify.tosca.artifacts.plugin.flask.installer"
+                        - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.tosca.artifacts.plugin.flask_installer"
                     policies:
                         start_detection_policy:
                             rules:
@@ -99,9 +99,9 @@ definitions:
                         -   type: "cloudify.tosca.relationships.contained_in"
                             target: "flask"
                             execution_list:
-                                - target.cloudify.tosca.artifacts.plugin.flask.installer.deploy_application
+                                - target.cloudify.tosca.artifacts.plugin.flask_installer.deploy_application
                         -   type: "cloudify.tosca.relationships.connected_to"
                             target: "pickle_db"
                             late_execution_list:
-                                - target.cloudify.tosca.artifacts.plugin.pickledb.installer.get_db_file_location: "db_file"
-                                - source.cloudify.tosca.artifacts.plugin.flask_app.installer.set_db_properties
+                                - target.cloudify.tosca.artifacts.plugin.pickledb_installer.get_db_file_location: "db_file"
+                                - source.cloudify.tosca.artifacts.plugin.flask_app_installer.set_db_properties
