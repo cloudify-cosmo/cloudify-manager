@@ -49,7 +49,7 @@ public class DSLImporterTest extends AbstractTestNGSpringContextTests {
 
     private static final String EXPECTED_PLUGIN_NAME = "python_webserver_installer.zip";
     private static final String EXPECTED_RELATIVE_DSL_PATH = "integration_phase3/integration-phase3.yaml";
-    private static final String EXPECTED_RELATIVE_DSL_NO_PLUGINS_PATH = "noplugins/integration-phase3.yaml";
+    private static final String EXPECTED_RELATIVE_DSL_NO_PLUGINS_PATH = "noplugins/simple-dsl.yaml";
 
     /**
      * Test Config.
