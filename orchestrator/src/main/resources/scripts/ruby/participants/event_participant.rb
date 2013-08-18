@@ -1,6 +1,7 @@
 class EventParticipant < Ruote::Participant
 
-  MESSAGE = 'message'
+  NODE = 'node'
+  EVENT = 'event'
 
   def do_not_thread
     true
@@ -9,13 +10,22 @@ class EventParticipant < Ruote::Participant
   def on_workitem
     begin
 
-      raise 'message not set' unless workitem.params.has_key? 'message'
-      raise 'host_id not set' unless workitem.params.has_key? 'host_id'
-      message = workitem.params['message']
-      host_id = workitem.params['host_id']
-      workflow_name = workitem.wf_name
+      raise 'event not set' unless workitem.params.has_key? EVENT
+      event = workitem.params[EVENT]
+      workflow_name = workitem.sub_wf_name
+      workflow_id = workitem.wfid
 
-      $user_logger.debug("#{workflow_name}-#{host_id} - {}", message)
+      event['workflow_id'] = workflow_id
+      event['workflow_name'] = workflow_name
+
+      if workitem.fields.has_key? NODE
+        node = workitem.fields[NODE]
+        parts = node['id'].split('.')
+        event['node'] = parts[1]
+        event['app'] = parts[0]
+      end
+
+      $user_logger.debug("[workflow] - #{event}")
 
       reply(workitem)
 
