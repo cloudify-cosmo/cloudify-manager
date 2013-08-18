@@ -2,7 +2,7 @@ definitions:
 
   imports:
     - "cloudify.types"
-    - "host.provisioner"
+    - "host_provisioner"
     - "dsl-with-global-plan-invalid-double-import-imported.yaml"
 
   service_templates:

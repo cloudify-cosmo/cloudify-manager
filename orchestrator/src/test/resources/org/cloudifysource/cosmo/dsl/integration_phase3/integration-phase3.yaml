@@ -2,8 +2,8 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "vagrant.host.provisioner"
-        - "python-webserver-installer.yaml"
+        - "vagrant_host_provisioner"
+        - "python_webserver_installer.yaml"
 
     service_templates:
         simple_web_server:
@@ -21,6 +21,7 @@ definitions:
                         worker_config:
                             user: 'vagrant'
                             port: '22'
+                            management_ip: "10.0.0.1"
                             key: '~/.vagrant.d/insecure_private_key'
                             broker: 'amqp://guest:guest@10.0.0.1:5672//'
                     policies:

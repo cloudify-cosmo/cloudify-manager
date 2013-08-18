@@ -3,9 +3,9 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "app_module.installer"
-        - "host.provisioner"
-        - "middleware_component.installer"
+        - "app_module_installer"
+        - "host_provisioner"
+        - "middleware_component_installer"
 
     types:
         some_custom_type:

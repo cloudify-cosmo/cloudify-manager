@@ -1,7 +1,7 @@
 define execute_operation
     prepare_operation operation: "${v:operation}"
 
-    set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks.verify_plugin"
+    set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin"
     execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
         properties: {
             worker_id: "${worker_id}",

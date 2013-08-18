@@ -16,16 +16,16 @@ definitions:
         # A host (physical / virtual or LXC) in a topology
         cloudify.tosca.types.host:
             interfaces:
-                - "cloudify.tosca.interfaces.host.provisioner"
-                - "cloudify.tosca.interfaces.worker.installer"
-                - "cloudify.tosca.interfaces.worker.plugin_installer"
+                - "cloudify.tosca.interfaces.host_provisioner"
+                - "cloudify.tosca.interfaces.worker_installer"
+                - "cloudify.tosca.interfaces.plugin_installer"
             properties:
                 install_agent: 'false'
 
         # A middleware component in a topology
         cloudify.tosca.types.middleware_server:
             interfaces:
-                - "cloudify.tosca.interfaces.middleware_component.installer"
+                - "cloudify.tosca.interfaces.middleware_component_installer"
 
         cloudify.tosca.types.db_server:
             derived_from: "cloudify.tosca.types.middleware_server"
@@ -36,7 +36,7 @@ definitions:
         # An application artifact to deploy
         cloudify.tosca.types.app_module:
             interfaces:
-                - "cloudify.tosca.interfaces.app_module.installer"
+                - "cloudify.tosca.interfaces.app_module_installer"
 
 
     ##################################################################################
@@ -59,7 +59,7 @@ definitions:
     interfaces:
 
         # provision and manage host lifecycle
-        cloudify.tosca.interfaces.host.provisioner:
+        cloudify.tosca.interfaces.host_provisioner:
             operations:
                 - "provision"
                 - "terminate"
@@ -68,7 +68,7 @@ definitions:
                 - "restart"
 
         # installs middleware components
-        cloudify.tosca.interfaces.middleware_component.installer:
+        cloudify.tosca.interfaces.middleware_component_installer:
             operations:
                 - "install"
                 - "uninstall"
@@ -76,7 +76,7 @@ definitions:
                 - "stop"
                 - "restart"
 
-        cloudify.tosca.interfaces.app_module.installer:
+        cloudify.tosca.interfaces.app_module_installer:
             operations:
                 - "deploy"
                 - "undeploy"
@@ -84,13 +84,13 @@ definitions:
                 - "start"
 
         # start and manage celery worker lifecycle
-        cloudify.tosca.interfaces.worker.installer:
+        cloudify.tosca.interfaces.worker_installer:
             operations:
                 - "install"
                 - "restart"
 
         # installs plugins on the agent host
-        cloudify.tosca.interfaces.worker.plugin_installer:
+        cloudify.tosca.interfaces.plugin_installer:
             operations:
                 - "install"
 
@@ -108,16 +108,16 @@ definitions:
                       given
                         that '${node.properties.install_agent} == true'
                           state resource_id: '${node.id}', state: { reachable: "true" }
-                          execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.install'
+                          execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.install'
                           iterator on: '$node.plugins_to_install', to_v: 'plugin'
                             log message: 'installing plugin: ${v:plugin.name}'
-                            execute_operation operation: 'cloudify.tosca.interfaces.worker.plugin_installer.install', params: {
+                            execute_operation operation: 'cloudify.tosca.interfaces.plugin_installer.install', params: {
                               plugin: {
                                 name: '${v:plugin.name}',
                                 url: '${v:plugin.url}'
                               }
                             }
-                          execute_operation operation: 'cloudify.tosca.interfaces.worker.installer.restart'
+                          execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.restart'
 
         cloudify.tosca.types.middleware_server:
             init:
