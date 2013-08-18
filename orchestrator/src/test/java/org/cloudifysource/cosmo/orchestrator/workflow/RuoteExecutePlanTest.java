@@ -115,15 +115,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
-                "cloudify.tosca.artifacts.plugin.host.provisioner",
+                "cloudify.tosca.artifacts.plugin.host_provisioner",
                 new String[]{"provision", "start"}),
             new OperationsDescriptor(
                 machineId,
-                "cloudify.tosca.artifacts.plugin.middleware_component.installer",
+                "cloudify.tosca.artifacts.plugin.middleware_component_installer",
                 new String[]{"install", "start"}),
             new OperationsDescriptor(
                 machineId,
-                "cloudify.tosca.artifacts.plugin.app_module.installer",
+                "cloudify.tosca.artifacts.plugin.app_module_installer",
                 new String[]{"deploy", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
@@ -138,15 +138,15 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                     CLOUDIFY_MANAGEMENT,
-                    "cloudify.tosca.artifacts.plugin.host.provisioner",
+                    "cloudify.tosca.artifacts.plugin.host_provisioner",
                     new String[]{"provision", "start"}),
             new OperationsDescriptor(
                     machineId,
-                    "cloudify.tosca.artifacts.plugin.middleware_component.installer",
+                    "cloudify.tosca.artifacts.plugin.middleware_component_installer",
                     new String[]{"install", "start"}),
             new OperationsDescriptor(
                     machineId,
-                    "cloudify.tosca.artifacts.plugin.app_module.installer",
+                    "cloudify.tosca.artifacts.plugin.app_module_installer",
                     new String[]{"deploy", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors, true);
@@ -259,7 +259,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-global-plan.yaml";
         OperationsDescriptor descriptor = new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
-                "cloudify.tosca.artifacts.plugin.host.provisioner",
+                "cloudify.tosca.artifacts.plugin.host_provisioner",
                 new String[]{"provision", "start", "provision", "start"});
         OperationsDescriptor[] descriptors = {descriptor};
         testPlanExecution(dslFile, null, descriptors);
@@ -621,9 +621,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
         final String machineId = "plugins_template.host_template";
         final String remotePluginTarget = "cloudify.management";
-        final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component.installer.tasks";
-        final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host.provisioner.tasks";
-        final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks";
+        final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks";
+        final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host_provisioner.tasks";
+        final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks";
 
         reachable("plugins_template.server_template");
 

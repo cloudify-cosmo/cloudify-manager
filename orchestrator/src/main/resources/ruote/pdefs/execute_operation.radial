@@ -1,7 +1,7 @@
 define execute_operation
     prepare_operation operation: "${v:operation}", target_node_id: "${v:target_node_id}"
 
-    set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.installer.tasks.verify_plugin"
+    set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin"
     repeat
         log message: 'verifying plugin: ${plugin_name} is installed on target: ${target}'
         execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
