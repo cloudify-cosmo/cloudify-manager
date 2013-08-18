@@ -645,8 +645,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         TaskReceivedListener listener = new TaskReceivedListener() {
             @Override
             public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                System.out.println("-- executing " + target + " -> " + taskName + " :: " + kwargs);
-                System.out.println("-- executed tasks: " + executedTasks);
                 final int executedTasksCount = executedTasks.size();
                 if (taskName.startsWith(pluginInstallerPrefix)) {
                     assertThat(kwargs).containsKey("plugin_name");

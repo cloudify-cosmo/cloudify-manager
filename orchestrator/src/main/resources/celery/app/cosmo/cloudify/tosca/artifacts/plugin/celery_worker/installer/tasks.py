@@ -130,8 +130,7 @@ CELERYD_OPTS="\
 -Q %(node_id)s \
 --broker=%(broker_url)s \
 --hostname=%(node_id)s"''' % dict(user=user,
-                                   workdir=workdir,
-                                   app=app,
-                                   node_id=node_id,
-                                   broker_url=broker_url)
-
+                                  workdir=workdir,
+                                  app=app,
+                                  node_id=node_id,
+                                  broker_url=broker_url)

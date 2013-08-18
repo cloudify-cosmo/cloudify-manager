@@ -40,6 +40,11 @@ public class RuoteRuntime {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RuoteRuntime.class);
 
+    /**
+     * This logger is intended for logging high level events and prettifying them to the console.
+     */
+    private static final Logger USER_OUTPUT_LOGGER = LoggerFactory.getLogger("COSMO");
+
     private static final String CREATE_DASHBOARD_METHOD_NAME = "create_dashboard";
     private static final String EXECUTE_WORKFLOW_METHOD_NAME = "execute_ruote_workflow";
     private static final String WAIT_FOR_WORKFLOW_METHOD_NAME = "wait_for_workflow";
@@ -75,6 +80,7 @@ public class RuoteRuntime {
             updateLibraryPath(container, "scripts", rubyClassLoader);
             container.put("$ruote_properties", globalProperties != null ? globalProperties : Maps.newHashMap());
             container.put("$logger", LOGGER);
+            container.put("$user_logger", USER_OUTPUT_LOGGER);
             final Object receiver = container.runScriptlet(PathType.CLASSPATH, RUOTE_SCRIPT);
             final Object dashboard =
                     container.callMethod(receiver, CREATE_DASHBOARD_METHOD_NAME, dashboardVariables);

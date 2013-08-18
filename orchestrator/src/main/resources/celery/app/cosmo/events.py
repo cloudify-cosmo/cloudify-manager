@@ -18,12 +18,12 @@ import bernhard
 import os
 
 
-def send_event(node_id, host, service, state):
+def send_event(node_id, host, service, type, value):
     client = bernhard.Client(host=_get_management_ip())
     event = {
         'host': host,
         'service': service,
-        'state': state,
+        type: value,
         'tags': ['name={0}'.format(node_id)]
     }
     try:
@@ -37,5 +37,4 @@ def _get_management_ip():
 
 
 def test():
-    send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'running')
-
+    send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'state', 'running')

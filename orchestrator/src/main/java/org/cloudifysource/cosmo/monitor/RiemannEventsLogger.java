@@ -91,10 +91,11 @@ public class RiemannEventsLogger {
                         return;
                     }
                     Preconditions.checkNotNull(event.getHost(), "RiemannEvent host field cannot be null");
-                    logger.debug("[event] host={}, service={}, state={}, description={}",
+                    logger.debug("[event] host={}, service={}, state={}, metric={}, description={}",
                             event.getHost(),
                             event.getService(),
                             event.getState(),
+                            event.getMetric(),
                             event.getDescription());
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);
