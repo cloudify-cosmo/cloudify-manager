@@ -90,6 +90,19 @@ definitions:
                                         state: "host_state"
                                         value: "terminated"
 
+                3rd_template_with_overriden_policy_message:
+                    type: "2nd_type_with_policy"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_not_equals"
+                                    properties:
+                                        state: "host_state"
+                                        value: "terminated"
+                            # override
+                            message: "override message"
+
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
