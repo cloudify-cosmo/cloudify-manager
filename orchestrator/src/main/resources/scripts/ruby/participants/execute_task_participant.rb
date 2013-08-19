@@ -175,7 +175,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
         when 'task-failed' || 'task-revoked'
 
-          if full_task_name == RELOAD_RIEMANN_CONFIG_TASK_NAME || full_task_name == RESTART_CELERY_WORKER_TASK_NAME
+          unless full_task_name == VERIFY_PLUGIN_TASK_NAME
             $user_logger.debug(red(description))
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
