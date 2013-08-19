@@ -16,9 +16,10 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.Maps;
 
-import java.util.Map;
+import com.google.common.collect.Lists;
+
+import java.util.List;
 
 /**
  * A class used to represent a type template.
@@ -28,13 +29,13 @@ import java.util.Map;
 */
 public class TypeTemplate extends Type {
 
-    private Map<String, Object> relationships = Maps.newHashMap();
+    private List<RelationshipTemplate> relationships = Lists.newArrayList();
 
-    public Map<String, Object> getRelationships() {
+    public List<RelationshipTemplate> getRelationships() {
         return relationships;
     }
 
-    public void setRelationships(Map<String, Object> relationships) {
+    public void setRelationships(List<RelationshipTemplate> relationships) {
         this.relationships = relationships;
     }
 
@@ -52,8 +53,6 @@ public class TypeTemplate extends Type {
         TypeTemplate result = new TypeTemplate();
         result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
-        result.inheritPoliciesFrom(typedParent);
-        result.inheritPoliciesFrom(this);
         result.setName(getName());
         result.setSuperTypes(parent);
         return result;
@@ -61,6 +60,6 @@ public class TypeTemplate extends Type {
 
     protected void inheritPropertiesFrom(TypeTemplate other) {
         super.inheritPropertiesFrom(other);
-        relationships.putAll(other.getRelationships());
+        relationships.addAll(other.getRelationships());
     }
 }

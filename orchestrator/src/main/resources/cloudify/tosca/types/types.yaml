@@ -13,6 +13,9 @@ definitions:
     ##################################################################################
     types:
 
+        # A tier in a topology
+        cloudify.tosca.types.tier: { }
+
         # A host (physical / virtual or LXC) in a topology
         cloudify.tosca.types.host:
             interfaces:
@@ -44,12 +47,23 @@ definitions:
     ##################################################################################
     relationships:
 
-        cloudify.tosca.relationships.depends_on: { }
+        cloudify.tosca.relationships.depends_on:
+            workflow: |
+              define relationship_workflow
+                log message: 'relationship workflow: node[${node.id}], list[${v:execution_list}]'
+                iterator on: '$v:execution_list', to_v: 'executed'
+                  log message: 'relationship workflow item: node[${node.id}], item[${v:executed.operation}]'
+                  collect_params names: '$node.execution_params_names',
+                                 to_f: 'execution_params'
+                  execute_operation operation: '${v:executed.operation}',
+                                    target_node_id: '${v:target_node_id}',
+                                    to_f: '${v:executed.output_field}',
+                                    params: '$f:execution_params'
 
-        cloudify.tosca.relationships.hosted_on:
+        cloudify.tosca.relationships.connected_to:
             derived_from: "cloudify.tosca.relationships.depends_on"
 
-        cloudify.tosca.relationships.deployed_on:
+        cloudify.tosca.relationships.contained_in:
             derived_from: "cloudify.tosca.relationships.depends_on"
 
 
@@ -109,16 +123,20 @@ definitions:
                         that '${node.properties.install_agent} == true'
                           event event: { "stage" => "Installing agent" }
                           state resource_id: '${node.id}', state: { reachable: "true" }
+                          log message: 'installing agent on host: ${node.id}'
                           execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.install'
                           event event: { "stage" => "Installing plugins" }
+                          log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
                           iterator on: '$node.plugins_to_install', to_v: 'plugin'
-                            log message: 'installing plugin: ${v:plugin.name}'
+                            log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
                             execute_operation operation: 'cloudify.tosca.interfaces.plugin_installer.install', params: {
                               plugin: {
                                 name: '${v:plugin.name}',
                                 url: '${v:plugin.url}'
-                              }
+                               }
                             }
+                            log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
+                          log message: 'restarting worker on host: ${node.id}'
                           execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.restart'
 
         cloudify.tosca.types.middleware_server:
