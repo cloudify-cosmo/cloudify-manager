@@ -160,7 +160,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
         when 'task-failed' || 'task-revoked'
 
-          unless TASK_TO_FILTER.include? full_task_name
+          if full_task_name == RELOAD_RIEMANN_CONFIG_TASK_NAME || full_task_name == RESTART_CELERY_WORKER_TASK_NAME
             $user_logger.debug(red(description))
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
@@ -180,6 +180,7 @@ class ExecuteTaskParticipant < Ruote::Participant
                  'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
     unless event['exception'].nil?
       new_event['error'] = event['exception']
+      new_event['trace'] = event['traceback']
     end
 
     "[#{event['type']}] - #{new_event}"
