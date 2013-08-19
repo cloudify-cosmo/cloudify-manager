@@ -49,7 +49,7 @@ def install(plugin, **kwargs):
     management_ip = get_management_ip()
 
     if management_ip != None:
-        url = url.replace("${plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
+        url = url.replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
     extract = None
     plugin_file = None

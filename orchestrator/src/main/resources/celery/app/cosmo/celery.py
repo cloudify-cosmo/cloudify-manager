@@ -1,6 +1,3 @@
-import os
-import cosmo
-
 from __future__ import absolute_import
 
 from celery import Celery
@@ -14,10 +11,11 @@ celery.conf.update(
     CELERY_TASK_SERIALIZER="json"
 )
 
+# Management machine, this is here as a work around due to import error because the plugin_installer is installed on
+# management machine even though it doesn't need this. we should remove this once the plugin_installer wouldn't be
+# installed on the management celery worker.
+def get_management_ip():
+    return "localhost"
+
 if __name__ == '__main__':
     celery.start()
-
-def get_management_ip():
-    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'management-ip.txt')
-    with open(file_path, 'r') as f:
-        return f.readlines()[0]
