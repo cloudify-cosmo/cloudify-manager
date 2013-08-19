@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.monitor.config;
 
 import org.cloudifysource.cosmo.monitor.RiemannEventsLogger;
+import org.cloudifysource.cosmo.monitor.RiemannPropertyPlaceHolderHelper;
 import org.robobninjas.riemann.json.RiemannEventObjectMapper;
 import org.robobninjas.riemann.spring.RiemannTcpClientConfiguration;
 import org.robobninjas.riemann.spring.RiemannWebsocketClientConfiguration;
@@ -35,7 +36,8 @@ import javax.inject.Inject;
 @Configuration
 @Import({
         RiemannWebsocketClientConfiguration.class,
-        RiemannTcpClientConfiguration.class
+        RiemannTcpClientConfiguration.class,
+        RiemannPropertyPlaceHolderHelperConfig.class
 })
 public class RiemannEventsLoggerConfig {
 
@@ -44,6 +46,9 @@ public class RiemannEventsLoggerConfig {
 
     @Inject
     private RiemannEventObjectMapper objectMapper;
+
+    @Inject
+    private RiemannPropertyPlaceHolderHelper propertyPlaceHolderHelper;
 
     @Value("${riemann.client.connection.number-of-connection-attempts:60}")
     int numberOfConnectionAttempts;
@@ -57,7 +62,8 @@ public class RiemannEventsLoggerConfig {
                 riemannClient,
                 objectMapper,
                 numberOfConnectionAttempts,
-                sleepBeforeConnectionAttemptMilliseconds);
+                sleepBeforeConnectionAttemptMilliseconds,
+                propertyPlaceHolderHelper);
     }
 
 }
