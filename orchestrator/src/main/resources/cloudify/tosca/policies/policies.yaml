@@ -67,7 +67,7 @@ definitions:
             #node_id will be injected with the current node id
             state_equals:
 
-                message: "state has changed to ${state.value}"
+                message: "${service} state has changed to #{state.value}"
                 rule: |
                   (changed-state
                     (where
@@ -80,7 +80,7 @@ definitions:
 
             state_not_equals:
 
-                message: "state of node $node_id has changed to ${state.value}"
+                message: "${service} has changed to #{state.value}"
                 rule: |
                   (changed-state
                     (where
@@ -93,8 +93,7 @@ definitions:
 
             metric_below:
 
-                message: "metric ${service.value} has dropped below a threshold of ${metric},
-                with a value of ${metric.value}"
+                message: "metric ${service} has dropped below a threshold of ${metric}, with a value of #{metric.value}"
                 rule: |
                   (by [:host :service]
                     (changed 

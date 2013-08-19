@@ -31,6 +31,6 @@ public class RiemannPropertyPlaceHolderHelperConfig {
 
     @Bean
     public RiemannPropertyPlaceHolderHelper riemannPropertyPlaceHolderHelper() {
-        return new RiemannPropertyPlaceHolderHelper("${", "}");
+        return new RiemannPropertyPlaceHolderHelper("#{", "}");
     }
 }

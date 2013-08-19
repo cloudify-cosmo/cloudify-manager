@@ -63,8 +63,8 @@ public class RiemannPropertyPlaceHolderHelperTest extends AbstractTestNGSpringCo
         event.setState("my_state");
         event.setMetric("50");
 
-        String original = "host=>${host.value}, service=>${service.value}, state=>${state.value}, " +
-                "metric=>${metric.value}";
+        String original = "host=>#{host.value}, service=>#{service.value}, state=>#{state.value}, " +
+                "metric=>#{metric.value}";
 
         String expected = "host=>my_host, service=>my_service, state=>my_state, " +
                 "metric=>50";
@@ -83,8 +83,8 @@ public class RiemannPropertyPlaceHolderHelperTest extends AbstractTestNGSpringCo
         event.setState("my_state");
         event.setMetric("50");
 
-        String original = "host=>${host1.value}, service=>${service1.value}, state=>${state1.value}, " +
-                "metric=>${metric1.value}";
+        String original = "host=>#{host1.value}, service=>#{service1.value}, state=>#{state1.value}, " +
+                "metric=>#{metric1.value}";
 
         String replaced = propertyPlaceHolderHelper.replace(original, event);
 
