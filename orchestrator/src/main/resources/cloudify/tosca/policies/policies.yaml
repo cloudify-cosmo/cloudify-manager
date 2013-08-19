@@ -9,7 +9,7 @@ definitions:
             # $event will be injected with a json form event
             start_detection_policy:
 
-                message: "Start detection passed"
+                message: "start detection passed"
                 policy: |
                   (fn [evnt]
                     (let [ip-event (assoc evnt :host "$node_id"
@@ -27,7 +27,7 @@ definitions:
 
             failure_detection_policy:
 
-                message: "Detected failure"
+                message: "detected failure"
                 policy: |
                   (fn [evnt]
                     (let [ip-event (assoc evnt :host "$node_id"
@@ -45,7 +45,7 @@ definitions:
 
             performance_policy:
 
-                message: "Performance monitoring"
+                message: "performance monitoring"
                 policy: |
                   (fn [evnt]
                     (let [ip-event (assoc evnt :host "$node_id"
@@ -65,6 +65,7 @@ definitions:
         rules:
             #node_policy_events will be injected with the matching policy (see above)
             #node_id will be injected with the current node id
+            #placeholders with '#' will be replaced by the real time data of the field when the policy event was sent.
             state_equals:
 
                 message: "${service} state has changed to #{state.value}"

@@ -121,14 +121,15 @@ definitions:
                       execute_operation operation: 'start'
                       given
                         that '${node.properties.install_agent} == true'
-                          event event: { "Stage" => "Installing agent" }
+                          event event: { "stage" => "Installing agent" }
                           state resource_id: '${node.id}', state: { reachable: "true" }
                           log message: 'installing agent on host: ${node.id}'
                           execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.install'
-                          event event: { "Stage" => "Installing plugins" }
+                          event event: { "stage" => "Installing plugins" }
                           log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
                           iterator on: '$node.plugins_to_install', to_v: 'plugin'
                             log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
+                            event event: { "stage" => "installing plugin: ${v:plugin.name}" }
                             execute_operation operation: 'cloudify.tosca.interfaces.plugin_installer.install', params: {
                               plugin: {
                                 name: '${v:plugin.name}',
@@ -143,18 +144,18 @@ definitions:
             init:
                 radial: |
                     define middleware_server_init
-                        event event: { "Stage" => "Installing Middleware" }
+                        event event: { "stage" => "Installing Middleware" }
                         execute_operation operation: 'install'
-                        event event: { "Stage" => "Starting Middleware" }
+                        event event: { "stage" => "Starting Middleware" }
                         execute_operation operation: 'start'
 
         cloudify.tosca.types.app_module:
             init:
                 radial: |
                     define app_module_init
-                        event event: { "Stage" => "Deploying application" }
+                        event event: { "stage" => "Deploying application" }
                         execute_operation operation: 'deploy'
-                        event event: { "Stage" => "Starting application" }
+                        event event: { "stage" => "Starting application" }
                         execute_operation operation: 'start'
 
 
