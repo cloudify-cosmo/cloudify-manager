@@ -48,7 +48,7 @@ public class RiemannEventsLoggerConfig {
     private RiemannEventObjectMapper objectMapper;
 
     @Inject
-    private RiemannPropertyPlaceHolderHelper propertyPlaceHolderHelper;
+    private RiemannPropertyPlaceHolderHelper riemannPropertyPlaceHolderHelper;
 
     @Value("${riemann.client.connection.number-of-connection-attempts:60}")
     int numberOfConnectionAttempts;
@@ -63,7 +63,7 @@ public class RiemannEventsLoggerConfig {
                 objectMapper,
                 numberOfConnectionAttempts,
                 sleepBeforeConnectionAttemptMilliseconds,
-                propertyPlaceHolderHelper);
+                riemannPropertyPlaceHolderHelper);
     }
 
 }

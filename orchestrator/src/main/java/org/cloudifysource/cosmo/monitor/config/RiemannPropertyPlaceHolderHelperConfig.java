@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Configuration;
 public class RiemannPropertyPlaceHolderHelperConfig {
 
     @Bean
-    public RiemannPropertyPlaceHolderHelper riemannEventsListener() {
+    public RiemannPropertyPlaceHolderHelper riemannPropertyPlaceHolderHelper() {
         return new RiemannPropertyPlaceHolderHelper("${", "}");
     }
 }
