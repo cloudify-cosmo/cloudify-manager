@@ -18,8 +18,6 @@ package org.cloudifysource.cosmo.dsl;
 
 import org.testng.annotations.Test;
 
-import java.util.Map;
-
 import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
@@ -38,28 +36,6 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         assertThat(policyEvent.getMessage()).isEqualTo("Start detection passed");
         assertThat(policyEvent).isNotNull();
         assertThat(policyEvent.getPolicy()).isNotEmpty();
-    }
-
-    @Test
-    public void testPolicyWithMessageOverride() {
-
-        Processed processed = process(DSL_PATH);
-        assertThat(processed.getPoliciesEvents()).isNotNull().isNotEmpty();
-        Map<String,Policy> policies =
-                processed.getPolicies().get("web_server.2nd_template_with_overridden_policy");
-    }
-
-    @Test
-    public void testDefaultPolicyMessage() {
-
-        Processed processed = process(DSL_PATH);
-        assertThat(processed.getPoliciesEvents()).isNotNull().isNotEmpty();
-        Map<String,Policy> policies =
-                processed.getPolicies().get("web_server.3rd_template_with_overriden_policy_message");
-        String message = policies.get("failure_detection_policy").getMessage();
-        assertThat(message).isEqualTo("Detected failure");
-
-
     }
 
     @Test

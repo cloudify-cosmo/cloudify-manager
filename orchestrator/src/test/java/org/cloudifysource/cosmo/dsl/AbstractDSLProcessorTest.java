@@ -187,15 +187,6 @@ public abstract class AbstractDSLProcessorTest {
      */
     public static class Policy {
         private Map<String, Rule> rules;
-        private String message;
-
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
 
         public void setRules(Map<String, Rule> rules) {
             this.rules = rules;
