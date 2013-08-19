@@ -4,7 +4,7 @@ from StringIO import StringIO
 
 from cosmo.celery import celery as celery
 from celery.utils.log import get_task_logger
-from fabric.api import settings, sudo, run, put
+from fabric.api import settings, sudo, run, put, get, hide
 import socket
 import os
 from os import path
@@ -32,6 +32,8 @@ def prepare_configuration(worker_config, cloudify_runtime):
     worker_config['app'] = 'cosmo'
 
 
+
+
 def install_celery_worker(worker_config, node_id):
     print 'worker_config=', worker_config
     print 'node_id=', node_id
@@ -41,6 +43,7 @@ def install_celery_worker(worker_config, node_id):
                   key_filename=key_filename,
                   disable_known_hosts=True):
         _install_celery(worker_config, node_id)
+        _verify_no_celery_error(worker_config)
 
 
 def restart_celery_worker(worker_config, node_id):
@@ -52,6 +55,26 @@ def restart_celery_worker(worker_config, node_id):
                   key_filename=key_filename,
                   disable_known_hosts=True):
         sudo('service celeryd restart')
+        _verify_no_celery_error(worker_config)
+
+
+def _verify_no_celery_error(worker_config):
+    user = worker_config['user']
+    home = "/home/" + user
+    celery_error_out = '{0}/celery_error.out'.format(home)
+    output = StringIO()
+    with hide('aborts', 'running', 'stdout', 'stderr'):
+        try:
+            get(celery_error_out, output)
+        except:
+            pass
+
+    # this means the celery worker had an uncaught exception and it wrote its content
+    # to the file above because of our custom exception handler (see celery.py)
+    if output.getvalue():
+        run('rm {0}'.format(celery_error_out))
+        error_content = output.getvalue()
+        raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
 
 
 def _install_celery(worker_config, node_id):
