@@ -7,8 +7,11 @@ definitions:
         types:
             # $node_id will be injected with the current node id
             # $event will be injected with a json form event
-            start_detection_policy: |
-                (fn [evnt]
+            start_detection_policy:
+
+                message: "Start detection passed"
+                policy: |
+                  (fn [evnt]
                     (let [ip-event (assoc evnt :host "$node_id"
                                                :service "ip"
                                                :state (get evnt :host)
@@ -22,8 +25,11 @@ definitions:
                                                       :tags ["cosmo"])]
                         (call-rescue reachable-event [index])))
 
-            failure_detection_policy: |
-                (fn [evnt]
+            failure_detection_policy:
+
+                message: "Detected failure"
+                policy: |
+                  (fn [evnt]
                     (let [ip-event (assoc evnt :host "$node_id"
                                                :service "ip"
                                                :state (get evnt :host)
@@ -37,8 +43,11 @@ definitions:
                                                       :tags ["cosmo"])]
                         (call-rescue reachable-event [index])))
 
-            performance_policy: |
-                (fn [evnt]
+            performance_policy:
+
+                message: "Performance monitoring"
+                policy: |
+                  (fn [evnt]
                     (let [ip-event (assoc evnt :host "$node_id"
                                                :service "ip"
                                                :state (get evnt :host)
@@ -56,28 +65,38 @@ definitions:
         rules:
             #node_policy_events will be injected with the matching policy (see above)
             #node_id will be injected with the current node id
-            state_equals: |
-                (changed-state
+            state_equals:
+
+                message: "state has changed to ${state.value}"
+                rule: |
+                  (changed-state
                     (where
                         (and
                             (service "${service}")
                             (state "${state}")
                             (tagged "name=$node_id"))
                         $node_policy_events)
-                )
+                  )
 
-            state_not_equals: |
-                (changed-state
+            state_not_equals:
+
+                message: "state of node $node_id has changed to ${state.value}"
+                rule: |
+                  (changed-state
                     (where
                         (and
                             (service "${service}")
                             (not (state "${state}"))
                             (tagged "name=$node_id"))
                         $node_policy_events)
-                )
+                  )
 
-            metric_below: |
-                (by [:host :service]
+            metric_below:
+
+                message: "metric ${service.value} has dropped below a threshold of ${metric},
+                with a value of ${metric.value}"
+                rule: |
+                  (by [:host :service]
                     (changed 
                         (fn [e]
                             (and
@@ -98,4 +117,4 @@ definitions:
                             $node_policy_events
                         )
                     )
-                )
+                  )

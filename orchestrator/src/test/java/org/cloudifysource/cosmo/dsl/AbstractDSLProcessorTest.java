@@ -71,8 +71,8 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, NodeExtra> nodesExtra;
         String globalWorkflow;
         Map<String, Map<String, Policy>> policies;
-        Map<String, String> rules;
-        private Map<String, String> policiesEvents;
+        Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
+        private Map<String, PolicyDefinition> policiesEvents;
 
         public List<Node> getNodes() {
             return nodes;
@@ -102,19 +102,19 @@ public abstract class AbstractDSLProcessorTest {
             this.policies = policies;
         }
 
-        public Map<String, String> getRules() {
+        public Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> getRules() {
             return rules;
         }
 
-        public void setRules(Map<String, String> rules) {
+        public void setRules(Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules) {
             this.rules = rules;
         }
 
-        public void setPoliciesEvents(Map<String, String> policiesEvents) {
+        public void setPoliciesEvents(Map<String, PolicyDefinition> policiesEvents) {
             this.policiesEvents = policiesEvents;
         }
 
-        public Map<String, String> getPoliciesEvents() {
+        public Map<String, PolicyDefinition> getPoliciesEvents() {
             return policiesEvents;
         }
     }
@@ -194,29 +194,6 @@ public abstract class AbstractDSLProcessorTest {
 
         public Map<String, Rule> getRules() {
             return rules;
-        }
-    }
-
-    /**
-     */
-    public static class RuleDefinition {
-        private String type;
-        private String content;
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
         }
     }
 

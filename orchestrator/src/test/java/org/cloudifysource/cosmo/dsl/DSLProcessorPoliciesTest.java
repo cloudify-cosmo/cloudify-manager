@@ -32,9 +32,10 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
     public void testPoliciesEventsDefinition() {
         Processed processed = process(DSL_PATH);
         assertThat(processed.getPoliciesEvents()).isNotNull().isNotEmpty();
-        String policyEvent = processed.getPoliciesEvents().get("start_detection_policy");
+        PolicyDefinition policyEvent = processed.getPoliciesEvents().get("start_detection_policy");
+        assertThat(policyEvent.getMessage()).isEqualTo("Start detection passed");
         assertThat(policyEvent).isNotNull();
-        assertThat(policyEvent).isNotEmpty();
+        assertThat(policyEvent.getPolicy()).isNotEmpty();
     }
 
     @Test
