@@ -93,4 +93,5 @@ definitions:
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "webserver_host"
+                        - type: "cloudify.tosca.relationships.contained_in"
+                          target: "webserver_host"

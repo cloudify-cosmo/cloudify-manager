@@ -19,6 +19,7 @@ A celery task for starting a simple http server using a python command.
 """
 
 from cosmo.celery import celery
+from cosmo.events import send_event
 import time
 import urllib2
 import os
@@ -30,7 +31,7 @@ def install(**kwargs):
 
 
 @celery.task
-def start(port=8080, **kwargs):
+def start(__cloudify_id, port=8080, **kwargs):
     os.system("nohup python -m SimpleHTTPServer {0} &".format(port))
 
     # verify http server is up
@@ -43,9 +44,10 @@ def start(port=8080, **kwargs):
             time.sleep(1)
     else:
         raise RuntimeError("failed to start python http server")
+    send_event(__cloudify_id, "10.0.0.5", "webserver status", "state", "running")
 
 
 def test():
     port = 8000
-    start(port)
+    start('', port)
 

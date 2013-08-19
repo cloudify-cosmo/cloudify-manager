@@ -15,6 +15,8 @@
  *******************************************************************************/
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
+import com.google.common.collect.Maps;
+
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,19 +26,27 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RuoteJavaParticipant {
 
-    private static AtomicInteger executeInvocationsCounter = new AtomicInteger(0);
+    private static final AtomicInteger INVOCATIONS_COUNTER = new AtomicInteger(0);
+    private static Map<String, Object> workitemFields = Maps.newHashMap();
 
     public void execute(Map<String, Object> workItemFields) {
         System.out.println(getClass().getName() + ".execute() invoked");
-        executeInvocationsCounter.incrementAndGet();
+        INVOCATIONS_COUNTER.incrementAndGet();
+        synchronized (INVOCATIONS_COUNTER) {
+            RuoteJavaParticipant.workitemFields = workItemFields;
+        }
     }
 
     public static void reset() {
-        executeInvocationsCounter.set(0);
+        INVOCATIONS_COUNTER.set(0);
     }
 
     public static int get() {
-        return executeInvocationsCounter.get();
+        return INVOCATIONS_COUNTER.get();
+    }
+
+    public static Map<String, Object> getWorkitemFields() {
+        return workitemFields;
     }
 
 }

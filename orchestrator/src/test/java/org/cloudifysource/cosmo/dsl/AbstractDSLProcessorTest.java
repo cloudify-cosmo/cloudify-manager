@@ -73,6 +73,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Map<String, Policy>> policies;
         Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
         private Map<String, PolicyDefinition> policiesEvents;
+        Map<String, Object> relationships;
 
         public List<Node> getNodes() {
             return nodes;
@@ -117,6 +118,14 @@ public abstract class AbstractDSLProcessorTest {
         public Map<String, PolicyDefinition> getPoliciesEvents() {
             return policiesEvents;
         }
+
+        public Map<String, Object> getRelationships() {
+            return relationships;
+        }
+
+        public void setRelationships(Map<String, Object> relationships) {
+            this.relationships = relationships;
+        }
     }
 
     /**
@@ -126,7 +135,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> workflows;
         Map<String, String> operations;
         Map<String, Object> properties;
-        List<Object> relationships;
+        List<ProcessedRelationshipTemplate> relationships;
         Map<String, Object> plugins;
         Map<String, Policy> policies;
 
@@ -154,11 +163,11 @@ public abstract class AbstractDSLProcessorTest {
             this.operations = operations;
         }
 
-        public List<Object> getRelationships() {
+        public List<ProcessedRelationshipTemplate> getRelationships() {
             return relationships;
         }
 
-        public void setRelationships(List<Object> relationships) {
+        public void setRelationships(List<ProcessedRelationshipTemplate> relationships) {
             this.relationships = relationships;
         }
 
@@ -239,6 +248,68 @@ public abstract class AbstractDSLProcessorTest {
             this.relationships = relationships;
         }
 
+    }
+
+    /**
+     */
+    public static class ProcessedRelationshipTemplate {
+        String type;
+        String targetId;
+        List<ProcessedExecutionListItem> executionList;
+        List<ProcessedExecutionListItem> lateExecutionList;
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public String getTargetId() {
+            return targetId;
+        }
+
+        public void setTargetId(String targetId) {
+            this.targetId = targetId;
+        }
+
+        public List<ProcessedExecutionListItem> getExecutionList() {
+            return executionList;
+        }
+
+        public void setExecutionList(List<ProcessedExecutionListItem> executionList) {
+            this.executionList = executionList;
+        }
+
+        public List<ProcessedExecutionListItem> getLateExecutionList() {
+            return lateExecutionList;
+        }
+
+        public void setLateExecutionList(List<ProcessedExecutionListItem> lateExecutionList) {
+            this.lateExecutionList = lateExecutionList;
+        }
+
+    }
+
+    /**
+     */
+    public static class ProcessedExecutionListItem {
+        private String operation;
+        private String outputField;
+        public String getOperation() {
+            return operation;
+        }
+        public void setOperation(String operation) {
+            this.operation = operation;
+        }
+
+        public String getOutputField() {
+            return outputField;
+        }
+        public void setOutputField(String outputField) {
+            this.outputField = outputField;
+        }
     }
 
 }
