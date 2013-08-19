@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.cloudifysource.cosmo.dsl.RelationshipTemplate.ExecutionListItem;
+
 /**
  * Post processor the prepares the map for the workflow consumption.
  * Auto wires interfaces to plugins.
@@ -44,7 +46,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
                                            Map<String, ServiceTemplate> populatedServiceTemplates,
-                                           Map<String, Artifact> populatedArtifacts) {
+                                           Map<String, Artifact> populatedArtifacts,
+                                           Map<String, Relationship> populatedRelationships) {
 
         Map<String, Set<String>> interfacePluginImplementations =
                 extractInterfacePluginImplementations(definitions.getInterfaces(), populatedArtifacts);
@@ -79,6 +82,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         result.put("rules", definitions.getPolicies().getRules());
         result.put("policies", policies);
         result.put("policies_events", definitions.getPolicies().getTypes());
+        result.put("relationships", populatedRelationships);
         return result;
     }
 
@@ -165,22 +169,28 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     private void setNodeRelationships(TypeTemplate typeTemplate, String serviceTemplateName, Map<String, Object> node) {
         List<Object> relationships = Lists.newLinkedList();
-        // TODO 1) DSL Handle proper typing for relationship (i.e. should be in sync with relationship
-        // inheritance
-        // 2) Also, currently relation is assumed to be in the same service
-        // should be fixed
-        // 3) the relationship value is currently always String denoting the name of the target
-        // but this should be extended to allow more than one target and perhaps
-        // a complex target with properties that refine the relationship
-        for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
+        for (RelationshipTemplate relationship : typeTemplate.getRelationships()) {
             Map<String, Object> relationshipMap = Maps.newHashMap();
-            relationshipMap.put("type", entry.getKey());
-            String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, entry);
+            relationshipMap.put("type", relationship.getType());
+            String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget());
             relationshipMap.put("target_id", fullTargetId);
+
+            List<Map<String, String>> executionList = Lists.newArrayList();
+            for (Object rawItem : relationship.getExecutionList()) {
+                executionList.add(ExecutionListItem.fromObject(rawItem));
+            }
+            relationshipMap.put("execution_list", executionList);
+            List<Map<String, String>> lateExecutionList = Lists.newArrayList();
+            for (Object rawItem : relationship.getLateExecutionList()) {
+                lateExecutionList.add(ExecutionListItem.fromObject(rawItem));
+            }
+            relationshipMap.put("late_execution_list", lateExecutionList);
+
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);
     }
+
 
 
     private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
@@ -297,15 +307,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                                                String serviceTemplateName,
                                                Map<String, Object> nodeExtraData) {
         List<String> flattenedRelations = Lists.newArrayList();
-        for (Map.Entry<String, Object> entry : typeTemplate.getRelationships().entrySet()) {
-            flattenedRelations.add(extractFullTargetIdFromRelationship(serviceTemplateName, entry));
+        for (RelationshipTemplate relationship : typeTemplate.getRelationships()) {
+            flattenedRelations.add(extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget()));
         }
         nodeExtraData.put("relationships", flattenedRelations);
     }
 
-    private String extractFullTargetIdFromRelationship(String serviceTemplateName, Map.Entry<String, Object> entry) {
-        String targetId = (String) entry.getValue();
-        return serviceTemplateName + "." + targetId;
+    private String extractFullTargetIdFromRelationship(String serviceTemplateName, String target) {
+        return serviceTemplateName + "." + target;
     }
 
 }
