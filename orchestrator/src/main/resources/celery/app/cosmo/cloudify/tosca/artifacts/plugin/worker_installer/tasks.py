@@ -8,6 +8,7 @@ from fabric.api import settings, sudo, run, put, get, hide
 import socket
 import os
 from os import path
+import sys
 
 logger = get_task_logger(__name__)
 
@@ -16,22 +17,30 @@ _plugins_to_install = ["plugin_installer"]
 
 @celery.task
 def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
-    prepare_configuration(worker_config, cloudify_runtime)
-    install_celery_worker(worker_config, __cloudify_id)
+    try:
+        prepare_configuration(worker_config, cloudify_runtime)
+        install_celery_worker(worker_config, __cloudify_id)
+    # fabric raises SystemExit on failure, so we transform this to a regular exception.
+    except SystemExit, e:
+        trace = sys.exc_info()[2]
+        raise RuntimeError('Failed celery worker installation: {0}'.format(e)), None, trace
 
 
 @celery.task
 def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
-    prepare_configuration(worker_config, cloudify_runtime)
-    restart_celery_worker(worker_config, __cloudify_id)
+    try:
+        prepare_configuration(worker_config, cloudify_runtime)
+        restart_celery_worker(worker_config, __cloudify_id)
+    # fabric raises SystemExit on failure, so we transform this to a regular exception.
+    except SystemExit, e:
+        trace = sys.exc_info()[2]
+        raise RuntimeError('Failed celery worker restart: {0}'.format(e)), None, trace
 
 
 def prepare_configuration(worker_config, cloudify_runtime):
     ip = get_machine_ip(cloudify_runtime)
     worker_config['host'] = ip
     worker_config['app'] = 'cosmo'
-
-
 
 
 def install_celery_worker(worker_config, node_id):
