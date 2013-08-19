@@ -110,7 +110,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       enriched_event = JSON.parse(jsonEvent.to_s)
       enriched_event['wfid'] = workitem.wfid
-      enriched_event['wfname'] = workitem.wf_name
+      enriched_event['wfname'] = workitem.sub_wf_name
 
       # if we are in the context of a node
       # we should enrich the event even further.
