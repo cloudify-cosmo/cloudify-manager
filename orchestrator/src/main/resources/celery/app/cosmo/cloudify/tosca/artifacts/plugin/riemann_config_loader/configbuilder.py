@@ -12,34 +12,36 @@ def build_riemann_config(template, policies, rules, policies_events):
         for node_policy_name, node_policy in node_policies.items():
             node_policy_events_template = policies_events[node_policy_name]['policy']
 
-            policy_message = rule_message = None
-            aggregate_message = ''
-            if 'message' in policies_events[node_policy_name]:
-                policy_message = policies_events[node_policy_name]['message']
-            if rules:
-                first_rule = rules.itervalues().next()  # assume for now we only have one rule per policy.
-                if 'message' in first_rule:
-                    rule_message = first_rule['message']
+            aggregate_rules_message = " and ".join(filter(lambda message: message != '',
+                                                          map(lambda rule: extract_message(rule['type'],
+                                                                                           rule['properties'],
+                                                                                           rules),
+                                                              node_policy['rules'].values())))
 
-            if policy_message:
-                aggregate_message = policy_message
-                if rule_message:
-                    aggregate_message = "{0} : {1}".format(aggregate_message, rule_message)
-            else:
-                if rule_message:
-                    aggregate_message = rule_message
+            message = aggregate_rules_message
+            #  add policy message to aggregated message.
+            if 'message' in policies_events[node_policy_name]:
+                message = policies_events[node_policy_name]['message'] + " : " + message
 
             node_policy = build_node_policy_config(node_id,
                                                    node_policy,
                                                    rules,
                                                    node_policy_events_template,
                                                    node_policy_name,
-                                                   aggregate_message)
+                                                   message)
             policies_config.append(node_policy)
 
     return string.Template(template).substitute(dict(
         events_mapping=''.join(policies_config)
     ))
+
+
+def extract_message(rule_type, rule_properties, rules):
+    if rule_type in rules:
+        rule = rules[rule_type]
+        if 'message' in rule:
+            return string.Template(rule['message']).substitute(rule_properties)
+    return ''
 
 
 def build_node_policy_config(node_id,
@@ -48,10 +50,6 @@ def build_node_policy_config(node_id,
                              node_policy_events_template,
                              node_policy_name,
                              message):
-
-    # ugly as hell. but we currently assume one rule so its ok?
-    rule = node_policy['rules'].itervalues().next()
-    message = string.Template(message).substitute(rule['properties'])
 
     event_json = build_node_policy_event(
         node_id,
