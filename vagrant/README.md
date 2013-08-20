@@ -11,7 +11,7 @@ The demo recipe uses Cosmo to start and monitor an LXC machine with a python web
 
 ## Preparing the Vagrant Machine ##
 
-The process of creating a new vagrant machine from the source code may take up to 20 minutes.
+The process of creating a new vagrant machine may take up to 20 minutes.
 
 ```
 git clone https://github.com/CloudifySource/cosmo-manager.git
