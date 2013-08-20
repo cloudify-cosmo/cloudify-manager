@@ -6,34 +6,11 @@ The Cloudify Cosmo Management project is the scafolding for the deployment, moni
 installed on the cloud.
 
 
-If you want to see it in action, keep reading...
-
-Requirements
-============
-
-- Linux/MAC operation system.
-- Git
-- JAVA runtime 1.7 (openjdk or oracle).
-- Python2 with the following packages installed: (Use pip to install)
-	- celery
-	- fabric
-    - vagrant
-    - bernhard
-- Riemann (http://riemann.io)
-- RabbitMQ (http://www.rabbitmq.com/download.html)
-- 
-
-
-Setup
-=====
-
-- RabbitMQ process running:	
-	- Start RabbitMQ as a service, no configuration is required.
-
+To try it follow the vagrant machine instructions
+##[vagrant machine instructions](vagrant)
 
 Build
 =====
 
 - git clone https://github.com/CloudifySource/cosmo-manager.git
-- cd cosmo-manager/orchestrator
-- mvn -DskipTests package -Pall
+- mvn install -f travis-pom.xml
