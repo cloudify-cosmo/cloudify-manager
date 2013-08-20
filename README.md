@@ -87,11 +87,15 @@ To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://gi
 
 You will need Maven and Git in order to develop the cosmo project.
 
+- Open a new bug or feature request in [JIRA](cloudifysource.atlassian.net) with the "cosmo" label
+
 - clone this repo
 
+```
         git clone https://github.com/CloudifySource/cosmo-manager.git
+```
 
-- make changes on a seperate branch
+- make changes on a seperate branch named `feature/CLOUDIFY-XXXX` where XXXX is the JIRA ID.
 
 - Run unit tests
 
@@ -102,6 +106,7 @@ mvn clean install -f travis-pom.xml
 - Run integration test
 
 ```
+cd vagrant
 python2.7 test/dsl_test.py
 ```
 
