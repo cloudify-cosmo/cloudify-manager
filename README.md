@@ -10,6 +10,10 @@ installed on the cloud.
 To try Cloudify Csomo follow the [vagrant machine instructions](vagrant)
 
 ## Build ##
-
-- git clone https://github.com/CloudifySource/cosmo-manager.git
-- mvn install -f travis-pom.xml
+```
+git clone https://github.com/CloudifySource/cosmo-manager.git
+cd cosmo-manager
+mvn install -f travis-pom.xml
+cd orchestrator
+mvn install -Pall
+```
