@@ -87,25 +87,26 @@ This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
 To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes)
 
 
-Contribute
-==========
+## Contribute ##
 
 You will need Maven and Git in order to develop the cosmo project.
 
-- clone this repo.
+- clone this repo
 
         git clone https://github.com/CloudifySource/cosmo-manager.git
 
-- make changes.
-- make sure nothing is broken.
-    
-    Running unit and integration tests
-        
-        cd ..
-        mvn clean install -f travis-pom.xml
-    
-    Running the example dsl    
-        
-        python2.7 test/dsl_test.py
+- make changes on a seperate branch
 
-- pull request
+- Run unit tests
+
+```
+mvn clean install -f travis-pom.xml
+```
+    
+- Run integration test
+
+```
+python2.7 test/dsl_test.py
+```
+
+- Open a new pull request with the changes.
