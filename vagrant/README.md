@@ -1,11 +1,7 @@
-# Running Cloudify Cosmo on a Vagrant machine #
+# Running Cloudify Cosmo#
 
-The Cloudify Cosmo vagrant machine uses Cosmo to start and monitor applications. It uses LXC to internally spawn new machines.
-
-git clone https://github.com/CloudifySource/cosmo-manager.git
-
-**All code/script snippets assume your current directory is the root of this file.**
-
+Cloudify Cosmo runs on a vagrant machine. 
+The demo recipe uses Cosmo to start and monitor a python web server. It uses LXC to spawn new machines inside the vagrant machine.
 
 ## Requirements ##
 
