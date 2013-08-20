@@ -20,6 +20,8 @@ vagrant up
 vagrant snapshot take manager
 ```
 
+To delete the existing vagrant machine run `vagrant terminate`. The next time you run `vagrant up` it will need another 20 minutes to bootstrap.
+
 ## Deploy Application ##
 This example will start a new lxc machine and install a simple python web server on that mahcine.
 ```
@@ -37,14 +39,17 @@ vagrant ssh
 /home/vagrant/cosmo-work/cosmo undeploy
 ```
 
-Restoring the Vagrant Machine
-=============================
+To restore the Vagrant Machine to its original state use:
 ```
 vagrant snapshot go manager
 ```
 
+## Suspending Vagrant Machine ##
 
-## Upgrade Cosmo to new version ##
+To save the current running state of the machine and stop it use `vagrant suspend`. To restore the machine use `vagrant up`.
+
+
+## Upgrade Cosmo to latest version ##
 
 In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
@@ -56,12 +61,21 @@ export cosmo_version=0.1_SNASHOT
 wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
 ```
 
+## Upgrade Cosmo from code ##
+
+First build a new cosmo.jar
+```
+git clone https://github.com/CloudifySource/cosmo-manager.git
+cd cosmo-manager
+mvn install -f travis-pom.xml
+mvn install -Pall -f orchestrator/pom.xml -DskipTests
+```
+
 Vagrant creates a shared directory between the host and the guest. It is accessible on the guest machine in /vagrant, which is mounted to the cosmo-manager/vagrant folder.
-So instead of downloading the latest version, you can build your own jar.
 
 ```
 vagrant snapshot go manager
-cp orchestrator/target/cosmo.jar vagrant/cosmo.jar
+cp ../orchestrator/target/cosmo.jar cosmo.jar
 vagrant ssh
 cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 ```
@@ -70,22 +84,6 @@ cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 A default box called 'precise64' is automatically added.
 This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
 To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes)
-
-Stop
-====
-
-There are 3 ways to stop the management machine:
-
-Note that running "vagrant destroy" will completely terminate the environment,
-and another bootstrapping process will be needed.
-There is really no need for this since you can always go back to a clean machine using the snapshot mechanism.
-
-   * vagrant suspend
-   * vagrant halt
-   * vagrant destroy (not recommended)
-
-For more reading, please refer to:
-http://docs-v1.vagrantup.com/v1/docs/getting-started/teardown.html
 
 
 Contribute
