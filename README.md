@@ -54,7 +54,7 @@ It a simple matter of replacing a jar file.
 
 ```
 vagrant ssh
-export cosmo_version=0.1_SNASHOT
+export cosmo_version=0.1_SNAPSHOT
 wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
 ```
 
