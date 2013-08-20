@@ -24,6 +24,8 @@ require 'set'
 class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
 
+  $full_task_name = nil
+
   EXECUTOR = 'executor'
   TARGET = 'target'
   EXEC = 'exec'
@@ -109,7 +111,10 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       $logger.debug('Generated JSON from {} = {}', properties, json_props)
 
+      $full_task_name = exec
+
       executor.send_task(target, task_id, exec, json_props, self)
+
 
     rescue Exception => e
       $logger.debug("Exception caught on execute_task participant: #{e}")
@@ -117,10 +122,10 @@ class ExecuteTaskParticipant < Ruote::Participant
     end
   end
 
-  def onTaskEvent(taskId, eventType, jsonEvent)
+  def onTaskEvent(task_id, event_type, json_event)
     begin
 
-      enriched_event = JSON.parse(jsonEvent.to_s)
+      enriched_event = JSON.parse(json_event.to_s)
       enriched_event['wfid'] = workitem.wfid
       enriched_event['wfname'] = workitem.sub_wf_name
 
@@ -137,29 +142,25 @@ class ExecuteTaskParticipant < Ruote::Participant
       # this log will not be displayed to the user by default
       $logger.debug('[event] {}', JSON.generate(enriched_event))
 
-      full_task_name = get(taskId)
-      if full_task_name.nil?
-        full_task_name = enriched_event['name']
+      if $full_task_name.nil?
+        raise "task_name for task with id #{task_id} is null"
       end
-      unless full_task_name.nil?
-        enriched_event['plugin'] = get_plugin_name_from_task(full_task_name)
-        enriched_event['task_name'] = get_short_name_from_task_name(full_task_name)
-      end
+      enriched_event['plugin'] = get_plugin_name_from_task($full_task_name)
+      enriched_event['task_name'] = get_short_name_from_task_name($full_task_name)
 
       description = event_to_s(enriched_event)
 
-      case eventType
+      case event_type
 
         when 'task-received'
 
-          # worker received the task and is about to execute it
-          # save the task name for future reference
-
-          put(taskId, full_task_name)
+          unless TASK_TO_FILTER.include? $full_task_name
+            $user_logger.debug(description)
+          end
 
         when 'task-started'
 
-          unless TASK_TO_FILTER.include? full_task_name
+          unless TASK_TO_FILTER.include? $full_task_name
             $user_logger.debug(description)
           end
 
@@ -169,14 +170,14 @@ class ExecuteTaskParticipant < Ruote::Participant
             result_field = workitem.params[RESULT_WORKITEM_FIELD]
             workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
           end
-          unless TASK_TO_FILTER.include? full_task_name
+          unless TASK_TO_FILTER.include? $full_task_name
             $user_logger.debug(green(description))
           end
           reply(workitem)
 
         when 'task-failed' || 'task-revoked'
 
-          unless full_task_name == VERIFY_PLUGIN_TASK_NAME
+          unless $full_task_name == VERIFY_PLUGIN_TASK_NAME
             $user_logger.debug(red(description))
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
@@ -185,7 +186,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
-      $logger.debug("Exception handling task event #{jsonEvent}: #{e.to_s} / #{backtrace}. ")
+      $logger.debug("Exception handling task event #{json_event}: #{e.to_s} / #{backtrace}. ")
       flunk(workitem, e)
     end
   end
