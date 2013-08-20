@@ -42,7 +42,10 @@ def send_log_event(log_record):
         'tags': ['cosmo-log'],
         'description': json.dumps(description)
     }
-    _send_event(event)
+    try:
+        _send_event(event)
+    except:
+        pass
 
 
 def _send_event(event):

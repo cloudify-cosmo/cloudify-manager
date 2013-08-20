@@ -47,9 +47,7 @@ def send_log_event(log_record):
     try:
         _send_event(event)
     except:
-        with open("/tmp/log.txt", "a") as f:
-            f.write("error sending event\n")
-
+        pass
 
 
 def _send_event(event):
