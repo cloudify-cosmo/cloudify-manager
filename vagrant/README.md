@@ -1,75 +1,77 @@
-# Booting up the management machine #
+# Running Cloudify Cosmo on a Vagrant machine #
 
-This will create a vagrant host with all the necessary components for the cosmo management machine.
+The Cloudify Cosmo vagrant machine uses Cosmo to start and monitor applications. It uses LXC to internally spawn new machines.
+
+git clone https://github.com/CloudifySource/cosmo-manager.git
 
 **All code/script snippets assume your current directory is the root of this file.**
 
 
-Requirements
-============
+## Requirements ##
 
 - Virtual Box (https://www.virtualbox.org/wiki/Downloads)
 - Vagrant 1.2.6 (http://downloads.vagrantup.com)
-- Vagrant snapshot plugin (vagrant plugin install vagrant-vbox-snapshot)
+- Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
 
-Run
-====
+## Preparing the Vagrant Machine ##
 
-- vagrant up.
+The process of creating a new vagrant machine from the source code may take up to 20 minutes.
 
-    Note :
+```
+git clone https://github.com/CloudifySource/cosmo-manager.git
+cd vagrant
+vagrant up
+vagrant snapshot take manager
+```
 
-    This process may be very long (estimated time of 20 minutes) it is highly recommended that you create a snapshot of
-    this machine immediately after it is finished.
+## Deploy Application ##
+This example will start a new lxc machine and install a simple python web server on that mahcine.
+```
+vagrant ssh
+/home/vagrant/cosmo-work/cosmo --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+```
 
-        vagrant snapshot take manager
+For commandline usage see `~/cosmo-work/cosmo --help`
 
-    To revert back to the snapshot
-
-        vagrant snapshot go manager
-
-
-- vagrant ssh.
-- add vagrant boxes (optional)
-
-    * A default box called 'precise64' is automatically added.
-      This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
-
-    To add more boxes see a list of pre-packaged images for vagrant-lxc :
-    https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes
-
-- type cosmo --help to see the usage.
-
-    Note :
-
-    Vagrant by default creates a shared directory between the host and the guest.
-    It is accessible on the guest machine in /vagrant, which is mounted to the root directory of the Vagrantfile.
-
-
-Undeploy
-========
-
-In order to undeploy your application, run: `cosmo undeploy`
+## Undeploy Application ##
 
 The undeploy command will destroy any vagrant lxc machines provisioned within the management machine.
+```
+vagrant ssh
+/home/vagrant/cosmo-work/cosmo undeploy
+```
+
+Restoring the Vagrant Machine
+=============================
+```
+vagrant snapshot go manager
+```
 
 
-Upgrade
-======
+## Upgrade Cosmo to new version ##
 
 In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
 
+```
+vagrant ssh
+export cosmo_version=0.1_SNASHOT
+wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
+```
 
-Default values are: working_dir="/home/vagrant" and cosmo_version="0.1-SNAPSHOT"
-This values can be configued inside the Vagrantfile.
-To update the cosmo management jar, just SSH into the management machine and run:
+Vagrant creates a shared directory between the host and the guest. It is accessible on the guest machine in /vagrant, which is mounted to the cosmo-manager/vagrant folder.
+So instead of downloading the latest version, you can build your own jar.
 
-    - cd {working_dir}
-    - rm cosmo.jar
-    - wget https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
-    - mv orchestrator-{cosmo_version}-all.jar cosmo.jar
+```
+cp orchestrator/target/cosmo.jar vagrant/cosmo.jar
+vagrant ssh
+cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
+```
 
+## Using a different vagrant box operating system ##
+A default box called 'precise64' is automatically added.
+This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
+To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes)
 
 Stop
 ====
