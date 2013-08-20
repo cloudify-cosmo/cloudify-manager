@@ -9,7 +9,7 @@ The demo recipe uses Cosmo to start and monitor an LXC machine with a python web
 - Vagrant 1.2.6 (http://downloads.vagrantup.com)
 - Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
 
-## Preparing the Vagrant Machine ##
+## Bootstrap Cosmo ##
 
 The process of creating a new vagrant machine may take up to 20 minutes.
 
@@ -20,7 +20,13 @@ vagrant up
 vagrant snapshot take manager
 ```
 
-To delete the existing vagrant machine run `vagrant terminate`. The next time you run `vagrant up` it will need another 20 minutes to bootstrap.
+## Teardown Cosmo ##
+To delete the vagrant machine run `vagrant terminate`.
+That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
+
+## Suspend Cosmo ##
+To save the current running state of the machine and stop it use `vagrant suspend`.
+To restore the machine use `vagrant up`.
 
 ## Deploy Application ##
 This example will start a new lxc machine and install a simple python web server on that mahcine.
@@ -39,15 +45,10 @@ vagrant ssh
 /home/vagrant/cosmo-work/cosmo undeploy
 ```
 
-To restore the Vagrant Machine to its original state use:
+To restore the Vagrant Machine to its original state (just after bootstrap):
 ```
 vagrant snapshot go manager
 ```
-
-## Suspending Vagrant Machine ##
-
-To save the current running state of the machine and stop it use `vagrant suspend`. To restore the machine use `vagrant up`.
-
 
 ## Upgrade Cosmo to latest version ##
 
