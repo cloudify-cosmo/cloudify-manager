@@ -17,16 +17,18 @@ The process of creating a new vagrant machine may take up to 20 minutes.
 git clone https://github.com/CloudifySource/cosmo-manager.git
 cd cosmo-manager/vagrant
 vagrant up
-vagrant snapshot take manager
+vagrant snapshot take after-bootstrap-snapshot
 ```
 
 ## Teardown Cosmo ##
 To delete the vagrant machine run `vagrant terminate`.
 That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
 
-## Suspend Cosmo ##
-To save the current running state of the machine and stop it use `vagrant suspend`.
-To restore the machine use `vagrant up`.
+## Suspend/Restore Cosmo ##
+To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
+To start the vagrant machine at its last running state `vagrant up`.
+
+To restore the Vagrant Machine to its original state (just after bootstrap) `vagrant snapshot go after-bootstrap-snapshot`
 
 ## Deploy Application ##
 This example will start a new lxc machine and install a simple python web server on that mahcine.
@@ -43,11 +45,6 @@ The undeploy command will destroy any vagrant lxc machines provisioned within th
 ```
 vagrant ssh
 /home/vagrant/cosmo-work/cosmo undeploy
-```
-
-To restore the Vagrant Machine to its original state (just after bootstrap):
-```
-vagrant snapshot go manager
 ```
 
 ## Upgrade Cosmo to latest version ##
