@@ -1,7 +1,7 @@
 # Running Cloudify Cosmo#
 
 Cloudify Cosmo runs on a vagrant machine. 
-The demo recipe uses Cosmo to start and monitor a python web server. It uses LXC to spawn new machines inside the vagrant machine.
+The demo recipe uses Cosmo to start and monitor an LXC machine with a python web server. 
 
 ## Requirements ##
 
@@ -50,6 +50,7 @@ In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
 
 ```
+vagrant snapshot go manager
 vagrant ssh
 export cosmo_version=0.1_SNASHOT
 wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/{cosmo_version}/orchestrator-{cosmo_version}-all.jar
@@ -59,6 +60,7 @@ Vagrant creates a shared directory between the host and the guest. It is accessi
 So instead of downloading the latest version, you can build your own jar.
 
 ```
+vagrant snapshot go manager
 cp orchestrator/target/cosmo.jar vagrant/cosmo.jar
 vagrant ssh
 cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
