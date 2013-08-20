@@ -15,7 +15,7 @@ The process of creating a new vagrant machine from the source code may take up t
 
 ```
 git clone https://github.com/CloudifySource/cosmo-manager.git
-cd vagrant
+cd cosmo-manager/vagrant
 vagrant up
 vagrant snapshot take manager
 ```
