@@ -175,16 +175,16 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget());
             relationshipMap.put("target_id", fullTargetId);
 
-            List<Map<String, String>> executionList = Lists.newArrayList();
-            for (Object rawItem : relationship.getExecutionList()) {
-                executionList.add(ExecutionListItem.fromObject(rawItem));
+            List<Map<String, String>> postTargetStart = Lists.newArrayList();
+            for (Object rawItem : relationship.getPostTargetStart()) {
+                postTargetStart.add(ExecutionListItem.fromObject(rawItem));
             }
-            relationshipMap.put("execution_list", executionList);
-            List<Map<String, String>> lateExecutionList = Lists.newArrayList();
-            for (Object rawItem : relationship.getLateExecutionList()) {
-                lateExecutionList.add(ExecutionListItem.fromObject(rawItem));
+            relationshipMap.put("post_target_start", postTargetStart);
+            List<Map<String, String>> postSourceStart = Lists.newArrayList();
+            for (Object rawItem : relationship.getPostSourceStart()) {
+                postSourceStart.add(ExecutionListItem.fromObject(rawItem));
             }
-            relationshipMap.put("late_execution_list", lateExecutionList);
+            relationshipMap.put("post_source_start", postSourceStart);
 
             relationships.add(relationshipMap);
         }
