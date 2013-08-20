@@ -8,6 +8,7 @@ from fabric.api import settings, sudo, run, put
 import socket
 import os
 from os import path
+import json
 
 logger = get_task_logger(__name__)
 
@@ -40,7 +41,7 @@ def install_celery_worker(worker_config, node_id):
     with settings(host_string=host_string,
                   key_filename=key_filename,
                   disable_known_hosts=True):
-        _install_celery(worker_config, node_id)
+        _install_celery(worker_config, node_id, worker_config['host'])
 
 
 def restart_celery_worker(worker_config, node_id):
@@ -54,14 +55,17 @@ def restart_celery_worker(worker_config, node_id):
         sudo('service celeryd restart')
 
 
-def _install_celery(worker_config, node_id):
+def _install_celery(worker_config, node_id, host):
     sudo("apt-get install -q -y python-pip")
     sudo("pip install billiard==2.7.3.28")
     sudo("pip install --timeout=120 celery==3.0.19")
     sudo("pip install --timeout=120 bernhard==0.1.0")
 
+    cosmo_properties = {
+        'management_ip': worker_config['management_ip'],
+        'ip': host
+    }
     user = worker_config['user']
-    management_ip = worker_config['management_ip']
     broker_url = worker_config['broker']
     app = worker_config['app']
     home = "/home/" + user
@@ -77,9 +81,9 @@ def _install_celery(worker_config, node_id):
     put(script_dir + "/remote/celery.py", app_dir)
     put(script_dir + "/remote/events.py", app_dir)
 
-    # write management ip
-    management_ip_path = path.join(app_dir, "management-ip.txt")
-    run("echo {0} > {1}".format(management_ip, management_ip_path))
+    # write cosmo properties
+    cosmo_properties_path = path.join(app_dir, "cosmo.txt")
+    put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path)
 
     # create app/cloudify/tosca/artifacts/plugin with __init__.py file in each directory
     remote_plugin_path = app_dir

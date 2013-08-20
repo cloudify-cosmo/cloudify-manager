@@ -16,28 +16,57 @@
 
 import bernhard
 import os
+import json
 import cosmo
 
 
 def send_event(node_id, host, service, type, value):
-    client = bernhard.Client(host=_get_management_ip())
     event = {
         'host': host,
         'service': service,
         type: value,
         'tags': ['name={0}'.format(node_id)]
     }
+    _send_event(event)
+
+
+def send_log_event(log_record):
+    host = _get_cosmo_properties()['ip']
+    description = {
+        'log_record': log_record
+    }
+    event = {
+        'host': host,
+        'service': 'cloudify-logging',
+        'state': '',
+        'tags': ['cosmo-log'],
+        'description': json.dumps(description)
+    }
+    _send_event(event)
+
+
+def _send_event(event):
+    client = _get_riemann_client()
     try:
         client.send(event)
     finally:
         client.disconnect()
 
 
-def _get_management_ip():
-    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'management-ip.txt')
-    with open(file_path, 'r') as f:
-        return f.readlines()[0]
+def _get_riemann_client():
+    host = _get_cosmo_properties()['management_ip']
+    return bernhard.Client(host=host)
 
+
+def _get_cosmo_properties():
+    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'cosmo.txt')
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return json.loads(f.read())
+    return {
+        'management_ip': 'localhost',
+        'ip': 'localhost'
+    }
 
 def test():
     send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'running')
