@@ -56,11 +56,11 @@ class PreparePlanParticipant < Ruote::Participant
             relationship_workflow = 'define stub_workflow\n\t'
           end
           relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
-          relationship['execution_list'].each do |executed_item|
+          relationship['post_target_start'].each do |executed_item|
             output_field = executed_item['output_field']
             execution_params_names << output_field unless output_field.empty?
           end
-          relationship['late_execution_list'].each do |executed_item|
+          relationship['post_source_start'].each do |executed_item|
             output_field = executed_item['output_field']
             execution_params_names << output_field unless output_field.empty?
           end

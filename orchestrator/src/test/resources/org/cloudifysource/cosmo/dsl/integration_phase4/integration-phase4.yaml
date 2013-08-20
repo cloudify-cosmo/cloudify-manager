@@ -98,10 +98,10 @@ definitions:
                     relationships:
                         -   type: "cloudify.tosca.relationships.contained_in"
                             target: "flask"
-                            execution_list:
+                            post_target_start:
                                 - target.cloudify.tosca.artifacts.plugin.flask_installer.deploy_application
                         -   type: "cloudify.tosca.relationships.connected_to"
                             target: "pickle_db"
-                            late_execution_list:
+                            post_source_start:
                                 - target.cloudify.tosca.artifacts.plugin.pickledb_installer.get_db_file_location: "db_file"
                                 - source.cloudify.tosca.artifacts.plugin.flask_app_installer.set_db_properties

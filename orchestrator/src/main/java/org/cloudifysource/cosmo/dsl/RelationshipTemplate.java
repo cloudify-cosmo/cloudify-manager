@@ -32,8 +32,8 @@ public class RelationshipTemplate {
 
     private String type;
     private String target;
-    private List<Object> executionList = Lists.newArrayList();
-    private List<Object> lateExecutionList = Lists.newArrayList();
+    private List<Object> postTargetStart = Lists.newArrayList();
+    private List<Object> postSourceStart = Lists.newArrayList();
 
     public String getType() {
         return type;
@@ -51,20 +51,20 @@ public class RelationshipTemplate {
         this.target = target;
     }
 
-    public List<Object> getExecutionList() {
-        return executionList;
+    public List<Object> getPostTargetStart() {
+        return postTargetStart;
     }
 
-    public void setExecutionList(List<Object> executionList) {
-        this.executionList = executionList;
+    public void setPostTargetStart(List<Object> postTargetStart) {
+        this.postTargetStart = postTargetStart;
     }
 
-    public List<Object> getLateExecutionList() {
-        return lateExecutionList;
+    public List<Object> getPostSourceStart() {
+        return postSourceStart;
     }
 
-    public void setLateExecutionList(List<Object> lateExecutionList) {
-        this.lateExecutionList = lateExecutionList;
+    public void setPostSourceStart(List<Object> postSourceStart) {
+        this.postSourceStart = postSourceStart;
     }
 
     /**
