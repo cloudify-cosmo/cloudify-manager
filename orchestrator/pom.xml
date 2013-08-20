@@ -99,6 +99,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
+            <!-- Used for place holders resolving -->
             <artifactId>spring-core</artifactId>
         </dependency>
         <dependency>
