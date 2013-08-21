@@ -29,7 +29,7 @@ vagrant@cosmo-manager:~ $ cd ~/cosmo-work
 
 The cosmo shell script starts cosmo and executes the the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
 ```
-./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+vagrant@cosmo-manager:~/cosmo-work$ ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```
 
 Wait until the script prints the following message:
@@ -40,11 +40,11 @@ ManagerBoot Application has been successfully deployed (press CTRL+C to quit)
 Pressing Ctrl+C will stop cosmo processes, but will not destroy the LXC machine.
 The LXC ip address is 10.0.3.5 and the python web server listens on port 8888.
 ```
-wget -O /dev/stdout http://10.0.3.5:8888
+vagrant@cosmo-manager:~/cosmo-work$ wget -O /dev/stdout http://10.0.3.5:8888
 ```
 You can terminate all LXC machines with:
 ```
-./cosmo.sh undeploy
+vagrant@cosmo-manager:~/cosmo-work$ ./cosmo.sh undeploy
 ```
 
 For commandline usage see `./cosmo.sh --help`
@@ -67,25 +67,25 @@ In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
 
 ```
-export cosmo_version=0.1-SNAPSHOT
-wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
+vagrant@cosmo-manager:~/cosmo-work$ export cosmo_version=0.1-SNAPSHOT
+vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
 ```
 
 ### Upgrade Cosmo from code ###
 
 First build a new cosmo.jar
 ```
-cd cosmo-manager
-mvn install -f travis-pom.xml
-mvn install -Pall -f orchestrator/pom.xml -DskipTests
+cosmo-manager$ mvn install -f travis-pom.xml
+cosmo-manager$ mvn install -Pall -f orchestrator/pom.xml -DskipTests
 ```
 
 Vagrant creates a shared directory between the host and the guest. It is accessible on the guest machine in /vagrant, which is mounted to the cosmo-manager/vagrant folder.
 
 ```
-cp ../orchestrator/target/cosmo.jar cosmo.jar
-vagrant ssh
-cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
+          cosmo-manager$ cp orchestrator/target/cosmo.jar cosmo.jar
+          cosmo-manager$ cd vagrant
+  cosmo-manager/vagrant$ vagrant ssh
+vagrant@cosmo-manager:~$ cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 ```
 
 ### Upgrade the vagrant operating system ###
