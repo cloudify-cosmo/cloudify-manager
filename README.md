@@ -19,9 +19,9 @@ The process of creating a new vagrant machine may take up to 20 minutes.
 ```
                        $ git clone https://github.com/CloudifySource/cosmo-manager.git
                        $ cd cosmo-manager/vagrant
-  cosmo-manager/vagrant$ vagrant up
-  cosmo-manager/vagrant$ vagrant snapshot take after-bootstrap-snapshot
-  cosmo-manager/vagrant$ vagrant ssh
+cosmo-manager/vagrant  $ vagrant up
+cosmo-manager/vagrant  $ vagrant snapshot take after-bootstrap-snapshot
+cosmo-manager/vagrant  $ vagrant ssh
 vagrant@cosmo-manager:~$ cd ~/cosmo-work
 ```
 
@@ -79,7 +79,7 @@ First build a new cosmo.jar. Then use the shared directory between the host and 
 cosmo-manager          $ cp orchestrator/target/cosmo.jar vagrant/cosmo.jar
 cosmo-manager          $ cd vagrant
 cosmo-manager/vagrant  $ vagrant ssh
-vagrant@cosmo-manager:~$ cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
+vagrant@cosmo-manager:~$ cp /vagrant/cosmo.jar ~/cosmo-work/cosmo.jar
 ```
 
 ### Upgrade the vagrant operating system ###
