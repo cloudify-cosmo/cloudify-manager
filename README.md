@@ -32,7 +32,7 @@ For commandline usage see `./cosmo.sh --help`
 
 ## Undeploy Application ##
 
-The undeploy command will destroy any vagrant lxc machines provisioned within the management machine.
+The undeploy command will destroy the lxc machine running the python web server.
 ```
 ./cosmo.sh undeploy
 ```
