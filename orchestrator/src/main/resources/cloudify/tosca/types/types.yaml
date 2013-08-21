@@ -24,6 +24,11 @@ definitions:
                 - "cloudify.tosca.interfaces.plugin_installer"
             properties:
                 install_agent: 'false'
+                
+        # A storage volume in a topology
+        cloudify.tosca.types.volume:
+        	interfaces:
+        		- "cloudify.tosca.interfaces.volume.volume_provisioner"
 
         # A middleware component in a topology
         cloudify.tosca.types.middleware_server:
@@ -107,6 +112,13 @@ definitions:
         cloudify.tosca.interfaces.plugin_installer:
             operations:
                 - "install"
+                
+        # provision and manage a storage volume
+        cloudify.tosca.interfaces.volume.volume_provisioner:
+        	- "create"
+        	- "delete"
+        	- "attach"
+        	- "detach"
 
     ##################################################################################
     # Base plan definitions
