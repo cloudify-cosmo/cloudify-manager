@@ -25,11 +25,10 @@ class EventParticipant < Ruote::Participant
       if sub_workflow_name == workflow_name
         # no need to print sub workflow if there is none
         $user_logger.debug("[#{workflow_name}] - #{event}")
+      else
+        $user_logger.debug("[#{workflow_name}.#{sub_workflow_name}] - #{event}")
       end
 
-
-
-      $user_logger.debug("[#{workflow_name}.#{sub_workflow_name}] - #{event}")
 
       reply(workitem)
 
