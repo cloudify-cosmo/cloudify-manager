@@ -89,7 +89,7 @@ vagrant ssh
 cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 ```
 
-## Using a different vagrant box operating system ##
+### Upgrading the vagrant operating system ###
 A default box called 'precise64' is automatically added.
 This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
 To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes)
