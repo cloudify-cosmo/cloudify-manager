@@ -15,7 +15,7 @@ define global_workflow
             }
             log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
             set 'v:relationship_workflow': '$v:relationship.workflow'
-            relationship_workflow execution_list: '$v:relationship.execution_list',
+            relationship_workflow execution_list: '$v:relationship.post_target_start',
                                   target_node_id: '${v:relationship.target_id}'
 
         log message: 'executing init workflow for node: ${node.id}'
@@ -26,5 +26,5 @@ define global_workflow
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
             set 'v:relationship_workflow': '$v:relationship.workflow'
-            relationship_workflow execution_list: '$v:relationship.late_execution_list',
+            relationship_workflow execution_list: '$v:relationship.post_source_start',
                                   target_node_id: '${v:relationship.target_id}'

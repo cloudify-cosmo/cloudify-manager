@@ -278,8 +278,8 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
-        List<ProcessedExecutionListItem> executionList;
-        List<ProcessedExecutionListItem> lateExecutionList;
+        List<ProcessedExecutionListItem> postTargetStart;
+        List<ProcessedExecutionListItem> postSourceStart;
 
         public String getType() {
             return type;
@@ -297,20 +297,20 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
-        public List<ProcessedExecutionListItem> getExecutionList() {
-            return executionList;
+        public List<ProcessedExecutionListItem> getPostTargetStart() {
+            return postTargetStart;
         }
 
-        public void setExecutionList(List<ProcessedExecutionListItem> executionList) {
-            this.executionList = executionList;
+        public void setPostTargetStart(List<ProcessedExecutionListItem> postTargetStart) {
+            this.postTargetStart = postTargetStart;
         }
 
-        public List<ProcessedExecutionListItem> getLateExecutionList() {
-            return lateExecutionList;
+        public List<ProcessedExecutionListItem> getPostSourceStart() {
+            return postSourceStart;
         }
 
-        public void setLateExecutionList(List<ProcessedExecutionListItem> lateExecutionList) {
-            this.lateExecutionList = lateExecutionList;
+        public void setPostSourceStart(List<ProcessedExecutionListItem> postSourceStart) {
+            this.postSourceStart = postSourceStart;
         }
 
     }
