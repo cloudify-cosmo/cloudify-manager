@@ -12,7 +12,6 @@
     <name>Build automation stub</name>
     <version>0</version>
     <modules>
-    	<module>bootstrapper</module>
         <module>orchestrator</module>
         <module>state-cache</module>
     </modules>
