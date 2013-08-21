@@ -98,7 +98,7 @@ You will need Maven and Git in order to develop the cosmo project.
 - clone this repo
 
 ```
-git clone https://github.com/CloudifySource/cosmo-manager.git
+cosmo-manager$ git clone https://github.com/CloudifySource/cosmo-manager.git
 ```
 
 - make changes on a seperate branch named `feature/CLOUDIFY-XXXX` where XXXX is the JIRA ID.
@@ -106,14 +106,14 @@ git clone https://github.com/CloudifySource/cosmo-manager.git
 - Run unit tests
 
 ```
-mvn clean install -f travis-pom.xml
+cosmo-manager$ mvn test -f travis-pom.xml
 ```
     
 - Run integration test
 
 ```
-cd vagrant
-python2.7 test/dsl_test.py
+cosmo-manager        $ cd vagrant
+cosmo-manager/vagrant$ python2.7 test/dsl_test.py
 ```
 
 - Open a new pull request with the changes.
