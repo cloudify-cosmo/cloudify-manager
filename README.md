@@ -83,7 +83,6 @@ mvn install -Pall -f orchestrator/pom.xml -DskipTests
 Vagrant creates a shared directory between the host and the guest. It is accessible on the guest machine in /vagrant, which is mounted to the cosmo-manager/vagrant folder.
 
 ```
-vagrant snapshot go manager
 cp ../orchestrator/target/cosmo.jar cosmo.jar
 vagrant ssh
 cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
@@ -104,7 +103,7 @@ You will need Maven and Git in order to develop the cosmo project.
 - clone this repo
 
 ```
-        git clone https://github.com/CloudifySource/cosmo-manager.git
+git clone https://github.com/CloudifySource/cosmo-manager.git
 ```
 
 - make changes on a seperate branch named `feature/CLOUDIFY-XXXX` where XXXX is the JIRA ID.
