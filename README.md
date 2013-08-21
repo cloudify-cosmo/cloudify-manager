@@ -1,7 +1,7 @@
 ## Getting Started with Cosmo ##
 
 Cloudify Cosmo allows to deploy, monitor and manage complex applications. It follows the [TOSCA spec](https://www.oasis-open.org/committees/tosca).
-Cosmo runs on a vagrant machine, reads a plan file (yaml) that describe the application and orchestrates the application deployment and monitoring.
+Cosmo runs on a vagrant machine, reads the application plan file, and orchestrates the application deployment and monitoring.
 The [sample application](vagrant/test/python_webserver/python-webserver.yaml) starts and monitors an LXC machine with a python web server. 
 
 ## Requirements ##
