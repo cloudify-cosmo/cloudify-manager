@@ -1,5 +1,8 @@
-Cloudify Cosmo runs on a vagrant machine. 
-The demo recipe uses Cosmo to start and monitor an LXC machine with a python web server. 
+## Getting Started with Cosmo ##
+
+Cloudify Cosmo allows to deploy, monitor and manage complex applications. It follows the [TOSCA spec](https://www.oasis-open.org/committees/tosca).
+Cosmo runs on a vagrant machine, reads a plan file (yaml) that describe the application and orchestrates the application deployment and monitoring.
+The [sample application](vagrant/test/python_webserver/python-webserver.yaml) starts and monitors an LXC machine with a python web server. 
 
 ## Requirements ##
 - Build Status (develop branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager)
@@ -8,8 +11,7 @@ The demo recipe uses Cosmo to start and monitor an LXC machine with a python web
 - Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
 
 
-
-## Bootstrap Cosmo ##
+### Bootstrap Cosmo ###
 
 The process of creating a new vagrant machine may take up to 20 minutes.
 
@@ -22,10 +24,7 @@ vagrant ssh
 cd ~/cosmo-work
 ```
 
-## Getting Started with Cosmo ##
-
-Cosmo reads a plan file (yaml) that describe the deployment and monitoring of complex applications.
-[python-webserver.yaml](vagrant/test/python_webserver/python-webserver.yaml) describes an lxc machine running a simple python web server on that mahcine.
+### Deploy the sample application ###
 
 The cosmo shell script starts cosmo and executes the the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
 ```
