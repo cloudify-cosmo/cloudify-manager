@@ -20,16 +20,6 @@ vagrant up
 vagrant snapshot take after-bootstrap-snapshot
 ```
 
-## Teardown Cosmo ##
-To delete the vagrant machine run `vagrant terminate`.
-That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
-
-## Suspend/Restore Cosmo ##
-To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
-To start the vagrant machine at its last running state `vagrant up`.
-
-To restore the Vagrant Machine to its original state (just after bootstrap) `vagrant snapshot go after-bootstrap-snapshot`
-
 ## Deploy Application ##
 This example will start a new lxc machine and install a simple python web server on that mahcine.
 ```
@@ -46,6 +36,12 @@ The undeploy command will destroy any vagrant lxc machines provisioned within th
 vagrant ssh
 /home/vagrant/cosmo-work/cosmo undeploy
 ```
+
+## Suspend/Restore Cosmo ##
+To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
+To start the vagrant machine at its last running state `vagrant up`.
+
+To restore the Vagrant Machine to its original state (just after bootstrap) `vagrant snapshot go after-bootstrap-snapshot`
 
 ## Upgrade Cosmo to latest version ##
 
@@ -76,6 +72,10 @@ cp ../orchestrator/target/cosmo.jar cosmo.jar
 vagrant ssh
 cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 ```
+
+## Teardown Cosmo ##
+To delete the vagrant machine run `vagrant terminate`.
+That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
 
 ## Using a different vagrant box operating system ##
 A default box called 'precise64' is automatically added.
