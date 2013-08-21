@@ -10,6 +10,7 @@ import os
 from os import path
 import time
 import sys
+import json
 
 
 logger = get_task_logger(__name__)
@@ -97,8 +98,11 @@ def _install_celery(worker_config, node_id):
     runner.sudo("pip install --timeout=120 celery==3.0.19")
     runner.sudo("pip install --timeout=120 bernhard==0.1.0")
 
+    cosmo_properties = {
+        'management_ip': worker_config['management_ip'],
+        'ip': worker_config['host']
+    }
     user = worker_config['user']
-    management_ip = worker_config['management_ip']
     broker_url = worker_config['broker']
     app = worker_config['app']
     home = "/home/" + user
@@ -114,9 +118,9 @@ def _install_celery(worker_config, node_id):
     runner.put(script_dir + "/remote/celery.py", app_dir)
     runner.put(script_dir + "/remote/events.py", app_dir)
 
-    # write management ip
-    management_ip_path = path.join(app_dir, "management-ip.txt")
-    runner.run("echo {0} > {1}".format(management_ip, management_ip_path))
+    # write cosmo properties
+    cosmo_properties_path = path.join(app_dir, "cosmo.txt")
+    runner.put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path)
 
     # create app/cloudify/tosca/artifacts/plugin with __init__.py file in each directory
     remote_plugin_path = app_dir
