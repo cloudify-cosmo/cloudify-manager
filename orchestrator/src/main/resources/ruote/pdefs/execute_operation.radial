@@ -3,15 +3,16 @@ define execute_operation
 
     set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin"
     repeat
-        log message: 'verifying plugin: ${plugin_name} is installed on target: ${target}'
+        log message: 'verifying plugin: ${plugin_name} and operation ${operation} is installed on target: ${target}'
         execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
             properties: {
                 worker_id: "${worker_id}",
-                plugin_name: "${plugin_name}"
+                plugin_name: "${plugin_name}",
+                operation: "${operation}"
             }
         }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
         log message: 'plugin verification result for ${plugin_name} on ${target} is: ${verified}'
-        break if: '${verified} == True'
+        break if: '${verified} != False'
         wait for: '5s'
 
     execute_task target: '${target}', exec: '${operation}', payload: {

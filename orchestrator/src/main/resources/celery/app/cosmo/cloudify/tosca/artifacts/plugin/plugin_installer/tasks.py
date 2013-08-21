@@ -20,6 +20,8 @@ import tarfile
 import zipfile
 import shutil
 import subprocess
+import ast
+import _ast
 from subprocess import CalledProcessError
 from cosmo.celery import celery, get_management_ip
 from celery.utils.log import get_task_logger
@@ -90,7 +92,7 @@ def install(plugin, **kwargs):
 
 
 @celery.task
-def verify_plugin(worker_id, plugin_name, **kwargs):
+def verify_plugin(worker_id, plugin_name, operation, **kwargs):
     p = subprocess.Popen(["celery", "inspect", "registered", "-d", worker_id, "--no-color"], stdout=subprocess.PIPE)
     out, err = p.communicate()
 
@@ -99,12 +101,23 @@ def verify_plugin(worker_id, plugin_name, **kwargs):
 
     lines = out.splitlines()
     registered_tasks = list()
+    operation_name = operation.split(".")[-1]
     for line in lines:
         processed_line = line.strip()
         if processed_line.startswith("*"):
             task = processed_line[1:].strip()
-            if task.startswith(plugin_name):
-                return True
+            if task.startswith(plugin_name) and task.endswith("." + operation_name):
+                current_dir = os.path.abspath(os.path.join(__file__, os.pardir))
+                plugins_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+                taskspy_path = os.path.join(plugins_dir, plugin_name.split(".")[-2]) + "/tasks.py"
+
+                parsed_tasks_file = ast.parse(open(taskspy_path, 'r').read())
+                method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
+                                            parsed_tasks_file.body)
+                if not method_description:
+                    raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
+                    .format(operation_name, taskspy_path, plugin_name))
+                return map(lambda arg: arg.id, method_description[0].args.args)
             else:
                 registered_tasks.append(task)
     return False
