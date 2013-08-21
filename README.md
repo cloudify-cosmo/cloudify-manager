@@ -18,23 +18,23 @@ git clone https://github.com/CloudifySource/cosmo-manager.git
 cd cosmo-manager/vagrant
 vagrant up
 vagrant snapshot take after-bootstrap-snapshot
+vagrant ssh
+cd ~/cosmo-work
 ```
 
 ## Deploy Application ##
 This example will start a new lxc machine and install a simple python web server on that mahcine.
 ```
-vagrant ssh
-/home/vagrant/cosmo-work/cosmo --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```
 
-For commandline usage see `~/cosmo-work/cosmo --help`
+For commandline usage see `./cosmo.sh --help`
 
 ## Undeploy Application ##
 
 The undeploy command will destroy any vagrant lxc machines provisioned within the management machine.
 ```
-vagrant ssh
-/home/vagrant/cosmo-work/cosmo undeploy
+./cosmo.sh undeploy
 ```
 
 ## Suspend/Restore Cosmo ##
@@ -49,7 +49,6 @@ In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
 
 ```
-vagrant ssh
 export cosmo_version=0.1-SNAPSHOT
 wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
 ```
@@ -58,7 +57,6 @@ wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-re
 
 First build a new cosmo.jar
 ```
-git clone https://github.com/CloudifySource/cosmo-manager.git
 cd cosmo-manager
 mvn install -f travis-pom.xml
 mvn install -Pall -f orchestrator/pom.xml -DskipTests
