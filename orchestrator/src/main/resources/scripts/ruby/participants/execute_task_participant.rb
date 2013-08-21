@@ -152,18 +152,6 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       case event_type
 
-        when 'task-received'
-
-          unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(description)
-          end
-
-        when 'task-started'
-
-          unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(description)
-          end
-
         when 'task-succeeded'
 
           if workitem.params.has_key? RESULT_WORKITEM_FIELD
@@ -181,8 +169,11 @@ class ExecuteTaskParticipant < Ruote::Participant
             $user_logger.debug(red(description))
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
-        else
 
+        else
+          unless TASK_TO_FILTER.include? @full_task_name
+            $user_logger.debug(description)
+          end
       end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
