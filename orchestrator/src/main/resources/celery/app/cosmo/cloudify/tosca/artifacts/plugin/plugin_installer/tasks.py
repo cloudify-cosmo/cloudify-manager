@@ -21,7 +21,7 @@ import zipfile
 import shutil
 import subprocess
 from subprocess import CalledProcessError
-from cosmo.celery import celery
+from cosmo.celery import celery, get_management_ip
 from celery.utils.log import get_task_logger
 
 logger = get_task_logger(__name__)
@@ -45,6 +45,11 @@ def install(plugin, **kwargs):
     """
     name = plugin["name"]
     url = plugin["url"]
+
+    management_ip = get_management_ip()
+
+    if management_ip != None:
+        url = url.replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
     extract = None
     plugin_file = None
