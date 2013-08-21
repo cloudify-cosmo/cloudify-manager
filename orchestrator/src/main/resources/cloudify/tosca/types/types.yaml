@@ -27,18 +27,18 @@ definitions:
                 
         # A storage volume in a topology
         cloudify.tosca.types.volume:
-        	interfaces:
-        		- "cloudify.tosca.interfaces.volume.volume_provisioner"
+            interfaces:
+                - "cloudify.tosca.interfaces.volume.volume_provisioner"
         
         # A storage Container (Object Store segment)
         cloudify.tosca.types.object_container:
-        	interfaces:
-        		- "cloudify.tosca.interfaces.object_container.container_provisioner"
-        		
+            interfaces:
+                - "cloudify.tosca.interfaces.object_container.container_provisioner"
+                
         # An isolated virtual layer 2 domain or a logical / virtual switch
         cloudify.tosca.types.netwrok:
-        	interfaces:
-        		- "cloudify.tosca.interfaces.network.network_provisioner"	
+            interfaces:
+                - "cloudify.tosca.interfaces.network.network_provisioner"   
                
         # A middleware component in a topology
         cloudify.tosca.types.middleware_server:
@@ -125,29 +125,29 @@ definitions:
                 
         # provision and manage a storage volume
         cloudify.tosca.interfaces.volume.volume_provisioner:
-        	operations:
-				- "create"
-				- "delete"
-				- "attach"
-				- "detach"
-        	
+            operations:
+                - "create"
+                - "delete"
+                - "attach"
+                - "detach"
+            
         # provision and manage an object container
         cloudify.tosca.interfaces.object_container.container_provisioner:
-        	operations:
-				- "create"
-				- "delete"
-				- "create_metadata"
-				- "delete_metadata"
-				- "update_metadata"
-				
-		# provision and manage virtual networks
-		cloudify.tosca.interfaces.network.network_provisioner
-			operations:
-				- "create"
-				- "delete"
-				- "create_subnet"
-				- "delete_subnet"
-				
+            operations:
+                - "create"
+                - "delete"
+                - "create_metadata"
+                - "delete_metadata"
+                - "update_metadata"
+                
+        # provision and manage virtual networks
+        cloudify.tosca.interfaces.network.network_provisioner
+            operations:
+                - "create"
+                - "delete"
+                - "create_subnet"
+                - "delete_subnet"
+                
 
     ##################################################################################
     # Base plan definitions
