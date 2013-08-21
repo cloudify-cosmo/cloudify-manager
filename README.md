@@ -23,14 +23,22 @@ cd ~/cosmo-work
 ```
 
 ## Running the Demo Application ##
-The cosmo shell script starts cosmo and executes the the specified plan file.
 The python-webserver.yaml describes an lxc machine running a simple python web server on that mahcine.
+
+The cosmo shell script starts cosmo and executes the the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
 ```
 ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```
-Press Ctrl+C to stop cosmo-manager.
-To test the python web server that cosmo installed `wget -O /dev/stdout http://10.0.3.5:8888`
-To kill all LXC machines run `./cosmo.sh undeploy`
+
+Pressing Ctrl+C will stop cosmo processes, but will not destroy the LXC machine.
+```
+wget -O /dev/stdout http://10.0.3.5:8888```
+```
+You can terminate all LXC machines with:
+```
+./cosmo.sh undeploy
+```
+
 For commandline usage see `./cosmo.sh --help`
 
 ## Undeploy Application ##
