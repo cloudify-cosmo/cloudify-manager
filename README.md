@@ -76,6 +76,9 @@ vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.am
 First build a new cosmo.jar. Then use the shared directory between the host and vagrant to copy the new jar.
 
 ```
+cosmo-manager          $ mvn install -f travis-pom.xml
+cosmo-manager          $ mvn install -f orchestrator/pom.xml -Pall
+cosmo-manager          $ cd vagrant
 cosmo-manager/vagrant  $ cp ../orchestrator/target/cosmo.jar cosmo.jar
 cosmo-manager/vagrant  $ vagrant ssh
 vagrant@cosmo-manager:~$ cp /vagrant/cosmo.jar ~/cosmo-work/cosmo.jar
