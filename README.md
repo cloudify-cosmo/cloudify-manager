@@ -31,6 +31,7 @@ The cosmo shell script starts cosmo and executes the the specified plan file. It
 ```
 
 Pressing Ctrl+C will stop cosmo processes, but will not destroy the LXC machine.
+The LXC ip address is 10.0.3.5 and the python web server listens on port 8888.
 ```
 wget -O /dev/stdout http://10.0.3.5:8888
 ```
