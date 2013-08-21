@@ -59,9 +59,9 @@ To restore the Vagrant Machine to its original state (just after bootstrap) `vag
 To delete the vagrant machine run `vagrant terminate`.
 That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
 
-### Upgrading Cosmo ###
+## Upgrade ##
 
-## Upgrade Cosmo to latest version ##
+### Upgrade Cosmo to latest version ###
 
 In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
@@ -71,7 +71,7 @@ export cosmo_version=0.1-SNAPSHOT
 wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
 ```
 
-## Upgrade Cosmo from code ##
+### Upgrade Cosmo from code ###
 
 First build a new cosmo.jar
 ```
