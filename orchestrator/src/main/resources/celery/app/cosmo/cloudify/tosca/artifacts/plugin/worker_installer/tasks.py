@@ -8,7 +8,9 @@ from fabric.api import settings, sudo, run, put, get, hide
 import socket
 import os
 from os import path
+import time
 import sys
+
 
 logger = get_task_logger(__name__)
 
@@ -81,16 +83,19 @@ def _verify_no_celery_error(worker_config):
     # this means the celery worker had an uncaught exception and it wrote its content
     # to the file above because of our custom exception handler (see celery.py)
     if output.getvalue():
-        run('rm {0}'.format(celery_error_out))
+        FabricRetryingRunner().run('rm {0}'.format(celery_error_out))
         error_content = output.getvalue()
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
 
 
 def _install_celery(worker_config, node_id):
-    sudo("apt-get install -q -y python-pip")
-    sudo("pip install billiard==2.7.3.28")
-    sudo("pip install --timeout=120 celery==3.0.19")
-    sudo("pip install --timeout=120 bernhard==0.1.0")
+
+    runner = FabricRetryingRunner()
+
+    runner.sudo("apt-get install -q -y python-pip")
+    runner.sudo("pip install billiard==2.7.3.28")
+    runner.sudo("pip install --timeout=120 celery==3.0.19")
+    runner.sudo("pip install --timeout=120 bernhard==0.1.0")
 
     user = worker_config['user']
     management_ip = worker_config['management_ip']
@@ -99,26 +104,26 @@ def _install_celery(worker_config, node_id):
     home = "/home/" + user
     app_dir = home + "/" + app
 
-    run("rm -rf " + app_dir)
+    runner.run("rm -rf " + app_dir)
 
     # create app directory and copy necessary files to it
-    run("mkdir " + app_dir)
+    runner.run("mkdir " + app_dir)
     script_path = path.realpath(__file__)
     script_dir = path.dirname(script_path)
-    put(script_dir + "/remote/__init__.py", app_dir)
-    put(script_dir + "/remote/celery.py", app_dir)
-    put(script_dir + "/remote/events.py", app_dir)
+    runner.put(script_dir + "/remote/__init__.py", app_dir)
+    runner.put(script_dir + "/remote/celery.py", app_dir)
+    runner.put(script_dir + "/remote/events.py", app_dir)
 
     # write management ip
     management_ip_path = path.join(app_dir, "management-ip.txt")
-    run("echo {0} > {1}".format(management_ip, management_ip_path))
+    runner.run("echo {0} > {1}".format(management_ip, management_ip_path))
 
     # create app/cloudify/tosca/artifacts/plugin with __init__.py file in each directory
     remote_plugin_path = app_dir
     for dir in ["cloudify", "tosca", "artifacts", "plugin"]:
         remote_plugin_path = path.join(remote_plugin_path, dir)
-        run("mkdir " + remote_plugin_path)
-        run('echo "" > ' + remote_plugin_path + '/__init__.py')
+        runner.run("mkdir " + remote_plugin_path)
+        runner.run('echo "" > ' + remote_plugin_path + '/__init__.py')
 
     # install plugins (from ../*) according to _plugins_to_install
     plugins_dir = path.abspath(path.join(script_dir, "../"))
@@ -126,14 +131,14 @@ def _install_celery(worker_config, node_id):
         plugin_dir = path.join(plugins_dir, plugin)
         if not path.exists(plugin_dir):
             raise RuntimeError("plugin [{0}] does not exist [path={1}]".format(plugin, plugin_dir))
-        put(plugin_dir, remote_plugin_path)
+        runner.put(plugin_dir, remote_plugin_path)
 
     #daemonize
-    sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
-    sudo("chmod +x /etc/init.d/celeryd")
+    runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
+    runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
-    put(config_file, "/etc/default/celeryd", use_sudo=True)
-    sudo("service celeryd start")
+    runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
+    runner.sudo("service celeryd start")
 
 
 def get_machine_ip(cloudify_runtime):
@@ -166,3 +171,39 @@ CELERYD_OPTS="\
                                   app=app,
                                   node_id=node_id,
                                   broker_url=broker_url)
+
+
+class FabricRetryingRunner:
+
+    def run_with_timeout_and_retry(self, fun, *args, **kwargs):
+        sleep_interval = 3
+        max_retries = 3
+
+        current_retries = 0
+
+        while True:
+            try:
+                try:
+                    fun(*args, **kwargs)
+                    break
+                except SystemExit, e: # fabric just loves them SystemExit folks
+                    trace = sys.exc_info()[2]
+                    raise RuntimeError('Failed command: {0}'.format(e)), None, trace
+            except:
+                if current_retries < max_retries:
+                    current_retries += 1
+                    time.sleep(sleep_interval)
+                else:
+                    exception = sys.exc_info()[1]
+                    trace = sys.exc_info()[2]
+                    raise exception, None, trace
+    
+
+    def sudo(self, command):
+        self.run_with_timeout_and_retry(sudo, command)
+
+    def run(self, command):
+        self.run_with_timeout_and_retry(run, command)        
+
+    def put(self, local, remote, use_sudo=False):
+        self.run_with_timeout_and_retry(put, local, remote, use_sudo=use_sudo)
