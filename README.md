@@ -4,7 +4,7 @@ Cloudify Cosmo allows to deploy, monitor and manage complex applications. It fol
 Cosmo runs on a vagrant machine, reads the application plan file, and orchestrates the application deployment and monitoring.
 The [sample application](vagrant/test/python_webserver/python-webserver.yaml) starts and monitors an LXC machine with a python web server. 
 
-## Requirements ##
+### Requirements ###
 - Build Status (develop branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager)
 - Virtual Box (https://www.virtualbox.org/wiki/Downloads)
 - Vagrant 1.2.6 (http://downloads.vagrantup.com)
@@ -54,6 +54,12 @@ To start the vagrant machine at its last running state `vagrant up`.
 
 To restore the Vagrant Machine to its original state (just after bootstrap) `vagrant snapshot go after-bootstrap-snapshot`
 
+### Teardown Cosmo ###
+To delete the vagrant machine run `vagrant terminate`.
+That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
+
+### Upgrading Cosmo ###
+
 ## Upgrade Cosmo to latest version ##
 
 In case a new version of cosmo was released, you will probably want to upgrade.
@@ -82,17 +88,13 @@ vagrant ssh
 cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 ```
 
-## Teardown Cosmo ##
-To delete the vagrant machine run `vagrant terminate`.
-That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
-
 ## Using a different vagrant box operating system ##
 A default box called 'precise64' is automatically added.
 This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
 To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes)
 
 
-## Contribute ##
+## Contributing to Cosmo ##
 
 You will need Maven and Git in order to develop the cosmo project.
 
