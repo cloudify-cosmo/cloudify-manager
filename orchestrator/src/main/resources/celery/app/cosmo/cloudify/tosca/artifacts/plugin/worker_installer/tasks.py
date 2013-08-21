@@ -4,10 +4,11 @@ from StringIO import StringIO
 
 from cosmo.celery import celery as celery
 from celery.utils.log import get_task_logger
-from fabric.api import settings, sudo, run, put
+from fabric.api import settings, sudo, run, put, get, hide
 import socket
 import os
 from os import path
+import sys
 import json
 
 logger = get_task_logger(__name__)
@@ -17,14 +18,24 @@ _plugins_to_install = ["plugin_installer"]
 
 @celery.task
 def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
-    prepare_configuration(worker_config, cloudify_runtime)
-    install_celery_worker(worker_config, __cloudify_id)
+    try:
+        prepare_configuration(worker_config, cloudify_runtime)
+        install_celery_worker(worker_config, __cloudify_id)
+    # fabric raises SystemExit on failure, so we transform this to a regular exception.
+    except SystemExit, e:
+        trace = sys.exc_info()[2]
+        raise RuntimeError('Failed celery worker installation: {0}'.format(e)), None, trace
 
 
 @celery.task
 def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
-    prepare_configuration(worker_config, cloudify_runtime)
-    restart_celery_worker(worker_config, __cloudify_id)
+    try:
+        prepare_configuration(worker_config, cloudify_runtime)
+        restart_celery_worker(worker_config, __cloudify_id)
+    # fabric raises SystemExit on failure, so we transform this to a regular exception.
+    except SystemExit, e:
+        trace = sys.exc_info()[2]
+        raise RuntimeError('Failed celery worker restart: {0}'.format(e)), None, trace
 
 
 def prepare_configuration(worker_config, cloudify_runtime):
@@ -41,7 +52,8 @@ def install_celery_worker(worker_config, node_id):
     with settings(host_string=host_string,
                   key_filename=key_filename,
                   disable_known_hosts=True):
-        _install_celery(worker_config, node_id, worker_config['host'])
+        _install_celery(worker_config, node_id)
+        _verify_no_celery_error(worker_config)
 
 
 def restart_celery_worker(worker_config, node_id):
@@ -53,9 +65,29 @@ def restart_celery_worker(worker_config, node_id):
                   key_filename=key_filename,
                   disable_known_hosts=True):
         sudo('service celeryd restart')
+        _verify_no_celery_error(worker_config)
 
 
-def _install_celery(worker_config, node_id, host):
+def _verify_no_celery_error(worker_config):
+    user = worker_config['user']
+    home = "/home/" + user
+    celery_error_out = '{0}/celery_error.out'.format(home)
+    output = StringIO()
+    with hide('aborts', 'running', 'stdout', 'stderr'):
+        try:
+            get(celery_error_out, output)
+        except:
+            pass
+
+    # this means the celery worker had an uncaught exception and it wrote its content
+    # to the file above because of our custom exception handler (see celery.py)
+    if output.getvalue():
+        run('rm {0}'.format(celery_error_out))
+        error_content = output.getvalue()
+        raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
+
+
+def _install_celery(worker_config, node_id):
     sudo("apt-get install -q -y python-pip")
     sudo("pip install billiard==2.7.3.28")
     sudo("pip install --timeout=120 celery==3.0.19")
@@ -63,7 +95,7 @@ def _install_celery(worker_config, node_id, host):
 
     cosmo_properties = {
         'management_ip': worker_config['management_ip'],
-        'ip': host
+        'ip': worker_config['host']
     }
     user = worker_config['user']
     broker_url = worker_config['broker']
@@ -93,7 +125,7 @@ def _install_celery(worker_config, node_id, host):
         run('echo "" > ' + remote_plugin_path + '/__init__.py')
 
     # install plugins (from ../*) according to _plugins_to_install
-    plugins_dir = path.abspath(path.join(script_dir, "../.."))
+    plugins_dir = path.abspath(path.join(script_dir, "../"))
     for plugin in _plugins_to_install:
         plugin_dir = path.join(plugins_dir, plugin)
         if not path.exists(plugin_dir):

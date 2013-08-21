@@ -74,4 +74,4 @@ def _get_cosmo_properties():
     }
 
 def test():
-    send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'running')
+    send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'state', 'running')

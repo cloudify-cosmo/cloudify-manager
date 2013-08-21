@@ -2,9 +2,9 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "app_module.installer"
-        - "host.provisioner"
-        - "middleware_component.installer"
+        - "app_module_installer"
+        - "host_provisioner"
+        - "middleware_component_installer"
 
     service_templates:
 
@@ -21,11 +21,13 @@ definitions:
                         port: "3306"
                         installer_recipe: "mysql_chef_recipe"
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "mysql_host"
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "mysql_host"
 
                 mysql_schema:
                     type: "cloudify.tosca.types.app_module"
                     properties:
                         name: "petclinic"
                     relationships:
-                        cloudify.tosca.relationships.deployed_on: "mysql_database_server"
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "mysql_database_server"

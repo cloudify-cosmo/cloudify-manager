@@ -20,6 +20,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Request;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
 import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
@@ -52,6 +54,8 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
+
+import static org.fest.assertions.api.Assertions.assertThat;
 
 /**
  * Test requirements:
@@ -123,6 +127,12 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
         test("org/cloudifysource/cosmo/dsl/integration_phase3/integration-phase3.yaml");
     }
 
+    @Test(groups = "vagrant", enabled = true)
+    public void testPhase4() throws Exception {
+        test("org/cloudifysource/cosmo/dsl/integration_phase4/integration-phase4.yaml");
+        assertPhase4FlaskApp();
+    }
+
     private void test(String dslPath) throws IOException {
 
         String dslLocation = dslImporter.importDSL(dslPath);
@@ -143,6 +153,22 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             return Resources.toString(resource, Charsets.UTF_8);
         } catch (IOException e) {
             throw Throwables.propagate(e);
+        }
+    }
+
+    private void assertPhase4FlaskApp() throws Exception {
+        AsyncHttpClient client = new AsyncHttpClient();
+        try {
+            String service = "http://10.0.0.5:8888/db";
+            String key = "mykey";
+            String value = "myvalue";
+            Request request = client.preparePut(service + "/" + key + "/" + value).build();
+            client.executeRequest(request).get();
+            request = client.prepareGet(service + "/" + key).build();
+            String result = client.executeRequest(request).get().getResponseBody();
+            assertThat(result).isEqualTo(value);
+        } finally {
+            client.close();
         }
     }
 

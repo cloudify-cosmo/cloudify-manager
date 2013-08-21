@@ -1,5 +1,5 @@
 define reload_riemann_config
-  set "v:reload_riemann_config_task": "cosmo.cloudify.tosca.artifacts.plugin.riemann.config_loader.tasks.reload_riemann_config"
+  set "v:reload_riemann_config_task": "cosmo.cloudify.tosca.artifacts.plugin.riemann_config_loader.tasks.reload_riemann_config"
   execute_task target: 'cloudify.management', exec: "${v:reload_riemann_config_task}", payload: {
     properties: {
       policies: "$v:policies",

@@ -3,7 +3,7 @@ definitions:
     imports:
         - "cloudify.types"
         - "simple-webserver-installer.yaml"
-        - "vagrant-host-provisioner.yaml"
+        - "vagrant-host_provisioner.yaml"
 
     service_templates:
         simple_web_server:
@@ -23,4 +23,4 @@ definitions:
                     properties:
                         port: 8888
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "webserver_host"
+                        cloudify.tosca.relationships.contained_in: "webserver_host"

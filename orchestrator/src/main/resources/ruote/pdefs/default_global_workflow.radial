@@ -9,10 +9,22 @@ define global_workflow
     concurrent_iterator on: '$plan.nodes', to_f: 'node'
         log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
-            log message: 'waiting for node dependencies: ${v:relationship}'
+            log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
-        log message: 'executing init workflow'
+            log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
+            set 'v:relationship_workflow': '$v:relationship.workflow'
+            relationship_workflow execution_list: '$v:relationship.post_target_start',
+                                  target_node_id: '${v:relationship.target_id}'
+
+        log message: 'executing init workflow for node: ${node.id}'
         set 'v:init': "$f:node.workflows.init"
         init
+
+        state resource_id: '${node.id}', state: { reachable: "true" }
+        iterator on: '$f:node.relationships', to_v: 'relationship'
+            log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
+            set 'v:relationship_workflow': '$v:relationship.workflow'
+            relationship_workflow execution_list: '$v:relationship.post_source_start',
+                                  target_node_id: '${v:relationship.target_id}'

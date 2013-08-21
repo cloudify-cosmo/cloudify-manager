@@ -1,0 +1,107 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "vagrant_host_provisioner"
+        - "pickle_db_installer.yaml"
+        - "flask_installer.yaml"
+        - "flask_app_installer.yaml"
+
+    service_templates:
+        phase4:
+            topology:
+                vagrant_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        install_agent: 'true'
+                        vagrant_file: |
+                            Vagrant.configure("2") do |config|
+                              config.vm.box = "precise32"
+                              config.vm.network :private_network, ip: "10.0.0.5"
+                              config.vm.provision :shell, :inline => "sudo ufw disable"
+                              config.vm.provider "virtualbox" do |v|
+                                v.destroy_unused_network_interfaces = true
+                              end
+                            end
+                        worker_config:
+                            user: 'vagrant'
+                            port: '22'
+                            key: '~/.vagrant.d/insecure_private_key'
+                            management_ip: "10.0.0.1"
+                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_not_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+
+                pickle_db:
+                    type: "cloudify.tosca.types.db_server"
+                    interfaces:
+                        - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.tosca.artifacts.plugin.pickledb_installer"
+                    properties:
+                        db_name: "phase4"
+                        db_data:
+                            hello: "world"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                pickle_db_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "pickle db status"
+                                        state: "running"
+                    relationships:
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "vagrant_host"
+
+                flask:
+                    type: "cloudify.tosca.types.web_server"
+                    interfaces:
+                        - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.tosca.artifacts.plugin.flask_installer"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                flask_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "flask status"
+                                        state: "running"
+                    relationships:
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "vagrant_host"
+
+                flask_app:
+                    type: "cloudify.tosca.types.app_module"
+                    properties:
+                        application_name: "phase4-app"
+                        application_url: "http://10.0.0.1:53229/integration_phase4/data/flask_app.py"
+                        port: "8888"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                flask_app_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "flask app status"
+                                        state: "running"
+                    relationships:
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "flask"
+                            post_target_start:
+                                - target.cloudify.tosca.artifacts.plugin.flask_installer.deploy_application
+                        -   type: "cloudify.tosca.relationships.connected_to"
+                            target: "pickle_db"
+                            post_source_start:
+                                - target.cloudify.tosca.artifacts.plugin.pickledb_installer.get_db_file_location: "db_file"
+                                - source.cloudify.tosca.artifacts.plugin.flask_app_installer.set_db_properties

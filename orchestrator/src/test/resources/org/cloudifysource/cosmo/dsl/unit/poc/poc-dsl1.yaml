@@ -8,8 +8,8 @@
 definitions:
     imports:
         - "cloudify.types"
-        - "host.provisioner"
-        - "app_module.installer"
+        - "host_provisioner"
+        - "app_module_installer"
 
     artifacts:
         # this plugin supports the following operations:
@@ -17,7 +17,7 @@ definitions:
         cloudify.poc.chef_plugin:
             derived_from: "cloudify.tosca.artifacts.plugin"
             properties:
-                interface: "cloudify.tosca.interfaces.middleware_component.installer"
+                interface: "cloudify.tosca.interfaces.middleware_component_installer"
                 url: "cloudify/poc/artifacts/plugins/chef-plugin.zip"
 
     service_templates:
@@ -34,11 +34,11 @@ definitions:
                         port: "3306"
                         installer_recipe: "mysql_chef_recipe"
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "mysql_host"
+                        cloudify.tosca.relationships.contained_in: "mysql_host"
 
                 mysql_schema:
                     type: "cloudify.tosca.types.app_module"
                     properties:
                         name: "petclinic"
                     relationships:
-                        cloudify.tosca.relationships.deployed_on: "mysql_database_server"
+                        cloudify.tosca.relationships.contained_in: "mysql_database_server"

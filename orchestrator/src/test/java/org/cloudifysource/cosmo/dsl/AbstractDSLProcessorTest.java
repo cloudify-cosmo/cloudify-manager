@@ -72,7 +72,8 @@ public abstract class AbstractDSLProcessorTest {
         String globalWorkflow;
         Map<String, Map<String, Policy>> policies;
         Map<String, String> rules;
-        private Map<String, String> policiesEvents;
+        Map<String, String> policiesEvents;
+        Map<String, Object> relationships;
 
         public List<Node> getNodes() {
             return nodes;
@@ -117,6 +118,14 @@ public abstract class AbstractDSLProcessorTest {
         public Map<String, String> getPoliciesEvents() {
             return policiesEvents;
         }
+
+        public Map<String, Object> getRelationships() {
+            return relationships;
+        }
+
+        public void setRelationships(Map<String, Object> relationships) {
+            this.relationships = relationships;
+        }
     }
 
     /**
@@ -126,7 +135,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> workflows;
         Map<String, String> operations;
         Map<String, Object> properties;
-        List<Object> relationships;
+        List<ProcessedRelationshipTemplate> relationships;
         Map<String, Object> plugins;
         Map<String, Policy> policies;
 
@@ -154,11 +163,11 @@ public abstract class AbstractDSLProcessorTest {
             this.operations = operations;
         }
 
-        public List<Object> getRelationships() {
+        public List<ProcessedRelationshipTemplate> getRelationships() {
             return relationships;
         }
 
-        public void setRelationships(List<Object> relationships) {
+        public void setRelationships(List<ProcessedRelationshipTemplate> relationships) {
             this.relationships = relationships;
         }
 
@@ -262,6 +271,68 @@ public abstract class AbstractDSLProcessorTest {
             this.relationships = relationships;
         }
 
+    }
+
+    /**
+     */
+    public static class ProcessedRelationshipTemplate {
+        String type;
+        String targetId;
+        List<ProcessedExecutionListItem> postTargetStart;
+        List<ProcessedExecutionListItem> postSourceStart;
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public String getTargetId() {
+            return targetId;
+        }
+
+        public void setTargetId(String targetId) {
+            this.targetId = targetId;
+        }
+
+        public List<ProcessedExecutionListItem> getPostTargetStart() {
+            return postTargetStart;
+        }
+
+        public void setPostTargetStart(List<ProcessedExecutionListItem> postTargetStart) {
+            this.postTargetStart = postTargetStart;
+        }
+
+        public List<ProcessedExecutionListItem> getPostSourceStart() {
+            return postSourceStart;
+        }
+
+        public void setPostSourceStart(List<ProcessedExecutionListItem> postSourceStart) {
+            this.postSourceStart = postSourceStart;
+        }
+
+    }
+
+    /**
+     */
+    public static class ProcessedExecutionListItem {
+        private String operation;
+        private String outputField;
+        public String getOperation() {
+            return operation;
+        }
+        public void setOperation(String operation) {
+            this.operation = operation;
+        }
+
+        public String getOutputField() {
+            return outputField;
+        }
+        public void setOutputField(String outputField) {
+            this.outputField = outputField;
+        }
     }
 
 }

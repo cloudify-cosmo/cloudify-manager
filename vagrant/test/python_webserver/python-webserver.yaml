@@ -2,8 +2,8 @@ definitions:
 
     imports:
         - "cloudify.types"
-        - "vagrant.host.provisioner"
-        - "python-webserver-installer.yaml"
+        - "vagrant_host_provisioner"
+        - "python_webserver_installer.yaml"
 
     service_templates:
         simple_web_server:
@@ -62,5 +62,14 @@ definitions:
                     type: "cloudify.tosca.types.web_server"
                     properties:
                         port: 8888
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                webserver_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "webserver status"
+                                        state: "running"
                     relationships:
-                        cloudify.tosca.relationships.hosted_on: "webserver_host"
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "webserver_host"
