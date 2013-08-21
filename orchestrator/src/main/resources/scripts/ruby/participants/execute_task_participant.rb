@@ -24,7 +24,7 @@ require 'set'
 class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
 
-  $full_task_name = nil
+  @full_task_name = nil
 
   EXECUTOR = 'executor'
   TARGET = 'target'
@@ -111,7 +111,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       $logger.debug('Generated JSON from {} = {}', properties, json_props)
 
-      $full_task_name = exec
+      @full_task_name = exec
 
       executor.send_task(target, task_id, exec, json_props, self)
 
@@ -142,11 +142,11 @@ class ExecuteTaskParticipant < Ruote::Participant
       # this log will not be displayed to the user by default
       $logger.debug('[event] {}', JSON.generate(enriched_event))
 
-      if $full_task_name.nil?
+      if @full_task_name.nil?
         raise "task_name for task with id #{task_id} is null"
       end
-      enriched_event['plugin'] = get_plugin_name_from_task($full_task_name)
-      enriched_event['task_name'] = get_short_name_from_task_name($full_task_name)
+      enriched_event['plugin'] = get_plugin_name_from_task(@full_task_name)
+      enriched_event['task_name'] = get_short_name_from_task_name(@full_task_name)
 
       description = event_to_s(enriched_event)
 
@@ -154,13 +154,13 @@ class ExecuteTaskParticipant < Ruote::Participant
 
         when 'task-received'
 
-          unless TASK_TO_FILTER.include? $full_task_name
+          unless TASK_TO_FILTER.include? @full_task_name
             $user_logger.debug(description)
           end
 
         when 'task-started'
 
-          unless TASK_TO_FILTER.include? $full_task_name
+          unless TASK_TO_FILTER.include? @full_task_name
             $user_logger.debug(description)
           end
 
@@ -170,14 +170,14 @@ class ExecuteTaskParticipant < Ruote::Participant
             result_field = workitem.params[RESULT_WORKITEM_FIELD]
             workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
           end
-          unless TASK_TO_FILTER.include? $full_task_name
+          unless TASK_TO_FILTER.include? @full_task_name
             $user_logger.debug(green(description))
           end
           reply(workitem)
 
         when 'task-failed' || 'task-revoked'
 
-          unless $full_task_name == VERIFY_PLUGIN_TASK_NAME
+          unless @full_task_name == VERIFY_PLUGIN_TASK_NAME
             $user_logger.debug(red(description))
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
