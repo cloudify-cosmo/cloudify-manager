@@ -17,11 +17,11 @@ The [sample application](vagrant/test/python_webserver/python-webserver.yaml) st
 The process of creating a new vagrant machine may take up to 20 minutes.
 
 ```
-$ git clone https://github.com/CloudifySource/cosmo-manager.git
-$ cd cosmo-manager/vagrant
-cosmo-manager/vagrant$ vagrant up
-cosmo-manager/vagrant$ vagrant snapshot take after-bootstrap-snapshot
-cosmo-manager/vagrant$ vagrant ssh
+$                        git clone https://github.com/CloudifySource/cosmo-manager.git
+$                        cd cosmo-manager/vagrant
+cosmo-manager/vagrant$   vagrant up
+cosmo-manager/vagrant$   vagrant snapshot take after-bootstrap-snapshot
+cosmo-manager/vagrant$   vagrant ssh
 vagrant@cosmo-manager:~$ cd ~/cosmo-work
 ```
 
