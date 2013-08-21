@@ -18,24 +18,34 @@ git clone https://github.com/CloudifySource/cosmo-manager.git
 cd cosmo-manager/vagrant
 vagrant up
 vagrant snapshot take after-bootstrap-snapshot
-```
-
-## Deploy Application ##
-This example will start a new lxc machine and install a simple python web server on that mahcine.
-```
 vagrant ssh
-/home/vagrant/cosmo-work/cosmo --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+cd ~/cosmo-work
 ```
 
-For commandline usage see `~/cosmo-work/cosmo --help`
+## Running the Demo Application ##
+The python-webserver.yaml describes an lxc machine running a simple python web server on that mahcine.
 
-## Undeploy Application ##
+The cosmo shell script starts cosmo and executes the the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
+```
+./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+```
 
-The undeploy command will destroy any vagrant lxc machines provisioned within the management machine.
+Wait until the script prints the following message:
 ```
-vagrant ssh
-/home/vagrant/cosmo-work/cosmo undeploy
+ManagerBoot Application has been successfully deployed (press CTRL+C to quit)
 ```
+
+Pressing Ctrl+C will stop cosmo processes, but will not destroy the LXC machine.
+The LXC ip address is 10.0.3.5 and the python web server listens on port 8888.
+```
+wget -O /dev/stdout http://10.0.3.5:8888
+```
+You can terminate all LXC machines with:
+```
+./cosmo.sh undeploy
+```
+
+For commandline usage see `./cosmo.sh --help`
 
 ## Suspend/Restore Cosmo ##
 To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
@@ -49,16 +59,14 @@ In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
 
 ```
-vagrant ssh
 export cosmo_version=0.1-SNAPSHOT
-wget -O /home/vagrant/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
+wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
 ```
 
 ## Upgrade Cosmo from code ##
 
 First build a new cosmo.jar
 ```
-git clone https://github.com/CloudifySource/cosmo-manager.git
 cd cosmo-manager
 mvn install -f travis-pom.xml
 mvn install -Pall -f orchestrator/pom.xml -DskipTests
