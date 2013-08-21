@@ -30,6 +30,11 @@ The cosmo shell script starts cosmo and executes the the specified plan file. It
 ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```
 
+Wait until the script prints the following message:
+```
+ManagerBoot Application has been successfully deployed (press CTRL+C to quit)
+```
+
 Pressing Ctrl+C will stop cosmo processes, but will not destroy the LXC machine.
 The LXC ip address is 10.0.3.5 and the python web server listens on port 8888.
 ```
