@@ -14,38 +14,23 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.dsl;
+package org.cloudifysource.cosmo.monitor.config;
 
-import com.google.common.collect.Maps;
-
-import java.util.Map;
+import org.cloudifysource.cosmo.monitor.RiemannPropertyPlaceHolderHelper;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * A class used to represent a policy of the dsl.
- * Used internally only by the dsl processor.
+ * Configuration for creating a {@link org.cloudifysource.cosmo.monitor.RiemannPropertyPlaceHolderHelper}.
  *
- * @author Dan Kilman
+ * @author Eli Polonsky
  * @since 0.1
  */
-public class Policies {
+@Configuration
+public class RiemannPropertyPlaceHolderHelperConfig {
 
-    private Map<String, RuleDefinition> rules = Maps.newHashMap();
-    private Map<String, PolicyDefinition> types = Maps.newHashMap();
-
-    public Map<String, RuleDefinition> getRules() {
-        return rules;
+    @Bean
+    public RiemannPropertyPlaceHolderHelper riemannPropertyPlaceHolderHelper() {
+        return new RiemannPropertyPlaceHolderHelper("#{", "}");
     }
-
-    public void setRules(Map<String, RuleDefinition> rules) {
-        this.rules = rules;
-    }
-
-    public Map<String, PolicyDefinition> getTypes() {
-        return types;
-    }
-
-    public void setTypes(Map<String, PolicyDefinition> types) {
-        this.types = types;
-    }
-
 }

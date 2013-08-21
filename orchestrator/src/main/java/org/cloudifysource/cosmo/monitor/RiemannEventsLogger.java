@@ -16,6 +16,7 @@
 
 package org.cloudifysource.cosmo.monitor;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.logging.Logger;
@@ -30,6 +31,8 @@ import org.robotninjas.riemann.pubsub.RiemannPubSubConnection;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.lang.Thread.sleep;
 
@@ -38,19 +41,27 @@ import static java.lang.Thread.sleep;
  * @since 0.1
  */
 public class RiemannEventsLogger {
+
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    protected final Logger userOutputLogger = LoggerFactory.getLogger("COSMO");
+
     private final RiemannPubSubConnection connection;
+    private final RiemannPropertyPlaceHolderHelper propertyPlaceHolderHelper;
 
     public RiemannEventsLogger(final RiemannPubSubClient riemannClient,
                                final RiemannEventObjectMapper objectMapper,
                                final int numberOfConnectionAttempts,
-                               final int sleepBeforeConnectionAttemptMilliseconds) {
+                               final int sleepBeforeConnectionAttemptMilliseconds,
+                               RiemannPropertyPlaceHolderHelper propertyPlaceHolderHelper) {
         final QueryResultListener queryResultListener = queryResultListener(objectMapper);
         this.connection = connect(
                 riemannClient,
                 numberOfConnectionAttempts, sleepBeforeConnectionAttemptMilliseconds,
                 queryResultListener);
+        this.propertyPlaceHolderHelper = propertyPlaceHolderHelper;
+
+
     }
 
     private RiemannPubSubConnection connect(
@@ -91,17 +102,43 @@ public class RiemannEventsLogger {
                         return;
                     }
                     Preconditions.checkNotNull(event.getHost(), "RiemannEvent host field cannot be null");
+
+                    // log raw riemann event
+
                     logger.debug("[event] host={}, service={}, state={}, metric={}, description={}",
                             event.getHost(),
                             event.getService(),
                             event.getState(),
                             event.getMetric(),
                             event.getDescription());
+
+                    // construct a pretty event to be logged to the user
+
+                    Map<String, Object> description = objectMapper.readValue(event.getDescription(),
+                            new TypeReference<HashMap<String, Object>>() {
+                            });
+
+                    String nodeId = (String) description.get("node_id");
+
+                    String[] fullNodeId = nodeId.split("\\.");
+                    String simpleNodeName = fullNodeId[1];
+                    String simpleAppName = fullNodeId[0];
+
+                    String policy = (String) description.get("policy");
+                    String message = propertyPlaceHolderHelper.replace((String) description.get("message"), event);
+
+                    userOutputLogger.debug("[monitor] - {" +
+                            "'policy'=>'{}', 'app'=>'{}', " +
+                            "'node'=>'{}'," +
+                            "'message'=>'{}'}",
+                            policy, simpleAppName, simpleNodeName, message);
+
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);
                     throw Throwables.propagate(e);
                 }
             }
+
         };
     }
 
@@ -118,7 +155,4 @@ public class RiemannEventsLogger {
             }
         }
     }
-
-
-
 }

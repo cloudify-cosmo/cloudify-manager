@@ -16,36 +16,31 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.Maps;
-
-import java.util.Map;
-
 /**
- * A class used to represent a policy of the dsl.
- * Used internally only by the dsl processor.
+ * Represents a rule definition.
+ * Containing the rule and a log message.
  *
- * @author Dan Kilman
+ * @author Eli Polonsky
  * @since 0.1
  */
-public class Policies {
+public class RuleDefinition {
 
-    private Map<String, RuleDefinition> rules = Maps.newHashMap();
-    private Map<String, PolicyDefinition> types = Maps.newHashMap();
+    private String message;
+    private String rule;
 
-    public Map<String, RuleDefinition> getRules() {
-        return rules;
+    public String getMessage() {
+        return message;
     }
 
-    public void setRules(Map<String, RuleDefinition> rules) {
-        this.rules = rules;
+    public void setMessage(String message) {
+        this.message = message;
     }
 
-    public Map<String, PolicyDefinition> getTypes() {
-        return types;
+    public String getRule() {
+        return rule;
     }
 
-    public void setTypes(Map<String, PolicyDefinition> types) {
-        this.types = types;
+    public void setRule(String rule) {
+        this.rule = rule;
     }
-
 }

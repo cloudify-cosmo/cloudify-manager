@@ -129,6 +129,7 @@ definitions:
                           log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
                           iterator on: '$node.plugins_to_install', to_v: 'plugin'
                             log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
+                            event event: { "stage" => "installing plugin: ${v:plugin.name}" }
                             execute_operation operation: 'cloudify.tosca.interfaces.plugin_installer.install', params: {
                               plugin: {
                                 name: '${v:plugin.name}',
