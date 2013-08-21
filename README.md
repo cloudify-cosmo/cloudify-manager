@@ -48,7 +48,7 @@ You can terminate all LXC machines with:
 
 For commandline usage see `./cosmo.sh --help`
 
-## Suspend/Restore Cosmo ##
+### Suspend/Restore Cosmo ###
 To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
 To start the vagrant machine at its last running state `vagrant up`.
 
