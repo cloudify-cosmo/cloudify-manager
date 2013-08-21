@@ -21,32 +21,139 @@ require 'json'
 require 'securerandom'
 require 'set'
 
-class ExecuteTaskParticipant < Ruote::Participant
+EXECUTOR = 'executor'
+TARGET = 'target'
+EXEC = 'exec'
+PROPERTIES = 'properties'
+RELATIONSHIP_PROPERTIES = 'relationship_properties'
+PARAMS = 'params'
+PAYLOAD = 'payload'
+NODE = 'node'
+NODE_ID = '__cloudify_id'
+CLOUDIFY_RUNTIME = 'cloudify_runtime'
+EVENT_RESULT = 'result'
+RESULT_WORKITEM_FIELD = 'to_f'
+TASK_SUCCEEDED = 'task-succeeded'
+TASK_FAILED = 'task-failed'
+TASK_REVOKED = 'task-revoked'
+
+RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.riemann_config_loader.tasks.reload_riemann_config'
+VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin'
+RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.worker_installer.tasks.restart'
+
+TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME, RESTART_CELERY_WORKER_TASK_NAME]
+
+class Listener
+
   include TaskEventListener
 
-  $full_task_name = nil
+  attr_accessor :workitem
+  attr_accessor :full_task_name
+  attr_accessor :participant
 
-  EXECUTOR = 'executor'
-  TARGET = 'target'
-  EXEC = 'exec'
-  PROPERTIES = 'properties'
-  RELATIONSHIP_PROPERTIES = 'relationship_properties'
-  PARAMS = 'params'
-  PAYLOAD = 'payload'
-  NODE = 'node'
-  NODE_ID = '__cloudify_id'
-  CLOUDIFY_RUNTIME = 'cloudify_runtime'
-  EVENT_RESULT = 'result'
-  RESULT_WORKITEM_FIELD = 'to_f'
-  TASK_SUCCEEDED = 'task-succeeded'
-  TASK_FAILED = 'task-failed'
-  TASK_REVOKED = 'task-revoked'
+  def onTaskEvent(task_id, event_type, json_event)
 
-  RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.riemann_config_loader.tasks.reload_riemann_config'
-  VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin'
-  RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.tosca.artifacts.plugin.worker_installer.tasks.restart'
+    enriched_event = JSON.parse(json_event.to_s)
+    enriched_event['wfid'] = self.workitem.wfid
+    enriched_event['wfname'] = self.workitem.sub_wf_name
 
-  TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME, RESTART_CELERY_WORKER_TASK_NAME]
+    # if we are in the context of a node
+    # we should enrich the event even further.
+    if self.workitem.fields.has_key? NODE
+      node = self.workitem.fields[NODE]
+      parts = node['id'].split('.')
+      enriched_event['node_id'] = parts[1]
+      enriched_event['app_id'] = parts[0]
+    end
+
+    # log every event coming from task executions.
+    # this log will not be displayed to the user by default
+    $logger.debug('[event] {}', JSON.generate(enriched_event))
+
+    if self.full_task_name.nil?
+      raise "task_name for task with id #{task_id} is null"
+    end
+    enriched_event['plugin'] = get_plugin_name_from_task(self.full_task_name)
+    enriched_event['task_name'] = get_short_name_from_task_name(self.full_task_name)
+
+    description = event_to_s(enriched_event)
+
+    case event_type
+
+      when 'task-received'
+
+        unless TASK_TO_FILTER.include? self.full_task_name
+          $user_logger.debug(description)
+        end
+
+      when 'task-started'
+
+        unless TASK_TO_FILTER.include? self.full_task_name
+          $user_logger.debug(description)
+        end
+
+      when 'task-succeeded'
+
+        if self.workitem.params.has_key? RESULT_WORKITEM_FIELD
+          result_field = self.workitem.params[RESULT_WORKITEM_FIELD]
+          self.workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
+        end
+        unless TASK_TO_FILTER.include? self.full_task_name
+          $user_logger.debug(green(description))
+        end
+        self.participant.reply(self.workitem)
+
+      when 'task-failed' || 'task-revoked'
+
+        unless self.full_task_name == VERIFY_PLUGIN_TASK_NAME
+          $user_logger.debug(red(description))
+        end
+        self.participant.flunk(self.workitem, Exception.new(enriched_event['exception']))
+      else
+
+    end
+  rescue => e
+    backtrace = e.backtrace if e.respond_to?(:backtrace)
+    $logger.debug("Exception handling task event #{json_event}: #{e.to_s} / #{backtrace}. ")
+    self.participant.flunk(self.workitem, e)
+  end
+
+  def event_to_s(event)
+
+    new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
+                 'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
+    unless event['exception'].nil?
+      new_event['error'] = event['exception']
+      new_event['trace'] = event['traceback']
+    end
+
+    "[#{event['type']}] - #{new_event}"
+
+  end
+
+  def get_plugin_name_from_task(full_task_name)
+    if full_task_name.include?('.tasks.')
+      return full_task_name.split('.tasks.')[0].split('.')[-1]
+    end
+    full_task_name
+  end
+
+  def get_short_name_from_task_name(full_task_name)
+    if full_task_name.include?('.tasks.')
+      return full_task_name.split('.tasks.')[1]
+    end
+    full_task_name
+  end
+
+  # temporary workaround to fix literal results of python tasks
+  def fix_task_result(raw_result)
+    final_result = raw_result
+    if raw_result.length >= 2 && raw_result[0] == "'" && raw_result[-1] == "'"
+      final_result = raw_result[1...-1]
+    end
+    final_result
+  end
+
 
   def colorize(color_code, message)
     "\e[#{color_code}m#{message}\e[0m"
@@ -64,6 +171,9 @@ class ExecuteTaskParticipant < Ruote::Participant
     colorize(33, message)
   end
 
+end
+
+class ExecuteTaskParticipant < Ruote::Participant
 
   def do_not_thread
     true
@@ -111,93 +221,18 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       $logger.debug('Generated JSON from {} = {}', properties, json_props)
 
-      $full_task_name = exec
+      task_listener = Listener.new()
+      task_listener.workitem = workitem
+      task_listener.full_task_name = exec
+      task_listener.participant = self
 
-      executor.send_task(target, task_id, exec, json_props, self)
+      executor.send_task(target, task_id, exec, json_props, task_listener)
 
 
     rescue Exception => e
       $logger.debug("Exception caught on execute_task participant: #{e}")
       flunk(workitem, e)
     end
-  end
-
-  def onTaskEvent(task_id, event_type, json_event)
-    begin
-
-      enriched_event = JSON.parse(json_event.to_s)
-      enriched_event['wfid'] = workitem.wfid
-      enriched_event['wfname'] = workitem.sub_wf_name
-
-      # if we are in the context of a node
-      # we should enrich the event even further.
-      if workitem.fields.has_key? NODE
-        node = workitem.fields[NODE]
-        parts = node['id'].split('.')
-        enriched_event['node_id'] = parts[1]
-        enriched_event['app_id'] = parts[0]
-      end
-
-      # log every event coming from task executions.
-      # this log will not be displayed to the user by default
-      $logger.debug('[event] {}', JSON.generate(enriched_event))
-
-      if $full_task_name.nil?
-        raise "task_name for task with id #{task_id} is null"
-      end
-      enriched_event['plugin'] = get_plugin_name_from_task($full_task_name)
-      enriched_event['task_name'] = get_short_name_from_task_name($full_task_name)
-
-      description = event_to_s(enriched_event)
-
-      case event_type
-
-        when 'task-received'
-
-          unless TASK_TO_FILTER.include? $full_task_name
-            $user_logger.debug(description)
-          end
-
-        when 'task-started'
-
-          unless TASK_TO_FILTER.include? $full_task_name
-            $user_logger.debug(description)
-          end
-
-        when 'task-succeeded'
-
-          if workitem.params.has_key? RESULT_WORKITEM_FIELD
-            result_field = workitem.params[RESULT_WORKITEM_FIELD]
-            workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
-          end
-          unless TASK_TO_FILTER.include? $full_task_name
-            $user_logger.debug(green(description))
-          end
-          reply(workitem)
-
-        when 'task-failed' || 'task-revoked'
-
-          unless $full_task_name == VERIFY_PLUGIN_TASK_NAME
-            $user_logger.debug(red(description))
-          end
-          flunk(workitem, Exception.new(enriched_event['exception']))
-        else
-
-      end
-    rescue => e
-      backtrace = e.backtrace if e.respond_to?(:backtrace)
-      $logger.debug("Exception handling task event #{json_event}: #{e.to_s} / #{backtrace}. ")
-      flunk(workitem, e)
-    end
-  end
-
-  # temporary workaround to fix literal results of python tasks
-  def fix_task_result(raw_result)
-    final_result = raw_result
-    if raw_result.length >= 2 && raw_result[0] == "'" && raw_result[-1] == "'"
-      final_result = raw_result[1...-1]
-    end
-    final_result
   end
 
   def safe_merge!(merge_into, merge_from)
@@ -213,33 +248,6 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
     end
     merge_into
-  end
-
-  def event_to_s(event)
-
-    new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
-                 'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
-    unless event['exception'].nil?
-      new_event['error'] = event['exception']
-      new_event['trace'] = event['traceback']
-    end
-
-    "[#{event['type']}] - #{new_event}"
-
-  end
-
-  def get_plugin_name_from_task(full_task_name)
-    if full_task_name.include?('.tasks.')
-      return full_task_name.split('.tasks.')[0].split('.')[-1]
-    end
-    full_task_name
-  end
-
-  def get_short_name_from_task_name(full_task_name)
-    if full_task_name.include?('.tasks.')
-      return full_task_name.split('.tasks.')[1]
-    end
-    full_task_name
   end
 
 end
