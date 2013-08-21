@@ -2,13 +2,12 @@ Cloudify Cosmo runs on a vagrant machine.
 The demo recipe uses Cosmo to start and monitor an LXC machine with a python web server. 
 
 ## Requirements ##
-
+- Build Status (develop branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager)
 - Virtual Box (https://www.virtualbox.org/wiki/Downloads)
 - Vagrant 1.2.6 (http://downloads.vagrantup.com)
 - Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
 
-### build Status (develop branch) ###
-[![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager)
+
 
 ## Bootstrap Cosmo ##
 
