@@ -12,11 +12,8 @@ class EventParticipant < Ruote::Participant
 
       raise 'event not set' unless workitem.params.has_key? EVENT
       event = workitem.params[EVENT]
-      workflow_name = workitem.sub_wf_name
-      workflow_id = workitem.wfid
-
-      event['workflow_id'] = workflow_id
-      event['workflow_name'] = workflow_name
+      sub_workflow_name = workitem.sub_wf_name
+      workflow_name = workitem.wf_name
 
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
@@ -25,7 +22,14 @@ class EventParticipant < Ruote::Participant
         event['app'] = parts[0]
       end
 
-      $user_logger.debug("[workflow] - #{event}")
+      if sub_workflow_name == workflow_name
+        # no need to print sub workflow if there is none
+        $user_logger.debug("[#{workflow_name}] - #{event}")
+      end
+
+
+
+      $user_logger.debug("[#{workflow_name}.#{sub_workflow_name}] - #{event}")
 
       reply(workitem)
 
