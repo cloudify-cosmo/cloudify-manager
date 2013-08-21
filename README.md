@@ -22,8 +22,10 @@ vagrant ssh
 cd ~/cosmo-work
 ```
 
-## Running the Demo Application ##
-The python-webserver.yaml describes an lxc machine running a simple python web server on that mahcine.
+## Getting Started with Cosmo ##
+
+Cosmo reads a plan file (yaml) that describe the deployment and monitoring of complex applications.
+[python-webserver.yaml](vagrant/test/python_webserver/python-webserver.yaml) describes an lxc machine running a simple python web server on that mahcine.
 
 The cosmo shell script starts cosmo and executes the the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
 ```
