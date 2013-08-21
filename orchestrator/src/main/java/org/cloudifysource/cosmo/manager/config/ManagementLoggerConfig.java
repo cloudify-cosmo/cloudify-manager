@@ -12,20 +12,27 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
+ ******************************************************************************/
 
-package org.cloudifysource.cosmo.manager;
+package org.cloudifysource.cosmo.manager.config;
 
-import org.cloudifysource.cosmo.logging.LogDescription;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
+import org.cloudifysource.cosmo.manager.ManagerBoot;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * {@link Manager} Log description.
+ * Logger used to log management related messages.
  *
- * @author Dan Kilman
+ * @author Eli Polonsky
  * @since 0.1
  */
-public enum ManagerLogDescription implements LogDescription {
-    MANAGER_STARTED, BOOTING_MANAGER, FAILED_SHUTTING_DOWN_MANAGER, DEPLOYING_DSL, APPLICATION_DEPLOYED,
-    VALIDATING_DSL, DSL_VALIDATED, STARTING_FILE_SERVER, LAUNCHING_RIEMANN_CEP, LAUNCHING_WORKER,
-    CREATING_RUNTIME_ENVIRONMENT
+@Configuration
+public class ManagementLoggerConfig {
+
+    @Bean
+    Logger logger() {
+        return LoggerFactory.getLogger(ManagerBoot.class);
+    }
 }

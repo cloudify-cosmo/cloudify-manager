@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.manager.ManagerLogDescription;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
 import org.robobninjas.riemann.spring.server.RiemannProcess;
@@ -37,6 +39,9 @@ import java.nio.file.Paths;
 @Configuration
 public class RiemannProcessConfiguration {
 
+    @Inject
+    private Logger logger;
+
     private static final String RIEMANN_RESOURCES_PATH = "riemann";
 
     @Inject
@@ -52,6 +57,7 @@ public class RiemannProcessConfiguration {
                 Paths.get(temporaryDirectory.get().getAbsolutePath()));
         Path configPath = Paths.get(temporaryDirectory.get().getAbsolutePath(),
                 riemannConfigResourcePath);
+        logger.info(ManagerLogDescription.LAUNCHING_RIEMANN_CEP);
         return new RiemannProcess(configPath);
     }
 }

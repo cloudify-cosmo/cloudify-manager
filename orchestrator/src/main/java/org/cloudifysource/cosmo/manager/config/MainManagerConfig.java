@@ -38,6 +38,7 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
  */
 @Configuration
 @Import({
+        ManagementLoggerConfig.class,
         StateCacheConfig.class,
         TaskExecutorConfig.class,
         JettyFileServerForPluginsConfig.class,
