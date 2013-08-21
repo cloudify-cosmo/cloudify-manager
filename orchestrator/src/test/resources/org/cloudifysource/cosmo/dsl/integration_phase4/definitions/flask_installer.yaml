@@ -5,4 +5,4 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "cloudify.tosca.interfaces.middleware_component_installer"
-                url: "http://10.0.0.1:53229/flask_installer.zip"
+                url: "#{plugin_repository}/flask_installer.zip"

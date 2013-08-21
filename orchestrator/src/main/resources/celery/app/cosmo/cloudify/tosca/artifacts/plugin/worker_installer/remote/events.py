@@ -16,11 +16,11 @@
 
 import bernhard
 import os
-import cosmo
+from cosmo.celery import get_management_ip
 
 
 def send_event(node_id, host, service, type, value):
-    client = bernhard.Client(host=_get_management_ip())
+    client = bernhard.Client(host=get_management_ip())
     event = {
         'host': host,
         'service': service,
@@ -31,12 +31,6 @@ def send_event(node_id, host, service, type, value):
         client.send(event)
     finally:
         client.disconnect()
-
-
-def _get_management_ip():
-    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'management-ip.txt')
-    with open(file_path, 'r') as f:
-        return f.readlines()[0]
 
 
 def test():
