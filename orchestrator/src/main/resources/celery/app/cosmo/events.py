@@ -17,7 +17,6 @@
 import bernhard
 import os
 import json
-import cosmo
 
 
 def send_event(node_id, host, service, type, value):
@@ -37,13 +36,11 @@ def send_log_event(log_record):
     }
     event = {
         'host': host,
-        'service': 'cloudify-logging',
+        'service': 'celery-task-log',
         'state': '',
         'tags': ['cosmo-log'],
         'description': json.dumps(description)
     }
-    with open("/tmp/log.txt", "a") as f:
-        f.write("sending event: {0}\n".format(event))
     try:
         _send_event(event)
     except:
@@ -64,14 +61,18 @@ def _get_riemann_client():
 
 
 def _get_cosmo_properties():
-    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'cosmo.txt')
+    file_path = os.path.join(os.path.dirname(__file__), 'cosmo.txt')
     if os.path.exists(file_path):
         with open(file_path, 'r') as f:
             return json.loads(f.read())
+    # when on management machine, cosmo.txt does not exist so management_ip and ip are
+    # pointing to the management machine which is localhost.
     return {
         'management_ip': 'localhost',
         'ip': 'localhost'
     }
 
+
 def test():
     send_event('vagrant_host', '10.0.0.5', 'vagrant machine status', 'state', 'running')
+

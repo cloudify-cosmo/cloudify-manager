@@ -18,7 +18,10 @@ from __future__ import absolute_import
 from celery import Celery
 from celery.signals import after_setup_task_logger
 from cosmo.events import send_log_event
+import cosmo
 import logging
+import os
+import json
 
 
 class RiemannLoggingHandler(logging.Handler):
@@ -43,7 +46,6 @@ class RiemannLoggingHandler(logging.Handler):
         except BaseException:
             pass
 
-
 @after_setup_task_logger.connect
 def setup_logger(loglevel=None, **kwargs):
     logger = logging.getLogger("cosmo")
@@ -55,6 +57,18 @@ def setup_logger(loglevel=None, **kwargs):
         logger.propagate = True
 
 
+def get_cosmo_properties():
+    file_path = os.path.join(os.path.dirname(cosmo.__file__), 'cosmo.txt')
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return json.loads(f.read())
+    # when on management machine, cosmo.txt does not exist so management_ip and ip are
+    # pointing to the management machine which is localhost.
+    return {
+        'management_ip': 'localhost',
+        'ip': 'localhost'
+    }
+
 celery = Celery('cosmo.celery',
                 broker='amqp://',
                 backend='amqp://')
@@ -63,12 +77,6 @@ celery = Celery('cosmo.celery',
 celery.conf.update(
     CELERY_TASK_SERIALIZER="json"
 )
-
-# Management machine, this is here as a work around due to import error because the plugin_installer is installed on
-# management machine even though it doesn't need this. we should remove this once the plugin_installer wouldn't be
-# installed on the management celery worker.
-def get_management_ip():
-    return "localhost"
 
 if __name__ == '__main__':
     celery.start()
