@@ -22,20 +22,21 @@ vagrant ssh
 cd ~/cosmo-work
 ```
 
-## Deploy Application ##
-This example will start a new lxc machine and install a simple python web server on that mahcine.
+## Running the Demo Application ##
+The cosmo shell script starts cosmo and executes the the specified plan file.
+The python-webserver.yaml describes an lxc machine running a simple python web server on that mahcine.
 ```
 ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```
-
+Press Ctrl+C to stop cosmo-manager.
+To test the python web server that cosmo installed `wget -O /dev/stdout http://10.0.3.5:8888`
+To kill all LXC machines run `./cosmo.sh undeploy`
 For commandline usage see `./cosmo.sh --help`
 
 ## Undeploy Application ##
 
 The undeploy command will destroy the lxc machine running the python web server.
-```
-./cosmo.sh undeploy
-```
+
 
 ## Suspend/Restore Cosmo ##
 To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
