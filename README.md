@@ -73,18 +73,12 @@ vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.am
 
 ### Upgrade Cosmo from code ###
 
-First build a new cosmo.jar
-```
-cosmo-manager$ mvn install -f travis-pom.xml
-cosmo-manager$ mvn install -Pall -f orchestrator/pom.xml -DskipTests
-```
-
-Vagrant creates a shared directory between the host and the guest. It is accessible on the guest machine in /vagrant, which is mounted to the cosmo-manager/vagrant folder.
+First build a new cosmo.jar. Then use the shared directory between the host and vagrant to copy the new jar.
 
 ```
-          cosmo-manager$ cp orchestrator/target/cosmo.jar cosmo.jar
-          cosmo-manager$ cd vagrant
-  cosmo-manager/vagrant$ vagrant ssh
+cosmo-manager          $ cp orchestrator/target/cosmo.jar vagrant/cosmo.jar
+cosmo-manager          $ cd vagrant
+cosmo-manager/vagrant  $ vagrant ssh
 vagrant@cosmo-manager:~$ cp /vagrant/cosmo.jar /home/vagrant/cosmo.jar
 ```
 
