@@ -66,7 +66,7 @@ def get_cosmo_properties():
     # pointing to the management machine which is localhost.
     return {
         'management_ip': 'localhost',
-        'ip': 'localhost'
+        'ip': 'management'
     }
 
 celery = Celery('cosmo.celery',

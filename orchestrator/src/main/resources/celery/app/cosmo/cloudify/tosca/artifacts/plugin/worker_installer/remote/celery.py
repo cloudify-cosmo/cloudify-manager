@@ -58,7 +58,6 @@ def setup_logger(loglevel=None, **kwargs):
         logger.propagate = True
 
 
-
 def get_cosmo_properties():
     file_path = os.path.join(os.path.dirname(cosmo.__file__), 'cosmo.txt')
     if os.path.exists(file_path):
@@ -68,7 +67,7 @@ def get_cosmo_properties():
     # pointing to the management machine which is localhost.
     return {
         'management_ip': 'localhost',
-        'ip': 'localhost'
+        'ip': 'management'
     }
 
 
