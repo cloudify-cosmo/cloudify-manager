@@ -33,6 +33,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   RELATIONSHIP_PROPERTIES = 'relationship_properties'
   PARAMS = 'params'
   PAYLOAD = 'payload'
+  ARGUMENT_NAMES = 'argument_names'
   NODE = 'node'
   NODE_ID = '__cloudify_id'
   CLOUDIFY_RUNTIME = 'cloudify_runtime'
@@ -80,8 +81,10 @@ class ExecuteTaskParticipant < Ruote::Participant
       exec = workitem.params[EXEC]
       target = workitem.params[TARGET]
       payload = to_map(workitem.params[PAYLOAD])
+      argument_names = workitem.params[ARGUMENT_NAMES]
 
-      $logger.debug('Received task execution request [target={}, exec={}, payload={}]', target, exec, payload)
+      $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]', target,
+                    exec, payload, argument_names)
 
       task_id = SecureRandom.uuid
       payload_properties = payload[PROPERTIES] || Hash.new
