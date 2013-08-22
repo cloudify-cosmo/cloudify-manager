@@ -17,9 +17,6 @@ define execute_operation
         break if: '${argument_names} != False'
         wait for: '5s'
 
-    log message: 'plugin verification out of repeat loop argument names fetching result for ${plugin_name} on
-    ${target} is: ${argument_names}'
-
     execute_task target: '${target}', exec: '${operation}', payload: {
         properties: '$node.properties',
         params: '$v:params',
