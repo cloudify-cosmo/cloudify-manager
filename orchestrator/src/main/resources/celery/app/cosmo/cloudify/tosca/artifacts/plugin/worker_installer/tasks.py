@@ -93,9 +93,16 @@ def _install_celery(worker_config, node_id):
 
     runner = FabricRetryingRunner()
 
+    logger.debug("installing python-pip [node_id=%s]", node_id)
     runner.sudo("apt-get install -q -y python-pip")
+
+    logger.debug("installing billiard using pip [node_id=%s]", node_id)
     runner.sudo("pip install billiard==2.7.3.28")
+
+    logger.debug("installing celery using pip [node_id=%s]", node_id)
     runner.sudo("pip install --timeout=120 celery==3.0.19")
+
+    logger.debug("installing bernhard using pip [node_id=%s]", node_id)
     runner.sudo("pip install --timeout=120 bernhard==0.1.0")
 
     cosmo_properties = {
@@ -119,6 +126,7 @@ def _install_celery(worker_config, node_id):
     runner.put(script_dir + "/remote/events.py", app_dir)
 
     # write cosmo properties
+    logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
     cosmo_properties_path = path.join(app_dir, "cosmo.txt")
     runner.put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path)
 
@@ -128,6 +136,8 @@ def _install_celery(worker_config, node_id):
         remote_plugin_path = path.join(remote_plugin_path, dir)
         runner.run("mkdir " + remote_plugin_path)
         runner.run('echo "" > ' + remote_plugin_path + '/__init__.py')
+
+    logger.debug("installing cosmo built in plugins [node_id=%s]", node_id)
 
     # install plugins (from ../*) according to _plugins_to_install
     plugins_dir = path.abspath(path.join(script_dir, "../"))
@@ -142,6 +152,8 @@ def _install_celery(worker_config, node_id):
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
+
+    logger.debug("starting celeryd service")
     runner.sudo("service celeryd start")
 
 
