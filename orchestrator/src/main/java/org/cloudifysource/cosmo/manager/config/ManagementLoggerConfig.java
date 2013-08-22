@@ -14,22 +14,25 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.bootstrap.config;
+package org.cloudifysource.cosmo.manager.config;
 
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
+import org.cloudifysource.cosmo.manager.ManagerBoot;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.PropertySource;
 
 /**
- * Abstract test spring configuration.
+ * Logger used to log management related messages.
  *
- * @author Dan Kilman
+ * @author Eli Polonsky
  * @since 0.1
  */
 @Configuration
-@PropertySource({ "org/cloudifysource/cosmo/bootstrap/config/connection-test.properties",
-        "org/cloudifysource/cosmo/bootstrap/config/test.properties" })
-@Import({ SSHScriptExecutorConfig.class })
-public abstract class BaseConfig extends TestConfig {
+public class ManagementLoggerConfig {
 
+    @Bean
+    Logger logger() {
+        return LoggerFactory.getLogger(ManagerBoot.class);
+    }
 }

@@ -14,31 +14,37 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.bootstrap.config;
+package org.cloudifysource.cosmo.manager.config;
 
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.manager.ManagerLogDescription;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
+
+import javax.inject.Inject;
+import java.io.IOException;
 
 /**
- * Abstract test spring configuration.
+ * Creates a new {@link org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime}.
+ * It uses a logger to report creation to the user.
  *
- * @author Dan Kilman
+ * @author Eli Polonsky
  * @since 0.1
  */
 @Configuration
-public abstract class TestConfig {
+public class ManagementRuoteRuntimeConfig extends RuoteRuntimeConfig {
 
-    // To enable @Value("${place_holder}")
+    @Inject
+    private Logger logger;
+
+    @Override
     @Bean
-    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-        return new PropertySourcesPlaceholderConfigurer();
+    public RuoteRuntime ruoteRuntime() throws IOException {
+        logger.info(ManagerLogDescription.CREATING_RUNTIME_ENVIRONMENT);
+        return super.ruoteRuntime();
     }
 
-    // To enable hibernate validation of Configuration files
-    @Bean
-    public static BeanValidationPostProcessor beanValidationPostProcessor() {
-        return new BeanValidationPostProcessor();
-    }
+
 }

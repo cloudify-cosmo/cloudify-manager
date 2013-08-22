@@ -14,24 +14,16 @@
  * limitations under the License.
  ******************************************************************************/
 
-package org.cloudifysource.cosmo.bootstrap.ssh;
+package org.cloudifysource.cosmo.monitor;
+
+import org.cloudifysource.cosmo.logging.LogDescription;
 
 /**
- * An exception that is thrown if an ssh execution returned with a non-zero exit status.
- * @author Dan Kilman
+ * Log Description for riemann events logger.
+ *
+ * @author Idan Moyal
  * @since 0.1
  */
-public class SSHExecutionException extends RuntimeException {
-
-    private final int exitStatus;
-
-    public SSHExecutionException(int exitStatus) {
-        super("SSH Execution returned a non-zero status. Exit status [" + exitStatus + "]");
-        this.exitStatus = exitStatus;
-    }
-
-    public int getExitStatus() {
-        return exitStatus;
-    }
-
+public enum RiemannEventsLogDescription implements LogDescription {
+    PLUGIN_MESSAGE
 }

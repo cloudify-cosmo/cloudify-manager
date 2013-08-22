@@ -17,6 +17,7 @@
 package org.cloudifysource.cosmo.monitor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.cloudifysource.cosmo.logging.Logger;
@@ -43,8 +44,10 @@ import static java.lang.Thread.sleep;
 public class RiemannEventsLogger {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
-
     protected final Logger userOutputLogger = LoggerFactory.getLogger("COSMO");
+    protected final Logger pluginsLogger = LoggerFactory.getLogger("COSMO.PLUGIN");
+
+    private static final String COSMO_LOG_TAG = "cosmo-log";
 
     private final RiemannPubSubConnection connection;
     private final RiemannPropertyPlaceHolderHelper propertyPlaceHolderHelper;
@@ -103,36 +106,70 @@ public class RiemannEventsLogger {
                     }
                     Preconditions.checkNotNull(event.getHost(), "RiemannEvent host field cannot be null");
 
-                    // log raw riemann event
-
-                    logger.debug("[event] host={}, service={}, state={}, metric={}, description={}",
-                            event.getHost(),
-                            event.getService(),
-                            event.getState(),
-                            event.getMetric(),
-                            event.getDescription());
-
-                    // construct a pretty event to be logged to the user
-
-                    Map<String, Object> description = objectMapper.readValue(event.getDescription(),
+                    final Map<String, Object> description = objectMapper.readValue(event.getDescription(),
                             new TypeReference<HashMap<String, Object>>() {
                             });
 
-                    String nodeId = (String) description.get("node_id");
+                    if (event.getTags() != null && event.getTags().contains(COSMO_LOG_TAG)) {
+                        if (description.containsKey("log_record")) {
+                            final Map<?, ?> logRecord = (Map<?, ?>) description.get("log_record");
+                            final String message = logRecord.get("message").toString();
+                            final String name = extractPluginName(logRecord.get("name").toString());
+                            final String level = logRecord.get("level").toString();
+                            switch (level) {
+                                default:
+                                case "INFO":
+                                    pluginsLogger.info(RiemannEventsLogDescription.PLUGIN_MESSAGE,
+                                            level,
+                                            name,
+                                            message);
+                                    break;
+                                case "WARNING":
+                                    pluginsLogger.warn(RiemannEventsLogDescription.PLUGIN_MESSAGE,
+                                            level,
+                                            name,
+                                            message);
+                                    break;
+                                case "ERROR":
+                                case "CRITICAL":
+                                    pluginsLogger.error(RiemannEventsLogDescription.PLUGIN_MESSAGE,
+                                            level,
+                                            name,
+                                            message);
+                                    break;
+                                case "DEBUG":
+                                    pluginsLogger.debug(RiemannEventsLogDescription.PLUGIN_MESSAGE,
+                                            level,
+                                            name,
+                                            message);
+                                    break;
+                            }
+                        }
+                    } else {
+                        // log raw riemann event
+                        logger.debug("[event] host={}, service={}, state={}, metric={}, description={}",
+                                event.getHost(),
+                                event.getService(),
+                                event.getState(),
+                                event.getMetric(),
+                                event.getDescription());
 
-                    String[] fullNodeId = nodeId.split("\\.");
-                    String simpleNodeName = fullNodeId[1];
-                    String simpleAppName = fullNodeId[0];
+                        // construct a pretty event to be logged to the user
+                        String nodeId = (String) description.get("node_id");
 
-                    String policy = (String) description.get("policy");
-                    String message = propertyPlaceHolderHelper.replace((String) description.get("message"), event);
+                        String[] fullNodeId = nodeId.split("\\.");
+                        String simpleNodeName = fullNodeId[1];
+                        String simpleAppName = fullNodeId[0];
 
-                    userOutputLogger.debug("[monitor] - {" +
-                            "'policy'=>'{}', 'app'=>'{}', " +
-                            "'node'=>'{}'," +
-                            "'message'=>'{}'}",
-                            policy, simpleAppName, simpleNodeName, message);
+                        String policy = (String) description.get("policy");
+                        String message = propertyPlaceHolderHelper.replace((String) description.get("message"), event);
 
+                        userOutputLogger.debug("[monitor] - {" +
+                                "'policy'=>'{}', 'app'=>'{}', " +
+                                "'node'=>'{}'," +
+                                "'message'=>'{}'}",
+                                policy, simpleAppName, simpleNodeName, message);
+                    }
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);
                     throw Throwables.propagate(e);
@@ -142,8 +179,19 @@ public class RiemannEventsLogger {
         };
     }
 
+    private static String extractPluginName(String name) {
+        String[] values = name.split("\\.");
+        if (values.length > 1) {
+            int last = values.length - 1;
+            if (Objects.equal(values[last], "tasks")) {
+                return values[last - 1];
+            }
+        }
+        return name;
+    }
+
     private String queryString() {
-        return "tagged \"cosmo\"";
+        return String.format("tagged \"cosmo\" or tagged \"%s\"", COSMO_LOG_TAG);
     }
 
     public void close() {
@@ -155,4 +203,5 @@ public class RiemannEventsLogger {
             }
         }
     }
+
 }
