@@ -17,6 +17,8 @@
 package org.cloudifysource.cosmo.manager.config;
 
 import com.google.common.base.Throwables;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.manager.ManagerLogDescription;
 import org.cloudifysource.cosmo.tasks.CeleryWorkerProcess;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
@@ -39,6 +41,9 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class CeleryWorkerProcessConfig {
 
+    @Inject
+    private Logger logger;
+
     private static final String RESOURCE_PATH = "celery/app";
 
     @Value("${celery-worker.timeout-seconds:60}")
@@ -60,6 +65,7 @@ public class CeleryWorkerProcessConfig {
 
     @Bean
     CeleryWorkerProcess celeryWorkerProcess() {
+        logger.info(ManagerLogDescription.LAUNCHING_WORKER);
         return new CeleryWorkerProcess("cosmo", temporaryDirectory.get().getAbsolutePath() + "/" + RESOURCE_PATH,
                 timeout, TimeUnit.SECONDS);
     }
