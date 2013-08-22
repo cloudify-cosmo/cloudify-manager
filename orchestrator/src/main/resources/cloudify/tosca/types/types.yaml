@@ -36,7 +36,7 @@ definitions:
                 - "cloudify.tosca.interfaces.object_container.container_provisioner"
                 
         # An isolated virtual layer 2 domain or a logical / virtual switch
-        cloudify.tosca.types.netwrok:
+        cloudify.tosca.types.network:
             interfaces:
                 - "cloudify.tosca.interfaces.network.network_provisioner" 
                 
