@@ -26,6 +26,7 @@ from subprocess import CalledProcessError
 from cosmo.celery import celery, get_cosmo_properties
 from celery.utils.log import get_task_logger
 from os.path import expanduser
+import cosmo
 
 
 TAR_GZ_SUFFIX = "tar.gz"
@@ -109,10 +110,9 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
         if processed_line.startswith("*"):
             task = processed_line[1:].strip()
             if task.startswith(plugin_name) and task.endswith("." + operation_name):
-                current_dir = os.path.abspath(os.path.join(__file__, os.pardir))
-                plugins_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-                taskspy_path = os.path.join(plugins_dir, plugin_name.split(".")[-2]) + "/tasks.py"
-
+                cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
+                plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
+                taskspy_path = os.path.join(plugin_dir, "tasks.py")
                 parsed_tasks_file = ast.parse(open(taskspy_path, 'r').read())
                 method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
                                             parsed_tasks_file.body)
