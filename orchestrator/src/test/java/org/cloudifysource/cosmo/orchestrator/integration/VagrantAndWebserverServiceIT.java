@@ -24,6 +24,7 @@ import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Request;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.manager.config.JettyFileServerForPluginsConfig;
+import org.cloudifysource.cosmo.manager.config.ManagementLoggerConfig;
 import org.cloudifysource.cosmo.manager.dsl.DSLImporter;
 import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
 import org.cloudifysource.cosmo.monitor.RiemannEventsLogger;
@@ -74,6 +75,7 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
      */
     @Configuration
     @Import({
+            ManagementLoggerConfig.class,
             TemporaryDirectoryConfig.class,
             JettyFileServerForPluginsConfig.class,
             CeleryWorkerProcessConfig.class,
