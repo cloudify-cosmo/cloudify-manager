@@ -146,8 +146,17 @@ class ExecuteTaskParticipant < Ruote::Participant
     begin
 
       enriched_event = JSON.parse(json_event.to_s)
+
+      sub_workflow_name = workitem.sub_wf_name
+      workflow_name = workitem.wf_name
+      if sub_workflow_name == workflow_name
+        # no need to print sub workflow if there is none
+        enriched_event['wfname'] = workflow_name
+      else
+        enriched_event['wfname'] = "#{workflow_name}.#{sub_workflow_name}"
+      end
+
       enriched_event['wfid'] = workitem.wfid
-      enriched_event['wfname'] = workitem.sub_wf_name
 
       # if we are in the context of a node
       # we should enrich the event even further.
