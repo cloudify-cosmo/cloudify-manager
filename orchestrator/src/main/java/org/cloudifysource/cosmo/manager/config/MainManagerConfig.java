@@ -20,7 +20,6 @@ import org.cloudifysource.cosmo.manager.dsl.config.JettyDSLImporterConfig;
 import org.cloudifysource.cosmo.monitor.config.RiemannEventsLoggerConfig;
 import org.cloudifysource.cosmo.monitor.config.StateCacheFeederConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
-import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.springframework.context.annotation.Bean;
@@ -44,7 +43,7 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         JettyFileServerForPluginsConfig.class,
         JettyDSLImporterConfig.class,
         DefaultRuoteWorkflowConfig.class,
-        RuoteRuntimeConfig.class,
+        ManagementRuoteRuntimeConfig.class,
         CeleryWorkerProcessConfig.class,
         RiemannProcessConfiguration.class,
         StateCacheConfig.class,

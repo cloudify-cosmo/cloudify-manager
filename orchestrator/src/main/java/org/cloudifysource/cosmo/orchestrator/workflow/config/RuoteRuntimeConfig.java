@@ -23,8 +23,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
-import org.cloudifysource.cosmo.logging.Logger;
-import org.cloudifysource.cosmo.manager.ManagerLogDescription;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable;
 import org.cloudifysource.cosmo.statecache.StateCache;
@@ -52,9 +50,6 @@ import java.util.Map;
 @PropertySource("org/cloudifysource/cosmo/manager/ruote/ruote.properties")
 public class RuoteRuntimeConfig {
 
-    @Inject
-    private Logger logger;
-
     @NotEmpty
     @Value("${cosmo.ruote.workflows:ruote/workflows.yaml}")
     private String workflows;
@@ -77,7 +72,6 @@ public class RuoteRuntimeConfig {
         final Map<String, Object> variables = Maps.newHashMap();
         variables.putAll(loadInitialWorkflows());
 
-        logger.info(ManagerLogDescription.CREATING_RUNTIME_ENVIRONMENT);
         return RuoteRuntime.createRuntime(runtimeProperties, variables, rubyResourcesClassLoader);
     }
 
