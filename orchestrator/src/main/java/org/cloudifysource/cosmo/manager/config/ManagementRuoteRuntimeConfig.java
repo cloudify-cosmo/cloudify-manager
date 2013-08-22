@@ -18,46 +18,33 @@ package org.cloudifysource.cosmo.manager.config;
 
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.manager.ManagerLogDescription;
-import org.cloudifysource.cosmo.utils.ResourceExtractor;
-import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
-import org.robobninjas.riemann.spring.server.RiemannProcess;
-import org.springframework.beans.factory.annotation.Value;
+import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
+import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
- * A spring bean that starts and stops the riemann process.
+ * Creates a new {@link org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime}.
+ * It uses a logger to report creation to the user.
  *
  * @author Eli Polonsky
  * @since 0.1
  */
 @Configuration
-public class RiemannProcessConfiguration {
+public class ManagementRuoteRuntimeConfig extends RuoteRuntimeConfig {
 
     @Inject
     private Logger logger;
 
-    private static final String RIEMANN_RESOURCES_PATH = "riemann";
-
-    @Inject
-    private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
-
-
-    @Value("${riemann.server.config-resource}")
-    private String riemannConfigResourcePath;
-
-    @Bean(destroyMethod = "close")
-    public RiemannProcess riemann() throws IOException {
-        ResourceExtractor.extractResource(RIEMANN_RESOURCES_PATH,
-                Paths.get(temporaryDirectory.get().getAbsolutePath()));
-        Path configPath = Paths.get(temporaryDirectory.get().getAbsolutePath(),
-                riemannConfigResourcePath);
-        logger.info(ManagerLogDescription.LAUNCHING_RIEMANN_CEP);
-        return new RiemannProcess(configPath);
+    @Override
+    @Bean
+    public RuoteRuntime ruoteRuntime() throws IOException {
+        logger.info(ManagerLogDescription.CREATING_RUNTIME_ENVIRONMENT);
+        return super.ruoteRuntime();
     }
+
+
 }
