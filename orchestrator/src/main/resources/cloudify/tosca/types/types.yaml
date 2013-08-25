@@ -69,7 +69,7 @@ definitions:
             derived_from: "cloudify.tosca.types.middleware_server"
             
         cloudify.tosca.types.app_server:
-            dervied_from: "cloudify.tosca.types.middleware_server"
+            derived_from: "cloudify.tosca.types.middleware_server"
             
         clouidyf.tosca.type.message_bus_server:
             derived_from: "cloudify.tosca.types.middleware_server"
