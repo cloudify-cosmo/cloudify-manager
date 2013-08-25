@@ -14,6 +14,8 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
+require_relative '../exception_logger'
+
 class PrepareOperationParticipant < Ruote::Participant
 
   PLAN = 'plan'
@@ -97,9 +99,10 @@ class PrepareOperationParticipant < Ruote::Participant
       workitem.fields[OPERATION] = "cosmo.#{plugin_name}.tasks.#{operation.split('.')[-1]}"
 
       reply
-    rescue Exception => e
-      $logger.debug('Exception caught on prepare_operation participant execution: {}', e)
-      raise e
+
+    rescue => e
+      log_exception(e, 'prepare_operation')
+      flunk(workitem, e)
     end
   end
 

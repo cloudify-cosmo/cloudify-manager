@@ -14,23 +14,16 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-require_relative '../exception_logger'
+java_import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteLogDescription
+java_import com.google.common.base.Throwables
 
 
-class LoggerParticipant < Ruote::Participant
-
-  MESSAGE = 'message'
-
-  def on_workitem
-    begin
-      raise 'message not set' unless workitem.params.has_key? MESSAGE
-      message = workitem.params[MESSAGE]
-      $logger.debug('ruote-workflow: {}', message)
-      reply
-    rescue => e
-      log_exception(e, 'logger')
-      flunk(workitem, e)
-    end
+def log_exception(exception, participant_name='ruote', raise_exception=false)
+  if exception.kind_of? Exception
+    backtrace = exception.backtrace if exception.respond_to?(:backtrace)
+    $logger.error(RuoteLogDescription::EXCEPTION, participant_name, exception, backtrace)
+  elsif exception.java_kind_of? java.lang.Throwable
+    $logger.error(RuoteLogDescription::EXCEPTION, participant_name, exception, Throwables::get_stack_trace_as_string(exception))
   end
-
+  raise exception if raise_exception
 end
