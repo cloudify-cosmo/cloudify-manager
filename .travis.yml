@@ -17,6 +17,7 @@ install:
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
+   
 
 after_success:
   - "cd orchestrator;mvn install -Pall"
