@@ -164,7 +164,7 @@ definitions:
                 - "update_metadata"
                 
         # provision and manage virtual networks
-        cloudify.tosca.interfaces.network.network_provisioner
+        cloudify.tosca.interfaces.network.network_provisioner:
             operations:
                 - "create"
                 - "delete"
