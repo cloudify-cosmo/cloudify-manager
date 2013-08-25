@@ -26,6 +26,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
 
   @full_task_name = nil
+  @task_arguments = nil
 
   EXECUTOR = 'executor'
   TARGET = 'target'
@@ -34,6 +35,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   RELATIONSHIP_PROPERTIES = 'relationship_properties'
   PARAMS = 'params'
   PAYLOAD = 'payload'
+  ARGUMENT_NAMES = 'argument_names'
   NODE = 'node'
   RELATIONSHIP_NODE = 'relationship_other_node'
   NODE_ID = '__cloudify_id'
@@ -84,8 +86,11 @@ class ExecuteTaskParticipant < Ruote::Participant
       exec = workitem.params[EXEC]
       target = workitem.params[TARGET]
       payload = to_map(workitem.params[PAYLOAD])
+      argument_names = workitem.params[ARGUMENT_NAMES]
 
-      $logger.debug('Received task execution request [target={}, exec={}, payload={}]', target, exec, payload)
+
+      $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
+                    target, exec, payload, argument_names)
 
       task_id = SecureRandom.uuid
       payload_properties = payload[PROPERTIES] || Hash.new
@@ -109,6 +114,8 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
       properties = to_map(final_properties)
 
+      @task_arguments = extract_task_arguments(properties, argument_names)
+
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
                     task_id,
                     target,
@@ -130,12 +137,34 @@ class ExecuteTaskParticipant < Ruote::Participant
     end
   end
 
+  def extract_task_arguments(properties, argument_names)
+    props = {}
+    unless argument_names.nil?
+      args = argument_names.gsub('[','').gsub(']','').gsub("'",'')
+      args = args.split(',')
+      for name in args
+        name = name.gsub(' ','')
+        props[name] = properties[name]
+      end
+    end
+    props
+  end
+
   def onTaskEvent(task_id, event_type, json_event)
     begin
 
       enriched_event = JSON.parse(json_event.to_s)
+
+      sub_workflow_name = workitem.sub_wf_name
+      workflow_name = workitem.wf_name
+      if sub_workflow_name == workflow_name
+        # no need to print sub workflow if there is none
+        enriched_event['wfname'] = workflow_name
+      else
+        enriched_event['wfname'] = "#{workflow_name}.#{sub_workflow_name}"
+      end
+
       enriched_event['wfid'] = workitem.wfid
-      enriched_event['wfname'] = workitem.sub_wf_name
 
       # if we are in the context of a node
       # we should enrich the event even further.
@@ -160,18 +189,6 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       case event_type
 
-        when 'task-received'
-
-          unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(description)
-          end
-
-        when 'task-started'
-
-          unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(description)
-          end
-
         when 'task-succeeded'
 
           if workitem.params.has_key? RESULT_WORKITEM_FIELD
@@ -189,8 +206,11 @@ class ExecuteTaskParticipant < Ruote::Participant
             $user_logger.debug(red(description))
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
-        else
 
+        else
+          unless TASK_TO_FILTER.include? @full_task_name
+            $user_logger.debug(description)
+          end
       end
     rescue => e
       backtrace = e.backtrace if e.respond_to?(:backtrace)
@@ -226,7 +246,8 @@ class ExecuteTaskParticipant < Ruote::Participant
   def event_to_s(event)
 
     new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
-                 'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname']}
+                 'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname'],
+                 'args' => @task_arguments}
     unless event['exception'].nil?
       new_event['error'] = event['exception']
       new_event['trace'] = event['traceback']

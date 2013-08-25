@@ -1,6 +1,7 @@
 define global_workflow
 
     log message: 'Reloading policies'
+    event event: { "stage"=>"configuring riemann policies" }
     reload_riemann_config policies: '$plan.policies',
                           rules: '$plan.rules',
                           policies_events: '$plan.policies_events'
@@ -18,6 +19,7 @@ define global_workflow
             relationship_workflow execution_list: '$v:relationship.post_target_start',
                                   target_node_id: '${v:relationship.target_id}'
 
+        event event: { "stage"=>"initiating" }
         log message: 'executing init workflow for node: ${node.id}'
         set 'v:init': "$f:node.workflows.init"
         init

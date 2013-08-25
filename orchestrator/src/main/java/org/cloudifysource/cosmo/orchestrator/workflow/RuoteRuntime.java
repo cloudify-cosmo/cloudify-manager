@@ -43,7 +43,7 @@ public class RuoteRuntime {
     /**
      * This logger is intended for logging high level events and prettifying them to the console.
      */
-    private static final Logger USER_OUTPUT_LOGGER = LoggerFactory.getLogger("COSMO");
+    private static final Logger USER_OUTPUT_LOGGER = LoggerFactory.getLogger("cosmo");
 
     private static final String CREATE_DASHBOARD_METHOD_NAME = "create_dashboard";
     private static final String EXECUTE_WORKFLOW_METHOD_NAME = "execute_ruote_workflow";

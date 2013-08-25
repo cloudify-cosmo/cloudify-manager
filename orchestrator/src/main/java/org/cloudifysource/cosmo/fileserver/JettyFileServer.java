@@ -53,7 +53,7 @@ public class JettyFileServer implements AutoCloseable {
         try {
             server.start();
         } catch (Exception e) {
-            Throwables.propagate(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -62,4 +62,5 @@ public class JettyFileServer implements AutoCloseable {
     public void close() throws Exception {
         server.stop();
     }
+
 }

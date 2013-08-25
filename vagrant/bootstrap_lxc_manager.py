@@ -120,10 +120,11 @@ class VagrantLxcBoot:
         self.pip("bernhard")
 
     def install_vagrant(self):
+
         self.wget(
-            "http://files.vagrantup.com/packages/22b76517d6ccd4ef232a4b4ecbaa276aff8037b8/vagrant_1.2.6_x86_64.deb"
+            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/vagrant_1.2.7_x86_64.deb"
         )
-        self.run_fabric(self.sudo("dpkg -i vagrant_1.2.6_x86_64.deb"))
+        self.run_fabric(self.sudo("dpkg -i vagrant_1.2.7_x86_64.deb"))
         self.install_vagrant_lxc()
         self.add_lxc_box("precise64", "http://dl.dropbox.com/u/13510779/lxc-precise-amd64-2013-07-12.box")
 

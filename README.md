@@ -11,7 +11,7 @@ The [sample application](vagrant/test/python_webserver/python-webserver.yaml) st
 - Vagrant 1.2.6 (http://downloads.vagrantup.com)
 - Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
 
-
+the
 ### Bootstrap Cosmo ###
 
 The process of creating a new vagrant machine may take up to 20 minutes.
@@ -27,7 +27,7 @@ vagrant@cosmo-manager:~$ cd ~/cosmo-work
 
 ### Deploy the sample application ###
 
-The cosmo shell script starts cosmo and executes the the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
+The cosmo shell script starts cosmo and executes the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
 ```
 vagrant@cosmo-manager:~/cosmo-work$ ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```

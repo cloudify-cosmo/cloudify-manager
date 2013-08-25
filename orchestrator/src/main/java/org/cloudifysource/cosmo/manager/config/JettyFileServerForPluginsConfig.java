@@ -16,8 +16,12 @@
 
 package org.cloudifysource.cosmo.manager.config;
 
+import org.cloudifysource.cosmo.fileserver.JettyFileServer;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.manager.ManagerLogDescription;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
@@ -38,7 +42,18 @@ import java.io.IOException;
 public class JettyFileServerForPluginsConfig extends JettyFileServerConfig {
 
     @Inject
+    private Logger logger;
+
+    @Inject
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
+
+    @Override
+    @Bean(destroyMethod = "close")
+    public JettyFileServer jettyFileServer() {
+        logger.info(ManagerLogDescription.STARTING_FILE_SERVER, port);
+        return super.jettyFileServer();
+    }
+
 
     @PostConstruct
     public void setResourceBase() throws IOException {

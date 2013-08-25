@@ -44,8 +44,8 @@ import static java.lang.Thread.sleep;
 public class RiemannEventsLogger {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
-    protected final Logger userOutputLogger = LoggerFactory.getLogger("COSMO");
-    protected final Logger pluginsLogger = LoggerFactory.getLogger("COSMO.PLUGIN");
+    protected final Logger userOutputLogger = LoggerFactory.getLogger("cosmo");
+    protected final Logger pluginsLogger = LoggerFactory.getLogger("cosmo.plugin");
 
     private static final String COSMO_LOG_TAG = "cosmo-log";
 
