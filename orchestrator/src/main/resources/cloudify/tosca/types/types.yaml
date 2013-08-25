@@ -24,7 +24,39 @@ definitions:
                 - "cloudify.tosca.interfaces.plugin_installer"
             properties:
                 install_agent: 'false'
-
+                
+        # A storage volume in a topology
+        cloudify.tosca.types.volume:
+            interfaces:
+                - "cloudify.tosca.interfaces.volume.volume_provisioner"
+        
+        # A storage Container (Object Store segment)
+        cloudify.tosca.types.object_container:
+            interfaces:
+                - "cloudify.tosca.interfaces.object_container.container_provisioner"
+                
+        # An isolated virtual layer 2 domain or a logical / virtual switch
+        cloudify.tosca.types.network:
+            interfaces:
+                - "cloudify.tosca.interfaces.network.network_provisioner" 
+                
+        # A virtual Load Balancer
+        cloudify.tosca.types.load_balancer:
+            interfaces:
+                - "cloudify.tosca.interfaces.load_balancer.lb_provisioner"
+                
+        # A virtual floating IP
+        cloudify.tosca.types.virtual_ip:
+            interfaces:
+                - "cloudify.tosca.interfaces.virtual_ip.virtual_ip_provisioner"
+                
+        
+        # A security group 
+        cloudify.tosca.types.security_group:
+            interfaces:
+                - "cloudify.tosca.interfaces.security_group.security_group_provisioner"
+                          
+                               
         # A middleware component in a topology
         cloudify.tosca.types.middleware_server:
             interfaces:
@@ -34,6 +66,12 @@ definitions:
             derived_from: "cloudify.tosca.types.middleware_server"
 
         cloudify.tosca.types.web_server:
+            derived_from: "cloudify.tosca.types.middleware_server"
+            
+        cloudify.tosca.types.app_server:
+            derived_from: "cloudify.tosca.types.middleware_server"
+            
+        clouidyf.tosca.type.message_bus_server:
             derived_from: "cloudify.tosca.types.middleware_server"
 
         # An application artifact to deploy
@@ -107,6 +145,70 @@ definitions:
         cloudify.tosca.interfaces.plugin_installer:
             operations:
                 - "install"
+                
+        # provision and manage a storage volume
+        cloudify.tosca.interfaces.volume.volume_provisioner:
+            operations:
+                - "create"
+                - "delete"
+                - "attach"
+                - "detach"
+            
+        # provision and manage an object container
+        cloudify.tosca.interfaces.object_container.container_provisioner:
+            operations:
+                - "create"
+                - "delete"
+                - "create_metadata"
+                - "delete_metadata"
+                - "update_metadata"
+                
+        # provision and manage virtual networks
+        cloudify.tosca.interfaces.network.network_provisioner:
+            operations:
+                - "create"
+                - "delete"
+                - "create_subnet"
+                - "delete_subnet"
+                
+        # provision and manage a virtual load balancer
+        cloudify.tosca.interfaces.load_balancer.lb_provisioner:
+            operations:
+                - "create_device"
+                - "delete_device"
+                - "create_load_balancer"
+                - "delete_load_balancer"
+                - "update_load_balancer"
+                - "create_node"
+                - "delete_node"
+                - "update_node"
+                - "create_prob"
+                - "delete_prob"
+                - "update_prob"
+                
+        # provision and manage virtual ip
+        cloudify.tosca.interfaces.virtual_ip.virtual_ip_provisioner:
+            operations:
+                - "create"
+                - "delete"
+        
+        
+        #provision and manage a security group
+        cloudify.tosca.interfaces.security_group.security_group_provisioner:
+            operations:
+                - "create"
+                - "delete"
+                - "create_rule"
+                - "delete_rule"
+                
+        
+                
+        
+                
+        
+        
+                
+                
 
     ##################################################################################
     # Base plan definitions
