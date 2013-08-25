@@ -142,7 +142,7 @@ definitions:
                 radial: |
                     define middleware_server_init
                         execute_operation operation: 'install'
-                        execute_operation operation: 'start'
+                        execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
 
         cloudify.tosca.types.app_module:
             init:
