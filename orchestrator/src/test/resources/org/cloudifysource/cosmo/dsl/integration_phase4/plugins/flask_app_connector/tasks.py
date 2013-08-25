@@ -15,34 +15,18 @@
 # *******************************************************************************/
 
 from cosmo.celery import celery
-from cosmo.events import send_event
+import urllib
 import urllib2
-import os
-from os import path
-import errno
-import tempfile
-import sys
-import subprocess
-
-@celery.task
-def start(__relationship_cloudify_id, **kwargs):
-    send_event(__relationship_cloudify_id, "10.0.0.5", "flask app status", "state", "running")
 
 
 @celery.task
-def deploy(application_name, application_url, port=8080, **kwargs):
-    response = urllib2.urlopen(application_url)
-    application_path = path.join(tempfile.gettempdir(), 'flask-apps', application_name)
+def set_db_properties(db_file, port=8080, **kwargs):
+    url = "http://localhost:{0}/admin".format(port)
+    data = urllib.urlencode({"db_file": db_file})
+    request = urllib2.Request(url, data)
+    request.get_method = lambda: 'PUT'
+    response = urllib2.urlopen(request)
+    if response.getcode() != 200:
+        raise RuntimeError("request [{0}] return code is: {1}".format(request, response.getcode()))
 
-    try:
-        os.makedirs(application_path)
-    except OSError as e:
-        if not (e.errno == errno.EEXIST):
-            raise
 
-    application_file = path.join(application_path, 'app.py')
-    with open(application_file, "w") as f:
-        f.write(response.read())
-
-    command = [sys.executable, application_file, str(port)]
-    subprocess.Popen(command)

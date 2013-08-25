@@ -23,6 +23,7 @@ class PrepareOperationParticipant < Ruote::Participant
   SOURCE_PREFIX = 'source.'
   TARGET_PREFIX = 'target.'
   RELATIONSHIP_OTHER_NODE = 'relationship_other_node'
+  RUOTE_RELATIONSHIP_NODE_ID = 'relationship_node_id'
 
   NODE = 'node'
   OPERATION = 'operation'
@@ -53,9 +54,11 @@ class PrepareOperationParticipant < Ruote::Participant
         if operation.start_with? SOURCE_PREFIX
           operation = operation[SOURCE_PREFIX.length, operation.length]
           node = source_node
+          workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = target_node[NODE_ID]
         elsif operation.start_with? TARGET_PREFIX
           operation = operation[TARGET_PREFIX.length, operation.length]
           node = target_node
+          workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = source_node[NODE_ID]
         else
           raise "Invalid execution destination specified in operation: #{operation}"
         end

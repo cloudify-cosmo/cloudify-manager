@@ -6,6 +6,7 @@ definitions:
         - "cloudify.types"
         - "host_provisioner"
         - "middleware_component_installer"
+        - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
 
     service_templates:
         plugins_template:
@@ -32,4 +33,4 @@ definitions:
                 radial: |
                     define server_init
                         execute_operation operation: 'install'
-                        execute_operation operation: 'start'
+                        execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
