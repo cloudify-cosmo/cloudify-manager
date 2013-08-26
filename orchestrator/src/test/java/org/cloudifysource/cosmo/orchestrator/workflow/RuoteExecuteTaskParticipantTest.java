@@ -125,7 +125,7 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
                 "    resource_id: \"%s\",\n" +
                 "    properties: {\n" +
                 "      fail: \"%s\"\n" +
-                "    },\n" +
+                "    }\n" +
                 "  }\n", "http://localhost:8080/", execute, resourceId, true);
 
         final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);

@@ -16,6 +16,7 @@
 
 java_import org.cloudifysource::cosmo::statecache::StateCacheListener
 require 'json'
+require_relative '../exception_logger'
 
 class StateCacheParticipant < Ruote::Participant
   include StateCacheListener
@@ -36,9 +37,9 @@ class StateCacheParticipant < Ruote::Participant
       listener_id = state_cache.subscribe(resource_id, self)
       $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, params={}]', resource_id, workitem.params)
       put(LISTENER_ID, listener_id)
-    rescue Exception => e
-      $logger.debug(e.message)
-      raise e
+    rescue => e
+      log_exception(e, 'state_cache')
+      flunk(workitem, e)
     end
   end
 
@@ -47,9 +48,9 @@ class StateCacheParticipant < Ruote::Participant
       state_cache = $ruote_properties[STATE_CACHE]
       listener_id = get(LISTENER_ID)
       state_cache.remove_subscription(workitem.params[RESOURCE_ID], listener_id)
-    rescue Exception => e
-      $logger.debug(e.message)
-      raise
+    rescue => e
+      log_exception(e, 'state_cache')
+      flunk(workitem, e)
     end
   end
 

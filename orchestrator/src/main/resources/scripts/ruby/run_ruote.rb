@@ -32,7 +32,9 @@ require 'participants'
 require 'logging_observer'
 
 java_import com.google.common.io.Resources
+java_import com.google.common.base.Throwables
 java_import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteRadialVariable
+
 
 def to_map(java_map)
   map = Hash.new
@@ -81,12 +83,22 @@ def execute_ruote_workflow(dashboard, workflow, workitem_fields, wait_for_workfl
 end
 
 def wait_for_workflow(dashboard, wfid, timeout)
-  dashboard.wait_for(wfid, :timeout => timeout)
-  status = dashboard.process(wfid)
-  unless status.nil? or status.errors.nil?
-    raise java.lang.RuntimeException.new(status.errors.first.message)
+  result = nil
+  begin
+    result = dashboard.wait_for(wfid, :timeout => timeout)
+  rescue => e
+    EventParticipant.log_event({'workflow timed out' => e.message})
+    raise e
   end
-
+  status = dashboard.process(wfid)
+  if status.nil? or status.errors.nil?
+    EventParticipant.log_event({'workflow execution' => 'successful'}, result['workitem'])
+  else
+    message = status.errors.first.message
+    workitem = status.errors.first.workitem
+    EventParticipant.log_event({'workflow execution failed' => message}, workitem)
+    Throwables::propagate(java.lang.RuntimeException.new(status.errors.first.message))
+  end
 end
 
 

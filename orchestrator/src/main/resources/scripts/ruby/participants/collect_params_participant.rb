@@ -14,6 +14,8 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
+require_relative '../exception_logger'
+
 class CollectParamsParticipant < Ruote::Participant
 
   NAMES = 'names'
@@ -34,9 +36,9 @@ class CollectParamsParticipant < Ruote::Participant
                     param_names, output_field_name, result)
       workitem.fields[output_field_name] = result
       reply
-    rescue Exception => e
-      $logger.debug('Exception caught on collect_params participant execution: {}', e)
-      raise e
+    rescue => e
+      log_exception(e, 'collect_params')
+      flunk(workitem, e)
     end
   end
 

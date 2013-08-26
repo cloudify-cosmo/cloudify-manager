@@ -21,6 +21,8 @@ require 'json'
 require 'securerandom'
 require 'set'
 require 'prepare_operation_participant'
+require_relative '../exception_logger'
+
 
 class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
@@ -130,9 +132,8 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       executor.send_task(target, task_id, exec, json_props, self)
 
-
-    rescue Exception => e
-      $logger.debug("Exception caught on execute_task participant: #{e}")
+    rescue => e
+      log_exception(e, 'execute_task')
       flunk(workitem, e)
     end
   end
@@ -213,8 +214,7 @@ class ExecuteTaskParticipant < Ruote::Participant
           end
       end
     rescue => e
-      backtrace = e.backtrace if e.respond_to?(:backtrace)
-      $logger.debug("Exception handling task event #{json_event}: #{e.to_s} / #{backtrace}. ")
+      log_exception(e, 'execute_task')
       flunk(workitem, e)
     end
   end

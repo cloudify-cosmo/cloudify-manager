@@ -17,6 +17,7 @@
 java_import org.cloudifysource.cosmo.dsl.DSLProcessor
 java_import org.cloudifysource.cosmo.dsl.PluginArtifactAwareDSLPostProcessor
 require 'json'
+require_relative '../exception_logger'
 
 class PreparePlanParticipant < Ruote::Participant
 
@@ -78,9 +79,9 @@ class PreparePlanParticipant < Ruote::Participant
 
       reply
 
-    rescue Exception => e
-      $logger.debug('Exception caught on prepare_plan participant execution: {}', e)
-      raise e
+    rescue => e
+      log_exception(e, 'prepare_plan')
+      flunk(workitem, e)
     end
   end
 
