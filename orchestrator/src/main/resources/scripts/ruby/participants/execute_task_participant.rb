@@ -273,7 +273,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def dict_to_s(dict)
-    '{' + dict.map{|k,v| "\"#{k}\"=>\"#{v}\""}.join(', ') + '}'
+    "{\n" + dict.map{|k,v| "\"#{k}\"=>\"#{v}\""}.join(",\n") + "\n}"
   end
 
 end
