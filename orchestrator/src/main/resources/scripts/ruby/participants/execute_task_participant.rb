@@ -247,13 +247,14 @@ class ExecuteTaskParticipant < Ruote::Participant
 
     new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
                  'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname'],
-                 'args' => @task_arguments}
+                 'args' => dict_to_s(@task_arguments)}
     unless event['exception'].nil?
       new_event['error'] = event['exception']
       new_event['trace'] = event['traceback']
     end
 
-    "[#{event['type']}] - #{new_event}"
+    event_string = dict_to_s(new_event)
+    "[#{event['type']}] - #{event_string}"
 
   end
 
@@ -269,6 +270,10 @@ class ExecuteTaskParticipant < Ruote::Participant
       return full_task_name.split('.tasks.')[1]
     end
     full_task_name
+  end
+
+  def dict_to_s(dict)
+    '{' + dict.map{|k,v| "\"#{k}\"=>\"#{v}\""}.join(', ') + '}'
   end
 
 end
