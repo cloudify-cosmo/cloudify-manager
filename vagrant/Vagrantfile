@@ -33,7 +33,7 @@ Vagrant.configure('2') do |config|
     end
 
     working_dir = '/home/vagrant/cosmo-work'
-    cosmo_version = '0.1-SNAPSHOT'
+    cosmo_version = '0.1-RELEASE'
 
     command = "
         sudo apt-get -y update;
