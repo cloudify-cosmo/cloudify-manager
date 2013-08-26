@@ -6,7 +6,7 @@ The current version of Cosmo runs on a vagrant machine, reads the application pl
 The [sample application](vagrant/test/python_webserver/python-webserver.yaml) starts and monitors an LXC machine with a python web server. 
 
 ### Requirements ###
-- Build Status (develop branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-manager)
+- Build Status (master branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=master)](http://travis-ci.org/CloudifySource/cosmo-manager)
 - Virtual Box (https://www.virtualbox.org/wiki/Downloads)
 - Vagrant 1.2.6 (http://downloads.vagrantup.com)
 - Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
@@ -67,9 +67,12 @@ In case a new version of cosmo was released, you will probably want to upgrade.
 It a simple matter of replacing a jar file.
 
 ```
-vagrant@cosmo-manager:~/cosmo-work$ export cosmo_version=0.1-SNAPSHOT
+vagrant@cosmo-manager:~/cosmo-work$ export cosmo_version=0.1-RELEASE
 vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
 ```
+
+* To upgrade to the latest development code use `cosmo_vesrsion=${version}-SNAPHOT`.
+* To upgrade to a new release use `cosmo_version=${version}-RELEALSE`.
 
 ### Upgrade Cosmo from code ###
 
