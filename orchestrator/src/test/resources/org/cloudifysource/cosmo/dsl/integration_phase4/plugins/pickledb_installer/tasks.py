@@ -23,7 +23,7 @@ import pickledb
 
 @celery.task
 def install(**kwargs):
-	pass
+    pass
 
 
 @celery.task
@@ -31,7 +31,7 @@ def start(__cloudify_id, db_name='pickle', db_data={}, **kwargs):
     db_file = get_db_file_location(db_name)
     db = pickledb.load(db_file, False)
     for key, value in db_data.iteritems():
-    	db.set(key, value)
+        db.set(key, value)
     db.dump()
     send_event(__cloudify_id, "10.0.0.5", "pickle db status", "state", "running")
 
@@ -42,12 +42,11 @@ def get_db_file_location(db_name, **kwargs):
 
 
 def test():
-	db_name = 'pickle'
-	db_data = {'key1': 'value1', 'key2': 'value2'}
-	start(db_name, db_data)
-	db_file = get_db_file_location(db_name)
-	db = pickledb.load(db_file, False)
-	print(db.get('key1'))
-	print(db.get('key2'))
-	print(get_db_file_location(db_name))
-
+    db_name = 'pickle'
+    db_data = {'key1': 'value1', 'key2': 'value2'}
+    start(db_name, db_data)
+    db_file = get_db_file_location(db_name)
+    db = pickledb.load(db_file, False)
+    print(db.get('key1'))
+    print(db.get('key2'))
+    print(get_db_file_location(db_name))

@@ -120,11 +120,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             new OperationsDescriptor(
                 machineId,
                 "cloudify.tosca.artifacts.plugin.middleware_component_installer",
-                new String[]{"install", "start"}),
-            new OperationsDescriptor(
-                machineId,
-                "cloudify.tosca.artifacts.plugin.app_module_installer",
-                new String[]{"deploy", "start"})
+                new String[]{"install", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
     }
@@ -143,11 +139,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             new OperationsDescriptor(
                     machineId,
                     "cloudify.tosca.artifacts.plugin.middleware_component_installer",
-                    new String[]{"install", "start"}),
-            new OperationsDescriptor(
-                    machineId,
-                    "cloudify.tosca.artifacts.plugin.app_module_installer",
-                    new String[]{"deploy", "start"})
+                    new String[]{"install", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors, true);
     }
@@ -423,12 +415,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 host1Id,
                 "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks.install",
                 webServerId,
-                new CountDownLatch(1)
-            },
-            {
-                host1Id,
-                "cosmo.cloudify.tosca.artifacts.plugin.app_module_installer.tasks.deploy",
-                webApplicationId,
                 new CountDownLatch(1)
             }
         };

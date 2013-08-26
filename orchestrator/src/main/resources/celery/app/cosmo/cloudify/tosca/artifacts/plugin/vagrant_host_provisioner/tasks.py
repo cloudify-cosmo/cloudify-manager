@@ -35,7 +35,7 @@ logger = get_task_logger(__name__)
 
 @celery.task
 def provision(vagrant_file, __cloudify_id, ssh_conf=None, **kwargs):
-    logger.info('provisioning vagrant vm [id=%s, vagrant_file=\n%s]', __cloudify_id, vagrant_file)
+    logger.info('creating vagrant file [id=%s, vagrant_file=\n%s]', __cloudify_id, vagrant_file)
     v = get_vagrant(__cloudify_id, True)
     with open("{0}/Vagrantfile".format(v.root), 'w') as output_file:
         output_file.write(vagrant_file)
@@ -44,25 +44,25 @@ def provision(vagrant_file, __cloudify_id, ssh_conf=None, **kwargs):
 
 @celery.task
 def start(__cloudify_id, **kwargs):
-    logger.info('calling vagrant up [id=%s]', __cloudify_id)
+    logger.info('vagrant up [id=%s]', __cloudify_id)
     v = get_vagrant(__cloudify_id)
-    if status(v) != RUNNING:
+    if status(v, __cloudify_id) != RUNNING:
         return v.up()
     logger.info('vagrant vm is already up [id=%s]', __cloudify_id)
 
 
 @celery.task
 def stop(__cloudify_id, **kwargs):
-    logger.info('calling vagrant halt [id=%s]', __cloudify_id)
+    logger.info('vagrant halt [id=%s]', __cloudify_id)
     v = get_vagrant(__cloudify_id)
-    if status(v) == RUNNING:
+    if status(v, __cloudify_id) == RUNNING:
         return v.halt()
     logger.info('vagrant vm is not running [id=%s]', __cloudify_id)
 
 
 @celery.task
 def terminate(__cloudify_id, **kwargs):
-    logger.info("calling vagrant destroy [id=%s]", __cloudify_id)
+    logger.info("vagrant destroy [id=%s]", __cloudify_id)
     v = get_vagrant(__cloudify_id)
     return v.destroy()
 
@@ -77,7 +77,8 @@ def get_vagrant(vm_id, create=False):
     return vagrant.Vagrant(vm_path)
 
 
-def status(v):
+def status(v, host_id):
+    logger.debug("vagrant status [id=%s]", host_id)
     return v.status()
 
 
@@ -107,6 +108,6 @@ def start_monitor(v, host_id, ssh_conf):
     ]
     command = filter(lambda s: len(s) > 0, command)
 
-    logger.info('starting vagrant monitoring [cmd=%s]', command)
+    logger.info('starting vagrant monitoring [id=%s, cmd=%s]', host_id, command)
     subprocess.Popen(command)
 

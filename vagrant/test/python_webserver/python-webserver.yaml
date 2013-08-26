@@ -1,13 +1,19 @@
+###############
+#
+# Describes a deployment of a python simple http server running on a vagrant lxc machine.
+#
 definitions:
 
     imports:
         - "cloudify.types"
         - "vagrant_host_provisioner"
         - "python_webserver_installer.yaml"
+        - "stub_app_installer.yaml"
 
     service_templates:
         simple_web_server:
             topology:
+                # vagrant lxc machine
                 webserver_host:
                     type: "cloudify.tosca.types.host"
                     properties:
@@ -21,11 +27,8 @@ definitions:
                               config.vm.box = "precise64"
                               config.vm.provision :shell, :inline => "sudo apt-get -y install ufw && sudo ufw disable"
                               config.vm.provider :lxc do |lxc|
-
                                 lxc.customize 'network.ipv4', '10.0.3.5'
-
                               end
-
                             end
                         worker_config:
                             user: 'vagrant'
@@ -58,6 +61,7 @@ definitions:
                                         service: "vagrant machine bytes/sec"
                                         metric: "500.0"
 
+                # python simple http server
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
                     properties:

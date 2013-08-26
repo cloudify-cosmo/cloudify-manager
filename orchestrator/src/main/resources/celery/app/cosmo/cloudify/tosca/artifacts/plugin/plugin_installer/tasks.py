@@ -25,10 +25,9 @@ import _ast
 from subprocess import CalledProcessError
 from cosmo.celery import celery, get_cosmo_properties
 from celery.utils.log import get_task_logger
+from os.path import expanduser
+import cosmo
 
-logger = get_task_logger(__name__)
-
-CELERY_TASKS_PATH = "/home/vagrant/cosmo"
 
 TAR_GZ_SUFFIX = "tar.gz"
 ZIP_SUFFIX = "zip"
@@ -36,15 +35,20 @@ PLUGIN_FILE_PREFIX = "plugin"
 REQUIREMENTS_FILE = "requirements.txt"
 TASKS_MODULE = "tasks.py"
 
+logger = get_task_logger(__name__)
+
 
 @celery.task
-def install(plugin, **kwargs):
+def install(plugin, __cloudify_id, **kwargs):
     """
     Installs plugin as celery task according to the provided plugins details.
     plugin parameter is expected to be in the following format: { name: "...", url: "..." }
     The plugin's url should be an http url pointing to either a zip or tar.gz file and the compressed file
     should contain a "tasks.py" module with celery tasks.
     """
+
+    logger.debug("installing plugin [%s] in host [%s]", plugin, __cloudify_id)
+
     name = plugin["name"]
     url = plugin["url"]
 
@@ -106,10 +110,9 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
         if processed_line.startswith("*"):
             task = processed_line[1:].strip()
             if task.startswith(plugin_name) and task.endswith("." + operation_name):
-                current_dir = os.path.abspath(os.path.join(__file__, os.pardir))
-                plugins_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-                taskspy_path = os.path.join(plugins_dir, plugin_name.split(".")[-2]) + "/tasks.py"
-
+                cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
+                plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
+                taskspy_path = os.path.join(plugin_dir, "tasks.py")
                 parsed_tasks_file = ast.parse(open(taskspy_path, 'r').read())
                 method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
                                             parsed_tasks_file.body)
@@ -142,7 +145,9 @@ def create_plugin_path(name):
     path's sub directories.
     An exception will be raised if the plugin's directory already exists.
     """
-    path = CELERY_TASKS_PATH
+    home_dir = expanduser("~")
+    cosmo_path = os.path.join(home_dir, "cosmo")
+    path = cosmo_path
     path_values = name.split(".")
 
     for p in path_values:
@@ -154,7 +159,7 @@ def create_plugin_path(name):
     os.makedirs(path)
 
     # create __init__.py files in each subfolder
-    init_path = CELERY_TASKS_PATH
+    init_path = cosmo_path
     for p in path_values:
         init_path = os.path.join(init_path, p)
         init_file = os.path.join(init_path, "__init__.py")
