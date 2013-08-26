@@ -43,11 +43,11 @@ def provision(vagrant_file, __cloudify_id, ssh_conf=None, **kwargs):
 
 
 @celery.task
-def start(__cloudify_id, **kwargs):
+def start(__cloudify_id, provider='virtualbox', **kwargs):
     logger.info('vagrant up [id=%s]', __cloudify_id)
     v = get_vagrant(__cloudify_id)
     if status(v, __cloudify_id) != RUNNING:
-        return v.up()
+        return v.up(provider)
     logger.info('vagrant vm is already up [id=%s]', __cloudify_id)
 
 
@@ -79,7 +79,10 @@ def get_vagrant(vm_id, create=False):
 
 def status(v, host_id):
     logger.debug("vagrant status [id=%s]", host_id)
-    return v.status()
+
+    # we assume a single vm vagrant file
+    v_status = v.status()
+    return v_status.itervalues().next()
 
 
 def start_monitor(v, host_id, ssh_conf):
