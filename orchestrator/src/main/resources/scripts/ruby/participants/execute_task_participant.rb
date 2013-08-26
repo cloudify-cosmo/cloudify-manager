@@ -20,6 +20,7 @@ java_import org.cloudifysource::cosmo::tasks::TaskExecutor
 require 'json'
 require 'securerandom'
 require 'set'
+require 'prepare_operation_participant'
 
 class ExecuteTaskParticipant < Ruote::Participant
   include TaskEventListener
@@ -36,7 +37,10 @@ class ExecuteTaskParticipant < Ruote::Participant
   PAYLOAD = 'payload'
   ARGUMENT_NAMES = 'argument_names'
   NODE = 'node'
+  RELATIONSHIP_NODE = 'relationship_other_node'
   NODE_ID = '__cloudify_id'
+  RUOTE_RELATIONSHIP_NODE_ID = PrepareOperationParticipant::RUOTE_RELATIONSHIP_NODE_ID
+  RELATIONSHIP_NODE_ID = '__relationship_cloudify_id'
   CLOUDIFY_RUNTIME = 'cloudify_runtime'
   EVENT_RESULT = 'result'
   RESULT_WORKITEM_FIELD = 'to_f'
@@ -103,6 +107,10 @@ class ExecuteTaskParticipant < Ruote::Participant
       if payload.has_key? RELATIONSHIP_PROPERTIES
         relationship_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
         safe_merge!(final_properties, relationship_properties)
+      end
+      if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
+        relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
+        payload_properties[RELATIONSHIP_NODE_ID] = relationship_node_id
       end
       properties = to_map(final_properties)
 

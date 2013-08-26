@@ -8,6 +8,7 @@ definitions:
         - "cloudify.types"
         - "vagrant_host_provisioner"
         - "python_webserver_installer.yaml"
+        - "stub_app_installer.yaml"
 
     service_templates:
         simple_web_server:

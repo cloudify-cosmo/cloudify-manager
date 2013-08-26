@@ -59,6 +59,7 @@ definitions:
         cloudify.tosca.types.middleware_server:
             interfaces:
                 - "cloudify.tosca.interfaces.middleware_component_installer"
+                - "cloudify.tosca.interfaces.app_module_installer"
 
         cloudify.tosca.types.db_server:
             derived_from: "cloudify.tosca.types.middleware_server"
@@ -73,9 +74,7 @@ definitions:
             derived_from: "cloudify.tosca.types.middleware_server"
 
         # An application artifact to deploy
-        cloudify.tosca.types.app_module:
-            interfaces:
-                - "cloudify.tosca.interfaces.app_module_installer"
+        cloudify.tosca.types.app_module: { }
 
 
     ##################################################################################
@@ -234,14 +233,12 @@ definitions:
                 radial: |
                     define middleware_server_init
                         execute_operation operation: 'install'
-                        execute_operation operation: 'start'
+                        execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
 
         cloudify.tosca.types.app_module:
             init:
                 radial: |
                     define app_module_init
-                        execute_operation operation: 'deploy'
-                        execute_operation operation: 'start'
 
 
     ##################################################################################

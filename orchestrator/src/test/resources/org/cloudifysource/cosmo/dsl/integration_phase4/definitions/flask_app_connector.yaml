@@ -1,0 +1,13 @@
+definitions:
+
+    interfaces:
+        cloudify.tosca.interfaces.app_connector:
+            operations:
+                - "set_db_properties"
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.flask_app_connector:
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.app_connector"
+                url: "#{plugin_repository}/flask_app_connector.zip"
