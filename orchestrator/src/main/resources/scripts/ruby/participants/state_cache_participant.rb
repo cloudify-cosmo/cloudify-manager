@@ -38,7 +38,8 @@ class StateCacheParticipant < Ruote::Participant
       $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, params={}]', resource_id, workitem.params)
       put(LISTENER_ID, listener_id)
     rescue => e
-      log_exception(e, 'state_cache', true)
+      log_exception(e, 'state_cache')
+      flunk(workitem, e)
     end
   end
 
