@@ -18,6 +18,7 @@ definitions:
                     type: "cloudify.tosca.types.host"
                     properties:
                         install_agent: 'true'
+                        provider: lxc
                         ssh_conf:
                             host: '10.0.3.5'
                             port: '22' # needed since the default port for the vagrant monitor uses 2222(virtual box)
