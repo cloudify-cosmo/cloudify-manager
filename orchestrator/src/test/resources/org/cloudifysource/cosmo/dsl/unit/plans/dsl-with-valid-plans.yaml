@@ -1,0 +1,44 @@
+# valid
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "app_module_installer"
+        - "host_provisioner"
+        - "middleware_component_installer"
+
+    types:
+        some_custom_type:
+            derived_from: "cloudify.tosca.types.host"
+
+    service_templates:
+        service_template:
+            topology:
+                default_host:
+                    type: "cloudify.tosca.types.host"
+
+                overridden_host:
+                    type: "cloudify.tosca.types.host"
+
+                default_middleware:
+                    type: "cloudify.tosca.types.web_server"
+
+                custom_template:
+                    type: "some_custom_type"
+
+    plans:
+        service_template.default_host:
+            init:
+                radial: "plan1"
+
+        service_template.overridden_host:
+            init:
+                radial: "plan2"
+
+        cloudify.tosca.types.web_server:
+            init:
+                radial: "plan3"
+
+        service_template.custom_template:
+            init:
+                radial: "plan4"

@@ -1,0 +1,8 @@
+cloudify.types: cloudify/tosca/types/types.yaml
+cloudify.policies: cloudify/tosca/policies/policies.yaml
+app_module_installer: cloudify/tosca/artifacts/plugins/app_module_installer.yaml
+host_provisioner: cloudify/tosca/artifacts/plugins/host_provisioner.yaml
+middleware_component_installer: cloudify/tosca/artifacts/plugins/middleware_component_installer.yaml
+celery_worker_installer: cloudify/tosca/artifacts/plugins/worker_installer.yaml
+celery_plugin_installer: cloudify/tosca/artifacts/plugins/plugin_installer.yaml
+vagrant_host_provisioner: cloudify/tosca/artifacts/plugins/vagrant_host_provisioner.yaml

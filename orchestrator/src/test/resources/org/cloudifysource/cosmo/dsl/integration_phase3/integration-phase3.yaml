@@ -1,0 +1,65 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "vagrant_host_provisioner"
+        - "python_webserver_installer.yaml"
+        - "stub_app_installer.yaml"
+
+    service_templates:
+        simple_web_server:
+            topology:
+                webserver_host:
+                    type: "cloudify.tosca.types.host"
+                    properties:
+                        install_agent: 'true'
+                        vagrant_file: |
+                            Vagrant.configure("2") do |config|
+                              config.vm.box = "precise32"
+                              config.vm.network :private_network, ip: "10.0.0.5"
+                              config.vm.provision :shell, :inline => "sudo ufw disable"
+                            end
+                        worker_config:
+                            user: 'vagrant'
+                            port: '22'
+                            management_ip: "10.0.0.1"
+                            key: '~/.vagrant.d/insecure_private_key'
+                            broker: 'amqp://guest:guest@10.0.0.1:5672//'
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                        failure_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_not_equals"
+                                    properties:
+                                        service: "vagrant machine status"
+                                        state: "running"
+                        performance_policy:
+                            rules:
+                                host_state:
+                                    type: "metric_below"
+                                    properties:
+                                        service: "vagrant machine bytes/sec"
+                                        metric: "500.0"
+
+                webserver_middleware:
+                    type: "cloudify.tosca.types.web_server"
+                    properties:
+                        port: 8888
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                webserver_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "webserver status"
+                                        state: "running"
+                    relationships:
+                        -   type: "cloudify.tosca.relationships.contained_in"
+                            target: "webserver_host"

@@ -1,0 +1,8 @@
+definitions:
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.vagrant_host_provisioner:
+            derived_from: "cloudify.tosca.artifacts.remote_plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.host_provisioner"
+                url: "cloudify/tosca/artifacts/plugins/vagrant-host-plugin.zip"

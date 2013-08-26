@@ -1,0 +1,8 @@
+definitions:
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.flask_app_installer:
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.app_module_installer"
+                url: "#{plugin_repository}/flask_app_installer.zip"

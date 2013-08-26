@@ -1,0 +1,21 @@
+--- 
+definitions: 
+  artifacts: 
+    artifact2: 
+      derived_from: artifact
+  imports: 
+    - org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports-imported3.yaml
+  interfaces: 
+    interface2: 
+      operations: 
+        - operation1
+        - operation2
+  plans: 
+    type2: 
+      init: 
+        radial: type2_radial_stub
+  relationships:
+    relationship2: {}
+  types: 
+    type2: 
+      derived_from: node

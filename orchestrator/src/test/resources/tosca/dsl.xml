@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns="http://docs.oasis-open.org/tosca/ns/2011/12"
+             targetNamespace="http://docs.oasis-open.org/tosca/ns/2011/12"
+             id="TheBestDSLInTheWorld"
+             name="MyServiceTemplateDefinition"
+             xsi:schemaLocation="http://docs.oasis-open.org/tosca/ns/2011/12 http://docs.oasis-open.org/tosca/TOSCA/v1.0/cs02/schemas/TOSCA-v1.0.xsd ">
+
+    <Types>
+        <xsi:schema
+                    elementFormDefault="qualified"
+                    attributeFormDefault="unqualified">
+        <element name="MachineProperties">
+                <complexType>
+                    <sequence>
+                        <element name="Image" type="xs:string"/>
+                        <element name="OS" type="xs:string"/>
+                        <element name="Memory" type="xs:string"/>
+                        <element name="CPU" type="xs:string"/>
+                    </sequence>
+                </complexType>
+            </element>
+            <element name="DatabaseServerProperties">
+                <complexType>
+                    <sequence>
+                        <element name="Port" type="xs:positiveInteger"/>
+                    </sequence>
+                </complexType>
+            </element>
+            <element name="DatabaseProperties">
+                <complexType>
+                    <sequence>
+                        <element name="Name" type="xs:string"/>
+                        <element name="SchemaFile" type="xs:string"/>
+                    </sequence>
+                </complexType>
+            </element>
+        </xsi:schema>
+    </Types>
+
+    <ServiceTemplate id="MySQLService">
+
+        <TopologyTemplate xmlns:p="properties">
+
+            <NodeTemplate id="MachineTemplate" name="MySQL Machine" type="Machine">
+                <Properties>
+                    <p:MachineProperties>
+                        <Image>aws-11jk839</Image>
+                    </p:MachineProperties>
+                </Properties>
+            </NodeTemplate>
+
+            <NodeTemplate id="DatabaseServerTemplate"
+                          name="MySQL Database Server"
+                          type="MySQLDatabaseServer">
+                <Properties>
+                    <p:DatabaseServerProperties>
+                        <Port>3306</Port>
+                    </p:DatabaseServerProperties>
+                </Properties>
+            </NodeTemplate>
+
+            <NodeTemplate id="DatabaseTemplate"
+                          name="Database Schema"
+                          type="Database">
+                <Properties>
+                    <p:DatabaseProperties>
+                        <Name>petclinic</Name>
+                        <SchemaFile>mysql.schema</SchemaFile>
+                    </p:DatabaseProperties>
+                </Properties>
+            </NodeTemplate>
+
+            <RelationshipTemplate id="DatabaseServerHostedOnMachine"
+                                  type="HostedOn">
+                <SourceElement ref="DatabaseServerTemplate"/>
+                <TargetElement ref="MachineTemplate"/>
+            </RelationshipTemplate>
+
+            <RelationshipTemplate id="DatabaseDeployedOnDatabaseServer"
+                                  type="DeployedOn">
+                <SourceElement ref="DatabaseTemplate"/>
+                <TargetElement ref="DatabaseServerTemplate"/>
+            </RelationshipTemplate>
+
+        </TopologyTemplate>
+
+    </ServiceTemplate>
+
+    <NodeType name="Machine">
+        <PropertiesDefinition element="MachineProperties"/>
+        <Interfaces>
+            <Interface name="MachineInterface">
+                <Operation name="Create"/>
+                <Operation name="Halt"/>
+                <Operation name="Terminate"/>
+            </Interface>
+        </Interfaces>
+    </NodeType>
+
+    <NodeType name="DatabaseServer">
+        <PropertiesDefinition element="DatabaseServerProperties"/>
+        <Interfaces>
+            <Interface name="DatabaseServerInterface">
+                <Operation name="Install"/>
+                <Operation name="Start"/>
+                <Operation name="Stop"/>
+            </Interface>
+        </Interfaces>
+    </NodeType>
+
+    <NodeType name="Database">
+        <PropertiesDefinition element="DatabaseProperties"/>
+        <Interfaces>
+            <Interface name="DatabaseInterface">
+                <Operation name="Create"/>
+                <Operation name="Delete"/>
+            </Interface>
+        </Interfaces>
+    </NodeType>
+
+    <RelationshipType name="HostedOn"/>
+    <RelationshipType name="DeployedOn"/>
+
+
+</Definitions>

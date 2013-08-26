@@ -1,0 +1,425 @@
+
+= ruote - CHANGELOG.txt
+
+
+== ruote - 2.3.1    not yet released
+
+
+== ruote - 2.3.0.2    not yet released
+
+- pin ruote.gemspec to ruby_parser ~>2.3 and parslet 1.4.0
+- add Ruote.[de]camelize
+- expose 'history_max_size' config option
+- Dashboard#get_trackers
+- Dashboard#remove_tracker(fei_sid_or_id, wfid)
+- :await attribute
+- let Ruote.deep_mutate mutate matching keys and their collection values
+- stop tripping on empty tags ("")
+- jump to 'x' where x in "participant 'x'" unlocked (thanks Tobias Neubert)
+- unlock on_error more (on_error: "retry * 3, pass" for example)
+- revise "$x" (literal dollars), now return nil instead of "$x" when missing
+- _auto_remove (and _alter) for trackers (pause on apply++)
+- pause on apply concept brought in
+- Dashboard#add_tracker
+- Dashboard#attach(fei, pdef)
+- participant#on_error
+
+
+== ruote - 2.3.0.1    released 2012/09/08
+
+- pin ruote.gemspec to blankslate 2.1.2.4
+  (since blankslate 3.1 is out and Parslet wants ~> 2.1...)
+- FlowExpression#root(stubborn=false)
+
+
+== ruote - 2.3.0    released 2012/09/04
+
+- Dashboard#wait_for('action' => 'apply', 'name' => 'wait')
+- past_tags: track variables
+- Workitem#launched_at and #sub_wf_launched_at
+- Ruote.deep_delete and .deep_mutate
+- Ruote::Observer (a base classing for observing a ruote engine's activity)
+- thread['ruote_worker']
+- Dashboard#respark(wfid, opts={})
+- StorageBase#dump: go with YAML
+- on_error: !immediate
+- "kill" expression (undo/cancel alias)
+- ${tags}, ${tag} and ${full_tag}
+- StorageParticipant#flunk(workitem, err, *err_args)
+- ReceiverMixin#flunk(workitem, err, *err_args)
+- workitem: sub_wf_name and sub_wf_revision
+- new 'raise' msg for passing back errors to worker
+- participant#on_apply
+- push/pop specialized aliases for inc/dec
+- inc/dec: 'v:x' => 2 shortcut
+- inc/dec: drop default 'v:d' and accept nested {in|de}crement
+- 'participant_in_variable_enabled' switch
+- make re_apply use the applied workitem by default
+- ${mnemo_id} (along with ${expid} and ${subid})
+- Dashboard#remove_process (idea Claudio Petasecca Donati)
+- re_dispatch bug fix (patch by Doug Bryant)
+- Ruote.extract_wfid(o)
+- on_error/on_timeout: cancel/cando
+- Worker#handle_step_error(e, msg) enhancements
+- cancel "flavour" rebound
+- Dashboard#logger shortcut
+- :on_error => 'raise'
+- :over_if bug fix (reported by Alex Wang)
+- :merge_type => 'deep' (idea Jim MarsBomber Li)
+- Dashboard#launch accepts :wfid "field", custom wfid
+- kill_process expression (and on_error)
+- the "second take" (__on_error__, __on_cancel__)
+- Ruote.tree(&block) alias to Ruote.to_tree(&block)
+- added 'tree' entry to error doc and error msg
+- error handler $f:__error__: added 'tree' entry
+- Ruote::Reader.to_expid_radial
+- wfid_generator: dropping the @last['raw'] concept
+- wait_for(:x, :or_error) (thanks John Roberts)
+- concurrence over_if bug (thanks alexw668)
+- concurrence and citerator :remaining => 'wait' (idea Pedro Visintin)
+- set 'v:x' => 'y', :over[ride] => true/'sub'
+- concurrence and citerator :count => -x (all but x)
+- "await" expression, successor to "listen"
+- root expression: __past_tags__ variable
+- full tags
+- concurrence and citerator: :count => 0 (immediate reply)
+- iterator and concurrent-iterator: implicit sequence
+- iterator: stopped creating new variable scope
+- :vars_to_f common attribute
+- :scope => true forces a new variable scope
+- subprocess 'field:x' => 'y' (variables and now fields)
+- Dashboard#worklist (alias for Dashboard#storage_participant)
+- set: now accepting children (and behaving like a sequence)
+- [un]set: setting __result__
+- concurrence :wait_for => 'alpha, bravo' (idea Raphael Simon)
+- BlockParticipant: nicer multi blocks
+- Dashboard #cancel and #kill now accept options
+- StorageParticipant #reserve and #delegate
+- 'terminated/ceased' msg: include root exp variables
+- Dashboard#worker_state[=] (running/paused/stopped)
+- define :on_terminate => :regenerate
+- :on_error => '5m: retry * 3, 10m: retry'
+- :on_error => '5m: retry, 2m: retry, pass'
+- dsub for attribute keys as well
+- conf option: 'worker_info_enabled' (defaults to true, enabled)
+- Dashboard#register saves list in one batch (unless :clear => true)
+- DefaultHistory include Enumerable
+- Dashboard#wait_for(action_name) (dispatch, cancel, reply, ...)
+- merged TestLogger into WaitLogger
+- :take and :discard common attributes
+- filter: 'take' and 'discard'
+- Participant: on_cancel -> false prevents on_cancel reply
+- LocalParticipant #is_gone? #is_cancel[l]ed?
+- Dashboard#worker_info
+- msg: put_doc, low-level action
+- participant: #rtimers, #rtimeout and #timers
+- lose and forget expressions: aligned 'multi' behaviour
+- concurrence and citerator: :merge_type => 'ignore'
+- :timers error, redo/retry, undo/pass and commands
+- :timers common attribute
+- :flank common attribute
+- Storage#done(worker, msg) optional method
+- get_many :batch option (used by some storages for optimization)
+- 'stall' expression (mostly for testing)
+- context and worker : subscription reworked
+- worker: 'restless_worker' option
+- Ruote::Dashboard (will slowly phase Ruote::Engine out)
+- :on_timeout => 'rewind', :on_timeout => 'jump to alpha'
+- :on_error => 'rewind', :on_error => 'jump to alpha'
+- dispatch_pool and context['participant_threads_enabled']
+- participant params.__children__
+- on_error expression
+- concurrence :merge_type => 'concat' (vs 'union') (Thanks Julien France)
+- Workitem#re_dispatch_count
+- Engine#launch(pdef, fields, vars, root_stash)
+- Workitem #[] amd #[]= (#lookup and #set_field shortcuts)
+- LocalParticipant#lookup_variable(key)
+- LocalParticipant / Receiver : stash_get / stash_put
+- LocalParticipant implicit participant_name
+- LocalParticipant implicit workitem, fei, flavour and fexp
+- Participant #on_workitem, #dont_thread?, etc
+- FlowExpression #root and #root_id
+- dollar substitution in expression name as well
+- Engine#replay_at_error(err_or_fei_or_wi)
+- Engine#error(wi_or_fei)
+- storages: #replace_engine_configuration(opts)
+- FsStorage: saving newer configuration (Thanks Nicholas Faiz)
+- ProcessStatus context: linking expression <-> error
+- ProcessStatus#root_workitem
+- ProcessStatus#leaves
+- filter 'includes' and 'is' (Thanks Nando Sola)
+- trailing fields (a Simone Carletti idea)
+- concurrence vs history issue fixed (Thanks Juris Galang)
+- unset and fields: made sure the field is removed (Thanks jpgilman)
+- sourcify, using to_raw_source from now on
+- filter expression and blocks
+- set 'v:display' => 'echo', aliasing of expressions
+- Reader.read(s): better error raised when failed to 'parse'
+- :on_field => 'my.nested.field' now possible
+- [concurrent-]iterator :to => 'v:x' / 'f:y' / 'y'
+- concurrence :merge_type => 'union'
+- Reader.to_radial(tree)
+- Workitem#param_or_field(key) and #field_or_param(key)
+- Workitem#param_text
+- ProcessError#deviations (cf filter and Ruote::ValidationError)
+- reworked (process definition) Reader
+- filter top-level 'or'
+- filter field => 'x|y' (or on field names)
+- 'radial' process definitions
+- fixed Tracker#add_tracker (2nd try) issue (Thanks Pedro Texeira)
+- Engine#register :on_workitem / :on_reply / ...
+- set 'v:participant' => lambda { |wi| wi.fields['x'] = 'y' }
+- listen :to => :errors, :class => string / :message/:msg => string / regex
+- listen :to => :errors
+- dropped require 'json' and co from fs_storage (Thanks Torsten)
+- cursor : 'reset' command and :reset_if attribute
+- Engine#resume(wfid, :anyway => true) resumes any paused expression in a
+  given process
+- Engine#pause(fei, :breakpoint => true) pauses only one expression (and not
+  its children)
+- CompositeStorage#delete_schedule fix (Thanks Greg)
+- read 'http://'|'file', :to => 'f:a' / :to => 'v:b'
+- save :to => 'f:a' / :to => 'v:b'
+- pause(fei/wfid), resume(fei/wfid)
+- participant list, multiple participants with same regex now ok, allowing
+  for cascading participants (at consume and at on_error)
+- register block : fixed issue with lonely pname and block
+- register_participant : after/before/over
+- register block : now clearing by default
+- fixed issue with deep set and unset (Thanks Nando Sola)
+- improved conditional evaluation for dollar notation
+- register block : catchall and catch_all
+- Workitem #wf_name and #wf_revision
+- StorageParticipant :skip and :limit issues (Thanks Jan Topiński)
+- StorageParticipant #proceed deprecates #reply
+- fix for :if => '${a}' when a like '456ab' (Thanks John Le)
+- StorageParticipant :count => true uniformization (Thanks Jan Topiński)
+- StorageParticipant#by_fei (alias for #[])
+
+
+== ruote - 2.2.0    released 2011/03/01
+
+- Engine#participant(name) returns an instance of any participant
+- :filter => 'participant_name' (consume(wi) / filter(fields))
+- listen block and forget issue fixed (Thanks Nando Sola)
+- @msg always set in FlowExpression
+- aliased 'cancel_process' to 'terminate'
+- Engine#leftovers (Thanks Iuri)
+- $x, $f:x and $v:y vs ${x}, ${f:x} and ${v:y} (literally)
+- :filter common attribute
+- Participant#do_not_thread : optional workitem parameter
+- filter expression
+- LocalParticipant / Receiver #applied_workitem(fei)
+- using Sourcify to store block participant's code as a string
+- CompositeStorage#delete bug fix (Thanks Claudio)
+- ParticipantList#register bug fix (Thanks 'sandbox')
+- StorageHistory#wfids and DefaultHistory#wfids
+- Engine#history -> DefaultHistory (keeping the last 1000 msgs)
+- 'citerator' alias to 'concurrent_iterator'
+- Participant#rtimeout(workitem) (optional)
+- moved Engine#workitem(fei) to ReceiverMixin
+- storage#delete_schedule ignoring nil schedule_id
+- Participant #rtimeout instead of #timeout
+- StorageParticipant making @options available
+- Engine#register, allowing block participants (Thanks Hery)
+- fixed Engine#launch_single relaunch issue (Thanks Gonzalo)
+- 'rset', an alias for the 'set' expression (Thanks Rebo)
+- listen :to => /x/ or "/x/" required for regular expressions
+- engine#on_terminate = participant_name / subprocess_name / tree
+- listen :to => 'tagname', :upon => 'entering' / 'leaving'
+- Ruote::Parser becomes Ruote::Reader
+- :if => "${customer} in ${customer_list}", :if => "4 in {4 => 5}"
+- Ruote::Workitem .from_json #as_json
+- :on_error => redo/retry // undo/pass
+- given : a case/switch ruote equivalent
+- conditionals : "${x} is empty" and "${x} is null"
+- once expression (once, _when, as_soon_as)
+- let expression (a sequence with its own variable scope)
+- engine.ps(wfid=nil)
+- once : made sure child is cancelled as well
+- :if => '${f:a} and ${f:b}'
+- workitem.tags (workitem['fields']['__tags__']
+- better participant initialization (Thanks Neil Pennell)
+- Engine #cancel and #kill (expression or process, whichever)
+- subid (sub_wfid) for every expression
+- undo and redo : more robust (broken tags)
+- cursor : giving a sub_wfid to children (play nice with :forget)
+- Ruote.is_tree?(o) .is_definition_tree?(o) consolidated
+- engine#on_error = [] registering error notifications and the like
+- engine#configuration(key) (counterpart to engine#configure(key, value))
+- implemented the :lose attribute
+- implemented the 'lose' expression
+- fixed issue with "over" (Thanks Daniel 'hassox' Neighman)
+- fixed issue with workitem.command = 'jump to x' (Thanks Fix Peña)
+- fixed issue with ProcessStatus#position and errors in ParticipantExpression
+  (Thanks Eric Smith)
+- 'registerp' and 'unregisterp' expressions
+- ${r:xxx} when ruby_eval_allowed == false now raises an error
+
+
+== ruote - 2.1.11    released 2010/10/01
+
+- Engine#process broken with process where schedule count > 1 (Thanks David)
+- Engine#launch_single for 1! instance processes (Thanks Eric)
+- Workitem#command and #command= helpers
+- ProcessError#workitem helper
+- fetch_flow_expression made public and aliased to fexp
+- ${r:workitem_field} (idea: Nathan Stults)
+- Ruote::Dollar::Dict and Ruote::Dollar::RubyContext
+- made Ruote.dsub a service : @context.dollar_sub.s(...) (idea: Nathan Stults)
+- moved simpler services to ruote/svc/
+- using BlankSlate for ruby process definitions
+- Engine.new(worker, :join => true) will let the worker run in the current
+  thread (and not return)
+- StorageParticipant#query(:count => true)
+- storage.get_many(type, keys, :descending => true)
+- engine.processes(:skip => 50, limit => 50)
+- listen expression : using lwfid instead of wfid (storage change)
+- fixed issue when re-applying root expressions (Thanks Brett)
+- storage_participant.query using :skip and :limit
+- engine.schedules([wfid]) and ProcessStatus#schedules
+- differentiating on_re_apply from on_cancel (process gardening)
+- engine.participant_list= more tolerant about its input
+- engine.process(wfid).stored_workitems
+- engine.process(wfid).workitems and .position
+- engine.process(wfid).last_active
+- engine.errors(wfid=nil) now returns array of ProcessError instances
+- engine.register { block } (Torsten)
+- participant.accept?(workitem)
+- 'ref' expression (pointing to participants or subprocesses)
+- engine.process_wfids (list process instance wfids)
+- set 'v:alpha' => [ 'MyParticipant', { 'flavour' => 'vanilla' }]
+  participants registered as variables (just for that process instance)
+- engine.participant_list and .participant_list=
+- engine.register_participant 'al', 'AlParticipant', :require_path => 'pa/th'
+- engine.register_participant 'al', 'AlParticipant', :load_path => 'pa/th'
+- engine.[un]register for .[un]register_participant
+- engine.noisy = true (a shortcut)
+- engine.storage_participant (a shortcut)
+- removed direct dependency on rufus-lru
+- WaitLogger : a transient @seen (Thanks Kaspar)
+- error_handler : more error catching
+- storage#copy_to(other_storage) item by item implementation
+- Engine#wait_for OK with multiple threads
+- ExpressionMap now loads all expressions in Ruote::Exp:: namespace
+- 'error_intercepted' msg now features error_class, _message and _backtrace (RM)
+- Engine#join and Worker#join
+- workitem.error now includes error's backtrace (contributed by Rich Meyers)
+
+
+== ruote - 2.1.10    released 2010/06/15
+
+- storage#copy_to(other_storage) implemented
+- #launch moved from Engine to ReceiverMixin
+- participants without initialize(opts) are now allowed
+- engine.wait_for(:inactive)
+- engine.wait_for(*interests) unlocked
+- engine.wait_for(:empty)
+- fixed issue with participant 'x' and :on_error. Thanks Oleg.
+- receiver : reply and reply_to_engine : from aliases to wrappers
+- Ruote::StorageParticipant more flexibility for method args
+- Ruote::FlowExpressionId .extract_h and .extract
+- dropped fs_history (storage_history is better)
+- parser to_xml _if 'x == b' --> <if test="x == b">
+- workitem.sid shortcut for workitem.fei.to_storage_id
+- workitem.wfid shorcut for workitem.fei.wfid
+- new error_handler service
+- Receiver.new(x), x can be worker, engine, context or storage
+- Participant#on_reply(workitem) manipulating workitems when they come back
+- set '${v:customers.0.name}' => 'x' now OK, was limited to fields. Thanks Oleg
+- LocalParticipant#put(fei, hash) #get(fei, key) for stashing info
+- LocalParticipant#re_dispatch(wi, opts)
+- bug in HashStorage, apply over apply didn't raise a persist error. Fixed.
+- keeping track of workitem fields as they were right before a participant error
+- Workitem.error holds the error when on_error. Thanks Oleg.
+- Workitem#error and Workitem#timed_out shortcuts
+- participant :on_error => 'x' broken. Fixed. Thanks Oleg.
+- Engine#workitem(fei) for advanced users
+- LocalParticipant : added a reject(workitem) method
+- participant exp : dispatched = true set right after dispatch
+
+
+== ruote - 2.1.9    released 2010/03/22
+
+- made participant.cancel occur asynchronously (as should be)
+- lookup_variable : making sure not to break when the parent exp is gone
+- workitem.fields['__dispatch_time__'] is now set
+
+
+== ruote - 2.1.8    released 2010/03/15
+
+- participant#schedule_timeout workaround for issue with JRuby 1.4.0 (1.8.7)
+- implemented Ruote::CompositeStorage
+- leveraging rufus-cloche 0.1.16 and the 'cloche_nolock' option (FsStorage)
+- SmtpParticipant and ruote/part/template.rb reorganization
+- StorageParticipant when returned by engine#register was unusable. Fixed.
+- string keys for SmtpParticipant. Thanks Gonzalo
+- fixed every('10m') bug. Thanks Gonzalo Suarez
+- Ruote::FlowExpressionId.from_id(s) more permissive
+- concurrence (and concurrent-iterator) :merge_type => :stack
+
+
+== ruote - 2.1.7    released 2010/02/15
+
+- now works on WinXP, Ruby 1.8.7
+- reformed msgs ids and adapted Ruote::StorageHistory
+- engine.register_participant(x, Ruote::StorageParticipant) now returning
+  a instance of the participant, for easy query
+- StorageParticipant, added #query(criteria), thanks Torsten and Brett
+- Ruote::Workitem #lookup('deep.field') and #set_field('deep.field') are back
+- Ruote::Workitem added == and hash (list.uniq friendly), thanks Brett
+- Engine#configure(key, value), thanks Torsten
+- Ruote.to_tree (lightweight version of Ruote.process_definition)
+- ParticipantList#names, thanks Kenneth
+
+
+== ruote - 2.1.6    released 2010/02/08
+
+- welcoming ruote-dm (datamapper persistency)
+- Engine#re_apply(fei, opts) where opts in [ :tree, :fields, :merge_in_fields ]
+- fixed issue about StorageParticipant#update, thanks Torsten
+
+
+== ruote - 2.1.5    released 2010/01/28
+
+- fixed StorageParticipant a to b flow, fix by Torsten
+- fixed StorageParticipant#cancel
+- dollar : made sure of ${fei} and ${wfid}
+- implemented ProcessStatus#to_dot
+- if a participant implementation cancel method returns false,
+  reply_to_parent will not get called
+- changes about errors without [stored] expressions, they now appear in process
+  statuses
+- EngineParticipant implemented
+- 'ruby_eval_allowed' instead of :ruby_eval_allowed
+- ${v:customer.address.1} deep trick now ok (as it was ok for fields)
+- added d() to the $ notation : echo "${r: d('f:toto') }"
+- Engine#kill_process(wfid) can cure errored participant expressions
+- made sure ${r:wi} and ${r:workitem} is and instance of Ruote::Workitem
+- implemented StorageParticipant#by_field
+
+
+== ruote - 2.1.4    released 2010/01/11
+
+- implemented StorageHistory
+- using yyyy-mm-dd instead of yyyy/mm/dd for Ruote.time_to_utc_s(t)
+- implemented Storage#purge_type!(t)
+- Engine#add_service now returning just bound service
+
+
+== ruote - 2.1.3    released 2010/01/04
+
+- fixed issue with Rufus.is_cron_string (thanks Torsten)
+- fixed issue with FlowExpression#cancel (Kenneth)
+
+
+== ruote - 2.1.2    released 2010/01/03
+
+- fixed issue when initializing engine without worker. Thanks Matt Nichols.
+
+
+== ruote - 2.1.1    released 2009/12/31
+
+== OpenWFEru - 0.9.2       released 2007/01/26
+== openwfe-ruby - 1.7.0    released 2006/05/08
+

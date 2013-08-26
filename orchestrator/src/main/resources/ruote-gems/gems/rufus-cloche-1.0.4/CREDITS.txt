@@ -1,0 +1,22 @@
+
+many thanks to Brian Lopez for yajl-ruby
+  http://github.com/brianmario
+
+
+= rufus-cloche
+
+== authors
+
+John Mettraux - http://github.com/jmettraux
+
+
+== contributors
+
+Mario Camou -  JRuby flock fix
+
+
+== feedback
+
+Torsten Schoenebaum - http://github.com/tosch
+gauched - http://github.com/gauched
+

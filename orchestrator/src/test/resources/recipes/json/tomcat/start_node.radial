@@ -1,0 +1,4 @@
+define start_node
+  resource action: start_machine
+  iterator on_field: "resources", to_field: "resource"
+    state key: "$resource.name", value: "ready"

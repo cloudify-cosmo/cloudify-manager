@@ -1,0 +1,5 @@
+define java_flow
+  sequence
+    participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteJavaParticipant"
+    participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteJavaParticipant"
+    participant ref: "java", class: "org.cloudifysource.cosmo.orchestrator.workflow.RuoteJavaParticipant"

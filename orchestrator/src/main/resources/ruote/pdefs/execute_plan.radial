@@ -1,0 +1,10 @@
+define execute_plan
+    log message: 'preparing plan from dsl'
+    event event: { "stage"=>"preparing deployment plan" }
+    prepare_plan dsl: $dsl
+
+    log message: 'overriding default global workflow with ${f:global_workflow}', if: '${f:global_workflow} is set'
+    set variable: 'global_workflow', value: '$f:global_workflow', if: '${f:global_workflow} is set'
+
+    log message: 'executing global workflow'
+    global_workflow
