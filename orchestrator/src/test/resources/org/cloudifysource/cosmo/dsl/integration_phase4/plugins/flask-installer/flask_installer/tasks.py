@@ -14,8 +14,10 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-from cosmo.celery import celery
 from cosmo.events import send_event
+
+from cosmo.celery import celery
+
 
 @celery.task
 def install(**kwargs):

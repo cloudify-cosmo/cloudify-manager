@@ -14,9 +14,10 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-from cosmo.celery import celery
 import urllib
 import urllib2
+
+from cosmo.celery import celery
 
 
 @celery.task
