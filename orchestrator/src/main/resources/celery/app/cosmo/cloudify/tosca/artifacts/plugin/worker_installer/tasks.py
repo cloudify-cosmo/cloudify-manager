@@ -195,7 +195,7 @@ CELERY_RESULT_BACKEND="%(broker_url)s"
 CELERYD_CHDIR="%(workdir)s"
 CELERYD_OPTS="\
 --events \
---loglevel=info \
+--loglevel=debug \
 --app=%(app)s \
 -Q %(node_id)s \
 --broker=%(broker_url)s \
