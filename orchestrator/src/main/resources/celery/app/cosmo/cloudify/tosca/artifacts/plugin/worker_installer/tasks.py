@@ -49,11 +49,11 @@ def install_latest_pip(worker_config, node_id):
                   key_filename=key_filename,
                   disable_known_hosts=True):
         runner = FabricRetryingRunner()
-        logger.info("retrieving pip script [node_id=%s]", node_id)
+        logger.debug("retrieving pip script [node_id=%s]", node_id)
         runner.sudo("wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
-        logger.info("installing setuptools [node_id=%s]", node_id)
+        logger.debug("installing setuptools [node_id=%s]", node_id)
         runner.sudo("apt-get -q -y install python-pip")
-        logger.info("building pip installation [node_id=%s]", node_id)
+        logger.debug("building pip installation [node_id=%s]", node_id)
         runner.sudo("python get-pip.py")
 
 
@@ -110,16 +110,18 @@ def _install_celery(worker_config, node_id):
 
     runner = FabricRetryingRunner()
 
-    logger.info("installing python-pip [node_id=%s]", node_id)
+    logger.info("installing celery worker[node_id=%s]", node_id)
+
+    logger.debug("installing python-pip [node_id=%s]", node_id)
     runner.sudo("apt-get install -q -y python-pip")
 
-    logger.info("installing billiard using pip [node_id=%s]", node_id)
+    logger.debug("installing billiard using pip [node_id=%s]", node_id)
     runner.sudo("pip install billiard==2.7.3.28")
 
-    logger.info("installing celery using pip [node_id=%s]", node_id)
+    logger.debug("installing celery using pip [node_id=%s]", node_id)
     runner.sudo("pip install --timeout=120 celery==3.0.19")
 
-    logger.info("installing bernhard using pip [node_id=%s]", node_id)
+    logger.debug("installing bernhard using pip [node_id=%s]", node_id)
     runner.sudo("pip install --timeout=120 bernhard==0.1.0")
 
     cosmo_properties = {
@@ -170,7 +172,7 @@ def _install_celery(worker_config, node_id):
     config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
-    logger.info("starting celeryd service")
+    logger.info("starting celery worker")
     runner.sudo("service celeryd start")
 
 
