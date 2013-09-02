@@ -10,4 +10,4 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "cloudify.tosca.interfaces.app_connector"
-                url: "#{plugin_repository}/flask_app_connector.zip"
+                url: "#{plugin_repository}/flask-app-connector.zip"

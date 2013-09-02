@@ -1,16 +1,15 @@
 __author__ = 'elip'
 
 from StringIO import StringIO
-
-from cosmo.celery import celery as celery
-from celery.utils.log import get_task_logger
-from fabric.api import settings, sudo, run, put, get, hide
-import socket
-import os
 from os import path
 import time
 import sys
 import json
+
+from celery.utils.log import get_task_logger
+from fabric.api import settings, sudo, run, put, get, hide
+
+from cosmo.celery import celery as celery
 
 
 logger = get_task_logger(__name__)
@@ -22,6 +21,7 @@ _plugins_to_install = ["plugin_installer"]
 def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
     try:
         prepare_configuration(worker_config, cloudify_runtime)
+        install_latest_pip(worker_config, __cloudify_id)
         install_celery_worker(worker_config, __cloudify_id)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
     except SystemExit, e:
@@ -38,6 +38,23 @@ def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
     except SystemExit, e:
         trace = sys.exc_info()[2]
         raise RuntimeError('Failed celery worker restart: {0}'.format(e)), None, trace
+
+def install_latest_pip(worker_config, node_id):
+    logger.info("installing latest pip installation [node_id=%s]", node_id)
+    print 'worker_config=', worker_config
+    print 'node_id=', node_id
+    host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+    key_filename = worker_config['key']
+    with settings(host_string=host_string,
+                  key_filename=key_filename,
+                  disable_known_hosts=True):
+        runner = FabricRetryingRunner()
+        logger.debug("retrieving pip script [node_id=%s]", node_id)
+        runner.sudo("wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
+        logger.debug("installing setuptools [node_id=%s]", node_id)
+        runner.sudo("apt-get -q -y install python-pip")
+        logger.debug("building pip installation [node_id=%s]", node_id)
+        runner.sudo("python get-pip.py")
 
 
 def prepare_configuration(worker_config, cloudify_runtime):
@@ -93,6 +110,8 @@ def _install_celery(worker_config, node_id):
 
     runner = FabricRetryingRunner()
 
+    logger.info("installing celery worker[node_id=%s]", node_id)
+
     logger.debug("installing python-pip [node_id=%s]", node_id)
     runner.sudo("apt-get install -q -y python-pip")
 
@@ -137,7 +156,7 @@ def _install_celery(worker_config, node_id):
         runner.run("mkdir " + remote_plugin_path)
         runner.run('echo "" > ' + remote_plugin_path + '/__init__.py')
 
-    logger.debug("installing cosmo built in plugins [node_id=%s]", node_id)
+    logger.info("installing cosmo built in plugins [node_id=%s]", node_id)
 
     # install plugins (from ../*) according to _plugins_to_install
     plugins_dir = path.abspath(path.join(script_dir, "../"))
@@ -153,7 +172,7 @@ def _install_celery(worker_config, node_id):
     config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
-    logger.debug("starting celeryd service")
+    logger.info("starting celery worker")
     runner.sudo("service celeryd start")
 
 
@@ -178,7 +197,7 @@ CELERY_RESULT_BACKEND="%(broker_url)s"
 CELERYD_CHDIR="%(workdir)s"
 CELERYD_OPTS="\
 --events \
---loglevel=info \
+--loglevel=debug \
 --app=%(app)s \
 -Q %(node_id)s \
 --broker=%(broker_url)s \

@@ -14,40 +14,16 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-"""
-A celery task for starting a simple http server using a python command.
-"""
+from cosmo.events import send_event
 
 from cosmo.celery import celery
-from cosmo.events import send_event
-import time
-import urllib2
-import os
 
 
 @celery.task
 def install(**kwargs):
     pass
 
-
 @celery.task
-def start(__cloudify_id, port=8080, **kwargs):
-    os.system("nohup python -m SimpleHTTPServer {0} &".format(port))
-
-    # verify http server is up
-    for attempt in range(10):
-        try:
-            response = urllib2.urlopen("http://localhost:{0}".format(port))
-            response.read()
-            break
-        except:
-            time.sleep(1)
-    else:
-        raise RuntimeError("failed to start python http server")
-    send_event(__cloudify_id, "10.0.0.5", "webserver status", "state", "running")
-
-
-def test():
-    port = 8000
-    start('', port)
+def start(__cloudify_id, **kwargs):
+    send_event(__cloudify_id, "10.0.0.5", "flask status", "state", "running")
 

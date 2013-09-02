@@ -36,6 +36,15 @@ class VagrantLxcBoot:
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
 
     @retry(stop='stop_after_attempt', stop_max_attempt_number=3, wait_fixed=3000)
+    def install_latest_pip(self):
+        return_code = subprocess.call(["wget", "https://raw.github.com/pypa/pip/master/contrib/get-pip.py"])
+        if return_code != 0:
+            raise CalledProcessError(cmd="wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py", returncode=1, output=sys.stderr)
+        return_code = subprocess.call(["sudo", "python", "get-pip.py"])
+        if return_code != 0:
+            raise CalledProcessError(cmd="sudo python get-pip.py", returncode=1, output=sys.stderr)
+
+    @retry(stop='stop_after_attempt', stop_max_attempt_number=3, wait_fixed=3000)
     def install_fabric(self):
         return_code = subprocess.call(["sudo", "pip", "install", "fabric"])
         if return_code != 0:
@@ -204,6 +213,7 @@ fi
         self.run_fabric("shutdown -r +1")
 
     def bootstrap(self):
+        self.install_latest_pip()
         self.install_fabric()
         self.install_lxc_docker()
         self.install_kernel()

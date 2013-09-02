@@ -14,8 +14,6 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-from cosmo.celery import celery
-from cosmo.events import send_event
 import urllib2
 import os
 from os import path
@@ -23,6 +21,11 @@ import errno
 import tempfile
 import sys
 import subprocess
+
+from cosmo.events import send_event
+
+from cosmo.celery import celery
+
 
 @celery.task
 def start(__relationship_cloudify_id, **kwargs):

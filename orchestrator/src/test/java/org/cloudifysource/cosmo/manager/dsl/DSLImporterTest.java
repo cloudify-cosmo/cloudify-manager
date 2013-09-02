@@ -47,7 +47,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class DSLImporterTest extends AbstractTestNGSpringContextTests {
 
-    private static final String EXPECTED_PLUGIN_NAME = "python_webserver_installer.zip";
+    private static final String EXPECTED_PLUGIN_NAME = "stub-installer.zip";
     private static final String EXPECTED_RELATIVE_DSL_PATH = "integration_phase3/integration-phase3.yaml";
     private static final String EXPECTED_RELATIVE_DSL_NO_PLUGINS_PATH = "noplugins/simple-dsl.yaml";
 
