@@ -1,0 +1,2 @@
+cosmo-plugin-installer
+======================
