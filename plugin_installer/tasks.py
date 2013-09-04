@@ -26,13 +26,6 @@ import cosmo
 from celery import task
 from cosmo.celery import get_cosmo_properties
 
-
-TAR_GZ_SUFFIX = "tar.gz"
-ZIP_SUFFIX = "zip"
-PLUGIN_FILE_PREFIX = "plugin"
-REQUIREMENTS_FILE = "requirements.txt"
-TASKS_MODULE = "tasks.py"
-
 logger = get_task_logger(__name__)
 
 @task
@@ -104,7 +97,7 @@ def install_plugin_dependencies(url, name):
     out, err = p.communicate()
     if p.returncode != 0:
         raise RuntimeError("unable to install plugin {0} [returncode={1}, output={2}, err={3}]"
-                .format(name, p.returncode, out, err))
+                           .format(name, p.returncode, out, err))
     pass
 
 

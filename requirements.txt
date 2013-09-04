@@ -1,0 +1,5 @@
+# requirements placed here will not be installed inside the cosmo environment.
+
+# cosmo.events and cosmo.celery is provided at runtime, no need to install it.
+# this dependencie is just for developments purposes.
+https://github.com/iliapolo/cosmo-worker-utils/archive/master.zip
