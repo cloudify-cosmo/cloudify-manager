@@ -88,7 +88,7 @@ def install_plugin_to_celery_dir(url, name):
     out, err = p.communicate()
     if p.returncode != 0:
         raise RuntimeError("unable to install plugin {0} [returncode={1}, output={2}, err={3}]"
-                .format(name, p.returncode, out, err))
+                           .format(name, p.returncode, out, err))
 
 
 def install_plugin_dependencies(url, name):
