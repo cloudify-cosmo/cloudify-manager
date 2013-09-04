@@ -11,8 +11,9 @@ setup(
     license='LICENSE',
     description='Plugin for starting a new cosmo agent on a remote host',
     install_requires=[
+        "billiard==2.7.3.28",
         "fabric",
-        "celery=3.0.19"
+        "celery==3.0.19"
     ],
     tests_require=['nose']
 )

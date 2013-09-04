@@ -14,13 +14,12 @@ from celery import task
 from fabric.api import settings, sudo, run, put, get, hide
 
 
-COSMO_CELERY_URL = ""
-PLUGIN_INSTALLER_URL = ""
+COSMO_CELERY_URL = "https://github.com/iliapolo/cosmo-worker-utils/archive/master.zip"
+PLUGIN_INSTALLER_URL = 'https://github.com/CloudifySource/' \
+                       'cosmo-plugin-installer/archive/feature/CLOUDIFY-2022-initial-commit.zip'
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
+
 logger = get_task_logger(__name__)
-
-_plugins_to_install = ["plugin_installer"]
-
 
 @task
 def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
@@ -47,8 +46,6 @@ def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
 
 def install_latest_pip(worker_config, node_id):
     logger.info("installing latest pip installation [node_id=%s]", node_id)
-    print 'worker_config=', worker_config
-    print 'node_id=', node_id
     host_string = '%(user)s@%(host)s:%(port)s' % worker_config
     key_filename = worker_config['key']
     with settings(host_string=host_string,
@@ -70,8 +67,6 @@ def prepare_configuration(worker_config, cloudify_runtime):
 
 
 def install_celery_worker(worker_config, node_id):
-    print 'worker_config=', worker_config
-    print 'node_id=', node_id
     host_string = '%(user)s@%(host)s:%(port)s' % worker_config
     key_filename = worker_config['key']
     with settings(host_string=host_string,
@@ -82,8 +77,6 @@ def install_celery_worker(worker_config, node_id):
 
 
 def restart_celery_worker(worker_config, node_id):
-    print 'worker_config=', worker_config
-    print 'node_id=', node_id
     host_string = '%(user)s@%(host)s:%(port)s' % worker_config
     key_filename = worker_config['key']
     with settings(host_string=host_string,
@@ -101,7 +94,7 @@ def _verify_no_celery_error(worker_config):
     with hide('aborts', 'running', 'stdout', 'stderr'):
         try:
             get(celery_error_out, output)
-        except:
+        except BaseException:
             pass
 
     # this means the celery worker had an uncaught exception and it wrote its content
@@ -116,20 +109,6 @@ def _install_celery(worker_config, node_id):
 
     runner = FabricRetryingRunner()
 
-    logger.info("installing celery worker[node_id=%s]", node_id)
-
-    logger.debug("installing python-pip [node_id=%s]", node_id)
-    runner.sudo("apt-get install -q -y python-pip")
-
-    logger.debug("installing billiard using pip [node_id=%s]", node_id)
-    runner.sudo("pip install billiard==2.7.3.28")
-
-    logger.debug("installing celery using pip [node_id=%s]", node_id)
-    runner.sudo("pip install --timeout=120 celery==3.0.19")
-
-    logger.debug("installing bernhard using pip [node_id=%s]", node_id)
-    runner.sudo("pip install --timeout=120 bernhard==0.1.0")
-
     cosmo_properties = {
         'management_ip': worker_config['management_ip'],
         'ip': worker_config['host']
@@ -140,23 +119,27 @@ def _install_celery(worker_config, node_id):
     home = "/home/" + user
     app_dir = home + "/" + app
 
-    runner.run("rm -rf " + app_dir)
+    runner.sudo("rm -rf " + app_dir)
+
+    # this will install celery because of transitive dependencies
+    runner.sudo("pip install {0}".format(COSMO_CELERY_URL))
 
     # install the cosmo celery app to the user home
-    runner.sudo("pip install -t {0} {1}".format(home, COSMO_CELERY_URL))
+    runner.sudo("pip install --no-deps -t {0} {1}".format(home, COSMO_CELERY_URL))
 
     # write cosmo properties
     logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
     cosmo_properties_path = path.join(app_dir, "cosmo.txt")
-    runner.put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path)
+    runner.put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path, use_sudo=True)
 
     # install the plugin installer dependencies
     runner.sudo("pip install {0}".format(PLUGIN_INSTALLER_URL))
 
     # install the plugin installer into the worker
-    runner.sudo("pip install -t {0} {1}".format(create_namespace_path(COSMO_PLUGIN_NAMESPACE), PLUGIN_INSTALLER_URL))
+    runner.sudo("pip install --no-deps -t {0} {1}".format(create_namespace_path(COSMO_PLUGIN_NAMESPACE, app_dir),
+                                                          PLUGIN_INSTALLER_URL))
 
-    #daemonize
+    # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
@@ -165,9 +148,11 @@ def _install_celery(worker_config, node_id):
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
 
+    # just to print out the registered tasks for debugging purposes
+    runner.sudo("celery inspect registered --broker=" + broker_url)
 
-def create_namespace_path(namespace_parts):
 
+def create_namespace_path(namespace_parts, base_dir):
     """
     Creates the namespaces path the plugin directory will reside in.
     For example
@@ -177,26 +162,17 @@ def create_namespace_path(namespace_parts):
     path's sub directories.
 
     """
-    home_dir = expanduser("~")
-    cosmo_path = os.path.join(home_dir, "cosmo")
-    path = cosmo_path
 
-    for p in namespace_parts:
-        path = os.path.join(path, p)
-    logger.debug("plugin installation path is {0}".format(path))
+    runner = FabricRetryingRunner()
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+    runner.sudo("mkdir -p " + base_dir)
+    remote_plugin_path = base_dir
+    for folder in namespace_parts:
+        remote_plugin_path = os.path.join(remote_plugin_path, folder)
+        runner.sudo("mkdir -p " + remote_plugin_path)
+        runner.sudo('echo "" > ' + remote_plugin_path + '/__init__.py')
 
-    # create __init__.py files in each subfolder
-    init_path = cosmo_path
-    for p in namespace_parts:
-        init_path = os.path.join(init_path, p)
-        init_file = os.path.join(init_path, "__init__.py")
-        if not os.path.exists(init_file):
-            open(init_file, "w").close()
-
-    return path
+    return remote_plugin_path
 
 
 def get_machine_ip(cloudify_runtime):
@@ -232,7 +208,6 @@ CELERYD_OPTS="\
 
 
 class FabricRetryingRunner:
-
     def run_with_timeout_and_retry(self, fun, *args, **kwargs):
         sleep_interval = 3
         max_retries = 3
@@ -260,7 +235,7 @@ class FabricRetryingRunner:
         self.run_with_timeout_and_retry(sudo, command)
 
     def run(self, command):
-        self.run_with_timeout_and_retry(run, command)        
+        self.run_with_timeout_and_retry(run, command)
 
     def put(self, local, remote, use_sudo=False):
         self.run_with_timeout_and_retry(put, local, remote, use_sudo=use_sudo)
