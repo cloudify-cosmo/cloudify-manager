@@ -11,8 +11,8 @@ setup(
     license='LICENSE',
     description='Plugin for installing plugins into an existing celery worker',
     install_requires=[
-        "celery==3.0.19",
-        "cosmo-worker-utils"
+        "billiard==2.7.3.28",
+        "celery==3.0.19"
     ],
     tests_require=['nose']
 )
