@@ -1,3 +1,6 @@
+import os
+from os.path import expanduser
+
 __author__ = 'elip'
 
 from StringIO import StringIO
@@ -10,6 +13,10 @@ from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import settings, sudo, run, put, get, hide
 
+
+COSMO_CELERY_URL = ""
+PLUGIN_INSTALLER_URL = ""
+COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 logger = get_task_logger(__name__)
 
 _plugins_to_install = ["plugin_installer"]
@@ -135,35 +142,19 @@ def _install_celery(worker_config, node_id):
 
     runner.run("rm -rf " + app_dir)
 
-    # create app directory and copy necessary files to it
-    runner.run("mkdir " + app_dir)
-    script_path = path.realpath(__file__)
-    script_dir = path.dirname(script_path)
-    runner.put(script_dir + "/remote/__init__.py", app_dir)
-    runner.put(script_dir + "/remote/celery.py", app_dir)
-    runner.put(script_dir + "/remote/events.py", app_dir)
+    # install the cosmo celery app to the user home
+    runner.sudo("pip install -t {0} {1}".format(home, COSMO_CELERY_URL))
 
     # write cosmo properties
     logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
     cosmo_properties_path = path.join(app_dir, "cosmo.txt")
     runner.put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path)
 
-    # create app/cloudify/tosca/artifacts/plugin with __init__.py file in each directory
-    remote_plugin_path = app_dir
-    for dir in ["cloudify", "tosca", "artifacts", "plugin"]:
-        remote_plugin_path = path.join(remote_plugin_path, dir)
-        runner.run("mkdir " + remote_plugin_path)
-        runner.run('echo "" > ' + remote_plugin_path + '/__init__.py')
+    # install the plugin installer dependencies
+    runner.sudo("pip install {0}".format(PLUGIN_INSTALLER_URL))
 
-    logger.info("installing cosmo built in plugins [node_id=%s]", node_id)
-
-    # install plugins (from ../*) according to _plugins_to_install
-    plugins_dir = path.abspath(path.join(script_dir, "../"))
-    for plugin in _plugins_to_install:
-        plugin_dir = path.join(plugins_dir, plugin)
-        if not path.exists(plugin_dir):
-            raise RuntimeError("plugin [{0}] does not exist [path={1}]".format(plugin, plugin_dir))
-        runner.put(plugin_dir, remote_plugin_path)
+    # install the plugin installer into the worker
+    runner.sudo("pip install -t {0} {1}".format(create_namespace_path(COSMO_PLUGIN_NAMESPACE), PLUGIN_INSTALLER_URL))
 
     #daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
@@ -173,6 +164,39 @@ def _install_celery(worker_config, node_id):
 
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
+
+
+def create_namespace_path(namespace_parts):
+
+    """
+    Creates the namespaces path the plugin directory will reside in.
+    For example
+        input : cloudify.tosca.artifacts.plugin.python_webserver_installer
+        output : a directory path app/cloudify/tosca/artifacts/plugin
+    "app/cloudify/plugins/host_provisioner". In addition, "__init.py__" files will be created in each of the
+    path's sub directories.
+
+    """
+    home_dir = expanduser("~")
+    cosmo_path = os.path.join(home_dir, "cosmo")
+    path = cosmo_path
+
+    for p in namespace_parts:
+        path = os.path.join(path, p)
+    logger.debug("plugin installation path is {0}".format(path))
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    # create __init__.py files in each subfolder
+    init_path = cosmo_path
+    for p in namespace_parts:
+        init_path = os.path.join(init_path, p)
+        init_file = os.path.join(init_path, "__init__.py")
+        if not os.path.exists(init_file):
+            open(init_file, "w").close()
+
+    return path
 
 
 def get_machine_ip(cloudify_runtime):
