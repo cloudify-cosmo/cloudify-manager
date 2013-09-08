@@ -2,11 +2,18 @@ language: python
 python:
   - "2.7"
 
-# command to install dependencies
+
 install:
+
+    # command to install dependencies
     - python setup.py install
 
+    # command to install test dependencies
+    - python setup.py test
 
-# command to run tests
+
+
 script:
-    - nosetests --nocapture
+
+    # command to run tests - we dont run remote tests since we cant provision vagrant inside travis
+    - 'nosetests --nocapture --exclude=worker_installer.tests.test_fabric_retry_runner:TestRemoteRunnerCase'
