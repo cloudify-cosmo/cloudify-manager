@@ -15,5 +15,5 @@ setup(
         "fabric",
         "celery==3.0.19"
     ],
-    tests_require=['nose']
+    tests_require=['nose', 'python-vagrant>=0.3.1']
 )
