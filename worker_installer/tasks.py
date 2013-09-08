@@ -1,9 +1,9 @@
 import os
-from os.path import expanduser
 
 __author__ = 'elip'
 
 from StringIO import StringIO
+from fabric.operations import local as lrun
 from os import path
 import time
 import sys
@@ -11,7 +11,7 @@ import json
 
 from celery.utils.log import get_task_logger
 from celery import task
-from fabric.api import settings, sudo, run, put, get, hide
+from fabric.api import settings, sudo, run, put, hide, get
 
 
 COSMO_CELERY_URL = "https://github.com/iliapolo/cosmo-worker-utils/archive/master.zip"
@@ -21,12 +21,19 @@ COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
 
+
 @task
-def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
+def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwargs):
     try:
         prepare_configuration(worker_config, cloudify_runtime)
-        install_latest_pip(worker_config, __cloudify_id)
-        install_celery_worker(worker_config, __cloudify_id)
+
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
+
+        runner = create_runner(local, host_string, key_filename)
+
+        install_latest_pip(runner, __cloudify_id)
+        install_celery_worker(runner, worker_config, __cloudify_id)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
     except SystemExit, e:
         trace = sys.exc_info()[2]
@@ -34,30 +41,38 @@ def install(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
 
 
 @task
-def restart(worker_config, __cloudify_id, cloudify_runtime, **kwargs):
+def restart(worker_config, cloudify_runtime, local=False, **kwargs):
     try:
         prepare_configuration(worker_config, cloudify_runtime)
-        restart_celery_worker(worker_config, __cloudify_id)
+
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
+
+        runner = create_runner(local, host_string, key_filename)
+
+        restart_celery_worker(runner, worker_config)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
     except SystemExit, e:
         trace = sys.exc_info()[2]
         raise RuntimeError('Failed celery worker restart: {0}'.format(e)), None, trace
 
 
-def install_latest_pip(worker_config, node_id):
+def create_runner(local, host_string, key_filename):
+    runner = FabricRetryingRunner(
+        local=local,
+        host_string=host_string,
+        key_filename=key_filename)
+    return runner
+
+
+def install_latest_pip(runner, node_id):
     logger.info("installing latest pip installation [node_id=%s]", node_id)
-    host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-    key_filename = worker_config['key']
-    with settings(host_string=host_string,
-                  key_filename=key_filename,
-                  disable_known_hosts=True):
-        runner = FabricRetryingRunner()
-        logger.debug("retrieving pip script [node_id=%s]", node_id)
-        runner.sudo("wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
-        logger.debug("installing setuptools [node_id=%s]", node_id)
-        runner.sudo("apt-get -q -y install python-pip")
-        logger.debug("building pip installation [node_id=%s]", node_id)
-        runner.sudo("python get-pip.py")
+    logger.debug("retrieving pip script [node_id=%s]", node_id)
+    runner.sudo("wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
+    logger.debug("installing setuptools [node_id=%s]", node_id)
+    runner.sudo("apt-get -q -y install python-pip")
+    logger.debug("building pip installation [node_id=%s]", node_id)
+    runner.sudo("python get-pip.py")
 
 
 def prepare_configuration(worker_config, cloudify_runtime):
@@ -66,48 +81,38 @@ def prepare_configuration(worker_config, cloudify_runtime):
     worker_config['app'] = 'cosmo'
 
 
-def install_celery_worker(worker_config, node_id):
-    host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-    key_filename = worker_config['key']
-    with settings(host_string=host_string,
-                  key_filename=key_filename,
-                  disable_known_hosts=True):
-        _install_celery(worker_config, node_id)
-        _verify_no_celery_error(worker_config)
+def install_celery_worker(runner, worker_config, node_id):
+    _install_celery(runner, worker_config, node_id)
+    _verify_no_celery_error(runner, worker_config)
 
 
-def restart_celery_worker(worker_config, node_id):
-    host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-    key_filename = worker_config['key']
-    with settings(host_string=host_string,
-                  key_filename=key_filename,
-                  disable_known_hosts=True):
-        sudo('service celeryd restart')
-        _verify_no_celery_error(worker_config)
+def restart_celery_worker(runner, worker_config):
+    runner.sudo('service celeryd restart')
+    _verify_no_celery_error(runner, worker_config)
 
 
-def _verify_no_celery_error(worker_config):
+def _verify_no_celery_error(runner, worker_config):
+
     user = worker_config['user']
     home = "/home/" + user
     celery_error_out = '{0}/celery_error.out'.format(home)
-    output = StringIO()
+
+    output = None
     with hide('aborts', 'running', 'stdout', 'stderr'):
         try:
-            get(celery_error_out, output)
+            runner.get(celery_error_out)
         except BaseException:
             pass
 
     # this means the celery worker had an uncaught exception and it wrote its content
     # to the file above because of our custom exception handler (see celery.py)
-    if output.getvalue():
-        FabricRetryingRunner().run('rm {0}'.format(celery_error_out))
+    if output:
+        runner.run('rm {0}'.format(celery_error_out))
         error_content = output.getvalue()
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
 
 
-def _install_celery(worker_config, node_id):
-
-    runner = FabricRetryingRunner()
+def _install_celery(runner, worker_config, node_id):
 
     cosmo_properties = {
         'management_ip': worker_config['management_ip'],
@@ -136,7 +141,8 @@ def _install_celery(worker_config, node_id):
     runner.sudo("pip install {0}".format(PLUGIN_INSTALLER_URL))
 
     # install the plugin installer into the worker
-    runner.sudo("pip install --no-deps -t {0} {1}".format(create_namespace_path(COSMO_PLUGIN_NAMESPACE, app_dir),
+    runner.sudo("pip install --no-deps -t {0} {1}".format(create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE,
+                                                                                app_dir),
                                                           PLUGIN_INSTALLER_URL))
 
     # daemonize
@@ -152,7 +158,7 @@ def _install_celery(worker_config, node_id):
     runner.sudo("celery inspect registered --broker=" + broker_url)
 
 
-def create_namespace_path(namespace_parts, base_dir):
+def create_namespace_path(runner, namespace_parts, base_dir):
     """
     Creates the namespaces path the plugin directory will reside in.
     For example
@@ -162,8 +168,6 @@ def create_namespace_path(namespace_parts, base_dir):
     path's sub directories.
 
     """
-
-    runner = FabricRetryingRunner()
 
     runner.sudo("mkdir -p " + base_dir)
     remote_plugin_path = base_dir
@@ -208,6 +212,20 @@ CELERYD_OPTS="\
 
 
 class FabricRetryingRunner:
+
+    def __init__(self, local=False, host_string=None, key_filename=None):
+
+        """
+        If ``local`` is true. the ``host_string`` and ``key_filename`` parameters are ignored
+        and all commands will run on the local machine.
+
+        If ``local`` is false. the ``host_string`` and ``key_filename`` are mandatory
+        """
+
+        self.local = local
+        self.host_string = host_string
+        self.key_filename = key_filename
+
     def run_with_timeout_and_retry(self, fun, *args, **kwargs):
         sleep_interval = 3
         max_retries = 3
@@ -217,12 +235,18 @@ class FabricRetryingRunner:
         while True:
             try:
                 try:
-                    fun(*args, **kwargs)
+                    if self.local:
+                        fun(*args, **kwargs)
+                    else:
+                        with settings(host_string=self.host_string,
+                                      key_filename=self.key_filename,
+                                      disable_known_hosts=True):
+                            fun(*args, **kwargs)
                     break
-                except SystemExit, e: # fabric just loves them SystemExit folks
+                except SystemExit, e:  # fabric just loves them SystemExit folks
                     trace = sys.exc_info()[2]
                     raise RuntimeError('Failed command: {0}'.format(e)), None, trace
-            except:
+            except BaseException:
                 if current_retries < max_retries:
                     current_retries += 1
                     time.sleep(sleep_interval)
@@ -232,10 +256,58 @@ class FabricRetryingRunner:
                     raise exception, None, trace
 
     def sudo(self, command):
-        self.run_with_timeout_and_retry(sudo, command)
+
+        function = sudo
+        if self.local:
+            function = self._lsudo
+
+        self.run_with_timeout_and_retry(function, command)
 
     def run(self, command):
-        self.run_with_timeout_and_retry(run, command)
 
-    def put(self, local, remote, use_sudo=False):
-        self.run_with_timeout_and_retry(put, local, remote, use_sudo=use_sudo)
+        function = run
+        if self.local:
+            function = lrun
+
+        self.run_with_timeout_and_retry(function, command)
+
+    def put(self, string, remote_file_path, use_sudo=False):
+
+        if self.local:
+            self.run_with_timeout_and_retry(self._lput, string, remote_file_path)
+            return
+
+        string = StringIO(string)
+        self.run_with_timeout_and_retry(put, string, remote_file_path, use_sudo=use_sudo)
+
+    def get(self, file_path):
+
+        """
+        Read the file to a string
+        """
+
+        if self.local:
+            with open(file_path, "r") as f:
+                return f.read()
+
+        output = StringIO()
+        self.run_with_timeout_and_retry(get, file_path, output)
+        return output.getvalue()
+
+    def _lsudo(self, command):
+
+        """
+        Run sudo command locally
+        """
+
+        lrun("sudo {0}".format(command))
+
+    def _lput(self, string, file_path):
+
+        """
+        Write the string to the file specified in file_path
+        """
+
+        with open(file_path, "w") as f:
+            f.write(string)
+
