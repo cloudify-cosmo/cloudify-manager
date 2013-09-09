@@ -285,7 +285,7 @@ class FabricRetryingRunner:
     def put(self, string, remote_file_path, use_sudo=False):
 
         if self.local:
-            self.run_with_timeout_and_retry(self._lput, string, remote_file_path)
+            self.run_with_timeout_and_retry(self._lput, string, remote_file_path, use_sudo)
             return
 
         string = StringIO(string)
@@ -310,15 +310,18 @@ class FabricRetryingRunner:
         """
         Run sudo command locally
         """
-
         lrun("sudo {0}".format(command))
 
-    def _lput(self, string, file_path):
+    def _lput(self, string, file_path, use_sudo=False):
 
         """
         Write the string to the file specified in file_path
         """
 
+        if use_sudo:
+            # we need to write a string to a file locally with sudo
+            # use echo for now
+            lrun('sudo echo "{0}" > '.format(string) + file_path)
         with open(file_path, "w") as f:
             f.write(string)
 

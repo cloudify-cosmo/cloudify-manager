@@ -26,6 +26,14 @@ def _test_get(runner):
     assert output == data
 
 
+def _test_put_sudo(runner):
+    data = "test"
+    file_path = tempfile.NamedTemporaryFile().name
+    runner.put(data, file_path, use_sudo=True)
+    output = runner.get(file_path)
+    assert output == data
+
+
 class TestLocalRunnerCase:
 
     """
@@ -56,6 +64,9 @@ class TestLocalRunnerCase:
     def test_get(self):
         _test_get(self.RUNNER)
 
+    def test_put_sudo(self):
+        _test_sudo(self.RUNNER)
+
 
 class TestRemoteRunnerCase:
 
@@ -84,3 +95,6 @@ class TestRemoteRunnerCase:
 
     def test_get(self):
         _test_get(self.RUNNER)
+
+    def test_put_sudo(self):
+        _test_sudo(self.RUNNER)
