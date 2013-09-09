@@ -321,7 +321,8 @@ class FabricRetryingRunner:
         if use_sudo:
             # we need to write a string to a file locally with sudo
             # use echo for now
-            lrun('sudo echo "{0}" > '.format(string) + file_path)
+
+            lrun("echo '{0}'".format(string) + " | sudo tee -a {0}".format(file_path))
         else:
             # no sudo needed. just use python for this
             with open(file_path, "w") as f:

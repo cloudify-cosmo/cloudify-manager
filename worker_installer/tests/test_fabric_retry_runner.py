@@ -28,10 +28,12 @@ def _test_get(runner):
 
 def _test_put_sudo(runner):
     data = "test"
-    file_path = tempfile.NamedTemporaryFile().name
+    # we need a path that needs sudo
+    file_path = "/etc/default/celeryd"
     runner.put(data, file_path, use_sudo=True)
     output = runner.get(file_path)
-    assert output == data
+    # echo command adds a blank line at the end
+    assert output == data + "\n"
 
 
 class TestLocalRunnerCase:
@@ -65,7 +67,7 @@ class TestLocalRunnerCase:
         _test_get(self.RUNNER)
 
     def test_put_sudo(self):
-        _test_sudo(self.RUNNER)
+        _test_put_sudo(self.RUNNER)
 
 
 class TestRemoteRunnerCase:
