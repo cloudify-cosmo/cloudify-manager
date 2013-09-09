@@ -1,6 +1,5 @@
 import tempfile
 from worker_installer.tests import get_remote_runner, get_local_runner
-from vagrant_helper import launch_vagrant, terminate_vagrant
 
 __author__ = 'elip'
 
@@ -65,11 +64,13 @@ class TestRemoteRunnerCase:
 
     @classmethod
     def setup_class(cls):
+        from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID)
         cls.RUNNER = get_remote_runner()
 
     @classmethod
     def teardown_class(cls):
+        from vagrant_helper import terminate_vagrant
         terminate_vagrant(cls.VM_ID)
 
     def test_run(self):

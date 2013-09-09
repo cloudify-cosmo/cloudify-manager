@@ -8,7 +8,6 @@ from celery import Celery
 from worker_installer.tasks import install
 from worker_installer.tasks import create_namespace_path
 from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
-from vagrant_helper import launch_vagrant, terminate_vagrant
 
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
@@ -69,11 +68,13 @@ class TestRemoteInstallerCase:
 
     @classmethod
     def setup_class(cls):
+        from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID)
         cls.RUNNER = get_remote_runner()
 
     @classmethod
     def teardown_class(cls):
+        from vagrant_helper import terminate_vagrant
         terminate_vagrant(cls.VM_ID)
 
     def test_install(self):
