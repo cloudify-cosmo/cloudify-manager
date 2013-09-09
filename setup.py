@@ -1,7 +1,6 @@
 __author__ = 'elip'
 
 from setuptools import setup
-
 setup(
     name='cosmo-agent-installer',
     version='0.1.0',
@@ -11,9 +10,9 @@ setup(
     license='LICENSE',
     description='Plugin for starting a new cosmo agent on a remote host',
     install_requires=[
-        "billiard==2.7.3.28",
         "fabric",
-        "celery==3.0.19"
+        "celery"
     ],
     tests_require=['nose', 'python-vagrant>=0.3.1']
 )
+
