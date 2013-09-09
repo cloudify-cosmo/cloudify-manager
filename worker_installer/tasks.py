@@ -153,9 +153,6 @@ def _install_celery(runner, worker_config, node_id):
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
 
-    # just to print out the registered tasks for debugging purposes
-    runner.sudo("celery inspect registered --broker=" + broker_url)
-
 
 def install_celery_plugin_to_dir(runner, to_dir, plugin_url, plugin_name):
 
