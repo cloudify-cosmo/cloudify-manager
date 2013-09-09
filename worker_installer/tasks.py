@@ -160,6 +160,7 @@ def _install_celery(runner, worker_config, node_id):
     try:
         print "before starting celery worker"
         subprocess.call(["sudo", "service", "celeryd", "start"])
+        runner.run("celery inspect registered --broker={0}".format(broker_url))
         print "after starting celery worker"
     except (BaseException, SystemExit) as t:
         raise RuntimeError(t)
