@@ -36,7 +36,7 @@ def launch_vagrant(vm_id):
 
         Vagrant.configure("2") do |config|
             config.vm.box = "precise64"
-            config.vm.network :private_network, ip: {0}
+            config.vm.network :private_network, ip: '{0}'
             config.vm.provision :shell, :inline => "sudo ufw disable"
         end
 
@@ -56,7 +56,7 @@ def terminate_vagrant(vm_id):
     print "terminating vagrant machine"
     v = get_vagrant(VAGRANT_PATH, vm_id)
     v.destroy()
-    shutil.rmtree(v)
+    shutil.rmtree(v.root)
 
 
 def get_vagrant(vagrant_path, vm_id):
