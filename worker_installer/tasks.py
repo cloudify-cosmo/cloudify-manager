@@ -1,4 +1,5 @@
 import subprocess
+import traceback
 
 __author__ = 'elip'
 
@@ -168,6 +169,7 @@ def _install_celery(runner, worker_config, node_id):
         runner.run("celery inspect registered --broker={0}".format(broker_url))
         print "after inspecting celery worker"
     except BaseException as t:
+        print traceback.print_exc(file=sys.stdout)
         print "caught exception {0}".format(t)
         raise RuntimeError(t.message)
 
