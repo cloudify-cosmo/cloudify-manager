@@ -9,7 +9,8 @@ install:
     - python setup.py install
 
     # command to install test dependencies next to the tested package
-    - cd cosmo-agent-installer && python setup.py test
+    - pwd
+    - python setup.py test
 
 
 
