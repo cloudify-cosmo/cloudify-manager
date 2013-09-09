@@ -11,6 +11,7 @@ install:
     # command to install test dependencies next to the tested package
     - pwd
     - python setup.py test
+    - ls -l
 
 
 
