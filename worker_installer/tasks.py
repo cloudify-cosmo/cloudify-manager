@@ -163,7 +163,7 @@ def _install_celery(runner, worker_config, node_id):
         p = subprocess.Popen(["sudo", "service", "celeryd", "start"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         if p.returncode != 0:
-            raise RuntimeError("unable to start celery daemon [returncode={1}, output={2}, err={3}]"
+            raise RuntimeError("unable to start celery daemon [returncode={0}, output={1}, err={2}]"
                                .format(p.returncode, out, err))
         print "after starting celery worker"
         runner.run("celery inspect registered --broker={0}".format(broker_url))
