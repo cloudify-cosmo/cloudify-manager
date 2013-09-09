@@ -164,11 +164,13 @@ def _install_celery(runner, worker_config, node_id):
         if p.returncode != 0:
             raise RuntimeError("unable to start celery daemon [returncode={1}, output={2}, err={3}]"
                                .format(p.returncode, out, err))
-
-        runner.run("celery inspect registered --broker={0}".format(broker_url))
         print "after starting celery worker"
-    except (BaseException, SystemExit) as t:
-        raise RuntimeError(t)
+        runner.run("celery inspect registered --broker={0}".format(broker_url))
+        print "after inspecting celery worker"
+    except BaseException as t:
+        print "caught exception"
+        raise RuntimeError(t.message)
+
     # runner.sudo("service celeryd start")
 
 
