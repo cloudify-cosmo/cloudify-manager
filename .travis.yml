@@ -17,4 +17,4 @@ script:
 
     # command to run tests - we dont run remote tests since we cant provision vagrant inside travis
     - 'nosetests --nocapture worker_installer.tests.test_fabric_retry_runner:TestLocalRunnerCase'
-    - 'nosetests --nocapture worker_installer.tests.test_worker_installer:TestLocalInstallerCase.test_create_namespace_path'
+    - 'nosetests --nocapture worker_installer.tests.test_worker_installer:TestLocalInstallerCase'
