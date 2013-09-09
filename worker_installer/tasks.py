@@ -180,7 +180,7 @@ def create_namespace_path(runner, namespace_parts, base_dir):
 
     """
 
-    runner.sudo("mkdir -p " + base_dir)
+    runner.run("mkdir -p " + base_dir)
     remote_plugin_path = base_dir
     for folder in namespace_parts:
         remote_plugin_path = os.path.join(remote_plugin_path, folder)
