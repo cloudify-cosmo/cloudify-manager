@@ -9,7 +9,7 @@ install:
     - python setup.py install
 
     # command to install test dependencies
-    - sudo pip install -r test-requirements.txt
+    - pip install -r test-requirements.txt
 
 
 
