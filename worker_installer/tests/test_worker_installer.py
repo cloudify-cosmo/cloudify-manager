@@ -2,10 +2,14 @@ __author__ = 'elip'
 
 import os
 import tempfile
+
+from celery import Celery
+
 from worker_installer.tasks import install
 from worker_installer.tasks import create_namespace_path
-from worker_installer.tests import get_remote_runner, terminate_vagrant, launch_vagrant, get_local_runner, VAGRANT_MACHINE_IP
-from celery import Celery
+from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
+from vagrant_helper import launch_vagrant, terminate_vagrant
+
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
 BROKER_URL = "amqp://guest:guest@10.0.0.1:5672//"

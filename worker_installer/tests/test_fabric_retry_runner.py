@@ -1,5 +1,6 @@
 import tempfile
-from worker_installer.tests import get_remote_runner, terminate_vagrant, launch_vagrant, get_local_runner
+from worker_installer.tests import get_remote_runner, get_local_runner
+from vagrant_helper import launch_vagrant, terminate_vagrant
 
 __author__ = 'elip'
 
