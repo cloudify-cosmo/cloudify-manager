@@ -121,6 +121,11 @@ def _verify_no_celery_error(runner, worker_config):
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
 
 
+def create_empty_file_in_dir(runner, folder, name):
+    runner.run("mkdir -p {0}".format(folder))
+    runner.put("", os.path.join(folder, name))
+
+
 def _install_celery(runner, worker_config, node_id):
 
     cosmo_properties = {
@@ -149,8 +154,10 @@ def _install_celery(runner, worker_config, node_id):
     install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL, PLUGIN_INSTALLER_NAME)
 
     # daemonize
-    runner.run("mkdir -p {0}/var/log".format(home))
-    runner.run("mkdir -p {0}/var/run".format(home))
+
+    # create log and pid file is the user home directory
+    create_empty_file_in_dir("{0}/var/log/celery".format(home), "worker.log")
+    create_empty_file_in_dir("{0}/var/run/celery".format(home), "worker.pid")
 
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
