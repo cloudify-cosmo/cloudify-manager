@@ -42,12 +42,8 @@ def _test_install(worker_config, cloudify_runtime, local=False):
     # this should install the plugin installer inside the celery worker
     install(worker_config, __cloudify_id, cloudify_runtime, local=local)
 
-    broker_url = "amqp://guest:guest@10.0.0.1:5672//"
-    if local:
-        broker_url = "amqp://"
-
     # lets make sure it did
-    plugins = _extract_registered_plugins(broker_url)
+    plugins = _extract_registered_plugins(worker_config['broker'])
     print plugins
     assert 'celery.{0}@cloudify.tosca.artifacts.plugin.plugin_installer'.format(__cloudify_id) in plugins
 

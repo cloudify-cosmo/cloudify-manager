@@ -158,22 +158,8 @@ def _install_celery(runner, worker_config, node_id):
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     logger.info("starting celery worker")
-    try:
-        print "before starting celery worker"
-        p = subprocess.Popen(["sudo", "service", "celeryd", "start"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        if p.returncode != 0:
-            raise RuntimeError("unable to start celery daemon [returncode={0}, output={1}, err={2}]"
-                               .format(p.returncode, out, err))
-        print "after starting celery worker"
-        runner.run("celery inspect registered --broker={0}".format(broker_url))
-        print "after inspecting celery worker"
-    except BaseException as t:
-        print traceback.print_exc(file=sys.stdout)
-        print "caught exception {0}".format(t)
-        raise RuntimeError(t.message)
-
-    # runner.sudo("service celeryd start")
+    runner.run("service celeryd start")
+    runner.run("celery inspect registered --broker={0}".format(broker_url))
 
 
 def install_celery_plugin_to_dir(runner, to_dir, plugin_url, plugin_name):
