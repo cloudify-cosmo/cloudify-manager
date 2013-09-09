@@ -12,7 +12,6 @@ setup(
     install_requires=[
         "fabric",
         "celery"
-    ],
-    tests_require=['nose', 'python-vagrant>=0.3.1']
+    ]
 )
 
