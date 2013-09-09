@@ -18,6 +18,7 @@ def _extract_registered_plugins(borker_url):
 
     c = Celery(broker=borker_url, backend=borker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
+    print "tasks = {0}".format(tasks)
 
     plugins = set()
     for node, node_tasks in tasks.items():
