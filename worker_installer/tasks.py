@@ -155,12 +155,7 @@ def _install_celery(runner, worker_config, node_id):
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     logger.info("starting celery worker")
-    try:
-        runner.sudo("service celeryd start")
-    except BaseException:
-        print "caught exception while starting celery."
-        runner.run("cat /var/log/celery")
-        raise RuntimeError("Failed running celery")
+    runner.sudo("service celeryd start")
     runner.run("celery inspect registered --broker={0}".format(broker_url))
 
 
@@ -210,6 +205,8 @@ def get_machine_ip(cloudify_runtime):
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
+CELERYD_LOG_FILE="/home/%(user)s/var/log/celery/worker.log"
+CELERYD_PID_FILE="/home/%(user)s/var/run/celery/worker.pid"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
