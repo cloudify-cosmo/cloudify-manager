@@ -9,18 +9,16 @@ python:
 
 install:
 
-    - sudo rabbitmqctl status
     # command to install dependencies
-    #- python setup.py install
+    - python setup.py install
 
     # command to install test dependencies
-    #- pip install -r test-requirements.txt
+    - pip install -r test-requirements.txt
 
 
 
 script:
 
     # command to run tests - we dont run remote tests since we cant provision vagrant inside travis
-    #- 'nosetests --nocapture --nologcapture worker_installer.tests.test_fabric_retry_runner:TestLocalRunnerCase'
-    #- 'nosetests --nocapture --nologcapture worker_installer.tests.test_worker_installer:TestLocalInstallerCase'
-    - sudo mkdir /home/travis/elip
+    - 'nosetests --nocapture --nologcapture worker_installer.tests.test_fabric_retry_runner:TestLocalRunnerCase'
+    - 'nosetests --nocapture --nologcapture worker_installer.tests.test_worker_installer:TestLocalInstallerCase'
