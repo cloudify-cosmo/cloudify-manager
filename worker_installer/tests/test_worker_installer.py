@@ -1,5 +1,4 @@
 import getpass
-import socket
 
 __author__ = 'elip'
 
@@ -114,7 +113,7 @@ class TestLocalInstallerCase:
     def test_install(self):
 
         # no need to specify port and key file. we are installing locally
-        local_ip = socket.gethostbyname(socket.gethostname())
+        local_ip = "127.0.0.1"
 
         worker_config = {
             "user": getpass.getuser(),
