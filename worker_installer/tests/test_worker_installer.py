@@ -14,6 +14,7 @@ from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
 
+
 def _extract_registered_plugins(borker_url):
 
     c = Celery(broker=borker_url, backend=borker_url)
