@@ -168,7 +168,7 @@ def _install_celery(runner, worker_config, node_id):
         runner.run("celery inspect registered --broker={0}".format(broker_url))
         print "after inspecting celery worker"
     except BaseException as t:
-        print "caught exception"
+        print "caught exception {0}".format(t)
         raise RuntimeError(t.message)
 
     # runner.sudo("service celeryd start")
@@ -232,11 +232,12 @@ CELERYD_OPTS="\
 --app=%(app)s \
 -Q %(node_id)s \
 --broker=%(broker_url)s \
---hostname=%(node_id)s"''' % dict(user=user,
-                                  workdir=workdir,
-                                  app=app,
-                                  node_id=node_id,
-                                  broker_url=broker_url)
+--hostname=%(node_id)s"
+''' % dict(user=user,
+           workdir=workdir,
+           app=app,
+           node_id=node_id,
+           broker_url=broker_url)
 
 
 class FabricRetryingRunner:
