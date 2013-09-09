@@ -1,7 +1,14 @@
+import os
+import random
+import string
 import tempfile
 from worker_installer.tests import get_remote_runner, get_local_runner
 
 __author__ = 'elip'
+
+
+def _id_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for x in range(size))
 
 
 def _test_run(runner):
@@ -34,6 +41,15 @@ def _test_put_sudo(runner):
     output = runner.get(file_path)
     # echo command adds a blank line at the end
     assert output == data + "\n"
+
+
+def _test_put_to_non_existing_dir(runner):
+    data = "test"
+    # we need a path that needs sudo
+    file_path = os.path.join(tempfile.NamedTemporaryFile().name, _id_generator(6))
+    runner.put(data, file_path)
+    output = runner.get(file_path)
+    assert output == data
 
 
 class TestLocalRunnerCase:
@@ -69,6 +85,18 @@ class TestLocalRunnerCase:
     def test_put_sudo(self):
         _test_put_sudo(self.RUNNER)
 
+    def test_put_to_non_existing_dir(self):
+        _test_put_to_non_existing_dir(self.RUNNER)
+
+    def test_put_to_non_existing_dir_sudo(self):
+        data = "test"
+        # we need a path that needs sudo
+        file_path = os.path.join(tempfile.NamedTemporaryFile().name, _id_generator(6))
+        self.RUNNER.put(data, file_path, use_sudo=True)
+        output = self.RUNNER.get(file_path)
+        # echo command adds a blank line at the end
+        assert output == data + "\n"
+
 
 class TestRemoteRunnerCase:
 
@@ -100,3 +128,14 @@ class TestRemoteRunnerCase:
 
     def test_put_sudo(self):
         _test_sudo(self.RUNNER)
+
+    def test_put_to_non_existing_dir(self):
+        _test_put_to_non_existing_dir(self.RUNNER)
+
+    def test_put_to_non_existing_dir_sudo(self):
+        data = "test"
+        # we need a path that needs sudo
+        file_path = os.path.join(tempfile.NamedTemporaryFile().name, _id_generator(6))
+        self.RUNNER.put(data, file_path, use_sudo=True)
+        output = self.RUNNER.get(file_path)
+        assert output == data

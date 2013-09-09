@@ -120,6 +120,7 @@ def _verify_no_celery_error(runner, worker_config):
         error_content = output.getvalue()
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
 
+
 def _install_celery(runner, worker_config, node_id):
 
     cosmo_properties = {
@@ -291,14 +292,23 @@ class FabricRetryingRunner:
 
         self.run_with_timeout_and_retry(function, command)
 
-    def put(self, string, remote_file_path, use_sudo=False):
+    def put(self, string, file_path, use_sudo=False):
 
         if self.local:
-            self.run_with_timeout_and_retry(self._lput, string, remote_file_path, use_sudo)
+            self.run_with_timeout_and_retry(self._lput, string, file_path, use_sudo)
             return
 
         string = StringIO(string)
-        self.run_with_timeout_and_retry(put, string, remote_file_path, use_sudo=use_sudo)
+        # we first need to create the directory
+        directory = "/".join(file_path.split("/")[:-1])
+        with settings(host_string=self.host_string,
+                      key_filename=self.key_filename,
+                      disable_known_hosts=True):
+            if use_sudo:
+                run("sudo mkdir -p {0}".format(directory))
+            else:
+                run("mkdir -p {0}".format(directory))
+        self.run_with_timeout_and_retry(put, string, file_path, use_sudo=use_sudo)
 
     def get(self, file_path):
 

@@ -19,7 +19,8 @@ def _extract_registered_plugins(borker_url):
 
     c = Celery(broker=borker_url, backend=borker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
-    print "tasks = {0}".format(tasks)
+    if tasks is None:
+        return set()
 
     plugins = set()
     for node, node_tasks in tasks.items():
@@ -44,7 +45,8 @@ def _test_install(worker_config, cloudify_runtime, local=False):
 
     # lets make sure it did
     plugins = _extract_registered_plugins(worker_config['broker'])
-    print plugins
+    if plugins is None:
+        raise AssertionError("No plugins were detected on the installed worker")
     assert 'celery.{0}@cloudify.tosca.artifacts.plugin.plugin_installer'.format(__cloudify_id) in plugins
 
 
