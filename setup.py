@@ -11,8 +11,7 @@ setup(
     license='LICENSE',
     description='Plugin for installing plugins into an existing celery worker',
     install_requires=[
-        "billiard==2.7.3.28",
-        "celery==3.0.19"
+        "celery"
     ],
     tests_require=['nose']
 )
