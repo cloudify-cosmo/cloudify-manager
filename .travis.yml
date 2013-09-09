@@ -8,10 +8,8 @@ install:
     # command to install dependencies
     - python setup.py install
 
-    # command to install test dependencies next to the tested package
-    - pwd
-    - python setup.py test
-    - ls -l
+    # command to install test dependencies
+    - sudo pip install -r test-requirements.txt
 
 
 
