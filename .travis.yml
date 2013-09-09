@@ -8,8 +8,8 @@ install:
     # command to install dependencies
     - python setup.py install
 
-    # command to install test dependencies
-    - python setup.py test
+    # command to install test dependencies next to the tested package
+    - cd cosmo-agent-installer && python setup.py test
 
 
 
