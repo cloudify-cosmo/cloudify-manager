@@ -149,6 +149,9 @@ def _install_celery(runner, worker_config, node_id):
     install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL, PLUGIN_INSTALLER_NAME)
 
     # daemonize
+    runner.run("mkdir -p {0}/var/log".format(home))
+    runner.run("mkdir -p {0}/var/run".format(home))
+
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = build_celeryd_config(user, home, app, node_id, broker_url)
