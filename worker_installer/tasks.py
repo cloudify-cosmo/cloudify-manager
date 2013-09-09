@@ -1,6 +1,3 @@
-import subprocess
-import traceback
-
 __author__ = 'elip'
 
 import os
