@@ -100,6 +100,8 @@ def restart_celery_worker(runner, worker_config):
 
 def _verify_no_celery_error(runner, worker_config):
 
+    print "verifying no error"
+
     user = worker_config['user']
     home = "/home/" + user
     celery_error_out = '{0}/celery_error.out'.format(home)
@@ -156,9 +158,11 @@ def _install_celery(runner, worker_config, node_id):
 
     logger.info("starting celery worker")
     try:
+        print "before starting celery worker"
         subprocess.call(["sudo", "service", "celeryd", "start"])
+        print "after starting celery worker"
     except (BaseException, SystemExit) as t:
-        print "failed starting celery {0}".format(t)
+        raise RuntimeError(t)
     # runner.sudo("service celeryd start")
 
 
