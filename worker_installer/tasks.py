@@ -137,7 +137,7 @@ def _install_celery(runner, worker_config, node_id):
 
     # this will also install celery because of transitive dependencies
     install_celery_plugin_to_dir(runner, home, COSMO_CELERY_URL, COSMO_CELERY_NAME)
-    runner.sudo("cd /home/travis && ls -l")
+    runner.run("cd /home/travis && ls -l")
 
     # write cosmo properties
     logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
