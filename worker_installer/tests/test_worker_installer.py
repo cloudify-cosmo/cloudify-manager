@@ -118,7 +118,7 @@ class TestLocalInstallerCase:
         worker_config = {
             "user": getpass.getuser(),
             "management_ip": local_ip,
-            "broker": "amqp://guest:guest@{0}:5672//".format(local_ip)
+            "broker": "amqp://"
         }
 
         cloudify_runtime = {
