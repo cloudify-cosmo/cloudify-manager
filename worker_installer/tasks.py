@@ -1,7 +1,6 @@
-import os
-
 __author__ = 'elip'
 
+import os
 from StringIO import StringIO
 from fabric.operations import local as lrun
 from os import path
@@ -27,8 +26,10 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
     try:
         prepare_configuration(worker_config, cloudify_runtime)
 
-        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-        key_filename = worker_config['key']
+        host_string = key_filename = None
+        if not local:
+            host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+            key_filename = worker_config['key']
 
         runner = create_runner(local, host_string, key_filename)
 
@@ -45,8 +46,10 @@ def restart(worker_config, cloudify_runtime, local=False, **kwargs):
     try:
         prepare_configuration(worker_config, cloudify_runtime)
 
-        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-        key_filename = worker_config['key']
+        host_string = key_filename = None
+        if not local:
+            host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+            key_filename = worker_config['key']
 
         runner = create_runner(local, host_string, key_filename)
 
@@ -100,7 +103,7 @@ def _verify_no_celery_error(runner, worker_config):
     output = None
     with hide('aborts', 'running', 'stdout', 'stderr'):
         try:
-            runner.get(celery_error_out)
+            output = runner.get(celery_error_out)
         except BaseException:
             pass
 
@@ -135,7 +138,7 @@ def _install_celery(runner, worker_config, node_id):
     # write cosmo properties
     logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
     cosmo_properties_path = path.join(app_dir, "cosmo.txt")
-    runner.put(StringIO(json.dumps(cosmo_properties)), cosmo_properties_path, use_sudo=True)
+    runner.put(json.dumps(cosmo_properties), cosmo_properties_path, use_sudo=True)
 
     # install the plugin installer dependencies
     runner.sudo("pip install {0}".format(PLUGIN_INSTALLER_URL))
@@ -148,7 +151,7 @@ def _install_celery(runner, worker_config, node_id):
     # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
-    config_file = StringIO(build_celeryd_config(user, home, app, node_id, broker_url))
+    config_file = build_celeryd_config(user, home, app, node_id, broker_url)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     logger.info("starting celery worker")
