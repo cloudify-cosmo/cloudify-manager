@@ -2,20 +2,22 @@ __author__ = 'elip'
 
 import os
 from StringIO import StringIO
-from fabric.operations import local as lrun
 from os import path
 import time
 import sys
 import json
 
+from fabric.operations import local as lrun
 from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import settings, sudo, run, put, hide, get
 
 
-COSMO_CELERY_URL = "https://github.com/iliapolo/cosmo-worker-utils/archive/master.zip"
-PLUGIN_INSTALLER_URL = 'https://github.com/CloudifySource/' \
-                       'cosmo-plugin-installer/archive/feature/CLOUDIFY-2022-initial-commit.zip'
+COSMO_CELERY_NAME = "cosmo-worker-utils"
+COSMO_CELERY_URL = "https://github.com/iliapolo/{0}/archive/master.zip".format(COSMO_CELERY_NAME)
+PLUGIN_INSTALLER_NAME = "cosmo-plugin-installer"
+PLUGIN_INSTALLER_URL = 'https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip'\
+    .format(PLUGIN_INSTALLER_NAME)
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
@@ -129,24 +131,18 @@ def _install_celery(runner, worker_config, node_id):
 
     runner.sudo("rm -rf " + app_dir)
 
-    # this will install celery because of transitive dependencies
-    runner.sudo("pip install {0}".format(COSMO_CELERY_URL))
-
-    # install the cosmo celery app to the user home
-    runner.sudo("pip install --no-deps -t {0} {1}".format(home, COSMO_CELERY_URL))
+    # this will also install celery because of transitive dependencies
+    install_celery_plugin_to_dir(runner, home, COSMO_CELERY_URL, COSMO_CELERY_NAME)
 
     # write cosmo properties
     logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
     cosmo_properties_path = path.join(app_dir, "cosmo.txt")
     runner.put(json.dumps(cosmo_properties), cosmo_properties_path, use_sudo=True)
 
-    # install the plugin installer dependencies
-    runner.sudo("pip install {0}".format(PLUGIN_INSTALLER_URL))
+    plugin_installer_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
-    # install the plugin installer into the worker
-    runner.sudo("pip install --no-deps -t {0} {1}".format(create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE,
-                                                                                app_dir),
-                                                          PLUGIN_INSTALLER_URL))
+    # install the plugin installer
+    install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL, PLUGIN_INSTALLER_NAME)
 
     # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
@@ -159,6 +155,18 @@ def _install_celery(runner, worker_config, node_id):
 
     # just to print out the registered tasks for debugging purposes
     runner.sudo("celery inspect registered --broker=" + broker_url)
+
+
+def install_celery_plugin_to_dir(runner, to_dir, plugin_url, plugin_name):
+
+    # this will install the package and the dependencies into the python installation
+    runner.sudo("pip install {0}".format(plugin_url))
+
+    # this will remove just the package from the python installation. it is not needed there and causes conflicts
+    runner.sudo("pip uninstall -y {0}".format(plugin_name))
+
+    # install the pakcage to the target directory
+    runner.run("pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
 
 
 def create_namespace_path(runner, namespace_parts, base_dir):
@@ -176,8 +184,8 @@ def create_namespace_path(runner, namespace_parts, base_dir):
     remote_plugin_path = base_dir
     for folder in namespace_parts:
         remote_plugin_path = os.path.join(remote_plugin_path, folder)
-        runner.sudo("mkdir -p " + remote_plugin_path)
-        runner.sudo('echo "" > ' + remote_plugin_path + '/__init__.py')
+        runner.run("mkdir -p " + remote_plugin_path)
+        runner.run('echo "" > ' + remote_plugin_path + '/__init__.py')
 
     return remote_plugin_path
 
