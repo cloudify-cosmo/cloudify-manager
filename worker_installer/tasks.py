@@ -155,7 +155,12 @@ def _install_celery(runner, worker_config, node_id):
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     logger.info("starting celery worker")
-    runner.run("service celeryd start")
+    try:
+        runner.sudo("service celeryd start")
+    except BaseException:
+        print "caught exception while starting celery."
+        runner.run("cat /var/log/celery")
+        raise RuntimeError("Failed running celery")
     runner.run("celery inspect registered --broker={0}".format(broker_url))
 
 
