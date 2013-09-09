@@ -16,4 +16,5 @@ install:
 script:
 
     # command to run tests - we dont run remote tests since we cant provision vagrant inside travis
-    - 'nosetests --nocapture --exclude=worker_installer.tests.test_fabric_retry_runner:TestRemoteRunnerCase,worker_installer.tests.test_worker_installer:TestRemoteInstallerCase'
+    - 'nosetests --nocapture worker_installer.tests.test_fabric_retry_runner:TestLocalRunnerCase'
+    - 'nosetests --nocapture worker_installer.tests.test_fabric_retry_runner:TestLocalInstallerCase'
