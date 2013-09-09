@@ -1,3 +1,5 @@
+import subprocess
+
 __author__ = 'elip'
 
 import os
@@ -109,9 +111,11 @@ def _verify_no_celery_error(runner, worker_config):
         except BaseException:
             pass
 
-    # this means the celery worker had an uncaught exception and it wrote its content
-    # to the file above because of our custom exception handler (see celery.py)
     if output:
+
+        # this means the celery worker had an uncaught exception and it wrote its content
+        # to the file above because of our custom exception handler (see celery.py)
+
         runner.run('rm {0}'.format(celery_error_out))
         error_content = output.getvalue()
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
@@ -151,7 +155,11 @@ def _install_celery(runner, worker_config, node_id):
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     logger.info("starting celery worker")
-    runner.sudo("service celeryd start")
+    try:
+        subprocess.call(["sudo", "service", "celeryd", "start"])
+    except (BaseException, SystemExit) as t:
+        print "failed starting celery {0}".format(t)
+    # runner.sudo("service celeryd start")
 
 
 def install_celery_plugin_to_dir(runner, to_dir, plugin_url, plugin_name):
