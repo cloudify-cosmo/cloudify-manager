@@ -1,3 +1,6 @@
+import getpass
+import socket
+
 __author__ = 'elip'
 
 import os
@@ -111,15 +114,17 @@ class TestLocalInstallerCase:
     def test_install(self):
 
         # no need to specify port and key file. we are installing locally
+        local_ip = socket.gethostbyname(socket.gethostname())
+
         worker_config = {
-            "user": "elip",
-            "management_ip": "127.0.0.1",
-            "broker": "amqp://guest:guest@127.0.0.1:5672//"
+            "user": getpass.getuser(),
+            "management_ip": local_ip,
+            "broker": "amqp://guest:guest@{0}:5672//".format(local_ip)
         }
 
         cloudify_runtime = {
             "test_id": {
-                "ip": "127.0.0.1"
+                "ip": local_ip
             }
         }
 
