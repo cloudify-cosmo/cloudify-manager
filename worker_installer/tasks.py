@@ -120,12 +120,6 @@ def _verify_no_celery_error(runner, worker_config):
         error_content = output.getvalue()
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
 
-
-def create_empty_file_in_dir(runner, folder, name):
-    runner.run("mkdir -p {0}".format(folder))
-    runner.put("", os.path.join(folder, name))
-
-
 def _install_celery(runner, worker_config, node_id):
 
     cosmo_properties = {
@@ -156,8 +150,8 @@ def _install_celery(runner, worker_config, node_id):
     # daemonize
 
     # create log and pid file is the user home directory
-    create_empty_file_in_dir("{0}/var/log/celery".format(home), "worker.log")
-    create_empty_file_in_dir("{0}/var/run/celery".format(home), "worker.pid")
+    runner.put("", "{0}/var/log/celery/worker.log".format(home))
+    runner.put("", "{0}/var/run/celery/worker.pid".format(home))
 
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
@@ -330,16 +324,20 @@ class FabricRetryingRunner:
     def _lput(self, string, file_path, use_sudo=False):
 
         """
-        Write the string to the file specified in file_path
+        Write the string to the file specified in file_path.
+        Will create necessary directories if not exists.
         """
 
+        directory = "/".join(file_path.split("/")[:-1])
         if use_sudo:
             # we need to write a string to a file locally with sudo
             # use echo for now
-
+            if not os.path.exists(directory):
+                lrun("sudo mkdir -p {0}".format(directory))
             lrun("echo '{0}'".format(string) + " | sudo tee -a {0}".format(file_path))
         else:
             # no sudo needed. just use python for this
+            if not os.path.exists(directory):
+                os.makedirs(directory)
             with open(file_path, "w") as f:
                 f.write(string)
-
