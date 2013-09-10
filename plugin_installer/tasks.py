@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 # *******************************************************************************/
+import logging
 
 import os
 import subprocess
@@ -27,6 +28,7 @@ from celery import task
 from cosmo.celery import get_cosmo_properties
 
 logger = get_task_logger(__name__)
+logger.level = logging.DEBUG
 
 @task
 def install(plugin, __cloudify_id, **kwargs):

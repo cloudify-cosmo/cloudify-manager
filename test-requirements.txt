@@ -2,4 +2,4 @@
 
 # cosmo.events and cosmo.celery is provided at runtime, no need to install it.
 # this dependencie is just for developments purposes.
-https://github.com/iliapolo/cosmo-worker-utils/archive/master.zip
+https://github.com/CloudifySource/cosmo-celery-common/archive/feature/CLOUDIFY-2022-initial-commit.zip
