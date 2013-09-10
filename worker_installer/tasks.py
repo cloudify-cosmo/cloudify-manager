@@ -211,7 +211,7 @@ def get_machine_ip(cloudify_runtime):
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
-ENV_PYTHON="/home/travis/virtualenv/bin/python"
+CELERYD_MULTI="/home/travis/virtualenv/python2.7/bin"
 CELERYD_LOG_FILE="/home/%(user)s/var/log/celery/worker.log"
 CELERYD_PID_FILE="/home/%(user)s/var/run/celery/worker.pid"
 CELERYD_USER="%(user)s"
