@@ -204,7 +204,6 @@ def get_machine_ip(cloudify_runtime):
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
-CELERYD_MULTI="/usr/local/bin/celeryd-multi"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
