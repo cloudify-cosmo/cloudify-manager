@@ -15,7 +15,7 @@ from celery import task
 from fabric.api import settings, sudo, run, put, hide, get
 
 COSMO_CELERY_NAME = "cosmo-celery-common"
-COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial -commit.zip".format(COSMO_CELERY_NAME)
+COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip".format(COSMO_CELERY_NAME)
 
 PLUGIN_INSTALLER_NAME = "cosmo-plugin-plugin-installer"
 PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip".format(PLUGIN_INSTALLER_NAME)
