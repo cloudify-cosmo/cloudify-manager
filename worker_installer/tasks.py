@@ -36,7 +36,7 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
         runner = create_runner(local, host_string, key_filename)
 
         install_latest_pip(runner, __cloudify_id)
-        install_celery_worker(runner, worker_config, __cloudify_id)
+        _install_celery(runner, worker_config, __cloudify_id)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
     except SystemExit, e:
         trace = sys.exc_info()[2]
@@ -84,11 +84,6 @@ def prepare_configuration(worker_config, cloudify_runtime):
     ip = get_machine_ip(cloudify_runtime)
     worker_config['host'] = ip
     worker_config['app'] = 'cosmo'
-
-
-def install_celery_worker(runner, worker_config, node_id):
-    _install_celery(runner, worker_config, node_id)
-    _verify_no_celery_error(runner, worker_config)
 
 
 def restart_celery_worker(runner, worker_config):
@@ -164,6 +159,7 @@ def _install_celery(runner, worker_config, node_id):
 
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
+    _verify_no_celery_error(runner, worker_config)
     runner.run("celery inspect registered --broker={0}".format(broker_url))
 
 
