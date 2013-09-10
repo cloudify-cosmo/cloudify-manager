@@ -35,7 +35,7 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
 
         runner = create_runner(local, host_string, key_filename)
 
-        install_latest_pip(runner, __cloudify_id)
+        _install_latest_pip(runner, __cloudify_id)
         _install_celery(runner, worker_config, __cloudify_id)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
     except SystemExit, e:
@@ -70,7 +70,7 @@ def create_runner(local, host_string, key_filename):
     return runner
 
 
-def install_latest_pip(runner, node_id):
+def _install_latest_pip(runner, node_id):
     logger.info("installing latest pip installation [node_id=%s]", node_id)
     logger.debug("retrieving pip script [node_id=%s]", node_id)
     runner.sudo("wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
@@ -92,8 +92,6 @@ def restart_celery_worker(runner, worker_config):
 
 
 def _verify_no_celery_error(runner, worker_config):
-
-    print "verifying no error"
 
     user = worker_config['user']
     home = "/home/" + user
@@ -145,20 +143,18 @@ def _install_celery(runner, worker_config, node_id):
     install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL, PLUGIN_INSTALLER_NAME)
 
     # daemonize
-    runner.sudo("wget https://raw.github.com/CloudifySource/cosmo-agent-installer/feature/CLOUDIFY-2022-initial-commit/celeryd -O /etc/init.d/celeryd")
+    runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = build_celeryd_config(user, home, app, node_id, broker_url)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
-    print "contents of celeryd file:"
-    print runner.get("/etc/default/celeryd")
 
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
-    runner.run("ls -l /dev/shm")
-    runner.run("ls -l /home/travis")
-    runner.run("ps -eaf | grep celery")
-    print runner.get("/var/log/celery/celery.log")
+
+    logger.debug(runner.get("/var/log/celery/celery.log"))
+
     _verify_no_celery_error(runner, worker_config)
+
     runner.run("celery inspect registered --broker={0}".format(broker_url))
 
 
