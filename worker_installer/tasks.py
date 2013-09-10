@@ -154,6 +154,8 @@ def _install_celery(runner, worker_config, node_id):
 
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
+    runner.run("ps -eaf | grep celery")
+    print runner.get("/var/log/celery/{0}.log".format(node_id))
     _verify_no_celery_error(runner, worker_config)
     runner.run("celery inspect registered --broker={0}".format(broker_url))
 
