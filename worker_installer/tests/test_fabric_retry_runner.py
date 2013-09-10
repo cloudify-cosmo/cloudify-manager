@@ -36,7 +36,7 @@ def _test_get(runner):
 def _test_put_sudo(runner):
     data = "test"
     # we need a path that needs sudo
-    file_path = "/etc/default/celeryd"
+    file_path = "/etc/default/test_put_sudo"
     runner.put(data, file_path, use_sudo=True)
     output = runner.get(file_path)
     # echo command adds a blank line at the end
