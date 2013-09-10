@@ -23,12 +23,14 @@ from os.path import expanduser
 
 from celery.utils.log import get_task_logger
 import cosmo
+from cosmo.celery import get_cosmo_properties
 
 from celery import task
-from cosmo.celery import get_cosmo_properties
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
+
+COSMO_APP_NAME = "cosmo"
 
 @task
 def install(plugin, __cloudify_id, **kwargs):
@@ -44,23 +46,17 @@ def install(plugin, __cloudify_id, **kwargs):
 
     name = plugin["name"]
     url = plugin["url"]
+    package_name = plugin['package']
 
     management_ip = get_cosmo_properties()["management_ip"]
     if management_ip:
         url = url.replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
-    install_plugin_dependencies(url, name)
-
-    install_plugin_to_celery_dir(url, name)
+    install_celery_plugin_to_dir(url, name, package_name)
 
 @task
 def verify_plugin(worker_id, plugin_name, operation, **kwargs):
-    p = subprocess.Popen(["celery", "inspect", "registered", "-d", worker_id, "--no-color"], stdout=subprocess.PIPE)
-    out, err = p.communicate()
-
-    if p.returncode != 0:
-        raise RuntimeError("unable to get celery worker registered tasks [returncode={0}]".format(p.returncode))
-
+    out = run_command("celery inspect registered -d {0} --no-color".format(worker_id))
     lines = out.splitlines()
     registered_tasks = list()
     operation_name = operation.split(".")[-1]
@@ -84,39 +80,67 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
     return False
 
 
-def install_plugin_to_celery_dir(url, name):
-    command = ["sudo", "pip", "install", "--no-deps", "-t", create_namespace_path(name.split(".")[:-1]), url]
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def install_celery_plugin_to_dir(plugin_url,
+                                 plugin_name,
+                                 package_name,
+                                 base_dir=os.path.join(expanduser("~"), COSMO_APP_NAME)):
+
+    """
+    Installs a plugin from a url to the given base dir.
+
+    ``plugin_url`` url to zipped version of the python project.
+
+            - needed for pip installation.
+
+    ``plugin_name`` is the full name of the plugin. including namespace specification
+
+            - needed for namespace directory structure creation.
+
+    ``package_name`` name of the python distribution. as specified in the 'name' property of the setup.py file.
+
+            - needed for uninstallation of plugin from python installation. not needed there.
+    """
+
+    to_dir = create_namespace_path(plugin_name.split(".")[:-1], base_dir)
+
+    # this will install the package and the dependencies into the python installation
+    run_command("sudo pip install {0}".format(plugin_url))
+    logger.debug("installed plugin {0} and dependencies into python installation".format(package_name))
+
+    # this will remove just the package from the python installation. it is not needed there and causes conflicts
+    run_command("sudo pip uninstall -y {0}".format(package_name))
+    logger.debug("uninstalled plugin {0} from python installation".format(package_name))
+
+    # install the pakcage to the target directory
+    run_command("pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
+    logger.debug("installing plugin {0} into {1}".format(package_name, to_dir))
+
+
+def get_plugin_simple_name(full_plugin_name):
+    return full_plugin_name.split(".")[-1:][0]
+
+
+def run_command(command):
+    p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
-        raise RuntimeError("unable to install plugin {0} [returncode={1}, output={2}, err={3}]"
-                           .format(name, p.returncode, out, err))
+        raise RuntimeError("Failed running command {0} [returncode={1}, "
+                           "output={2}, error={3}]".format(command, out, err, p.returncode))
+    return out
 
 
-def install_plugin_dependencies(url, name):
-    command = ["sudo", "pip", "install", url]
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    if p.returncode != 0:
-        raise RuntimeError("unable to install plugin {0} [returncode={1}, output={2}, err={3}]"
-                           .format(name, p.returncode, out, err))
-    pass
-
-
-def create_namespace_path(namespace_parts):
+def create_namespace_path(namespace_parts, base_dir):
 
     """
     Creates the namespaces path the plugin directory will reside in.
     For example
         input : cloudify.tosca.artifacts.plugin.python_webserver_installer
-        output : a directory path app/cloudify/tosca/artifacts/plugin
-    "app/cloudify/plugins/host_provisioner". In addition, "__init.py__" files will be created in each of the
-    path's sub directories.
-
+        input : basedir
+        output : a directory path ${basedir}/cloudify/tosca/artifacts/plugin
+    In addition, "__init.py__" files will be created in each of the path's sub directories.
     """
-    home_dir = expanduser("~")
-    cosmo_path = os.path.join(home_dir, "cosmo")
-    path = cosmo_path
+
+    path = base_dir
 
     for p in namespace_parts:
         path = os.path.join(path, p)
@@ -126,7 +150,7 @@ def create_namespace_path(namespace_parts):
         os.makedirs(path)
 
     # create __init__.py files in each subfolder
-    init_path = cosmo_path
+    init_path = base_dir
     for p in namespace_parts:
         init_path = os.path.join(init_path, p)
         init_file = os.path.join(init_path, "__init__.py")
