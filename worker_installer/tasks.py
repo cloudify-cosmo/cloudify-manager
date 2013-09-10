@@ -1,3 +1,5 @@
+import logging
+
 __author__ = 'elip'
 
 import os
@@ -21,6 +23,7 @@ PLUGIN_INSTALLER_URL = 'https://github.com/CloudifySource/{0}/archive/feature/CL
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
+logger.level = logging.DEBUG
 
 
 @task
@@ -179,6 +182,8 @@ def create_namespace_path(runner, namespace_parts, base_dir):
     path's sub directories.
 
     """
+
+    logger.info("creating namespace path : {0} in directory {1}".format(namespace_parts, base_dir))
 
     runner.run("mkdir -p " + base_dir)
     remote_plugin_path = base_dir

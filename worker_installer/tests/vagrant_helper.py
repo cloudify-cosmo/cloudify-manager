@@ -2,16 +2,19 @@ import os
 import shutil
 import tempfile
 import vagrant
+from worker_installer.tests import get_logger
 
 __author__ = 'elip'
 
 VAGRANT_MACHINE_IP = "10.0.0.5"
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
+logger = get_logger("VagrantHelper")
+
 
 def launch_vagrant(vm_id):
 
-    print "launching a new vagrant machine to be used by test"
+    logger.info("launching a new virtual machine")
 
     vagrant_file = """
 
@@ -25,16 +28,16 @@ def launch_vagrant(vm_id):
 
     v = get_vagrant(VAGRANT_PATH, vm_id)
     with open("{0}/Vagrantfile".format(v.root), 'w') as output_file:
-        print "writing vagrant file to {0}/Vagrantfile".format(v.root)
+        logger.info("writing vagrant file to {0}/Vagrantfile".format(v.root))
         output_file.write(vagrant_file)
 
     # start the machine
-    print "calling vagrant up"
+    logger.info("calling vagrant up")
     v.up()
 
 
 def terminate_vagrant(vm_id):
-    print "terminating vagrant machine"
+    logger.info("terminating vagrant machine")
     v = get_vagrant(VAGRANT_PATH, vm_id)
     v.destroy()
     shutil.rmtree(v.root)

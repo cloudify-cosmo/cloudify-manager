@@ -1,4 +1,6 @@
 import getpass
+import logging
+import unittest
 
 __author__ = 'elip'
 
@@ -9,7 +11,7 @@ from celery import Celery
 
 from worker_installer.tasks import install
 from worker_installer.tasks import create_namespace_path
-from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
+from worker_installer.tests import get_remote_runner, get_local_runner, get_logger, VAGRANT_MACHINE_IP
 
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
@@ -66,19 +68,19 @@ def _test_create_namespace_path(runner):
         assert init_data == "\n"
 
 
-class TestRemoteInstallerCase:
+class TestRemoteInstallerCase(unittest.TestCase):
 
     VM_ID = "TestRemoteInstallerCase"
     RUNNER = None
 
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID)
         cls.RUNNER = get_remote_runner()
 
     @classmethod
-    def teardown_class(cls):
+    def tearDownClass(cls):
         from vagrant_helper import terminate_vagrant
         terminate_vagrant(cls.VM_ID)
 
@@ -105,12 +107,12 @@ class TestRemoteInstallerCase:
         _test_create_namespace_path(self.RUNNER)
 
 
-class TestLocalInstallerCase:
+class TestLocalInstallerCase(unittest.TestCase):
 
     RUNNER = None
 
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         cls.RUNNER = get_local_runner()
 
     def test_install(self):
@@ -135,3 +137,7 @@ class TestLocalInstallerCase:
     def test_create_namespace_path(self):
 
         _test_create_namespace_path(self.RUNNER)
+
+
+if __name__ == '__main__':
+    unittest.main()

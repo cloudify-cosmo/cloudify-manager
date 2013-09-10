@@ -1,8 +1,10 @@
+import logging
 import os
 import random
 import string
 import tempfile
-from worker_installer.tests import get_remote_runner, get_local_runner
+import unittest
+from worker_installer.tests import get_remote_runner, get_local_runner, get_logger
 
 __author__ = 'elip'
 
@@ -52,16 +54,17 @@ def _test_put_to_non_existing_dir(runner):
     assert output == data
 
 
-class TestLocalRunnerCase:
+class TestLocalRunnerCase(unittest.TestCase):
 
     """
     Tests the fabric runner localhost functioanllity.
     """
 
     RUNNER = None
+    LOGGER = get_logger("TestLocalRunnerCase")
 
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         cls.RUNNER = get_local_runner()
 
     def test_run(self):
@@ -98,19 +101,20 @@ class TestLocalRunnerCase:
         assert output == data + "\n"
 
 
-class TestRemoteRunnerCase:
+class TestRemoteRunnerCase(unittest.TestCase):
 
     VM_ID = "TestRemoteRunnerCase"
     RUNNER = None
+    LOGGER = get_logger("TestRemoteRunnerCase")
 
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID)
         cls.RUNNER = get_remote_runner()
 
     @classmethod
-    def teardown_class(cls):
+    def tearDownClass(cls):
         from vagrant_helper import terminate_vagrant
         terminate_vagrant(cls.VM_ID)
 
@@ -139,3 +143,6 @@ class TestRemoteRunnerCase:
         self.RUNNER.put(data, file_path, use_sudo=True)
         output = self.RUNNER.get(file_path)
         assert output == data
+
+if __name__ == '__main__':
+    unittest.main()

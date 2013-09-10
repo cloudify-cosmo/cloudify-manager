@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 from worker_installer.tasks import FabricRetryingRunner
@@ -6,6 +7,8 @@ __author__ = 'idanm'
 
 VAGRANT_MACHINE_IP = "10.0.0.5"
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 def get_remote_runner():
@@ -24,3 +27,9 @@ def get_remote_runner():
 
 def get_local_runner():
     return FabricRetryingRunner(local=True)
+
+
+def get_logger(name):
+    logger = logging.getLogger(name)
+    logger.level = logging.DEBUG
+    return logger
