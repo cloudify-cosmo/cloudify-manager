@@ -145,12 +145,7 @@ def _install_celery(runner, worker_config, node_id):
     install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL, PLUGIN_INSTALLER_NAME)
 
     # daemonize
-
-    # create log and pid file is the user home directory
-    runner.put("", "{0}/var/log/celery/worker.log".format(home))
-    runner.put("", "{0}/var/run/celery/worker.pid".format(home))
-
-    runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
+    runner.sudo("wget https://raw.github.com/CloudifySource/cosmo-agent-installer/feature/CLOUDIFY-2022-initial-commit/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = build_celeryd_config(user, home, app, node_id, broker_url)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
@@ -209,8 +204,6 @@ def get_machine_ip(cloudify_runtime):
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
-CELERYD_LOG_FILE="/home/%(user)s/var/log/celery/worker.log"
-CELERYD_PID_FILE="/home/%(user)s/var/run/celery/worker.pid"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
