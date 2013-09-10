@@ -14,6 +14,8 @@ from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import settings, sudo, run, put, hide, get
 
+COSMO_APP_NAME = "cosmo"
+
 COSMO_CELERY_NAME = "cosmo-celery-common"
 COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip".format(COSMO_CELERY_NAME)
 
@@ -86,7 +88,6 @@ def _install_latest_pip(runner, node_id):
 def prepare_configuration(worker_config, cloudify_runtime):
     ip = get_machine_ip(cloudify_runtime)
     worker_config['host'] = ip
-    worker_config['app'] = 'cosmo'
 
 
 def restart_celery_worker(runner, worker_config):
@@ -125,9 +126,12 @@ def _install_celery(runner, worker_config, node_id):
     }
     user = worker_config['user']
     broker_url = worker_config['broker']
-    app = worker_config['app']
+
     home = "/home/" + user
-    app_dir = home + "/" + app
+    if 'home' in worker_config:
+        home = worker_config['home']
+
+    app_dir = home + "/" + COSMO_APP_NAME
 
     runner.sudo("rm -rf " + app_dir)
 
@@ -147,7 +151,7 @@ def _install_celery(runner, worker_config, node_id):
     # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
-    config_file = build_celeryd_config(user, home, app, node_id, broker_url)
+    config_file = build_celeryd_config(user, home, COSMO_APP_NAME, node_id, broker_url)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     logger.info("starting celery worker")
