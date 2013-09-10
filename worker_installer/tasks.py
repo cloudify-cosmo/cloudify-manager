@@ -14,12 +14,12 @@ from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import settings, sudo, run, put, hide, get
 
+COSMO_CELERY_NAME = "cosmo-celery-common"
+COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial -commit.zip".format(COSMO_CELERY_NAME)
 
-COSMO_CELERY_NAME = "cosmo-worker-utils"
-COSMO_CELERY_URL = "https://github.com/iliapolo/{0}/archive/master.zip".format(COSMO_CELERY_NAME)
-PLUGIN_INSTALLER_NAME = "cosmo-plugin-installer"
-PLUGIN_INSTALLER_URL = 'https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip'\
-    .format(PLUGIN_INSTALLER_NAME)
+PLUGIN_INSTALLER_NAME = "cosmo-plugin-plugin-installer"
+PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip".format(PLUGIN_INSTALLER_NAME)
+
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
