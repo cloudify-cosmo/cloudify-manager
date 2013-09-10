@@ -1,5 +1,4 @@
 import getpass
-import logging
 import unittest
 
 __author__ = 'elip'
@@ -11,7 +10,7 @@ from celery import Celery
 
 from worker_installer.tasks import install
 from worker_installer.tasks import create_namespace_path
-from worker_installer.tests import get_remote_runner, get_local_runner, get_logger, VAGRANT_MACHINE_IP
+from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
 
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
