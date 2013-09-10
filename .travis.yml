@@ -9,6 +9,8 @@ python:
 
 install:
 
+    - sudo rmdir /dev/shm
+    - sudo ln -Tsf /{run,dev}/shm
     # command to install dependencies
     - python setup.py install
 
