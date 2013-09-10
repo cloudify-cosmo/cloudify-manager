@@ -159,6 +159,8 @@ def _install_celery(runner, worker_config, node_id):
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = build_celeryd_config(user, home, app, node_id, broker_url)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
+    print "contents of celeryd file:"
+    print runner.get("/etc/default/celeryd")
 
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
