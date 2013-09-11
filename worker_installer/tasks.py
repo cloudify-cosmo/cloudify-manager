@@ -47,6 +47,27 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
         trace = sys.exc_info()[2]
         raise RuntimeError('Failed celery worker installation: {0}'.format(e)), None, trace
 
+@task
+def start(worker_config, cloudify_runtime, local=False, **kwargs):
+
+    prepare_configuration(worker_config, cloudify_runtime)
+
+    host_string = key_filename = None
+    if not local:
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
+
+    runner = create_runner(local, host_string, key_filename)
+
+    logger.info("starting celery worker")
+    runner.sudo("service celeryd start")
+
+    logger.debug(runner.get("/var/log/celery/celery.log"))
+
+    _verify_no_celery_error(runner, worker_config)
+
+    runner.run("celery inspect registered --broker={0}".format(worker_config['broker']))
+
 
 @task
 def restart(worker_config, cloudify_runtime, local=False, **kwargs):
@@ -136,7 +157,10 @@ def _install_celery(runner, worker_config, node_id):
     runner.sudo("rm -rf " + app_dir)
 
     # this will also install celery because of transitive dependencies
-    install_celery_plugin_to_dir(runner, home, COSMO_CELERY_URL, COSMO_CELERY_NAME)
+    install_celery_plugin_to_dir(runner, home, COSMO_CELERY_URL)
+
+    # since sudo pip created the app dir. the owner is root. but actually it is used by celery.
+    runner.sudo("chown -R {0} {1}".format(user, app_dir))
 
     # write cosmo properties
     logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
@@ -146,7 +170,7 @@ def _install_celery(runner, worker_config, node_id):
     plugin_installer_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
     # install the plugin installer
-    install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL, PLUGIN_INSTALLER_NAME)
+    install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL)
 
     # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
@@ -154,26 +178,15 @@ def _install_celery(runner, worker_config, node_id):
     config_file = build_celeryd_config(user, home, COSMO_APP_NAME, node_id, broker_url)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
-    logger.info("starting celery worker")
-    runner.sudo("service celeryd start")
 
-    logger.debug(runner.get("/var/log/celery/celery.log"))
-
-    _verify_no_celery_error(runner, worker_config)
-
-    runner.run("celery inspect registered --broker={0}".format(broker_url))
-
-
-def install_celery_plugin_to_dir(runner, to_dir, plugin_url, plugin_name):
+def install_celery_plugin_to_dir(runner, to_dir, plugin_url):
 
     # this will install the package and the dependencies into the python installation
     runner.sudo("pip install {0}".format(plugin_url))
 
-    # this will remove just the package from the python installation. it is not needed there and causes conflicts
-    runner.sudo("pip uninstall -y {0}".format(plugin_name))
-
-    # install the pakcage to the target directory
-    runner.run("pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
+    # install the package to the target directory. this should also remove the plugin package from the python
+    # installation.
+    runner.sudo("pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
 
 
 def create_namespace_path(runner, namespace_parts, base_dir):
@@ -265,6 +278,8 @@ class FabricRetryingRunner:
                             fun(*args, **kwargs)
                     break
                 except SystemExit, e:  # fabric just loves them SystemExit folks
+                    logger.debug("caught SystemExit from fabric while running function {0} with args {1}"
+                                 .format(fun, args))
                     trace = sys.exc_info()[2]
                     raise RuntimeError('Failed command: {0}'.format(e)), None, trace
             except BaseException:
