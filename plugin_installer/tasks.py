@@ -14,7 +14,6 @@
 #    * limitations under the License.
 # *******************************************************************************/
 import logging
-
 import os
 import subprocess
 import ast
@@ -22,10 +21,10 @@ import _ast
 from os.path import expanduser
 
 from celery.utils.log import get_task_logger
+from celery import task
+
 import cosmo
 from cosmo.celery import get_cosmo_properties
-
-from celery import task
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -44,15 +43,11 @@ def install(plugin, __cloudify_id, **kwargs):
 
     logger.debug("installing plugin [%s] in host [%s]", plugin, __cloudify_id)
 
-    name = plugin["name"]
-    url = plugin["url"]
-    package_name = plugin['package']
-
     management_ip = get_cosmo_properties()["management_ip"]
     if management_ip:
-        url = url.replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
+        plugin["url"] = plugin['url'].replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
-    install_celery_plugin_to_dir(url, name, package_name)
+    install_celery_plugin_to_dir(plugin)
 
 @task
 def verify_plugin(worker_id, plugin_name, operation, **kwargs):
@@ -80,40 +75,38 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
     return False
 
 
-def install_celery_plugin_to_dir(plugin_url,
-                                 plugin_name,
-                                 package_name,
+def install_celery_plugin_to_dir(plugin,
                                  base_dir=os.path.join(expanduser("~"), COSMO_APP_NAME)):
 
     """
     Installs a plugin from a url to the given base dir.
+    NOTE : Plugin dependencies will be installed to the python installation,
+           but the plugin itself will not be, this is to avoid conflicts because the plugin is installed to the
+           celery dir, which is also sourced to the PYTHONPATH of the system.
 
-    ``plugin_url`` url to zipped version of the python project.
+    ``plugin['url']`` url to zipped version of the python project.
 
             - needed for pip installation.
 
-    ``plugin_name`` is the full name of the plugin. including namespace specification
+    ``plugin['name']`` is the full name of the plugin. including namespace specification
 
             - needed for namespace directory structure creation.
 
-    ``package_name`` name of the python distribution. as specified in the 'name' property of the setup.py file.
-
-            - needed for uninstallation of plugin from python installation. not needed there.
     """
+
+    plugin_name = plugin["name"]
+    plugin_url = plugin["url"]
 
     to_dir = create_namespace_path(plugin_name.split(".")[:-1], base_dir)
 
     # this will install the package and the dependencies into the python installation
     run_command("sudo pip install {0}".format(plugin_url))
-    logger.debug("installed plugin {0} and dependencies into python installation".format(package_name))
+    logger.debug("installed plugin {0} and dependencies into python installation".format(plugin_name))
 
-    # this will remove just the package from the python installation. it is not needed there and causes conflicts
-    run_command("sudo pip uninstall -y {0}".format(package_name))
-    logger.debug("uninstalled plugin {0} from python installation".format(package_name))
-
-    # install the pakcage to the target directory
-    run_command("pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
-    logger.debug("installing plugin {0} into {1}".format(package_name, to_dir))
+    # install the package to the target directory. this will also uninstall the plugin package from the python
+    # installation. leaving the plugin package just inside the base dir.
+    run_command("sudo pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
+    logger.debug("installing plugin {0} into {1}".format(plugin_name, to_dir))
 
 
 def get_plugin_simple_name(full_plugin_name):
