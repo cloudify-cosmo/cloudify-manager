@@ -3,16 +3,14 @@ import logging
 __author__ = 'elip'
 
 import os
-from StringIO import StringIO
 from os import path
-import time
 import sys
 import json
 
-from fabric.operations import local as lrun
 from celery.utils.log import get_task_logger
 from celery import task
-from fabric.api import settings, sudo, run, put, hide, get
+from fabric.api import hide
+from cosmo_fabric.runner import FabricRetryingRunner
 
 COSMO_APP_NAME = "cosmo"
 
@@ -243,126 +241,3 @@ CELERYD_OPTS="\
            app=app,
            node_id=node_id,
            broker_url=broker_url)
-
-
-class FabricRetryingRunner:
-
-    def __init__(self, local=False, host_string=None, key_filename=None):
-
-        """
-        If ``local`` is true. the ``host_string`` and ``key_filename`` parameters are ignored
-        and all commands will run on the local machine.
-
-        If ``local`` is false. the ``host_string`` and ``key_filename`` are mandatory
-        """
-
-        self.local = local
-        self.host_string = host_string
-        self.key_filename = key_filename
-
-    def run_with_timeout_and_retry(self, fun, *args, **kwargs):
-        sleep_interval = 3
-        max_retries = 3
-
-        current_retries = 0
-
-        while True:
-            try:
-                try:
-                    if self.local:
-                        fun(*args, **kwargs)
-                    else:
-                        with settings(host_string=self.host_string,
-                                      key_filename=self.key_filename,
-                                      disable_known_hosts=True):
-                            fun(*args, **kwargs)
-                    break
-                except SystemExit, e:  # fabric just loves them SystemExit folks
-                    logger.debug("caught SystemExit from fabric while running function {0} with args {1}"
-                                 .format(fun, args))
-                    trace = sys.exc_info()[2]
-                    raise RuntimeError('Failed command: {0}'.format(e)), None, trace
-            except BaseException:
-                if current_retries < max_retries:
-                    current_retries += 1
-                    time.sleep(sleep_interval)
-                else:
-                    exception = sys.exc_info()[1]
-                    trace = sys.exc_info()[2]
-                    raise exception, None, trace
-
-    def sudo(self, command):
-
-        function = sudo
-        if self.local:
-            function = self._lsudo
-
-        self.run_with_timeout_and_retry(function, command)
-
-    def run(self, command):
-
-        function = run
-        if self.local:
-            function = lrun
-
-        self.run_with_timeout_and_retry(function, command)
-
-    def put(self, string, file_path, use_sudo=False):
-
-        if self.local:
-            self.run_with_timeout_and_retry(self._lput, string, file_path, use_sudo)
-            return
-
-        string = StringIO(string)
-        # we first need to create the directory
-        directory = "/".join(file_path.split("/")[:-1])
-        with settings(host_string=self.host_string,
-                      key_filename=self.key_filename,
-                      disable_known_hosts=True):
-            if use_sudo:
-                run("sudo mkdir -p {0}".format(directory))
-            else:
-                run("mkdir -p {0}".format(directory))
-        self.run_with_timeout_and_retry(put, string, file_path, use_sudo=use_sudo)
-
-    def get(self, file_path):
-
-        """
-        Read the file to a string
-        """
-
-        if self.local:
-            with open(file_path, "r") as f:
-                return f.read()
-
-        output = StringIO()
-        self.run_with_timeout_and_retry(get, file_path, output)
-        return output.getvalue()
-
-    def _lsudo(self, command):
-
-        """
-        Run sudo command locally
-        """
-        lrun("sudo {0}".format(command))
-
-    def _lput(self, string, file_path, use_sudo=False):
-
-        """
-        Write the string to the file specified in file_path.
-        Will create necessary directories if not exists.
-        """
-
-        directory = "/".join(file_path.split("/")[:-1])
-        if use_sudo:
-            # we need to write a string to a file locally with sudo
-            # use echo for now
-            if not os.path.exists(directory):
-                lrun("sudo mkdir -p {0}".format(directory))
-            lrun("echo '{0}'".format(string) + " | sudo tee -a {0}".format(file_path))
-        else:
-            # no sudo needed. just use python for this
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            with open(file_path, "w") as f:
-                f.write(string)
