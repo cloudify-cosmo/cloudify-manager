@@ -8,12 +8,16 @@ import tempfile
 
 from celery import Celery
 
-from worker_installer.tasks import install
+from worker_installer.tasks import install, start
 from worker_installer.tasks import create_namespace_path
 from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
+from worker_installer.tests import get_logger
 
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
+
+remote_suite_logger = get_logger("TestRemoteInstallerCase")
+local_suite_logger = get_logger("TestLocalInstallerCase")
 
 
 def _extract_registered_plugins(borker_url):
@@ -39,12 +43,22 @@ def _extract_registered_plugins(borker_url):
 
 def _test_install(worker_config, cloudify_runtime, local=False):
 
+    logger = remote_suite_logger
+    if local:
+        logger = local_suite_logger
+
     __cloudify_id = "management_host"
 
     # this should install the plugin installer inside the celery worker
+
+    logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
     install(worker_config, __cloudify_id, cloudify_runtime, local=local)
 
+    logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
+    start(worker_config, cloudify_runtime, local=local)
+
     # lets make sure it did
+    logger.info("extracting plugins from newly installed worker")
     plugins = _extract_registered_plugins(worker_config['broker'])
     if plugins is None:
         raise AssertionError("No plugins were detected on the installed worker")
