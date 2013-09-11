@@ -15,6 +15,7 @@ def run_command(command):
                            "output={2}, error={3}]".format(command, out, err, p.returncode))
     return out
 
+run_command("sudo pip install {0}".format(FABRIC_RUNNER))
 
 setup(
     name='cosmo-plugin-agent-installer',
@@ -25,7 +26,6 @@ setup(
     license='LICENSE',
     description='Plugin for starting a new cosmo agent on a remote host',
     install_requires=[
-        "https://github.com/CloudifySource/cosmo-fabric-runner/archive/feature/CLOUDIFY-2022-initial-commit.zip",
         "celery"
     ]
 )
