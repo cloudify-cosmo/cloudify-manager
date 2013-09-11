@@ -33,18 +33,25 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_install(self):
 
-        name = "test.plugin.mock"
-        package_name = "mock-plugin"
-        url = os.path.join(os.path.dirname(__file__), "mock-plugin")
+        plugin = {
+            "name": "test.plugin.mock_for_test",
+            "url": os.path.join(os.path.dirname(__file__), "mock-plugin"),
+            "package": "mock-plugin"
+        }
 
         base_dir = tempfile.NamedTemporaryFile().name
 
-        install_celery_plugin_to_dir(url,
-                                     name,
-                                     package_name,
-                                     base_dir)
+        install_celery_plugin_to_dir(plugin=plugin, base_dir=base_dir)
 
-        expected_plugin_path = os.path.join(base_dir, name.replace(".", "/"))
+        expected_plugin_path = os.path.join(base_dir, plugin['name'].replace(".", "/"))
 
+        # check the plugin was installed to the correct directory
         assert os.path.exists(expected_plugin_path)
+
+        # check the plugin itself is not available in the python path.
+        try:
+            import mock_for_test
+            self.fail("import error expected for module {0}".format(plugin['name']))
+        except ImportError:
+            pass
 

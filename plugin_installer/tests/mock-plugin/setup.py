@@ -7,7 +7,7 @@ setup(
     version='0.1.0',
     author='elip',
     author_email='elip@gigaspaces.com',
-    packages=['mock'],
+    packages=['mock_for_test'],
     license='LICENSE',
-    description='Mock plugin for test'
+    description='Mock plugin for test',
 )
