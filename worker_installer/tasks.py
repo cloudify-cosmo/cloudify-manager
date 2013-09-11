@@ -133,8 +133,7 @@ def _verify_no_celery_error(runner, worker_config):
         # to the file above because of our custom exception handler (see celery.py)
 
         runner.run('rm {0}'.format(celery_error_out))
-        error_content = output.getvalue()
-        raise RuntimeError('Celery worker failed to start:\n{0}'.format(error_content))
+        raise RuntimeError('Celery worker failed to start:\n{0}'.format(output))
 
 
 def _install_celery(runner, worker_config, node_id):
