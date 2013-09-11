@@ -1,4 +1,3 @@
-import logging
 import os
 import random
 import string
@@ -9,7 +8,7 @@ from worker_installer.tests import get_remote_runner, get_local_runner, get_logg
 __author__ = 'elip'
 
 
-def _id_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
+def _id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for x in range(size))
 
 
