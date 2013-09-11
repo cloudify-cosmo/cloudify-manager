@@ -7,9 +7,6 @@ install:
     # command to install dependencies
     - python setup.py install
 
-    # command to install test dependencies
-    - pip install -r test-requirements.txt
-
 # command to run tests
 script:
     - 'python -m unittest plugin_installer.tests.test_installer'
