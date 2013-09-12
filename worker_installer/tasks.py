@@ -59,7 +59,7 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
     runner = create_runner(local, host_string, key_filename)
 
     # change owner again since more directories were added
-    runner.sudo("chown -R {0} {1}".format(worker_config['user'], worker_config['app_dir']))
+    runner.sudo("chown -R {0}:{0} {1}".format(worker_config['user'], worker_config['app_dir']))
 
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
