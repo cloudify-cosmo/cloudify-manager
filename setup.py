@@ -3,7 +3,8 @@ import os
 __author__ = 'elip'
 
 from setuptools import setup
-from worker_installer import DEFAULT_BRANCH
+
+DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
 
 BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
 

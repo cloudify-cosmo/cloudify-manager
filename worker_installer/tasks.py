@@ -4,16 +4,16 @@ __author__ = 'elip'
 
 import os
 from os import path
-import sys
 import json
 
 from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import hide
 from cosmo_fabric.runner import FabricRetryingRunner
-from worker_installer import DEFAULT_BRANCH
 
 COSMO_APP_NAME = "cosmo"
+
+DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
 
 BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
 
@@ -33,22 +33,18 @@ logger.debug("COSMO_BRANCH is {0}".format(BRANCH))
 
 @task
 def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwargs):
-    try:
-        prepare_configuration(worker_config, cloudify_runtime)
 
-        host_string = key_filename = None
-        if not local:
-            host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-            key_filename = worker_config['key']
+    prepare_configuration(worker_config, cloudify_runtime)
 
-        runner = create_runner(local, host_string, key_filename)
+    host_string = key_filename = None
+    if not local:
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
 
-        _install_latest_pip(runner, __cloudify_id)
-        _install_celery(runner, worker_config, __cloudify_id)
-    # fabric raises SystemExit on failure, so we transform this to a regular exception.
-    except SystemExit, e:
-        trace = sys.exc_info()[2]
-        raise RuntimeError('Failed celery worker installation: {0}'.format(e)), None, trace
+    runner = create_runner(local, host_string, key_filename)
+
+    _install_latest_pip(runner, __cloudify_id)
+    _install_celery(runner, worker_config, __cloudify_id)
 
 @task
 def start(worker_config, cloudify_runtime, local=False, **kwargs):
@@ -62,6 +58,9 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
     runner = create_runner(local, host_string, key_filename)
 
+    # change owner again since more directories were added
+    runner.sudo("chown -R {0} {1}".format(worker_config['user'], worker_config['app_dir']))
+
     logger.info("starting celery worker")
     runner.sudo("service celeryd start")
 
@@ -74,21 +73,18 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
 @task
 def restart(worker_config, cloudify_runtime, local=False, **kwargs):
-    try:
-        prepare_configuration(worker_config, cloudify_runtime)
 
-        host_string = key_filename = None
-        if not local:
-            host_string = '%(user)s@%(host)s:%(port)s' % worker_config
-            key_filename = worker_config['key']
+    prepare_configuration(worker_config, cloudify_runtime)
 
-        runner = create_runner(local, host_string, key_filename)
+    host_string = key_filename = None
+    if not local:
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
 
-        restart_celery_worker(runner, worker_config)
+    runner = create_runner(local, host_string, key_filename)
+
+    restart_celery_worker(runner, worker_config)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
-    except SystemExit, e:
-        trace = sys.exc_info()[2]
-        raise RuntimeError('Failed celery worker restart: {0}'.format(e)), None, trace
 
 
 def create_runner(local, host_string, key_filename):
@@ -112,6 +108,8 @@ def _install_latest_pip(runner, node_id):
 def prepare_configuration(worker_config, cloudify_runtime):
     ip = get_machine_ip(cloudify_runtime)
     worker_config['host'] = ip
+    worker_config['home'] = "/home/" + worker_config['user']
+    worker_config['app_dir'] = worker_config['home'] + "/" + COSMO_APP_NAME
 
 
 def restart_celery_worker(runner, worker_config):
@@ -149,12 +147,8 @@ def _install_celery(runner, worker_config, node_id):
     }
     user = worker_config['user']
     broker_url = worker_config['broker']
-
-    home = "/home/" + user
-    if 'home' in worker_config:
-        home = worker_config['home']
-
-    app_dir = home + "/" + COSMO_APP_NAME
+    app_dir = worker_config['app_dir']
+    home = worker_config['home']
 
     runner.sudo("rm -rf " + app_dir)
 
@@ -227,7 +221,7 @@ def get_machine_ip(cloudify_runtime):
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
-COSMO_BRANCH="develop"
+COSMO_BRANCH="%(branch)s"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
@@ -241,7 +235,8 @@ CELERYD_OPTS="\
 -Q %(node_id)s \
 --broker=%(broker_url)s \
 --hostname=%(node_id)s"
-''' % dict(user=user,
+''' % dict(branch=DEFAULT_BRANCH,
+           user=user,
            workdir=workdir,
            app=app,
            node_id=node_id,
