@@ -10,7 +10,7 @@ import tempfile
 
 from celery import Celery
 
-from worker_installer.tasks import install, start
+from worker_installer.tasks import install, start, build_env_string
 from worker_installer.tasks import create_namespace_path
 from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
 from worker_installer.tests import get_logger
@@ -156,6 +156,16 @@ class TestLocalInstallerCase(unittest.TestCase):
     def test_create_namespace_path(self):
 
         _test_create_namespace_path(self.RUNNER)
+
+    def test_create_env_string(self):
+        env = {
+            "TEST_KEY1": "TEST_VALUE2",
+            "TEST_KEY2": "TEST_VALUE2"
+        }
+
+        expected_string = "TEST_KEY2=TEST_VALUE2\nTEST_KEY1=TEST_VALUE2\n"
+
+        assert expected_string == build_env_string(env)
 
 
 if __name__ == '__main__':
