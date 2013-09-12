@@ -12,8 +12,6 @@ from worker_installer.tasks import install, start
 from worker_installer.tasks import create_namespace_path
 from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
 from worker_installer.tests import get_logger
-from worker_installer.tests.vagrant_helper import id_generator
-
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
 
@@ -86,6 +84,7 @@ class TestRemoteInstallerCase(unittest.TestCase):
 
     VM_ID = "TestRemoteInstallerCase"
     RUNNER = None
+    from worker_installer.tests.vagrant_helper import id_generator
     RAN_ID = id_generator(3)
 
     @classmethod
