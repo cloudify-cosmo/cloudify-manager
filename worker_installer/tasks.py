@@ -171,7 +171,10 @@ def _install_celery(runner, worker_config, node_id):
     # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
-    config_file = build_celeryd_config(user, home, COSMO_APP_NAME, node_id, broker_url, worker_config['env'])
+    env = None
+    if 'env' in worker_config:
+        env = worker_config['env']
+    config_file = build_celeryd_config(user, home, COSMO_APP_NAME, node_id, broker_url, env)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
 
@@ -227,8 +230,10 @@ def build_env_string(env):
     return string
 
 
-def build_celeryd_config(user, workdir, app, node_id, broker_url, env):
+def build_celeryd_config(user, workdir, app, node_id, broker_url, env=None):
 
+    if not env:
+        env = {}
     env_string = build_env_string(env)
 
     return '''

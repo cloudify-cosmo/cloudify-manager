@@ -167,6 +167,13 @@ class TestLocalInstallerCase(unittest.TestCase):
 
         assert expected_string == build_env_string(env)
 
+    def test_create_empty_env_string(self):
+
+        expected_string = ""
+
+        assert expected_string == build_env_string({})
+
+
 
 if __name__ == '__main__':
     unittest.main()
