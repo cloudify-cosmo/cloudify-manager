@@ -226,7 +226,7 @@ def build_env_string(env):
 
     string = ""
     for key, value in env.iteritems():
-        string = "{0}=\"{1}\"\n{2}".format(key, value, string)
+        string = "export {0}=\"{1}\"\n{2}".format(key, value, string)
     return string
 
 
@@ -238,7 +238,7 @@ def build_celeryd_config(user, workdir, app, node_id, broker_url, env=None):
 
     return '''
 %(env)s
-COSMO_BRANCH="%(branch)s"
+export COSMO_BRANCH="%(branch)s"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
