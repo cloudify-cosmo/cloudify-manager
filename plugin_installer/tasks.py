@@ -68,7 +68,7 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
                                             parsed_tasks_file.body)
                 if not method_description:
                     raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
-                    .format(operation_name, taskspy_path, plugin_name))
+                                       .format(operation_name, taskspy_path, plugin_name))
                 return map(lambda arg: arg.id, method_description[0].args.args)
             else:
                 registered_tasks.append(task)
