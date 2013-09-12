@@ -1,4 +1,6 @@
 import getpass
+import random
+import string
 import unittest
 
 __author__ = 'elip'
@@ -17,6 +19,10 @@ PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
 
 remote_suite_logger = get_logger("TestRemoteInstallerCase")
 local_suite_logger = get_logger("TestLocalInstallerCase")
+
+
+def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for x in range(size))
 
 
 def _extract_registered_plugins(borker_url):
@@ -84,7 +90,6 @@ class TestRemoteInstallerCase(unittest.TestCase):
 
     VM_ID = "TestRemoteInstallerCase"
     RUNNER = None
-    from worker_installer.tests.vagrant_helper import id_generator
     RAN_ID = id_generator(3)
 
     @classmethod

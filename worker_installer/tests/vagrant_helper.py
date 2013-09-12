@@ -14,10 +14,6 @@ VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 logger = get_logger("VagrantHelper")
 
 
-def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(size))
-
-
 def launch_vagrant(vm_id, ran_id):
 
     logger.info("launching a new virtual machine")
