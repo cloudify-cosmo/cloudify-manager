@@ -226,7 +226,7 @@ def build_env_string(env):
 
     string = ""
     for key, value in env.iteritems():
-        string = "{0}={1}\n{2}".format(key, value, string)
+        string = "{0}=\"{1}\"\n{2}".format(key, value, string)
     return string
 
 

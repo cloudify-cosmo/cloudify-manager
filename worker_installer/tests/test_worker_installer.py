@@ -163,7 +163,7 @@ class TestLocalInstallerCase(unittest.TestCase):
             "TEST_KEY2": "TEST_VALUE2"
         }
 
-        expected_string = "TEST_KEY2=TEST_VALUE2\nTEST_KEY1=TEST_VALUE2\n"
+        expected_string = "TEST_KEY2=\"TEST_VALUE2\"\nTEST_KEY1=\"TEST_VALUE2\"\n"
 
         assert expected_string == build_env_string(env)
 
