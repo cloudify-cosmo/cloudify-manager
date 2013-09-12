@@ -1,8 +1,13 @@
+import os
+
 __author__ = 'elip'
 
 from setuptools import setup
+from worker_installer import DEFAULT_BRANCH
 
-FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/feature/CLOUDIFY-2022-initial-commit"
+BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
+
+FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(BRANCH)
 FABRIC_RUNNER_VERSION = "0.1.0"
 
 setup(

@@ -16,6 +16,7 @@ install:
     - sudo ln -Tsf /{run,dev}/shm
 
     # command to install dependencies
+    - export COSMO_BRANCH=$TRAVIS_BRANCH
     - python setup.py install
 
     # command to install test dependencies
@@ -26,4 +27,5 @@ install:
 script:
 
     # command to run tests - we dont run remote tests since we cant provision vagrant inside travis
-    - 'python -m unittest worker_installer.tests.test_worker_installer.TestLocalInstallerCase'
+    - export COSMO_BRANCH=$TRAVIS_BRANCH
+    - python -m unittest worker_installer.tests.test_worker_installer.TestLocalInstallerCase

@@ -11,19 +11,24 @@ from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import hide
 from cosmo_fabric.runner import FabricRetryingRunner
+from worker_installer import DEFAULT_BRANCH
 
 COSMO_APP_NAME = "cosmo"
 
+BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
+
 COSMO_CELERY_NAME = "cosmo-celery-common"
-COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip".format(COSMO_CELERY_NAME)
+COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/{1}.zip".format(COSMO_CELERY_NAME, BRANCH)
 
 PLUGIN_INSTALLER_NAME = "cosmo-plugin-plugin-installer"
-PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/{0}/archive/feature/CLOUDIFY-2022-initial-commit.zip".format(PLUGIN_INSTALLER_NAME)
+PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/{0}/archive/{1}.zip".format(PLUGIN_INSTALLER_NAME, BRANCH)
 
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
+
+logger.debug("COSMO_BRANCH is {0}".format(BRANCH))
 
 
 @task
@@ -222,6 +227,7 @@ def get_machine_ip(cloudify_runtime):
 
 def build_celeryd_config(user, workdir, app, node_id, broker_url):
     return '''
+COSMO_BRANCH="develop"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
