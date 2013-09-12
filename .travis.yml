@@ -5,8 +5,11 @@ python:
 install:
 
     # command to install dependencies
+    - export COSMO_BRANCH=$TRAVIS_BRANCH
     - python setup.py install
 
-# command to run tests
+
 script:
-    - 'python -m unittest plugin_installer.tests.test_installer'
+
+    # command to run tests
+    - python -m unittest plugin_installer.tests.test_installer

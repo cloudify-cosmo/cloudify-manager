@@ -1,8 +1,14 @@
+import os
+
 __author__ = 'elip'
 
 from setuptools import setup
 
-COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/feature/CLOUDIFY-2022-initial-commit"
+DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
+
+BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
+
+COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(BRANCH)
 COSMO_CELERY_VERSION = "0.1.0"
 
 setup(
