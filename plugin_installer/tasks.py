@@ -51,7 +51,7 @@ def install(plugin, __cloudify_id, **kwargs):
 
 @task
 def verify_plugin(worker_id, plugin_name, operation, **kwargs):
-    out = run_command("celery inspect registered -d {0} --no-color".format(worker_id))
+    out = run_command("celery inspect registered -d celery.{0} --no-color".format(worker_id))
     lines = out.splitlines()
     registered_tasks = list()
     operation_name = operation.split(".")[-1]
