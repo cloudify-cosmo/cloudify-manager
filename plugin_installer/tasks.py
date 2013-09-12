@@ -114,7 +114,7 @@ def get_plugin_simple_name(full_plugin_name):
 
 
 def run_command(command):
-    p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE)
+    p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
         raise RuntimeError("Failed running command {0} [returncode={1}, "
