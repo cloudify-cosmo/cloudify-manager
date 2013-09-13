@@ -209,7 +209,7 @@ definitions:
                 radial: |
                     define host_init
                       execute_operation operation: 'provision'
-                      execute_operation operation: 'start'
+                      execute_operation operation: 'cloudify.tosca.interfaces.host_provisioner.start'
 
                       given
                         that '${node.properties.install_agent} == true'
