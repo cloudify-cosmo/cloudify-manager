@@ -16,15 +16,23 @@
 
 import argparse
 import getpass
+import os
 from os.path import expanduser
 import subprocess
 
 __author__ = 'elip'
 
+DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
+
+BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
+
 USER_HOME = expanduser('~')
-WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/feature/CLOUDIFY-2022-initial-commit.zip"
-PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/feature/CLOUDIFY-2022-initial-commit.zip"
-FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/feature/CLOUDIFY-2022-initial-commit.zip"
+
+WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip".format(BRANCH)
+PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip".format(BRANCH)
+VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip".format(BRANCH)
+FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(BRANCH)
+RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/{0}.zip".format(BRANCH)
 
 
 class VagrantLxcBoot:
@@ -33,10 +41,10 @@ class VagrantLxcBoot:
         self.working_dir = args.working_dir
         self.cosmo_version = args.cosmo_version
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
+        self.update_only = args.update_only
 
     def run_command(self, command):
-        print command
-        p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE)
+        p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         if p.returncode != 0:
             raise RuntimeError("Failed running command {0} [returncode={1}, "
@@ -47,6 +55,12 @@ class VagrantLxcBoot:
         self.run_command("sudo pip install {0}".format(FABRIC_RUNNER))
         from cosmo_fabric.runner import FabricRetryingRunner
         self.runner = FabricRetryingRunner(local=True)
+
+    def apply_vagrant_patch(self):
+        python_vagrant_file_path = "/usr/local/lib/python2.7/dist-packages/vagrant.py"
+        local_python_vagrant_file_path = os.path.join(os.path.dirname(__file__), "vagrant.py")
+        self.runner.sudo("rm {0}".format(python_vagrant_file_path))
+        self.runner.sudo("cp {0} {1}".format(local_python_vagrant_file_path, python_vagrant_file_path))
 
     def pip(self, package):
         self.runner.sudo("pip install --timeout=120 {0}".format(package))
@@ -104,9 +118,7 @@ class VagrantLxcBoot:
     def install_celery_worker(self):
 
         # download and install the worker_installer
-        print "installing worker_installer"
         self.pip(WORKER_INSTALLER)
-        print "installed worker_installer"
 
         # no need to specify port and key file. we are installing locally
         local_ip = "127.0.0.1"
@@ -114,7 +126,11 @@ class VagrantLxcBoot:
         worker_config = {
             "user": getpass.getuser(),
             "management_ip": local_ip,
-            "broker": "amqp://"
+            "broker": "amqp://",
+            "env": {
+                "VAGRANT_DEFAULT_PROVIDER": "lxc",
+                "HOME": "/home/{0}".format(getpass.getuser())
+            }
         }
 
         cloudify_runtime = {
@@ -126,19 +142,14 @@ class VagrantLxcBoot:
         __cloudify_id = "cloudify.management"
 
         # # install the worker locally
-        print "installing worker"
         from worker_installer.tasks import install as install_worker
         install_worker(worker_config=worker_config,
                        __cloudify_id=__cloudify_id,
                        cloudify_runtime=cloudify_runtime,
                        local=True)
 
-        print "installed worker"
-
         # download and install the plugin_installer
-        print "installing plugin installer"
         self.pip(PLUGIN_INSTALLER)
-        print "installed plugin installer"
 
         # install the management plugins
         from plugin_installer.tasks import install_celery_plugin_to_dir as install_plugin
@@ -146,7 +157,7 @@ class VagrantLxcBoot:
         # install the riemann configurer
         plugin = {
             "name": "cloudify.tosca.artifacts.plugin.riemann_config_loader",
-            "url": "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/feature/CLOUDIFY-2022-initial-commit.zip"
+            "url": RIEMANN_LOADER
         }
         install_plugin(plugin=plugin)
 
@@ -159,9 +170,20 @@ class VagrantLxcBoot:
 
         install_plugin(plugin=plugin)
 
+        # install the vagrant host provisioner so that deplyoments may use it.
+        plugin = {
+            "name": "cloudify.tosca.artifacts.plugin.vagrant_host_provisioner",
+            "url": VAGRANT_PROVISION
+        }
+
+        install_plugin(plugin=plugin)
+
         # start the worker now for all plugins to be registered
         from worker_installer.tasks import start
         start(worker_config=worker_config, cloudify_runtime=cloudify_runtime, local=True)
+
+        # uninstall the plugin installer from python installation. not needed anymore.
+        self.runner.sudo("pip uninstall -y cosmo-plugin-plugin-installer")
 
     def install_vagrant(self):
 
@@ -217,7 +239,6 @@ then
         echo "done!"
 else
         ARGS="$@"
-        export VAGRANT_DEFAULT_PROVIDER=lxc
         java -Xms512m -Xmx1024m -XX:PermSize=128m -Dlog4j.configuration=file://{0}/log4j.properties -jar {0}/cosmo.jar $ARGS
 fi
 """.format(self.working_dir)
@@ -252,15 +273,23 @@ fi
 
     def bootstrap(self):
         self.install_fabric_runner()
-        self.install_python_protobuf()
-        self.install_rabbitmq()
-        self.install_lxc_docker()
-        self.install_kernel()
-        self.install_riemann()
-        self.install_vagrant()
-        self.install_celery_worker()
-        self.install_java()
-        self.install_cosmo()
+        if not self.update_only:
+            self.install_python_protobuf()
+            self.install_rabbitmq()
+            self.install_lxc_docker()
+            self.install_kernel()
+            self.install_riemann()
+            self.install_vagrant()
+            self.install_java()
+            self.install_cosmo()
+            self.install_celery_worker()
+        else:
+            # just update the worker
+            self.apply_vagrant_patch()
+            self.runner.sudo("service celeryd stop")
+            self.runner.sudo("rm -rf /home/vagrant/cosmo")
+            self.runner.sudo("rm -rf cosmo_celery_common-0.1.0.egg-info")
+            self.install_celery_worker()
 
 
 if __name__ == '__main__':
@@ -277,6 +306,11 @@ if __name__ == '__main__':
         '--cosmo_version',
         help='Version of cosmo that will be used to deploy the dsl',
         default='0.1-SNAPSHOT'
+    )
+    parser.add_argument(
+        '--update_only',
+        help='Update the cosmo agent on this machine with new plugins from github',
+        default=False,
     )
 
     vagrant_boot = VagrantLxcBoot(parser.parse_args())
