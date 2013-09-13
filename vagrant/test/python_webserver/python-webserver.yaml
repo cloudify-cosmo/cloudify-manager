@@ -39,6 +39,9 @@ definitions:
                             broker: 'amqp://guest:guest@10.0.3.1:5672//' # vagrant-lxc creates an 10.0.3.0/24 subnet for
                                                                          # communication with the lxc container
 
+                            env:
+                              VAGRANT_DEFAULT_PROVIDER: 'lxc'
+
                     policies:
                         start_detection_policy:
                             rules:
