@@ -56,7 +56,10 @@ public class ManagerBoot {
                 LOGGER.info(ManagerLogDescription.DEPLOYING_DSL, dslPath);
                 manager.deployDSL(dslPath, timeout);
                 LOGGER.info(ManagerLogDescription.APPLICATION_DEPLOYED);
-                System.in.read();
+                if (!parsed.isNonInteractive()) {
+                    // pause the process to allow for monitoring events to take affect.
+                    System.in.read();
+                }
             } finally {
                 if (manager != null) {
                     manager.close();
