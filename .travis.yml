@@ -5,7 +5,6 @@ python:
 install:
 
     # command to install dependencies
-    - export COSMO_BRANCH=$TRAVIS_BRANCH
     - python setup.py install
 
 

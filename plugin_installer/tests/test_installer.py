@@ -52,7 +52,6 @@ class PluginInstallerTestCase(unittest.TestCase):
         plugin = {
             "name": "test.plugin.mock_for_test",
             "url": os.path.join(os.path.dirname(__file__), "mock-plugin"),
-            "package": "mock-plugin"
         }
 
         base_dir = tempfile.NamedTemporaryFile().name
