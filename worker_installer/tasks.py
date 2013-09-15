@@ -17,18 +17,15 @@ DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
 
 BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
 
-COSMO_CELERY_NAME = "cosmo-celery-common"
-COSMO_CELERY_URL = "https://github.com/CloudifySource/{0}/archive/{1}.zip".format(COSMO_CELERY_NAME, BRANCH)
+COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/master.zip"
 
 PLUGIN_INSTALLER_NAME = "cosmo-plugin-plugin-installer"
-PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/{0}/archive/{1}.zip".format(PLUGIN_INSTALLER_NAME, BRANCH)
+PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip"
 
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
-
-logger.debug("COSMO_BRANCH is {0}".format(BRANCH))
 
 
 @task
