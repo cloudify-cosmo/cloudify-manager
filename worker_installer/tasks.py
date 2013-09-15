@@ -247,7 +247,6 @@ def build_celeryd_config(user, workdir, app, node_id, broker_url, env=None):
 
     return '''
 %(env)s
-export COSMO_BRANCH="%(branch)s"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
