@@ -16,21 +16,18 @@
 
 import argparse
 import getpass
-import os
 from os.path import expanduser
 import subprocess
 
 __author__ = 'elip'
 
-DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
+FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/master.zip"
 
-BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
+PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip"
+
+from management_plugins import WORKER_INSTALLER
 
 USER_HOME = expanduser('~')
-
-PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip".format(BRANCH)
-FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(BRANCH)
-WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip".format(BRANCH)
 
 
 class VagrantLxcBoot:
@@ -53,12 +50,6 @@ class VagrantLxcBoot:
         self.run_command("sudo pip install {0}".format(FABRIC_RUNNER))
         from cosmo_fabric.runner import FabricRetryingRunner
         self.runner = FabricRetryingRunner(local=True)
-
-    def apply_vagrant_patch(self):
-        python_vagrant_file_path = "/usr/local/lib/python2.7/dist-packages/vagrant.py"
-        local_python_vagrant_file_path = os.path.join(os.path.dirname(__file__), "vagrant.py")
-        self.runner.sudo("rm {0}".format(python_vagrant_file_path))
-        self.runner.sudo("cp {0} {1}".format(local_python_vagrant_file_path, python_vagrant_file_path))
 
     def pip(self, package):
         self.runner.sudo("pip install --timeout=120 {0}".format(package))
@@ -270,8 +261,7 @@ fi
             self.install_celery_worker()
         else:
             # just update the worker
-            self.apply_vagrant_patch()
-            self.runner.sudo("service celeryd stop")
+            # self.runner.sudo("service celeryd stop")
             self.runner.sudo("rm -rf /home/vagrant/cosmo")
             self.runner.sudo("rm -rf cosmo_celery_common-0.1.0.egg-info")
             self.install_celery_worker()
