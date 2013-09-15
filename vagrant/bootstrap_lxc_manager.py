@@ -28,11 +28,9 @@ BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
 
 USER_HOME = expanduser('~')
 
-WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip".format(BRANCH)
 PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip".format(BRANCH)
-VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip".format(BRANCH)
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(BRANCH)
-RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/{0}.zip".format(BRANCH)
+WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip".format(BRANCH)
 
 
 class VagrantLxcBoot:
@@ -129,6 +127,8 @@ class VagrantLxcBoot:
             "broker": "amqp://",
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
+                # when running celery in daemon mode. this environment does
+                # not exists. it is needed for vagrant.
                 "HOME": "/home/{0}".format(getpass.getuser())
             }
         }
@@ -148,35 +148,8 @@ class VagrantLxcBoot:
                        cloudify_runtime=cloudify_runtime,
                        local=True)
 
-        # download and install the plugin_installer
-        self.pip(PLUGIN_INSTALLER)
-
-        # install the management plugins
-        from plugin_installer.tasks import install_celery_plugin_to_dir as install_plugin
-
-        # install the riemann configurer
-        plugin = {
-            "name": "cloudify.tosca.artifacts.plugin.riemann_config_loader",
-            "url": RIEMANN_LOADER
-        }
-        install_plugin(plugin=plugin)
-
-        # we actually need the worker_installer as a celery plugin as well.
-        # but since this plugin is already installed on the local python env. just install it to the celery dir.
-        plugin = {
-            "name": "cloudify.tosca.artifacts.plugin.worker_installer",
-            "url": WORKER_INSTALLER
-        }
-
-        install_plugin(plugin=plugin)
-
-        # install the vagrant host provisioner so that deplyoments may use it.
-        plugin = {
-            "name": "cloudify.tosca.artifacts.plugin.vagrant_host_provisioner",
-            "url": VAGRANT_PROVISION
-        }
-
-        install_plugin(plugin=plugin)
+        # install the necessary management plugins.
+        self.install_management_plugins()
 
         # start the worker now for all plugins to be registered
         from worker_installer.tasks import start
@@ -184,6 +157,18 @@ class VagrantLxcBoot:
 
         # uninstall the plugin installer from python installation. not needed anymore.
         self.runner.sudo("pip uninstall -y cosmo-plugin-plugin-installer")
+
+    def install_management_plugins(self):
+
+        # download and install the plugin_installer
+        self.pip(PLUGIN_INSTALLER)
+
+        # install the management plugins
+        from plugin_installer.tasks import install_celery_plugin_to_dir as install_plugin
+
+        from management_plugins import plugins
+        for plugin in plugins:
+            install_plugin(plugin=plugin)
 
     def install_vagrant(self):
 
