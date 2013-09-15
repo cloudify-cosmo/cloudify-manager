@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 # *******************************************************************************/
+
 import logging
 import os
 import subprocess
@@ -24,7 +25,7 @@ from celery.utils.log import get_task_logger
 from celery import task
 
 import cosmo
-from cosmo.celery import get_cosmo_properties
+from cosmo.events import get_cosmo_properties
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG

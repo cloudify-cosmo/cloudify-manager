@@ -1,14 +1,8 @@
-import os
-
 __author__ = 'elip'
 
 from setuptools import setup
 
-DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
-
-BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
-
-COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(BRANCH)
+COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/master"
 COSMO_CELERY_VERSION = "0.1.0"
 
 setup(
@@ -20,9 +14,6 @@ setup(
     license='LICENSE',
     description='Plugin for installing plugins into an existing celery worker',
     install_requires=[
-        "celery",
-        # we add this to allow running the plugin installer from outside of the cosmo env.
-        # this will bring the necessary dependencies
         "cosmo-celery-common"
     ],
 
