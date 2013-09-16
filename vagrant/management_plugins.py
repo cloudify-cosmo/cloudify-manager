@@ -16,9 +16,14 @@
 
 __author__ = 'elip'
 
-WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/develop.zip"
-RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/develop.zip"
-VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/develop.zip"
+from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION
+
+WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip"\
+                   .format(WORKER_INSTALLER_VERSION)
+RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/{0}.zip"\
+                 .format(RIEMANN_LOADER_VERSION)
+VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip"\
+                    .format(VAGRANT_PROVISION_VERSION)
 
 plugins = [
 

@@ -21,13 +21,11 @@ import subprocess
 
 __author__ = 'elip'
 
-FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/master.zip"
-
-PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip"
-
 from management_plugins import WORKER_INSTALLER
+from versions import FABRIC_RUNNER_VERSION
 
 USER_HOME = expanduser('~')
+FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(FABRIC_RUNNER_VERSION)
 
 
 class VagrantLxcBoot:
@@ -140,7 +138,11 @@ class VagrantLxcBoot:
                        local=True)
 
         # download and install the plugin_installer to install management plugins
-        self.pip(PLUGIN_INSTALLER)
+        # use the same plugin installer version used by the worker installer
+        from worker_installer.versions import PLUGIN_INSTALLER_VERSION
+        plugin_installer_url = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip"\
+                           .format(PLUGIN_INSTALLER_VERSION)
+        self.pip(plugin_installer_url)
 
         # install the necessary management plugins.
         self.install_management_plugins()
