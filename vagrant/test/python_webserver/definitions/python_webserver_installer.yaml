@@ -5,4 +5,4 @@ definitions:
             derived_from: "cloudify.tosca.artifacts.agent_plugin"
             properties:
                 interface: "cloudify.tosca.interfaces.middleware_component_installer"
-                url: "https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/feature/CLOUDIFY-2022-initial-commit.zip"
+                url: "https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/develop.zip"
