@@ -26,13 +26,15 @@ from celery.utils.log import get_task_logger
 from celery import task
 from fabric.api import hide
 from cosmo_fabric.runner import FabricRetryingRunner
+from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION
 
 COSMO_APP_NAME = "cosmo"
 
-COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/master.zip"
+COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
+                   .format(COSMO_CELERY_COMMON_VERSION)
 
-PLUGIN_INSTALLER_NAME = "cosmo-plugin-plugin-installer"
-PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip"
+PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip"\
+                       .format(PLUGIN_INSTALLER_VERSION)
 
 COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
