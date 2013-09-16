@@ -125,7 +125,9 @@ public class Manager {
             Path extractionPath,
             TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory) throws IOException {
 
+        LOGGER.info(ManagerLogDescription.EXTRACTING_RESOURCES, SCRIPTS_RESOURCE_PATH, extractionPath);
         ResourceExtractor.extractResource(SCRIPTS_RESOURCE_PATH, extractionPath);
+        LOGGER.info(ManagerLogDescription.EXTRACTING_RESOURCES, RUOTE_GEMS_RESOURCE_PATH, extractionPath);
         ResourceExtractor.extractResource(RUOTE_GEMS_RESOURCE_PATH, extractionPath);
         URLClassLoader ruoteClassLoader = new URLClassLoader(new URL[] {
                 extractionPath.toAbsolutePath().toUri().toURL() }, null);

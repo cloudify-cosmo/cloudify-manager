@@ -49,6 +49,14 @@ public class Args {
                description = "Specifies the yaml should only be validated and not deployed.")
     private boolean validate;
 
+    @Parameter(names = "--non-interactive",
+            description = "Shutdown the manager after the application has been deployed")
+    private boolean nonInteractive;
+
+    public boolean isNonInteractive() {
+        return nonInteractive;
+    }
+
     public boolean isHelp() {
         return help;
     }
@@ -64,4 +72,5 @@ public class Args {
     public int getTimeout() {
         return timeout;
     }
+
 }

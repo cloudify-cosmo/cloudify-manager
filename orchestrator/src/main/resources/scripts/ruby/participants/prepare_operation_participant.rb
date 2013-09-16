@@ -92,7 +92,7 @@ class PrepareOperationParticipant < Ruote::Participant
 
       workitem.fields[TARGET] = CLOUDIFY_MANAGEMENT
       workitem.fields[PLUGIN_NAME] = "cosmo.#{plugin_name}.tasks"
-      workitem.fields[WORKER_ID] = 'cloudify.management'
+      workitem.fields[WORKER_ID] = 'celery.cloudify.management'
       if node[PLUGINS][plugin_name][AGENT_PLUGIN].to_s.eql? 'true'
         raise 'node does not contain a host_id property' unless node.has_key? HOST_ID
         workitem.fields[TARGET] = node[HOST_ID]

@@ -44,7 +44,6 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         JettyDSLImporterConfig.class,
         DefaultRuoteWorkflowConfig.class,
         ManagementRuoteRuntimeConfig.class,
-        CeleryWorkerProcessConfig.class,
         RiemannProcessConfiguration.class,
         StateCacheConfig.class,
         StateCacheFeederConfig.class,
