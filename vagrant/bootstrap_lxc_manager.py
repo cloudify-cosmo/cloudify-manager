@@ -110,7 +110,7 @@ class VagrantLxcBoot:
         self.pip(WORKER_INSTALLER)
 
         # no need to specify port and key file. we are installing locally
-        local_ip = "127.0.0.1"
+        local_ip = "localhost"
 
         worker_config = {
             "user": getpass.getuser(),
@@ -126,7 +126,7 @@ class VagrantLxcBoot:
 
         cloudify_runtime = {
             "cloudify.management": {
-                "ip": local_ip
+                "ip": "cloudify.management"
             }
         }
 
