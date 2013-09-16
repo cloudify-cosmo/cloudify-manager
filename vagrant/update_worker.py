@@ -18,11 +18,6 @@ import os
 
 __author__ = 'elip'
 
-DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
-
-BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
-
-
 def update_worker():
 
     """
@@ -32,7 +27,7 @@ def update_worker():
     """
     from test import get_remote_runner
     runner = get_remote_runner()
-    runner.run("python2.7 /vagrant/bootstrap_lxc_manager.py --update_only=True".format(BRANCH))
+    runner.run("python2.7 /vagrant/bootstrap_lxc_manager.py --update_only=True")
 
 
 update_worker()

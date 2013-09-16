@@ -139,6 +139,9 @@ class VagrantLxcBoot:
                        cloudify_runtime=cloudify_runtime,
                        local=True)
 
+        # download and install the plugin_installer to install management plugins
+        self.pip(PLUGIN_INSTALLER)
+
         # install the necessary management plugins.
         self.install_management_plugins()
 
@@ -150,9 +153,6 @@ class VagrantLxcBoot:
         self.runner.sudo("pip uninstall -y cosmo-plugin-plugin-installer")
 
     def install_management_plugins(self):
-
-        # download and install the plugin_installer
-        self.pip(PLUGIN_INSTALLER)
 
         # install the management plugins
         from plugin_installer.tasks import install_celery_plugin_to_dir as install_plugin
