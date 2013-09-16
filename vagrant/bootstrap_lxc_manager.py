@@ -20,6 +20,7 @@ from os.path import expanduser
 import subprocess
 import re
 import threading
+import os
 
 __author__ = 'elip'
 
@@ -215,7 +216,7 @@ class VagrantLxcBoot:
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
                 # when running celery in daemon mode. this environment does
                 # not exists. it is needed for vagrant.
-                "HOME": "/home/{0}".format(getpass.getuser())
+                "HOME": "/home/{0}".format(getpass.getuser()),
                 "RIEMANN_PID": riemann_info[0],
                 "RIEMANN_CONFIG": riemann_info[1],
                 "RIEMANN_CONFIG_TEMPLATE": riemann_info[2]
