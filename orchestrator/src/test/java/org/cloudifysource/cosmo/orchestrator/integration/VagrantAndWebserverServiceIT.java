@@ -16,10 +16,7 @@
 
 package org.cloudifysource.cosmo.orchestrator.integration;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Resources;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Request;
 import org.cloudifysource.cosmo.config.TestConfig;
@@ -53,7 +50,6 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.net.URL;
 import java.util.Map;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -141,21 +137,9 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
-        workitemFields.put("riemann_pid", String.valueOf(riemannProcess.getPid()));
-        workitemFields.put("riemann_config_path", Resources.getResource(riemannConfigResourcePath).getPath());
-        workitemFields.put("riemann_config_template", readRiemannConfigTemplate());
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid);
-    }
-
-    private static String readRiemannConfigTemplate() {
-        URL resource = Resources.getResource("riemann/riemann.config.template");
-        try {
-            return Resources.toString(resource, Charsets.UTF_8);
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
     }
 
     private void assertPhase4FlaskApp() throws Exception {

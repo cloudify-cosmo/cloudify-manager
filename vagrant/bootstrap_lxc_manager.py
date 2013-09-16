@@ -19,10 +19,12 @@ import getpass
 import os
 from os.path import expanduser
 import subprocess
+import re
+import threading
 
 __author__ = 'elip'
 
-DEFAULT_BRANCH = "feature/CLOUDIFY-2022-initial-commit"
+DEFAULT_BRANCH = "master"
 
 BRANCH = os.environ.get("COSMO_BRANCH", DEFAULT_BRANCH)
 
@@ -32,7 +34,74 @@ WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-install
 PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip".format(BRANCH)
 VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip".format(BRANCH)
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(BRANCH)
-RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/{0}.zip".format(BRANCH)
+RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/{0}.zip".format("feature/CLOUDIFY-2041-riemann-in-bootstrap-script")
+
+
+class RiemannProcess(object):
+    """
+    Manages a riemann server process lifecycle.
+    """
+    pid = None
+    _config_path = None
+    _process = None
+    _detector = None
+    _event = None
+    _riemann_logs = list()
+
+    def __init__(self, config_path):
+        self._config_path = config_path
+
+    def _start_detector(self, process):
+        pid_pattern = ".*PID\s(\d*)"
+        started_pattern = ".*Hyperspace core online"
+        while True:
+            line = process.stdout.readline().rstrip()
+            self._riemann_logs.append(line)
+            if line != '':
+                if not self.pid:
+                    match = re.match(pid_pattern, line)
+                    if match:
+                        self.pid = int(match.group(1))
+                else:
+                    match = re.match(started_pattern, line)
+                    if match:
+                        self._event.set()
+                        break
+
+    def start(self):
+        print "Starting riemann server..."
+        self.pid = self.find_existing_riemann_process()
+        if self.pid:
+            print "Riemann server already running [pid={0}]".format(self.pid)
+            return
+        command = [
+            'riemann',
+            self._config_path
+        ]
+        self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self._event = threading.Event()
+        self._detector = threading.Thread(target=self._start_detector, kwargs={'process': self._process})
+        self._detector.start()
+        if not self._event.wait(10):
+            raise RuntimeError("Unable to start riemann process:\n{0}".format('\n'.join(self._riemann_logs)))
+        print "Riemann server started [pid={0}]".format(self.pid)
+
+    def close(self):
+        if self.pid:
+            print "Shutting down riemann server [pid={0}]".format(self.pid)
+            os.system("kill {0}".format(self.pid))
+
+    def find_existing_riemann_process(self):
+        from subprocess import CalledProcessError
+        pattern = "(\d*)\s.*"
+        try:
+            output = subprocess.check_output("ps a | grep 'riemann.jar' | grep -v grep", shell=True)
+            match = re.match(pattern, output)
+            if match:
+                return int(match.group(1))
+        except CalledProcessError:
+            pass
+        return None
 
 
 class VagrantLxcBoot:
@@ -75,7 +144,7 @@ class VagrantLxcBoot:
         self.runner.sudo("apt-key add {0}".format(command))
 
     def wget(self, url):
-        self.runner.run("wget {0} -P {1}/".format(url, self.working_dir))
+        self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
 
     def install_rabbitmq(self):
         self.runner.sudo("sed -i '2i deb http://www.rabbitmq.com/debian/ testing main' /etc/apt/sources.list")
@@ -105,6 +174,31 @@ class VagrantLxcBoot:
     def install_riemann(self):
         self.wget("http://aphyr.com/riemann/riemann_0.2.2_all.deb")
         self.runner.sudo("dpkg -i riemann_0.2.2_all.deb")
+        riemann_work_path, riemann_config_path, riemann_template_path = self._get_riemann_paths()
+        if os.path.exists(riemann_work_path):
+            self.runner.run("rm -rf {0}".format(riemann_work_path))
+        os.makedirs(riemann_work_path)
+        with open(riemann_config_path, "w") as f:
+            f.write("")
+
+        self.runner.run("cp {0} {1}".format("/vagrant/riemann.config.template", riemann_template_path))
+        riemann = RiemannProcess(riemann_config_path)
+        riemann.start()
+        return riemann.pid, riemann_config_path, riemann_template_path
+
+    def get_riemann_info(self):
+        riemann_work_path, riemann_config_path, riemann_template_path = self._get_riemann_paths()
+        riemann = RiemannProcess(riemann_config_path)
+        pid = riemann.find_existing_riemann_process()
+        if not pid:
+            raise RuntimeError("Riemann server is not running")
+        return pid, riemann_config_path, riemann_template_path
+
+    def _get_riemann_paths(self):
+        riemann_work_path = os.path.join(self.working_dir, 'riemann')
+        riemann_config_path = os.path.join(riemann_work_path, 'riemann.config')
+        riemann_template_path = os.path.join(riemann_work_path, 'riemann.config.template')
+        return riemann_work_path, riemann_config_path, riemann_template_path
 
     def install_java(self):
         self.apt_get("install -y openjdk-7-jdk")
@@ -115,7 +209,9 @@ class VagrantLxcBoot:
         self.pip("python-vagrant")
         self.pip("bernhard")
 
-    def install_celery_worker(self):
+    def install_celery_worker(self, riemann_info=None):
+        if not riemann_info:
+            riemann_info = self.get_riemann_info()
 
         # download and install the worker_installer
         self.pip(WORKER_INSTALLER)
@@ -129,7 +225,10 @@ class VagrantLxcBoot:
             "broker": "amqp://",
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
-                "HOME": "/home/{0}".format(getpass.getuser())
+                "HOME": "/home/{0}".format(getpass.getuser()),
+                "RIEMANN_PID": riemann_info[0],
+                "RIEMANN_CONFIG": riemann_info[1],
+                "RIEMANN_CONFIG_TEMPLATE": riemann_info[2]
             }
         }
 
@@ -186,7 +285,6 @@ class VagrantLxcBoot:
         self.runner.sudo("pip uninstall -y cosmo-plugin-plugin-installer")
 
     def install_vagrant(self):
-
         self.wget(
             "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/vagrant_1.2.7_x86_64.deb"
         )
@@ -249,7 +347,8 @@ fi
 
         self.wget(get_cosmo)
 
-        self.runner.run("mv {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
+        self.runner.run("rm cosmo.jar")
+        self.runner.run("ln -s {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
         self.runner.run("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir))
 
         script_path = self.working_dir + "/cosmo.sh"
@@ -261,9 +360,15 @@ fi
         self.runner.run("echo \"alias cosmo='{0}/cosmo.sh'\" > {1}/.bash_aliases".format(self.working_dir, USER_HOME))
 
     def add_lxc_box(self, name, url):
-        self.runner.run(
-            "vagrant box add {0} {1}".format(name, url)
-        )
+        pattern = "precise64.*"
+        output = subprocess.check_output(["vagrant", "box", "list"])
+        match = re.match(pattern, output)
+        if match:
+            print "precise64 box already installed"
+        else:
+            self.runner.run(
+                "vagrant box add {0} {1}".format(name, url)
+            )
 
     def install_python_protobuf(self):
         self.apt_get("install -y python-protobuf")
@@ -278,16 +383,16 @@ fi
             self.install_rabbitmq()
             self.install_lxc_docker()
             self.install_kernel()
-            self.install_riemann()
+            riemann_info = self.install_riemann()
             self.install_vagrant()
             self.install_java()
             self.install_cosmo()
-            self.install_celery_worker()
+            self.install_celery_worker(riemann_info)
         else:
             # just update the worker
             self.apply_vagrant_patch()
             self.runner.sudo("service celeryd stop")
-            self.runner.sudo("rm -rf /home/vagrant/cosmo")
+            self.runner.sudo("rm -rf {0}".format("/home/vagrant/cosmo"))
             self.runner.sudo("rm -rf cosmo_celery_common-0.1.0.egg-info")
             self.install_celery_worker()
 
