@@ -18,8 +18,8 @@ __author__ = 'elip'
 
 from setuptools import setup
 
-FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/master"
 FABRIC_RUNNER_VERSION = "0.1.0"
+FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_VERSION)
 
 setup(
     name='cosmo-plugin-agent-installer',
