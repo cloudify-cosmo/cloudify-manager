@@ -261,8 +261,7 @@ fi
             self.install_celery_worker()
         else:
             # just update the worker
-            # self.runner.sudo("service celeryd stop")
-            self.runner.sudo("rm -rf /home/vagrant/cosmo")
+            self.runner.sudo("service celeryd stop")
             self.runner.sudo("rm -rf cosmo_celery_common-0.1.0.egg-info")
             self.install_celery_worker()
 
