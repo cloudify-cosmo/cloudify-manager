@@ -31,7 +31,6 @@ USER_HOME = expanduser('~')
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(FABRIC_RUNNER_VERSION)
 
 
-
 class RiemannProcess(object):
     """
     Manages a riemann server process lifecycle.
@@ -167,9 +166,7 @@ class VagrantLxcBoot:
         if os.path.exists(riemann_work_path):
             self.runner.run("rm -rf {0}".format(riemann_work_path))
         os.makedirs(riemann_work_path)
-        with open(riemann_config_path, "w") as f:
-            f.write("")
-
+        self.runner.run("cp {0} {1}".format("/vagrant/riemann.config", riemann_config_path))
         self.runner.run("cp {0} {1}".format("/vagrant/riemann.config.template", riemann_template_path))
         riemann = RiemannProcess(riemann_config_path)
         riemann.start()

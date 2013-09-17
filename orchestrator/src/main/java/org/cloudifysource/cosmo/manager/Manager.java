@@ -25,7 +25,6 @@ import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
-import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.io.IOException;
@@ -55,7 +54,6 @@ public class Manager {
     private boolean closed;
     private RuoteWorkflow ruoteWorkflow;
     private RuoteRuntime ruoteRuntime;
-    private RiemannProcess riemannProcess;
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
     private DSLImporter dslImporter;
 
@@ -66,7 +64,6 @@ public class Manager {
         this.mainContext = registerConfig(temporaryDirectory.get().toPath(), temporaryDirectory);
         this.ruoteWorkflow = (RuoteWorkflow) mainContext.getBean("defaultRuoteWorkflow");
         this.ruoteRuntime = (RuoteRuntime) mainContext.getBean("ruoteRuntime");
-        this.riemannProcess = (RiemannProcess) mainContext.getBean("riemann");
         this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) mainContext.getBean("temporaryDirectory");
         this.dslImporter = (DSLImporter) mainContext.getBean("dslImporter");
