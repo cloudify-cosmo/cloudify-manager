@@ -16,10 +16,7 @@
 
 package org.cloudifysource.cosmo.manager;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.manager.config.MainManagerConfig;
@@ -28,7 +25,6 @@ import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime;
 import org.cloudifysource.cosmo.orchestrator.workflow.RuoteWorkflow;
 import org.cloudifysource.cosmo.utils.ResourceExtractor;
 import org.cloudifysource.cosmo.utils.config.TemporaryDirectoryConfig;
-import org.robobninjas.riemann.spring.server.RiemannProcess;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.io.IOException;
@@ -58,7 +54,6 @@ public class Manager {
     private boolean closed;
     private RuoteWorkflow ruoteWorkflow;
     private RuoteRuntime ruoteRuntime;
-    private RiemannProcess riemannProcess;
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
     private DSLImporter dslImporter;
 
@@ -69,7 +64,6 @@ public class Manager {
         this.mainContext = registerConfig(temporaryDirectory.get().toPath(), temporaryDirectory);
         this.ruoteWorkflow = (RuoteWorkflow) mainContext.getBean("defaultRuoteWorkflow");
         this.ruoteRuntime = (RuoteRuntime) mainContext.getBean("ruoteRuntime");
-        this.riemannProcess = (RiemannProcess) mainContext.getBean("riemann");
         this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) mainContext.getBean("temporaryDirectory");
         this.dslImporter = (DSLImporter) mainContext.getBean("dslImporter");
@@ -81,10 +75,6 @@ public class Manager {
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
-        workitemFields.put("riemann_pid", String.valueOf(riemannProcess.getPid()));
-        workitemFields.put("riemann_config_path", temporaryDirectory.get()
-                .getAbsolutePath() + "/riemann/riemann.config");
-        workitemFields.put("riemann_config_template", readRiemannConfigTemplate());
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
@@ -110,15 +100,6 @@ public class Manager {
 
     public boolean isClosed() {
         return this.closed;
-    }
-
-    private static String readRiemannConfigTemplate() {
-        URL resource = Resources.getResource("riemann/riemann.config.template");
-        try {
-            return Resources.toString(resource, Charsets.UTF_8);
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
     }
 
     private AnnotationConfigApplicationContext registerConfig(
