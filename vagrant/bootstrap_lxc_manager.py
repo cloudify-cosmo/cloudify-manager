@@ -100,6 +100,10 @@ class RiemannProcess(object):
 
 class VagrantLxcBoot:
 
+    RIEMANN_PID = "RIEMANN_PID"
+    RIEMANN_CONFIG = "RIEMANN_CONFIG"
+    RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
+
     def __init__(self, args):
         self.working_dir = args.working_dir
         self.cosmo_version = args.cosmo_version
@@ -170,7 +174,11 @@ class VagrantLxcBoot:
         self.runner.run("cp {0} {1}".format("/vagrant/riemann.config.template", riemann_template_path))
         riemann = RiemannProcess(riemann_config_path)
         riemann.start()
-        return riemann.pid, riemann_config_path, riemann_template_path
+        return {
+            self.RIEMANN_PID: riemann.pid,
+            self.RIEMANN_CONFIG: riemann_config_path,
+            self.RIEMANN_TEMPLATE: riemann_template_path
+        }
 
     def get_riemann_info(self):
         riemann_work_path, riemann_config_path, riemann_template_path = self._get_riemann_paths()
@@ -178,7 +186,11 @@ class VagrantLxcBoot:
         pid = riemann.find_existing_riemann_process()
         if not pid:
             raise RuntimeError("Riemann server is not running")
-        return pid, riemann_config_path, riemann_template_path
+        return {
+            self.RIEMANN_PID: pid,
+            self.RIEMANN_CONFIG: riemann_config_path,
+            self.RIEMANN_TEMPLATE: riemann_template_path
+        }
 
     def _get_riemann_paths(self):
         riemann_work_path = os.path.join(self.working_dir, 'riemann')
@@ -211,9 +223,9 @@ class VagrantLxcBoot:
                 # when running celery in daemon mode. this environment does
                 # not exists. it is needed for vagrant.
                 "HOME": "/home/{0}".format(getpass.getuser()),
-                "RIEMANN_PID": riemann_info[0],
-                "RIEMANN_CONFIG": riemann_info[1],
-                "RIEMANN_CONFIG_TEMPLATE": riemann_info[2]
+                self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
+                self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
+                self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE]
             }
         }
 
