@@ -195,10 +195,7 @@ class VagrantLxcBoot:
         self.pip("python-vagrant")
         self.pip("bernhard")
 
-    def install_celery_worker(self, riemann_info=None):
-        if not riemann_info:
-            riemann_info = self.get_riemann_info()
-
+    def install_celery_worker(self, riemann_info):
         # download and install the worker_installer
         self.pip(WORKER_INSTALLER)
 
@@ -325,7 +322,8 @@ fi
 
         self.wget(get_cosmo)
 
-        self.runner.run("rm cosmo.jar")
+        if os.path.exists("cosmo.jar"):
+            self.runner.run("rm cosmo.jar")
         self.runner.run("ln -s {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
         self.runner.run("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir))
 
@@ -370,7 +368,7 @@ fi
             # just update the worker
             self.runner.sudo("service celeryd stop")
             self.runner.sudo("rm -rf cosmo_celery_common-0.1.0.egg-info")
-            self.install_celery_worker()
+            self.install_celery_worker(self.get_riemann_info())
 
 
 if __name__ == '__main__':
