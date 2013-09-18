@@ -1,11 +1,12 @@
 __author__ = 'idanmo'
 
 
+from testenv import TestEnvironment as env
+
+
 def setUp():
-    print("-- setting up package --")
-    pass
+    env.create()
 
 
 def tearDown():
-    print("-- tearing down package --")
-    pass
+    env.destroy()

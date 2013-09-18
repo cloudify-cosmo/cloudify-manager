@@ -32,4 +32,3 @@ class TestRuoteWorkflows(TestCase):
         machines = result.get(timeout=10)
         self.assertEquals(1, len(machines))
 
-

@@ -28,12 +28,13 @@ logger.setLevel(logging.INFO)
 class CeleryWorkerProcess(object):
     _process = None
 
-    def __init__(self, tempdir, cosmo_path, cosmo_jar_path, riemann_config_path, riemann_template_path,
-                 riemann_pid):
+    def __init__(self, tempdir, plugins_tempdir, cosmo_path, cosmo_jar_path, riemann_config_path,
+                 riemann_template_path, riemann_pid):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
         self._app_path = path.join(tempdir, "cosmo")
         self._tempdir = tempdir
+        self._plugins_tempdir = plugins_tempdir
         self._cosmo_plugins = path.join(self._app_path, "cloudify/tosca/artifacts/plugin")
         self._cosmo_jar_path = cosmo_jar_path
         self._riemann_config_path = riemann_config_path
@@ -79,7 +80,7 @@ class CeleryWorkerProcess(object):
         os.chdir(self._tempdir)
 
         environment = os.environ.copy()
-        environment['TEMP_DIR'] = self._tempdir
+        environment['TEMP_DIR'] = self._plugins_tempdir
         environment['COSMO_JAR'] = self._cosmo_jar_path
         environment['RIEMANN_PID'] = str(self._riemann_pid)
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
@@ -182,51 +183,91 @@ class RiemannProcess(object):
     #     p.close()
 
 
-class TestCase(unittest.TestCase):
+class TestEnvironmentScope(object):
+    CLASS = "CLASS"
+    MODULE = "MODULE"
+    PACKAGE = "PACKAGE"
 
+    @staticmethod
+    def validate(scope):
+        if scope not in [
+            TestEnvironmentScope.CLASS,
+            TestEnvironmentScope.MODULE,
+            TestEnvironmentScope.PACKAGE
+        ]:
+            raise AttributeError("Unknown test environment scope: " + str(scope))
+
+
+class TestEnvironment(object):
+    _instance = None
     _celery_worker_process = None
     _riemann_process = None
     _tempdir = None
+    _plugins_tempdir = None
+    _scope = None
 
-    @classmethod
-    def setUpClass(cls):
+    def __init__(self, scope):
         try:
-            logger.info("Setting up test environment...")
+            TestEnvironmentScope.validate(scope)
+
+            logger.info("Setting up test environment... [scope={0}]".format(scope))
+            self._scope = scope
 
             # temp directory
-            cls._tempdir = tempfile.mkdtemp(suffix="test", prefix="cloudify")
-            logger.info("Test environment will be stored in: %s", cls._tempdir)
-            cosmo_jar_path = cls._get_cosmo_jar_path()
+            self._tempdir = tempfile.mkdtemp(suffix="test", prefix="cloudify")
+            self._plugins_tempdir = path.join(self._tempdir, "cosmo-work")
+            logger.info("Test environment will be stored in: %s", self._tempdir)
+            cosmo_jar_path = self._get_cosmo_jar_path()
+            if not path.exists(self._plugins_tempdir):
+                os.makedirs(self._plugins_tempdir)
 
             # riemann
-            riemann_config_path = path.join(cls._tempdir, "riemann.config")
-            riemann_template_path = path.join(cls._tempdir, "riemann.config.template")
-            cls._generate_riemann_config(riemann_config_path, riemann_template_path)
-            cls._riemann_process = RiemannProcess(riemann_config_path)
-            cls._riemann_process.start()
+            riemann_config_path = path.join(self._tempdir, "riemann.config")
+            riemann_template_path = path.join(self._tempdir, "riemann.config.template")
+            self._generate_riemann_config(riemann_config_path, riemann_template_path)
+            self._riemann_process = RiemannProcess(riemann_config_path)
+            self._riemann_process.start()
 
             # celery
             cosmo_path = path.dirname(path.realpath(cosmo.__file__))
-            cls._celery_worker_process = CeleryWorkerProcess(cls._tempdir, cosmo_path, cosmo_jar_path,
-                                                             riemann_config_path, riemann_template_path,
-                                                             cls._riemann_process.pid)
-            cls._celery_worker_process.start()
-            logger.info("Running [%s] tests", cls.__name__)
+            self._celery_worker_process = CeleryWorkerProcess(self._tempdir, self._plugins_tempdir, cosmo_path,
+                                                              cosmo_jar_path,
+                                                              riemann_config_path, riemann_template_path,
+                                                              self._riemann_process.pid)
+            self._celery_worker_process.start()
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
-            cls.tearDownClass()
+            self._destroy()
             raise error
 
-    @classmethod
-    def tearDownClass(cls):
-        logger.info("Test teardown...")
-        if cls._riemann_process:
-            cls._riemann_process.close()
-        if cls._celery_worker_process:
-            cls._celery_worker_process.close()
-        if cls._tempdir:
-            logger.info("Deleting test environment from: %s", cls._tempdir)
-            shutil.rmtree(cls._tempdir, ignore_errors=True)
+    def _destroy(self):
+        logger.info("Destroying test environment... [scope={0}]".format(self._scope))
+        if self._riemann_process:
+            self._riemann_process.close()
+        if self._celery_worker_process:
+            self._celery_worker_process.close()
+        if self._tempdir:
+            logger.info("Deleting test environment from: %s", self._tempdir)
+            shutil.rmtree(self._tempdir, ignore_errors=True)
+
+    @staticmethod
+    def create(scope=TestEnvironmentScope.PACKAGE):
+        if not TestEnvironment._instance:
+            TestEnvironment._instance = TestEnvironment(scope)
+        return TestEnvironment._instance
+
+    @staticmethod
+    def destroy(scope=TestEnvironmentScope.PACKAGE):
+        if TestEnvironment._instance and TestEnvironment._instance._scope == scope:
+            TestEnvironment._instance._destroy()
+
+    @staticmethod
+    def clean_plugins_tempdir():
+        if TestEnvironment._instance:
+            plugins_tempdir = TestEnvironment._instance._plugins_tempdir
+            if path.exists(plugins_tempdir):
+                shutil.rmtree(plugins_tempdir)
+                os.makedirs(plugins_tempdir)
 
     @classmethod
     def _get_cosmo_jar_path(cls):
@@ -241,6 +282,20 @@ class TestCase(unittest.TestCase):
         shutil.copy(source_path, riemann_config_path)
         source_path = get_resource('riemann/riemann.config.template')
         shutil.copy(source_path, riemann_template_path)
+
+
+class TestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        TestEnvironment.create(TestEnvironmentScope.CLASS)
+
+    @classmethod
+    def tearDownClass(cls):
+        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
+
+    def setUp(self):
+        TestEnvironment.clean_plugins_tempdir()
 
 
 def get_resource(resource):
