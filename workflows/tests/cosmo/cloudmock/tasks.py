@@ -1,30 +1,35 @@
 __author__ = 'idanmo'
 
 from cosmo.celery import celery
-import tempfile
 import os
 from os import path
 import json
 from celery.utils.log import get_task_logger
+from cosmo.events import set_reachable as reachable
 
-DATA_FILE = path.join(tempfile.gettempdir(), "cloudmock.json")
 RUNNING = "running"
 NOT_RUNNING = "not_running"
 
 logger = get_task_logger(__name__)
 
 
+def _get_data_file_path():
+    return path.join(os.environ["TEMP_DIR"], "cloudmock.json")
+
+
 def _read_data_file():
-    if not path.exists(DATA_FILE):
+    data_file_path = _get_data_file_path()
+    if not path.exists(data_file_path):
         return dict()
-    with open(DATA_FILE, "r") as f:
+    with open(data_file_path, "r") as f:
         return json.loads(f.read())
 
 
 def _save_data_file(machines):
-    if path.exists(DATA_FILE):
-        os.remove(DATA_FILE)
-    with open(DATA_FILE, "w") as f:
+    data_file_path = _get_data_file_path()
+    if path.exists(data_file_path):
+        os.remove(data_file_path)
+    with open(data_file_path, "w") as f:
         f.write(json.dumps(machines))
 
 
@@ -46,6 +51,7 @@ def start(__cloudify_id, **kwargs):
         raise RuntimeError("machine with id [{0}] does not exist".format(__cloudify_id))
     machines[__cloudify_id] = RUNNING
     _save_data_file(machines)
+    reachable(__cloudify_id)
 
 
 @celery.task
@@ -80,8 +86,9 @@ import unittest
 class CloudMockTest(unittest.TestCase):
 
     def setUp(self):
-        if path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
+        data_file_path = _get_data_file_path()
+        if path.exists(data_file_path):
+            os.remove(data_file_path)
 
     def test_provision(self):
         machine_id = "machine1"

@@ -28,25 +28,48 @@ logger.setLevel(logging.INFO)
 class CeleryWorkerProcess(object):
     _process = None
 
-    def __init__(self, tempdir, cosmo_path, cosmo_jar_path, riemann_config_path, riemann_pid):
+    def __init__(self, tempdir, cosmo_path, cosmo_jar_path, riemann_config_path, riemann_template_path,
+                 riemann_pid):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
         self._app_path = path.join(tempdir, "cosmo")
         self._tempdir = tempdir
+        self._cosmo_plugins = path.join(self._app_path, "cloudify/tosca/artifacts/plugin")
         self._cosmo_jar_path = cosmo_jar_path
         self._riemann_config_path = riemann_config_path
+        self._riemann_template_path = riemann_template_path
         self._riemann_pid = riemann_pid
+
+    def _copy_cosmo_plugins(self):
+        import riemann_config_loader
+        import plugin_installer
+        self._copy_plugin(riemann_config_loader)
+        self._copy_plugin(plugin_installer)
+
+    def _copy_plugin(self, plugin):
+        installed_plugin_path = path.dirname(plugin.__file__)
+        self._create_python_module_path(self._cosmo_plugins)
+        shutil.copytree(installed_plugin_path, path.join(self._cosmo_plugins, plugin.__name__))
+
+    def _create_python_module_path(self, module_path):
+        if not path.exists(module_path):
+            os.makedirs(module_path)
+        while not path.exists(path.join(module_path, "__init__.py")):
+            with open(path.join(module_path, "__init__.py"), "w") as f:
+                f.write("")
+            module_path = path.realpath(path.join(module_path, ".."))
 
     def start(self):
         logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
         shutil.copytree(self._cosmo_path, self._app_path)
+        self._copy_cosmo_plugins()
         celery_command = [
             "celery",
             "worker",
             "--events",
             "--loglevel=debug",
             "--app=cosmo",
-            "--hostname=cloudify.management",
+            "--hostname=celery.cloudify.management",
             "--purge",
             "--logfile={0}".format(path.join(self._tempdir, "celery.log")),
             "--pidfile={0}".format(self._celery_pid_file),
@@ -56,9 +79,11 @@ class CeleryWorkerProcess(object):
         os.chdir(self._tempdir)
 
         environment = os.environ.copy()
+        environment['TEMP_DIR'] = self._tempdir
         environment['COSMO_JAR'] = self._cosmo_jar_path
-        environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_PID'] = str(self._riemann_pid)
+        environment['RIEMANN_CONFIG'] = self._riemann_config_path
+        environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
 
         logger.info("Starting celery worker...")
         self._process = subprocess.Popen(celery_command, env=environment)
@@ -97,8 +122,8 @@ class RiemannProcess(object):
         started_pattern = ".*Hyperspace core online"
         while True:
             line = process.stdout.readline().rstrip()
-            self._riemann_logs.append(line)
             if line != '':
+                self._riemann_logs.append(line)
                 if not self.pid:
                     match = re.match(pid_pattern, line)
                     if match:
@@ -113,18 +138,21 @@ class RiemannProcess(object):
         logger.info("Starting riemann server...")
         self.pid = self._find_existing_riemann_process()
         if self.pid:
-            logger.info("Riemann server already running [pid={0}]".format(self.pid))
+            logger.info("Riemann server is already running [pid={0}]".format(self.pid))
             return
         command = [
             'riemann',
             self._config_path
         ]
-        self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self._event = threading.Event()
         self._detector = threading.Thread(target=self._start_detector, kwargs={'process': self._process})
+        self._detector.daemon = True
         self._detector.start()
-        if not self._event.wait(10):
-            raise RuntimeError("Unable to start riemann process:\n{0}".format('\n'.join(self._riemann_logs)))
+        timeout = 30
+        if not self._event.wait(timeout):
+            raise RuntimeError("Unable to start riemann process:\n{0} (timed out after {1} seconds)".format('\n'.join(
+                self._riemann_logs), timeout))
         logger.info("Riemann server started [pid={0}]".format(self.pid))
 
     def close(self):
@@ -147,9 +175,11 @@ class RiemannProcess(object):
 
 # class MyTest(unittest.TestCase):
 #     def test(self):
-#         p = RiemannProcess('/home/idanm/temp/riemann.config')
-#         p.start()
-#         p.close()
+#         import riemann_config_loader
+#         print path.dirname(riemann_config_loader.__file__)
+    # p = RiemannProcess('/home/idanm/temp/riemann.config')
+    #     p.start()
+    #     p.close()
 
 
 class TestCase(unittest.TestCase):
@@ -170,14 +200,16 @@ class TestCase(unittest.TestCase):
 
             # riemann
             riemann_config_path = path.join(cls._tempdir, "riemann.config")
-            cls._generate_riemann_config(riemann_config_path)
+            riemann_template_path = path.join(cls._tempdir, "riemann.config.template")
+            cls._generate_riemann_config(riemann_config_path, riemann_template_path)
             cls._riemann_process = RiemannProcess(riemann_config_path)
             cls._riemann_process.start()
 
             # celery
             cosmo_path = path.dirname(path.realpath(cosmo.__file__))
             cls._celery_worker_process = CeleryWorkerProcess(cls._tempdir, cosmo_path, cosmo_jar_path,
-                                                             riemann_config_path, cls._riemann_process.pid)
+                                                             riemann_config_path, riemann_template_path,
+                                                             cls._riemann_process.pid)
             cls._celery_worker_process.start()
             logger.info("Running [%s] tests", cls.__name__)
         except BaseException as error:
@@ -204,9 +236,11 @@ class TestCase(unittest.TestCase):
         return cosmo_jar_path
 
     @classmethod
-    def _generate_riemann_config(cls, target_path):
+    def _generate_riemann_config(cls, riemann_config_path, riemann_template_path):
         source_path = get_resource('riemann/riemann.config')
-        shutil.copy(source_path, target_path)
+        shutil.copy(source_path, riemann_config_path)
+        source_path = get_resource('riemann/riemann.config.template')
+        shutil.copy(source_path, riemann_template_path)
 
 
 def get_resource(resource):

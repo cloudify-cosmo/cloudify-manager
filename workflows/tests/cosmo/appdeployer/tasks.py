@@ -20,7 +20,8 @@ def deploy(dsl, **kwargs):
         "-jar",
         COSMO_JAR,
         "--dsl",
-        dsl
+        dsl,
+        "--non-interactive"
     ]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
