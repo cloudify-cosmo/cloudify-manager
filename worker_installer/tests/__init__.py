@@ -13,9 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 # *******************************************************************************/
+import getpass
 
 import logging
 import os
+import random
+import string
 import tempfile
 from worker_installer.tasks import FabricRetryingRunner
 
@@ -25,6 +28,37 @@ VAGRANT_MACHINE_IP = "10.0.0.5"
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+local_worker_config = {
+    "user": getpass.getuser(),
+    "management_ip": "localhost",
+    "broker": "amqp://"
+}
+
+remote_worker_config = {
+    "user": "vagrant",
+    "port": 22,
+    "key": "~/.vagrant.d/insecure_private_key",
+    "management_ip": VAGRANT_MACHINE_IP,
+    "broker": "amqp://guest:guest@10.0.0.1:5672//"
+}
+
+
+local_cloudify_runtime = {
+    "cloudify.management": {
+        "ip": "127.0.0.1"
+    }
+}
+
+remote_cloudify_runtime = {
+    "cloudify.management": {
+        "ip": VAGRANT_MACHINE_IP
+    }
+}
+
+
+def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for x in range(size))
 
 
 def get_remote_runner():
