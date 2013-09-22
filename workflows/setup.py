@@ -5,13 +5,15 @@ from setuptools import setup
 import os
 import sys
 
+PIP_WITH_SUDO = "PIP_SUDO"
+use_sudo = PIP_WITH_SUDO in os.environ and os.environ[PIP_WITH_SUDO].lower() == "true"
+
 
 def pip_install(url, use_sudo=False):
     sudo = "sudo " if use_sudo else ""
-    os.system("{0}pip install {1}".format(sudo, url))
+    os.system("{0}pip install {1} -q --timeout 60".format(sudo, url))
 
 os.chdir(sys.path[0])
-use_sudo = "sudo=true" in sys.argv
 
 # The following plugins are installed using pip because their installation is required to be flat (not egg)
 # as these plugins are copied from python lib in tests runtime.
