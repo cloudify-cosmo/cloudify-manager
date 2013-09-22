@@ -25,7 +25,6 @@ import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.validation.beanvalidation.BeanValidationPostProcessor;
 
@@ -49,9 +48,6 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         VagrantRiemannMonitorProcessConfig.class,
         RiemannEventsLoggerConfig.class
 })
-
-// adding this prop file here since riemann configuration is not part of the orchestrator
-@PropertySource("org/cloudifysource/cosmo/manager/riemann/riemann.properties")
 public class MainManagerConfig {
 
     @Bean
