@@ -16,8 +16,8 @@ before_script:
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 #   - "mvn install -DskipTests -f travis-pom.xml"
-   - "cd orchestrator;mvn install -Pall"
-   - "cd workflows;sudo python setup.py install"
+   - "mvn install -Pall -f orchestrator/pom.xml"
+   - "sudo python workflows/setup.py install"
 
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
