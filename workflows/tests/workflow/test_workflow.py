@@ -2,7 +2,7 @@ __author__ = 'idanm'
 
 from testenv import TestCase
 from testenv import get_resource as resource
-from testenv import logger
+from testenv import deploy_application as deploy
 
 
 class celery_worker_queue:
@@ -19,16 +19,11 @@ class TestRuoteWorkflows(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
-
-        from cosmo.appdeployer.tasks import deploy
-        logger.info("deploying dsl...")
-        result = deploy.delay(dsl_path)
-        result.get(timeout=120)
+        deploy(dsl_path)
 
         from cosmo.cloudmock.tasks import get_machines
-        logger.info("getting machines info...")
         result = get_machines.apply_async()
-
         machines = result.get(timeout=10)
+
         self.assertEquals(1, len(machines))
 

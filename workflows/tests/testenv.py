@@ -330,3 +330,8 @@ def get_resource(resource):
     return resource_path
 
 
+def deploy_application(dsl_path, timeout=120):
+    from cosmo.appdeployer.tasks import deploy
+    result = deploy.delay(dsl_path)
+    result.get(timeout=timeout)
+
