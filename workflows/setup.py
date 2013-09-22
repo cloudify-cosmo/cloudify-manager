@@ -3,10 +3,13 @@ __author__ = "idanmo"
 
 from setuptools import setup
 import os
+import sys
 
 
 def pip_install(url):
     os.system("pip install {0}".format(url))
+
+os.chdir(sys.path[0])
 
 # The following plugins are installed using pip because their installation is required to be flat (not egg)
 # as these plugins are copied from python lib in tests runtime.
