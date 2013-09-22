@@ -269,6 +269,18 @@ class TestEnvironment(object):
                 shutil.rmtree(plugins_tempdir)
                 os.makedirs(plugins_tempdir)
 
+    @staticmethod
+    def kill_cosmo_process():
+        pattern = "(\d*)\s.*"
+        try:
+            output = subprocess.check_output("ps a | grep 'cosmo.jar' | grep -v grep", shell=True)
+            match = re.match(pattern, output)
+            if match:
+                pid = match.group(1)
+                os.system("kill {0}".format(pid))
+        except BaseException:
+            pass
+
     @classmethod
     def _get_cosmo_jar_path(cls):
         cosmo_jar_path = path.realpath(path.join(path.dirname(__file__), '../../orchestrator/target/cosmo.jar'))
@@ -296,6 +308,9 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
+
+    def tearDown(self):
+        TestEnvironment.kill_cosmo_process()
 
 
 def get_resource(resource):
