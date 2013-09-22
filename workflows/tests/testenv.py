@@ -64,6 +64,7 @@ class CeleryWorkerProcess(object):
         logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
         shutil.copytree(self._cosmo_path, self._app_path)
         self._copy_cosmo_plugins()
+        celery_log_file = path.join(self._tempdir, "celery.log")
         celery_command = [
             "celery",
             "worker",
@@ -72,7 +73,7 @@ class CeleryWorkerProcess(object):
             "--app=cosmo",
             "--hostname=celery.cloudify.management",
             "--purge",
-            "--logfile={0}".format(path.join(self._tempdir, "celery.log")),
+            "--logfile={0}".format(celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
             "--queues=cloudify.management"
         ]
@@ -89,12 +90,19 @@ class CeleryWorkerProcess(object):
         logger.info("Starting celery worker...")
         self._process = subprocess.Popen(celery_command, env=environment)
 
-        deadline = time.time() + 10
+        timeout = 30
+        deadline = time.time() + timeout
         while not path.exists(self._celery_pid_file) and time.time() < deadline:
             time.sleep(1)
 
         if not path.exists(self._celery_pid_file):
-            raise RuntimeError("Failed to start celery worker: {0}".format(self._process.returncode))
+            if path.exists(celery_log_file):
+                with open(celery_log_file, "r") as f:
+                    celery_log = f.read()
+                    logger.info("{0} content:\n{1}".format(celery_log_file, celery_log))
+            raise RuntimeError("Failed to start celery worker: {0} - process did not start after {1} seconds".format(
+                self._process.returncode,
+                timeout))
 
         logger.info("Celery worker started [pid=%s]", self._process.pid)
 
