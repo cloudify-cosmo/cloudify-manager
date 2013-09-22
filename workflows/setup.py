@@ -2,14 +2,16 @@
 __author__ = "idanmo"
 
 from setuptools import setup
+import os
 
-RIEMANN_CONFIGURER_VERSION = "0.1.1"
-RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/tarball/{0}".format(
-    RIEMANN_CONFIGURER_VERSION)
 
-PLUGIN_INSTALLER_VERSION = "0.1.0"
-PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/tarball/{0}".format(
-    PLUGIN_INSTALLER_VERSION)
+def pip_install(url):
+    os.system("pip install {0}".format(url))
+
+# The following plugins are installed using pip because their installation is required to be flat (not egg)
+# as these plugins are copied from python lib in tests runtime.
+pip_install("https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/0.1.0.zip")
+pip_install("https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/0.1.1.zip")
 
 setup(
     name='cloudify-workflows',
@@ -22,15 +24,6 @@ setup(
     install_requires=[
         "celery",
         "bernhard",
-        "cosmo-plugin-riemann-configurer",
-        "cosmo-plugin-plugin-installer",
         "nose"
     ],
-
-    dependency_links=[
-        "{0}#egg=cosmo-plugin-riemann-configurer-{1}".format(RIEMANN_CONFIGURER,
-                                                                           RIEMANN_CONFIGURER_VERSION),
-        "{0}#egg=cosmo-plugin-plugin-installer-{1}".format(PLUGIN_INSTALLER,
-                                                             PLUGIN_INSTALLER_VERSION)
-    ]
 )
