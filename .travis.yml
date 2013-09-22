@@ -13,7 +13,7 @@ before_script:
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 #   - "mvn install -DskipTests -f travis-pom.xml"
-   - "mvn package -Pall -f cosmo-manager/pom.xml"
+   - "mvn package -Pall -f orchestrator/pom.xml"
    - "python workflows/setup.py install"
 
 script:
