@@ -2,7 +2,10 @@ language: java
 
 jdk:
   - openjdk7
-  
+
+services:
+  - rabbitmq
+
 before_script:
    - "gem install travis-artifacts"
    - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
@@ -13,17 +16,15 @@ before_script:
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 #   - "mvn install -DskipTests -f travis-pom.xml"
-   - "mvn package -Pall -q -f orchestrator/pom.xml"
-   - "sudo python workflows/setup.py install"
+   - "cd orchestrator;mvn install -Pall"
+   - "cd workflows;sudo python setup.py install"
 
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 #   - "mvn verify -f travis-pom.xml"
    - "nosetests -s workflows/tests"
-   
 
 after_success:
-  - "cd orchestrator;mvn install -Pall"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/bootstrapper --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
