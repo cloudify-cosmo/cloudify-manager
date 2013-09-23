@@ -186,24 +186,15 @@ class RiemannProcess(object):
 
     def _find_existing_riemann_process(self):
         from subprocess import CalledProcessError
-        pattern = "(\d*)\s.*"
+        pattern = "\w*\s*(\d*).*"
         try:
-            output = subprocess.check_output("ps a | grep 'riemann.jar' | grep -v grep", shell=True)
+            output = subprocess.check_output("ps aux | grep 'riemann.jar' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
         except CalledProcessError:
             pass
         return None
-
-
-# class MyTest(unittest.TestCase):
-#     def test(self):
-#         import riemann_config_loader
-#         print path.dirname(riemann_config_loader.__file__)
-    # p = RiemannProcess('/home/idanm/temp/riemann.config')
-    #     p.start()
-    #     p.close()
 
 
 class TestEnvironmentScope(object):
@@ -294,12 +285,13 @@ class TestEnvironment(object):
 
     @staticmethod
     def kill_cosmo_process():
-        pattern = "(\d*)\s.*"
+        pattern = "\w*\s*(\d*).*"
         try:
-            output = subprocess.check_output("ps a | grep 'cosmo.jar' | grep -v grep", shell=True)
+            output = subprocess.check_output("ps aux | grep 'cosmo.jar' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 pid = match.group(1)
+                logger.info("'cosmo.jar' process is still running [pid={0}] - terminating...".format(pid))
                 os.system("kill {0}".format(pid))
         except BaseException:
             pass

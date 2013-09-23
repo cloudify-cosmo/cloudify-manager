@@ -18,14 +18,14 @@ before_script:
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
-#   - "mvn install -DskipTests -f travis-pom.xml"
+   - "mvn install -DskipTests -f travis-pom.xml"
    - "mvn install -Pall -f orchestrator/pom.xml"
    - "sudo python workflows/setup.py install"
 
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
-#   - "mvn verify -f travis-pom.xml"
-   - "nosetests -s workflows/tests"
+   - "mvn verify -f travis-pom.xml"
+   - "nosetests workflows/tests"
 
 after_success:
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/bootstrapper --target-path travisci"
@@ -34,7 +34,6 @@ after_success:
 
 env:
  global:
-   - "PIP_WITH_SUDO=true"
    - "ARTIFACTS_AWS_REGION=us-east-1"
    - "ARTIFACTS_S3_BUCKET=cosmo-snapshot-maven-repository"
    - secure: "ZFXmjFGg7wHA+u/8HmhAop6Y4zRJIHdVPvWrYHN3zlV5MuaG/5Zfr7HTzVyK\nGirLlRK3g0trDNnkNWYbnu4gfP1V7sPxv+G9HcP0Ig1hr13Xlh8u0u0yCFjp\nD/fW8nndIPNNi+7xT6KZMhUt+oNxEA31rY4dIVGoU7oHCebhD5U="

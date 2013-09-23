@@ -20,12 +20,13 @@ import os
 from os import path
 import json
 from celery.utils.log import get_task_logger
-from cosmo.events import set_reachable as reachable
+from cosmo.events import set_reachable
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
 
 logger = get_task_logger(__name__)
+reachable = set_reachable
 
 
 def _get_data_file_path():
@@ -91,51 +92,7 @@ def terminate(__cloudify_id, **kwargs):
 
 @celery.task
 def get_machines(**kwargs):
-    logger.info("getting machines")
+    logger.info("getting machines...")
     return _read_data_file()
 
-
-import unittest
-
-
-class CloudMockTest(unittest.TestCase):
-
-    def setUp(self):
-        data_file_path = _get_data_file_path()
-        if path.exists(data_file_path):
-            os.remove(data_file_path)
-
-    def test_provision(self):
-        machine_id = "machine1"
-        provision(__cloudify_id=machine_id)
-        machines = get_machines()
-        self.assertEqual(1, len(machines))
-        self.assertTrue(machine_id in machines)
-        self.assertEqual(NOT_RUNNING, machines[machine_id])
-
-    def test_start(self):
-        machine_id = "machine1"
-        provision(__cloudify_id=machine_id)
-        start(__cloudify_id=machine_id)
-        machines = get_machines()
-        self.assertEqual(1, len(machines))
-        self.assertTrue(machine_id in machines)
-        self.assertEqual(RUNNING, machines[machine_id])
-
-    def test_stop(self):
-        machine_id = "machine1"
-        provision(__cloudify_id=machine_id)
-        start(__cloudify_id=machine_id)
-        stop(__cloudify_id=machine_id)
-        machines = get_machines()
-        self.assertEqual(1, len(machines))
-        self.assertTrue(machine_id in machines)
-        self.assertEqual(NOT_RUNNING, machines[machine_id])
-
-    def test_terminate(self):
-        machine_id = "machine1"
-        provision(__cloudify_id=machine_id)
-        terminate(__cloudify_id=machine_id)
-        machines = get_machines()
-        self.assertEqual(0, len(machines))
 

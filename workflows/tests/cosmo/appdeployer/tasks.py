@@ -29,7 +29,6 @@ logger = get_task_logger(__name__)
 @celery.task
 def deploy(dsl, **kwargs):
     logger.info("deploying dsl: " + dsl)
-    logger.info("cosmo jar: " + COSMO_JAR)
     command = [
         "java",
         "-jar",
@@ -44,5 +43,4 @@ def deploy(dsl, **kwargs):
         if line == '':
             break
         logger.info(line)
-
-    logger.info("dsl deployment has finished.")
+    logger.info("dsl has been deployed [dsl={0}]".format(dsl))

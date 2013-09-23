@@ -19,20 +19,17 @@ from setuptools import setup
 import os
 import sys
 
-PIP_WITH_SUDO = "PIP_SUDO"
-use_sudo = PIP_WITH_SUDO in os.environ and os.environ[PIP_WITH_SUDO].lower() == "true"
+
+PLUGIN_INSTALLER_VERSION = "0.1.1"
+PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/tarball/{" \
+    "0}#egg=cosmo-plugin-plugin-installer-{0}".format(PLUGIN_INSTALLER_VERSION)
 
 
-def pip_install(url, use_sudo=False):
-    sudo = "sudo " if use_sudo else ""
-    os.system("{0}pip install {1} -q --timeout 60".format(sudo, url))
+RIEMANN_CONFIGURER_VERSION = "0.1.2"
+RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/tarball/{" \
+                     "0}#egg=cosmo-plugin-riemann-configurer-{0}".format(RIEMANN_CONFIGURER_VERSION)
 
 os.chdir(sys.path[0])
-
-# The following plugins are installed using pip because their installation is required to be flat (not egg)
-# as these plugins are copied from python lib in tests runtime.
-pip_install("https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/0.1.0.zip", use_sudo)
-pip_install("https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/0.1.1.zip", use_sudo)
 
 setup(
     name='cloudify-workflows',
@@ -42,9 +39,13 @@ setup(
     packages=['tests'],
     license='LICENSE',
     description='Cloudify workflow python tests',
+    zip_safe=False,
     install_requires=[
         "celery",
         "bernhard",
-        "nose"
+        "nose",
+        "cosmo-plugin-plugin-installer",
+        "cosmo-plugin-riemann-configurer"
     ],
+    dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER]
 )
