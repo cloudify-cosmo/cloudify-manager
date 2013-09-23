@@ -7,12 +7,13 @@ COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0
 
 setup(
     name='cosmo-plugin-plugin-installer',
-    version='0.1.0',
+    version='0.1.1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['plugin_installer'],
     license='LICENSE',
     description='Plugin for installing plugins into an existing celery worker',
+    zip_safe=False,
     install_requires=[
         "cosmo-celery-common"
     ],
