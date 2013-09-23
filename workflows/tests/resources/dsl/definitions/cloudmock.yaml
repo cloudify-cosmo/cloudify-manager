@@ -1,0 +1,9 @@
+###
+# cloudmock plugin definition.
+definitions:
+    artifacts:
+        cloudmock:
+            derived_from: "cloudify.tosca.artifacts.remote_plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.host_provisioner"
+                url: "cloudmock.zip"

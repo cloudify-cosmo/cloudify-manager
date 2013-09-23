@@ -38,7 +38,7 @@ def setup_logger(loglevel=None, **kwargs):
     logger = logging.getLogger("cosmo")
     if not logger.handlers:
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(message)s"))
+        handler.setFormatter(logging.Formatter('| %(message)s'))
         logger.addHandler(handler)
         logger.setLevel(loglevel)
         logger.propagate = True

@@ -2,13 +2,7 @@ definitions:
 
     imports:
         - "cloudify.types"
-
-    artifacts:
-        cloudmock:
-            derived_from: "cloudify.tosca.artifacts.remote_plugin"
-            properties:
-                interface: "cloudify.tosca.interfaces.host_provisioner"
-                url: "cloudmock.zip"
+        - "cloudmock.yaml"
 
     service_templates:
         simple_web_server:
