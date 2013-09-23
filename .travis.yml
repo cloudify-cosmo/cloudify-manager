@@ -15,12 +15,12 @@ before_script:
    - "sudo rmdir /dev/shm"
    - "sudo ln -Tsf /{run,dev}/shm"
    - "sudo chmod 777 /dev/shm" # for celery worker
-   - "sudo pip install virtualenv"
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    # - "mvn install -DskipTests -f travis-pom.xml"
    - "mvn install -Pall -f orchestrator/pom.xml"
+   - "sudo pip install virtualenv"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
    - "python workflows/setup.py install"
