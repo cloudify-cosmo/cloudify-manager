@@ -13,6 +13,7 @@ setup(
     packages=['plugin_installer'],
     license='LICENSE',
     description='Plugin for installing plugins into an existing celery worker',
+    zip_safe=False,
     install_requires=[
         "cosmo-celery-common"
     ],
