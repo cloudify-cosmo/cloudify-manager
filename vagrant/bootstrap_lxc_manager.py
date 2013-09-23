@@ -371,9 +371,9 @@ fi
             self.install_rabbitmq()
             self.install_lxc_docker()
             self.install_kernel()
+            self.install_java()
             riemann_info = self.install_riemann()
             self.install_vagrant()
-            self.install_java()
             self.install_cosmo()
             self.install_celery_worker(riemann_info)
         else:
