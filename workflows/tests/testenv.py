@@ -213,6 +213,12 @@ class TestEnvironmentScope(object):
 
 
 class TestEnvironment(object):
+    """
+    Creates the cosmo test environment:
+        - Riemann server.
+        - Celery worker.
+        - Prepares celery app dir with plugins from cosmo module and official riemann configurer and plugin installer.
+    """
     _instance = None
     _celery_worker_process = None
     _riemann_process = None
@@ -266,17 +272,28 @@ class TestEnvironment(object):
 
     @staticmethod
     def create(scope=TestEnvironmentScope.PACKAGE):
+        """
+        Creates the test environment if not already created.
+        :param scope: The scope the test environment is created at.
+        """
         if not TestEnvironment._instance:
             TestEnvironment._instance = TestEnvironment(scope)
         return TestEnvironment._instance
 
     @staticmethod
     def destroy(scope=TestEnvironmentScope.PACKAGE):
+        """
+        Destroys the test environment if the provided scope matches the scope the environment was created with.
+        :param scope: The scope this method is invoked from.
+        """
         if TestEnvironment._instance and TestEnvironment._instance._scope == scope:
             TestEnvironment._instance._destroy()
 
     @staticmethod
     def clean_plugins_tempdir():
+        """
+        Removes and creates a new plugins temporary directory.
+        """
         if TestEnvironment._instance:
             plugins_tempdir = TestEnvironment._instance._plugins_tempdir
             if path.exists(plugins_tempdir):
@@ -285,6 +302,9 @@ class TestEnvironment(object):
 
     @staticmethod
     def kill_cosmo_process():
+        """
+        Kills 'cosmo.jar' process if it exists.
+        """
         pattern = "\w*\s*(\d*).*"
         try:
             output = subprocess.check_output("ps aux | grep 'cosmo.jar' | grep -v grep", shell=True)
@@ -312,6 +332,9 @@ class TestEnvironment(object):
 
 
 class TestCase(unittest.TestCase):
+    """
+    A test case for cosmo workflow tests.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -329,6 +352,10 @@ class TestCase(unittest.TestCase):
 
 
 def get_resource(resource):
+    """
+    Gets the path for the provided resource.
+    :param resource: resource name relative to /resources.
+    """
     import resources
     resources_path = path.dirname(resources.__file__)
     resource_path = path.join(resources_path, resource)
@@ -338,6 +365,9 @@ def get_resource(resource):
 
 
 def deploy_application(dsl_path, timeout=120):
+    """
+    A blocking method which deploys an application from the provided dsl path.
+    """
     from cosmo.appdeployer.tasks import deploy
     result = deploy.delay(dsl_path)
     result.get(timeout=timeout)
