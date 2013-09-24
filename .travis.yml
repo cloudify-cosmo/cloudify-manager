@@ -18,8 +18,7 @@ before_script:
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
-   - "mvn install -DskipTests -f travis-pom.xml"
-   - "mvn install -Pall -f orchestrator/pom.xml"
+   - "mvn install -Pall -f travis-pom.xml -DskipTests"
    - "sudo pip install virtualenv"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
