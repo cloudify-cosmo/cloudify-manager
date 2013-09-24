@@ -13,7 +13,9 @@ For a test example see: `tests/workflow/test_workflow.py`
 
 * Python 2.7 runtime.
 * A running rabbitmq server.
+* Riemann server installed (riemann executable available in path).
 * cosmo.jar available in ../orchestrator/target (built using mvn package -Pall in orchestrator).
+
 
 ## Installation
 
