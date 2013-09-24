@@ -2,27 +2,36 @@ language: java
 
 jdk:
   - openjdk7
-  
+
+services:
+  - rabbitmq
+
 before_script:
    - "gem install travis-artifacts"
    - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
    - "sudo dpkg -i riemann_0.2.2_all.deb"
    - "sudo touch /var/log/riemann/riemann.log"
    - "sudo chmod 666 /var/log/riemann/riemann.log"
+   - "sudo rmdir /dev/shm"
+   - "sudo ln -Tsf /{run,dev}/shm"
+   - "sudo chmod 777 /dev/shm" # for celery worker
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
-   - "mvn install -DskipTests -f travis-pom.xml"
+   - "mvn install -Pall -f travis-pom.xml -DskipTests"
+   - "sudo pip install virtualenv"
+   - "virtualenv ~/env"
+   - "source ~/env/bin/activate"
+   - "python workflows/setup.py install"
 
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
-   
+   - "nosetests workflows/tests"
 
 after_success:
-  - "cd orchestrator;mvn install -Pall"
-  - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
-  - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
+   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
+   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
 
 env:
  global:
