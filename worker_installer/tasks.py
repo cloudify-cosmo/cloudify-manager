@@ -112,7 +112,7 @@ def _install_virtualenv(runner, __cloudify_id):
 
 def _create_virtualenv(runner, env_path, __cloudify_id):
     logger.debug("creating virtualenv [node_id=%s]", __cloudify_id)
-    runner.run("virtualenv {0}".format(env_path))
+    runner.sudo("virtualenv {0}".format(env_path))
 
 
 def create_runner(local, host_string, key_filename):
