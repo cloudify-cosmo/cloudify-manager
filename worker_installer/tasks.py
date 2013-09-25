@@ -43,6 +43,8 @@ logger.level = logging.DEBUG
 @task
 def install(worker_config, __cloudify_id, cloudify_runtime, virtualenv=True, local=False, **kwargs):
 
+    logger.info("installing worker. virtualenv = {0}".format(virtualenv))
+
     prepare_configuration(worker_config, cloudify_runtime)
     worker_config['virtualenv'] = virtualenv
 
@@ -66,6 +68,8 @@ def install(worker_config, __cloudify_id, cloudify_runtime, virtualenv=True, loc
 @task
 def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
+    logger.info("starting celery worker")
+
     prepare_configuration(worker_config, cloudify_runtime)
 
     host_string = key_filename = None
@@ -78,7 +82,6 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
     # change owner again since more directories were added
     runner.sudo("chown -R {0}:{0} {1}".format(worker_config['user'], worker_config['app_dir']))
 
-    logger.info("starting celery worker")
     runner.sudo("service celeryd start")
 
     logger.debug(runner.get("/var/log/celery/celery.log"))
