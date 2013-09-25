@@ -136,7 +136,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         cls.RUNNER = get_local_runner()
 
     def test_install_worker(self):
-        _test_install(local_worker_config, local_cloudify_runtime, local=True, virtualenv=False)
+        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=False)
 
     def test_create_namespace_path(self):
         _test_create_namespace_path(self.RUNNER)
@@ -158,7 +158,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         assert expected_string == build_env_string({})
 
     def test_install_virtual_env(self):
-        _test_install(local_worker_config, local_cloudify_runtime, local=True, virtualenv=True)
+        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=True)
 
 if __name__ == '__main__':
     unittest.main()
