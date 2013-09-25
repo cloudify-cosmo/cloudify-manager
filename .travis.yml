@@ -26,4 +26,4 @@ install:
 script:
 
     # command to run tests - we dont run remote tests since we cant provision vagrant inside travis
-    - python -m unittest worker_installer.tests.test_worker_installer.TestLocalInstallerCase.test_install_virtual_env
+    - python -m unittest worker_installer.tests.test_worker_installer.TestLocalInstallerCase
