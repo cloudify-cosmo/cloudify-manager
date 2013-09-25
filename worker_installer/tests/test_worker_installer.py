@@ -13,9 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 # *******************************************************************************/
-from tempfile import NamedTemporaryFile
 
 import unittest
+from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, local_worker_config
 
 __author__ = 'elip'
 
@@ -26,10 +26,7 @@ from celery import Celery
 
 from worker_installer.tasks import install, start, build_env_string
 from worker_installer.tasks import create_namespace_path
-from worker_installer.tests import get_remote_runner, get_local_runner, remote_worker_config, local_worker_config, \
-    remote_cloudify_runtime, local_cloudify_runtime
-from worker_installer.tests import get_logger, id_generator
-from worker_installer.tasks import VIRTUALENV_PATH_KEY
+from cosmo.constants import COSMO_PLUGIN_NAMESPACE
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
 
@@ -58,18 +55,24 @@ def _extract_registered_plugins(borker_url):
     return list(plugins)
 
 
-def _test_install(worker_config, cloudify_runtime, local=False):
+def _test_install(runner, worker_config, cloudify_runtime, local=False, virtualenv=False):
 
     logger = remote_suite_logger
     if local:
         logger = local_suite_logger
+
+    try:
+        # try and stop any celery processes that may have started due to other tests.
+        runner.sudo("service celeryd stop")
+    except BaseException as e:
+        logger.warning("Failed to stop celery process : {0}".format(e.message))
 
     __cloudify_id = "management_host"
 
     # this should install the plugin installer inside the celery worker
 
     logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    install(worker_config, __cloudify_id, cloudify_runtime, local=local)
+    install(worker_config, __cloudify_id, cloudify_runtime, local=local, virtualenv=virtualenv)
 
     logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
     start(worker_config, cloudify_runtime, local=local)
@@ -82,24 +85,15 @@ def _test_install(worker_config, cloudify_runtime, local=False):
     assert 'celery.{0}@cloudify.tosca.artifacts.plugin.plugin_installer'.format(__cloudify_id) in plugins
 
 
-def _test_install_virtualenv(worker_config, cloudify_runtime, local=False):
-
-    # enable installation under virtual env
-    worker_config['virtualenv'] = True
-
-    _test_install(worker_config, cloudify_runtime, local)
-
-
 def _test_create_namespace_path(runner):
 
     base_dir = tempfile.NamedTemporaryFile().name
 
-    namespace_parts = ["cloudify", "tosca", "artifacts", "plugin"]
-    create_namespace_path(runner, namespace_parts, base_dir)
+    create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, base_dir)
 
     # lets make sure the correct strcture was created
     namespace_path = base_dir
-    for folder in namespace_parts:
+    for folder in COSMO_PLUGIN_NAMESPACE:
         namespace_path = os.path.join(namespace_path, folder)
         init_data = runner.get(os.path.join(namespace_path,  "__init__.py"))
         # we create empty init files
@@ -124,14 +118,13 @@ class TestRemoteInstallerCase(unittest.TestCase):
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
     def test_install_worker(self):
-        _test_install(remote_worker_config, remote_cloudify_runtime)
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, virtualenv=False)
 
     def test_create_namespace_path(self):
-
         _test_create_namespace_path(self.RUNNER)
 
     def test_install_virtual_env(self):
-        _test_install_virtualenv(remote_worker_config, remote_cloudify_runtime)
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, virtualenv=True)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
@@ -143,7 +136,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         cls.RUNNER = get_local_runner()
 
     def test_install_worker(self):
-        _test_install(local_worker_config, local_cloudify_runtime, True)
+        _test_install(local_worker_config, local_cloudify_runtime, local=True, virtualenv=False)
 
     def test_create_namespace_path(self):
         _test_create_namespace_path(self.RUNNER)
@@ -165,7 +158,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         assert expected_string == build_env_string({})
 
     def test_install_virtual_env(self):
-        _test_install_virtualenv(local_worker_config, local_cloudify_runtime, True)
+        _test_install(local_worker_config, local_cloudify_runtime, local=True, virtualenv=True)
 
 if __name__ == '__main__':
     unittest.main()
