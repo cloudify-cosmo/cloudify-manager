@@ -21,7 +21,7 @@ from setuptools import setup
 FABRIC_RUNNER_VERSION = "0.1.0"
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_VERSION)
 
-COSMO_CELERY_VERSION = "0.1.0"
+COSMO_CELERY_VERSION = "feature/CLOUDIFY-2048-virtualenv-support"
 COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_VERSION)
 
 
