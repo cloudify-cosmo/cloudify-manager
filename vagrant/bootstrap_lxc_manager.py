@@ -248,7 +248,7 @@ class VagrantLxcBoot:
         # use the same plugin installer version used by the worker installer
         from worker_installer.versions import PLUGIN_INSTALLER_VERSION
         plugin_installer_url = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip"\
-                           .format(PLUGIN_INSTALLER_VERSION)
+                               .format(PLUGIN_INSTALLER_VERSION)
         self.pip(plugin_installer_url)
 
         # install the necessary management plugins.
