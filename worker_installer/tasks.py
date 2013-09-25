@@ -126,7 +126,7 @@ def create_runner(local, host_string, key_filename):
 def _install_latest_pip(runner, node_id):
     logger.info("installing latest pip installation [node_id=%s]", node_id)
     logger.debug("retrieving pip script [node_id=%s]", node_id)
-    runner.sudo("wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
+    runner.sudo("wget -N https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
     logger.debug("installing setuptools [node_id=%s]", node_id)
     runner.sudo("apt-get -q -y install python-pip")
     logger.debug("building pip installation [node_id=%s]", node_id)
@@ -177,6 +177,7 @@ def _install_celery(runner, worker_config, node_id):
     app_dir = worker_config['app_dir']
     home = worker_config['home']
 
+    runner.run("ls -l {0}".format(os.path.join(app_dir, os.path.pardir)))
     runner.sudo("rm -rf " + app_dir)
 
     # this will also install celery because of transitive dependencies
@@ -196,7 +197,7 @@ def _install_celery(runner, worker_config, node_id):
     install_celery_plugin_to_dir(runner, worker_config, plugin_installer_installation_path, PLUGIN_INSTALLER_URL)
 
     # daemonize
-    runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
+    runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = build_celeryd_config(worker_config, node_id)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
