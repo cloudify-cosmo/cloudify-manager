@@ -27,8 +27,8 @@ from celery import task
 from fabric.api import hide
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION
+from cosmo.constants import VIRTUALENV_PATH_KEY, COSMO_APP_NAME, COSMO_PLUGIN_NAMESPACE
 
-COSMO_APP_NAME = "cosmo"
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
                    .format(COSMO_CELERY_COMMON_VERSION)
@@ -36,16 +36,15 @@ COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archiv
 PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip"\
                        .format(PLUGIN_INSTALLER_VERSION)
 
-COSMO_PLUGIN_NAMESPACE = ["cloudify", "tosca", "artifacts", "plugin"]
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
-
 @task
-def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwargs):
+def install(worker_config, __cloudify_id, cloudify_runtime, virtualenv=True, local=False, **kwargs):
 
     prepare_configuration(worker_config, cloudify_runtime)
+    worker_config['virtualenv'] = virtualenv
 
     host_string = key_filename = None
     if not local:
@@ -55,6 +54,13 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
     runner = create_runner(local, host_string, key_filename)
 
     _install_latest_pip(runner, __cloudify_id)
+
+    if is_virtualenv(worker_config):
+        logger.info("creating virtualenv for worker process")
+        # create virtual env for the worker
+        _install_virtualenv(runner, __cloudify_id)
+        _create_virtualenv(runner, get_virtual_env_path(worker_config), __cloudify_id)
+
     _install_celery(runner, worker_config, __cloudify_id)
 
 @task
@@ -79,7 +85,7 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
     _verify_no_celery_error(runner, worker_config)
 
-    runner.run("celery inspect registered --broker={0}".format(worker_config['broker']))
+    runner.run("{0} inspect registered --broker={1}".format(get_celery(worker_config), worker_config['broker']))
 
 
 @task
@@ -96,6 +102,17 @@ def restart(worker_config, cloudify_runtime, local=False, **kwargs):
 
     restart_celery_worker(runner, worker_config)
     # fabric raises SystemExit on failure, so we transform this to a regular exception.
+
+
+def _install_virtualenv(runner, __cloudify_id):
+
+    logger.debug("installing virtualenv [node_id=%s]", __cloudify_id)
+    runner.sudo("pip install virtualenv")
+
+
+def _create_virtualenv(runner, env_path, __cloudify_id):
+    logger.debug("creating virtualenv [node_id=%s]", __cloudify_id)
+    runner.run("virtualenv {0}".format(env_path))
 
 
 def create_runner(local, host_string, key_filename):
@@ -157,14 +174,13 @@ def _install_celery(runner, worker_config, node_id):
         'ip': worker_config['host']
     }
     user = worker_config['user']
-    broker_url = worker_config['broker']
     app_dir = worker_config['app_dir']
     home = worker_config['home']
 
     runner.sudo("rm -rf " + app_dir)
 
     # this will also install celery because of transitive dependencies
-    install_celery_plugin_to_dir(runner, home, COSMO_CELERY_URL)
+    install_celery_plugin_to_dir(runner, worker_config, home, COSMO_CELERY_URL)
 
     # since sudo pip created the app dir. the owner is root. but actually it is used by celery.
     runner.sudo("chown -R {0} {1}".format(user, app_dir))
@@ -177,26 +193,23 @@ def _install_celery(runner, worker_config, node_id):
     plugin_installer_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
     # install the plugin installer
-    install_celery_plugin_to_dir(runner, plugin_installer_installation_path, PLUGIN_INSTALLER_URL)
+    install_celery_plugin_to_dir(runner, worker_config, plugin_installer_installation_path, PLUGIN_INSTALLER_URL)
 
     # daemonize
     runner.sudo("wget https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
-    env = None
-    if 'env' in worker_config:
-        env = worker_config['env']
-    config_file = build_celeryd_config(user, home, COSMO_APP_NAME, node_id, broker_url, env)
+    config_file = build_celeryd_config(worker_config, node_id)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
 
-def install_celery_plugin_to_dir(runner, to_dir, plugin_url):
+def install_celery_plugin_to_dir(runner, worker_config, to_dir, plugin_url):
 
     # this will install the package and the dependencies into the python installation
-    runner.sudo("pip install {0}".format(plugin_url))
+    runner.sudo("{0} install {1}".format(get_pip(worker_config), plugin_url))
 
     # install the package to the target directory. this should also remove the plugin package from the python
     # installation.
-    runner.sudo("pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
+    runner.sudo("{0} install --no-deps -t {1} {2}".format(get_pip(worker_config), to_dir, plugin_url))
 
 
 def create_namespace_path(runner, namespace_parts, base_dir):
@@ -233,6 +246,46 @@ def get_machine_ip(cloudify_runtime):
     raise ValueError('cannot get machine ip - cloudify_runtime format error')
 
 
+def get_pip(worker_config):
+    return get_prefix_for_command(worker_config, "pip")
+
+
+def get_celery(worker_config):
+    return get_prefix_for_command(worker_config, "celery")
+
+
+def get_celeryd_multi(worker_config):
+    return get_prefix_for_command(worker_config, "celeryd-multi")
+
+
+def get_prefix_for_command(worker_config, command):
+    try:
+        return os.path.join(get_virtual_env_path(worker_config), "bin", command)
+    except KeyError:
+        return command
+
+
+def is_virtualenv(worker_config):
+    try:
+        get_virtual_env_path(worker_config)
+        return True
+    except KeyError:
+        return False
+
+
+def get_virtual_env_path(worker_config):
+
+    if 'virtualenv_path' in worker_config:
+        # user has explicitly defined a virtualenv path
+        return os.path.join(worker_config['virtualenv_path'])
+    elif worker_config['virtualenv']:
+        # user has indicated that he wishes to use virtualenv, but no path was defined.
+        # use the default path
+        return os.path.join(worker_config['home'], "ENV")
+
+    raise KeyError("No virtualenv configuration was made in worker {0}".format(worker_config))
+
+
 def build_env_string(env):
 
     string = ""
@@ -241,14 +294,25 @@ def build_env_string(env):
     return string
 
 
-def build_celeryd_config(user, workdir, app, node_id, broker_url, env=None):
+def build_celeryd_config(worker_config, node_id):
 
-    if not env:
-        env = {}
+    user = worker_config['user']
+    broker_url = worker_config['broker']
+    workdir = worker_config['home']
+
+    env = {}
+    if 'env' in worker_config:
+        env = worker_config['env']
+
+    if is_virtualenv(worker_config):
+        # put virtualenv prefix so that other plugins will have it in their env.
+        env[VIRTUALENV_PATH_KEY] = get_virtual_env_path(worker_config)
+
     env_string = build_env_string(env)
 
     return '''
 %(env)s
+CELERYD_MULTI="%(celeryd_multi)s"
 CELERYD_USER="%(user)s"
 CELERYD_GROUP="%(user)s"
 CELERY_TASK_SERIALIZER="json"
@@ -263,8 +327,9 @@ CELERYD_OPTS="\
 --broker=%(broker_url)s \
 --hostname=%(node_id)s"
 ''' % dict(env=env_string,
+           celeryd_multi=get_celeryd_multi(worker_config),
            user=user,
            workdir=workdir,
-           app=app,
+           app=COSMO_APP_NAME,
            node_id=node_id,
            broker_url=broker_url)
