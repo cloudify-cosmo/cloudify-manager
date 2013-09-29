@@ -204,6 +204,11 @@ definitions:
     ##################################################################################
     plans:
 
+        cloudify.tosca.types.tier:
+            init:
+                radial: |
+                    define tier_init
+
         cloudify.tosca.types.host:
             init:
                 radial: |
