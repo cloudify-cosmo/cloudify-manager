@@ -135,7 +135,7 @@ def run_command(command):
     out, err = p.communicate()
     if p.returncode != 0:
         raise RuntimeError("Failed running command {0} [returncode={1}, "
-                           "output={2}, error={3}]".format(command, out, err, p.returncode))
+                           "output={2}, error={3}]".format(command, p.returncode, out, err))
     return out
 
 
