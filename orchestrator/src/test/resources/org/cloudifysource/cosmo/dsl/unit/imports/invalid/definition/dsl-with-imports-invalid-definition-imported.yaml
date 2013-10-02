@@ -1,5 +1,3 @@
---- 
-definitions: 
-  types: 
-    type0: 
-      derived_from: node
+types:
+    type0:
+        derived_from: node

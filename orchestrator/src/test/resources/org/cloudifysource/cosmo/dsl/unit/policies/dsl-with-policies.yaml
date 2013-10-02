@@ -1,98 +1,91 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
+    - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
 
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-        - "middleware_component_installer"
-        - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
+types:
+    type_with_policy:
+        derived_from: "cloudify.tosca.types.host"
+        policies:
+            start_detection_policy:
+                rules:
+                    host_state:
+                        type: "state_equals"
+                        properties:
+                            state: "host_state"
+                            value: "running"
 
-    types:
-        type_with_policy:
-            derived_from: "cloudify.tosca.types.host"
+    2nd_type_with_policy:
+        derived_from: "type_with_policy"
+        policies:
+            # override
+            start_detection_policy:
+                rules:
+                    host_state:
+                        type: "state_not_equals"
+                        properties:
+                            state: "host_state"
+                            value: "terminated"
+            failure_detection_policy:
+                rules:
+                    host_state:
+                        type: "state_equals"
+                        properties:
+                            state: "host_state"
+                            value: "terminated"
+
+application_template:
+    name: "web_server"
+    topology:
+        -   name: "webserver_host"
+            type: "cloudify.tosca.types.host"
             policies:
                 start_detection_policy:
                     rules:
-                        host_state:
-                            type: "state_equals"
+                        -   type: "state_equals"
+                            properties:
+                                state: "host_state"
+                                value: "running"
+                        -   type: "metric_below"
+                            properties:
+                                metric: "latency"
+                                value: "100"
+                failure_detection_policy:
+                    rules:
+                        -   type: "state_not_equals"
                             properties:
                                 state: "host_state"
                                 value: "running"
 
-        2nd_type_with_policy:
-            derived_from: "type_with_policy"
+        -   name: "template_with_inherited_policy"
+            type: "type_with_policy"
+
+        -   name: "template_with_inherited_policy_and_additional_policy"
+            type: "type_with_policy"
             policies:
-                # override
-                start_detection_policy:
-                    rules:
-                        host_state:
-                            type: "state_not_equals"
-                            properties:
-                                state: "host_state"
-                                value: "terminated"
                 failure_detection_policy:
                     rules:
-                        host_state:
-                            type: "state_equals"
+                        -   type: "state_equals"
                             properties:
                                 state: "host_state"
                                 value: "terminated"
 
-    service_templates:
-        web_server:
-            topology:
-                webserver_host:
-                    type: "cloudify.tosca.types.host"
-                    policies:
-                        start_detection_policy:
-                            rules:
-                                host_state:
-                                    type: "state_equals"
-                                    properties:
-                                        state: "host_state"
-                                        value: "running"
-                                ping_latency:
-                                    type: "metric_below"
-                                    properties:
-                                        metric: "latency"
-                                        value: "100"
-                        failure_detection_policy:
-                            rules:
-                                host_state:
-                                    type: "state_not_equals"
-                                    properties:
-                                        state: "host_state"
-                                        value: "running"
+        -   name: "2nd_template_with_inherited_policy"
+            type: "2nd_type_with_policy"
 
-                template_with_inherited_policy:
-                    type: "type_with_policy"
+        -   name: "2nd_template_with_overridden_policy"
+            type: "2nd_type_with_policy"
+            policies:
+                failure_detection_policy:
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                state: "host_state"
+                                value: "terminated"
 
-                template_with_inherited_policy_and_additional_policy:
-                    type: "type_with_policy"
-                    policies:
-                        failure_detection_policy:
-                            rules:
-                                host_state:
-                                    type: "state_equals"
-                                    properties:
-                                        state: "host_state"
-                                        value: "terminated"
-
-                2nd_template_with_inherited_policy:
-                    type: "2nd_type_with_policy"
-
-                2nd_template_with_overridden_policy:
-                    type: "2nd_type_with_policy"
-                    policies:
-                        failure_detection_policy:
-                            rules:
-                                host_state:
-                                    type: "state_equals"
-                                    properties:
-                                        state: "host_state"
-                                        value: "terminated"
-
-                webserver_middleware:
-                    type: "cloudify.tosca.types.web_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "webserver_host"
+        -   name: "webserver_middleware"
+            type: "cloudify.tosca.types.web_server"
+            relationships:
+                - type: "cloudify.tosca.relationships.contained_in"
+                  target: "webserver_host"

@@ -1,47 +1,44 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
+    - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
 
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-        - "middleware_component_installer"
-        - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
-
-    service_templates:
-
-        service_template:
-            topology:
-                host1:
-                    type: "cloudify.tosca.types.host"
-                host2:
-                    type: "cloudify.tosca.types.host"
-                host3:
-                    type: "cloudify.tosca.types.host"
-                webserver1:
-                    type: "cloudify.tosca.types.web_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host1"
-                webserver2:
-                    type: "cloudify.tosca.types.web_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host1"
-                webserver3:
-                    type: "cloudify.tosca.types.web_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host1"
-                          post_target_start:
-                            - source.operation1: "result1"
-                            - target.operation1: "result2"
-                            - source.operation2
-                            - target.operation2: "result3"
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host2"
-                          post_source_start:
-                             - source.operation3: "result4"
-                             - target.operation3: "result5"
-                             - source.operation4
-                             - target.operation4: "result6"
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host3"
+application_template:
+    name: "service_template"
+    topology:
+        -   name: "host1"
+            type: "cloudify.tosca.types.host"
+        -   name: "host2"
+            type: "cloudify.tosca.types.host"
+        -   name: "host3"
+            type: "cloudify.tosca.types.host"
+        -   name: "webserver1"
+            type: "cloudify.tosca.types.web_server"
+            relationships:
+                - type: "cloudify.tosca.relationships.contained_in"
+                  target: "host1"
+        -   name: "webserver2"
+            type: "cloudify.tosca.types.web_server"
+            relationships:
+                - type: "cloudify.tosca.relationships.contained_in"
+                  target: "host1"
+        -   name: "webserver3"
+            type: "cloudify.tosca.types.web_server"
+            relationships:
+                - type: "cloudify.tosca.relationships.contained_in"
+                  target: "host1"
+                  post_target_start:
+                    - source.operation1: "result1"
+                    - target.operation1: "result2"
+                    - source.operation2
+                    - target.operation2: "result3"
+                - type: "cloudify.tosca.relationships.contained_in"
+                  target: "host2"
+                  post_source_start:
+                     - source.operation3: "result4"
+                     - target.operation3: "result5"
+                     - source.operation4
+                     - target.operation4: "result6"
+                - type: "cloudify.tosca.relationships.contained_in"
+                  target: "host3"

@@ -1,16 +1,14 @@
---- 
-definitions: 
-  imports: 
-    - org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/dsl-with-imports-invalid-definition-imported.yaml
-  plans: 
-    node: 
-      init: 
-        radial: node_radial_stub
-  service_templates:
-    some_service_template:
-      topology:
-        type_template:
-          type: node
-  types: 
-    type0: 
-      derived_from: node
+imports:
+    - "org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/dsl-with-imports-invalid-definition-imported.yaml"
+workflows:
+    node:
+        init:
+            radial: "node_radial_stub"
+application_template:
+    name: "some_service_template"
+    topology:
+        -   name: "type_template"
+            type: "node"
+types:
+    type0:
+        derived_from: node

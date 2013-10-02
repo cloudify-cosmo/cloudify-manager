@@ -1,19 +1,17 @@
---- 
-definitions: 
-  artifacts: 
-    artifact1: 
-      derived_from: artifact
-  interfaces: 
-    interface1: 
-      operations: 
-        - operation1
-        - operation2
-  plans: 
-    type1: 
-      init: 
-        radial: type1_radial_stub
-  relationships:
+plugins:
+    artifact1:
+        derived_from: artifact
+interfaces:
+    interface1:
+        operations:
+            - operation1
+            - operation2
+workflows:
+    type1:
+        init:
+            radial: type1_radial_stub
+relationships:
     relationship1: {}
-  types: 
-    type1: 
-      derived_from: node
+types:
+    type1:
+        derived_from: node

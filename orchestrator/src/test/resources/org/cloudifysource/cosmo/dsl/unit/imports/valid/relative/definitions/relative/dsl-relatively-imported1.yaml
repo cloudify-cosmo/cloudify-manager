@@ -1,8 +1,7 @@
-definitions:
-    imports:
-        - "dsl-relatively-imported2.yaml"
-    types:
-        type_c:
-            derived_from: "type_b"
-            properties:
-                property_c: ""
+imports:
+    - "dsl-relatively-imported2.yaml"
+types:
+    type_c:
+        derived_from: "type_b"
+        properties:
+            property_c: ""
