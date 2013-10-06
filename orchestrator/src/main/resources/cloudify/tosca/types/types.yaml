@@ -246,7 +246,7 @@ workflows:
 ##################################################################################
 # Base artifact definitions
 ##################################################################################
-artifacts:
+plugins:
 
     # Basic plugin artifact
     cloudify.tosca.artifacts.plugin: { }

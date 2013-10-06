@@ -11,8 +11,7 @@ application_template:
             policies:
                 unknown_policy:
                     rules:
-                        host_status:
-                            type: "state_equals"
+                        -   type: "state_equals"
                             properties:
                                 state: "host_state"
                                 value: "running"

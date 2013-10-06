@@ -16,7 +16,7 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * Represents a node type/template policy.
@@ -27,13 +27,13 @@ import java.util.Map;
  */
 public class Policy {
 
-    private Map<String, Rule> rules;
+    private List<Rule> rules;
 
-    public Map<String, Rule> getRules() {
+    public List<Rule> getRules() {
         return rules;
     }
 
-    public void setRules(Map<String, Rule> rules) {
+    public void setRules(List<Rule> rules) {
         this.rules = rules;
     }
 

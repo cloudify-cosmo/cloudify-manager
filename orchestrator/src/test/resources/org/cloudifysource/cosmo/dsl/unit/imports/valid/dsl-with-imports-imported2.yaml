@@ -1,6 +1,6 @@
 plugins:
     artifact2:
-        derived_from: artifact
+        derived_from: plugin
 imports:
     - org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports-imported3.yaml
 interfaces:

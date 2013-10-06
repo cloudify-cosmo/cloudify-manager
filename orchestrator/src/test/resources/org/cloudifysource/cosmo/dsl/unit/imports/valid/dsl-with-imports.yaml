@@ -1,6 +1,6 @@
 plugins:
     artifact0:
-        derived_from: artifact
+        derived_from: plugin
     artifact1_sub:
         derived_from: artifact1
     artifact2_sub:

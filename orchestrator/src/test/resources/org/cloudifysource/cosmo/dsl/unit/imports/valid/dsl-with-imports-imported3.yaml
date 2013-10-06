@@ -1,6 +1,6 @@
 plugins:
     artifact3:
-        derived_from: artifact
+        derived_from: plugin
 interfaces:
     interface3:
         operations:

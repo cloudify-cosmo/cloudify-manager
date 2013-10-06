@@ -3,7 +3,7 @@ imports:
     - "host_provisioner"
     - "middleware_component_installer"
 
-service_templates:
+application_template:
     name: "service_template"
     topology:
         -   name: "host1"

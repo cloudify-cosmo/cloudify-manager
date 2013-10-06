@@ -32,7 +32,7 @@ workflows:
         init:
             radial: "plan2"
 
-    # plan for an unknown type
+    # workflow for an unknown type
     unknown.type:
         init:
             radial: "plan3"

@@ -3,13 +3,13 @@ imports:
 application_template:
     name: "relative_imports_template"
     topology:
-        test_a:
+        -   name: "test_a"
             type: "type_a"
-        test_b:
+        -   name: "test_b"
             type: "type_b"
-        test_c:
+        -   name: "test_c"
             type: "type_c"
-        test_0:
+        -   name: "test_0"
             type: "type_0"
 workflows:
     relative_imports_template.test_a:
