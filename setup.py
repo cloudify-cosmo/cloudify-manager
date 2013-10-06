@@ -37,7 +37,8 @@ setup(
         "cosmo-fabric-runner",
         "cosmo-celery-common"
     ],
-    dependency_links=[FABRIC_RUNNER, FABRIC_RUNNER_VERSION, COSMO_CELERY, COSMO_CELERY_VERSION]
+    dependency_links=["{0}#egg=cosmo-fabric-runner-{1}".format(FABRIC_RUNNER, FABRIC_RUNNER_VERSION),
+                      "{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY, COSMO_CELERY_VERSION)]
 )
 
 
