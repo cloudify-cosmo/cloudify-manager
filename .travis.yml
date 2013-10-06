@@ -9,7 +9,6 @@ python:
 
 install:
 
-
     # celery needs the /dev/shm device for billiard semaphore functionality.
     # this device is not mounted by default on travis hosts.
     # see https://github.com/travis-ci/travis-core/issues/187#issuecomment-13682856
