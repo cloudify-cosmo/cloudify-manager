@@ -1,0 +1,19 @@
+definitions:
+
+    imports:
+        - "cloudify.types"
+        - "cloudmock.yaml"
+
+    service_templates:
+        simple_web_server:
+            topology:
+                webserver_host:
+                    type: "cloudify.tosca.types.host"
+                    policies:
+                        start_detection_policy:
+                            rules:
+                                host_state:
+                                    type: "state_equals"
+                                    properties:
+                                        service: "machine-status"
+                                        state: "running"

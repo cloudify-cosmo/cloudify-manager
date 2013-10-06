@@ -87,9 +87,9 @@ class RiemannProcess(object):
 
     def find_existing_riemann_process(self):
         from subprocess import CalledProcessError
-        pattern = "(\d*)\s.*"
+        pattern = "\w*\s*(\d*).*"
         try:
-            output = subprocess.check_output("ps a | grep 'riemann.jar' | grep -v grep", shell=True)
+            output = subprocess.check_output("ps aux | grep 'riemann.jar' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
@@ -371,9 +371,9 @@ fi
             self.install_rabbitmq()
             self.install_lxc_docker()
             self.install_kernel()
+            self.install_java()
             riemann_info = self.install_riemann()
             self.install_vagrant()
-            self.install_java()
             self.install_cosmo()
             self.install_celery_worker(riemann_info)
         else:
