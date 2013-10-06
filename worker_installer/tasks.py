@@ -180,7 +180,6 @@ def _install_celery(runner, worker_config, node_id):
     app_dir = worker_config['app_dir']
     home = worker_config['home']
 
-    runner.run("ls -l {0}".format(home))
     runner.sudo("rm -rf " + app_dir)
 
     # this will also install celery because of transitive dependencies
