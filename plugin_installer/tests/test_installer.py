@@ -21,6 +21,7 @@ __author__ = 'elip'
 import unittest
 from plugin_installer.tasks import get_plugin_simple_name, create_namespace_path, install_celery_plugin_to_dir
 from plugin_installer.tests import get_logger
+from cosmo.constants import COSMO_PLUGIN_NAMESPACE
 
 logger = get_logger("PluginInstallerTestCase")
 
@@ -35,12 +36,11 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         base_dir = tempfile.NamedTemporaryFile().name
 
-        namespace_parts = ["cloudify", "tosca", "artifacts", "plugin"]
-        create_namespace_path(namespace_parts, base_dir)
+        create_namespace_path(COSMO_PLUGIN_NAMESPACE, base_dir)
 
         # lets make sure the correct structure was created
         namespace_path = base_dir
-        for folder in namespace_parts:
+        for folder in COSMO_PLUGIN_NAMESPACE:
             namespace_path = os.path.join(namespace_path, folder)
             with open(os.path.join(namespace_path,  "__init__.py")) as f:
                 init_data = f.read()
