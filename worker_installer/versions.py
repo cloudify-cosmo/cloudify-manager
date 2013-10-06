@@ -16,5 +16,5 @@
 
 __author__ = 'elip'
 
-PLUGIN_INSTALLER_VERSION = "feature/CLOUDIFY-2048-virtualenv-suuport"
+PLUGIN_INSTALLER_VERSION = "0.1.2"
 COSMO_CELERY_COMMON_VERSION = "0.1.1"
