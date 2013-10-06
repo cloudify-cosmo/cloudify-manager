@@ -24,13 +24,14 @@ from os.path import expanduser
 from celery.utils.log import get_task_logger
 from celery import task
 
+from cosmo.constants import VIRTUALENV_PATH_KEY
 import cosmo
 from cosmo.events import get_cosmo_properties
+from cosmo.constants import COSMO_APP_NAME
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
-COSMO_APP_NAME = "cosmo"
 
 @task
 def install(plugin, __cloudify_id, **kwargs):
@@ -52,7 +53,7 @@ def install(plugin, __cloudify_id, **kwargs):
 
 @task
 def verify_plugin(worker_id, plugin_name, operation, **kwargs):
-    out = run_command("celery inspect registered -d {0} --no-color".format(worker_id))
+    out = run_command("{0} inspect registered -d {1} --no-color".format(get_celery(), worker_id))
     lines = out.splitlines()
     registered_tasks = list()
     operation_name = operation.split(".")[-1]
@@ -74,6 +75,21 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
             else:
                 registered_tasks.append(task)
     return False
+
+
+def get_pip():
+    return get_prefix_for_command("pip")
+
+
+def get_celery():
+    return get_prefix_for_command("celery")
+
+
+def get_prefix_for_command(command):
+    try:
+        return os.path.join(os.environ[VIRTUALENV_PATH_KEY], "bin", command)
+    except KeyError:
+        return command
 
 
 def install_celery_plugin_to_dir(plugin,
@@ -101,12 +117,12 @@ def install_celery_plugin_to_dir(plugin,
     to_dir = create_namespace_path(plugin_name.split(".")[:-1], base_dir)
 
     # this will install the package and the dependencies into the python installation
-    run_command("sudo pip install {0}".format(plugin_url))
+    run_command("sudo {0} install {1}".format(get_pip(), plugin_url))
     logger.debug("installed plugin {0} and dependencies into python installation".format(plugin_name))
 
     # install the package to the target directory. this will also uninstall the plugin package from the python
     # installation. leaving the plugin package just inside the base dir.
-    run_command("sudo pip install --no-deps -t {0} {1}".format(to_dir, plugin_url))
+    run_command("sudo {0} install --no-deps -t {1} {2}".format(get_pip(), to_dir, plugin_url))
     logger.debug("installing plugin {0} into {1}".format(plugin_name, to_dir))
 
 
@@ -119,7 +135,7 @@ def run_command(command):
     out, err = p.communicate()
     if p.returncode != 0:
         raise RuntimeError("Failed running command {0} [returncode={1}, "
-                           "output={2}, error={3}]".format(command, out, err, p.returncode))
+                           "output={2}, error={3}]".format(command, p.returncode, out, err))
     return out
 
 
