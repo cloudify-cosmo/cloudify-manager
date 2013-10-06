@@ -19,10 +19,10 @@ import shutil
 import tempfile
 import vagrant
 from worker_installer.tests import get_logger
+from worker_installer.tests import VAGRANT_MACHINE_IP
 
 __author__ = 'elip'
 
-VAGRANT_MACHINE_IP = "10.0.0.5"
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
 logger = get_logger("VagrantHelper")

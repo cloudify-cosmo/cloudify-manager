@@ -14,10 +14,8 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-import getpass
-import random
-import string
 import unittest
+from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, local_worker_config
 
 __author__ = 'elip'
 
@@ -28,17 +26,12 @@ from celery import Celery
 
 from worker_installer.tasks import install, start, build_env_string
 from worker_installer.tasks import create_namespace_path
-from worker_installer.tests import get_remote_runner, get_local_runner, VAGRANT_MACHINE_IP
-from worker_installer.tests import get_logger
+from cosmo.constants import COSMO_PLUGIN_NAMESPACE
 
 PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
 
 remote_suite_logger = get_logger("TestRemoteInstallerCase")
 local_suite_logger = get_logger("TestLocalInstallerCase")
-
-
-def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(size))
 
 
 def _extract_registered_plugins(borker_url):
@@ -62,18 +55,24 @@ def _extract_registered_plugins(borker_url):
     return list(plugins)
 
 
-def _test_install(worker_config, cloudify_runtime, local=False):
+def _test_install(runner, worker_config, cloudify_runtime, local=False, virtualenv=False):
 
     logger = remote_suite_logger
     if local:
         logger = local_suite_logger
+
+    try:
+        # try and stop any celery processes that may have started due to other tests.
+        runner.sudo("service celeryd stop")
+    except BaseException as e:
+        logger.warning("Failed to stop celery process : {0}".format(e.message))
 
     __cloudify_id = "management_host"
 
     # this should install the plugin installer inside the celery worker
 
     logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    install(worker_config, __cloudify_id, cloudify_runtime, local=local)
+    install(worker_config, __cloudify_id, cloudify_runtime, local=local, virtualenv=virtualenv)
 
     logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
     start(worker_config, cloudify_runtime, local=local)
@@ -90,12 +89,11 @@ def _test_create_namespace_path(runner):
 
     base_dir = tempfile.NamedTemporaryFile().name
 
-    namespace_parts = ["cloudify", "tosca", "artifacts", "plugin"]
-    create_namespace_path(runner, namespace_parts, base_dir)
+    create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, base_dir)
 
     # lets make sure the correct strcture was created
     namespace_path = base_dir
-    for folder in namespace_parts:
+    for folder in COSMO_PLUGIN_NAMESPACE:
         namespace_path = os.path.join(namespace_path, folder)
         init_data = runner.get(os.path.join(namespace_path,  "__init__.py"))
         # we create empty init files
@@ -119,27 +117,14 @@ class TestRemoteInstallerCase(unittest.TestCase):
         from vagrant_helper import terminate_vagrant
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
-    def test_install(self):
-
-        worker_config = {
-            "user": "vagrant",
-            "port": 22,
-            "key": "~/.vagrant.d/insecure_private_key",
-            "management_ip": VAGRANT_MACHINE_IP,
-            "broker": "amqp://guest:guest@10.0.0.1:5672//"
-        }
-
-        cloudify_runtime = {
-            "test_id": {
-                "ip": VAGRANT_MACHINE_IP
-            }
-        }
-
-        _test_install(worker_config, cloudify_runtime)
+    def test_install_worker(self):
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, virtualenv=False)
 
     def test_create_namespace_path(self):
-
         _test_create_namespace_path(self.RUNNER)
+
+    def test_install_virtual_env(self):
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, virtualenv=True)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
@@ -150,27 +135,10 @@ class TestLocalInstallerCase(unittest.TestCase):
     def setUpClass(cls):
         cls.RUNNER = get_local_runner()
 
-    def test_install(self):
-
-        # no need to specify port and key file. we are installing locally
-        local_ip = "127.0.0.1"
-
-        worker_config = {
-            "user": getpass.getuser(),
-            "management_ip": local_ip,
-            "broker": "amqp://"
-        }
-
-        cloudify_runtime = {
-            "test_id": {
-                "ip": local_ip
-            }
-        }
-
-        _test_install(worker_config, cloudify_runtime, True)
+    def test_install_worker(self):
+        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=False)
 
     def test_create_namespace_path(self):
-
         _test_create_namespace_path(self.RUNNER)
 
     def test_create_env_string(self):
@@ -189,7 +157,8 @@ class TestLocalInstallerCase(unittest.TestCase):
 
         assert expected_string == build_env_string({})
 
-
+    def test_install_virtual_env(self):
+        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=True)
 
 if __name__ == '__main__':
     unittest.main()

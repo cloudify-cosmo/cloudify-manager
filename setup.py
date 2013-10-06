@@ -21,6 +21,10 @@ from setuptools import setup
 FABRIC_RUNNER_VERSION = "0.1.0"
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_VERSION)
 
+COSMO_CELERY_VERSION = "0.1.1"
+COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_VERSION)
+
+
 setup(
     name='cosmo-plugin-agent-installer',
     version='0.1.0',
@@ -31,9 +35,10 @@ setup(
     description='Plugin for starting a new cosmo agent on a remote host',
     install_requires=[
         "cosmo-fabric-runner",
-        "celery"
+        "cosmo-celery-common"
     ],
-    dependency_links=["{0}#egg=cosmo-fabric-runner-{1}".format(FABRIC_RUNNER, FABRIC_RUNNER_VERSION)]
+    dependency_links=["{0}#egg=cosmo-fabric-runner-{1}".format(FABRIC_RUNNER, FABRIC_RUNNER_VERSION),
+                      "{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY, COSMO_CELERY_VERSION)]
 )
 
 
