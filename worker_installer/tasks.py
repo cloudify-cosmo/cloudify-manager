@@ -88,8 +88,6 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
     _verify_no_celery_error(runner, worker_config)
 
-    runner.run("{0} inspect registered --broker={1}".format(get_celery(worker_config), worker_config['broker']))
-
 
 @task
 def restart(worker_config, cloudify_runtime, local=False, **kwargs):
@@ -104,7 +102,6 @@ def restart(worker_config, cloudify_runtime, local=False, **kwargs):
     runner = create_runner(local, host_string, key_filename)
 
     restart_celery_worker(runner, worker_config)
-    # fabric raises SystemExit on failure, so we transform this to a regular exception.
 
 
 def _install_virtualenv(runner, __cloudify_id):
