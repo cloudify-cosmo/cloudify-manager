@@ -20,44 +20,19 @@
     "nodes": [
         {
             "id": "multi_instance.db",
-            "plugins": {
-                "app_installer": {
-                    "name": "app_installer",
-                    "interface": "cloudify.tosca.interfaces.app_module_installer",
-                    "agent_plugin": "true",
-                    "url": "app_installer_mock.zip"
-                },
-                "dbmock": {
-                    "name": "dbmock",
-                    "interface": "cloudify.tosca.interfaces.middleware_component_installer",
-                    "agent_plugin": "true",
-                    "url": "dbmock.zip"
+            "relationships": [
+                {
+                    "type": "cloudify.tosca.relationships.contained_in",
+                    "target_id": "multi_instance.host"
                 }
-            },
+            ],
             "host_id": "multi_instance.host"
         },
         {
             "id": "multi_instance.host",
-            "plugins": {
-                "cloudify.tosca.artifacts.plugin.worker_installer": {
-                    "name": "cloudify.tosca.artifacts.plugin.worker_installer",
-                    "interface": "cloudify.tosca.interfaces.worker_installer",
-                    "agent_plugin": "false",
-                    "url": "cloudify/poc/artifacts/plugins/celery-worker-installer.zip"
-                },
-                "cloudmock": {
-                    "name": "cloudmock",
-                    "interface": "cloudify.tosca.interfaces.host_provisioner",
-                    "agent_plugin": "false",
-                    "url": "cloudmock.zip"
-                },
-                "cloudify.tosca.artifacts.plugin.plugin_installer": {
-                    "name": "cloudify.tosca.artifacts.plugin.plugin_installer",
-                    "interface": "cloudify.tosca.interfaces.plugin_installer",
-                    "agent_plugin": "true",
-                    "url": "cloudify/poc/artifacts/plugins/celery-worker-plugin-installer.zip"
-                }
-            }
+            "relationships": [],
+            "host_id": "multi_instance.host"
+
         }
     ]
 }
