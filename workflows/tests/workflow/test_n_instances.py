@@ -20,8 +20,9 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 
 
-class TestTierNumberOfInstances(TestCase):
+class TestMultiInstanceApplication(TestCase):
 
-    def test_execute_operation(self):
-        pass
+    def test_deploy_multi_instance_application(self):
+        dsl_path = resource("dsl/multi_instance.yaml")
+        deploy(dsl_path)
 
