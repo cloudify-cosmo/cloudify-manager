@@ -1,0 +1,55 @@
+{
+    "nodes_extra": {
+        "simple_web_server.web_tier": {
+            "super_types": [
+                "cloudify.tosca.types.tier",
+                "node"
+            ],
+            "relationships": []
+        },
+        "simple_web_server.host": {
+            "super_types": [
+                "cloudify.tosca.types.host",
+                "node"
+            ],
+            "relationships": []
+        },
+        "simple_web_server.non_tier_host": {
+            "super_types": [
+                "cloudify.tosca.types.host",
+                "node"
+            ],
+            "relationships": []
+        }
+    },
+    "nodes": [
+        {
+            "id": "simple_web_server.host",
+            "properties": {
+                "install_agent": "false",
+                "cloudify_runtime": {}
+            },
+            "relationships": [],
+            "host_id": "simple_web_server.host"
+        },
+        {
+            "id": "simple_web_server.non_tier_host",
+            "properties": {
+                "install_agent": "false",
+                "cloudify_runtime": {}
+            },
+            "relationships": [],
+            "host_id": "simple_web_server.host"
+        },
+        {
+            "id": "simple_web_server.web_tier",
+            "properties": {
+                "nodes": [
+                    "host"
+                ],
+                "number_of_instances": 2
+            },
+            "relationships": []
+        }
+    ]
+}

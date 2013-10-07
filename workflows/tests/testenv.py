@@ -364,6 +364,18 @@ def get_resource(resource):
     return resource_path
 
 
+def get_resource_as_string(resource):
+
+    """
+    Gets the provided resource as a string.
+    :param resource: resource name relative to /resources.
+    """
+
+    resource_path = get_resource(resource)
+    return open(resource_path, 'r').read()
+
+
+
 def deploy_application(dsl_path, timeout=120):
     """
     A blocking method which deploys an application from the provided dsl path.

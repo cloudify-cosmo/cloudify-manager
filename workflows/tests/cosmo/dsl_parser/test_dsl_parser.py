@@ -16,50 +16,21 @@
 __author__ = 'idanmo'
 
 import unittest
-import tasks as t
-import json
+
+import tasks
+from testenv import get_resource_as_string
 
 
 class TestDSLParser(unittest.TestCase):
 
-    def test_tier_processing(self):
-        result = t.create_node_instances(nodes_json)
-        parsed = json.loads(result)
-        extra = parsed["nodes_extra"]
-        self.assertFalse("simple_web_server.host" in extra)
-        self.assertTrue("simple_web_server.tier" in extra)
-        self.assertTrue("simple_web_server.host_1" in extra)
-        self.assertTrue("simple_web_server.host_2" in extra)
-        self.assertEquals(3, len(extra))
-        nodes_list = parsed["nodes"]
-        nodes = {x.id: x for x in nodes_list}
-        self.assertFalse("simple_web_server.host" in nodes)
-        self.assertTrue("simple_web_server.tier" in nodes)
-        self.assertTrue("simple_web_server.host_1" in nodes)
-        self.assertTrue("simple_web_server.host_2" in nodes)
-        self.assertEquals(3, len(nodes))
+    def test_get_tier_simple_name(self):
 
+        full_name = 'application.tier'
+        self.assertEqual('tier', tasks.get_tier_simple_name(full_name))
 
-nodes_json = """
-{
-    "nodes_extra": {
-        "simple_web_server.tier": {
-            "super_types": [
-                "cloudify.tosca.types.tier",
-                "node"
-            ],
-            "relationships": []
-        },
-        "simple_web_server.host": {
-            "super_types": [
-                "cloudify.tosca.types.host",
-                "node"
-            ],
-            "relationships": []
-        }
-    },
-    "nodes": [
-        {
+    def test_create_node_instances(self):
+
+        node = {
             "id": "simple_web_server.host",
             "properties": {
                 "install_agent": "false",
@@ -67,17 +38,102 @@ nodes_json = """
             },
             "relationships": [],
             "host_id": "simple_web_server.host"
-        },
-        {
-            "id": "simple_web_server.tier",
-            "properties": {
-                "nodes": [
-                    "host"
-                ],
-                "number_of_instances": 2
-            },
-            "relationships": []
         }
-    ]
-}
-"""
+
+        expected_instances = [
+            {
+                "id": "simple_web_server.web_tier.host_1",
+                "properties": {
+                    "install_agent": "false",
+                    "cloudify_runtime": {}
+                },
+                "relationships": [],
+                "host_id": "simple_web_server.host"
+            },
+            {
+                "id": "simple_web_server.web_tier.host_2",
+                "properties": {
+                    "install_agent": "false",
+                    "cloudify_runtime": {}
+                },
+                "relationships": [],
+                "host_id": "simple_web_server.host"
+            }
+        ]
+
+        instances = tasks.create_node_instances(node, 2, 'test.web_tier')
+        self.assertEqual(instances, expected_instances)
+
+    def test_prepare_multi_instance_plan(self):
+
+        plan = get_resource_as_string('dsl_parser/multi_instance.json')
+
+        # everything in the new plan stays the same except for nodes that belonged to a tier.
+        expected_plan = {
+            "nodes_extra": {
+                "simple_web_server.web_tier": {
+                    "super_types": [
+                        "cloudify.tosca.types.tier",
+                        "node"
+                    ],
+                    "relationships": []
+                },
+                "simple_web_server.host": {
+                    "super_types": [
+                        "cloudify.tosca.types.host",
+                        "node"
+                    ],
+                    "relationships": []
+                },
+                "simple_web_server.non_tier_host": {
+                    "super_types": [
+                        "cloudify.tosca.types.host",
+                        "node"
+                    ],
+                    "relationships": []
+                }
+            },
+            "nodes": [
+                {
+                    "id": "simple_web_server.web_tier.host_1",
+                    "properties": {
+                        "install_agent": "false",
+                        "cloudify_runtime": {}
+                    },
+                    "relationships": [],
+                    "host_id": "simple_web_server.host"
+                },
+                {
+                    "id": "simple_web_server.web_tier.host_2",
+                    "properties": {
+                        "install_agent": "false",
+                        "cloudify_runtime": {}
+                    },
+                    "relationships": [],
+                    "host_id": "simple_web_server.host"
+
+                },
+                {
+                    "id": "simple_web_server.non_tier_host",
+                    "properties": {
+                        "install_agent": "false",
+                        "cloudify_runtime": {}
+                    },
+                    "relationships": [],
+                    "host_id": "simple_web_server.host"
+                },
+                {
+                    "id": "simple_web_server.web_tier",
+                    "properties": {
+                        "nodes": [
+                            "host"
+                        ],
+                        "number_of_instances": 2
+                    },
+                    "relationships": []
+                }
+            ]
+        }
+
+        new_plan = tasks.prepare_multi_instance_plan(plan)
+        self.assertEqual(new_plan, expected_plan)

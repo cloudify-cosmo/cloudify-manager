@@ -1,0 +1,15 @@
+imports:
+    - "cloudify.types"
+    - "cloudmock.yaml"
+
+application_template:
+    name: "multi_instance"
+    topology:
+      - name: "host"
+        type: "cloudify.tosca.types.host"
+        instances:
+          deploy: 2
+      - name: "db"
+        type: "cloudify.tosca.types.db_server"
+        instances:
+          deploy: 2
