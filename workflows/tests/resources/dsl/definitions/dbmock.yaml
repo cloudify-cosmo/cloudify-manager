@@ -1,0 +1,6 @@
+plugins:
+    dbmock:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        properties:
+            interface: "cloudify.tosca.interfaces.middleware_component_installer"
+            url: "dbmock.zip"

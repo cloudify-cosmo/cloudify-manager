@@ -1,5 +1,3 @@
-###
-# cloudmock plugin definition.
 plugins:
     cloudmock:
         derived_from: "cloudify.tosca.artifacts.remote_plugin"
