@@ -100,9 +100,7 @@ def create_multi_instance_nodes(nodes, nodes_extra):
     return new_nodes
 
 
-def create_node_instances(node, tier_number_of_instances, tier_name):
-
-    tier_simple_name = get_tier_simple_name(tier_name)
+def create_node_instances(node, tier_number_of_instances):
 
     instances = []
 
@@ -114,23 +112,17 @@ def create_node_instances(node, tier_number_of_instances, tier_name):
         # and change its id
         application_name = node['id'].split('.')[0]
         node_simple_name = node['id'].split('.')[1]
-        new_id = "{0}.{1}.{2}_{3}".format(application_name, tier_simple_name, node_simple_name, i + 1)
+        new_id = "{0}.{1}_{2}".format(application_name, node_simple_name, i + 1)
         node_copy['id'] = new_id
+
+        # and change the host_id
+        node_copy['host_id'] = "{0}_{1}".format(node_copy['host_id'], i + 1)
 
         logger.debug("generated new node instance {0}".format(node_copy))
 
         instances.append(node_copy)
 
     return instances
-
-
-def get_tier_simple_name(tier_full_name):
-
-    """
-    Returns the simple name of the tier as defined in the YAML file.
-    """
-
-    return tier_full_name.split('.')[1]
 
 
 
