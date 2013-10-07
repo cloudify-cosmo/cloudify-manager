@@ -46,7 +46,7 @@ application_template:
                                 service: "vagrant machine status"
                                 state: "running"
 
-        pickle_db:
+        -   name: "pickle_db"
             type: "cloudify.tosca.types.db_server"
             interfaces:
                 # pickledb middleware component plugin implementation
@@ -69,7 +69,7 @@ application_template:
                 -   type: "cloudify.tosca.relationships.contained_in"
                     target: "vagrant_host"
 
-        flask:
+        -   name: "flask"
             type: "cloudify.tosca.types.web_server"
             interfaces:
                 # flask middleware component plugin implementation
@@ -88,7 +88,7 @@ application_template:
                 -   type: "cloudify.tosca.relationships.contained_in"
                     target: "vagrant_host"
 
-        flask_app:
+        -   name: "flask_app"
             type: "cloudify.tosca.types.app_module"
             properties:
                 application_name: "phase4-app"
