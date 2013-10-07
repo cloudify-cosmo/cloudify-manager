@@ -23,11 +23,6 @@ from testenv import get_resource_as_string
 
 class TestDSLParser(unittest.TestCase):
 
-    def test_get_tier_simple_name(self):
-
-        full_name = 'application.tier'
-        self.assertEqual('tier', tasks.get_tier_simple_name(full_name))
-
     def test_create_node_instances(self):
 
         node = {
@@ -42,26 +37,26 @@ class TestDSLParser(unittest.TestCase):
 
         expected_instances = [
             {
-                "id": "simple_web_server.web_tier.host_1",
+                "id": "simple_web_server.host_1",
                 "properties": {
                     "install_agent": "false",
                     "cloudify_runtime": {}
                 },
                 "relationships": [],
-                "host_id": "simple_web_server.host"
+                "host_id": "simple_web_server.host_1"
             },
             {
-                "id": "simple_web_server.web_tier.host_2",
+                "id": "simple_web_server.host_2",
                 "properties": {
                     "install_agent": "false",
                     "cloudify_runtime": {}
                 },
                 "relationships": [],
-                "host_id": "simple_web_server.host"
+                "host_id": "simple_web_server.host_2"
             }
         ]
 
-        instances = tasks.create_node_instances(node, 2, 'test.web_tier')
+        instances = tasks.create_node_instances(node, 2)
         self.assertEqual(instances, expected_instances)
 
     def test_prepare_multi_instance_plan(self):
@@ -71,66 +66,105 @@ class TestDSLParser(unittest.TestCase):
         # everything in the new plan stays the same except for nodes that belonged to a tier.
         expected_plan = {
             "nodes_extra": {
-                "simple_web_server.web_tier": {
-                    "super_types": [
-                        "cloudify.tosca.types.tier",
-                        "node"
-                    ],
-                    "relationships": []
-                },
-                "simple_web_server.host": {
+                "multi_instance.host": {
                     "super_types": [
                         "cloudify.tosca.types.host",
                         "node"
-                    ],
-                    "relationships": []
+                    ]
                 },
-                "simple_web_server.non_tier_host": {
+                "multi_instance.db": {
                     "super_types": [
-                        "cloudify.tosca.types.host",
+                        "cloudify.tosca.types.db_server",
+                        "cloudify.tosca.types.middleware_server",
                         "node"
                     ],
-                    "relationships": []
+                    "relationships": [
+                        "multi_instance.host"
+                    ]
                 }
             },
             "nodes": [
                 {
-                    "id": "simple_web_server.web_tier.host_1",
-                    "properties": {
-                        "install_agent": "false",
-                        "cloudify_runtime": {}
+                    "id": "multi_instance.db_1",
+                    "plugins": {
+                        "app_installer": {
+                            "name": "app_installer",
+                            "interface": "cloudify.tosca.interfaces.app_module_installer",
+                            "agent_plugin": "true",
+                            "url": "app_installer_mock.zip"
+                        },
+                        "dbmock": {
+                            "name": "dbmock",
+                            "interface": "cloudify.tosca.interfaces.middleware_component_installer",
+                            "agent_plugin": "true",
+                            "url": "dbmock.zip"
+                        }
                     },
-                    "relationships": [],
-                    "host_id": "simple_web_server.host"
+                    "host_id": "multi_instance.host_1"
                 },
                 {
-                    "id": "simple_web_server.web_tier.host_2",
-                    "properties": {
-                        "install_agent": "false",
-                        "cloudify_runtime": {}
+                    "id": "multi_instance.db_2",
+                    "plugins": {
+                        "app_installer": {
+                            "name": "app_installer",
+                            "interface": "cloudify.tosca.interfaces.app_module_installer",
+                            "agent_plugin": "true",
+                            "url": "app_installer_mock.zip"
+                        },
+                        "dbmock": {
+                            "name": "dbmock",
+                            "interface": "cloudify.tosca.interfaces.middleware_component_installer",
+                            "agent_plugin": "true",
+                            "url": "dbmock.zip"
+                        }
                     },
-                    "relationships": [],
-                    "host_id": "simple_web_server.host"
-
+                    "host_id": "multi_instance.host_2"
                 },
                 {
-                    "id": "simple_web_server.non_tier_host",
-                    "properties": {
-                        "install_agent": "false",
-                        "cloudify_runtime": {}
-                    },
-                    "relationships": [],
-                    "host_id": "simple_web_server.host"
+                    "id": "multi_instance.host_1",
+                    "plugins": {
+                        "cloudify.tosca.artifacts.plugin.worker_installer": {
+                            "name": "cloudify.tosca.artifacts.plugin.worker_installer",
+                            "interface": "cloudify.tosca.interfaces.worker_installer",
+                            "agent_plugin": "false",
+                            "url": "cloudify/poc/artifacts/plugins/celery-worker-installer.zip"
+                        },
+                        "cloudmock": {
+                            "name": "cloudmock",
+                            "interface": "cloudify.tosca.interfaces.host_provisioner",
+                            "agent_plugin": "false",
+                            "url": "cloudmock.zip"
+                        },
+                        "cloudify.tosca.artifacts.plugin.plugin_installer": {
+                            "name": "cloudify.tosca.artifacts.plugin.plugin_installer",
+                            "interface": "cloudify.tosca.interfaces.plugin_installer",
+                            "agent_plugin": "true",
+                            "url": "cloudify/poc/artifacts/plugins/celery-worker-plugin-installer.zip"
+                        }
+                    }
                 },
                 {
-                    "id": "simple_web_server.web_tier",
-                    "properties": {
-                        "nodes": [
-                            "host"
-                        ],
-                        "number_of_instances": 2
-                    },
-                    "relationships": []
+                    "id": "multi_instance.host_2",
+                    "plugins": {
+                        "cloudify.tosca.artifacts.plugin.worker_installer": {
+                            "name": "cloudify.tosca.artifacts.plugin.worker_installer",
+                            "interface": "cloudify.tosca.interfaces.worker_installer",
+                            "agent_plugin": "false",
+                            "url": "cloudify/poc/artifacts/plugins/celery-worker-installer.zip"
+                        },
+                        "cloudmock": {
+                            "name": "cloudmock",
+                            "interface": "cloudify.tosca.interfaces.host_provisioner",
+                            "agent_plugin": "false",
+                            "url": "cloudmock.zip"
+                        },
+                        "cloudify.tosca.artifacts.plugin.plugin_installer": {
+                            "name": "cloudify.tosca.artifacts.plugin.plugin_installer",
+                            "interface": "cloudify.tosca.interfaces.plugin_installer",
+                            "agent_plugin": "true",
+                            "url": "cloudify/poc/artifacts/plugins/celery-worker-plugin-installer.zip"
+                        }
+                    }
                 }
             ]
         }
