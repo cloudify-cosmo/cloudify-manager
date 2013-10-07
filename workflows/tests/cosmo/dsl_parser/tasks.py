@@ -44,11 +44,44 @@ def prepare_multi_instance_plan(nodes_plan_json):
     return plan
 
 
+def create_node_expansion_map(nodes, nodes_extra):
+
+    """
+    This method insepcts the current nodes and create an expansion map.
+    That is, for every node, it should determine how many instances are needed in the final plan.
+    """
+    return {
+
+    }
+
+
 def create_multi_instance_nodes(nodes, nodes_extra):
-    pass
+
+    new_nodes = []
+
+    nodes_expansion = create_node_expansion_map(nodes, nodes_extra)
+
+    for node_id, number_of_instances in nodes_expansion.iteritems():
+        node = get_node(node_id, nodes)
+        instances = create_node_instances(node, number_of_instances)
+        new_nodes.extend(instances)
+
+    return new_nodes
+
+
+def get_node(node_id, nodes):
+    for node in nodes:
+        if node_id == node['id']:
+            return node
+    raise RuntimeError("Could not find a node with id {0} in nodes".format(node_id))
 
 
 def create_node_instances(node, number_of_instances):
+
+    if number_of_instances == 1:
+
+        # no need to duplicate. just return the original node
+        return node
 
     instances = []
 
@@ -69,13 +102,3 @@ def create_node_instances(node, number_of_instances):
         instances.append(node_copy)
 
     return instances
-
-
-
-
-
-
-
-
-
-
