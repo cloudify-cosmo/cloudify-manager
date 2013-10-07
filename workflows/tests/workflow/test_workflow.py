@@ -20,9 +20,6 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 
 
-import logging
-
-
 class TestRuoteWorkflows(TestCase):
 
     def test_execute_operation(self):

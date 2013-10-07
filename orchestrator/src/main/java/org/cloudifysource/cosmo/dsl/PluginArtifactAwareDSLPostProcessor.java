@@ -46,11 +46,11 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
                                            Map<String, ApplicationTemplate> populatedServiceTemplates,
-                                           Map<String, Plugin> populatedArtifacts,
+                                           Map<String, Plugin> populatedPlugins,
                                            Map<String, Relationship> populatedRelationships) {
 
         Map<String, Set<String>> interfacePluginImplementations =
-                extractInterfacePluginImplementations(definitions.getInterfaces(), populatedArtifacts);
+                extractInterfacePluginImplementations(definitions.getInterfaces(), populatedPlugins);
 
         Map<String, Object> result = Maps.newHashMap();
         List<Object> nodes = Lists.newArrayList();
@@ -67,7 +67,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                         typeTemplate,
                         definitions,
                         interfacePluginImplementations,
-                        populatedArtifacts);
+                        populatedPlugins);
                 Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
                         applicationTemplate.getName(),
                         typeTemplate);
@@ -102,7 +102,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                                                         TypeTemplate typeTemplate,
                                                         Definitions definitions,
                                                         Map<String, Set<String>> interfacesToPluginImplementations,
-                                                        Map<String, Plugin> populatedArtifacts) {
+                                                        Map<String, Plugin> populatedPlugins) {
         Map<String, Object> node = Maps.newHashMap();
 
         setNodeId(typeTemplate, node);
@@ -119,20 +119,20 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                                     definitions,
                                     interfacesToPluginImplementations,
                                     node,
-                                    populatedArtifacts);
+                                    populatedPlugins);
 
 
         return node;
     }
 
     private Map<String, Set<String>> extractInterfacePluginImplementations(Map<String, Interface> interfaces,
-                                                                           Map<String, Plugin> populatedArtifacts) {
+                                                                           Map<String, Plugin> populatedPlugins) {
         Map<String, Set<String>> interfacePluginImplementations = Maps.newHashMap();
         for (String interfaceName : interfaces.keySet()) {
             interfacePluginImplementations.put(interfaceName, Sets.<String>newHashSet());
         }
 
-        for (Plugin plugin : populatedArtifacts.values()) {
+        for (Plugin plugin : populatedPlugins.values()) {
             if (!plugin.isInstanceOf(CLOUDIFY_TOSCA_PLUGIN) ||
                     Objects.equal(CLOUDIFY_TOSCA_PLUGIN, plugin.getName())) {
                 continue;
@@ -230,7 +230,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,
                                              Map<String, Set<String>> interfacesToPluginImplementations,
-                                             Map<String, Object> node, Map<String, Plugin> populatedArtifacts) {
+                                             Map<String, Object> node, Map<String, Plugin> populatedPlugins) {
         Set<String> sameNameOperations = Sets.newHashSet();
         Map<String, String> operationToPlugin = Maps.newHashMap();
         Map<String, Map<String, Object>> plugins = Maps.newHashMap();
@@ -268,7 +268,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             }
 
             Map<String, Object> pluginDetails = Maps.newHashMap();
-            Plugin plugin = populatedArtifacts.get(pluginImplementation);
+            Plugin plugin = populatedPlugins.get(pluginImplementation);
             boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN);
             pluginDetails.putAll(plugin.getProperties());
             pluginDetails.put("name", pluginImplementation);
