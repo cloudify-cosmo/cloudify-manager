@@ -3,25 +3,6 @@ define execute_plan
     event event: { "stage"=>"preparing deployment plan" }
     prepare_plan dsl: $dsl
 
-    set "v:prepare_multi_instance_plan": "cosmo.dsl_parser.tasks.prepare_multi_instance_plan"
-
-    execute_task target: 'cloudify.management', exec: "${v:prepare_multi_instance_plan}", payload: {
-        properties: {
-          plan: "$v:policies",
-          rules: "$v:rules",
-          policies_events: "$v:policies_events"
-        }
-    }, to_f: 'new_plan', timeout: '30s', on_timeout: 'redo'
-
-    execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
-        properties: {
-            worker_id: "${worker_id}",
-            plugin_name: "${plugin_name}",
-            operation: "${operation}"
-        }
-    }, to_f: 'new_plan', timeout: '30s', on_timeout: 'redo'
-
-
     log message: 'overriding default global workflow with ${f:global_workflow}', if: '${f:global_workflow} is set'
     set variable: 'global_workflow', value: '$f:global_workflow', if: '${f:global_workflow} is set'
 
