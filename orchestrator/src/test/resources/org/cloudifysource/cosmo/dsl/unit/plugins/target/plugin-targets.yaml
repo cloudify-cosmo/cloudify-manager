@@ -1,36 +1,34 @@
 ###################
 # DSL for testing plugin targets (queues) - remote (management) and agent (worker).
 #
-definitions:
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-        - "middleware_component_installer"
-        - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
+    - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
 
-    service_templates:
-        plugins_template:
-            topology:
-                host_template:
-                    type: "cloudify.tosca.types.host"
+application_template:
+    name: "plugins_template"
+    topology:
+        -   name: "host_template"
+            type: cloudify.tosca.types.host
 
-                server_template:
-                    type: "cloudify.tosca.types.db_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host_template"
+        -   name: "server_template"
+            type: cloudify.tosca.types.db_server
+            relationships:
+                - type: cloudify.tosca.relationships.contained_in
+                  target: "host_template"
 
-
-    plans:
-        plugins_template.host_template:
-            init:
-                radial: |
-                    define host_init
-                        echo '!! overridden host_template init workflow !!'
-                        execute_operation operation: 'provision'
-        plugins_template.server_template:
-            init:
-                radial: |
-                    define server_init
-                        execute_operation operation: 'install'
-                        execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
+workflows:
+    plugins_template.host_template:
+        init:
+            radial: |
+                define host_init
+                    echo '!! overridden host_template init workflow !!'
+                    execute_operation operation: 'provision'
+    plugins_template.server_template:
+        init:
+            radial: |
+                define server_init
+                    execute_operation operation: 'install'
+                    execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'

@@ -23,26 +23,26 @@ package org.cloudifysource.cosmo.dsl;
  * @author Dan Kilman
  * @since 0.1
  */
-public class Artifact extends InheritedDefinition {
+public class Plugin extends InheritedDefinition {
 
-    public static final String ROOT_ARTIFACT_NAME = "artifact";
-    public static final Artifact ROOT_ARTIFACT = initRootArtifact();
+    public static final String ROOT_PLUGIN_NAME = "plugin";
+    public static final Plugin ROOT_PLUGIN = initRootPlugin();
 
-    private static Artifact initRootArtifact() {
-        Artifact root = new Artifact();
-        root.setName(ROOT_ARTIFACT_NAME);
+    private static Plugin initRootPlugin() {
+        Plugin root = new Plugin();
+        root.setName(ROOT_PLUGIN_NAME);
         return root;
     }
 
-    public Artifact() {
+    public Plugin() {
         // Default value
-        setDerivedFrom(ROOT_ARTIFACT_NAME);
+        setDerivedFrom(ROOT_PLUGIN_NAME);
     }
 
     @Override
     public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
-        Artifact typedParent = (Artifact) parent;
-        Artifact result = new Artifact();
+        Plugin typedParent = (Plugin) parent;
+        Plugin result = new Plugin();
         result.inheritPropertiesFrom(typedParent);
         result.inheritPropertiesFrom(this);
         result.setName(getName());
@@ -50,7 +50,7 @@ public class Artifact extends InheritedDefinition {
         return result;
     }
 
-    protected void inheritPropertiesFrom(Artifact other) {
+    protected void inheritPropertiesFrom(Plugin other) {
         super.inheritPropertiesFrom(other);
     }
 }

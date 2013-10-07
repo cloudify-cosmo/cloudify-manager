@@ -27,8 +27,8 @@ import java.util.Map;
 public interface DSLPostProcessor {
 
     Map<String, Object> postProcess(Definitions definitions,
-                                    Map<String, ServiceTemplate> populatedServiceTemplates,
-                                    Map<String, Artifact> populatedArtifacts,
+                                    Map<String, ApplicationTemplate> populatedServiceTemplates,
+                                    Map<String, Plugin> populatedArtifacts,
                                     Map<String, Relationship> populatedRelationships);
 
 }

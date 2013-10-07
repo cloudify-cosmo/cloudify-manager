@@ -1,68 +1,67 @@
-definitions:
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-        - "packaging-with-imports0.yaml"
-        - "relative_from_base/packaging-with-imports1.yaml"
-        - "/fixed_from_base/packaging-with-imports2.yaml"
-    interfaces:
-        provisioner:
-            operations:
-                - "operation0"
-                - "operation1"
-                - "operation2"
-                - "operation3"
-                - "operation4"
-                - "operation5"
-    artifacts:
-        provisioner_plugin:
-            derived_from: "cloudify.tosca.artifacts.remote_plugin"
-            properties:
-                interface: "provisioner"
-                url: "provisioner.zip"
-    service_templates:
-        test_template:
-            topology:
-                test_vm00:
-                    type: "vm00"
-                test_vm03:
-                    type: "vm03"
-                test_vm04:
-                    type: "vm04"
-                test_vm05:
-                    type: "vm05"
-                test_vm1:
-                    type: "vm1"
-                test_vm2:
-                    type: "vm2"
-    plans:
-        test_template.test_vm00:
-            init:
-                radial: |
-                    define init_method0
-                        execute_operation operation: 'operation0'
-        test_template.test_vm03:
-            init:
-                radial: |
-                    define init_method1
-                        execute_operation operation: 'operation1'
-        test_template.test_vm04:
-            init:
-                radial: |
-                    define init_method2
-                        execute_operation operation: 'operation2'
-        test_template.test_vm05:
-            init:
-                radial: |
-                    define init_method3
-                        execute_operation operation: 'operation3'
-        test_template.test_vm1:
-            init:
-                radial: |
-                    define init_method4
-                        execute_operation operation: 'operation4'
-        test_template.test_vm2:
-            init:
-                radial: |
-                    define init_method5
-                        execute_operation operation: 'operation5'
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "packaging-with-imports0.yaml"
+    - "relative_from_base/packaging-with-imports1.yaml"
+    - "/fixed_from_base/packaging-with-imports2.yaml"
+interfaces:
+    provisioner:
+        operations:
+            - "operation0"
+            - "operation1"
+            - "operation2"
+            - "operation3"
+            - "operation4"
+            - "operation5"
+plugins:
+    provisioner_plugin:
+        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        properties:
+            interface: "provisioner"
+            url: "provisioner.zip"
+application_template:
+    name: "test_template"
+    topology:
+        -   name: "test_vm00"
+            type: vm00
+        -   name: "test_vm03"
+            type: vm03
+        -   name: "test_vm04"
+            type: vm04
+        -   name: "test_vm05"
+            type: vm05
+        -   name: "test_vm1"
+            type: vm1
+        -   name: "test_vm2"
+            type: vm2
+workflows:
+    test_template.test_vm00:
+        init:
+            radial: |
+                define init_method0
+                    execute_operation operation: 'operation0'
+    test_template.test_vm03:
+        init:
+            radial: |
+                define init_method1
+                    execute_operation operation: 'operation1'
+    test_template.test_vm04:
+        init:
+            radial: |
+                define init_method2
+                    execute_operation operation: 'operation2'
+    test_template.test_vm05:
+        init:
+            radial: |
+                define init_method3
+                    execute_operation operation: 'operation3'
+    test_template.test_vm1:
+        init:
+            radial: |
+                define init_method4
+                    execute_operation operation: 'operation4'
+    test_template.test_vm2:
+        init:
+            radial: |
+                define init_method5
+                    execute_operation operation: 'operation5'

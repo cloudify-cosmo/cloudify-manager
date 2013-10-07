@@ -46,13 +46,13 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy1 = node1.getPolicies().get("start_detection_policy");
         assertThat(policy1).isNotNull();
         assertThat(policy1.getRules()).hasSize(2);
-        Rule rule1 = policy1.getRules().get("host_state");
+        Rule rule1 = policy1.getRules().get(0);
         assertThat(rule1).isNotNull();
         assertThat(rule1.getType()).isEqualTo("state_equals");
         assertThat(rule1.getProperties()).hasSize(2);
         assertThat(rule1.getProperties().get("state")).isEqualTo("host_state");
         assertThat(rule1.getProperties().get("value")).isEqualTo("running");
-        Rule rule2 = policy1.getRules().get("ping_latency");
+        Rule rule2 = policy1.getRules().get(1);
         assertThat(rule2).isNotNull();
         assertThat(rule2.getType()).isEqualTo("metric_below");
         assertThat(rule2.getProperties()).hasSize(2);
@@ -61,7 +61,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy2 = node1.getPolicies().get("failure_detection_policy");
         assertThat(policy2).isNotNull();
         assertThat(policy2.getRules()).hasSize(1);
-        Rule rule3 = policy2.getRules().get("host_state");
+        Rule rule3 = policy2.getRules().get(0);
         assertThat(rule3).isNotNull();
         assertThat(rule3.getType()).isEqualTo("state_not_equals");
         assertThat(rule3.getProperties()).hasSize(2);
@@ -84,7 +84,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy1 = node1.getPolicies().get("start_detection_policy");
         assertThat(policy1).isNotNull();
         assertThat(policy1.getRules()).hasSize(1);
-        Rule rule1 = policy1.getRules().get("host_state");
+        Rule rule1 = policy1.getRules().get(0);
         assertThat(rule1).isNotNull();
         assertThat(rule1.getType()).isEqualTo("state_equals");
         assertThat(rule1.getProperties()).hasSize(2);
@@ -100,7 +100,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy1 = node1.getPolicies().get("start_detection_policy");
         assertThat(policy1).isNotNull();
         assertThat(policy1.getRules()).hasSize(1);
-        Rule rule1 = policy1.getRules().get("host_state");
+        Rule rule1 = policy1.getRules().get(0);
         assertThat(rule1).isNotNull();
         assertThat(rule1.getType()).isEqualTo("state_equals");
         assertThat(rule1.getProperties()).hasSize(2);
@@ -109,7 +109,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy2 = node1.getPolicies().get("failure_detection_policy");
         assertThat(policy2).isNotNull();
         assertThat(policy2.getRules()).hasSize(1);
-        Rule rule3 = policy2.getRules().get("host_state");
+        Rule rule3 = policy2.getRules().get(0);
         assertThat(rule3).isNotNull();
         assertThat(rule3.getType()).isEqualTo("state_equals");
         assertThat(rule3.getProperties()).hasSize(2);
@@ -121,7 +121,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy3 = node2.getPolicies().get("start_detection_policy");
         assertThat(policy3).isNotNull();
         assertThat(policy3.getRules()).hasSize(1);
-        Rule rule4 = policy3.getRules().get("host_state");
+        Rule rule4 = policy3.getRules().get(0);
         assertThat(rule4).isNotNull();
         assertThat(rule4.getType()).isEqualTo("state_not_equals");
         assertThat(rule4.getProperties()).hasSize(2);
@@ -130,7 +130,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy4 = node2.getPolicies().get("failure_detection_policy");
         assertThat(policy4).isNotNull();
         assertThat(policy4.getRules()).hasSize(1);
-        Rule rule5 = policy4.getRules().get("host_state");
+        Rule rule5 = policy4.getRules().get(0);
         assertThat(rule5).isNotNull();
         assertThat(rule5.getType()).isEqualTo("state_equals");
         assertThat(rule5.getProperties()).hasSize(2);
@@ -142,7 +142,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy5 = node3.getPolicies().get("start_detection_policy");
         assertThat(policy5).isNotNull();
         assertThat(policy5.getRules()).hasSize(1);
-        Rule rule6 = policy5.getRules().get("host_state");
+        Rule rule6 = policy5.getRules().get(0);
         assertThat(rule6).isNotNull();
         assertThat(rule6.getType()).isEqualTo("state_not_equals");
         assertThat(rule6.getProperties()).hasSize(2);
@@ -151,7 +151,7 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         Policy policy6 = node3.getPolicies().get("failure_detection_policy");
         assertThat(policy6).isNotNull();
         assertThat(policy6.getRules()).hasSize(1);
-        Rule rule7 = policy6.getRules().get("host_state");
+        Rule rule7 = policy6.getRules().get(0);
         assertThat(rule7).isNotNull();
         assertThat(rule7.getType()).isEqualTo("state_equals");
         assertThat(rule7.getProperties()).hasSize(2);

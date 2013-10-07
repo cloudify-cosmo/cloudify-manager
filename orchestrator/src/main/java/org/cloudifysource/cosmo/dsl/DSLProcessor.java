@@ -26,6 +26,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.dsl.resource.DSLResource;
@@ -40,6 +41,7 @@ import org.cloudifysource.cosmo.logging.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -76,11 +78,11 @@ public class DSLProcessor {
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
-            Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getArtifacts());
+            Map<String, Plugin> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getPlugins());
             Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
                     definitions.getRelationships());
 
-            Map<String, ServiceTemplate> populatedServiceTemplates =
+            Map<String, ApplicationTemplate> populatedServiceTemplates =
                     buildPopulatedServiceTemplatesMap(definitions, populatedTypes);
 
             Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
@@ -144,10 +146,10 @@ public class DSLProcessor {
                         "Policy not defined [%s] in template: %s - available policies: %s",
                         template.getName(), policyEntry, policies.getTypes());
                 final Policy policy = policyEntry.getValue();
-                for (Map.Entry<String, Rule> ruleEntry : policy.getRules().entrySet()) {
-                    Preconditions.checkArgument(policies.getRules().containsKey(ruleEntry.getValue().getType()),
-                            "Unknown rule type [%s] for rule: '%s' in template: %s", ruleEntry.getValue().getType(),
-                            ruleEntry.getKey(), template.getName());
+                for (Rule rule : policy.getRules()) {
+                    Preconditions.checkArgument(policies.getRules().containsKey(rule.getType()),
+                            "Unknown rule type [%s] for rule: '%s' in template: %s", rule.getType(),
+                            rule, template.getName());
                 }
             }
         }
@@ -156,66 +158,56 @@ public class DSLProcessor {
     private static void validatePlans(Map<String, TypeTemplate> nodeTemplates,
                                       Definitions definitions,
                                       Map<String, Type> populatedTypes) {
-        for (String plan : definitions.getPlans().keySet()) {
+        for (String plan : definitions.getWorkflows().keySet()) {
             Preconditions.checkArgument(populatedTypes.containsKey(plan) || nodeTemplates.containsKey(plan),
-                    "Plan [%s] does not match any node type or template", plan);
+                    "Workflow [%s] does not match any node type or template", plan);
         }
     }
 
     private static Map<String, TypeTemplate> extractNodeTemplates(Definitions definitions) {
         final Map<String, TypeTemplate> nodeTemplates = Maps.newHashMap();
-        for (Map.Entry<String, ServiceTemplate> serviceTemplateEntry : definitions
-                .getServiceTemplates().entrySet()) {
-            for (Map.Entry<String, TypeTemplate> nodeTemplateEntry :
-                    serviceTemplateEntry.getValue().getTopology().entrySet()) {
-                nodeTemplates.put(
-                        String.format("%s.%s", serviceTemplateEntry.getKey(),
-                                nodeTemplateEntry.getKey()), nodeTemplateEntry.getValue());
-            }
+        final ApplicationTemplate applicationTemplate = definitions.getApplicationTemplate();
+        for (TypeTemplate typeTemplate : applicationTemplate.getTopology()) {
+            nodeTemplates.put(
+                    String.format("%s.%s", applicationTemplate.getName(), typeTemplate.getName()), typeTemplate);
         }
         return nodeTemplates;
     }
 
 
-    private static Map<String, ServiceTemplate> buildPopulatedServiceTemplatesMap(
+    private static Map<String, ApplicationTemplate> buildPopulatedServiceTemplatesMap(
             Definitions definitions,
             Map<String, Type> populatedTypes) {
-        final Map<String, ServiceTemplate> populatedServiceTemplates = Maps.newHashMap();
-        for (Map.Entry<String, ServiceTemplate> entry : definitions.getServiceTemplates().entrySet()) {
+        final Map<String, ApplicationTemplate> populatedServiceTemplates = Maps.newHashMap();
+        final ApplicationTemplate applicationTemplate = definitions.getApplicationTemplate();
 
-            String serviceTemplateName = entry.getKey();
-            ServiceTemplate serviceTemplate = entry.getValue();
+        List<TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
+                applicationTemplate.getTopology(),
+                populatedTypes);
 
-            Map<String, TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
-                    serviceTemplate.getTopology(),
-                    populatedTypes);
+        ApplicationTemplate populatedApplicationTemplate = new ApplicationTemplate();
+        populatedApplicationTemplate.setName(applicationTemplate.getName());
+        populatedApplicationTemplate.setTopology(populatedTopology);
 
-            ServiceTemplate populatedServiceTemplate = new ServiceTemplate();
-            populatedServiceTemplate.setName(serviceTemplate.getName());
-            populatedServiceTemplate.setTopology(populatedTopology);
+        populatedServiceTemplates.put(applicationTemplate.getName(), populatedApplicationTemplate);
 
-            populatedServiceTemplates.put(serviceTemplateName, populatedServiceTemplate);
-
-        }
         return populatedServiceTemplates;
     }
 
-    private static Map<String, TypeTemplate> buildPopulatedTypeTemplatesMap(
-            Map<String, TypeTemplate> topology,
+    private static List<TypeTemplate> buildPopulatedTypeTemplatesMap(
+            List<TypeTemplate> topology,
             Map<String, Type> populatedTypes) {
         final Map<String, TypeTemplate> populatedTemplates = Maps.newHashMap();
-        for (Map.Entry<String, TypeTemplate> entry : topology.entrySet()) {
-            String templateName = entry.getKey();
-            TypeTemplate typeTemplate = entry.getValue();
-            Type typeTemplateParentType = populatedTypes.get(typeTemplate.getDerivedFrom());
-            Preconditions.checkArgument(typeTemplateParentType != null, "Missing type %s for %s", templateName,
-                    typeTemplate.getDerivedFrom());
-            TypeTemplate populatedTemplate = (TypeTemplate) typeTemplate.newInstanceWithInheritance(
+        for (TypeTemplate template : topology) {
+            Type typeTemplateParentType = populatedTypes.get(template.getDerivedFrom());
+            Preconditions.checkArgument(typeTemplateParentType != null, "Missing type %s for %s", template.getName(),
+                    template.getDerivedFrom());
+            TypeTemplate populatedTemplate = (TypeTemplate) template.newInstanceWithInheritance(
                     typeTemplateParentType);
 
-            populatedTemplates.put(templateName, populatedTemplate);
+            populatedTemplates.put(template.getName(), populatedTemplate);
         }
-        return populatedTemplates;
+        return Lists.newArrayList(populatedTemplates.values());
     }
 
     private static Map<String, Type> buildPopulatedTypesMap(Map<String, Type> types) {
@@ -224,9 +216,9 @@ public class DSLProcessor {
                                  types);
     }
 
-    private static Map<String, Artifact> buildPopulatedArtifactsMap(Map<String, Artifact> artifacts) {
-        return buildPopulatedMap(Artifact.ROOT_ARTIFACT_NAME,
-                                 Artifact.ROOT_ARTIFACT,
+    private static Map<String, Plugin> buildPopulatedArtifactsMap(Map<String, Plugin> artifacts) {
+        return buildPopulatedMap(Plugin.ROOT_PLUGIN_NAME,
+                                 Plugin.ROOT_PLUGIN,
                                  artifacts);
     }
 
@@ -300,14 +292,13 @@ public class DSLProcessor {
             Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
             context.setContextLocation(currentContext);
 
-            copyDefinitions(importedDefinitions.getServiceTemplates(), definitions.getServiceTemplates());
             copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
-            copyDefinitions(importedDefinitions.getArtifacts(), definitions.getArtifacts());
+            copyDefinitions(importedDefinitions.getPlugins(), definitions.getPlugins());
             copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
             copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
             copyMapNoOverride(importedDefinitions.getPolicies().getRules(), definitions.getPolicies().getRules());
             copyMapNoOverride(importedDefinitions.getPolicies().getTypes(), definitions.getPolicies().getTypes());
-            copyPlans(importedDefinitions.getPlans(), definitions.getPlans());
+            copyPlans(importedDefinitions.getWorkflows(), definitions.getWorkflows());
             copyGlobalPlan(importedDefinitions, definitions);
         }
 
@@ -340,23 +331,23 @@ public class DSLProcessor {
         }
     }
 
-    private static void copyPlans(Map<String, Plan> copyFromPlans,
-                                  Map<String, Plan> copyToPlans) {
+    private static void copyPlans(Map<String, Workflow> copyFromPlans,
+                                  Map<String, Workflow> copyToPlans) {
         // TODO DSL need to define semantics and
         // add some sort of validation to this copy phase.
         // Currently the semantics are not very clear.
         // The first plan to show up in the import phase will be
         // the one to "win". Where 'first' is not clearly defined.
-        for (Map.Entry<String, Plan> entry : copyFromPlans.entrySet()) {
+        for (Map.Entry<String, Workflow> entry : copyFromPlans.entrySet()) {
             String name = entry.getKey();
-            Plan copiedPlan = entry.getValue();
+            Workflow copiedWorkflow = entry.getValue();
 
             if (!copyToPlans.containsKey(name)) {
-                copyToPlans.put(name, copiedPlan);
+                copyToPlans.put(name, copiedWorkflow);
             } else {
-                Plan currentPlan = copyToPlans.get(name);
-                if (currentPlan.getInit().isEmpty()) {
-                    currentPlan.setInit(copiedPlan.getInit());
+                Workflow currentWorkflow = copyToPlans.get(name);
+                if (currentWorkflow.getInit().isEmpty()) {
+                    currentWorkflow.setInit(copiedWorkflow.getInit());
                 }
             }
         }
@@ -365,21 +356,16 @@ public class DSLProcessor {
     private static Definitions parseRawDsl(String dsl) {
         try {
             final ObjectMapper objectMapper = dsl.startsWith("{") ? JSON_OBJECT_MAPPER : YAML_OBJECT_MAPPER;
-            TopLevel topLevel = objectMapper.readValue(dsl, TopLevel.class);
-            Definitions definitions = topLevel.getDefinitions();
+            Definitions definitions = objectMapper.readValue(dsl, Definitions.class);
             if (definitions == null) {
-                throw new IllegalArgumentException("Invalid DSL - does not contain definitions");
+                throw new IllegalArgumentException("Invalid DSL.");
             }
 
-            setNames(definitions.getArtifacts());
-            setNames(definitions.getPlans());
+            setNames(definitions.getPlugins());
+            setNames(definitions.getWorkflows());
             setNames(definitions.getRelationships());
-            setNames(definitions.getServiceTemplates());
             setNames(definitions.getTypes());
             setNames(definitions.getInterfaces());
-            for (ServiceTemplate serviceTemplate : definitions.getServiceTemplates().values()) {
-                setNames(serviceTemplate.getTopology());
-            }
 
             return definitions;
         } catch (IOException e) {

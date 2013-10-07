@@ -25,7 +25,7 @@ PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-instal
     "0}#egg=cosmo-plugin-plugin-installer-{0}".format(PLUGIN_INSTALLER_VERSION)
 
 
-RIEMANN_CONFIGURER_VERSION = "0.1.2"
+RIEMANN_CONFIGURER_VERSION = "develop"
 RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/tarball/{" \
                      "0}#egg=cosmo-plugin-riemann-configurer-{0}".format(RIEMANN_CONFIGURER_VERSION)
 

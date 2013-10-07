@@ -195,13 +195,13 @@ public abstract class AbstractDSLProcessorTest {
     /**
      */
     public static class Policy {
-        private Map<String, Rule> rules;
+        private List<Rule> rules;
 
-        public void setRules(Map<String, Rule> rules) {
+        public void setRules(List<Rule> rules) {
             this.rules = rules;
         }
 
-        public Map<String, Rule> getRules() {
+        public List<Rule> getRules() {
             return rules;
         }
     }
