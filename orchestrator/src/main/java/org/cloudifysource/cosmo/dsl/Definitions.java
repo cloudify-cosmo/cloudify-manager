@@ -23,21 +23,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A class used to represent the definitions of the dsl.
+ * A class used to represent the top level element of the dsl.
  * Used internally only by the dsl processor.
- *
  * @author Dan Kilman
  * @since 0.1
  */
 public class Definitions {
 
     private List<String> imports = Lists.newArrayList();
-    private Map<String, ServiceTemplate> serviceTemplates = Maps.newHashMap();
+    private ApplicationTemplate applicationTemplate = new ApplicationTemplate();
     private Map<String, Type> types = Maps.newHashMap();
     private Map<String, Interface> interfaces = Maps.newHashMap();
-    private Map<String, Artifact> artifacts = Maps.newHashMap();
+    private Map<String, Plugin> plugins = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
-    private Map<String, Plan> plans = Maps.newHashMap();
+    private Map<String, Workflow> workflows = Maps.newHashMap();
     private Policies policies = new Policies();
     private String globalPlan;
 
@@ -57,12 +56,12 @@ public class Definitions {
         this.relationships = relationships;
     }
 
-    public Map<String, ServiceTemplate> getServiceTemplates() {
-        return serviceTemplates;
+    public ApplicationTemplate getApplicationTemplate() {
+        return applicationTemplate;
     }
 
-    public void setServiceTemplates(Map<String, ServiceTemplate> serviceTemplates) {
-        this.serviceTemplates = serviceTemplates;
+    public void setApplicationTemplate(ApplicationTemplate applicationTemplate) {
+        this.applicationTemplate = applicationTemplate;
     }
 
     public Map<String, Interface> getInterfaces() {
@@ -73,20 +72,20 @@ public class Definitions {
         this.interfaces = interfaces;
     }
 
-    public Map<String, Artifact> getArtifacts() {
-        return artifacts;
+    public Map<String, Plugin> getPlugins() {
+        return plugins;
     }
 
-    public void setArtifacts(Map<String, Artifact> artifacts) {
-        this.artifacts = artifacts;
+    public void setPlugins(Map<String, Plugin> plugins) {
+        this.plugins = plugins;
     }
 
-    public Map<String, Plan> getPlans() {
-        return plans;
+    public Map<String, Workflow> getWorkflows() {
+        return workflows;
     }
 
-    public void setPlans(Map<String, Plan> plans) {
-        this.plans = plans;
+    public void setWorkflows(Map<String, Workflow> workflows) {
+        this.workflows = workflows;
     }
 
     public List<String> getImports() {
@@ -112,5 +111,6 @@ public class Definitions {
     public void setPolicies(Policies policies) {
         this.policies = policies;
     }
+
 
 }

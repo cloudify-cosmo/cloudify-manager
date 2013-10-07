@@ -27,7 +27,7 @@ import java.util.Map;
  * @author Dan Kilman
  * @since 0.1
  */
-public class Plan extends Definition {
+public class Workflow extends Definition {
 
     private Map<String, Object> init = Maps.newHashMap();
 

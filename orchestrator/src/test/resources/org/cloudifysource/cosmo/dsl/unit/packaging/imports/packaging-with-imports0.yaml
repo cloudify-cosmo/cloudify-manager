@@ -1,23 +1,22 @@
-definitions:
-    imports:
-        - "cloudify.types"
-        - "packaging-with-imports3.yaml"
-        - "relative_path/packaging-with-imports4.yaml"
-        - "/fixed_path/packaging-with-imports5.yaml"
-    types:
-        vm00:
-            derived_from: "cloudify.tosca.types.host"
-            interfaces:
-                - "provisioner"
-        vm03:
-            derived_from: "vm3"
-            interfaces:
-                - "provisioner"
-        vm04:
-            derived_from: "vm4"
-            interfaces:
-                - "provisioner"
-        vm05:
-            derived_from: "vm5"
-            interfaces:
-                - "provisioner"
+imports:
+    - "cloudify.types"
+    - "packaging-with-imports3.yaml"
+    - "relative_path/packaging-with-imports4.yaml"
+    - "/fixed_path/packaging-with-imports5.yaml"
+types:
+    vm00:
+        derived_from: "cloudify.tosca.types.host"
+        interfaces:
+            - "provisioner"
+    vm03:
+        derived_from: "vm3"
+        interfaces:
+            - "provisioner"
+    vm04:
+        derived_from: "vm4"
+        interfaces:
+            - "provisioner"
+    vm05:
+        derived_from: "vm5"
+        interfaces:
+            - "provisioner"
