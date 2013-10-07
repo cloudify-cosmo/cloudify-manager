@@ -44,17 +44,6 @@ def prepare_multi_instance_plan(nodes_plan_json):
     return plan
 
 
-def create_node_expansion_map(nodes, nodes_extra):
-
-    """
-    This method insepcts the current nodes and create an expansion map.
-    That is, for every node, it should determine how many instances are needed in the final plan.
-    """
-    return {
-
-    }
-
-
 def create_multi_instance_nodes(nodes, nodes_extra):
 
     new_nodes = []
@@ -69,7 +58,22 @@ def create_multi_instance_nodes(nodes, nodes_extra):
     return new_nodes
 
 
+def create_node_expansion_map(nodes, nodes_extra):
+
+    """
+    This method insepcts the current nodes and creates an expansion map.
+    That is, for every node, it should determine how many instances are needed in the final plan.
+    """
+    return {
+
+    }
+
+
 def get_node(node_id, nodes):
+
+    """
+    Retrieves a node from the nodes list based on the node id.
+    """
     for node in nodes:
         if node_id == node['id']:
             return node
@@ -77,6 +81,13 @@ def get_node(node_id, nodes):
 
 
 def create_node_instances(node, number_of_instances):
+
+    """
+    This method duplicates the given node 'number_of_instances' times and return an array with the duplicated instance.
+    Each instance has a different id and each instance has a different host_id.
+    id's are generated with an incremental index suffixed to the original id.
+    For example: app.host --> [app.host_1, app.host_2] in case of 2 instances.
+    """
 
     if number_of_instances == 1:
 
