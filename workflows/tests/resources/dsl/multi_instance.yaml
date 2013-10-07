@@ -1,6 +1,8 @@
 imports:
     - "cloudify.types"
     - "cloudmock.yaml"
+    - "app_installer_mock.yaml"
+    - "dbmock.yaml"
 
 application_template:
     name: "multi_instance"
@@ -11,5 +13,6 @@ application_template:
           deploy: 2
       - name: "db"
         type: "cloudify.tosca.types.db_server"
-        instances:
-          deploy: 2
+        relationships:
+            -   type: "cloudify.tosca.relationships.contained_in"
+                target: "host"
