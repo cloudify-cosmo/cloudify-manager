@@ -61,24 +61,7 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(relationshipTemplates3.get(1).getTargetId()).isEqualTo("service_template.host2");
         assertThat(relationshipTemplates3.get(2).getTargetId()).isEqualTo("service_template.host3");
 
-        List<ProcessedExecutionListItem> executionList =  relationshipTemplates3.get(0).getPostTargetStart();
-        assertThat(executionList.get(0).getOperation()).isEqualTo("source.operation1");
-        assertThat(executionList.get(1).getOperation()).isEqualTo("target.operation1");
-        assertThat(executionList.get(2).getOperation()).isEqualTo("source.operation2");
-        assertThat(executionList.get(3).getOperation()).isEqualTo("target.operation2");
-        assertThat(executionList.get(0).getOutputField()).isEqualTo("result1");
-        assertThat(executionList.get(1).getOutputField()).isEqualTo("result2");
-        assertThat(executionList.get(2).getOutputField()).isEmpty();
-        assertThat(executionList.get(3).getOutputField()).isEqualTo("result3");
-        List<ProcessedExecutionListItem> lateExecutionList =  relationshipTemplates3.get(1).getPostSourceStart();
-        assertThat(lateExecutionList.get(0).getOperation()).isEqualTo("source.operation3");
-        assertThat(lateExecutionList.get(1).getOperation()).isEqualTo("target.operation3");
-        assertThat(lateExecutionList.get(2).getOperation()).isEqualTo("source.operation4");
-        assertThat(lateExecutionList.get(3).getOperation()).isEqualTo("target.operation4");
-        assertThat(lateExecutionList.get(0).getOutputField()).isEqualTo("result4");
-        assertThat(lateExecutionList.get(1).getOutputField()).isEqualTo("result5");
-        assertThat(lateExecutionList.get(2).getOutputField()).isEmpty();
-        assertThat(lateExecutionList.get(3).getOutputField()).isEqualTo("result6");
+
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)

@@ -255,8 +255,9 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
-        List<ProcessedExecutionListItem> postTargetStart;
-        List<ProcessedExecutionListItem> postSourceStart;
+        String interfaceImplementation;
+        String runPhase;
+        String runLocation;
 
         public String getType() {
             return type;
@@ -274,41 +275,28 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
-        public List<ProcessedExecutionListItem> getPostTargetStart() {
-            return postTargetStart;
+        public String getInterfaceImplementation() {
+            return interfaceImplementation;
         }
 
-        public void setPostTargetStart(List<ProcessedExecutionListItem> postTargetStart) {
-            this.postTargetStart = postTargetStart;
+        public void setInterfaceImplementation(String interfaceImplementation) {
+            this.interfaceImplementation = interfaceImplementation;
         }
 
-        public List<ProcessedExecutionListItem> getPostSourceStart() {
-            return postSourceStart;
+        public String getRunPhase() {
+            return runPhase;
         }
 
-        public void setPostSourceStart(List<ProcessedExecutionListItem> postSourceStart) {
-            this.postSourceStart = postSourceStart;
+        public void setRunPhase(String runPhase) {
+            this.runPhase = runPhase;
         }
 
-    }
-
-    /**
-     */
-    public static class ProcessedExecutionListItem {
-        private String operation;
-        private String outputField;
-        public String getOperation() {
-            return operation;
-        }
-        public void setOperation(String operation) {
-            this.operation = operation;
+        public String getRunLocation() {
+            return runLocation;
         }
 
-        public String getOutputField() {
-            return outputField;
-        }
-        public void setOutputField(String outputField) {
-            this.outputField = outputField;
+        public void setRunLocation(String runLocation) {
+            this.runLocation = runLocation;
         }
     }
 

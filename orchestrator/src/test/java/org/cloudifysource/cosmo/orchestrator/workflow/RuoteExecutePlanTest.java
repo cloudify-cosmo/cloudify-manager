@@ -46,6 +46,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -489,6 +490,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
     @Test(timeOut = 30000_000)
     public void testRelationshipTemplates() throws IOException, InterruptedException {
+        Assert.fail();
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
                 "dsl-with-relationship-templates-ruote.yaml";
         Map<String, Object> fields = Maps.newHashMap();
@@ -578,7 +580,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         node.put("properties", Maps.newHashMap());
         Map<String, Object> fields = Maps.newHashMap();
         fields.put("node", node);
-
+        fields.put("plan", Maps.newHashMap());
 
         final AtomicInteger counter = new AtomicInteger(0);
         TaskReceivedListener listener = new TaskReceivedListener() {

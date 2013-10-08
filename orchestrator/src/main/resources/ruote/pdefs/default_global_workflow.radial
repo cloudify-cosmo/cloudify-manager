@@ -18,6 +18,7 @@ define global_workflow
                 log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
                 set 'v:relationship_workflow': '$v:relationship.workflow'
                 relationship_workflow relationship: '$v:relationship'
+        unset 'v:relationship'
 
         event event: { "stage"=>"initiating" }
         log message: 'executing init workflow for node: ${node.id}'
@@ -30,3 +31,4 @@ define global_workflow
                 log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
                 set 'v:relationship_workflow': '$v:relationship.workflow'
                 relationship_workflow relationship: '$v:relationship'
+        unset 'v:relationship'
