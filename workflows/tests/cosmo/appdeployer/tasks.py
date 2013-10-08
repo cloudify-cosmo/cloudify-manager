@@ -31,6 +31,7 @@ def deploy(dsl, **kwargs):
     logger.info("deploying dsl: " + dsl)
     command = [
         "java",
+        '-XX:MaxPermSize=256m',
         "-jar",
         COSMO_JAR,
         "--dsl",
@@ -39,8 +40,8 @@ def deploy(dsl, **kwargs):
     ]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
-        line = p.stdout.readline().rstrip()
-        if line == '':
+        line = p.stdout.readline()
+        if not line:
             break
-        logger.info(line)
+        logger.info(line.rstrip())
     logger.info("dsl has been deployed [dsl={0}]".format(dsl))

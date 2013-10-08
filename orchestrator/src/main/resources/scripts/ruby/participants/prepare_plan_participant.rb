@@ -49,24 +49,15 @@ class PreparePlanParticipant < Ruote::Participant
           end
         end
         node[PROPERTIES][RUNTIME] = Hash.new
-        execution_params_names = []
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
-          relationship_workflow = plan['relationships'][relationship['type']]['workflow']
+          relationship_type = plan['relationships'][relationship['type']]
+          relationship_workflow = relationship_type['workflow']
           if relationship_workflow.nil? or relationship_workflow.empty?
             relationship_workflow = 'define stub_workflow\n\t'
           end
           relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
-          relationship['post_target_start'].each do |executed_item|
-            output_field = executed_item['output_field']
-            execution_params_names << output_field unless output_field.empty?
-          end
-          relationship['post_source_start'].each do |executed_item|
-            output_field = executed_item['output_field']
-            execution_params_names << output_field unless output_field.empty?
-          end
         end
-        node['execution_params_names'] = execution_params_names
       end
 
       workitem.fields['plan'] = plan

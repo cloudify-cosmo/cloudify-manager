@@ -1,0 +1,12 @@
+definitions:
+    interfaces:
+        mock_interface:
+            operations:
+                - "make_reachable"
+
+    artifacts:
+        testmockoperations:
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
+            properties:
+                interface: "mock_interface"
+                url: "mock_interface.zip"

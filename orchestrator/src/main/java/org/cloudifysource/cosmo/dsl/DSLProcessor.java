@@ -74,6 +74,7 @@ public class DSLProcessor {
                     ResourceLocationHelper.createLocationString(baseLocation, "definitions"));
             importContext.addMapping(loadAliasMapping());
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
+            extractRelationshipsInterfaces(definitions);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
             Map<String, Artifact> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getArtifacts());
@@ -312,6 +313,19 @@ public class DSLProcessor {
         }
 
         return definitions;
+    }
+
+    private static void extractRelationshipsInterfaces(Definitions definitions) {
+        for (Relationship relationship : definitions.getRelationships().values()) {
+            if (relationship.getInterface() != null) {
+                String interfaceName = relationship.getInterface().getName();
+                if (definitions.getInterfaces().containsKey(interfaceName)) {
+                    throw new IllegalArgumentException("Cannot override an already existing interface definition[" +
+                            interfaceName + "] in relationship[" + relationship.getName() + "]");
+                }
+                definitions.getInterfaces().put(interfaceName, relationship.getInterface());
+            }
+        }
     }
 
     private static void copyGlobalPlan(Definitions importedDefinitions, Definitions definitions) {

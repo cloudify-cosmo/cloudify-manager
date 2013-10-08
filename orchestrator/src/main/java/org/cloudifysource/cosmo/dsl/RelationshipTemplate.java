@@ -16,12 +16,6 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-
-import java.util.List;
-import java.util.Map;
-
 /**
  * Data container for a relationship template in a node template of the dsl.
  *
@@ -32,8 +26,10 @@ public class RelationshipTemplate {
 
     private String type;
     private String target;
-    private List<Object> postTargetStart = Lists.newArrayList();
-    private List<Object> postSourceStart = Lists.newArrayList();
+
+    private String interfaceImplementation;
+    private String runPhase;
+    private String runLocation;
 
     public String getType() {
         return type;
@@ -51,52 +47,27 @@ public class RelationshipTemplate {
         this.target = target;
     }
 
-    public List<Object> getPostTargetStart() {
-        return postTargetStart;
+    public String getRunPhase() {
+        return runPhase;
     }
 
-    public void setPostTargetStart(List<Object> postTargetStart) {
-        this.postTargetStart = postTargetStart;
+    public void setRunPhase(String runPhase) {
+        this.runPhase = runPhase;
     }
 
-    public List<Object> getPostSourceStart() {
-        return postSourceStart;
+    public String getRunLocation() {
+        return runLocation;
     }
 
-    public void setPostSourceStart(List<Object> postSourceStart) {
-        this.postSourceStart = postSourceStart;
+    public void setRunLocation(String runLocation) {
+        this.runLocation = runLocation;
     }
 
-    /**
-     */
-    static class ExecutionListItem {
-        private final String operation;
-        private final String outputField;
-        ExecutionListItem(String operation, String outputField) {
-            this.operation = operation;
-            this.outputField = outputField;
-        }
-        String getOperation() {
-            return operation;
-        }
-        String getOutputField() {
-            return outputField;
-        }
-        static Map<String, String> fromObject(Object rawItem) {
-            if (rawItem instanceof String) {
-                return new ExecutionListItem((String) rawItem, "").toMap();
-            } else if (rawItem instanceof Map) {
-                Map.Entry<String, String> entry =
-                        (Map.Entry<String, String>) ((Map) rawItem).entrySet().iterator().next();
-                return new ExecutionListItem(entry.getKey(), entry.getValue()).toMap();
-            } else {
-                throw new IllegalArgumentException("Cannot convert [" + rawItem + "] to an execution list item");
-            }
-        }
-        Map<String, String> toMap() {
-            return ImmutableMap.<String, String>builder().put("operation", operation)
-                                                         .put("output_field", outputField)
-                                                         .build();
-        }
+    public String getInterfaceImplementation() {
+        return interfaceImplementation;
+    }
+
+    public void setInterfaceImplementation(String interfaceImplementation) {
+        this.interfaceImplementation = interfaceImplementation;
     }
 }
