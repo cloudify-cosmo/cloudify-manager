@@ -16,10 +16,6 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.Maps;
-
-import java.util.Map;
-
 /**
  * A class used to represent a plan of the dsl.
  * Used internally only by the dsl processor.
@@ -29,14 +25,13 @@ import java.util.Map;
  */
 public class Workflow extends Definition {
 
-    private Map<String, Object> init = Maps.newHashMap();
+    private String radial;
 
-    public Map<String, Object> getInit() {
-        return init;
+    public String getRadial() {
+        return radial;
     }
 
-    public void setInit(Map<String, Object> init) {
-        this.init = init;
+    public void setRadial(String radial) {
+        this.radial = radial;
     }
-
 }

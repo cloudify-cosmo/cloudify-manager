@@ -36,7 +36,6 @@ public class Definitions {
     private Map<String, Interface> interfaces = Maps.newHashMap();
     private Map<String, Plugin> plugins = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
-    private Map<String, Workflow> workflows = Maps.newHashMap();
     private Policies policies = new Policies();
     private String globalPlan;
 
@@ -78,14 +77,6 @@ public class Definitions {
 
     public void setPlugins(Map<String, Plugin> plugins) {
         this.plugins = plugins;
-    }
-
-    public Map<String, Workflow> getWorkflows() {
-        return workflows;
-    }
-
-    public void setWorkflows(Map<String, Workflow> workflows) {
-        this.workflows = workflows;
     }
 
     public List<String> getImports() {

@@ -6,12 +6,11 @@ interfaces:
         operations:
             - operation1
             - operation2
-workflows:
-    type1:
-        init:
-            radial: type1_radial_stub
 relationships:
     relationship1: {}
 types:
     type1:
         derived_from: node
+        workflows:
+            init:
+                radial: type1_radial_stub

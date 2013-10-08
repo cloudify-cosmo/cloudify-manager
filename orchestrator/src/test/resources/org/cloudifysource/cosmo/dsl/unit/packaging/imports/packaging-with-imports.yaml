@@ -24,44 +24,43 @@ application_template:
     topology:
         -   name: "test_vm00"
             type: vm00
+            workflows:
+                init:
+                    radial: |
+                        define init_method0
+                            execute_operation operation: 'operation0'
         -   name: "test_vm03"
             type: vm03
+            workflows:
+                init:
+                    radial: |
+                        define init_method1
+                            execute_operation operation: 'operation1'
         -   name: "test_vm04"
             type: vm04
+            workflows:
+                init:
+                    radial: |
+                        define init_method2
+                            execute_operation operation: 'operation2'
         -   name: "test_vm05"
             type: vm05
+            workflows:
+                init:
+                    radial: |
+                        define init_method3
+                            execute_operation operation: 'operation3'
         -   name: "test_vm1"
             type: vm1
+            workflows:
+                init:
+                    radial: |
+                        define init_method4
+                            execute_operation operation: 'operation4'
         -   name: "test_vm2"
             type: vm2
-workflows:
-    test_template.test_vm00:
-        init:
-            radial: |
-                define init_method0
-                    execute_operation operation: 'operation0'
-    test_template.test_vm03:
-        init:
-            radial: |
-                define init_method1
-                    execute_operation operation: 'operation1'
-    test_template.test_vm04:
-        init:
-            radial: |
-                define init_method2
-                    execute_operation operation: 'operation2'
-    test_template.test_vm05:
-        init:
-            radial: |
-                define init_method3
-                    execute_operation operation: 'operation3'
-    test_template.test_vm1:
-        init:
-            radial: |
-                define init_method4
-                    execute_operation operation: 'operation4'
-    test_template.test_vm2:
-        init:
-            radial: |
-                define init_method5
-                    execute_operation operation: 'operation5'
+            workflows:
+                init:
+                    radial: |
+                        define init_method5
+                            execute_operation operation: 'operation5'

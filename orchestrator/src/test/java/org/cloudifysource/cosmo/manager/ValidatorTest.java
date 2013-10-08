@@ -38,7 +38,7 @@ public class ValidatorTest {
 
     @Test
     public void testInvalidDsl() throws IOException {
-        String dslFile = "org/cloudifysource/cosmo/dsl/unit/validation/dsl-with-invalid-plans1.yaml";
+        String dslFile = "org/cloudifysource/cosmo/dsl/unit/validation/invalid-dsl.yaml";
         //Check the dsl file exists so the test will fail on legit reason and not bacause this file was moved
         Resources.getResource(dslFile);
         try {

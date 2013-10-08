@@ -17,13 +17,11 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -194,32 +192,11 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
 
     private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
-        Map<String, Object> workflows = Maps.newHashMap();
-
-        // for now only inline radial is supported
-        // later we'll add support for others
-
-        // extract init
-        Optional<Object> initWorkflow = extractWorkflow(definitions.getWorkflows(), typeTemplate.getName());
-        Iterator<String> superTypes = typeTemplate.getSuperTypes().iterator();
-        while (superTypes.hasNext() && !initWorkflow.isPresent()) {
-            initWorkflow = extractWorkflow(definitions.getWorkflows(), superTypes.next());
+        final Map<String, Object> workflows = Maps.newHashMap();
+        for (Map.Entry<String, Workflow> entry : typeTemplate.getWorkflows().entrySet()) {
+            workflows.put(entry.getKey(), entry.getValue().getRadial());
         }
-        if (!initWorkflow.isPresent()) {
-            throw new IllegalArgumentException("No init workflow found for template: " + typeTemplate.getName());
-        }
-        workflows.put("init", initWorkflow.get());
-
         node.put("workflows", workflows);
-    }
-
-    private Optional<Object> extractWorkflow(Map<String, Workflow> plans, String typeName) {
-        Workflow workflow = plans.get(typeName);
-        if (workflow == null) {
-            return Optional.absent();
-        }
-        Object initWorkflow = workflow.getInit().get("radial");
-        return Optional.fromNullable(initWorkflow);
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {

@@ -86,7 +86,6 @@ public class DSLProcessor {
                     buildPopulatedServiceTemplatesMap(definitions, populatedTypes);
 
             Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
-            validatePlans(nodeTemplates, definitions, populatedTypes);
             validatePolicies(nodeTemplates, definitions.getPolicies());
             validateRelationships(nodeTemplates, populatedRelationships);
 
@@ -152,15 +151,6 @@ public class DSLProcessor {
                             rule, template.getName());
                 }
             }
-        }
-    }
-
-    private static void validatePlans(Map<String, TypeTemplate> nodeTemplates,
-                                      Definitions definitions,
-                                      Map<String, Type> populatedTypes) {
-        for (String plan : definitions.getWorkflows().keySet()) {
-            Preconditions.checkArgument(populatedTypes.containsKey(plan) || nodeTemplates.containsKey(plan),
-                    "Workflow [%s] does not match any node type or template", plan);
         }
     }
 
@@ -298,7 +288,6 @@ public class DSLProcessor {
             copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
             copyMapNoOverride(importedDefinitions.getPolicies().getRules(), definitions.getPolicies().getRules());
             copyMapNoOverride(importedDefinitions.getPolicies().getTypes(), definitions.getPolicies().getTypes());
-            copyPlans(importedDefinitions.getWorkflows(), definitions.getWorkflows());
             copyGlobalPlan(importedDefinitions, definitions);
         }
 
@@ -331,28 +320,6 @@ public class DSLProcessor {
         }
     }
 
-    private static void copyPlans(Map<String, Workflow> copyFromPlans,
-                                  Map<String, Workflow> copyToPlans) {
-        // TODO DSL need to define semantics and
-        // add some sort of validation to this copy phase.
-        // Currently the semantics are not very clear.
-        // The first plan to show up in the import phase will be
-        // the one to "win". Where 'first' is not clearly defined.
-        for (Map.Entry<String, Workflow> entry : copyFromPlans.entrySet()) {
-            String name = entry.getKey();
-            Workflow copiedWorkflow = entry.getValue();
-
-            if (!copyToPlans.containsKey(name)) {
-                copyToPlans.put(name, copiedWorkflow);
-            } else {
-                Workflow currentWorkflow = copyToPlans.get(name);
-                if (currentWorkflow.getInit().isEmpty()) {
-                    currentWorkflow.setInit(copiedWorkflow.getInit());
-                }
-            }
-        }
-    }
-
     private static Definitions parseRawDsl(String dsl) {
         try {
             final ObjectMapper objectMapper = dsl.startsWith("{") ? JSON_OBJECT_MAPPER : YAML_OBJECT_MAPPER;
@@ -362,7 +329,6 @@ public class DSLProcessor {
             }
 
             setNames(definitions.getPlugins());
-            setNames(definitions.getWorkflows());
             setNames(definitions.getRelationships());
             setNames(definitions.getTypes());
             setNames(definitions.getInterfaces());

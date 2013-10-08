@@ -8,8 +8,6 @@ application_template:
     topology:
         -   name: "host1"
             type: "cloudify.tosca.types.host"
-
-workflows:
-    service_template1.host1:
-        init:
-            radial: "service_template1_host1_override"
+            workflows:
+                init:
+                    radial: "service_template1_host1_override"
