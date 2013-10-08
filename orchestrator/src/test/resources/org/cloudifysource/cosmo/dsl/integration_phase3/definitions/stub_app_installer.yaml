@@ -1,8 +1,10 @@
-definitions:
 
-    artifacts:
-        cloudify.tosca.artifacts.plugin.stub_app_installer:
-            derived_from: "cloudify.tosca.artifacts.agent_plugin"
-            properties:
-                interface: "cloudify.tosca.interfaces.app_module_installer"
-                url: "#{plugin_repository}/stub-installer.zip"
+imports:
+    - "cloudify.types"
+
+plugins:
+    cloudify.tosca.artifacts.plugin.stub_app_installer:
+        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        properties:
+            interface: "cloudify.tosca.interfaces.app_module_installer"
+            url: "#{plugin_repository}/stub-installer.zip"

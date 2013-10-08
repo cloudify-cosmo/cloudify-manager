@@ -38,18 +38,18 @@ import java.util.Set;
  */
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
-    private static final String CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN = "cloudify.tosca.artifacts.plugin";
-    private static final String CLOUDIFY_TOSCA_ARTIFACTS_REMOTE_PLUGIN = "cloudify.tosca.artifacts.remote_plugin";
-    private static final String CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN = "cloudify.tosca.artifacts.agent_plugin";
+    private static final String CLOUDIFY_TOSCA_PLUGIN = "cloudify.tosca.artifacts.plugin";
+    private static final String CLOUDIFY_TOSCA_REMOTE_PLUGIN = "cloudify.tosca.artifacts.remote_plugin";
+    private static final String CLOUDIFY_TOSCA_AGENT_PLUGIN = "cloudify.tosca.artifacts.agent_plugin";
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
-                                           Map<String, ServiceTemplate> populatedServiceTemplates,
-                                           Map<String, Artifact> populatedArtifacts,
+                                           Map<String, ApplicationTemplate> populatedServiceTemplates,
+                                           Map<String, Plugin> populatedPlugins,
                                            Map<String, Relationship> populatedRelationships) {
 
         Map<String, Set<String>> interfacePluginImplementations =
-                extractInterfacePluginImplementations(definitions.getInterfaces(), populatedArtifacts);
+                extractInterfacePluginImplementations(definitions.getInterfaces(), populatedPlugins);
 
         Map<String, Object> result = Maps.newHashMap();
         List<Map<String, Object>> nodes = Lists.newArrayList();
@@ -57,19 +57,19 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         Map<String, Object> nodesExtraData = Maps.newHashMap();
         Map<String, Map<String, Policy>> policies = Maps.newHashMap();
 
-        for (ServiceTemplate serviceTemplate : populatedServiceTemplates.values()) {
-            for (TypeTemplate typeTemplate : serviceTemplate.getTopology().values()) {
+        for (ApplicationTemplate applicationTemplate : populatedServiceTemplates.values()) {
+            for (TypeTemplate typeTemplate : applicationTemplate.getTopology()) {
                 // Type template name we be prepended with the service template
-                String nodeId = serviceTemplate.getName() + "." + typeTemplate.getName();
+                String nodeId = applicationTemplate.getName() + "." + typeTemplate.getName();
                 typeTemplate.setName(nodeId);
                 Map<String, Object> node = processTypeTemplateNode(
-                        serviceTemplate.getName(),
+                        applicationTemplate.getName(),
                         typeTemplate,
                         definitions,
                         interfacePluginImplementations,
-                        populatedArtifacts);
+                        populatedPlugins);
                 Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
-                        serviceTemplate.getName(),
+                        applicationTemplate.getName(),
                         typeTemplate);
                 nodes.add(node);
                 nodesMap.put(nodeId, node);
@@ -78,7 +78,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             }
         }
 
-        processNodesRelationshipPlugins(nodesMap, populatedArtifacts);
+        processNodesRelationshipPlugins(nodesMap, populatedPlugins);
 
         result.put("nodes", nodes);
         result.put("nodes_extra", nodesExtraData);
@@ -90,7 +90,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     }
 
     private void processNodesRelationshipPlugins(Map<String, Map<String, Object>> nodesMap,
-                                                 Map<String, Artifact> populatedArtifacts) {
+                                                 Map<String, Plugin> populatedPlugins) {
         for (Map<String, Object> node : nodesMap.values()) {
             List<Map<String, String>> nodeRelationships = (List<Map<String, String>>) node.get("relationships");
             for (Map<String, String> relationship : nodeRelationships) {
@@ -107,7 +107,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                         throw new IllegalArgumentException("Undefined run location: " + runLocation + " for " +
                                 "relationship in node: " + node.get("id"));
                     }
-                    Map<String, Object> pluginDetails = buildPluginDetails(populatedArtifacts, interfaceImplementation);
+                    Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, interfaceImplementation);
                     Map<String, Object> nodeToUpdatePlugins = (Map<String, Object>) nodeToUpdate.get("plugins");
                     if (nodeToUpdatePlugins.containsKey(interfaceImplementation)) {
                         throw new IllegalArgumentException("Cannot override plugin definition of: " +
@@ -135,7 +135,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                                                         TypeTemplate typeTemplate,
                                                         Definitions definitions,
                                                         Map<String, Set<String>> interfacesToPluginImplementations,
-                                                        Map<String, Artifact> populatedArtifacts) {
+                                                        Map<String, Plugin> populatedPlugins) {
         Map<String, Object> node = Maps.newHashMap();
 
         setNodeId(typeTemplate, node);
@@ -152,41 +152,41 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                                     definitions,
                                     interfacesToPluginImplementations,
                                     node,
-                                    populatedArtifacts);
+                                    populatedPlugins);
 
 
         return node;
     }
 
     private Map<String, Set<String>> extractInterfacePluginImplementations(Map<String, Interface> interfaces,
-                                                                           Map<String, Artifact> populatedArtifacts) {
+                                                                           Map<String, Plugin> populatedPlugins) {
         Map<String, Set<String>> interfacePluginImplementations = Maps.newHashMap();
         for (String interfaceName : interfaces.keySet()) {
             interfacePluginImplementations.put(interfaceName, Sets.<String>newHashSet());
         }
 
-        for (Artifact artifact : populatedArtifacts.values()) {
-            if (!artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN) ||
-                    Objects.equal(CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN, artifact.getName())) {
+        for (Plugin plugin : populatedPlugins.values()) {
+            if (!plugin.isInstanceOf(CLOUDIFY_TOSCA_PLUGIN) ||
+                    Objects.equal(CLOUDIFY_TOSCA_PLUGIN, plugin.getName())) {
                 continue;
             }
             Preconditions.checkArgument(
-                    artifact.isInstanceOf(
-                            CLOUDIFY_TOSCA_ARTIFACTS_REMOTE_PLUGIN) ||
-                            artifact.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN),
-                    "Plugin [%s] cannot be derived directly from [%s]", artifact.getName(),
-                    CLOUDIFY_TOSCA_ARTIFACTS_PLUGIN);
-            if (!artifact.getProperties().containsKey("interface") ||
-                !(artifact.getProperties().get("interface") instanceof String)) {
+                    plugin.isInstanceOf(
+                            CLOUDIFY_TOSCA_REMOTE_PLUGIN) ||
+                            plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN),
+                    "Plugin [%s] cannot be derived directly from [%s]", plugin.getName(),
+                    CLOUDIFY_TOSCA_PLUGIN);
+            if (!plugin.getProperties().containsKey("interface") ||
+                !(plugin.getProperties().get("interface") instanceof String)) {
                 continue;
             }
-            String pluginInterface = (String) artifact.getProperties().get("interface");
+            String pluginInterface = (String) plugin.getProperties().get("interface");
             Set<String> implementingPlugins = interfacePluginImplementations.get(pluginInterface);
             if (implementingPlugins == null) {
                 throw new IllegalArgumentException("Plugin references a non defined interface [" +
                         pluginInterface + "]");
             }
-            implementingPlugins.add(artifact.getName());
+            implementingPlugins.add(plugin.getName());
             interfacePluginImplementations.put(pluginInterface, implementingPlugins);
         }
         return interfacePluginImplementations;
@@ -222,10 +222,10 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         // later we'll add support for others
 
         // extract init
-        Optional<Object> initWorkflow = extractWorkflow(definitions.getPlans(), typeTemplate.getName());
+        Optional<Object> initWorkflow = extractWorkflow(definitions.getWorkflows(), typeTemplate.getName());
         Iterator<String> superTypes = typeTemplate.getSuperTypes().iterator();
         while (superTypes.hasNext() && !initWorkflow.isPresent()) {
-            initWorkflow = extractWorkflow(definitions.getPlans(), superTypes.next());
+            initWorkflow = extractWorkflow(definitions.getWorkflows(), superTypes.next());
         }
         if (!initWorkflow.isPresent()) {
             throw new IllegalArgumentException("No init workflow found for template: " + typeTemplate.getName());
@@ -235,12 +235,12 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("workflows", workflows);
     }
 
-    private Optional<Object> extractWorkflow(Map<String, Plan> plans, String typeName) {
-        Plan plan = plans.get(typeName);
-        if (plan == null) {
+    private Optional<Object> extractWorkflow(Map<String, Workflow> plans, String typeName) {
+        Workflow workflow = plans.get(typeName);
+        if (workflow == null) {
             return Optional.absent();
         }
-        Object initWorkflow = plan.getInit().get("radial");
+        Object initWorkflow = workflow.getInit().get("radial");
         return Optional.fromNullable(initWorkflow);
     }
 
@@ -252,7 +252,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     private void setNodeOperationsAndPlugins(TypeTemplate typeTemplate, Definitions definitions,
                                              Map<String, Set<String>> interfacesToPluginImplementations,
-                                             Map<String, Object> node, Map<String, Artifact> populatedArtifacts) {
+                                             Map<String, Object> node, Map<String, Plugin> populatedPlugins) {
         Set<String> sameNameOperations = Sets.newHashSet();
         Map<String, String> operationToPlugin = Maps.newHashMap();
         Map<String, Map<String, Object>> plugins = Maps.newHashMap();
@@ -289,7 +289,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 pluginImplementation = pluginImplementations.iterator().next();
             }
 
-            Map<String, Object> pluginDetails = buildPluginDetails(populatedArtifacts, pluginImplementation);
+            Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, pluginImplementation);
             plugins.put(pluginImplementation, pluginDetails);
 
             Set<String> operations = Sets.newHashSet(theInterface.getOperations());
@@ -316,14 +316,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("operations", operationToPlugin);
     }
 
-    private Map<String, Object> buildPluginDetails(Map<String, Artifact> populatedArtifacts,
+    private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedArtifacts,
                                                    String pluginImplementation) {
         Map<String, Object> pluginDetails = Maps.newHashMap();
-        Artifact plugin = populatedArtifacts.get(pluginImplementation);
+        Plugin plugin = populatedArtifacts.get(pluginImplementation);
         if (plugin == null) {
             throw new IllegalArgumentException("No plugin named: " + pluginImplementation + "is defined");
         }
-        boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_ARTIFACTS_WORKER_PLUGIN);
+        boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN);
         pluginDetails.putAll(plugin.getProperties());
         pluginDetails.put("name", pluginImplementation);
         pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));

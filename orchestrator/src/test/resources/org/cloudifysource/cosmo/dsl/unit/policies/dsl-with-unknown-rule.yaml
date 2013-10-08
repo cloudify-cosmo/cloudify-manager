@@ -1,20 +1,17 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
 
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-        - "middleware_component_installer"
-
-    service_templates:
-        web_server:
-            topology:
-                webserver_host:
-                    type: "cloudify.tosca.types.host"
-                    policies:
-                        start_detection_policy:
-                            rules:
-                                host_status:
-                                    type: "unknown_rule"
-                                    properties:
-                                        state: "host_state"
-                                        value: "running"
+application_template:
+    name: "web_server"
+    topology:
+        -   name: "webserver_host"
+            type: "cloudify.tosca.types.host"
+            policies:
+                start_detection_policy:
+                    rules:
+                        -   type: "unknown_rule"
+                            properties:
+                                state: "host_state"
+                                value: "running"

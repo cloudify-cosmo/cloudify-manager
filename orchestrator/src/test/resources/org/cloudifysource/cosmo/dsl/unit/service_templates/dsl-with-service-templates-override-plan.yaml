@@ -1,19 +1,15 @@
-definitions:
+imports:
+    - "cloudify/tosca/types/types.yaml"
+    - "cloudify/tosca/artifacts/plugins/host_provisioner.yaml"
+    - "org/cloudifysource/cosmo/dsl/unit/service_templates/dsl-with-service-templates-override-workflow-imported.yaml"
 
-    imports:
-        - "cloudify/tosca/types/types.yaml"
-        - "cloudify/tosca/artifacts/plugins/host_provisioner.yaml"
-        - "org/cloudifysource/cosmo/dsl/unit/service_templates/dsl-with-service-templates-override-plan-imported.yaml"
+application_template:
+    name: "service_template1"
+    topology:
+        -   name: "host1"
+            type: "cloudify.tosca.types.host"
 
-    service_templates:
-
-        service_template1:
-            topology:
-                host1:
-                    type: "cloudify.tosca.types.host"
-
-
-    plans:
-        service_template1.host1:
-            init:
-                radial: "service_template1_host1_override"
+workflows:
+    service_template1.host1:
+        init:
+            radial: "service_template1_host1_override"

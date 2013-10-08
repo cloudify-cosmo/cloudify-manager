@@ -16,9 +16,9 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * A class used to represent a service template.
@@ -27,16 +27,24 @@ import java.util.Map;
  * @author Dan Kilman
  * @since 0.1
  */
-public class ServiceTemplate extends Definition {
+public class ApplicationTemplate extends Definition {
 
-    private Map<String, TypeTemplate> topology = Maps.newHashMap();
+    private String name;
+    private List<TypeTemplate> topology = Lists.newLinkedList();
 
-    public Map<String, TypeTemplate> getTopology() {
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public List<TypeTemplate> getTopology() {
         return topology;
     }
 
-    public void setTopology(Map<String, TypeTemplate> topology) {
+    public void setTopology(List<TypeTemplate> topology) {
         this.topology = topology;
     }
-
 }

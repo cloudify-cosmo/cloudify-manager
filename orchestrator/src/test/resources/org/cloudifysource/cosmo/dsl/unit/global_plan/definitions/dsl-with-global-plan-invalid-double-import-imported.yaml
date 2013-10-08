@@ -1,4 +1,2 @@
-definitions:
-
-  global_plan: "some_global_plan.radial"
+global_plan: "some_global_plan.radial"
 
