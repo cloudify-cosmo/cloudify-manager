@@ -1,5 +1,16 @@
+# yaml files
 cloudify.types: cloudify/tosca/types/types.yaml
 cloudify.policies: cloudify/tosca/policies/policies.yaml
+
+# workflows
+cloudify.workflows.install: cloudify/workflows/install.radial
+
+# policies
+cloudify.policies.start_detection: cloudify/policies/start_detection.clj
+cloudify.policies.failure_detection: cloudify/policies/failure_detection.clj
+cloudify.policies.performance: cloudify/policies/performance.clj
+
+# plugins
 app_module_installer: cloudify/tosca/artifacts/plugins/app_module_installer.yaml
 host_provisioner: cloudify/tosca/artifacts/plugins/host_provisioner.yaml
 middleware_component_installer: cloudify/tosca/artifacts/plugins/middleware_component_installer.yaml

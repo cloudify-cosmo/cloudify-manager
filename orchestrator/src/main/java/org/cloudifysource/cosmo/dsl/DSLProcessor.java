@@ -74,7 +74,8 @@ public class DSLProcessor {
 
             ImportsContext importContext = new ImportsContext(
                     ResourceLocationHelper.createLocationString(baseLocation, "definitions"));
-            importContext.addMapping(loadAliasMapping());
+            Map<String, String> aliasMappings = loadAliasMapping();
+            importContext.addMapping(aliasMappings);
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
@@ -89,22 +90,14 @@ public class DSLProcessor {
             validatePolicies(nodeTemplates, definitions.getPolicies());
             validateRelationships(nodeTemplates, populatedRelationships);
 
+            importReferencedWorkflows(definitions, populatedTypes, nodeTemplates, baseLocation, aliasMappings);
+            importReferencedPolicies(definitions, baseLocation, aliasMappings);
+
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
                     populatedServiceTemplates,
                     populatedArtifacts,
                     populatedRelationships);
-
-            if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
-                String globalPlanResourcePath = definitions.getGlobalPlan();
-                ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(baseLocation);
-                resourceLoadingContext.setContextLocation(
-                        ResourceLocationHelper.createLocationString(baseLocation, "workflows"));
-                DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
-                String globalPlanContent = globalPlanResource.getContent();
-                plan.put("global_workflow", globalPlanContent);
-                LOG.debug("Loaded global plan: \n{}", globalPlanContent);
-            }
 
             String result = JSON_OBJECT_MAPPER.writeValueAsString(plan);
             LOG.debug("Processed dsl is: {}", result);
@@ -115,6 +108,58 @@ public class DSLProcessor {
         }
     }
 
+    private static void importReferencedPolicies(Definitions definitions,
+                                                 String baseLocation,
+                                                 Map<String, String> aliasMappings) {
+        ImportsContext context = new ImportsContext(
+                ResourceLocationHelper.createLocationString(baseLocation, "policies"));
+        context.addMapping(aliasMappings);
+        for (PolicyDefinition policy : definitions.getPolicies().getTypes().values()) {
+            if (!Strings.isNullOrEmpty(policy.getRef())) {
+                Preconditions.checkArgument(Strings.isNullOrEmpty(policy.getPolicy()),
+                        "'ref' and 'policy' cannot be both specified for policy [%s]", policy);
+                final DSLResource resource = ResourcesLoader.load(policy.getRef(), context);
+                policy.setPolicy(resource.getContent());
+            }
+        }
+    }
+
+    private static void importReferencedWorkflows(Definitions definitions,
+                                                  Map<String, Type> types,
+                                                  Map<String, TypeTemplate> templates,
+                                                  String baseLocation,
+                                                  Map<String, String> aliasMappings) {
+        ImportsContext context = new ImportsContext(
+                ResourceLocationHelper.createLocationString(baseLocation, "workflows"));
+        context.addMapping(aliasMappings);
+        for (Workflow workflow : definitions.getWorkflows().values()) {
+            importWorkflow(context, workflow);
+        }
+        for (Type template : types.values()) {
+            for (Map.Entry<String, Workflow> entry : template.getWorkflows().entrySet()) {
+                importWorkflow(context, entry.getValue());
+                entry.getValue().setName(entry.getKey());
+            }
+        }
+        for (Type template : templates.values()) {
+            for (Map.Entry<String, Workflow> entry : template.getWorkflows().entrySet()) {
+                importWorkflow(context, entry.getValue());
+                entry.getValue().setName(entry.getKey());
+            }
+        }
+    }
+
+    private static void importWorkflow(ImportsContext context, Workflow workflow) {
+        if (!Strings.isNullOrEmpty(workflow.getRef())) {
+            Preconditions.checkArgument(Strings.isNullOrEmpty(
+                    workflow.getRadial()), "'ref' and 'radial' cannot be both specified for workflow [%s]", workflow);
+            final DSLResource resource = ResourcesLoader.load(workflow.getRef(), context);
+            workflow.setRadial(resource.getContent());
+            workflow.setRef(null);
+        }
+    }
+
+
     private static void validateRelationships(Map<String, TypeTemplate> nodeTemplates,
                                               Map<String, Relationship> populatedRelationships) {
         for (Map.Entry<String, TypeTemplate> templateEntry : nodeTemplates.entrySet()) {
@@ -124,8 +169,8 @@ public class DSLProcessor {
             for (RelationshipTemplate relationshipTemplate : template.getRelationships()) {
                 String targetName = String.format("%s.%s", serviceTemplate, relationshipTemplate.getTarget());
                 Preconditions.checkArgument(populatedRelationships.containsKey(relationshipTemplate.getType()),
-                                            "No relationship of type [%s] found for node [%s]",
-                                            relationshipTemplate.getType(), template.getName());
+                        "No relationship of type [%s] found for node [%s]",
+                        relationshipTemplate.getType(), template.getName());
                 Preconditions.checkArgument(nodeTemplates.containsKey(targetName),
                         "No node template [%s] found for relationship [%s] in node [%s]",
                         targetName, relationshipTemplate.getType(), typeTemplateName);
@@ -202,20 +247,20 @@ public class DSLProcessor {
 
     private static Map<String, Type> buildPopulatedTypesMap(Map<String, Type> types) {
         return buildPopulatedMap(Type.ROOT_NODE_TYPE_NAME,
-                                 Type.ROOT_NODE_TYPE,
-                                 types);
+                Type.ROOT_NODE_TYPE,
+                types);
     }
 
     private static Map<String, Plugin> buildPopulatedArtifactsMap(Map<String, Plugin> artifacts) {
         return buildPopulatedMap(Plugin.ROOT_PLUGIN_NAME,
-                                 Plugin.ROOT_PLUGIN,
-                                 artifacts);
+                Plugin.ROOT_PLUGIN,
+                artifacts);
     }
 
     private static Map<String, Relationship> buildPopulatedRelationshipsMap(Map<String, Relationship> relationships) {
         return buildPopulatedMap(Relationship.ROOT_RELATIONSHIP_NAME,
-                                 Relationship.ROOT_RELATIONSHIP,
-                                 relationships);
+                Relationship.ROOT_RELATIONSHIP,
+                relationships);
     }
 
     private static <T extends InheritedDefinition> Map<String, T> buildPopulatedMap(
@@ -262,44 +307,44 @@ public class DSLProcessor {
         return tree;
     }
 
-    private static Definitions parseDslAndHandleImports(DSLResource dsl, ImportsContext context) {
+    private static Definitions parseDslAndHandleImports(DSLResource dsl,
+                                                        ImportsContext importContext) {
         final Definitions definitions = parseRawDsl(dsl.getContent());
-        String currentContext = context.getContextLocation();
+        String currentContext = importContext.getContextLocation();
         LOG.debug("Loading imports for dsl: {} [imports={}]", dsl.getLocation(), definitions.getImports());
         for (String definitionImport : definitions.getImports()) {
 
-            DSLResource importedDsl = ResourcesLoader.load(definitionImport, context);
+            DSLResource importedDsl = ResourcesLoader.load(definitionImport, importContext);
 
             LOG.debug("Loaded import: {} [uri={}]", definitionImport, importedDsl.getLocation());
 
-            if (context.isImported(importedDsl.getLocation())) {
+            if (importContext.isImported(importedDsl.getLocation())) {
                 LOG.debug("Filtered import: {} (already imported)", definitionImport);
                 continue;
             }
-            context.addImport(importedDsl.getLocation());
+            importContext.addImport(importedDsl.getLocation());
 
-            context.setContextLocation(ResourceLocationHelper.getParentLocation(importedDsl.getLocation()));
-            Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
-            context.setContextLocation(currentContext);
+            importContext.setContextLocation(ResourceLocationHelper.getParentLocation(importedDsl.getLocation()));
+            Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, importContext);
+            importContext.setContextLocation(currentContext);
 
             copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
             copyDefinitions(importedDefinitions.getPlugins(), definitions.getPlugins());
             copyDefinitions(importedDefinitions.getRelationships(), definitions.getRelationships());
             copyDefinitions(importedDefinitions.getInterfaces(), definitions.getInterfaces());
+            copyWorkflows(importedDefinitions.getWorkflows(), definitions.getWorkflows());
             copyMapNoOverride(importedDefinitions.getPolicies().getRules(), definitions.getPolicies().getRules());
             copyMapNoOverride(importedDefinitions.getPolicies().getTypes(), definitions.getPolicies().getTypes());
-            copyGlobalPlan(importedDefinitions, definitions);
         }
 
         return definitions;
     }
 
-    private static void copyGlobalPlan(Definitions importedDefinitions, Definitions definitions) {
-        if (!Strings.isNullOrEmpty(importedDefinitions.getGlobalPlan())) {
-            if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
-                throw new IllegalArgumentException("Cannot override definitions of global plan");
+    private static void copyWorkflows(Map<String, Workflow> copyFrom, Map<String, Workflow> copyTo) {
+        for (Workflow workflow : copyFrom.values()) {
+            if (!copyTo.containsKey(workflow.getName())) {
+                copyTo.put(workflow.getName(), workflow);
             }
-            definitions.setGlobalPlan(importedDefinitions.getGlobalPlan());
         }
     }
 
@@ -332,6 +377,7 @@ public class DSLProcessor {
             setNames(definitions.getRelationships());
             setNames(definitions.getTypes());
             setNames(definitions.getInterfaces());
+            setNames(definitions.getWorkflows());
 
             return definitions;
         } catch (IOException e) {
@@ -356,7 +402,8 @@ public class DSLProcessor {
     private static Map<String, String> loadAliasMapping() {
         URL mappingResource = Resources.getResource(ALIAS_MAPPING_RESOURCE);
         try {
-            return YAML_OBJECT_MAPPER.readValue(mappingResource, new TypeReference<Map<String, String>>() { });
+            return YAML_OBJECT_MAPPER.readValue(mappingResource, new TypeReference<Map<String, String>>() {
+            });
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

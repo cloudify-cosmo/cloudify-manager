@@ -81,7 +81,16 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         result.put("policies", policies);
         result.put("policies_events", definitions.getPolicies().getTypes());
         result.put("relationships", populatedRelationships);
+        result.put("workflows", processWorkflows(definitions.getWorkflows()));
         return result;
+    }
+
+    private Map<String, Object> processWorkflows(Map<String, Workflow> workflows) {
+        final Map<String, Object> flatWorkflows = Maps.newHashMap();
+        for (Workflow workflow : workflows.values()) {
+            flatWorkflows.put(workflow.getName(), workflow.getRadial());
+        }
+        return flatWorkflows;
     }
 
     private Map<String, Object> processTypeTemplateNodeExtraData(String serviceTemplateName,
@@ -109,7 +118,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeRelationships(typeTemplate, serviceTemplateName, node);
 
-        setNodeWorkflows(typeTemplate, definitions, node);
+        setNodeWorkflows(typeTemplate, node);
 
         setNodePolicies(typeTemplate, node);
 
@@ -191,12 +200,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
 
 
-    private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
-        final Map<String, Object> workflows = Maps.newHashMap();
-        for (Map.Entry<String, Workflow> entry : typeTemplate.getWorkflows().entrySet()) {
-            workflows.put(entry.getKey(), entry.getValue().getRadial());
-        }
-        node.put("workflows", workflows);
+    private void setNodeWorkflows(TypeTemplate typeTemplate, Map<String, Object> node) {
+        node.put("workflows", processWorkflows(typeTemplate.getWorkflows()));
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {

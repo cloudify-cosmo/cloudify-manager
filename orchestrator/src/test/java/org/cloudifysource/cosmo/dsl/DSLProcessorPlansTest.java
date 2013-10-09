@@ -48,8 +48,7 @@ public class DSLProcessorPlansTest extends AbstractDSLProcessorTest {
     private void assertInitPlan(Map<String, Node> nodes, String nodeId, String plan) {
         assertThat(nodes).containsKey(nodeId);
         final Node node = nodes.get(nodeId);
-        final Object init = node.getWorkflows().get("init").toString();
-        assertThat(init).isEqualTo(plan);
+        assertThat(node.getWorkflows().get("init")).isEqualTo(plan);
     }
 
 }

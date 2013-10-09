@@ -69,14 +69,17 @@ class PreparePlanParticipant < Ruote::Participant
         node['execution_params_names'] = execution_params_names
       end
 
-      workitem.fields['plan'] = plan
-
-      if plan.has_key? 'global_workflow'
-        workitem.fields['global_workflow'] = Ruote::RadialReader.read(plan['global_workflow'])
+      if plan.has_key? 'workflows'
+        workflows = Hash.new
+        plan['workflows'].each do |key, value|
+          workflows[key] = Ruote::RadialReader.read(value)
+        end
+        plan['workflows'] = workflows
       end
 
-      $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
+      workitem.fields['plan'] = plan
 
+      $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
       reply
 
     rescue => e

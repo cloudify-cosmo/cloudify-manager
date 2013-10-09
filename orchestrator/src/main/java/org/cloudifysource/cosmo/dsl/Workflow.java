@@ -26,6 +26,7 @@ package org.cloudifysource.cosmo.dsl;
 public class Workflow extends Definition {
 
     private String radial;
+    private String ref;
 
     public String getRadial() {
         return radial;
@@ -33,5 +34,13 @@ public class Workflow extends Definition {
 
     public void setRadial(String radial) {
         this.radial = radial;
+    }
+
+    public String getRef() {
+        return ref;
+    }
+
+    public void setRef(String ref) {
+        this.ref = ref;
     }
 }
