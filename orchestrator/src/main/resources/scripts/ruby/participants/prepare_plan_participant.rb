@@ -97,7 +97,8 @@ class PreparePlanParticipant < Ruote::Participant
       node[PrepareOperationParticipant::PLUGINS].each do |_, plugin|
         plugin_name = plugin['name']
         agent_plugin = plugin[PrepareOperationParticipant::AGENT_PLUGIN]
-        raise "node #{node_id} has no 'contained_in' a host relationship and it has an agent plugin named " +
+        raise "node #{node_id} has no relationship which makes it contained within a host and it
+has an agent plugin named " +
               "#{plugin_name}, agent plugins must be installed on a host" unless
             agent_plugin.to_s.eql? 'false'
       end
