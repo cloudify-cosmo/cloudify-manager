@@ -255,9 +255,9 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
-        String interfaceImplementation;
-        String runPhase;
-        String runLocation;
+        String plugin;
+        String bindTime;
+        String bindLocation;
 
         public String getType() {
             return type;
@@ -275,28 +275,28 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
-        public String getInterfaceImplementation() {
-            return interfaceImplementation;
+        public String getPlugin() {
+            return plugin;
         }
 
-        public void setInterfaceImplementation(String interfaceImplementation) {
-            this.interfaceImplementation = interfaceImplementation;
+        public void setPlugin(String plugin) {
+            this.plugin = plugin;
         }
 
-        public String getRunPhase() {
-            return runPhase;
+        public String getBindTime() {
+            return bindTime;
         }
 
-        public void setRunPhase(String runPhase) {
-            this.runPhase = runPhase;
+        public void setBindTime(String bindTime) {
+            this.bindTime = bindTime;
         }
 
-        public String getRunLocation() {
-            return runLocation;
+        public String getBindLocation() {
+            return bindLocation;
         }
 
-        public void setRunLocation(String runLocation) {
-            this.runLocation = runLocation;
+        public void setBindLocation(String bindLocation) {
+            this.bindLocation = bindLocation;
         }
     }
 
