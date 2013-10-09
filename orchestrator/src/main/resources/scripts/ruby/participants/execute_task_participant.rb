@@ -46,6 +46,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   CLOUDIFY_RUNTIME = 'cloudify_runtime'
   EVENT_RESULT = 'result'
   RESULT_WORKITEM_FIELD = 'to_f'
+  SENDING_TASK = 'sending-task'
   TASK_SUCCEEDED = 'task-succeeded'
   TASK_FAILED = 'task-failed'
   TASK_REVOKED = 'task-revoked'
@@ -130,12 +131,53 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       @full_task_name = exec
 
+      event = {}
+      event['type'] = SENDING_TASK
+      populate_event_content(event, task_id, false)
+      description = event_to_s(event)
+      $user_logger.debug(description)
+
       executor.send_task(target, task_id, exec, json_props, self)
 
     rescue => e
       log_exception(e, 'execute_task')
       flunk(workitem, e)
     end
+  end
+
+  def populate_event_content(event, task_id, log_debug)
+    sub_workflow_name = workitem.sub_wf_name
+    workflow_name = workitem.wf_name
+    if sub_workflow_name == workflow_name
+      # no need to print sub workflow if there is none
+      event['wfname'] = workflow_name
+    else
+      event['wfname'] = "#{workflow_name}.#{sub_workflow_name}"
+    end
+
+    event['wfid'] = workitem.wfid
+
+    # if we are in the context of a node
+    # we should enrich the event even further.
+    if workitem.fields.has_key? NODE
+      node = workitem.fields[NODE]
+      parts = node['id'].split('.')
+      event['node_id'] = parts[1]
+      event['app_id'] = parts[0]
+    end
+
+    # log every event coming from task executions.
+    # this log will not be displayed to the user by default
+    if log_debug
+      $logger.debug('[event] {}', JSON.generate(event))
+    end
+
+    if @full_task_name.nil?
+      raise "task_name for task with id #{task_id} is null"
+    end
+    event['plugin'] = get_plugin_name_from_task(@full_task_name)
+    event['task_name'] = get_short_name_from_task_name(@full_task_name)
+
   end
 
   def extract_task_arguments(properties, argument_names)
@@ -156,41 +198,13 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       enriched_event = JSON.parse(json_event.to_s)
 
-      sub_workflow_name = workitem.sub_wf_name
-      workflow_name = workitem.wf_name
-      if sub_workflow_name == workflow_name
-        # no need to print sub workflow if there is none
-        enriched_event['wfname'] = workflow_name
-      else
-        enriched_event['wfname'] = "#{workflow_name}.#{sub_workflow_name}"
-      end
-
-      enriched_event['wfid'] = workitem.wfid
-
-      # if we are in the context of a node
-      # we should enrich the event even further.
-      if workitem.fields.has_key? NODE
-        node = workitem.fields[NODE]
-        parts = node['id'].split('.')
-        enriched_event['node_id'] = parts[1]
-        enriched_event['app_id'] = parts[0]
-      end
-
-      # log every event coming from task executions.
-      # this log will not be displayed to the user by default
-      $logger.debug('[event] {}', JSON.generate(enriched_event))
-
-      if @full_task_name.nil?
-        raise "task_name for task with id #{task_id} is null"
-      end
-      enriched_event['plugin'] = get_plugin_name_from_task(@full_task_name)
-      enriched_event['task_name'] = get_short_name_from_task_name(@full_task_name)
+      populate_event_content(enriched_event, task_id, true)
 
       description = event_to_s(enriched_event)
 
       case event_type
 
-        when 'task-succeeded'
+        when TASK_SUCCEEDED
 
           if workitem.params.has_key? RESULT_WORKITEM_FIELD
             result_field = workitem.params[RESULT_WORKITEM_FIELD]
@@ -201,7 +215,7 @@ class ExecuteTaskParticipant < Ruote::Participant
           end
           reply(workitem)
 
-        when 'task-failed' || 'task-revoked'
+        when TASK_FAILED || TASK_REVOKED
 
           unless @full_task_name == VERIFY_PLUGIN_TASK_NAME
             $user_logger.debug(red(description))
