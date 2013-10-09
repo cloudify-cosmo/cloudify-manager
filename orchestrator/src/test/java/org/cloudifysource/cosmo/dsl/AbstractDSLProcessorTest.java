@@ -73,7 +73,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Map<String, Policy>> policies;
         Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
         private Map<String, PolicyDefinition> policiesEvents;
-        Map<String, Object> relationships;
+        Map<String, Relationship> relationships;
 
         public List<Node> getNodes() {
             return nodes;
@@ -119,11 +119,11 @@ public abstract class AbstractDSLProcessorTest {
             return policiesEvents;
         }
 
-        public Map<String, Object> getRelationships() {
+        public Map<String, Relationship> getRelationships() {
             return relationships;
         }
 
-        public void setRelationships(Map<String, Object> relationships) {
+        public void setRelationships(Map<String, Relationship> relationships) {
             this.relationships = relationships;
         }
     }

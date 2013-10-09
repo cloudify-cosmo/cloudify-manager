@@ -61,8 +61,50 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(relationshipTemplates3.get(1).getTargetId()).isEqualTo("service_template.host2");
         assertThat(relationshipTemplates3.get(2).getTargetId()).isEqualTo("service_template.host3");
 
+    }
+
+    @Test
+    public void testRelationshipInterfaceAndTemplate() {
+
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-interface.yaml";
+
+        Processed processed = process(dslPath);
+
+        Node node1 = findNode(processed.getNodes(), "service_template.webserver");
+        List<ProcessedRelationshipTemplate> relationshipTemplates1 = node1.getRelationships();
+
+        Node node2 = findNode(processed.getNodes(), "service_template.webapplication");
+        List<ProcessedRelationshipTemplate> relationshipTemplates2 = node2.getRelationships();
+
+        assertThat(relationshipTemplates1.size()).isEqualTo(1);
+        assertThat(relationshipTemplates2.size()).isEqualTo(1);
+
+        assertThat(relationshipTemplates1.get(0).getType()).isEqualTo("relationship1");
+        assertThat(relationshipTemplates1.get(0).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates1.get(0).getPlugin()).isEqualTo("plugin1");
+        assertThat(relationshipTemplates1.get(0).getBindLocation()).isEqualTo("source");
+        assertThat(relationshipTemplates1.get(0).getBindTime()).isEqualTo("pre_started");
+
+        assertThat(relationshipTemplates2.get(0).getType()).isEqualTo("relationship2");
+        assertThat(relationshipTemplates2.get(0).getTargetId()).isEqualTo("service_template.webserver");
+        assertThat(relationshipTemplates2.get(0).getPlugin()).isEqualTo("plugin2");
+        assertThat(relationshipTemplates2.get(0).getBindLocation()).isEqualTo("target");
+        assertThat(relationshipTemplates2.get(0).getBindTime()).isEqualTo("post_started");
+
+        // Test that we place the right plugins under the right node during processing
+        // based on bind_location (source/target)
+        assertThat(node1.getPlugins()).containsKey("plugin1");
+        assertThat(node1.getPlugins()).containsKey("plugin2");
+
+        assertThat(processed.getRelationships().get("relationship1").getInterface().getName()).isEqualTo("interface1");
+        assertThat(processed.getRelationships().get("relationship2").getInterface().getName()).isEqualTo("interface2");
+
+        assertThat(processed.getRelationships().get("relationship1").getWorkflow()).isEqualTo("workflow1");
+        assertThat(processed.getRelationships().get("relationship2").getWorkflow()).isEqualTo("workflow2");
 
     }
+
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testRelationshipTemplateInvalidType() {
