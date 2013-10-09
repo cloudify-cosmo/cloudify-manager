@@ -14,7 +14,7 @@ define global_workflow
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
-            sequence if: '${v:relationship.run_phase} == pre_source_started'
+            sequence if: '${v:relationship.bind_time} == pre_started'
                 log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
                 set 'v:relationship_workflow': '$v:relationship.workflow'
                 relationship_workflow relationship: '$v:relationship'
@@ -27,7 +27,7 @@ define global_workflow
 
         state resource_id: '${node.id}', state: { reachable: "true" }
         iterator on: '$f:node.relationships', to_v: 'relationship'
-            sequence if: '${v:relationship.run_phase} == post_source_started'
+            sequence if: '${v:relationship.bind_time} == post_started'
                 log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
                 set 'v:relationship_workflow': '$v:relationship.workflow'
                 relationship_workflow relationship: '$v:relationship'

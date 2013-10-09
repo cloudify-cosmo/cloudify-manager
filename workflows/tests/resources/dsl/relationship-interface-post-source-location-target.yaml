@@ -28,8 +28,8 @@ application_template:
                 -   type: "cloudify.tosca.relationships.connected_to"
                     target: "host"
                     plugin: "connection_configurer_mock"
-                    bind_time: "pre_started"
-                    bind_location: "source"
+                    bind_time: "post_started"
+                    bind_location: "target"
             policies:
                 start_detection_policy:
                     rules:

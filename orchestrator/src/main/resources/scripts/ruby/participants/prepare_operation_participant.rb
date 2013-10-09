@@ -26,9 +26,9 @@ class PrepareOperationParticipant < Ruote::Participant
   NODE_ID = 'id'
   RELATIONSHIP_OTHER_NODE = 'relationship_other_node'
   RUOTE_RELATIONSHIP_NODE_ID = 'relationship_node_id'
-  RUN_LOCATION = 'run_location'
+  BIND_LOCATION = 'bind_location'
   TYPE = 'type'
-  INTERFACE_IMPLEMENTATION = 'interface_implementation'
+  PLUGIN = 'plugin'
 
   NODE = 'node'
   OPERATION = 'operation'
@@ -53,14 +53,12 @@ class PrepareOperationParticipant < Ruote::Participant
       if relationship_operation
         relationship = workitem.params[RELATIONSHIP]
         target_id = relationship[TARGET_ID]
-        run_location = relationship[RUN_LOCATION]
-        relationship_type = relationship[TYPE]
-        plugin_name = relationship[INTERFACE_IMPLEMENTATION]
+        bind_location = relationship[BIND_LOCATION]
+        plugin_name = relationship[PLUGIN]
 
         raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
-        raise "Relationship [#{relationship}] missing run_location" if run_location.nil? or run_location.empty?
-        raise "Relationship [#{relationship}] missing type" if relationship_type.nil? or relationship_type.empty?
-        raise "Relationship [#{relationship}] missing interface_implementation" if relationship_type.nil? or relationship_type.empty?
+        raise "Relationship [#{relationship}] missing bind_location" if bind_location.nil? or bind_location.empty?
+        raise "Relationship [#{relationship}] missing plugin" if plugin_name.nil? or plugin_name.empty?
 
         source_node = workitem.fields[NODE]
         target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
@@ -68,18 +66,19 @@ class PrepareOperationParticipant < Ruote::Participant
 
         raise "Node missing with id #{target_id}" if target_node.nil?
 
-        if run_location == 'source'
+        if bind_location == 'source'
           node = source_node
           workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = target_node[NODE_ID]
-        elsif run_location == 'target'
+        elsif bind_location == 'target'
           node = target_node
           workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = source_node[NODE_ID]
         else
-          raise "Invalid run location specified for relationship[#{relationship}]: #{run_location}"
+          raise "Invalid bind location specified for relationship[#{relationship}]: #{bind_location}"
         end
       else
         node = workitem.fields[NODE]
-        workitem.fields[RELATIONSHIP_OTHER_NODE] = nil
+        workitem.fields.delete(RELATIONSHIP_OTHER_NODE)
+        workitem.fields.delete(RUOTE_RELATIONSHIP_NODE_ID)
 
         operations = node[OPERATIONS]
         raise "Node has no operations: #{node}" unless operations != nil

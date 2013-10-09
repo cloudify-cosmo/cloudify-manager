@@ -94,26 +94,26 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         for (Map<String, Object> node : nodesMap.values()) {
             List<Map<String, String>> nodeRelationships = (List<Map<String, String>>) node.get("relationships");
             for (Map<String, String> relationship : nodeRelationships) {
-                String interfaceImplementation = relationship.get("interface_implementation");
-                if (!Strings.isNullOrEmpty(interfaceImplementation)) {
+                String pluginName = relationship.get("plugin");
+                if (!Strings.isNullOrEmpty(pluginName)) {
                     Map<String, Object> nodeToUpdate;
-                    String runLocation = relationship.get("run_location");
+                    String bindLocation = relationship.get("bind_location");
                     String targetId = relationship.get("target_id");
-                    if ("source".equals(runLocation)) {
+                    if ("source".equals(bindLocation)) {
                         nodeToUpdate = node;
-                    } else if ("target".equals(runLocation)) {
+                    } else if ("target".equals(bindLocation)) {
                         nodeToUpdate =  nodesMap.get(targetId);
                     } else {
-                        throw new IllegalArgumentException("Undefined run location: " + runLocation + " for " +
+                        throw new IllegalArgumentException("Undefined bind location: " + bindLocation + " for " +
                                 "relationship in node: " + node.get("id"));
                     }
-                    Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, interfaceImplementation);
+                    Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, pluginName);
                     Map<String, Object> nodeToUpdatePlugins = (Map<String, Object>) nodeToUpdate.get("plugins");
-                    if (nodeToUpdatePlugins.containsKey(interfaceImplementation)) {
+                    if (nodeToUpdatePlugins.containsKey(pluginName)) {
                         throw new IllegalArgumentException("Cannot override plugin definition of: " +
-                                interfaceImplementation + " in node: " + nodeToUpdate.get("id"));
+                                pluginName + " in node: " + nodeToUpdate.get("id"));
                     }
-                    nodeToUpdatePlugins.put(interfaceImplementation, pluginDetails);
+                    nodeToUpdatePlugins.put(pluginName, pluginDetails);
                 }
             }
         }
@@ -207,9 +207,9 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget());
             relationshipMap.put("target_id", fullTargetId);
             relationshipMap.put("type", relationship.getType());
-            relationshipMap.put("interface_implementation", relationship.getInterfaceImplementation());
-            relationshipMap.put("run_location", relationship.getRunLocation());
-            relationshipMap.put("run_phase", relationship.getRunPhase());
+            relationshipMap.put("plugin", relationship.getPlugin());
+            relationshipMap.put("bind_location", relationship.getBindLocation());
+            relationshipMap.put("bind_time", relationship.getBindTime());
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);

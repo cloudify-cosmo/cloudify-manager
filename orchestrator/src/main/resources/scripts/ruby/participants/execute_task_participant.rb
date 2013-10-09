@@ -111,8 +111,17 @@ class ExecuteTaskParticipant < Ruote::Participant
         safe_merge!(final_properties, relationship_properties)
       end
       if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
+        # relationship_node_id refers to the node that is on the other side of the relationship.
+        # i.e if the task is to be executed at the target node then the relationship_node_id will refer
+        # to the source node and vice versa
         relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
-        payload_properties[RELATIONSHIP_NODE_ID] = relationship_node_id
+        safe_merge!(final_properties, {RELATIONSHIP_NODE_ID => relationship_node_id})
+
+        # override __cloudify_id to reflect actual execution location
+        source_node_id = workitem.fields[NODE]['id']
+        target_node_id = workitem.fields[RELATIONSHIP_NODE]['id']
+        final_properties[NODE_ID] = relationship_node_id == source_node_id ? target_node_id :
+                                                                             source_node_id
       end
       properties = to_map(final_properties)
 

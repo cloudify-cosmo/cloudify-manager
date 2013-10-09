@@ -20,7 +20,7 @@ import os
 import sys
 
 
-PLUGIN_INSTALLER_VERSION = "0.1.1"
+PLUGIN_INSTALLER_VERSION = "develop"
 PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/tarball/{" \
     "0}#egg=cosmo-plugin-plugin-installer-{0}".format(PLUGIN_INSTALLER_VERSION)
 
