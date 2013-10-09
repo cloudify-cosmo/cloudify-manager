@@ -1,11 +1,13 @@
-
 imports:
     - "cloudify.types"
-    - "python_webserver_installer.yaml"
-    - "stub_app_installer.yaml"
+    - "app_module_installer"
+    - "middleware_component_installer"
 
 application_template:
-    name: "simple_web_server"
+    name: "mysql_template"
     topology:
-        -   name: "webserver_middleware"
-            type: "cloudify.tosca.types.web_server"
+        -   name: "mysql_database_server"
+            type: "cloudify.tosca.types.db_server"
+            properties:
+                port: "3306"
+                installer_recipe: "mysql_chef_recipe"

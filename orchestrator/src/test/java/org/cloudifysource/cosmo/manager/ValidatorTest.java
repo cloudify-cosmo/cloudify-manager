@@ -39,26 +39,27 @@ public class ValidatorTest {
     @Test
     public void testInvalidDsl() throws IOException {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/validation/dsl-with-invalid-plans1.yaml";
-        //Check the dsl file exists so the test will fail on legit reason and not bacause this file was moved
+        //Check the dsl file exists so the test will fail on legit reason and not because this file was moved
         Resources.getResource(dslFile);
         try {
             Validator.validateDSL(dslFile);
             Assert.fail();
         } catch (Exception e) {
-            //We are expecting an exeption since this is a dsl with error.
+            //We are expecting an exception since this is a dsl with error.
         }
     }
 
     @Test
     public void testInvalidDslNodeWithAgentPluginNoHostRelationship() throws IOException {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/validation/dsl-node-agent-plugin-no-host.yaml";
-        //Check the dsl file exists so the test will fail on legit reason and not bacause this file was moved
+        //Check the dsl file exists so the test will fail on legit reason and not because this file was moved
         Resources.getResource(dslFile);
         try {
             Validator.validateDSL(dslFile);
             Assert.fail();
         } catch (Exception e) {
-            //We are expecting an exeption since this is a dsl with error.
+            Assert.assertTrue(e.getMessage().contains("relationship"));
+            Assert.assertTrue(e.getMessage().contains("host"));
         }
     }
 }

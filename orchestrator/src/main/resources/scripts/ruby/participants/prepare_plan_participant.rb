@@ -77,11 +77,30 @@ class PreparePlanParticipant < Ruote::Participant
 
       $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
 
+      validate_plan(plan)
+
       reply
 
     rescue => e
       log_exception(e, 'prepare_plan')
       flunk(workitem, e)
+    end
+  end
+
+  def validate_plan(plan)
+    plan[PrepareOperationParticipant::NODES].each{ |node| validate_node(node)}
+  end
+
+  def validate_node(node)
+    unless node.has_key? PrepareOperationParticipant::HOST_ID
+      node_id = node[PrepareOperationParticipant::NODE_ID]
+      node[PrepareOperationParticipant::PLUGINS].each do |_, plugin|
+        plugin_name = plugin['name']
+        agent_plugin = plugin[PrepareOperationParticipant::AGENT_PLUGIN]
+        raise "node #{node_id} has no 'contained_in' a host relationship and it has an agent plugin named " +
+              "#{plugin_name}, agent plugins must be installed on a host" unless
+            agent_plugin.to_s.eql? 'false'
+      end
     end
   end
 
