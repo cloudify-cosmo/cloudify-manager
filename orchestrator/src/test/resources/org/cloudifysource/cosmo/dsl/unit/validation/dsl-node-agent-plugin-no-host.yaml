@@ -1,0 +1,11 @@
+
+imports:
+    - "cloudify.types"
+    - "python_webserver_installer.yaml"
+    - "stub_app_installer.yaml"
+
+application_template:
+    name: "simple_web_server"
+    topology:
+        -   name: "webserver_middleware"
+            type: "cloudify.tosca.types.web_server"
