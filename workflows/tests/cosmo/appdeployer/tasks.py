@@ -31,6 +31,7 @@ def deploy(dsl, **kwargs):
     logger.info("deploying dsl: " + dsl)
     command = [
         "java",
+        '-XX:MaxPermSize=256m',
         "-jar",
         COSMO_JAR,
         "--dsl",

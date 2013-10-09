@@ -76,9 +76,10 @@ public class DSLProcessor {
                     ResourceLocationHelper.createLocationString(baseLocation, "definitions"));
             importContext.addMapping(loadAliasMapping());
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
+            extractRelationshipsInterfaces(definitions);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
-            Map<String, Plugin> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getPlugins());
+            Map<String, Plugin> populatedPlugins = buildPopulatedPluginsMap(definitions.getPlugins());
             Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
                     definitions.getRelationships());
 
@@ -93,7 +94,7 @@ public class DSLProcessor {
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
                     populatedServiceTemplates,
-                    populatedArtifacts,
+                    populatedPlugins,
                     populatedRelationships);
 
             if (!Strings.isNullOrEmpty(definitions.getGlobalPlan())) {
@@ -216,10 +217,10 @@ public class DSLProcessor {
                                  types);
     }
 
-    private static Map<String, Plugin> buildPopulatedArtifactsMap(Map<String, Plugin> artifacts) {
+    private static Map<String, Plugin> buildPopulatedPluginsMap(Map<String, Plugin> plugins) {
         return buildPopulatedMap(Plugin.ROOT_PLUGIN_NAME,
                                  Plugin.ROOT_PLUGIN,
-                                 artifacts);
+                                 plugins);
     }
 
     private static Map<String, Relationship> buildPopulatedRelationshipsMap(Map<String, Relationship> relationships) {
@@ -259,14 +260,14 @@ public class DSLProcessor {
             String rootName
     ) {
         Tree<String> tree = new Tree<>(rootName);
-        for (String artifactName : inheritedDefinitions.keySet()) {
-            tree.addNode(artifactName);
+        for (String definitionName : inheritedDefinitions.keySet()) {
+            tree.addNode(definitionName);
         }
         for (Map.Entry<String, ? extends InheritedDefinition> entry : inheritedDefinitions.entrySet()) {
-            String artifactName = entry.getKey();
+            String definitionName = entry.getKey();
             InheritedDefinition type = entry.getValue();
-            String parentArtifactName = type.getDerivedFrom();
-            tree.setParentChildRelationship(parentArtifactName, artifactName);
+            String parentDefinitionName = type.getDerivedFrom();
+            tree.setParentChildRelationship(parentDefinitionName, definitionName);
         }
         tree.validateLegalTree();
         return tree;
@@ -303,6 +304,19 @@ public class DSLProcessor {
         }
 
         return definitions;
+    }
+
+    private static void extractRelationshipsInterfaces(Definitions definitions) {
+        for (Relationship relationship : definitions.getRelationships().values()) {
+            if (relationship.getInterface() != null) {
+                String interfaceName = relationship.getInterface().getName();
+                if (definitions.getInterfaces().containsKey(interfaceName)) {
+                    throw new IllegalArgumentException("Cannot override an already existing interface definition[" +
+                            interfaceName + "] in relationship[" + relationship.getName() + "]");
+                }
+                definitions.getInterfaces().put(interfaceName, relationship.getInterface());
+            }
+        }
     }
 
     private static void copyGlobalPlan(Definitions importedDefinitions, Definitions definitions) {

@@ -1,0 +1,46 @@
+imports:
+    - "cloudify.types"
+    - "cloudmock.yaml"
+    - "connectionconfigurermock.yaml"
+    - "testmockoperations.yaml"
+
+application_template:
+    name: "simple_web_server"
+    topology:
+        -   name: "host"
+            type: "cloudify.tosca.types.host"
+            properties:
+                target_property_key: 'target_property_value'
+            policies:
+                start_detection_policy:
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "machine-status"
+                                state: "running"
+        -   name: "mock_node_that_connects_to_host"
+            type: "cloudify.tosca.types.app_module"
+            properties:
+                source_property_key: 'source_property_value'
+            interfaces:
+                - "mock_interface"
+            relationships:
+                -   type: "cloudify.tosca.relationships.connected_to"
+                    target: "host"
+                    plugin: "connection_configurer_mock"
+                    bind_time: "post_started"
+                    bind_location: "target"
+            policies:
+                start_detection_policy:
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "mock-node-status"
+                                state: "running"
+
+workflows:
+    simple_web_server.mock_node_that_connects_to_host:
+        init:
+            radial: |
+                define app_module_init
+                    execute_operation operation: 'make_reachable'

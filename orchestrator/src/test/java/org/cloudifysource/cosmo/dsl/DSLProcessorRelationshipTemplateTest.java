@@ -61,25 +61,50 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(relationshipTemplates3.get(1).getTargetId()).isEqualTo("service_template.host2");
         assertThat(relationshipTemplates3.get(2).getTargetId()).isEqualTo("service_template.host3");
 
-        List<ProcessedExecutionListItem> executionList =  relationshipTemplates3.get(0).getPostTargetStart();
-        assertThat(executionList.get(0).getOperation()).isEqualTo("source.operation1");
-        assertThat(executionList.get(1).getOperation()).isEqualTo("target.operation1");
-        assertThat(executionList.get(2).getOperation()).isEqualTo("source.operation2");
-        assertThat(executionList.get(3).getOperation()).isEqualTo("target.operation2");
-        assertThat(executionList.get(0).getOutputField()).isEqualTo("result1");
-        assertThat(executionList.get(1).getOutputField()).isEqualTo("result2");
-        assertThat(executionList.get(2).getOutputField()).isEmpty();
-        assertThat(executionList.get(3).getOutputField()).isEqualTo("result3");
-        List<ProcessedExecutionListItem> lateExecutionList =  relationshipTemplates3.get(1).getPostSourceStart();
-        assertThat(lateExecutionList.get(0).getOperation()).isEqualTo("source.operation3");
-        assertThat(lateExecutionList.get(1).getOperation()).isEqualTo("target.operation3");
-        assertThat(lateExecutionList.get(2).getOperation()).isEqualTo("source.operation4");
-        assertThat(lateExecutionList.get(3).getOperation()).isEqualTo("target.operation4");
-        assertThat(lateExecutionList.get(0).getOutputField()).isEqualTo("result4");
-        assertThat(lateExecutionList.get(1).getOutputField()).isEqualTo("result5");
-        assertThat(lateExecutionList.get(2).getOutputField()).isEmpty();
-        assertThat(lateExecutionList.get(3).getOutputField()).isEqualTo("result6");
     }
+
+    @Test
+    public void testRelationshipInterfaceAndTemplate() {
+
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-interface.yaml";
+
+        Processed processed = process(dslPath);
+
+        Node node1 = findNode(processed.getNodes(), "service_template.webserver");
+        List<ProcessedRelationshipTemplate> relationshipTemplates1 = node1.getRelationships();
+
+        Node node2 = findNode(processed.getNodes(), "service_template.webapplication");
+        List<ProcessedRelationshipTemplate> relationshipTemplates2 = node2.getRelationships();
+
+        assertThat(relationshipTemplates1.size()).isEqualTo(1);
+        assertThat(relationshipTemplates2.size()).isEqualTo(1);
+
+        assertThat(relationshipTemplates1.get(0).getType()).isEqualTo("relationship1");
+        assertThat(relationshipTemplates1.get(0).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates1.get(0).getPlugin()).isEqualTo("plugin1");
+        assertThat(relationshipTemplates1.get(0).getBindLocation()).isEqualTo("source");
+        assertThat(relationshipTemplates1.get(0).getBindTime()).isEqualTo("pre_started");
+
+        assertThat(relationshipTemplates2.get(0).getType()).isEqualTo("relationship2");
+        assertThat(relationshipTemplates2.get(0).getTargetId()).isEqualTo("service_template.webserver");
+        assertThat(relationshipTemplates2.get(0).getPlugin()).isEqualTo("plugin2");
+        assertThat(relationshipTemplates2.get(0).getBindLocation()).isEqualTo("target");
+        assertThat(relationshipTemplates2.get(0).getBindTime()).isEqualTo("post_started");
+
+        // Test that we place the right plugins under the right node during processing
+        // based on bind_location (source/target)
+        assertThat(node1.getPlugins()).containsKey("plugin1");
+        assertThat(node1.getPlugins()).containsKey("plugin2");
+
+        assertThat(processed.getRelationships().get("relationship1").getInterface().getName()).isEqualTo("interface1");
+        assertThat(processed.getRelationships().get("relationship2").getInterface().getName()).isEqualTo("interface2");
+
+        assertThat(processed.getRelationships().get("relationship1").getWorkflow()).isEqualTo("workflow1");
+        assertThat(processed.getRelationships().get("relationship2").getWorkflow()).isEqualTo("workflow2");
+
+    }
+
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testRelationshipTemplateInvalidType() {

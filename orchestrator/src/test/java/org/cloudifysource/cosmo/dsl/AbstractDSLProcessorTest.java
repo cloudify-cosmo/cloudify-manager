@@ -73,7 +73,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Map<String, Policy>> policies;
         Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
         private Map<String, PolicyDefinition> policiesEvents;
-        Map<String, Object> relationships;
+        Map<String, Relationship> relationships;
 
         public List<Node> getNodes() {
             return nodes;
@@ -119,11 +119,11 @@ public abstract class AbstractDSLProcessorTest {
             return policiesEvents;
         }
 
-        public Map<String, Object> getRelationships() {
+        public Map<String, Relationship> getRelationships() {
             return relationships;
         }
 
-        public void setRelationships(Map<String, Object> relationships) {
+        public void setRelationships(Map<String, Relationship> relationships) {
             this.relationships = relationships;
         }
     }
@@ -255,8 +255,9 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
-        List<ProcessedExecutionListItem> postTargetStart;
-        List<ProcessedExecutionListItem> postSourceStart;
+        String plugin;
+        String bindTime;
+        String bindLocation;
 
         public String getType() {
             return type;
@@ -274,41 +275,28 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
-        public List<ProcessedExecutionListItem> getPostTargetStart() {
-            return postTargetStart;
+        public String getPlugin() {
+            return plugin;
         }
 
-        public void setPostTargetStart(List<ProcessedExecutionListItem> postTargetStart) {
-            this.postTargetStart = postTargetStart;
+        public void setPlugin(String plugin) {
+            this.plugin = plugin;
         }
 
-        public List<ProcessedExecutionListItem> getPostSourceStart() {
-            return postSourceStart;
+        public String getBindTime() {
+            return bindTime;
         }
 
-        public void setPostSourceStart(List<ProcessedExecutionListItem> postSourceStart) {
-            this.postSourceStart = postSourceStart;
+        public void setBindTime(String bindTime) {
+            this.bindTime = bindTime;
         }
 
-    }
-
-    /**
-     */
-    public static class ProcessedExecutionListItem {
-        private String operation;
-        private String outputField;
-        public String getOperation() {
-            return operation;
-        }
-        public void setOperation(String operation) {
-            this.operation = operation;
+        public String getBindLocation() {
+            return bindLocation;
         }
 
-        public String getOutputField() {
-            return outputField;
-        }
-        public void setOutputField(String outputField) {
-            this.outputField = outputField;
+        public void setBindLocation(String bindLocation) {
+            this.bindLocation = bindLocation;
         }
     }
 
