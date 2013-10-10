@@ -210,6 +210,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             relationshipMap.put("plugin", relationship.getPlugin());
             relationshipMap.put("run_on_node", relationship.getRunOnNode());
             relationshipMap.put("bind_at", relationship.getBindAt());
+            relationshipMap.put("workflow", relationship.getWorkflow());
+            relationshipMap.put("interface", relationship.getInterface());
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);

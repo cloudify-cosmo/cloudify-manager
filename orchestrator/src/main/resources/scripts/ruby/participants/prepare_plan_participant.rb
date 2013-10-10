@@ -51,8 +51,7 @@ class PreparePlanParticipant < Ruote::Participant
         node[PROPERTIES][RUNTIME] = Hash.new
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
-          relationship_type = plan['relationships'][relationship['type']]
-          relationship_workflow = relationship_type['workflow']
+          relationship_workflow = relationship['workflow']
           if relationship_workflow.nil? or relationship_workflow.empty?
             relationship_workflow = 'define stub_workflow\n\t'
           end

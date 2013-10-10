@@ -258,6 +258,8 @@ public abstract class AbstractDSLProcessorTest {
         String plugin;
         String bindAt;
         String runOnNode;
+        private Interface anInterface;
+        private String workflow;
 
         public String getType() {
             return type;
@@ -297,6 +299,22 @@ public abstract class AbstractDSLProcessorTest {
 
         public void setRunOnNode(String runOnNode) {
             this.runOnNode = runOnNode;
+        }
+
+        public Interface getInterface() {
+            return anInterface;
+        }
+
+        public void setInterface(Interface anInterface) {
+            this.anInterface = anInterface;
+        }
+
+        public String getWorkflow() {
+            return workflow;
+        }
+
+        public void setWorkflow(String workflow) {
+            this.workflow = workflow;
         }
     }
 

@@ -80,7 +80,12 @@ types:
 ##################################################################################
 relationships:
 
-    cloudify.tosca.relationships.depends_on: { }
+    cloudify.tosca.relationships.depends_on:
+        plugin: ""
+        # valid values (when plugin is defined): pre_started, post_started
+        bind_at: ""
+        # valid values (when plugin is defined): source, target
+        run_on_node: ""
 
     cloudify.tosca.relationships.connected_to:
         derived_from: "cloudify.tosca.relationships.depends_on"
