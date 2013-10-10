@@ -83,14 +83,14 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(relationshipTemplates1.get(0).getType()).isEqualTo("relationship1");
         assertThat(relationshipTemplates1.get(0).getTargetId()).isEqualTo("service_template.host");
         assertThat(relationshipTemplates1.get(0).getPlugin()).isEqualTo("plugin1");
-        assertThat(relationshipTemplates1.get(0).getBindLocation()).isEqualTo("source");
-        assertThat(relationshipTemplates1.get(0).getBindTime()).isEqualTo("pre_started");
+        assertThat(relationshipTemplates1.get(0).getRunOnNode()).isEqualTo("source");
+        assertThat(relationshipTemplates1.get(0).getBindAt()).isEqualTo("pre_started");
 
         assertThat(relationshipTemplates2.get(0).getType()).isEqualTo("relationship2");
         assertThat(relationshipTemplates2.get(0).getTargetId()).isEqualTo("service_template.webserver");
         assertThat(relationshipTemplates2.get(0).getPlugin()).isEqualTo("plugin2");
-        assertThat(relationshipTemplates2.get(0).getBindLocation()).isEqualTo("target");
-        assertThat(relationshipTemplates2.get(0).getBindTime()).isEqualTo("post_started");
+        assertThat(relationshipTemplates2.get(0).getRunOnNode()).isEqualTo("target");
+        assertThat(relationshipTemplates2.get(0).getBindAt()).isEqualTo("post_started");
 
         // Test that we place the right plugins under the right node during processing
         // based on bind_location (source/target)

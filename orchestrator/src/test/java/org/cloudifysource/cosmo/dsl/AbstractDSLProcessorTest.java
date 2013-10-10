@@ -256,8 +256,8 @@ public abstract class AbstractDSLProcessorTest {
         String type;
         String targetId;
         String plugin;
-        String bindTime;
-        String bindLocation;
+        String bindAt;
+        String runOnNode;
 
         public String getType() {
             return type;
@@ -283,20 +283,20 @@ public abstract class AbstractDSLProcessorTest {
             this.plugin = plugin;
         }
 
-        public String getBindTime() {
-            return bindTime;
+        public String getBindAt() {
+            return bindAt;
         }
 
-        public void setBindTime(String bindTime) {
-            this.bindTime = bindTime;
+        public void setBindAt(String bindAt) {
+            this.bindAt = bindAt;
         }
 
-        public String getBindLocation() {
-            return bindLocation;
+        public String getRunOnNode() {
+            return runOnNode;
         }
 
-        public void setBindLocation(String bindLocation) {
-            this.bindLocation = bindLocation;
+        public void setRunOnNode(String runOnNode) {
+            this.runOnNode = runOnNode;
         }
     }
 

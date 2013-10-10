@@ -28,8 +28,8 @@ public class RelationshipTemplate {
     private String target;
 
     private String plugin;
-    private String bindTime;
-    private String bindLocation;
+    private String bindAt;
+    private String runOnNode;
 
     public String getType() {
         return type;
@@ -47,20 +47,20 @@ public class RelationshipTemplate {
         this.target = target;
     }
 
-    public String getBindTime() {
-        return bindTime;
+    public String getBindAt() {
+        return bindAt;
     }
 
-    public void setBindTime(String bindTime) {
-        this.bindTime = bindTime;
+    public void setBindAt(String bindAt) {
+        this.bindAt = bindAt;
     }
 
-    public String getBindLocation() {
-        return bindLocation;
+    public String getRunOnNode() {
+        return runOnNode;
     }
 
-    public void setBindLocation(String bindLocation) {
-        this.bindLocation = bindLocation;
+    public void setRunOnNode(String runOnNode) {
+        this.runOnNode = runOnNode;
     }
 
     public String getPlugin() {
