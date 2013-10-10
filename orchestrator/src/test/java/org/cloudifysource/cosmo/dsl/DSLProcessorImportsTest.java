@@ -71,8 +71,8 @@ public class DSLProcessorImportsTest extends AbstractDSLProcessorTest {
         assertThat(findNode(nodes, "relative_imports_template.test_0")).isNotNull();
     }
 
-
     private void assertValidNode(Node node, String initWorkflow) {
+        assertThat(node.getWorkflows()).containsKey("init");
         assertThat(node.getWorkflows().get("init")).isEqualTo(initWorkflow);
     }
 

@@ -144,38 +144,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors, true);
     }
 
-    /**
-     * For POC purposes - this test should be disabled.
-     */
-    @Test(timeOut = 60000, enabled = false)
-    public void testPlanExecutionPoc() throws IOException, InterruptedException {
-        String dslFile = "org/cloudifysource/cosmo/dsl/unit/poc/poc-dsl1.yaml";
-        String machineId = "mysql_template.mysql_host";
-        String databaseId = "mysql_template.mysql_database_server";
-        String schemaId = "mysql_template.mysql_schema";
-
-        final Map<String, Object> fields = Maps.newHashMap();
-        String dslLocation;
-        if (Files.exists(Paths.get(dslFile))) {
-            dslLocation = dslFile;
-        } else {
-            dslLocation = Resources.getResource(dslFile).getFile();
-        }
-        fields.put("dsl", dslLocation);
-
-        final Object wfid = ruoteWorkflow.asyncExecute(fields);
-
-        Thread.sleep(10000);
-        reachable(machineId);
-        Thread.sleep(10000);
-        reachable(databaseId);
-        Thread.sleep(5000);
-        reachable(schemaId);
-
-        ruoteRuntime.waitForWorkflow(wfid);
-    }
-
-
     @Test(timeOut = 30000)
     public void testPlanExecutionFromPackage() throws IOException, InterruptedException {
 
@@ -247,12 +215,23 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
 
     @Test(timeOut = 30000)
-    public void testPlanExecutionWithOverriddenGlobalPlan() throws IOException, InterruptedException {
-        String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-global-plan.yaml";
+    public void testPlanExecutionWithOverriddenWorkflowRef() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-installation-workflow.yaml";
         OperationsDescriptor descriptor = new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
                 "cloudify.tosca.artifacts.plugin.host_provisioner",
                 new String[]{"provision", "start", "provision", "start"});
+        OperationsDescriptor[] descriptors = {descriptor};
+        testPlanExecution(dslFile, null, descriptors);
+    }
+
+    @Test(timeOut = 30000)
+    public void testPlanExecutionWithOverriddenNodeWorkflowRef() throws IOException, InterruptedException {
+        String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-full-install-node-init-override.yaml";
+        OperationsDescriptor descriptor = new OperationsDescriptor(
+                CLOUDIFY_MANAGEMENT,
+                "cloudify.tosca.artifacts.plugin.host_provisioner",
+                new String[]{"terminate", "terminate"});
         OperationsDescriptor[] descriptors = {descriptor};
         testPlanExecution(dslFile, null, descriptors);
     }

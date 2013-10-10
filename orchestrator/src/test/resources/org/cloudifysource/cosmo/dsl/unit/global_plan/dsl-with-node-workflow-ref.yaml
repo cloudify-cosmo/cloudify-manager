@@ -1,0 +1,19 @@
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+
+application_template:
+    name: "app"
+    topology:
+        -   name: "host"
+            type: "cloudify.tosca.types.host"
+            workflows:
+                init:
+                    ref: "some_global_plan.radial"
+                new_wf:
+                    ref: "some_global_plan.radial"
+
+workflows:
+    install:
+        ref: "some_global_plan.radial"
+

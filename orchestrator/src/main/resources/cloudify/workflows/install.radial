@@ -1,4 +1,4 @@
-define global_workflow
+define cloudify_workflows_install
 
     log message: 'Reloading policies'
     event event: { "stage"=>"configuring riemann policies" }
