@@ -102,14 +102,10 @@ has an agent plugin named " +
 
   def process_node(nodes_extra, node)
 
-    puts "-- workflows: #{node['workflows']}"
-
     # parse workflows
     workflows = Hash.new
     node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value) }
     node['workflows'] = workflows
-
-    puts "-- workflows: #{node['workflows']}"
 
     # extract host node id
     host_id = extract_host_id(nodes_extra, node['id'])

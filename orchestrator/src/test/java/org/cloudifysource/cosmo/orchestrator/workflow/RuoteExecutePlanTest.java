@@ -214,7 +214,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     }
 
 
-    @Test(timeOut = 30000000)
+    @Test(timeOut = 30000)
     public void testPlanExecutionWithOverriddenWorkflowRef() throws IOException, InterruptedException {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-installation-workflow.yaml";
         OperationsDescriptor descriptor = new OperationsDescriptor(

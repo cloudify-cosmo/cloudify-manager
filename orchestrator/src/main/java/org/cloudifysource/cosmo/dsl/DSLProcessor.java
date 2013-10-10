@@ -31,7 +31,6 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.dsl.resource.DSLResource;
 import org.cloudifysource.cosmo.dsl.resource.ImportsContext;
-import org.cloudifysource.cosmo.dsl.resource.ResourceLoadingContext;
 import org.cloudifysource.cosmo.dsl.resource.ResourcesLoader;
 import org.cloudifysource.cosmo.dsl.tree.Node;
 import org.cloudifysource.cosmo.dsl.tree.Tree;
@@ -421,13 +420,6 @@ public class DSLProcessor {
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
-    }
-
-    private static String loadGlobalPlan(String globalPlanResourcePath) {
-        final String globalPlanBaseLocation = ResourceLocationHelper.getParentLocation(globalPlanResourcePath);
-        ResourceLoadingContext resourceLoadingContext = new ResourceLoadingContext(globalPlanBaseLocation);
-        DSLResource globalPlanResource = ResourcesLoader.load(globalPlanResourcePath, resourceLoadingContext);
-        return globalPlanResource.getContent();
     }
 
 }
