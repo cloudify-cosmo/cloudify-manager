@@ -83,14 +83,14 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(relationshipTemplates1.get(0).getType()).isEqualTo("relationship1");
         assertThat(relationshipTemplates1.get(0).getTargetId()).isEqualTo("service_template.host");
         assertThat(relationshipTemplates1.get(0).getPlugin()).isEqualTo("plugin1");
-        assertThat(relationshipTemplates1.get(0).getBindLocation()).isEqualTo("source");
-        assertThat(relationshipTemplates1.get(0).getBindTime()).isEqualTo("pre_started");
+        assertThat(relationshipTemplates1.get(0).getRunOnNode()).isEqualTo("source");
+        assertThat(relationshipTemplates1.get(0).getBindAt()).isEqualTo("pre_started");
 
         assertThat(relationshipTemplates2.get(0).getType()).isEqualTo("relationship2");
         assertThat(relationshipTemplates2.get(0).getTargetId()).isEqualTo("service_template.webserver");
         assertThat(relationshipTemplates2.get(0).getPlugin()).isEqualTo("plugin2");
-        assertThat(relationshipTemplates2.get(0).getBindLocation()).isEqualTo("target");
-        assertThat(relationshipTemplates2.get(0).getBindTime()).isEqualTo("post_started");
+        assertThat(relationshipTemplates2.get(0).getRunOnNode()).isEqualTo("target");
+        assertThat(relationshipTemplates2.get(0).getBindAt()).isEqualTo("post_started");
 
         // Test that we place the right plugins under the right node during processing
         // based on bind_location (source/target)
@@ -105,6 +105,72 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
 
     }
 
+    @Test
+    public void testRelationshipTemplateInheritance() {
+        String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
+                "dsl-with-relationship-templates-inheritance.yaml";
+
+        Processed processed = process(dslPath);
+        Node node = findNode(processed.getNodes(), "service_template.webserver");
+        List<ProcessedRelationshipTemplate> relationshipTemplates = node.getRelationships();
+
+        assertThat(relationshipTemplates.get(0).getType()).isEqualTo("relationship1");
+        assertThat(relationshipTemplates.get(0).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates.get(0).getPlugin()).isNull();
+        assertThat(relationshipTemplates.get(0).getWorkflow()).isNull();
+        assertThat(relationshipTemplates.get(0).getBindAt()).isNull();
+        assertThat(relationshipTemplates.get(0).getRunOnNode()).isNull();
+        assertThat(relationshipTemplates.get(0).getInterface()).isNull();
+
+        assertThat(relationshipTemplates.get(1).getType()).isEqualTo("relationship2");
+        assertThat(relationshipTemplates.get(1).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates.get(1).getPlugin()).isNull();
+        assertThat(relationshipTemplates.get(1).getWorkflow()).isNull();
+        assertThat(relationshipTemplates.get(1).getBindAt()).isNull();
+        assertThat(relationshipTemplates.get(1).getRunOnNode()).isNull();
+        assertThat(relationshipTemplates.get(1).getInterface()).isNull();
+
+        assertThat(relationshipTemplates.get(2).getType()).isEqualTo("relationship3");
+        assertThat(relationshipTemplates.get(2).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates.get(2).getPlugin()).isEqualTo("plugin1");
+        assertThat(relationshipTemplates.get(2).getWorkflow()).isEqualTo("workflow1");
+        assertThat(relationshipTemplates.get(2).getBindAt()).isEqualTo("post_started");
+        assertThat(relationshipTemplates.get(2).getRunOnNode()).isEqualTo("target");
+        assertThat(relationshipTemplates.get(2).getInterface().getName()).isEqualTo("interface1");
+        assertThat(relationshipTemplates.get(2).getInterface().getOperations().get(0))
+                .isEqualTo("interface1_operation1");
+
+        assertThat(relationshipTemplates.get(3).getType()).isEqualTo("relationship4");
+        assertThat(relationshipTemplates.get(3).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates.get(3).getPlugin()).isEqualTo("plugin2");
+        assertThat(relationshipTemplates.get(3).getWorkflow()).isEqualTo("workflow1");
+        assertThat(relationshipTemplates.get(3).getBindAt()).isEqualTo("post_started");
+        assertThat(relationshipTemplates.get(3).getRunOnNode()).isEqualTo("target");
+        assertThat(relationshipTemplates.get(3).getInterface().getName()).isEqualTo("interface1");
+        assertThat(relationshipTemplates.get(3).getInterface().getOperations().get(0))
+                .isEqualTo("interface1_operation1");
+
+        assertThat(relationshipTemplates.get(4).getType()).isEqualTo("relationship4");
+        assertThat(relationshipTemplates.get(4).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates.get(4).getPlugin()).isEqualTo("plugin3");
+        assertThat(relationshipTemplates.get(4).getWorkflow()).isEqualTo("workflow1");
+        assertThat(relationshipTemplates.get(4).getBindAt()).isEqualTo("post_started");
+        assertThat(relationshipTemplates.get(4).getRunOnNode()).isEqualTo("target");
+        assertThat(relationshipTemplates.get(4).getInterface().getName()).isEqualTo("interface1");
+        assertThat(relationshipTemplates.get(4).getInterface().getOperations().get(0))
+                .isEqualTo("interface1_operation1");
+
+        assertThat(relationshipTemplates.get(5).getType()).isEqualTo("relationship4");
+        assertThat(relationshipTemplates.get(5).getTargetId()).isEqualTo("service_template.host");
+        assertThat(relationshipTemplates.get(5).getPlugin()).isEqualTo("plugin4");
+        assertThat(relationshipTemplates.get(5).getWorkflow()).isEqualTo("workflow2");
+        assertThat(relationshipTemplates.get(5).getBindAt()).isEqualTo("pre_started");
+        assertThat(relationshipTemplates.get(5).getRunOnNode()).isEqualTo("source");
+        assertThat(relationshipTemplates.get(5).getInterface().getName()).isEqualTo("interface2");
+        assertThat(relationshipTemplates.get(5).getInterface().getOperations().get(0))
+                .isEqualTo("interface2_operation1");
+
+    }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testRelationshipTemplateInvalidType() {

@@ -16,27 +16,24 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.base.Strings;
+
 /**
  * Data container for a relationship template in a node template of the dsl.
  *
  * @author Dan Kilman
  * @since 0.1
  */
-public class RelationshipTemplate {
+public class RelationshipTemplate extends Relationship {
 
-    private String type;
     private String target;
 
-    private String plugin;
-    private String bindTime;
-    private String bindLocation;
-
     public String getType() {
-        return type;
+        return getDerivedFrom();
     }
 
     public void setType(String type) {
-        this.type = type;
+        setDerivedFrom(type);
     }
 
     public String getTarget() {
@@ -47,27 +44,23 @@ public class RelationshipTemplate {
         this.target = target;
     }
 
-    public String getBindTime() {
-        return bindTime;
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        Relationship typedParent = (Relationship) parent;
+        RelationshipTemplate result = new RelationshipTemplate();
+        result.inheritPropertiesFrom(typedParent);
+        result.inheritPropertiesFrom(this);
+        result.setName(getName());
+        result.setDerivedFrom(parent.getName());
+        result.setSuperTypes(parent);
+        return result;
     }
 
-    public void setBindTime(String bindTime) {
-        this.bindTime = bindTime;
+    protected void inheritPropertiesFrom(RelationshipTemplate other) {
+        super.inheritPropertiesFrom(other);
+        if (!Strings.isNullOrEmpty(other.getTarget())) {
+            setTarget(other.getTarget());
+        }
     }
 
-    public String getBindLocation() {
-        return bindLocation;
-    }
-
-    public void setBindLocation(String bindLocation) {
-        this.bindLocation = bindLocation;
-    }
-
-    public String getPlugin() {
-        return plugin;
-    }
-
-    public void setPlugin(String plugin) {
-        this.plugin = plugin;
-    }
 }

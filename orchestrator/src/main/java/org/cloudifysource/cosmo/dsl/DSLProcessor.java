@@ -84,7 +84,7 @@ public class DSLProcessor {
                     definitions.getRelationships());
 
             Map<String, ApplicationTemplate> populatedServiceTemplates =
-                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes);
+                    buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
 
             Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
             validatePolicies(nodeTemplates, definitions.getPolicies());
@@ -232,13 +232,15 @@ public class DSLProcessor {
 
     private static Map<String, ApplicationTemplate> buildPopulatedServiceTemplatesMap(
             Definitions definitions,
-            Map<String, Type> populatedTypes) {
+            Map<String, Type> populatedTypes,
+            Map<String, Relationship> populatedRelationships) {
         final Map<String, ApplicationTemplate> populatedServiceTemplates = Maps.newHashMap();
         final ApplicationTemplate applicationTemplate = definitions.getApplicationTemplate();
 
         List<TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
                 applicationTemplate.getTopology(),
-                populatedTypes);
+                populatedTypes,
+                populatedRelationships);
 
         ApplicationTemplate populatedApplicationTemplate = new ApplicationTemplate();
         populatedApplicationTemplate.setName(applicationTemplate.getName());
@@ -251,7 +253,8 @@ public class DSLProcessor {
 
     private static List<TypeTemplate> buildPopulatedTypeTemplatesMap(
             List<TypeTemplate> topology,
-            Map<String, Type> populatedTypes) {
+            Map<String, Type> populatedTypes,
+            Map<String, Relationship> populatedRelationships) {
         final Map<String, TypeTemplate> populatedTemplates = Maps.newHashMap();
         for (TypeTemplate template : topology) {
             Type typeTemplateParentType = populatedTypes.get(template.getDerivedFrom());
@@ -259,6 +262,21 @@ public class DSLProcessor {
                     template.getDerivedFrom());
             TypeTemplate populatedTemplate = (TypeTemplate) template.newInstanceWithInheritance(
                     typeTemplateParentType);
+
+            List<RelationshipTemplate> populatedRelationshipTemplates = Lists.newLinkedList();
+            for (RelationshipTemplate relationshipTemplate : populatedTemplate.getRelationships()) {
+                Relationship relationshipTemplateParentType =
+                        populatedRelationships.get(relationshipTemplate.getType());
+                Preconditions.checkArgument(relationshipTemplateParentType != null,
+                        "Missing relationship type %s for relationship of node %s",
+                        relationshipTemplate.getType(),
+                        populatedTemplate.getName());
+                RelationshipTemplate populatedRelationshipTemplate =
+                        (RelationshipTemplate) relationshipTemplate.newInstanceWithInheritance(
+                                relationshipTemplateParentType);
+                populatedRelationshipTemplates.add(populatedRelationshipTemplate);
+            }
+            populatedTemplate.setRelationships(populatedRelationshipTemplates);
 
             populatedTemplates.put(template.getName(), populatedTemplate);
         }
@@ -361,14 +379,24 @@ public class DSLProcessor {
 
     private static void extractRelationshipsInterfaces(Definitions definitions) {
         for (Relationship relationship : definitions.getRelationships().values()) {
-            if (relationship.getInterface() != null) {
-                String interfaceName = relationship.getInterface().getName();
-                if (definitions.getInterfaces().containsKey(interfaceName)) {
-                    throw new IllegalArgumentException("Cannot override an already existing interface definition[" +
-                            interfaceName + "] in relationship[" + relationship.getName() + "]");
-                }
-                definitions.getInterfaces().put(interfaceName, relationship.getInterface());
+            validateAndAddInterfaceFromRelationshipIfNecessary(definitions, relationship);
+        }
+        for (TypeTemplate typeTemplate : definitions.getApplicationTemplate().getTopology()) {
+            for (RelationshipTemplate relationshipTemplate : typeTemplate.getRelationships()) {
+                validateAndAddInterfaceFromRelationshipIfNecessary(definitions, relationshipTemplate);
             }
+        }
+    }
+
+    private static void validateAndAddInterfaceFromRelationshipIfNecessary(Definitions definitions,
+                                                                           Relationship relationship) {
+        if (relationship.getInterface() != null) {
+            String interfaceName = relationship.getInterface().getName();
+            if (definitions.getInterfaces().containsKey(interfaceName)) {
+                throw new IllegalArgumentException("Cannot override an already existing interface definition[" +
+                        interfaceName + "] in relationship[" + relationship.getName() + "]");
+            }
+            definitions.getInterfaces().put(interfaceName, relationship.getInterface());
         }
     }
 

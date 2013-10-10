@@ -96,14 +96,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 String pluginName = relationship.get("plugin");
                 if (!Strings.isNullOrEmpty(pluginName)) {
                     Map<String, Object> nodeToUpdate;
-                    String bindLocation = relationship.get("bind_location");
+                    String runOnNode = relationship.get("run_on_node");
                     String targetId = relationship.get("target_id");
-                    if ("source".equals(bindLocation)) {
+                    if ("source".equals(runOnNode)) {
                         nodeToUpdate = node;
-                    } else if ("target".equals(bindLocation)) {
+                    } else if ("target".equals(runOnNode)) {
                         nodeToUpdate =  nodesMap.get(targetId);
                     } else {
-                        throw new IllegalArgumentException("Undefined bind location: " + bindLocation + " for " +
+                        throw new IllegalArgumentException("Undefined run_on_node: " + runOnNode + " for " +
                                 "relationship in node: " + node.get("id"));
                     }
                     Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, pluginName);
@@ -215,8 +215,10 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
             relationshipMap.put("target_id", fullTargetId);
             relationshipMap.put("type", relationship.getType());
             relationshipMap.put("plugin", relationship.getPlugin());
-            relationshipMap.put("bind_location", relationship.getBindLocation());
-            relationshipMap.put("bind_time", relationship.getBindTime());
+            relationshipMap.put("run_on_node", relationship.getRunOnNode());
+            relationshipMap.put("bind_at", relationship.getBindAt());
+            relationshipMap.put("workflow", relationship.getWorkflow());
+            relationshipMap.put("interface", relationship.getInterface());
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);

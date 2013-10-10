@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.base.Strings;
+
 /**
  * A class used to represent a relationship.
  * Used internally only by the dsl processor.
@@ -30,6 +32,10 @@ public class Relationship extends InheritedDefinition {
 
     private Interface anInterface;
     private Workflow workflow;
+
+    private String plugin;
+    private String bindAt;
+    private String runOnNode;
 
     private static Relationship initRootRelationship() {
         Relationship root = new Relationship();
@@ -61,6 +67,15 @@ public class Relationship extends InheritedDefinition {
         if (other.getInterface() != null) {
             setInterface(other.getInterface());
         }
+        if (!Strings.isNullOrEmpty(other.getPlugin())) {
+            setPlugin(other.getPlugin());
+        }
+        if (!Strings.isNullOrEmpty(other.getBindAt())) {
+            setBindAt(other.getBindAt());
+        }
+        if (!Strings.isNullOrEmpty(other.getRunOnNode())) {
+            setRunOnNode(other.getRunOnNode());
+        }
     }
 
     public Workflow getWorkflow() {
@@ -77,5 +92,29 @@ public class Relationship extends InheritedDefinition {
 
     public void setInterface(Interface anInterface) {
         this.anInterface = anInterface;
+    }
+
+    public String getBindAt() {
+        return bindAt;
+    }
+
+    public void setBindAt(String bindAt) {
+        this.bindAt = bindAt;
+    }
+
+    public String getRunOnNode() {
+        return runOnNode;
+    }
+
+    public void setRunOnNode(String runOnNode) {
+        this.runOnNode = runOnNode;
+    }
+
+    public String getPlugin() {
+        return plugin;
+    }
+
+    public void setPlugin(String plugin) {
+        this.plugin = plugin;
     }
 }

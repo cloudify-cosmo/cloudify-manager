@@ -16,16 +16,16 @@ application_template:
                 - type: "relationship1"
                   target: "host"
                   plugin: "plugin1"
-                  bind_location: "source"
-                  bind_time: "pre_started"
+                  run_on_node: "source"
+                  bind_at: "pre_started"
         -   name: "webapplication"
             type: "cloudify.tosca.types.app_module"
             relationships:
                 - type: "relationship2"
                   target: "webserver"
                   plugin: "plugin2"
-                  bind_location: "target"
-                  bind_time: "post_started"
+                  run_on_node: "target"
+                  bind_at: "post_started"
 
 relationships:
     relationship1:
