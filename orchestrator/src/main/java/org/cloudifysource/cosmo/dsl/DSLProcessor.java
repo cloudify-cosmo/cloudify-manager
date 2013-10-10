@@ -91,7 +91,8 @@ public class DSLProcessor {
             validatePolicies(nodeTemplates, definitions.getPolicies());
             validateRelationships(nodeTemplates, populatedRelationships);
 
-            importReferencedWorkflows(definitions, populatedTypes, nodeTemplates, baseLocation, aliasMappings);
+            importReferencedWorkflows(
+                    definitions, populatedTypes, populatedServiceTemplates, baseLocation, aliasMappings);
             importReferencedPolicies(definitions, baseLocation, aliasMappings);
 
             Map<String, Object> plan = postProcessor.postProcess(
@@ -127,7 +128,7 @@ public class DSLProcessor {
 
     private static void importReferencedWorkflows(Definitions definitions,
                                                   Map<String, Type> types,
-                                                  Map<String, TypeTemplate> templates,
+                                                  Map<String, ApplicationTemplate> applicationTemplates,
                                                   String baseLocation,
                                                   Map<String, String> aliasMappings) {
         ImportsContext context = new ImportsContext(
@@ -142,10 +143,12 @@ public class DSLProcessor {
                 entry.getValue().setName(entry.getKey());
             }
         }
-        for (Type template : templates.values()) {
-            for (Map.Entry<String, Workflow> entry : template.getWorkflows().entrySet()) {
-                importWorkflow(context, entry.getValue());
-                entry.getValue().setName(entry.getKey());
+        for (ApplicationTemplate applicationTemplate : applicationTemplates.values()) {
+            for (TypeTemplate template : applicationTemplate.getTopology()) {
+                for (Map.Entry<String, Workflow> entry : template.getWorkflows().entrySet()) {
+                    importWorkflow(context, entry.getValue());
+                    entry.getValue().setName(entry.getKey());
+                }
             }
         }
     }
@@ -159,7 +162,6 @@ public class DSLProcessor {
             workflow.setRef(null);
         }
     }
-
 
     private static void validateRelationships(Map<String, TypeTemplate> nodeTemplates,
                                               Map<String, Relationship> populatedRelationships) {

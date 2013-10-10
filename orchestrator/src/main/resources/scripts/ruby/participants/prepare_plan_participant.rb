@@ -40,6 +40,7 @@ class PreparePlanParticipant < Ruote::Participant
       nodes = plan['nodes']
       nodes_extra = plan['nodes_extra']
       nodes.each {|node| process_node(nodes_extra, node) }
+
       hosts_with_plugins = []
       nodes.each do |node|
         if nodes_extra[node['id']]['super_types'].include? HOST_TYPE
@@ -101,10 +102,14 @@ has an agent plugin named " +
 
   def process_node(nodes_extra, node)
 
+    puts "-- workflows: #{node['workflows']}"
+
     # parse workflows
     workflows = Hash.new
-    node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value)  }
+    node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value) }
     node['workflows'] = workflows
+
+    puts "-- workflows: #{node['workflows']}"
 
     # extract host node id
     host_id = extract_host_id(nodes_extra, node['id'])

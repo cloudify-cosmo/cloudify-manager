@@ -4,6 +4,9 @@ cloudify.policies: cloudify/tosca/policies/policies.yaml
 
 # workflows
 cloudify.workflows.install: cloudify/workflows/install.radial
+cloudify.workflows.host.init: cloudify/workflows/host_init.radial
+cloudify.workflows.middleware_server.init: cloudify/workflows/middleware_server_init.radial
+cloudify.workflows.app_module.init: cloudify/workflows/app_module_init.radial
 
 # policies
 cloudify.policies.start_detection: cloudify/policies/start_detection.clj
