@@ -45,24 +45,10 @@ public class DSLProcessorPlansTest extends AbstractDSLProcessorTest {
         assertInitPlan(nodes, "service_template.custom_template", "plan4");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testPlanForUnknownNodeTemplate() {
-        String dslPath = "org/cloudifysource/cosmo/dsl/unit/plans/dsl-with-invalid-plans1.yaml";
-        process(dslPath);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class)
-    public void testPlanForUnknownType() {
-        String dslPath = "org/cloudifysource/cosmo/dsl/unit/plans/dsl-with-invalid-plans2.yaml";
-        process(dslPath);
-    }
-
-
     private void assertInitPlan(Map<String, Node> nodes, String nodeId, String plan) {
         assertThat(nodes).containsKey(nodeId);
         final Node node = nodes.get(nodeId);
-        final Object init = node.getWorkflows().get("init").toString();
-        assertThat(init).isEqualTo(plan);
+        assertThat(node.getWorkflows().get("init")).isEqualTo(plan);
     }
 
 }

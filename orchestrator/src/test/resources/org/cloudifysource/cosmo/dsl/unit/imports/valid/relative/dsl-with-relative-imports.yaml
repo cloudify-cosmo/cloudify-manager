@@ -5,22 +5,21 @@ application_template:
     topology:
         -   name: "test_a"
             type: "type_a"
+            workflows:
+                init:
+                    radial: "init_stub"
         -   name: "test_b"
             type: "type_b"
+            workflows:
+                init:
+                    radial: "init_stub"
         -   name: "test_c"
             type: "type_c"
+            workflows:
+                init:
+                    radial: "init_stub"
         -   name: "test_0"
             type: "type_0"
-workflows:
-    relative_imports_template.test_a:
-        init:
-            radial: "init_stub"
-    relative_imports_template.test_b:
-        init:
-            radial: "init_stub"
-    relative_imports_template.test_c:
-        init:
-            radial: "init_stub"
-    relative_imports_template.test_0:
-        init:
-            radial: "init_stub"
+            workflows:
+                init:
+                    radial: "init_stub"

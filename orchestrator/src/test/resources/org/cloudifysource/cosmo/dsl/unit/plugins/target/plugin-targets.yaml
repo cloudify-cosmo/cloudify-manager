@@ -12,23 +12,21 @@ application_template:
     topology:
         -   name: "host_template"
             type: cloudify.tosca.types.host
+            workflows:
+                init:
+                    radial: |
+                        define host_init
+                            echo '!! overridden host_template init workflow !!'
+                            execute_operation operation: 'provision'
 
         -   name: "server_template"
             type: cloudify.tosca.types.db_server
             relationships:
                 - type: cloudify.tosca.relationships.contained_in
                   target: "host_template"
-
-workflows:
-    plugins_template.host_template:
-        init:
-            radial: |
-                define host_init
-                    echo '!! overridden host_template init workflow !!'
-                    execute_operation operation: 'provision'
-    plugins_template.server_template:
-        init:
-            radial: |
-                define server_init
-                    execute_operation operation: 'install'
-                    execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
+            workflows:
+                init:
+                    radial: |
+                        define server_init
+                            execute_operation operation: 'install'
+                            execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'

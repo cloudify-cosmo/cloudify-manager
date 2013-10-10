@@ -22,6 +22,9 @@ types:
             - "cloudify.tosca.interfaces.plugin_installer"
         properties:
             install_agent: 'false'
+        workflows:
+            init:
+                ref: "cloudify.workflows.host.init"
 
     # A storage volume in a topology
     cloudify.tosca.types.volume:
@@ -58,6 +61,9 @@ types:
         interfaces:
             - "cloudify.tosca.interfaces.middleware_component_installer"
             - "cloudify.tosca.interfaces.app_module_installer"
+        workflows:
+            init:
+                ref: "cloudify.workflows.middleware_server.init"
 
     cloudify.tosca.types.db_server:
         derived_from: "cloudify.tosca.types.middleware_server"
@@ -72,7 +78,10 @@ types:
         derived_from: "cloudify.tosca.types.middleware_server"
 
     # An application artifact to deploy
-    cloudify.tosca.types.app_module: { }
+    cloudify.tosca.types.app_module:
+        workflows:
+            init:
+                ref: "cloudify.workflows.app_module.init"
 
 
 ##################################################################################
@@ -202,49 +211,11 @@ interfaces:
 
 
 ##################################################################################
-# Types workflows
+# Workflows
 ##################################################################################
 workflows:
-
-    cloudify.tosca.types.host:
-        init:
-            radial: |
-                define host_init
-                  execute_operation operation: 'provision'
-                  execute_operation operation: 'cloudify.tosca.interfaces.host_provisioner.start'
-
-                  given
-                    that '${node.properties.install_agent} == true'
-                      state resource_id: '${node.id}', state: { reachable: "true" }
-                      log message: 'installing agent on host: ${node.id}'
-                      execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.install'
-                      execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.start'
-                      event event: { "stage" => "Installing plugins" }
-                      log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
-                      iterator on: '$node.plugins_to_install', to_v: 'plugin'
-                        log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
-                        execute_operation operation: 'cloudify.tosca.interfaces.plugin_installer.install', params: {
-                          plugin: {
-                            name: '${v:plugin.name}',
-                            url: '${v:plugin.url}'
-                           }
-                        }
-                        log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
-                      log message: 'restarting worker on host: ${node.id}'
-                      execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.restart'
-
-    cloudify.tosca.types.middleware_server:
-        init:
-            radial: |
-                define middleware_server_init
-                    execute_operation operation: 'install'
-                    execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
-
-    cloudify.tosca.types.app_module:
-        init:
-            radial: |
-                define app_module_init
-
+    install:
+        ref: "cloudify.workflows.install"
 
 ##################################################################################
 # Base artifact definitions

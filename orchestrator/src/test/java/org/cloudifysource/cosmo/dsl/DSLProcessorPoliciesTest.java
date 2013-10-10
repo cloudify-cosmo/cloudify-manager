@@ -159,6 +159,13 @@ public class DSLProcessorPoliciesTest extends AbstractDSLProcessorTest {
         assertThat(rule7.getProperties().get("value")).isEqualTo("terminated");
     }
 
+    @Test
+    public void testReferencedPolicies() {
+        Processed processed = process(DSL_PATH);
+        assertThat(processed.getPoliciesEvents()).containsKey("new_policy");
+        String policy = processed.getPoliciesEvents().get("new_policy").getPolicy();
+        assertThat(policy).isEqualTo("new_policy");
+    }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testUnknownPolicyValidation() {

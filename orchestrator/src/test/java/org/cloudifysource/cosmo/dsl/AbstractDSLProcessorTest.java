@@ -69,23 +69,17 @@ public abstract class AbstractDSLProcessorTest {
     public static class Processed {
         List<Node> nodes;
         Map<String, NodeExtra> nodesExtra;
-        String globalWorkflow;
         Map<String, Map<String, Policy>> policies;
         Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
         private Map<String, PolicyDefinition> policiesEvents;
         Map<String, Relationship> relationships;
+        Map<String, Object> workflows;
 
         public List<Node> getNodes() {
             return nodes;
         }
         public void setNodes(List<Node> nodes) {
             this.nodes = nodes;
-        }
-        public String getGlobalWorkflow() {
-            return globalWorkflow;
-        }
-        public void setGlobalWorkflow(String globalWorkflow) {
-            this.globalWorkflow = globalWorkflow;
         }
         public Map<String, NodeExtra> getNodesExtra() {
             return nodesExtra;
@@ -125,6 +119,14 @@ public abstract class AbstractDSLProcessorTest {
 
         public void setRelationships(Map<String, Relationship> relationships) {
             this.relationships = relationships;
+        }
+
+        public Map<String, Object> getWorkflows() {
+            return workflows;
+        }
+
+        public void setWorkflows(Map<String, Object> workflows) {
+            this.workflows = workflows;
         }
     }
 

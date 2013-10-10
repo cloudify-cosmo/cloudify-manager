@@ -1,12 +1,14 @@
-global_plan: "full_global_workflow.radial"
-
 imports:
     - "cloudify.types"
     - "host_provisioner"
 
 application_template:
-    name: "some_template"
+    name: "some_service_template"
     topology:
         -   name: "some_host"
             type: "cloudify.tosca.types.host"
+
+workflows:
+    install:
+        ref: "not-found"
 

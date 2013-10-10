@@ -1,9 +1,5 @@
 imports:
     - "org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/dsl-with-imports-invalid-definition-imported.yaml"
-workflows:
-    node:
-        init:
-            radial: "node_radial_stub"
 application_template:
     name: "some_service_template"
     topology:

@@ -4,56 +4,17 @@
 ##################################################################################
 policies:
     types:
-        # $node_id will be injected with the current node id
-        # $event will be injected with a json form event
         start_detection_policy:
-
             message: "start detection passed"
-            policy: |
-              (fn [evnt]
-                (let [ip-event (assoc evnt :host "$node_id"
-                                           :service "ip"
-                                           :state (get evnt :host)
-                                           :description "$event"
-                                           :tags ["cosmo"])]
-                    (call-rescue ip-event [index]))
-                (let [reachable-event (assoc evnt :host "$node_id"
-                                                  :service "reachable"
-                                                  :state "true"
-                                                  :description "$event"
-                                                  :tags ["cosmo"])]
-                    (call-rescue reachable-event [index])))
+            ref: "cloudify.policies.start_detection"
 
         failure_detection_policy:
-
             message: "detected failure"
-            policy: |
-              (fn [evnt]
-                (let [ip-event (assoc evnt :host "$node_id"
-                                           :service "ip"
-                                           :state (get evnt :host)
-                                           :description "$event"
-                                           :tags ["cosmo"])]
-                    (call-rescue ip-event [index]))
-                (let [reachable-event (assoc evnt :host "$node_id"
-                                                  :service "reachable"
-                                                  :state "false"
-                                                  :description "$event"
-                                                  :tags ["cosmo"])]
-                    (call-rescue reachable-event [index])))
+            ref: "cloudify.policies.failure_detection"
 
         performance_policy:
-
             message: "performance monitoring"
-            policy: |
-              (fn [evnt]
-                (let [reachable-event (assoc evnt :host "$node_id"
-                                                  :service "performance"
-                                                  :state ""
-                                                  :description "$event"
-                                                  :tags ["cosmo"])]
-                    (call-rescue reachable-event [index])))
-
+            ref: "cloudify.policies.performance"
 
     rules:
         #node_policy_events will be injected with the matching policy (see above)

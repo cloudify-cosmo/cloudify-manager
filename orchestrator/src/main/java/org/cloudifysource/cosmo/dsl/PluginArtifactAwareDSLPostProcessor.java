@@ -17,14 +17,12 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,6 +84,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         result.put("policies", policies);
         result.put("policies_events", definitions.getPolicies().getTypes());
         result.put("relationships", populatedRelationships);
+        result.put("workflows", processWorkflows(definitions.getWorkflows()));
         return result;
     }
 
@@ -119,6 +118,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
     }
 
+    private Map<String, Object> processWorkflows(Map<String, Workflow> workflows) {
+        final Map<String, Object> flatWorkflows = Maps.newHashMap();
+        for (Workflow workflow : workflows.values()) {
+            flatWorkflows.put(workflow.getName(), workflow.getRadial());
+        }
+        return flatWorkflows;
+    }
+
     private Map<String, Object> processTypeTemplateNodeExtraData(String serviceTemplateName,
                                                                  TypeTemplate typeTemplate) {
         Map<String, Object> nodeExtraData = Maps.newHashMap();
@@ -144,7 +151,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeRelationships(typeTemplate, serviceTemplateName, node);
 
-        setNodeWorkflows(typeTemplate, definitions, node);
+        setNodeWorkflows(typeTemplate, node);
 
         setNodePolicies(typeTemplate, node);
 
@@ -217,33 +224,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("relationships", relationships);
     }
 
-    private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
-        Map<String, Object> workflows = Maps.newHashMap();
-
-        // for now only inline radial is supported
-        // later we'll add support for others
-
-        // extract init
-        Optional<Object> initWorkflow = extractWorkflow(definitions.getWorkflows(), typeTemplate.getName());
-        Iterator<String> superTypes = typeTemplate.getSuperTypes().iterator();
-        while (superTypes.hasNext() && !initWorkflow.isPresent()) {
-            initWorkflow = extractWorkflow(definitions.getWorkflows(), superTypes.next());
-        }
-        if (!initWorkflow.isPresent()) {
-            throw new IllegalArgumentException("No init workflow found for template: " + typeTemplate.getName());
-        }
-        workflows.put("init", initWorkflow.get());
-
-        node.put("workflows", workflows);
-    }
-
-    private Optional<Object> extractWorkflow(Map<String, Workflow> plans, String typeName) {
-        Workflow workflow = plans.get(typeName);
-        if (workflow == null) {
-            return Optional.absent();
-        }
-        Object initWorkflow = workflow.getInit().get("radial");
-        return Optional.fromNullable(initWorkflow);
+    private void setNodeWorkflows(TypeTemplate typeTemplate, Map<String, Object> node) {
+        node.put("workflows", processWorkflows(typeTemplate.getWorkflows()));
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {

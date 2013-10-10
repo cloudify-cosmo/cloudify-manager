@@ -38,7 +38,7 @@ class ValidateDSLTestCase(unittest.TestCase):
     def test_invalid(self):
 
         try:
-            self.RUNNER.run("{0}/cosmo.sh --dsl=/vagrant/test/corrupted_dsl/dsl-with-invalid-plans1.yaml --validate"
+            self.RUNNER.run("{0}/cosmo.sh --dsl=/vagrant/test/corrupted_dsl/corrupted-dsl.yaml --validate"
                             .format(REMOTE_WORKING_DIR))
             self.fail("Expected validation exception but none occurred")
         except BaseException:
