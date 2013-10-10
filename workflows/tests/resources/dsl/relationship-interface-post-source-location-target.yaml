@@ -37,10 +37,8 @@ application_template:
                             properties:
                                 service: "mock-node-status"
                                 state: "running"
-
-workflows:
-    simple_web_server.mock_node_that_connects_to_host:
-        init:
-            radial: |
-                define app_module_init
-                    execute_operation operation: 'make_reachable'
+            workflows:
+                init:
+                    radial: |
+                        define app_module_init
+                            execute_operation operation: 'make_reachable'
