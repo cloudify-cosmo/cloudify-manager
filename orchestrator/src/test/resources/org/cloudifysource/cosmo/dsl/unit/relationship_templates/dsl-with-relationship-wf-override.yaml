@@ -1,0 +1,22 @@
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
+
+application_template:
+    name: "app"
+    topology:
+        -   name: "host"
+            type: "cloudify.tosca.types.host"
+        -   name: "server"
+            type: "cloudify.tosca.types.web_server"
+            relationships:
+                -   type: "cloudify.tosca.relationships.contained_in"
+                    target: "host"
+                    workflows:
+                        radial: "overridden_workflow"
+                -   type: "cloudify.tosca.relationships.connected_to"
+                    target: "host"
+                    workflows:
+                        ref: "some_workflow.radial"
+

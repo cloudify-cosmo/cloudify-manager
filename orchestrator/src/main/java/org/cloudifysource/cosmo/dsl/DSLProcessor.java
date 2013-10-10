@@ -91,7 +91,13 @@ public class DSLProcessor {
             validateRelationships(nodeTemplates, populatedRelationships);
 
             importReferencedWorkflows(
-                    definitions, populatedTypes, populatedServiceTemplates, baseLocation, aliasMappings);
+                    definitions,
+                    populatedTypes,
+                    populatedServiceTemplates,
+                    definitions.getRelationships(),
+                    populatedRelationships,
+                    baseLocation,
+                    aliasMappings);
             importReferencedPolicies(definitions, baseLocation, aliasMappings);
 
             Map<String, Object> plan = postProcessor.postProcess(
@@ -128,6 +134,8 @@ public class DSLProcessor {
     private static void importReferencedWorkflows(Definitions definitions,
                                                   Map<String, Type> types,
                                                   Map<String, ApplicationTemplate> applicationTemplates,
+                                                  Map<String, Relationship> relationshipTypes,
+                                                  Map<String, Relationship> populatedRelationships,
                                                   String baseLocation,
                                                   Map<String, String> aliasMappings) {
         ImportsContext context = new ImportsContext(
@@ -148,6 +156,16 @@ public class DSLProcessor {
                     importWorkflow(context, entry.getValue());
                     entry.getValue().setName(entry.getKey());
                 }
+            }
+        }
+        for (Relationship relationship : relationshipTypes.values()) {
+            if (relationship.getWorkflow() != null) {
+                importWorkflow(context, relationship.getWorkflow());
+            }
+        }
+        for (Relationship relationship : populatedRelationships.values()) {
+            if (relationship.getWorkflow() != null) {
+                importWorkflow(context, relationship.getWorkflow());
             }
         }
     }

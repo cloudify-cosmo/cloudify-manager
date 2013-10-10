@@ -93,10 +93,8 @@ relationships:
 
     cloudify.tosca.relationships.connected_to:
         derived_from: "cloudify.tosca.relationships.depends_on"
-        workflow: |
-            define relationship_workflow
-                execute_operation operation: 'configure_connection'
-                                  relationship: '$v:relationship'
+        workflow:
+            ref: "cloudify.workflows.connected_to"
 
         interface:
             name: "cloudify.tosca.interfaces.connection_configurer"

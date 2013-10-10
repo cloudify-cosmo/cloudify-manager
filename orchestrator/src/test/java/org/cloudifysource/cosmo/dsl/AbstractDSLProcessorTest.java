@@ -260,6 +260,7 @@ public abstract class AbstractDSLProcessorTest {
         String plugin;
         String bindTime;
         String bindLocation;
+        String workflow;
 
         public String getType() {
             return type;
@@ -299,6 +300,14 @@ public abstract class AbstractDSLProcessorTest {
 
         public void setBindLocation(String bindLocation) {
             this.bindLocation = bindLocation;
+        }
+
+        public String getWorkflow() {
+            return workflow;
+        }
+
+        public void setWorkflow(String workflow) {
+            this.workflow = workflow;
         }
     }
 
