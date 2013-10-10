@@ -1,4 +1,3 @@
-
 ##################################################################################
 # Auto imported:
 ##################################################################################
@@ -117,21 +116,20 @@ types:
 ##################################################################################
 relationships:
 
-    cloudify.tosca.relationships.depends_on:
-        workflow: |
-          define relationship_workflow
-            log message: 'relationship workflow: node[${node.id}], list[${v:execution_list}]'
-            iterator on: '$v:execution_list', to_v: 'executed'
-              log message: 'relationship workflow item: node[${node.id}], item[${v:executed.operation}]'
-              collect_params names: '$node.execution_params_names',
-                             to_f: 'execution_params'
-              execute_operation operation: '${v:executed.operation}',
-                                target_node_id: '${v:target_node_id}',
-                                to_f: '${v:executed.output_field}',
-                                params: '$f:execution_params'
+    cloudify.tosca.relationships.depends_on: { }
 
     cloudify.tosca.relationships.connected_to:
         derived_from: "cloudify.tosca.relationships.depends_on"
+        workflow: |
+            define relationship_workflow
+                execute_operation operation: 'configure_connection'
+                                  relationship: '$v:relationship'
+
+        interface:
+            name: "cloudify.tosca.interfaces.connection_configurer"
+            operations:
+                - "configure_connection"
+                - "unconfigure_connection"
 
     cloudify.tosca.relationships.contained_in:
         derived_from: "cloudify.tosca.relationships.depends_on"
@@ -256,3 +254,4 @@ plugins:
     # Worker plugin artifact - runs on Cloudify agent
     cloudify.tosca.artifacts.agent_plugin:
         derived_from: "cloudify.tosca.artifacts.plugin"
+

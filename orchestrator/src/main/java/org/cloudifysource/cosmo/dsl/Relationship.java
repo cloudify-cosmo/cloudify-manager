@@ -28,6 +28,7 @@ public class Relationship extends InheritedDefinition {
     public static final String ROOT_RELATIONSHIP_NAME = "relationship";
     public static final Relationship ROOT_RELATIONSHIP = initRootRelationship();
 
+    private Interface anInterface;
     private String workflow;
 
     private static Relationship initRootRelationship() {
@@ -57,6 +58,9 @@ public class Relationship extends InheritedDefinition {
         if (other.getWorkflow() != null) {
             setWorkflow(other.getWorkflow());
         }
+        if (other.getInterface() != null) {
+            setInterface(other.getInterface());
+        }
     }
 
     public String getWorkflow() {
@@ -65,5 +69,13 @@ public class Relationship extends InheritedDefinition {
 
     public void setWorkflow(String workflow) {
         this.workflow = workflow;
+    }
+
+    public Interface getInterface() {
+        return anInterface;
+    }
+
+    public void setInterface(Interface anInterface) {
+        this.anInterface = anInterface;
     }
 }

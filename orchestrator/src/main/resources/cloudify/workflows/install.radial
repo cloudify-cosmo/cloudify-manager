@@ -14,10 +14,11 @@ define cloudify_workflows_install
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
-            log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
-            set 'v:relationship_workflow': '$v:relationship.workflow'
-            relationship_workflow execution_list: '$v:relationship.post_target_start',
-                                  target_node_id: '${v:relationship.target_id}'
+            sequence if: '${v:relationship.bind_time} == pre_started'
+                log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
+                set 'v:relationship_workflow': '$v:relationship.workflow'
+                relationship_workflow relationship: '$v:relationship'
+        unset 'v:relationship'
 
         event event: { "stage"=>"initiating" }
         log message: 'executing init workflow for node: ${node.id}'
@@ -26,7 +27,8 @@ define cloudify_workflows_install
 
         state resource_id: '${node.id}', state: { reachable: "true" }
         iterator on: '$f:node.relationships', to_v: 'relationship'
-            log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
-            set 'v:relationship_workflow': '$v:relationship.workflow'
-            relationship_workflow execution_list: '$v:relationship.post_source_start',
-                                  target_node_id: '${v:relationship.target_id}'
+            sequence if: '${v:relationship.bind_time} == post_started'
+                log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
+                set 'v:relationship_workflow': '$v:relationship.workflow'
+                relationship_workflow relationship: '$v:relationship'
+        unset 'v:relationship'

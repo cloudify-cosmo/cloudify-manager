@@ -77,9 +77,10 @@ public class DSLProcessor {
             Map<String, String> aliasMappings = loadAliasMapping();
             importContext.addMapping(aliasMappings);
             Definitions definitions = parseDslAndHandleImports(loadedDsl, importContext);
+            extractRelationshipsInterfaces(definitions);
 
             Map<String, Type> populatedTypes = buildPopulatedTypesMap(definitions.getTypes());
-            Map<String, Plugin> populatedArtifacts = buildPopulatedArtifactsMap(definitions.getPlugins());
+            Map<String, Plugin> populatedPlugins = buildPopulatedPluginsMap(definitions.getPlugins());
             Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
                     definitions.getRelationships());
 
@@ -96,7 +97,7 @@ public class DSLProcessor {
             Map<String, Object> plan = postProcessor.postProcess(
                     definitions,
                     populatedServiceTemplates,
-                    populatedArtifacts,
+                    populatedPlugins,
                     populatedRelationships);
 
             String result = JSON_OBJECT_MAPPER.writeValueAsString(plan);
@@ -169,8 +170,8 @@ public class DSLProcessor {
             for (RelationshipTemplate relationshipTemplate : template.getRelationships()) {
                 String targetName = String.format("%s.%s", serviceTemplate, relationshipTemplate.getTarget());
                 Preconditions.checkArgument(populatedRelationships.containsKey(relationshipTemplate.getType()),
-                        "No relationship of type [%s] found for node [%s]",
-                        relationshipTemplate.getType(), template.getName());
+                                            "No relationship of type [%s] found for node [%s]",
+                                            relationshipTemplate.getType(), template.getName());
                 Preconditions.checkArgument(nodeTemplates.containsKey(targetName),
                         "No node template [%s] found for relationship [%s] in node [%s]",
                         targetName, relationshipTemplate.getType(), typeTemplateName);
@@ -247,20 +248,20 @@ public class DSLProcessor {
 
     private static Map<String, Type> buildPopulatedTypesMap(Map<String, Type> types) {
         return buildPopulatedMap(Type.ROOT_NODE_TYPE_NAME,
-                Type.ROOT_NODE_TYPE,
-                types);
+                                 Type.ROOT_NODE_TYPE,
+                                 types);
     }
 
-    private static Map<String, Plugin> buildPopulatedArtifactsMap(Map<String, Plugin> artifacts) {
+    private static Map<String, Plugin> buildPopulatedPluginsMap(Map<String, Plugin> plugins) {
         return buildPopulatedMap(Plugin.ROOT_PLUGIN_NAME,
-                Plugin.ROOT_PLUGIN,
-                artifacts);
+                                 Plugin.ROOT_PLUGIN,
+                                 plugins);
     }
 
     private static Map<String, Relationship> buildPopulatedRelationshipsMap(Map<String, Relationship> relationships) {
         return buildPopulatedMap(Relationship.ROOT_RELATIONSHIP_NAME,
-                Relationship.ROOT_RELATIONSHIP,
-                relationships);
+                                 Relationship.ROOT_RELATIONSHIP,
+                                 relationships);
     }
 
     private static <T extends InheritedDefinition> Map<String, T> buildPopulatedMap(
@@ -294,39 +295,38 @@ public class DSLProcessor {
             String rootName
     ) {
         Tree<String> tree = new Tree<>(rootName);
-        for (String artifactName : inheritedDefinitions.keySet()) {
-            tree.addNode(artifactName);
+        for (String definitionName : inheritedDefinitions.keySet()) {
+            tree.addNode(definitionName);
         }
         for (Map.Entry<String, ? extends InheritedDefinition> entry : inheritedDefinitions.entrySet()) {
-            String artifactName = entry.getKey();
+            String definitionName = entry.getKey();
             InheritedDefinition type = entry.getValue();
-            String parentArtifactName = type.getDerivedFrom();
-            tree.setParentChildRelationship(parentArtifactName, artifactName);
+            String parentDefinitionName = type.getDerivedFrom();
+            tree.setParentChildRelationship(parentDefinitionName, definitionName);
         }
         tree.validateLegalTree();
         return tree;
     }
 
-    private static Definitions parseDslAndHandleImports(DSLResource dsl,
-                                                        ImportsContext importContext) {
+    private static Definitions parseDslAndHandleImports(DSLResource dsl, ImportsContext context) {
         final Definitions definitions = parseRawDsl(dsl.getContent());
-        String currentContext = importContext.getContextLocation();
+        String currentContext = context.getContextLocation();
         LOG.debug("Loading imports for dsl: {} [imports={}]", dsl.getLocation(), definitions.getImports());
         for (String definitionImport : definitions.getImports()) {
 
-            DSLResource importedDsl = ResourcesLoader.load(definitionImport, importContext);
+            DSLResource importedDsl = ResourcesLoader.load(definitionImport, context);
 
             LOG.debug("Loaded import: {} [uri={}]", definitionImport, importedDsl.getLocation());
 
-            if (importContext.isImported(importedDsl.getLocation())) {
+            if (context.isImported(importedDsl.getLocation())) {
                 LOG.debug("Filtered import: {} (already imported)", definitionImport);
                 continue;
             }
-            importContext.addImport(importedDsl.getLocation());
+            context.addImport(importedDsl.getLocation());
 
-            importContext.setContextLocation(ResourceLocationHelper.getParentLocation(importedDsl.getLocation()));
-            Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, importContext);
-            importContext.setContextLocation(currentContext);
+            context.setContextLocation(ResourceLocationHelper.getParentLocation(importedDsl.getLocation()));
+            Definitions importedDefinitions = parseDslAndHandleImports(importedDsl, context);
+            context.setContextLocation(currentContext);
 
             copyDefinitions(importedDefinitions.getTypes(), definitions.getTypes());
             copyDefinitions(importedDefinitions.getPlugins(), definitions.getPlugins());
@@ -338,6 +338,19 @@ public class DSLProcessor {
         }
 
         return definitions;
+    }
+
+    private static void extractRelationshipsInterfaces(Definitions definitions) {
+        for (Relationship relationship : definitions.getRelationships().values()) {
+            if (relationship.getInterface() != null) {
+                String interfaceName = relationship.getInterface().getName();
+                if (definitions.getInterfaces().containsKey(interfaceName)) {
+                    throw new IllegalArgumentException("Cannot override an already existing interface definition[" +
+                            interfaceName + "] in relationship[" + relationship.getName() + "]");
+                }
+                definitions.getInterfaces().put(interfaceName, relationship.getInterface());
+            }
+        }
     }
 
     private static void copyWorkflows(Map<String, Workflow> copyFrom, Map<String, Workflow> copyTo) {
@@ -402,8 +415,7 @@ public class DSLProcessor {
     private static Map<String, String> loadAliasMapping() {
         URL mappingResource = Resources.getResource(ALIAS_MAPPING_RESOURCE);
         try {
-            return YAML_OBJECT_MAPPER.readValue(mappingResource, new TypeReference<Map<String, String>>() {
-            });
+            return YAML_OBJECT_MAPPER.readValue(mappingResource, new TypeReference<Map<String, String>>() { });
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

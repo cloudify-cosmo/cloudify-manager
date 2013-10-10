@@ -49,24 +49,15 @@ class PreparePlanParticipant < Ruote::Participant
           end
         end
         node[PROPERTIES][RUNTIME] = Hash.new
-        execution_params_names = []
         node['relationships'].each do |relationship|
           relationship['state'] = 'reachable'
-          relationship_workflow = plan['relationships'][relationship['type']]['workflow']
+          relationship_type = plan['relationships'][relationship['type']]
+          relationship_workflow = relationship_type['workflow']
           if relationship_workflow.nil? or relationship_workflow.empty?
             relationship_workflow = 'define stub_workflow\n\t'
           end
           relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
-          relationship['post_target_start'].each do |executed_item|
-            output_field = executed_item['output_field']
-            execution_params_names << output_field unless output_field.empty?
-          end
-          relationship['post_source_start'].each do |executed_item|
-            output_field = executed_item['output_field']
-            execution_params_names << output_field unless output_field.empty?
-          end
         end
-        node['execution_params_names'] = execution_params_names
       end
 
       if plan.has_key? 'workflows'
@@ -79,12 +70,32 @@ class PreparePlanParticipant < Ruote::Participant
 
       workitem.fields['plan'] = plan
 
+      validate_plan(plan)
+
       $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
       reply
 
     rescue => e
       log_exception(e, 'prepare_plan')
       flunk(workitem, e)
+    end
+  end
+
+  def validate_plan(plan)
+    plan[PrepareOperationParticipant::NODES].each{ |node| validate_node(node)}
+  end
+
+  def validate_node(node)
+    unless node.has_key? PrepareOperationParticipant::HOST_ID
+      node_id = node[PrepareOperationParticipant::NODE_ID]
+      node[PrepareOperationParticipant::PLUGINS].each do |_, plugin|
+        plugin_name = plugin['name']
+        agent_plugin = plugin[PrepareOperationParticipant::AGENT_PLUGIN]
+        raise "node #{node_id} has no relationship which makes it contained within a host and it
+has an agent plugin named " +
+              "#{plugin_name}, agent plugins must be installed on a host" unless
+            agent_plugin.to_s.eql? 'false'
+      end
     end
   end
 
