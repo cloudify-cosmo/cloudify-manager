@@ -29,7 +29,8 @@ application_template:
                     name: "interface2"
                     operations:
                         - "interface2_operation1"
-                  workflow: "workflow2"
+                  workflow:
+                    radial: "workflow2"
                   plugin: "plugin4"
                   bind_at: "pre_started"
                   run_on_node: "source"
@@ -45,7 +46,8 @@ relationships:
             name: "interface1"
             operations:
                 - "interface1_operation1"
-        workflow: "workflow1"
+        workflow:
+            radial: "workflow1"
         plugin: "plugin1"
         bind_at: "post_started"
         run_on_node: "target"
