@@ -16,7 +16,7 @@
 
 __author__ = 'elip'
 
-from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION
+from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION, OPENSTACK_PROVISION_VERSION
 
 WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip"\
                    .format(WORKER_INSTALLER_VERSION)
@@ -26,7 +26,7 @@ VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-prov
                     .format(VAGRANT_PROVISION_VERSION)
 
 OPENSTACK_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
-    .format(VAGRANT_PROVISION_VERSION)
+    .format(OPENSTACK_PROVISION_VERSION)
 
 plugins = [
 
