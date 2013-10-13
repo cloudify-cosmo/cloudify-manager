@@ -22,6 +22,8 @@ For a test example see: `tests/workflow/test_workflow.py`
 The project's dependencies installation is done using setup.py:
 
 ```
+virtualenv venv
+source venv/Scripts/activate
 python setup.py install
 ```
 

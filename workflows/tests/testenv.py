@@ -59,8 +59,10 @@ class CeleryWorkerProcess(object):
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
         import plugin_installer
+        import dsl_parser
         self._copy_plugin(riemann_config_loader)
         self._copy_plugin(plugin_installer)
+        self._copy_plugin(dsl_parser)
 
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
