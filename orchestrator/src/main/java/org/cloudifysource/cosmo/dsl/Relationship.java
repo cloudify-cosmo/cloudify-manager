@@ -31,7 +31,7 @@ public class Relationship extends InheritedDefinition {
     public static final Relationship ROOT_RELATIONSHIP = initRootRelationship();
 
     private Interface anInterface;
-    private String workflow;
+    private Workflow workflow;
 
     private String plugin;
     private String bindAt;
@@ -78,11 +78,11 @@ public class Relationship extends InheritedDefinition {
         }
     }
 
-    public String getWorkflow() {
+    public Workflow getWorkflow() {
         return workflow;
     }
 
-    public void setWorkflow(String workflow) {
+    public void setWorkflow(Workflow workflow) {
         this.workflow = workflow;
     }
 
