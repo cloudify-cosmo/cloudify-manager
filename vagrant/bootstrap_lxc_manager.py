@@ -106,6 +106,7 @@ class VagrantLxcBoot:
 
     def __init__(self, args):
         self.working_dir = args.working_dir
+        self.config_dir = args.config_dir
         self.cosmo_version = args.cosmo_version
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
         self.update_only = args.update_only
@@ -170,8 +171,8 @@ class VagrantLxcBoot:
         if os.path.exists(riemann_work_path):
             self.runner.run("rm -rf {0}".format(riemann_work_path))
         os.makedirs(riemann_work_path)
-        self.runner.run("cp {0} {1}".format("/vagrant/riemann.config", riemann_config_path))
-        self.runner.run("cp {0} {1}".format("/vagrant/riemann.config.template", riemann_template_path))
+        self.runner.run("cp {0} {1}".format("{0}/riemann.config".format(self.config_dir), riemann_config_path))
+        self.runner.run("cp {0} {1}".format("{0}/riemann.config.template".format(self.config_dir), riemann_template_path))
         riemann = RiemannProcess(riemann_config_path)
         riemann.start()
         return {
@@ -340,7 +341,7 @@ fi
         if os.path.exists("cosmo.jar"):
             self.runner.run("rm cosmo.jar")
         self.runner.run("ln -s {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
-        self.runner.run("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir))
+        self.runner.run("cp {0} {1}".format("{0}/log4j.properties".format(self.config_dir), self.working_dir))
 
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")
@@ -398,6 +399,11 @@ if __name__ == '__main__':
         '--working_dir',
         help='Working directory for all cosmo installation files',
         default="/home/vagrant/cosmo-work"
+    )
+    parser.add_argument(
+        '--config_dir',
+        help='Directory in which files such as log4j.properties and riemann.config reside',
+        default='/vagrant'
     )
     parser.add_argument(
         '--cosmo_version',
