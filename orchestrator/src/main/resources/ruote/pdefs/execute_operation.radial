@@ -1,5 +1,6 @@
 define execute_operation
-    prepare_operation operation: "${v:operation}", target_node_id: "${v:target_node_id}"
+    prepare_operation operation: "${v:operation}",
+                      relationship: "$v:relationship"
 
     set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin"
     repeat

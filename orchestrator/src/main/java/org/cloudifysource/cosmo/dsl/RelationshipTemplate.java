@@ -16,11 +16,7 @@
 
 package org.cloudifysource.cosmo.dsl;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-
-import java.util.List;
-import java.util.Map;
+import com.google.common.base.Strings;
 
 /**
  * Data container for a relationship template in a node template of the dsl.
@@ -28,19 +24,16 @@ import java.util.Map;
  * @author Dan Kilman
  * @since 0.1
  */
-public class RelationshipTemplate {
+public class RelationshipTemplate extends Relationship {
 
-    private String type;
     private String target;
-    private List<Object> postTargetStart = Lists.newArrayList();
-    private List<Object> postSourceStart = Lists.newArrayList();
 
     public String getType() {
-        return type;
+        return getDerivedFrom();
     }
 
     public void setType(String type) {
-        this.type = type;
+        setDerivedFrom(type);
     }
 
     public String getTarget() {
@@ -51,52 +44,23 @@ public class RelationshipTemplate {
         this.target = target;
     }
 
-    public List<Object> getPostTargetStart() {
-        return postTargetStart;
+    @Override
+    public InheritedDefinition newInstanceWithInheritance(InheritedDefinition parent) {
+        Relationship typedParent = (Relationship) parent;
+        RelationshipTemplate result = new RelationshipTemplate();
+        result.inheritPropertiesFrom(typedParent);
+        result.inheritPropertiesFrom(this);
+        result.setName(getName());
+        result.setDerivedFrom(parent.getName());
+        result.setSuperTypes(parent);
+        return result;
     }
 
-    public void setPostTargetStart(List<Object> postTargetStart) {
-        this.postTargetStart = postTargetStart;
+    protected void inheritPropertiesFrom(RelationshipTemplate other) {
+        super.inheritPropertiesFrom(other);
+        if (!Strings.isNullOrEmpty(other.getTarget())) {
+            setTarget(other.getTarget());
+        }
     }
 
-    public List<Object> getPostSourceStart() {
-        return postSourceStart;
-    }
-
-    public void setPostSourceStart(List<Object> postSourceStart) {
-        this.postSourceStart = postSourceStart;
-    }
-
-    /**
-     */
-    static class ExecutionListItem {
-        private final String operation;
-        private final String outputField;
-        ExecutionListItem(String operation, String outputField) {
-            this.operation = operation;
-            this.outputField = outputField;
-        }
-        String getOperation() {
-            return operation;
-        }
-        String getOutputField() {
-            return outputField;
-        }
-        static Map<String, String> fromObject(Object rawItem) {
-            if (rawItem instanceof String) {
-                return new ExecutionListItem((String) rawItem, "").toMap();
-            } else if (rawItem instanceof Map) {
-                Map.Entry<String, String> entry =
-                        (Map.Entry<String, String>) ((Map) rawItem).entrySet().iterator().next();
-                return new ExecutionListItem(entry.getKey(), entry.getValue()).toMap();
-            } else {
-                throw new IllegalArgumentException("Cannot convert [" + rawItem + "] to an execution list item");
-            }
-        }
-        Map<String, String> toMap() {
-            return ImmutableMap.<String, String>builder().put("operation", operation)
-                                                         .put("output_field", outputField)
-                                                         .build();
-        }
-    }
 }

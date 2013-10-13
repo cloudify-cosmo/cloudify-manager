@@ -17,18 +17,15 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.cloudifysource.cosmo.dsl.RelationshipTemplate.ExecutionListItem;
 
 /**
  * Post processor the prepares the map for the workflow consumption.
@@ -53,7 +50,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 extractInterfacePluginImplementations(definitions.getInterfaces(), populatedPlugins);
 
         Map<String, Object> result = Maps.newHashMap();
-        List<Object> nodes = Lists.newArrayList();
+        List<Map<String, Object>> nodes = Lists.newArrayList();
+        Map<String, Map<String, Object>> nodesMap = Maps.newHashMap();
         Map<String, Object> nodesExtraData = Maps.newHashMap();
         Map<String, Map<String, Policy>> policies = Maps.newHashMap();
 
@@ -72,10 +70,13 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                         applicationTemplate.getName(),
                         typeTemplate);
                 nodes.add(node);
+                nodesMap.put(nodeId, node);
                 nodesExtraData.put(nodeId, nodeExtraData);
                 policies.put(nodeId, typeTemplate.getPolicies());
             }
         }
+
+        processNodesRelationshipPlugins(nodesMap, populatedPlugins);
 
         result.put("nodes", nodes);
         result.put("nodes_extra", nodesExtraData);
@@ -83,7 +84,46 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         result.put("policies", policies);
         result.put("policies_events", definitions.getPolicies().getTypes());
         result.put("relationships", populatedRelationships);
+        result.put("workflows", processWorkflows(definitions.getWorkflows()));
         return result;
+    }
+
+    private void processNodesRelationshipPlugins(Map<String, Map<String, Object>> nodesMap,
+                                                 Map<String, Plugin> populatedPlugins) {
+        for (Map<String, Object> node : nodesMap.values()) {
+            List<Map<String, String>> nodeRelationships = (List<Map<String, String>>) node.get("relationships");
+            for (Map<String, String> relationship : nodeRelationships) {
+                String pluginName = relationship.get("plugin");
+                if (!Strings.isNullOrEmpty(pluginName)) {
+                    Map<String, Object> nodeToUpdate;
+                    String runOnNode = relationship.get("run_on_node");
+                    String targetId = relationship.get("target_id");
+                    if ("source".equals(runOnNode)) {
+                        nodeToUpdate = node;
+                    } else if ("target".equals(runOnNode)) {
+                        nodeToUpdate =  nodesMap.get(targetId);
+                    } else {
+                        throw new IllegalArgumentException("Undefined run_on_node: " + runOnNode + " for " +
+                                "relationship in node: " + node.get("id"));
+                    }
+                    Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, pluginName);
+                    Map<String, Object> nodeToUpdatePlugins = (Map<String, Object>) nodeToUpdate.get("plugins");
+                    if (nodeToUpdatePlugins.containsKey(pluginName)) {
+                        throw new IllegalArgumentException("Cannot override plugin definition of: " +
+                                pluginName + " in node: " + nodeToUpdate.get("id"));
+                    }
+                    nodeToUpdatePlugins.put(pluginName, pluginDetails);
+                }
+            }
+        }
+    }
+
+    private Map<String, Object> processWorkflows(Map<String, Workflow> workflows) {
+        final Map<String, Object> flatWorkflows = Maps.newHashMap();
+        for (Workflow workflow : workflows.values()) {
+            flatWorkflows.put(workflow.getName(), workflow.getRadial());
+        }
+        return flatWorkflows;
     }
 
     private Map<String, Object> processTypeTemplateNodeExtraData(String serviceTemplateName,
@@ -111,7 +151,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
         setNodeRelationships(typeTemplate, serviceTemplateName, node);
 
-        setNodeWorkflows(typeTemplate, definitions, node);
+        setNodeWorkflows(typeTemplate, node);
 
         setNodePolicies(typeTemplate, node);
 
@@ -171,55 +211,21 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         List<Object> relationships = Lists.newLinkedList();
         for (RelationshipTemplate relationship : typeTemplate.getRelationships()) {
             Map<String, Object> relationshipMap = Maps.newHashMap();
-            relationshipMap.put("type", relationship.getType());
             String fullTargetId = extractFullTargetIdFromRelationship(serviceTemplateName, relationship.getTarget());
             relationshipMap.put("target_id", fullTargetId);
-
-            List<Map<String, String>> postTargetStart = Lists.newArrayList();
-            for (Object rawItem : relationship.getPostTargetStart()) {
-                postTargetStart.add(ExecutionListItem.fromObject(rawItem));
-            }
-            relationshipMap.put("post_target_start", postTargetStart);
-            List<Map<String, String>> postSourceStart = Lists.newArrayList();
-            for (Object rawItem : relationship.getPostSourceStart()) {
-                postSourceStart.add(ExecutionListItem.fromObject(rawItem));
-            }
-            relationshipMap.put("post_source_start", postSourceStart);
-
+            relationshipMap.put("type", relationship.getType());
+            relationshipMap.put("plugin", relationship.getPlugin());
+            relationshipMap.put("run_on_node", relationship.getRunOnNode());
+            relationshipMap.put("bind_at", relationship.getBindAt());
+            relationshipMap.put("workflow", relationship.getWorkflow());
+            relationshipMap.put("interface", relationship.getInterface());
             relationships.add(relationshipMap);
         }
         node.put("relationships", relationships);
     }
 
-
-
-    private void setNodeWorkflows(TypeTemplate typeTemplate, Definitions definitions, Map<String, Object> node) {
-        Map<String, Object> workflows = Maps.newHashMap();
-
-        // for now only inline radial is supported
-        // later we'll add support for others
-
-        // extract init
-        Optional<Object> initWorkflow = extractWorkflow(definitions.getWorkflows(), typeTemplate.getName());
-        Iterator<String> superTypes = typeTemplate.getSuperTypes().iterator();
-        while (superTypes.hasNext() && !initWorkflow.isPresent()) {
-            initWorkflow = extractWorkflow(definitions.getWorkflows(), superTypes.next());
-        }
-        if (!initWorkflow.isPresent()) {
-            throw new IllegalArgumentException("No init workflow found for template: " + typeTemplate.getName());
-        }
-        workflows.put("init", initWorkflow.get());
-
-        node.put("workflows", workflows);
-    }
-
-    private Optional<Object> extractWorkflow(Map<String, Workflow> plans, String typeName) {
-        Workflow workflow = plans.get(typeName);
-        if (workflow == null) {
-            return Optional.absent();
-        }
-        Object initWorkflow = workflow.getInit().get("radial");
-        return Optional.fromNullable(initWorkflow);
+    private void setNodeWorkflows(TypeTemplate typeTemplate, Map<String, Object> node) {
+        node.put("workflows", processWorkflows(typeTemplate.getWorkflows()));
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {
@@ -267,12 +273,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 pluginImplementation = pluginImplementations.iterator().next();
             }
 
-            Map<String, Object> pluginDetails = Maps.newHashMap();
-            Plugin plugin = populatedPlugins.get(pluginImplementation);
-            boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN);
-            pluginDetails.putAll(plugin.getProperties());
-            pluginDetails.put("name", pluginImplementation);
-            pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));
+            Map<String, Object> pluginDetails = buildPluginDetails(populatedPlugins, pluginImplementation);
             plugins.put(pluginImplementation, pluginDetails);
 
             Set<String> operations = Sets.newHashSet(theInterface.getOperations());
@@ -297,6 +298,20 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
         node.put("plugins", plugins);
         node.put("operations", operationToPlugin);
+    }
+
+    private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedArtifacts,
+                                                   String pluginImplementation) {
+        Map<String, Object> pluginDetails = Maps.newHashMap();
+        Plugin plugin = populatedArtifacts.get(pluginImplementation);
+        if (plugin == null) {
+            throw new IllegalArgumentException("No plugin named: " + pluginImplementation + "is defined");
+        }
+        boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN);
+        pluginDetails.putAll(plugin.getProperties());
+        pluginDetails.put("name", pluginImplementation);
+        pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));
+        return pluginDetails;
     }
 
     private void setNodeSuperTypes(TypeTemplate typeTemplate, Map<String, Object> nodeExtraData) {

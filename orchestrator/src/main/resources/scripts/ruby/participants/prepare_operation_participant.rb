@@ -20,12 +20,15 @@ class PrepareOperationParticipant < Ruote::Participant
 
   PLAN = 'plan'
   NODES = 'nodes'
-  TARGET_ID = 'target_node_id'
+  RELATIONSHIP = 'relationship'
+  RELATIONSHIPS = 'relationships'
+  TARGET_ID = 'target_id'
   NODE_ID = 'id'
-  SOURCE_PREFIX = 'source.'
-  TARGET_PREFIX = 'target.'
   RELATIONSHIP_OTHER_NODE = 'relationship_other_node'
   RUOTE_RELATIONSHIP_NODE_ID = 'relationship_node_id'
+  RUN_ON_NODE = 'run_on_node'
+  TYPE = 'type'
+  PLUGIN = 'plugin'
 
   NODE = 'node'
   OPERATION = 'operation'
@@ -40,53 +43,49 @@ class PrepareOperationParticipant < Ruote::Participant
 
   def on_workitem
     begin
+      raise "#{PLAN} field not set" unless workitem.fields.has_key? PLAN
       raise "#{NODE} field not set" unless workitem.fields.has_key? NODE
       raise "#{OPERATION} parameter not set" unless workitem.params.has_key? OPERATION
 
       operation = workitem.params[OPERATION]
 
-      allow_dynamic_operations = false
-      if workitem.params.has_key? TARGET_ID and workitem.params[TARGET_ID] != ''
-        allow_dynamic_operations = true
-        target_id = workitem.params[TARGET_ID]
+      relationship_operation = (workitem.params.has_key? RELATIONSHIP and not workitem.params[RELATIONSHIP].nil?)
+      if relationship_operation
+        relationship = workitem.params[RELATIONSHIP]
+        target_id = relationship[TARGET_ID]
+        run_on_node = relationship[RUN_ON_NODE]
+        plugin_name = relationship[PLUGIN]
+
+        raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
+        raise "Relationship [#{relationship}] missing run_on_node" if run_on_node.nil? or run_on_node.empty?
+        raise "Relationship [#{relationship}] missing plugin" if plugin_name.nil? or plugin_name.empty?
+
         source_node = workitem.fields[NODE]
         target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
         workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
+
         raise "Node missing with id #{target_id}" if target_node.nil?
-        if operation.start_with? SOURCE_PREFIX
-          operation = operation[SOURCE_PREFIX.length, operation.length]
+
+        if run_on_node == 'source'
           node = source_node
           workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = target_node[NODE_ID]
-        elsif operation.start_with? TARGET_PREFIX
-          operation = operation[TARGET_PREFIX.length, operation.length]
+        elsif run_on_node == 'target'
           node = target_node
           workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = source_node[NODE_ID]
         else
-          raise "Invalid execution destination specified in operation: #{operation}"
+          raise "Invalid bind location specified for relationship[#{relationship}]: #{run_on_node}"
         end
       else
         node = workitem.fields[NODE]
-        workitem.fields[RELATIONSHIP_OTHER_NODE] = nil
-      end
+        workitem.fields.delete(RELATIONSHIP_OTHER_NODE)
+        workitem.fields.delete(RUOTE_RELATIONSHIP_NODE_ID)
 
-      operations = node[OPERATIONS]
-      raise "Node has no operations: #{node}" unless operations != nil
-      raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
-
-      if allow_dynamic_operations
-        if operations.has_key? operation
-          plugin_name = operations[operation]
-        else
-          split_op = operation.split('.')
-          operation = split_op[-1]
-          plugin_name = split_op[0, split_op.length - 1].join('.')
-          raise "Node does not have a plugin named: #{plugin_name}" unless node[PLUGINS].has_key? plugin_name
-        end
-      else
+        operations = node[OPERATIONS]
+        raise "Node has no operations: #{node}" unless operations != nil
+        raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
         raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
         plugin_name = operations[operation]
       end
-
 
       $logger.debug('Executing operation [operation={}, plugin={}]', operation, plugin_name)
 

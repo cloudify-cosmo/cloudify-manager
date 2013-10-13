@@ -16,6 +16,8 @@
 
 package org.cloudifysource.cosmo.dsl;
 
+import com.google.common.base.Strings;
+
 /**
  * A class used to represent a relationship.
  * Used internally only by the dsl processor.
@@ -28,7 +30,12 @@ public class Relationship extends InheritedDefinition {
     public static final String ROOT_RELATIONSHIP_NAME = "relationship";
     public static final Relationship ROOT_RELATIONSHIP = initRootRelationship();
 
+    private Interface anInterface;
     private String workflow;
+
+    private String plugin;
+    private String bindAt;
+    private String runOnNode;
 
     private static Relationship initRootRelationship() {
         Relationship root = new Relationship();
@@ -57,6 +64,18 @@ public class Relationship extends InheritedDefinition {
         if (other.getWorkflow() != null) {
             setWorkflow(other.getWorkflow());
         }
+        if (other.getInterface() != null) {
+            setInterface(other.getInterface());
+        }
+        if (!Strings.isNullOrEmpty(other.getPlugin())) {
+            setPlugin(other.getPlugin());
+        }
+        if (!Strings.isNullOrEmpty(other.getBindAt())) {
+            setBindAt(other.getBindAt());
+        }
+        if (!Strings.isNullOrEmpty(other.getRunOnNode())) {
+            setRunOnNode(other.getRunOnNode());
+        }
     }
 
     public String getWorkflow() {
@@ -65,5 +84,37 @@ public class Relationship extends InheritedDefinition {
 
     public void setWorkflow(String workflow) {
         this.workflow = workflow;
+    }
+
+    public Interface getInterface() {
+        return anInterface;
+    }
+
+    public void setInterface(Interface anInterface) {
+        this.anInterface = anInterface;
+    }
+
+    public String getBindAt() {
+        return bindAt;
+    }
+
+    public void setBindAt(String bindAt) {
+        this.bindAt = bindAt;
+    }
+
+    public String getRunOnNode() {
+        return runOnNode;
+    }
+
+    public void setRunOnNode(String runOnNode) {
+        this.runOnNode = runOnNode;
+    }
+
+    public String getPlugin() {
+        return plugin;
+    }
+
+    public void setPlugin(String plugin) {
+        this.plugin = plugin;
     }
 }

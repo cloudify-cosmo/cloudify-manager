@@ -36,9 +36,8 @@ public class Definitions {
     private Map<String, Interface> interfaces = Maps.newHashMap();
     private Map<String, Plugin> plugins = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
-    private Map<String, Workflow> workflows = Maps.newHashMap();
     private Policies policies = new Policies();
-    private String globalPlan;
+    private Map<String, Workflow> workflows = Maps.newHashMap();
 
     public Map<String, Type> getTypes() {
         return types;
@@ -80,28 +79,12 @@ public class Definitions {
         this.plugins = plugins;
     }
 
-    public Map<String, Workflow> getWorkflows() {
-        return workflows;
-    }
-
-    public void setWorkflows(Map<String, Workflow> workflows) {
-        this.workflows = workflows;
-    }
-
     public List<String> getImports() {
         return imports;
     }
 
     public void setImports(List<String> imports) {
         this.imports = imports;
-    }
-
-    public String getGlobalPlan() {
-        return globalPlan;
-    }
-
-    public void setGlobalPlan(String globalPlan) {
-        this.globalPlan = globalPlan;
     }
 
     public Policies getPolicies() {
@@ -112,5 +95,11 @@ public class Definitions {
         this.policies = policies;
     }
 
+    public Map<String, Workflow> getWorkflows() {
+        return workflows;
+    }
 
+    public void setWorkflows(Map<String, Workflow> workflows) {
+        this.workflows = workflows;
+    }
 }

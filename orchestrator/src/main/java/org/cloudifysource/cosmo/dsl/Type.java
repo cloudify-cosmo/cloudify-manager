@@ -40,6 +40,7 @@ public class Type extends InheritedDefinition {
 
     private List<Object> interfaces = Lists.newArrayList();
     private Map<String, Policy> policies = Maps.newHashMap();
+    private Map<String, Workflow> workflows = Maps.newHashMap();
 
     private static Type initRootNodeType() {
         Type root = new Type();
@@ -66,6 +67,14 @@ public class Type extends InheritedDefinition {
 
     public void setPolicies(Map<String, Policy> policies) {
         this.policies = policies;
+    }
+
+    public Map<String, Workflow> getWorkflows() {
+        return workflows;
+    }
+
+    public void setWorkflows(Map<String, Workflow> workflows) {
+        this.workflows = workflows;
     }
 
     @Override
@@ -106,6 +115,7 @@ public class Type extends InheritedDefinition {
         }
         setInterfaces(newInterfaces);
         policies.putAll(other.getPolicies());
+        workflows.putAll(other.getWorkflows());
     }
 
     private Optional<InterfaceDescription> findInterface(List<InterfaceDescription> interfacesDescriptions,

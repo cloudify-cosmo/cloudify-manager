@@ -32,6 +32,11 @@ types:
                             state: "host_state"
                             value: "terminated"
 
+policies:
+    types:
+        new_policy:
+            ref: "new_policy.clj"
+
 application_template:
     name: "web_server"
     topology:

@@ -20,9 +20,8 @@ application_template:
     topology:
         -   name: "package_vm"
             type: vm
-workflows:
-    package_template.package_vm:
-        init:
-            radial: |
-                define init_method
-                    execute_operation operation: 'start'
+            workflows:
+                init:
+                    radial: |
+                        define init_method
+                            execute_operation operation: 'start'
