@@ -25,6 +25,9 @@ RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configu
 VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip"\
                     .format(VAGRANT_PROVISION_VERSION)
 
+OPENSTACK_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
+    .format(VAGRANT_PROVISION_VERSION)
+
 plugins = [
 
     {
@@ -41,3 +44,8 @@ plugins = [
         "url": VAGRANT_PROVISION
     },
 ]
+
+openstack_provisioner_plugin = {
+    "name": "cloudify.tosca.artifacts.plugin.openstack_host_provisioner",
+    "url": OPENSTACK_PROVISION
+}

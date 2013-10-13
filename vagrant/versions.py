@@ -5,5 +5,5 @@ WORKER_INSTALLER_VERSION = "develop"
 RIEMANN_LOADER_VERSION = "develop"
 VAGRANT_PROVISION_VERSION = "0.1.0"
 
-
-
+# TODO make this plugin hubflow'ish
+OPENSTACK_PROVISION_VERSION = "master"
