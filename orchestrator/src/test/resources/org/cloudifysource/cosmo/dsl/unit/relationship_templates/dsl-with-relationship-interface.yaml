@@ -33,14 +33,16 @@ relationships:
             name: "interface1"
             operations:
                 - "interface1_operation"
-        workflow: "workflow1"
+        workflow:
+            radial: "workflow1"
     relationship2:
         derived_from: "relationship1"
         interface:
             name: "interface2"
             operations:
                 - "interface2_operation"
-        workflow: "workflow2"
+        workflow:
+            radial: "workflow2"
 
 plugins:
     test_host_provisioner:

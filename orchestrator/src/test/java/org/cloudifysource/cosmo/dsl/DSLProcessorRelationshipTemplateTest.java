@@ -100,8 +100,8 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         assertThat(processed.getRelationships().get("relationship1").getInterface().getName()).isEqualTo("interface1");
         assertThat(processed.getRelationships().get("relationship2").getInterface().getName()).isEqualTo("interface2");
 
-        assertThat(processed.getRelationships().get("relationship1").getWorkflow()).isEqualTo("workflow1");
-        assertThat(processed.getRelationships().get("relationship2").getWorkflow()).isEqualTo("workflow2");
+        assertThat(processed.getRelationships().get("relationship1").getWorkflow().getRadial()).isEqualTo("workflow1");
+        assertThat(processed.getRelationships().get("relationship2").getWorkflow().getRadial()).isEqualTo("workflow2");
 
     }
 
@@ -184,6 +184,16 @@ public class DSLProcessorRelationshipTemplateTest extends AbstractDSLProcessorTe
         String dslPath = "org/cloudifysource/cosmo/dsl/unit/relationship_templates/" +
                 "dsl-with-relationship-templates-invalid-target.yaml";
         process(dslPath);
+    }
+
+    @Test
+    public void testRelationshipTemplateWorkflowOverride() {
+        String dslPath =
+                "org/cloudifysource/cosmo/dsl/unit/relationship_templates/dsl-with-relationship-wf-override.yaml";
+        Processed processed = process(dslPath);
+        final Node node = findNode(processed.getNodes(), "app.server");
+        assertThat(node.getRelationships().get(0).getWorkflow()).isEqualTo("overridden_workflow");
+        assertThat(node.getRelationships().get(1).getWorkflow()).isEqualTo("some_workflow");
     }
 
 }
