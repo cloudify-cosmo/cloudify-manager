@@ -161,7 +161,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                                     node,
                                     populatedPlugins);
 
-
+        setNodeInstances(typeTemplate, node);
         return node;
     }
 
@@ -300,6 +300,12 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
         node.put("plugins", plugins);
         node.put("operations", operationToPlugin);
+    }
+
+    private void setNodeInstances(TypeTemplate typeTemplate, Map<String, Object> node) {
+        final Map<String, Object> instances = Maps.newHashMap();
+        instances.put("deploy", typeTemplate.getInstances().getDeploy());
+        node.put("instances", instances);
     }
 
     private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedArtifacts,
