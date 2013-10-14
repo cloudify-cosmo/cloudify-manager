@@ -1,0 +1,3 @@
+define relationship_workflow
+    execute_operation operation: 'configure_connection'
+                      relationship: '$v:relationship'
