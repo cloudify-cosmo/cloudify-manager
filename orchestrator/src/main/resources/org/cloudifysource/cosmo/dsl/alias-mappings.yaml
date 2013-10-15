@@ -21,3 +21,4 @@ middleware_component_installer: cloudify/tosca/artifacts/plugins/middleware_comp
 celery_worker_installer: cloudify/tosca/artifacts/plugins/worker_installer.yaml
 celery_plugin_installer: cloudify/tosca/artifacts/plugins/plugin_installer.yaml
 vagrant_host_provisioner: cloudify/tosca/artifacts/plugins/vagrant_host_provisioner.yaml
+openstack_host_provisioner: cloudify/tosca/artifacts/plugins/openstack_host_provisioner.yaml
