@@ -221,13 +221,13 @@ workflows:
 plugins:
 
     # Basic plugin artifact
-    cloudify.tosca.artifacts.plugin: { }
+    cloudify.plugins.plugin: { }
 
     # Remote plugin artifact
-    cloudify.tosca.artifacts.remote_plugin:
-        derived_from: "cloudify.tosca.artifacts.plugin"
+    cloudify.plugins.remote_plugin:
+        derived_from: "cloudify.plugins.plugin"
 
     # Worker plugin artifact - runs on Cloudify agent
-    cloudify.tosca.artifacts.agent_plugin:
-        derived_from: "cloudify.tosca.artifacts.plugin"
+    cloudify.plugins.agent_plugin:
+        derived_from: "cloudify.plugins.plugin"
 

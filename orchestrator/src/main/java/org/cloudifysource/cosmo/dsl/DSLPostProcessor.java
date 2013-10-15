@@ -28,7 +28,7 @@ public interface DSLPostProcessor {
 
     Map<String, Object> postProcess(Definitions definitions,
                                     Map<String, ApplicationTemplate> populatedServiceTemplates,
-                                    Map<String, Plugin> populatedArtifacts,
+                                    Map<String, Plugin> populatedPlugins,
                                     Map<String, Relationship> populatedRelationships);
 
 }

@@ -49,7 +49,7 @@ public class DSLProcessorPluginsTest extends AbstractDSLProcessorTest {
         assertThat(operations.get("test.interface.some_op")).isEqualTo("test.plugin");
         assertThat(operations.get("test.interface.provision")).isEqualTo("test.plugin");
         assertThat(operations.get("cloudify.tosca.interfaces.host_provisioner.provision")).isEqualTo(
-                "cloudify.tosca.artifacts.plugin.host_provisioner");
+                "cloudify.plugins.host_provisioner");
         assertThat(operations.get("provision")).isNull();
 
     }

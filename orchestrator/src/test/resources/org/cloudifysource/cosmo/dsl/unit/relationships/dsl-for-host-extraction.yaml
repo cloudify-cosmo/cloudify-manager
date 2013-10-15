@@ -27,12 +27,12 @@ application_template:
 
 plugins:
     test_host_provisioner:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "cloudify.tosca.interfaces.host_provisioner"
-            url: "cloudify/tosca/artifacts/plugins/host-provisioner.zip"
+            url: "cloudify/plugins/host-provisioner.zip"
     test_host_provisioner2:
-        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "cloudify.tosca.interfaces.host_provisioner"
-            url: "cloudify/tosca/artifacts/plugins/host-provisioner.zip"
+            url: "cloudify/plugins/host-provisioner.zip"

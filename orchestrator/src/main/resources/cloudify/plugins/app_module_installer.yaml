@@ -1,6 +1,10 @@
+
+imports:
+    - "cloudify.types"
+
 plugins:
-    cloudify.plugins.stub_app_installer:
+    cloudify.plugins.app_module_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "cloudify.tosca.interfaces.app_module_installer"
-            url: "#{plugin_repository}/stub-installer.zip"
+            url: "cloudify/plugins/app_module-installer.zip"

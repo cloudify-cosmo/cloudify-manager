@@ -15,7 +15,7 @@ interfaces:
             - "operation5"
 plugins:
     provisioner_plugin:
-        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "provisioner"
             url: "provisioner.zip"

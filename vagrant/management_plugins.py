@@ -31,21 +31,21 @@ OPENSTACK_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-openstack-
 plugins = [
 
     {
-        "name": "cloudify.tosca.artifacts.plugin.riemann_config_loader",
+        "name": "cloudify.plugins.riemann_config_loader",
         "url": RIEMANN_LOADER
 
     },
     {
-        "name": "cloudify.tosca.artifacts.plugin.worker_installer",
+        "name": "cloudify.plugins.worker_installer",
         "url": WORKER_INSTALLER
     },
     {
-        "name": "cloudify.tosca.artifacts.plugin.vagrant_host_provisioner",
+        "name": "cloudify.plugins.vagrant_host_provisioner",
         "url": VAGRANT_PROVISION
     },
 ]
 
 openstack_provisioner_plugin = {
-    "name": "cloudify.tosca.artifacts.plugin.openstack_host_provisioner",
+    "name": "cloudify.plugins.openstack_host_provisioner",
     "url": OPENSTACK_PROVISION
 }

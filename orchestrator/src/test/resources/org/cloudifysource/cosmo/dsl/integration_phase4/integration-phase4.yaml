@@ -50,10 +50,10 @@ application_template:
             type: "cloudify.tosca.types.db_server"
             interfaces:
                 # pickledb middleware component plugin implementation
-                - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.tosca.artifacts.plugin.pickledb_installer"
+                - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.plugins.pickledb_installer"
                 # every middleware component also has an app module installer interface, so we take a stub
                 # implementation when no real implementation is used
-                - cloudify.tosca.interfaces.app_module_installer: "cloudify.tosca.artifacts.plugin.stub_app_installer"
+                - cloudify.tosca.interfaces.app_module_installer: "cloudify.plugins.stub_app_installer"
             properties:
                 db_name: "phase4"
                 db_data:
@@ -73,10 +73,10 @@ application_template:
             type: "cloudify.tosca.types.web_server"
             interfaces:
                 # flask middleware component plugin implementation
-                - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.tosca.artifacts.plugin.flask_installer"
+                - cloudify.tosca.interfaces.middleware_component_installer: "cloudify.plugins.flask_installer"
                 # the flask component is also responsible for deploying the flask application so we choose
                 # the flask app installer as the app module installer implementation
-                - cloudify.tosca.interfaces.app_module_installer: "cloudify.tosca.artifacts.plugin.flask_app_installer"
+                - cloudify.tosca.interfaces.app_module_installer: "cloudify.plugins.flask_app_installer"
             policies:
                 start_detection_policy:
                     rules:
@@ -121,6 +121,6 @@ application_template:
                     # not part of any interface so we and explicit name. the return value of this task will be
                     # in the parameter db_file when next we call the set_db_properties on the source.
                     post_source_start:
-                        - target.cloudify.tosca.artifacts.plugin.pickledb_installer.get_db_file_location: "db_file"
-                        - source.cloudify.tosca.artifacts.plugin.flask_app_connector.set_db_properties
+                        - target.cloudify.plugins.pickledb_installer.get_db_file_location: "db_file"
+                        - source.cloudify.plugins.flask_app_connector.set_db_properties
 

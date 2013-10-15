@@ -15,10 +15,10 @@ cloudify.policies.failure_detection: cloudify/policies/failure_detection.clj
 cloudify.policies.performance: cloudify/policies/performance.clj
 
 # plugins
-app_module_installer: cloudify/tosca/artifacts/plugins/app_module_installer.yaml
-host_provisioner: cloudify/tosca/artifacts/plugins/host_provisioner.yaml
-middleware_component_installer: cloudify/tosca/artifacts/plugins/middleware_component_installer.yaml
-celery_worker_installer: cloudify/tosca/artifacts/plugins/worker_installer.yaml
-celery_plugin_installer: cloudify/tosca/artifacts/plugins/plugin_installer.yaml
-vagrant_host_provisioner: cloudify/tosca/artifacts/plugins/vagrant_host_provisioner.yaml
-openstack_host_provisioner: cloudify/tosca/artifacts/plugins/openstack_host_provisioner.yaml
+app_module_installer: cloudify/plugins/app_module_installer.yaml
+host_provisioner: cloudify/plugins/host_provisioner.yaml
+middleware_component_installer: cloudify/plugins/middleware_component_installer.yaml
+celery_worker_installer: cloudify/plugins/worker_installer.yaml
+celery_plugin_installer: cloudify/plugins/plugin_installer.yaml
+vagrant_host_provisioner: cloudify/plugins/vagrant_host_provisioner.yaml
+openstack_host_provisioner: cloudify/plugins/openstack_host_provisioner.yaml

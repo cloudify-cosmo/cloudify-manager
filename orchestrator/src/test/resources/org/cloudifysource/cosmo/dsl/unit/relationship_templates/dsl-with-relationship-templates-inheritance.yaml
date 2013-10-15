@@ -57,22 +57,22 @@ relationships:
 
 plugins:
     plugin1:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin2:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin3:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin4:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface2"
             url: "url"
