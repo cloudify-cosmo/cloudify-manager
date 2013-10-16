@@ -1,6 +1,6 @@
 # yaml files
-cloudify.types: cloudify/tosca/types/types.yaml
-cloudify.policies: cloudify/tosca/policies/policies.yaml
+cloudify.types: cloudify/types/types.yaml
+cloudify.policies: cloudify/policies/policies.yaml
 
 # workflows
 cloudify.workflows.install: cloudify/workflows/install.radial

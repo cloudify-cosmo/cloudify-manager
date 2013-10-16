@@ -13,7 +13,7 @@ application_template:
     topology:
         # vagrant lxc machine
         -   name: "webserver_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             properties:
                 install_agent: 'true'
                 provider: lxc
@@ -62,7 +62,7 @@ application_template:
 
         # python simple http server
         -   name: "webserver_middleware"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             properties:
                 port: 8888
             policies:
@@ -73,5 +73,5 @@ application_template:
                                 service: "webserver status"
                                 state: "running"
             relationships:
-                -   type: "cloudify.tosca.relationships.contained_in"
+                -   type: "cloudify.relationships.contained_in"
                     target: "webserver_host"

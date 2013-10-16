@@ -7,32 +7,32 @@ application_template:
     name: "service_template"
     topology:
         -   name: "host1"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             interfaces:
-                - cloudify.tosca.interfaces.host_provisioner: "test_host_provisioner"
+                - cloudify.interfaces.host_provisioner: "test_host_provisioner"
         -   name: "host2"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             interfaces:
-                - cloudify.tosca.interfaces.host_provisioner: "test_host_provisioner2"
+                - cloudify.interfaces.host_provisioner: "test_host_provisioner2"
         -   name: "webserver1"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             relationships:
-                - type: "cloudify.tosca.relationships.contained_in"
+                - type: "cloudify.relationships.contained_in"
                   target: "host1"
         -   name: "webapplication1"
-            type: "cloudify.tosca.types.app_module"
+            type: "cloudify.types.app_module"
             relationships:
-                - type: "cloudify.tosca.relationships.contained_in"
+                - type: "cloudify.relationships.contained_in"
                   target: "webserver1"
 
 plugins:
     test_host_provisioner:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.host_provisioner"
+            interface: "cloudify.interfaces.host_provisioner"
             url: "cloudify/plugins/host-provisioner.zip"
     test_host_provisioner2:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.host_provisioner"
+            interface: "cloudify.interfaces.host_provisioner"
             url: "cloudify/plugins/host-provisioner.zip"

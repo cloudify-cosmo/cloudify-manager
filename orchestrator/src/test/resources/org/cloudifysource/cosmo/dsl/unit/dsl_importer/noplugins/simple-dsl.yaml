@@ -6,4 +6,4 @@ application_template:
     name: "app"
     topology:
         -   name: "host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"

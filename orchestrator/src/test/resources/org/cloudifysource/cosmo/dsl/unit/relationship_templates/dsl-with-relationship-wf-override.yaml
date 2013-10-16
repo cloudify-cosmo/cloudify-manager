@@ -8,15 +8,15 @@ application_template:
     name: "app"
     topology:
         -   name: "host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
         -   name: "server"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             relationships:
-                -   type: "cloudify.tosca.relationships.contained_in"
+                -   type: "cloudify.relationships.contained_in"
                     target: "host"
                     workflow:
                         radial: "overridden_workflow"
-                -   type: "cloudify.tosca.relationships.connected_to"
+                -   type: "cloudify.relationships.connected_to"
                     target: "host"
                     workflow:
                         ref: "some_workflow.radial"

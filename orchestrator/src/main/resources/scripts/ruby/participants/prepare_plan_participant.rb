@@ -22,7 +22,7 @@ require_relative '../exception_logger'
 class PreparePlanParticipant < Ruote::Participant
 
   DSL = 'dsl'
-  HOST_TYPE = 'cloudify.tosca.types.host'
+  HOST_TYPE = 'cloudify.types.host'
   PLUGIN_INSTALLER_PLUGIN = 'cloudify.plugins.plugin_installer'
   NODE = 'node'
   RUNTIME = 'cloudify_runtime'

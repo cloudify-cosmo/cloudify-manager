@@ -33,7 +33,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 /**
- * Validates cosmo TOSCA dsl.
+ * Validates cosmo dsl.
  *
  * @author Eitan Yanovsky
  * @since 0.1

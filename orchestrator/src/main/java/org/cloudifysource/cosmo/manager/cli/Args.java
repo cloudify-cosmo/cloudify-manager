@@ -33,7 +33,7 @@ import org.cloudifysource.cosmo.manager.cli.validator.FileExistValidator;
 public class Args {
 
     @Parameter(names = "--dsl",
-               description = "Path to a TOSCA yaml describing the deployment.",
+               description = "Path to a yaml file describing the deployment.",
                validateWith = FileExistValidator.class, required = true)
     private String dslPath;
 

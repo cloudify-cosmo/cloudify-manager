@@ -6,7 +6,7 @@ imports:
 
 types:
     type_with_policy:
-        derived_from: "cloudify.tosca.types.host"
+        derived_from: "cloudify.types.host"
         policies:
             start_detection_policy:
                 rules:
@@ -41,7 +41,7 @@ application_template:
     name: "web_server"
     topology:
         -   name: "webserver_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             policies:
                 start_detection_policy:
                     rules:
@@ -87,7 +87,7 @@ application_template:
                                 value: "terminated"
 
         -   name: "webserver_middleware"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             relationships:
-                - type: "cloudify.tosca.relationships.contained_in"
+                - type: "cloudify.relationships.contained_in"
                   target: "webserver_host"

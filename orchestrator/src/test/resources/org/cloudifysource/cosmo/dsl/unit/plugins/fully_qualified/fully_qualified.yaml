@@ -6,7 +6,7 @@ application_template:
     name: "test_service_template"
     topology:
         -   name: "test_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             interfaces:
                 - "test.interface"
 
