@@ -26,3 +26,8 @@ class TestMultiInstanceApplication(TestCase):
         dsl_path = resource("dsl/multi_instance.yaml")
         deploy(dsl_path)
 
+        from cosmo.cloudmock.tasks import get_machines
+        result = get_machines.apply_async()
+        machines = result.get(timeout=10)
+
+        self.assertEquals(2, len(machines))
