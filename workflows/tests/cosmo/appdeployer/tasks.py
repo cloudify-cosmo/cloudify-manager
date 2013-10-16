@@ -44,6 +44,7 @@ def deploy(dsl, **kwargs):
         if not line:
             break
         logger.info(line.rstrip())
+    p.wait()
     if p.returncode != 0:
         raise RuntimeError("Application Deployment failed with exit code {0}".format(p.returncode))
 
