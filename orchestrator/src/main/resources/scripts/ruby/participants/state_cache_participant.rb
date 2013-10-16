@@ -85,6 +85,7 @@ required_state={}]', resource_id, workitem.params, snapshot, required_state)
             description = JSON.parse(value.get_description)
             description['state'] = value.get_state
             description['wfid'] = workitem.wfid
+            description['service'] = key
             $logger.debug('[event] {}', JSON.generate(description))
           end
         end
