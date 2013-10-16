@@ -23,7 +23,7 @@ The project's dependencies installation is done using setup.py:
 
 ```
 virtualenv venv
-source venv/Scripts/activate
+source venv/bin/activate
 python setup.py install
 ```
 
