@@ -1,0 +1,10 @@
+
+imports:
+    - "cloudify.types"
+
+plugins:
+    cloudify.plugins.plugin_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "cloudify.tosca.interfaces.plugin_installer"
+            url: "cloudify/poc/plugins/celery-worker-plugin-installer.zip"

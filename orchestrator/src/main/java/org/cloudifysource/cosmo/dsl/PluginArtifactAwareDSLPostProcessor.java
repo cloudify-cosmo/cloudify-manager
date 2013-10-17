@@ -36,9 +36,9 @@ import java.util.Set;
  */
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
-    private static final String CLOUDIFY_TOSCA_PLUGIN = "cloudify.tosca.artifacts.plugin";
-    private static final String CLOUDIFY_TOSCA_REMOTE_PLUGIN = "cloudify.tosca.artifacts.remote_plugin";
-    private static final String CLOUDIFY_TOSCA_AGENT_PLUGIN = "cloudify.tosca.artifacts.agent_plugin";
+    private static final String CLOUDIFY_TOSCA_PLUGIN = "cloudify.plugins.plugin";
+    private static final String CLOUDIFY_TOSCA_REMOTE_PLUGIN = "cloudify.plugins.remote_plugin";
+    private static final String CLOUDIFY_TOSCA_AGENT_PLUGIN = "cloudify.plugins.agent_plugin";
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
@@ -302,10 +302,10 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("operations", operationToPlugin);
     }
 
-    private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedArtifacts,
+    private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedPlugins,
                                                    String pluginImplementation) {
         Map<String, Object> pluginDetails = Maps.newHashMap();
-        Plugin plugin = populatedArtifacts.get(pluginImplementation);
+        Plugin plugin = populatedPlugins.get(pluginImplementation);
         if (plugin == null) {
             throw new IllegalArgumentException("No plugin named: " + pluginImplementation + "is defined");
         }

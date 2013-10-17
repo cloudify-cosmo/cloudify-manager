@@ -1,6 +1,10 @@
+
+imports:
+    - "cloudify.types"
+
 plugins:
-    cloudify.plugins.pickledb_installer:
+    cloudify.plugins.middleware_component_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "cloudify.tosca.interfaces.middleware_component_installer"
-            url: "#{plugin_repository}/pickledb-installer.zip"
+            url: "cloudify/plugins/middleware_component-installer.zip"

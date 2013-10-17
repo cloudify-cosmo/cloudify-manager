@@ -1,8 +1,10 @@
-###
-# cloudmock plugin definition.
+
+imports:
+    - "cloudify.types"
+
 plugins:
-    cloudmock:
+    cloudify.plugins.vagrant_host_provisioner:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "cloudify.tosca.interfaces.host_provisioner"
-            url: "cloudmock.zip"
+            url: "cloudify/plugins/vagrant-host-plugin.zip"

@@ -3,8 +3,8 @@ imports:
     - "cloudify.types"
 
 plugins:
-    cloudify.tosca.artifacts.plugin.python_webserver_installer:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+    cloudify.plugins.python_webserver_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "cloudify.tosca.interfaces.middleware_component_installer"
             url: "https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/develop.zip"
