@@ -279,9 +279,12 @@ class VagrantLxcBoot:
             install_plugin(plugin=openstack_provisioner_plugin)
 
     def install_vagrant(self):
-
+        vagrant_file_name = "vagrant_1.2.7_x86_64.deb"
+        vagrant_file_path = os.path.join(self.working_dir, vagrant_file_name)
+        if os.path.exists(vagrant_file_path):
+            self.runner.run("rm -rf {0}".format(vagrant_file_path))
         self.wget(
-            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/vagrant_1.2.7_x86_64.deb"
+            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/{0}".format(vagrant_file_name)
         )
         self.runner.sudo("dpkg -i vagrant_1.2.7_x86_64.deb")
         self.install_vagrant_lxc()
