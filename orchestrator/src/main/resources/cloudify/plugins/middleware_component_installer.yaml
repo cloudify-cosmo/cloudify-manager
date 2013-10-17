@@ -6,5 +6,5 @@ plugins:
     cloudify.plugins.middleware_component_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.middleware_component_installer"
+            interface: "cloudify.interfaces.middleware_component_installer"
             url: "cloudify/plugins/middleware_component-installer.zip"

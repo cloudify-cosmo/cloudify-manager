@@ -6,5 +6,5 @@ plugins:
     cloudify.plugins.host_provisioner:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.host_provisioner"
+            interface: "cloudify.interfaces.host_provisioner"
             url: "cloudify/plugins/host-provisioner.zip"

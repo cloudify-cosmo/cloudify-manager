@@ -1,5 +1,5 @@
 interfaces:
-    cloudify.tosca.interfaces.app_connector:
+    cloudify.interfaces.app_connector:
         operations:
             - "set_db_properties"
 
@@ -7,5 +7,5 @@ plugins:
     cloudify.plugins.flask_app_connector:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.app_connector"
+            interface: "cloudify.interfaces.app_connector"
             url: "#{plugin_repository}/flask-app-connector.zip"

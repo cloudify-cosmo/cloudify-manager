@@ -2,5 +2,5 @@ plugins:
     cloudify.plugins.flask_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.middleware_component_installer"
+            interface: "cloudify.interfaces.middleware_component_installer"
             url: "#{plugin_repository}/flask-installer.zip"

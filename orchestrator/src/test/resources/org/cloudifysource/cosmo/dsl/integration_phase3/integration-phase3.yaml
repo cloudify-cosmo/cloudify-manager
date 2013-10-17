@@ -9,7 +9,7 @@ application_template:
     name: "simple_web_server"
     topology:
         -   name: "webserver_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             properties:
                 install_agent: 'true'
                 vagrant_file: |
@@ -45,7 +45,7 @@ application_template:
                                 metric: "500.0"
 
         -   name: "webserver_middleware"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             properties:
                 port: 8888
             policies:
@@ -56,5 +56,5 @@ application_template:
                                 service: "webserver status"
                                 state: "running"
             relationships:
-                -   type: "cloudify.tosca.relationships.contained_in"
+                -   type: "cloudify.relationships.contained_in"
                     target: "webserver_host"

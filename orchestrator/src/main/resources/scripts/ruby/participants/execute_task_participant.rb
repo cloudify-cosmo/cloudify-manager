@@ -140,11 +140,13 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       @full_task_name = exec
 
-      event = {}
-      event['type'] = SENDING_TASK
-      populate_event_content(event, task_id, false)
-      description = event_to_s(event)
-      $user_logger.debug(description)
+      unless TASK_TO_FILTER.include? @full_task_name
+        event = {}
+        event['type'] = SENDING_TASK
+        populate_event_content(event, task_id, false)
+        description = event_to_s(event)
+        $user_logger.debug(description)
+      end
 
       executor.send_task(target, task_id, exec, json_props, self)
 

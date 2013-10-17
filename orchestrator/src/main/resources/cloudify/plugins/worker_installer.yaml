@@ -6,5 +6,5 @@ plugins:
     cloudify.plugins.worker_installer:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.worker_installer"
+            interface: "cloudify.interfaces.worker_installer"
             url: "cloudify/poc/plugins/celery-worker-installer.zip"

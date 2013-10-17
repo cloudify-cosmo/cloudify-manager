@@ -2,6 +2,6 @@ imports:
     - "cloudify.types"
 types:
     vm2:
-        derived_from: "cloudify.tosca.types.host"
+        derived_from: "cloudify.types.host"
         interfaces:
             - "provisioner"

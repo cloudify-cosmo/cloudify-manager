@@ -11,7 +11,7 @@ application_template:
     name: "plugins_template"
     topology:
         -   name: "host_template"
-            type: cloudify.tosca.types.host
+            type: cloudify.types.host
             workflows:
                 init:
                     radial: |
@@ -20,13 +20,13 @@ application_template:
                             execute_operation operation: 'provision'
 
         -   name: "server_template"
-            type: cloudify.tosca.types.db_server
+            type: cloudify.types.db_server
             relationships:
-                - type: cloudify.tosca.relationships.contained_in
+                - type: cloudify.relationships.contained_in
                   target: "host_template"
             workflows:
                 init:
                     radial: |
                         define server_init
                             execute_operation operation: 'install'
-                            execute_operation operation: 'cloudify.tosca.interfaces.middleware_component_installer.start'
+                            execute_operation operation: 'cloudify.interfaces.middleware_component_installer.start'
