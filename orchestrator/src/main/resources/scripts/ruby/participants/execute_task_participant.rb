@@ -52,6 +52,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   RUOTE_RELATIONSHIP_NODE_ID = PrepareOperationParticipant::RUOTE_RELATIONSHIP_NODE_ID
   SOURCE_NODE_ID = '__source_cloudify_id'
   TARGET_NODE_ID = '__target_cloudify_id'
+  RUN_NODE_ID = '__run_on_node_cloudify_id'
   SOURCE_NODE_PROPERTIES = '__source_properties'
   TARGET_NODE_PROPERTIES = '__target_properties'
   RELATIONSHIP_NODE = 'relationship_other_node'
@@ -102,14 +103,17 @@ class ExecuteTaskParticipant < Ruote::Participant
       final_properties = Hash.new
 
       if (workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID) && (exec != VERIFY_PLUGIN_TASK_NAME)
+        relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
         source_properties = payload[PROPERTIES] || Hash.new
         target_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
         source_node_id = workitem.fields[NODE]['id']
         target_node_id = workitem.fields[RELATIONSHIP_NODE]['id']
+        run_node_id = relationship_node_id == source_node_id ? target_node_id : source_node_id
         safe_merge!(final_properties, {SOURCE_NODE_ID => source_node_id,
                                        TARGET_NODE_ID => target_node_id,
                                        SOURCE_NODE_PROPERTIES => source_properties,
-                                       TARGET_NODE_PROPERTIES => target_properties})
+                                       TARGET_NODE_PROPERTIES => target_properties,
+                                       RUN_NODE_ID => run_node_id})
       else
         payload_properties = payload[PROPERTIES] || Hash.new
         payload_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE

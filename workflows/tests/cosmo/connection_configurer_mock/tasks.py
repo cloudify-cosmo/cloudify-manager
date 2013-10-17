@@ -8,6 +8,7 @@ persist = Persist('connection_configurer')
 @celery.task
 def configure_connection(__source_cloudify_id,
                          __target_cloudify_id,
+                         __run_on_node_cloudify_id,
                          __source_properties,
                          __target_properties,
                          **kwargs):
@@ -16,7 +17,8 @@ def configure_connection(__source_cloudify_id,
         'target_id': __target_cloudify_id,
         'time': time(),
         'source_properties': __source_properties,
-        'target_properties': __target_properties
+        'target_properties': __target_properties,
+        'run_on_node_id': __run_on_node_cloudify_id
     })
 
 

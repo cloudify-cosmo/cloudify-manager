@@ -59,13 +59,10 @@ class TestRelationships(TestCase):
         else:
             self.assertEquals('true', state['source_properties']['cloudify_runtime'][source_id]['reachable'])
 
-        # TODO: test that run_on_node attribute is respected
-        # if runs_on_source:
-        #     self.assertEquals(source_id, state['id'])
-        #     self.assertEquals(target_id, state['relationship_id'])
-        # else:
-        #     self.assertEquals(target_id, state['id'])
-        #     self.assertEquals(source_id, state['relationship_id'])
+        if runs_on_source:
+            self.assertEquals(source_id, state['run_on_node_id'])
+        else:
+            self.assertEquals(target_id, state['run_on_node_id'])
 
         connector_timestamp = state['time']
 
