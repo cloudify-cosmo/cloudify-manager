@@ -28,7 +28,6 @@ import time
 import threading
 import re
 
-
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
@@ -92,8 +91,10 @@ class CeleryWorkerProcess(object):
             "--purge",
             "--logfile={0}".format(celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
-            "--queues=cloudify.management"
+            "--queues=cloudify.management",
+            "--concurrency=1"
         ]
+
 
         os.chdir(self._tempdir)
 
@@ -382,7 +383,18 @@ def deploy_application(dsl_path, timeout=120):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    from cosmo.appdeployer.tasks import deploy
-    result = deploy.delay(dsl_path)
-    result.get(timeout=timeout)
 
+    end = time.time() + timeout
+
+    from cosmo.appdeployer.tasks import deploy
+    from cosmo.appdeployer.tasks import get_deploy_return_value
+    result = deploy.delay(dsl_path)
+    result.get(timeout=60, propagate=True)
+
+    r = get_deploy_return_value.delay().get(timeout=60, propagate=False)
+
+    while r is None:
+        if end < time.time():
+            raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
+        time.sleep(1)
+        r = get_deploy_return_value.delay().get(timeout=60, propagate=False)
