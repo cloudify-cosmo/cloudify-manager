@@ -51,14 +51,18 @@ class EventParticipant < Ruote::Participant
         event['node'] = parts[1]
         event['app'] = parts[0]
       end
+      event['workflow_name'] = workflow_name
+      event['workflow_id'] = workitem.wfid
+      event['type'] = 'workflow'
+      json_event = JSON.pretty_generate(event)
       if sub_workflow_name == workflow_name
         # no need to print sub workflow if there is none
-        $user_logger.debug("[#{workflow_name}] - #{event}")
+        $user_logger.debug("[#{workflow_name}]\n#{json_event}")
       else
-        $user_logger.debug("[#{workflow_name}.#{sub_workflow_name}] - #{event}")
+        $user_logger.debug("[#{workflow_name}.#{sub_workflow_name}]\n#{json_event}")
       end
     else
-      $user_logger.debug("[workflow] - #{event}")
+      $user_logger.debug("[workflow]\n#{json_event}")
     end
 
   end
