@@ -34,15 +34,12 @@ class ExecuteTaskParticipant < Ruote::Participant
   TARGET = 'target'
   EXEC = 'exec'
   PROPERTIES = 'properties'
-  RELATIONSHIP_PROPERTIES = 'relationship_properties'
+
   PARAMS = 'params'
   PAYLOAD = 'payload'
   ARGUMENT_NAMES = 'argument_names'
   NODE = 'node'
-  RELATIONSHIP_NODE = 'relationship_other_node'
   NODE_ID = '__cloudify_id'
-  RUOTE_RELATIONSHIP_NODE_ID = PrepareOperationParticipant::RUOTE_RELATIONSHIP_NODE_ID
-  RELATIONSHIP_NODE_ID = '__relationship_cloudify_id'
   CLOUDIFY_RUNTIME = 'cloudify_runtime'
   EVENT_RESULT = 'result'
   RESULT_WORKITEM_FIELD = 'to_f'
@@ -50,6 +47,15 @@ class ExecuteTaskParticipant < Ruote::Participant
   TASK_SUCCEEDED = 'task-succeeded'
   TASK_FAILED = 'task-failed'
   TASK_REVOKED = 'task-revoked'
+
+  RELATIONSHIP_PROPERTIES = 'relationship_properties'
+  RUOTE_RELATIONSHIP_NODE_ID = PrepareOperationParticipant::RUOTE_RELATIONSHIP_NODE_ID
+  SOURCE_NODE_ID = '__source_cloudify_id'
+  TARGET_NODE_ID = '__target_cloudify_id'
+  RUN_NODE_ID = '__run_on_node_cloudify_id'
+  SOURCE_NODE_PROPERTIES = '__source_properties'
+  TARGET_NODE_PROPERTIES = '__target_properties'
+  RELATIONSHIP_NODE = 'relationship_other_node'
 
   RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.plugins.riemann_config_loader.tasks.reload_riemann_config'
   VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin'
@@ -91,41 +97,34 @@ class ExecuteTaskParticipant < Ruote::Participant
       payload = to_map(workitem.params[PAYLOAD])
       argument_names = workitem.params[ARGUMENT_NAMES]
 
-
       $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
                     target, exec, payload, argument_names)
 
-      task_id = SecureRandom.uuid
-      payload_properties = payload[PROPERTIES] || Hash.new
-      if workitem.fields.has_key? NODE
-        node = workitem.fields[NODE]
-        payload_properties[NODE_ID] = node['id']
-      end
       final_properties = Hash.new
-      safe_merge!(final_properties, payload_properties)
-      if payload.has_key? PARAMS
-        payload_params = payload[PARAMS] || Hash.new
-        safe_merge!(final_properties, payload_params)
-      end
-      if payload.has_key? RELATIONSHIP_PROPERTIES
-        relationship_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
-        safe_merge!(final_properties, relationship_properties)
-      end
-      if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
-        # relationship_node_id refers to the node that is on the other side of the relationship.
-        # i.e if the task is to be executed at the target node then the relationship_node_id will refer
-        # to the source node and vice versa
-        relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
-        safe_merge!(final_properties, {RELATIONSHIP_NODE_ID => relationship_node_id})
 
-        # override __cloudify_id to reflect actual execution location
+      if (workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID) && (exec != VERIFY_PLUGIN_TASK_NAME)
+        relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
+        source_properties = payload[PROPERTIES] || Hash.new
+        target_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
         source_node_id = workitem.fields[NODE]['id']
         target_node_id = workitem.fields[RELATIONSHIP_NODE]['id']
-        final_properties[NODE_ID] = relationship_node_id == source_node_id ? target_node_id :
-                                                                             source_node_id
+        run_node_id = relationship_node_id == source_node_id ? target_node_id : source_node_id
+        safe_merge!(final_properties, {SOURCE_NODE_ID => source_node_id,
+                                       TARGET_NODE_ID => target_node_id,
+                                       SOURCE_NODE_PROPERTIES => source_properties,
+                                       TARGET_NODE_PROPERTIES => target_properties,
+                                       RUN_NODE_ID => run_node_id})
+      else
+        payload_properties = payload[PROPERTIES] || Hash.new
+        payload_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE
+        safe_merge!(final_properties, payload_properties)
       end
+
+      safe_merge!(final_properties, payload[PARAMS] || Hash.new)
+
       properties = to_map(final_properties)
 
+      task_id = SecureRandom.uuid
       @task_arguments = extract_task_arguments(properties, argument_names)
 
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
