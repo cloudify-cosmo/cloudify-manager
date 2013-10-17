@@ -269,16 +269,18 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   def event_to_s(event)
 
-    new_event = {'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
-                 'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname'],
-                 'args' => dict_to_s(@task_arguments)}
+    new_event = {
+        'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
+        'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname'],
+        'args' => @task_arguments, 'type' => event['type'].gsub('-', '_')
+    }
     unless event['exception'].nil?
       new_event['error'] = event['exception']
       new_event['trace'] = event['traceback']
     end
 
     event_string = dict_to_s(new_event)
-    "[#{event['type']}] - #{event_string}"
+    "[#{event['type']}]\n#{event_string}"
 
   end
 
@@ -297,7 +299,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   end
 
   def dict_to_s(dict)
-    "{\n" + dict.map{|k,v| "\"#{k}\"=>\"#{v}\""}.join(",\n") + "\n}"
+    JSON.pretty_generate(dict)
   end
 
 end
