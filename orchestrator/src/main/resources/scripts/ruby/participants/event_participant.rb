@@ -53,7 +53,7 @@ class EventParticipant < Ruote::Participant
       end
       event['workflow_name'] = workflow_name
       event['workflow_id'] = workitem.wfid
-      event['type'] = 'workflow'
+      event['type'] = 'workflow_stage'
       json_event = JSON.pretty_generate(event)
       if sub_workflow_name == workflow_name
         # no need to print sub workflow if there is none

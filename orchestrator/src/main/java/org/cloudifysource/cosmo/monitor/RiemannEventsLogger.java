@@ -121,7 +121,7 @@ public class RiemannEventsLogger {
                             pluginEvent.put("name", name);
                             pluginEvent.put("level", level);
                             pluginEvent.put("message", message);
-                            pluginEvent.put("type", "plugin");
+                            pluginEvent.put("type", "plugin_execution");
                             final String pluginEventJson =
                                     objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(pluginEvent);
                             switch (level) {

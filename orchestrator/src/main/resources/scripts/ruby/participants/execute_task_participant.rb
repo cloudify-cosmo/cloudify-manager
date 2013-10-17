@@ -273,7 +273,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     new_event = {
         'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
         'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname'],
-        'args' => @task_arguments, 'type' => 'task'
+        'args' => @task_arguments, 'type' => event['type'].gsub('-', '_')
     }
     unless event['exception'].nil?
       new_event['error'] = event['exception']
