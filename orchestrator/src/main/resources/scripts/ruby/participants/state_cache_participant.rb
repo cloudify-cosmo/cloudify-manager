@@ -36,8 +36,9 @@ class StateCacheParticipant < Ruote::Participant
       raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
       listener_id = state_cache.subscribe(resource_id, self)
-      node_that_is_waiting = workitem.fields[NODE] ||= {}
-      node_id_that_is_waiting = node_that_is_waiting['id'] ||= ""
+      $logger.debug('wif: {}', workitem.fields)
+      node_that_is_waiting = workitem.fields[NODE] || {}
+      node_id_that_is_waiting = node_that_is_waiting['id'] || ""
 
       $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, node_id_that_is_waiting={}, params={}]',
       resource_id, node_id_that_is_waiting, workitem.params)
@@ -64,48 +65,53 @@ class StateCacheParticipant < Ruote::Participant
   end
 
   def onResourceStateChange(snapshot)
-    matches = false
-    resource_id = workitem.params[RESOURCE_ID]
-    required_state = workitem.params[STATE]
-    node_that_is_waiting = workitem.fields[NODE] ||= {}
-    node_id_that_is_waiting = node_that_is_waiting['id'] ||= ""
+    begin
+        matches = false
+        resource_id = workitem.params[RESOURCE_ID]
+        required_state = workitem.params[STATE]
+        node_that_is_waiting = workitem.fields[NODE] || {}
+        node_id_that_is_waiting = node_that_is_waiting['id'] || ""
 
-    $logger.debug('StateCacheParticipant onResourceStateChange called,
-                  checking state: [resource_id={}, parameters={}, snapshot={}, required_state={},
-                  node_id_that_is_waiting={}]',
-                  resource_id, workitem.params, snapshot, required_state, node_id_that_is_waiting)
+        $logger.debug('StateCacheParticipant onResourceStateChange called,
+                      checking state: [resource_id={}, parameters={}, snapshot={}, required_state={},
+                      node_id_that_is_waiting={}]',
+                      resource_id, workitem.params, snapshot, required_state, node_id_that_is_waiting)
 
-    required_state.each do |key, value|
-      matches = (snapshot.contains_property(resource_id, key) and
-          snapshot.get_property(resource_id, key).get.get_state.to_s.eql? value.to_s)
-      break unless matches
-    end
-
-
-    if matches
-      if workitem.fields.has_key? PreparePlanParticipant::NODE
-        current_node = workitem.fields[PreparePlanParticipant::NODE]
-        state = snapshot.get_resource_properties(resource_id)
-        node_state = Hash.new
-
-        state.each do |key, value|
-          node_state[key] = value.get_state
-          unless value.get_description.to_s == ''
-            description = JSON.parse(value.get_description)
-            description['state'] = value.get_state
-            description['wfid'] = workitem.wfid
-            description['service'] = key
-            $logger.debug('[event] {}', JSON.generate(description))
-          end
+        required_state.each do |key, value|
+          matches = (snapshot.contains_property(resource_id, key) and
+              snapshot.get_property(resource_id, key).get.get_state.to_s.eql? value.to_s)
+          break unless matches
         end
 
-        properties = current_node[PreparePlanParticipant::PROPERTIES]
-        properties[PreparePlanParticipant::RUNTIME][resource_id] = node_state
-      end
-      reply(workitem)
-      true
-    else
-      false
+
+        if matches
+          if workitem.fields.has_key? PreparePlanParticipant::NODE
+            current_node = workitem.fields[PreparePlanParticipant::NODE]
+            state = snapshot.get_resource_properties(resource_id)
+            node_state = Hash.new
+
+            state.each do |key, value|
+              node_state[key] = value.get_state
+              unless value.get_description.to_s == ''
+                description = JSON.parse(value.get_description)
+                description['state'] = value.get_state
+                description['wfid'] = workitem.wfid
+                description['service'] = key
+                $logger.debug('[event] {}', JSON.generate(description))
+              end
+            end
+
+            properties = current_node[PreparePlanParticipant::PROPERTIES]
+            properties[PreparePlanParticipant::RUNTIME][resource_id] = node_state
+          end
+          reply(workitem)
+          true
+        else
+          false
+        end
+    rescue => e
+      log_exception(e, 'state_cache')
+      flunk(workitem, e)
     end
   end
 
