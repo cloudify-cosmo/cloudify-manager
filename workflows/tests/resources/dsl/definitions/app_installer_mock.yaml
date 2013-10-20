@@ -1,6 +1,6 @@
 plugins:
     app_installer:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.app_module_installer"
+            interface: "cloudify.interfaces.app_module_installer"
             url: "app_installer_mock.zip"

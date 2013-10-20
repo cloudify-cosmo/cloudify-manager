@@ -37,6 +37,6 @@ application_template:
             type: some_custom_type
 
         -   name: "two_instances"
-            type: cloudify.tosca.types.host
+            type: cloudify.types.host
             instances:
                 deploy: 2
