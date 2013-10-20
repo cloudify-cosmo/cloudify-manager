@@ -4,7 +4,7 @@ define install_application
     prepare_plan dsl: $dsl
 
     execute_task target: 'cloudify.management',
-        exec: "cosmo.cloudify.tosca.artifacts.plugin.dsl_parser.tasks.prepare_multi_instance_plan",
+        exec: "cosmo.cloudify.plugins.dsl_parser.tasks.prepare_multi_instance_plan",
         to_f: 'plan',
         payload: {
             properties : {
