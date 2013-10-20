@@ -5,15 +5,27 @@ from time import time
 
 persist = Persist('testmockoperations')
 
-
 @celery.task
 def make_reachable(__cloudify_id, **kwargs):
     reachable(__cloudify_id)
-    persist.write({
-        'id': __cloudify_id,
-        'time': time()
-    })
+    try:
+        state = persist.read()
+    except BaseException:
+        state = dict()
+    state['id'] = __cloudify_id
+    state['time'] = time()
+    persist.write(state)
 
+
+@celery.task
+def touch(__cloudify_id, **kwargs):
+    try:
+        state = persist.read()
+    except BaseException:
+        state = dict()
+    state['touched'] = True
+    state['touched_time'] = time()
+    persist.write(state)
 
 @celery.task
 def get_state():
