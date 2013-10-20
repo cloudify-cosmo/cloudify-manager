@@ -7,17 +7,17 @@ from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
-state = None
+state = []
 
 @celery.task
 def make_reachable(__cloudify_id, **kwargs):
     reachable(__cloudify_id)
     global state
-    state = {
+    state.append({
         'id': __cloudify_id,
-        'time': time()
-    }
-    logger.debug("make_reachable id:"+__cloudify_id+" kwargs:"+str(kwargs))
+        'time': time(),
+        'relationships': kwargs['cloudify_runtime']
+    })
 
 @celery.task
 def get_state():

@@ -19,7 +19,6 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 
-
 class TestMultiInstanceApplication(TestCase):
 
     def test_deploy_multi_instance_application(self):
@@ -28,6 +27,15 @@ class TestMultiInstanceApplication(TestCase):
 
         from cosmo.cloudmock.tasks import get_machines
         result = get_machines.apply_async()
-        machines = result.get(timeout=10)
-
+        machines = set(result.get(timeout=10))
         self.assertEquals(2, len(machines))
+
+        from cosmo.testmockoperations.tasks import get_state as get_state
+        apps_state = get_state.apply_async().get(timeout=10)
+        machines_with_apps = set([])
+        for app_state in apps_state:
+            host_id = app_state['relationships'].keys()[0]
+            machines_with_apps.add(host_id)
+        self.assertEquals(machines, machines_with_apps)
+
+        pass

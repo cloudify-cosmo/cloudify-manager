@@ -46,7 +46,7 @@ class TestRelationships(TestCase):
 
         from cosmo.connection_configurer_mock.tasks import get_state as config_get_state
         result = config_get_state.apply_async()
-        state = result.get(timeout=10)
+        state = result.get(timeout=10)[0]
 
         self.assertEquals(target_id, state['target_id'])
         self.assertEquals(source_id, state['source_id'])
@@ -68,7 +68,7 @@ class TestRelationships(TestCase):
 
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         result = testmock_get_state.apply_async()
-        state = result.get(timeout=10)
+        state = result.get(timeout=10)[0]
         reachable_timestamp = state['time']
         if pre_started:
             self.assertGreater(reachable_timestamp, connector_timestamp)
