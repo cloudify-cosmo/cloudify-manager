@@ -6,7 +6,7 @@ application_template:
     name: "test_service_template"
     topology:
         -   name: "test_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             interfaces:
                 - "test.interface"
 
@@ -18,7 +18,7 @@ interfaces:
 
 plugins:
     test.plugin:
-        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "test.interface"
             url: "url_to.zip"

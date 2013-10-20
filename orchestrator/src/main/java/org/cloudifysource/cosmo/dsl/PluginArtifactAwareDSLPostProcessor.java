@@ -36,9 +36,9 @@ import java.util.Set;
  */
 public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
-    private static final String CLOUDIFY_TOSCA_PLUGIN = "cloudify.tosca.artifacts.plugin";
-    private static final String CLOUDIFY_TOSCA_REMOTE_PLUGIN = "cloudify.tosca.artifacts.remote_plugin";
-    private static final String CLOUDIFY_TOSCA_AGENT_PLUGIN = "cloudify.tosca.artifacts.agent_plugin";
+    private static final String CLOUDIFY_PLUGIN = "cloudify.plugins.plugin";
+    private static final String CLOUDIFY_REMOTE_PLUGIN = "cloudify.plugins.remote_plugin";
+    private static final String CLOUDIFY_AGENT_PLUGIN = "cloudify.plugins.agent_plugin";
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
@@ -173,16 +173,16 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         }
 
         for (Plugin plugin : populatedPlugins.values()) {
-            if (!plugin.isInstanceOf(CLOUDIFY_TOSCA_PLUGIN) ||
-                    Objects.equal(CLOUDIFY_TOSCA_PLUGIN, plugin.getName())) {
+            if (!plugin.isInstanceOf(CLOUDIFY_PLUGIN) ||
+                    Objects.equal(CLOUDIFY_PLUGIN, plugin.getName())) {
                 continue;
             }
             Preconditions.checkArgument(
                     plugin.isInstanceOf(
-                            CLOUDIFY_TOSCA_REMOTE_PLUGIN) ||
-                            plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN),
+                            CLOUDIFY_REMOTE_PLUGIN) ||
+                            plugin.isInstanceOf(CLOUDIFY_AGENT_PLUGIN),
                     "Plugin [%s] cannot be derived directly from [%s]", plugin.getName(),
-                    CLOUDIFY_TOSCA_PLUGIN);
+                    CLOUDIFY_PLUGIN);
             if (!plugin.getProperties().containsKey("interface") ||
                 !(plugin.getProperties().get("interface") instanceof String)) {
                 continue;
@@ -308,14 +308,14 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         node.put("instances", instances);
     }
 
-    private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedArtifacts,
+    private Map<String, Object> buildPluginDetails(Map<String, Plugin> populatedPlugins,
                                                    String pluginImplementation) {
         Map<String, Object> pluginDetails = Maps.newHashMap();
-        Plugin plugin = populatedArtifacts.get(pluginImplementation);
+        Plugin plugin = populatedPlugins.get(pluginImplementation);
         if (plugin == null) {
             throw new IllegalArgumentException("No plugin named: " + pluginImplementation + "is defined");
         }
-        boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_TOSCA_AGENT_PLUGIN);
+        boolean agentPlugin = plugin.isInstanceOf(CLOUDIFY_AGENT_PLUGIN);
         pluginDetails.putAll(plugin.getProperties());
         pluginDetails.put("name", pluginImplementation);
         pluginDetails.put("agent_plugin", Boolean.toString(agentPlugin));

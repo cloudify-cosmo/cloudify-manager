@@ -110,6 +110,7 @@ class VagrantLxcBoot:
         self.cosmo_version = args.cosmo_version
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
         self.update_only = args.update_only
+        self.install_openstack_provisioner = args.install_openstack_provisioner
 
     def run_command(self, command):
         p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -273,11 +274,17 @@ class VagrantLxcBoot:
         from management_plugins import plugins
         for plugin in plugins:
             install_plugin(plugin=plugin)
+        if self.install_openstack_provisioner:
+            from management_plugins import openstack_provisioner_plugin
+            install_plugin(plugin=openstack_provisioner_plugin)
 
     def install_vagrant(self):
-
+        vagrant_file_name = "vagrant_1.2.7_x86_64.deb"
+        vagrant_file_path = os.path.join(self.working_dir, vagrant_file_name)
+        if os.path.exists(vagrant_file_path):
+            self.runner.run("rm -rf {0}".format(vagrant_file_path))
         self.wget(
-            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/vagrant_1.2.7_x86_64.deb"
+            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/{0}".format(vagrant_file_name)
         )
         self.runner.sudo("dpkg -i vagrant_1.2.7_x86_64.deb")
         self.install_vagrant_lxc()
@@ -414,6 +421,11 @@ if __name__ == '__main__':
         '--update_only',
         help='Update the cosmo agent on this machine with new plugins from github',
         default=False,
+    )
+    parser.add_argument(
+        '--install_openstack_provisioner',
+        help='Whether the openstack host provisioner should be installed in the management celery worker',
+        default=False
     )
 
     vagrant_boot = VagrantLxcBoot(parser.parse_args())

@@ -63,7 +63,7 @@ public class DSLPackagingTest {
                 "\t\t\toperations:\n" +
                 "\t\t\t\t- \"provision\"\n" +
                 "\t\t\t\t- \"terminate\"\n" +
-                "\tartifacts:\n" +
+                "\tplugins:\n" +
                 "\t\tplugin:\n" +
                 "\t\t\tproperties:\n" +
                 "\t\t\t\tinterface: \"\"\n" +

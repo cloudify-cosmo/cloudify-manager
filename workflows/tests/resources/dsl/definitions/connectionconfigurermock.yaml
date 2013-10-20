@@ -2,7 +2,7 @@
 # connection configurer mock plugin definition.
 plugins:
     connection_configurer_mock:
-        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.connection_configurer"
+            interface: "cloudify.interfaces.connection_configurer"
             url: "connection_configurer_mock.zip"

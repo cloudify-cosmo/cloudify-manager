@@ -8,23 +8,23 @@ application_template:
     name: "mysql_template"
     topology:
         -   name: "mysql_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             properties:
                 image: "aws149180"
 
         -   name: "mysql_database_server"
-            type: "cloudify.tosca.types.db_server"
+            type: "cloudify.types.db_server"
             properties:
                 port: "3306"
                 installer_recipe: "mysql_chef_recipe"
             relationships:
-                - type: "cloudify.tosca.relationships.contained_in"
+                - type: "cloudify.relationships.contained_in"
                   target: "mysql_host"
 
         -   name: "mysql_schema"
-            type: "cloudify.tosca.types.app_module"
+            type: "cloudify.types.app_module"
             properties:
                 name: "petclinic"
             relationships:
-                - type: "cloudify.tosca.relationships.contained_in"
+                - type: "cloudify.relationships.contained_in"
                   target: "mysql_database_server"

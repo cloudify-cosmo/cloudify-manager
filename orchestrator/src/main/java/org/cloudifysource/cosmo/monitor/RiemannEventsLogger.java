@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.logging.Logger;
 import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.statecache.StateCacheLogDescription;
@@ -116,32 +117,31 @@ public class RiemannEventsLogger {
                             final String message = logRecord.get("message").toString();
                             final String name = extractPluginName(logRecord.get("name").toString());
                             final String level = logRecord.get("level").toString();
+                            final Map<String, Object> pluginEvent = Maps.newHashMap();
+                            pluginEvent.put("name", name);
+                            pluginEvent.put("level", level);
+                            pluginEvent.put("message", message);
+                            pluginEvent.put("type", "plugin_execution");
+                            final String pluginEventJson =
+                                    objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(pluginEvent);
                             switch (level) {
                                 default:
                                 case "INFO":
                                     pluginsLogger.info(RiemannEventsLogDescription.PLUGIN_MESSAGE,
-                                            level,
-                                            name,
-                                            message);
+                                            level, name, pluginEventJson);
                                     break;
                                 case "WARNING":
                                     pluginsLogger.warn(RiemannEventsLogDescription.PLUGIN_MESSAGE,
-                                            level,
-                                            name,
-                                            message);
+                                            level, name, pluginEventJson);
                                     break;
                                 case "ERROR":
                                 case "CRITICAL":
                                     pluginsLogger.error(RiemannEventsLogDescription.PLUGIN_MESSAGE,
-                                            level,
-                                            name,
-                                            message);
+                                            level, name, pluginEventJson);
                                     break;
                                 case "DEBUG":
-                                    pluginsLogger.debug(RiemannEventsLogDescription.PLUGIN_MESSAGE,
-                                            level,
-                                            name,
-                                            message);
+                                    pluginsLogger.debug(RiemannEventsLogDescription.PLUGIN_MESSAGE, pluginEventJson,
+                                            level, name, pluginEventJson);
                                     break;
                             }
                         }
@@ -164,11 +164,14 @@ public class RiemannEventsLogger {
                         String policy = (String) description.get("policy");
                         String message = propertyPlaceHolderHelper.replace((String) description.get("message"), event);
 
-                        userOutputLogger.debug("[monitor] - {" +
-                                "'policy'=>'{}', 'app'=>'{}', " +
-                                "'node'=>'{}'," +
-                                "'message'=>'{}'}",
-                                policy, simpleAppName, simpleNodeName, message);
+                        Map<String, Object> eventData = Maps.newHashMap();
+                        eventData.put("type", "policy");
+                        eventData.put("policy", policy);
+                        eventData.put("app", simpleAppName);
+                        eventData.put("node", simpleNodeName);
+                        eventData.put("message", message);
+                        userOutputLogger.debug("[monitor]\n{}",
+                                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eventData));
                     }
                 } catch (IOException e) {
                     logger.warn(StateCacheLogDescription.MESSAGE_CONSUMER_ERROR, e);

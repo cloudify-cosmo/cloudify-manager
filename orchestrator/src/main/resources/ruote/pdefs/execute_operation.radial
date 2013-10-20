@@ -2,7 +2,7 @@ define execute_operation
     prepare_operation operation: "${v:operation}",
                       relationship: "$v:relationship"
 
-    set "v:plugin_verification_task": "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks.verify_plugin"
+    set "v:plugin_verification_task": "cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin"
     repeat
         log message: 'verifying plugin: ${plugin_name} and operation ${operation} is installed on target and fetching
          the operation argument names: ${target}'

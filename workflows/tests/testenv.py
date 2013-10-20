@@ -49,7 +49,7 @@ class CeleryWorkerProcess(object):
         self._app_path = path.join(tempdir, "cosmo")
         self._tempdir = tempdir
         self._plugins_tempdir = plugins_tempdir
-        self._cosmo_plugins = path.join(self._app_path, "cloudify/tosca/artifacts/plugin")
+        self._cosmo_plugins = path.join(self._app_path, "cloudify/plugins")
         self._cosmo_jar_path = cosmo_jar_path
         self._riemann_config_path = riemann_config_path
         self._riemann_template_path = riemann_template_path

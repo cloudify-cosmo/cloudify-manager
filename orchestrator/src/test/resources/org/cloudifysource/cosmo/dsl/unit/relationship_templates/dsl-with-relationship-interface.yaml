@@ -7,11 +7,11 @@ application_template:
     name: "service_template"
     topology:
         -   name: "host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             interfaces:
-                - cloudify.tosca.interfaces.host_provisioner: "test_host_provisioner"
+                - cloudify.interfaces.host_provisioner: "test_host_provisioner"
         -   name: "webserver"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             relationships:
                 - type: "relationship1"
                   target: "host"
@@ -19,7 +19,7 @@ application_template:
                   run_on_node: "source"
                   bind_at: "pre_started"
         -   name: "webapplication"
-            type: "cloudify.tosca.types.app_module"
+            type: "cloudify.types.app_module"
             relationships:
                 - type: "relationship2"
                   target: "webserver"
@@ -46,17 +46,17 @@ relationships:
 
 plugins:
     test_host_provisioner:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.tosca.interfaces.host_provisioner"
+            interface: "cloudify.interfaces.host_provisioner"
             url: "url"
     plugin1:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin2:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface2"
             url: "url"

@@ -5,7 +5,7 @@ interfaces:
 
 plugins:
     testmockoperations:
-        derived_from: "cloudify.tosca.artifacts.remote_plugin"
+        derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "mock_interface"
             url: "mock_interface.zip"

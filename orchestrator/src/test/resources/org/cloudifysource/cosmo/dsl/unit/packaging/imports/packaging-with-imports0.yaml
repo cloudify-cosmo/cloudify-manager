@@ -5,7 +5,7 @@ imports:
     - "/fixed_path/packaging-with-imports5.yaml"
 types:
     vm00:
-        derived_from: "cloudify.tosca.types.host"
+        derived_from: "cloudify.types.host"
         interfaces:
             - "provisioner"
     vm03:

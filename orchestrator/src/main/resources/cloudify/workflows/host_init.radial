@@ -1,17 +1,17 @@
 define host_init
     execute_operation operation: 'provision'
-    execute_operation operation: 'cloudify.tosca.interfaces.host_provisioner.start'
+    execute_operation operation: 'cloudify.interfaces.host_provisioner.start'
     given
         that '${node.properties.install_agent} == true'
             state resource_id: '${node.id}', state: { reachable: "true" }
             log message: 'installing agent on host: ${node.id}'
-            execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.install'
-            execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.start'
+            execute_operation operation: 'cloudify.interfaces.worker_installer.install'
+            execute_operation operation: 'cloudify.interfaces.worker_installer.start'
             event event: { "stage" => "Installing plugins" }
             log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
             iterator on: '$node.plugins_to_install', to_v: 'plugin'
                 log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
-                execute_operation operation: 'cloudify.tosca.interfaces.plugin_installer.install', params: {
+                execute_operation operation: 'cloudify.interfaces.plugin_installer.install', params: {
                     plugin: {
                         name: '${v:plugin.name}',
                         url: '${v:plugin.url}'
@@ -19,4 +19,4 @@ define host_init
                 }
                 log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
             log message: 'restarting worker on host: ${node.id}'
-            execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.restart'
+            execute_operation operation: 'cloudify.interfaces.worker_installer.restart'

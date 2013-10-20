@@ -1,6 +1,10 @@
+
+imports:
+    - "cloudify.types"
+
 plugins:
-    cloudmock:
+    cloudify.plugins.host_provisioner:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "cloudify.interfaces.host_provisioner"
-            url: "cloudmock.zip"
+            url: "cloudify/plugins/host-provisioner.zip"

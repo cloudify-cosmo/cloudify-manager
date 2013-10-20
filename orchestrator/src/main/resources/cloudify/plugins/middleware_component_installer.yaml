@@ -1,6 +1,10 @@
+
+imports:
+    - "cloudify.types"
+
 plugins:
-    cloudify.plugins.flask_installer:
+    cloudify.plugins.middleware_component_installer:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "cloudify.interfaces.middleware_component_installer"
-            url: "#{plugin_repository}/flask-installer.zip"
+            url: "cloudify/plugins/middleware_component-installer.zip"

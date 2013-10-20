@@ -2,4 +2,4 @@ imports:
     - "cloudify.types"
 types:
     vm5:
-        derived_from: "cloudify.tosca.types.host"
+        derived_from: "cloudify.types.host"

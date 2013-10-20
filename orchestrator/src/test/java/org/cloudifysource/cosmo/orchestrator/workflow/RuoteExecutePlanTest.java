@@ -115,11 +115,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
-                "cloudify.tosca.artifacts.plugin.host_provisioner",
+                "cloudify.plugins.host_provisioner",
                 new String[]{"provision", "start"}),
             new OperationsDescriptor(
                 machineId,
-                "cloudify.tosca.artifacts.plugin.middleware_component_installer",
+                "cloudify.plugins.middleware_component_installer",
                 new String[]{"install", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors);
@@ -134,11 +134,11 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         OperationsDescriptor[] descriptors = {
             new OperationsDescriptor(
                     CLOUDIFY_MANAGEMENT,
-                    "cloudify.tosca.artifacts.plugin.host_provisioner",
+                    "cloudify.plugins.host_provisioner",
                     new String[]{"provision", "start"}),
             new OperationsDescriptor(
                     machineId,
-                    "cloudify.tosca.artifacts.plugin.middleware_component_installer",
+                    "cloudify.plugins.middleware_component_installer",
                     new String[]{"install", "start"})
         };
         testPlanExecution(dslFile, new String[] {machineId, databaseId}, descriptors, true);
@@ -219,7 +219,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-with-full-installation-workflow.yaml";
         OperationsDescriptor descriptor = new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
-                "cloudify.tosca.artifacts.plugin.host_provisioner",
+                "cloudify.plugins.host_provisioner",
                 new String[]{"provision", "start", "provision", "start"});
         OperationsDescriptor[] descriptors = {descriptor};
         testPlanExecution(dslFile, null, descriptors);
@@ -230,7 +230,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         String dslFile = "org/cloudifysource/cosmo/dsl/unit/global_plan/dsl-with-full-install-node-init-override.yaml";
         OperationsDescriptor descriptor = new OperationsDescriptor(
                 CLOUDIFY_MANAGEMENT,
-                "cloudify.tosca.artifacts.plugin.host_provisioner",
+                "cloudify.plugins.host_provisioner",
                 new String[]{"terminate", "terminate"});
         OperationsDescriptor[] descriptors = {descriptor};
         testPlanExecution(dslFile, null, descriptors);
@@ -392,7 +392,7 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
             },
             {
                 host1Id,
-                "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks.install",
+                "cosmo.cloudify.plugins.middleware_component_installer.tasks.install",
                 webServerId,
                 new CountDownLatch(1)
             }
@@ -516,9 +516,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
         final String dslFile = "org/cloudifysource/cosmo/dsl/unit/plugins/target/plugin-targets.yaml";
         final String machineId = "plugins_template.host_template";
         final String remotePluginTarget = "cloudify.management";
-        final String agentTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.middleware_component_installer.tasks";
-        final String remoteTaskPrefix = "cosmo.cloudify.tosca.artifacts.plugin.host_provisioner.tasks";
-        final String pluginInstallerPrefix = "cosmo.cloudify.tosca.artifacts.plugin.plugin_installer.tasks";
+        final String agentTaskPrefix = "cosmo.cloudify.plugins.middleware_component_installer.tasks";
+        final String remoteTaskPrefix = "cosmo.cloudify.plugins.host_provisioner.tasks";
+        final String pluginInstallerPrefix = "cosmo.cloudify.plugins.plugin_installer.tasks";
 
         reachable("plugins_template.server_template");
 

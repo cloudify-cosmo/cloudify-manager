@@ -7,7 +7,7 @@ application_template:
     name: "web_server"
     topology:
         -   name: "webserver_host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
             policies:
                 start_detection_policy:
                     rules:

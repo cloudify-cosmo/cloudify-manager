@@ -7,7 +7,7 @@ application_template:
     name: "mysql_template"
     topology:
         -   name: "mysql_database_server"
-            type: "cloudify.tosca.types.db_server"
+            type: "cloudify.types.db_server"
             properties:
                 port: "3306"
                 installer_recipe: "mysql_chef_recipe"

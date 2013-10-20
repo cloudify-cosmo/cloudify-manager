@@ -8,9 +8,9 @@ application_template:
     name: "service_template"
     topology:
         -   name: "host"
-            type: "cloudify.tosca.types.host"
+            type: "cloudify.types.host"
         -   name: "webserver"
-            type: "cloudify.tosca.types.web_server"
+            type: "cloudify.types.web_server"
             relationships:
                 - type: "relationship1"
                   target: "host"
@@ -39,9 +39,9 @@ application_template:
 relationships:
     relationship1: { }
     relationship2:
-        derived_from: "cloudify.tosca.relationships.depends_on"
+        derived_from: "cloudify.relationships.depends_on"
     relationship3:
-        derived_from: "cloudify.tosca.relationships.depends_on"
+        derived_from: "cloudify.relationships.depends_on"
         interface:
             name: "interface1"
             operations:
@@ -57,22 +57,22 @@ relationships:
 
 plugins:
     plugin1:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin2:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin3:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface1"
             url: "url"
     plugin4:
-        derived_from: "cloudify.tosca.artifacts.agent_plugin"
+        derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "interface2"
             url: "url"

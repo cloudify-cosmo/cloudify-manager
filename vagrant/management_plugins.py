@@ -16,7 +16,7 @@
 
 __author__ = 'elip'
 
-from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION
+from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION, OPENSTACK_PROVISION_VERSION
 
 WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip"\
                    .format(WORKER_INSTALLER_VERSION)
@@ -25,19 +25,27 @@ RIEMANN_LOADER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configu
 VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip"\
                     .format(VAGRANT_PROVISION_VERSION)
 
+OPENSTACK_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
+    .format(OPENSTACK_PROVISION_VERSION)
+
 plugins = [
 
     {
-        "name": "cloudify.tosca.artifacts.plugin.riemann_config_loader",
+        "name": "cloudify.plugins.riemann_config_loader",
         "url": RIEMANN_LOADER
 
     },
     {
-        "name": "cloudify.tosca.artifacts.plugin.worker_installer",
+        "name": "cloudify.plugins.worker_installer",
         "url": WORKER_INSTALLER
     },
     {
-        "name": "cloudify.tosca.artifacts.plugin.vagrant_host_provisioner",
+        "name": "cloudify.plugins.vagrant_host_provisioner",
         "url": VAGRANT_PROVISION
     },
 ]
+
+openstack_provisioner_plugin = {
+    "name": "cloudify.plugins.openstack_host_provisioner",
+    "url": OPENSTACK_PROVISION
+}
