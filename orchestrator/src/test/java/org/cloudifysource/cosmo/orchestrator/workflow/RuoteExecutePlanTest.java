@@ -339,15 +339,24 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        worker.addListener(machineId, new TaskReceivedListener() {
+        worker.addListener(CLOUDIFY_MANAGEMENT, new TaskReceivedListener() {
             @Override
             public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.endsWith("verify_plugin")) {
-                    return "True";
-                }
                 if (taskName.endsWith("multi_instance_plan")) {
                     return kwargs.get("plan");
                 }
+                return null;
+            }
+        });
+
+        worker.addListener(machineId, new TaskReceivedListener() {
+            @Override
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+
+                if (taskName.endsWith("verify_plugin")) {
+                    return "True";
+                }
+
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
