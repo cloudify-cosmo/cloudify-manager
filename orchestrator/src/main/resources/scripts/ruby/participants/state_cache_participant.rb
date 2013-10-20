@@ -36,7 +36,8 @@ class StateCacheParticipant < Ruote::Participant
       raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
       listener_id = state_cache.subscribe(resource_id, self)
-      node_id_that_is_waiting = workitem.fields[NODE]['id']
+      node_that_is_waiting = workitem.fields[NODE] ||= {}
+      node_id_that_is_waiting = node_that_is_waiting['id'] ||= ""
 
       $logger.debug('StateCacheParticipant: subscribed with [resource_id={}, node_id_that_is_waiting={}, params={}]',
       resource_id, node_id_that_is_waiting, workitem.params)
@@ -66,12 +67,14 @@ class StateCacheParticipant < Ruote::Participant
     matches = false
     resource_id = workitem.params[RESOURCE_ID]
     required_state = workitem.params[STATE]
-    node_id_that_is_waiting = workitem.fields[NODE]['id']
+    node_that_is_waiting = workitem.fields[NODE] ||= {}
+    node_id_that_is_waiting = node_that_is_waiting['id'] ||= ""
 
-    $logger.debug('StateCacheParticipant onResourceStateChange called, checking state: [resource_id={}, parameters={},
-snapshot={},
-required_state={}, node_id_that_is_waiting={}]', resource_id, workitem.params, snapshot, required_state,
-node_id_that_is_waiting)
+    $logger.debug('StateCacheParticipant onResourceStateChange called,
+                  checking state: [resource_id={}, parameters={}, snapshot={}, required_state={},
+                  node_id_that_is_waiting={}]',
+                  resource_id, workitem.params, snapshot, required_state, node_id_that_is_waiting)
+
     required_state.each do |key, value|
       matches = (snapshot.contains_property(resource_id, key) and
           snapshot.get_property(resource_id, key).get.get_state.to_s.eql? value.to_s)
