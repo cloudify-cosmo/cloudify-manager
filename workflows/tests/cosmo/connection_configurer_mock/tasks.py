@@ -1,9 +1,7 @@
 from cosmo.celery import celery
-from cosmo.persistency import Persist
 from time import time
 
-persist = Persist('connection_configurer')
-
+state = []
 
 @celery.task
 def configure_connection(__source_cloudify_id,
@@ -12,7 +10,8 @@ def configure_connection(__source_cloudify_id,
                          __source_properties,
                          __target_properties,
                          **kwargs):
-    persist.write({
+    global state
+    state.append({
         'source_id': __source_cloudify_id,
         'target_id': __target_cloudify_id,
         'time': time(),
@@ -29,4 +28,4 @@ def unconfigure_connection(__source_cloudify_id, __target_cloudify_id, **kwargs)
 
 @celery.task
 def get_state():
-    return persist.read()
+    return state

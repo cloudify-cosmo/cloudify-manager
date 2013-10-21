@@ -261,6 +261,7 @@ public class DSLProcessor {
             TypeTemplate populatedTemplate = (TypeTemplate) template.newInstanceWithInheritance(
                     typeTemplateParentType);
 
+            populatedTemplate.setInstances(template.getInstances());
             List<RelationshipTemplate> populatedRelationshipTemplates = Lists.newLinkedList();
             for (RelationshipTemplate relationshipTemplate : populatedTemplate.getRelationships()) {
                 Relationship relationshipTemplateParentType =

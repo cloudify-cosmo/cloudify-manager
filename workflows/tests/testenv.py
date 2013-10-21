@@ -28,7 +28,6 @@ import time
 import threading
 import re
 
-
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
@@ -59,8 +58,10 @@ class CeleryWorkerProcess(object):
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
         import plugin_installer
+        import dsl_parser
         self._copy_plugin(riemann_config_loader)
         self._copy_plugin(plugin_installer)
+        self._copy_plugin(dsl_parser)
 
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
@@ -90,8 +91,10 @@ class CeleryWorkerProcess(object):
             "--purge",
             "--logfile={0}".format(celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
-            "--queues=cloudify.management"
+            "--queues=cloudify.management",
+            "--concurrency=1"
         ]
+
 
         os.chdir(self._tempdir)
 
@@ -126,6 +129,14 @@ class CeleryWorkerProcess(object):
             logger.info("Shutting down celery worker [pid=%s]", self._process.pid)
             self._process.kill()
 
+    def restart(self):
+        """
+        Restarts the single celery worker process.
+        Does not change the pid of celery itself
+        """
+        from cosmo.celery import celery
+        celery.control.broadcast('pool_shrink', arguments={'N': 0})
+        celery.control.broadcast('pool_grow', arguments={'N': 1})
 
 class RiemannProcess(object):
     """
@@ -301,6 +312,11 @@ class TestEnvironment(object):
                 os.makedirs(plugins_tempdir)
 
     @staticmethod
+    def restart_celery_worker():
+        if TestEnvironment._instance and TestEnvironment._instance._celery_worker_process:
+            TestEnvironment._instance._celery_worker_process.restart()
+
+    @staticmethod
     def kill_cosmo_process():
         """
         Kills 'cosmo.jar' process if it exists.
@@ -349,7 +365,7 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         TestEnvironment.kill_cosmo_process()
-
+        TestEnvironment.restart_celery_worker()
 
 def get_resource(resource):
     """
@@ -363,12 +379,27 @@ def get_resource(resource):
         raise RuntimeError("Resource '{0}' not found in: {1}".format(resource, resource_path))
     return resource_path
 
-
-def deploy_application(dsl_path, timeout=120):
+def deploy_application(dsl_path, timeout=240):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    from cosmo.appdeployer.tasks import deploy
-    result = deploy.delay(dsl_path)
-    result.get(timeout=timeout)
 
+    end = time.time() + timeout
+
+    from cosmo.appdeployer.tasks import deploy
+    from cosmo.appdeployer.tasks import get_deploy_return_value
+    from cosmo.appdeployer.tasks import kill
+    result = deploy.delay(dsl_path)
+    result.get(timeout=60, propagate=True)
+
+    r = get_deploy_return_value.delay().get(timeout=60, propagate=False)
+
+    try:
+        while r is None:
+            if end < time.time():
+                raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
+            time.sleep(1)
+            r = get_deploy_return_value.delay().get(timeout=60, propagate=False)
+    except Exception, e:
+        kill.delay().get()
+        raise e

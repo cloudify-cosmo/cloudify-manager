@@ -3,6 +3,16 @@ define install_application
     event event: { "stage" => "Preparing template deployment" }
     prepare_plan dsl: $dsl
 
+    execute_task target: 'cloudify.management',
+        exec: "cosmo.cloudify.plugins.dsl_parser.tasks.prepare_multi_instance_plan",
+        to_f: 'plan',
+        payload: {
+            properties : {
+                plan: $plan
+            }
+        },
+        argument_names: 'plan'
+
     log message: 'executing workflows.install'
     set 'v:install': '$plan.workflows.install'
     install

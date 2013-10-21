@@ -277,6 +277,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                 if (taskName.endsWith("verify_plugin") || taskName.endsWith("reload_riemann_config")) {
                     return "True";
                 }
+                if (taskName.endsWith("multi_instance_plan")) {
+                    return kwargs.get("plan");
+                }
                 if (assertExecutionOrder) {
                     executions.add(taskName);
                     if (expectedTasksWithSeparator.isEmpty()) {
@@ -336,12 +339,24 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
+        worker.addListener(CLOUDIFY_MANAGEMENT, new TaskReceivedListener() {
+            @Override
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                if (taskName.endsWith("multi_instance_plan")) {
+                    return kwargs.get("plan");
+                }
+                return null;
+            }
+        });
+
         worker.addListener(machineId, new TaskReceivedListener() {
             @Override
             public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+
                 if (taskName.endsWith("verify_plugin")) {
                     return "True";
                 }
+
                 Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
                 if (runtimeProperties.containsKey(machineId)) {
                     Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
@@ -400,6 +415,9 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         final TaskReceivedListener listener = new TaskReceivedListener() {
             public synchronized Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                if (taskName.endsWith("multi_instance_plan")) {
+                    return kwargs.get("plan");
+                }
                 for (Object[] expectedTask : expectedTasks) {
                     if (expectedTask[0].equals(target) && expectedTask[1].equals(taskName) &&
                         expectedTask[2].equals(kwargs.get("__cloudify_id"))) {
@@ -573,6 +591,8 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
                     }
                     latch.countDown();
                     executedTasks.add(taskName);
+                } else if (taskName.endsWith("multi_instance_plan")) {
+                    return kwargs.get("plan");
                 }
                 return null;
             }

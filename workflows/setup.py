@@ -29,6 +29,10 @@ RIEMANN_CONFIGURER_VERSION = "develop"
 RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/tarball/{" \
                      "0}#egg=cosmo-plugin-riemann-configurer-{0}".format(RIEMANN_CONFIGURER_VERSION)
 
+DSL_PARSER_VERSION = "develop"
+DSL_PARSER = "https://github.com/CloudifySource/cosmo-plugin-dsl-parser/tarball/{" \
+                     "0}#egg=cosmo-plugin-dsl-parser-{0}".format(DSL_PARSER_VERSION)
+
 os.chdir(sys.path[0])
 
 setup(
@@ -45,7 +49,8 @@ setup(
         "bernhard",
         "nose",
         "cosmo-plugin-plugin-installer",
-        "cosmo-plugin-riemann-configurer"
+        "cosmo-plugin-riemann-configurer",
+        "cosmo-plugin-dsl-parser"
     ],
-    dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER]
+    dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER, DSL_PARSER]
 )

@@ -140,6 +140,7 @@ public abstract class AbstractDSLProcessorTest {
         List<ProcessedRelationshipTemplate> relationships;
         Map<String, Object> plugins;
         Map<String, Policy> policies;
+        Map<String, Object> instances;
 
         public String getId() {
             return id;
@@ -192,6 +193,15 @@ public abstract class AbstractDSLProcessorTest {
         public Map<String, Policy> getPolicies() {
             return policies;
         }
+
+        public Map<String, Object> getInstances() {
+            return instances;
+        }
+
+        public void setInstances(Map<String, Object> instances) {
+            this.instances = instances;
+        }
+
     }
 
     /**

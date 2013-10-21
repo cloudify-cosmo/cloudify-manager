@@ -206,7 +206,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   def onTaskEvent(task_id, event_type, json_event)
     begin
 
-      enriched_event = JSON.parse(json_event.to_s)
+      enriched_event = JSON.parse(json_event)
 
       populate_event_content(enriched_event, task_id, true)
 
@@ -245,11 +245,22 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   # temporary workaround to fix literal results of python tasks
   def fix_task_result(raw_result)
-    final_result = raw_result
-    if raw_result.length >= 2 && raw_result[0] == "'" && raw_result[-1] == "'"
-      final_result = raw_result[1...-1]
-    end
-    final_result
+
+      if raw_result.length >= 2 && raw_result[0] == "'" && raw_result[-1] == "'"
+        final_result = raw_result[1...-1]
+        final_result.gsub!("\\\\","\\")
+        final_result.gsub!("\\'","'")
+      else
+        final_result = raw_result
+      end
+
+      begin
+          final_result = JSON.parse(final_result)
+      rescue => e
+        # ignore, not valid JSON, probably a string
+      end
+
+      final_result
   end
 
   def safe_merge!(merge_into, merge_from)

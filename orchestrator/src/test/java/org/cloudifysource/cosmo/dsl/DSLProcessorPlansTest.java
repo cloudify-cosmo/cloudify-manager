@@ -17,11 +17,13 @@
 package org.cloudifysource.cosmo.dsl;
 
 import com.google.common.collect.Maps;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.Map;
 
 import static org.fest.assertions.api.Assertions.assertThat;
+
 
 /**
  * Verifies plans in DSL are relevant for either a node type or node template.
@@ -31,18 +33,41 @@ import static org.fest.assertions.api.Assertions.assertThat;
  */
 public class DSLProcessorPlansTest extends AbstractDSLProcessorTest {
 
+    Map<String, Node> nodes;
+
+    @BeforeClass
+    public void process() {
+        final String dslPath = "org/cloudifysource/cosmo/dsl/unit/plans/dsl-with-valid-plans.yaml";
+        final Processed processed = process(dslPath);
+        nodes = indexNodesById(processed);
+    }
+
     @Test
     public void testValidPlans() {
-        String dslPath = "org/cloudifysource/cosmo/dsl/unit/plans/dsl-with-valid-plans.yaml";
-        Processed processed = process(dslPath);
-        Map<String, Node> nodes = Maps.newHashMap();
-        for (Node node : processed.getNodes()) {
-            nodes.put(node.getId(), node);
-        }
         assertInitPlan(nodes, "service_template.default_host", "plan1");
         assertInitPlan(nodes, "service_template.overridden_host", "plan2");
         assertInitPlan(nodes, "service_template.default_middleware", "plan3");
         assertInitPlan(nodes, "service_template.custom_template", "plan4");
+    }
+
+    @Test
+    public void testExplicitNumberOfInstances() {
+        final Node node = nodes.get("service_template.two_instances");
+        assertThat(node.getInstances().get("deploy")).isEqualTo(2);
+    }
+
+    @Test
+    public void testDefaultNumberOfInstances() {
+        final Node node = nodes.get("service_template.default_host");
+        assertThat(node.getInstances().get("deploy")).isEqualTo(1);
+    }
+
+    private Map<String, Node> indexNodesById(Processed processed) {
+        Map<String, Node> nodes = Maps.newHashMap();
+        for (Node node : processed.getNodes()) {
+            nodes.put(node.getId(), node);
+        }
+        return nodes;
     }
 
     private void assertInitPlan(Map<String, Node> nodes, String nodeId, String plan) {
@@ -50,5 +75,4 @@ public class DSLProcessorPlansTest extends AbstractDSLProcessorTest {
         final Node node = nodes.get(nodeId);
         assertThat(node.getWorkflows().get("init")).isEqualTo(plan);
     }
-
 }

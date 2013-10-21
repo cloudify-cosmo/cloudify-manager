@@ -30,6 +30,16 @@ import java.util.List;
 public class TypeTemplate extends Type {
 
     private List<RelationshipTemplate> relationships = Lists.newArrayList();
+    private Instances instances = new Instances();
+
+    public Instances getInstances() {
+        return instances;
+    }
+
+    public void setInstances(Instances instances) {
+        this.instances = instances;
+    }
+
 
     public List<RelationshipTemplate> getRelationships() {
         return relationships;
