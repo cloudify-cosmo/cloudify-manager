@@ -1,11 +1,6 @@
 from cosmo.celery import celery
 from cosmo.events import set_reachable as reachable
 from time import time
-import logging
-from celery.utils.log import get_task_logger
-
-logger = get_task_logger(__name__)
-logger.level = logging.DEBUG
 
 state = []
 

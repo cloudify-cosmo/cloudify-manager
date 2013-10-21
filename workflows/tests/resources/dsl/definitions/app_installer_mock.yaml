@@ -1,6 +1,0 @@
-plugins:
-    app_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            interface: "cloudify.interfaces.app_module_installer"
-            url: "app_installer_mock.zip"

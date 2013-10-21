@@ -36,7 +36,6 @@ class StateCacheParticipant < Ruote::Participant
       raise "#{STATE} parameter is not defined for state cache participant" unless workitem.params.has_key? STATE
 
       listener_id = state_cache.subscribe(resource_id, self)
-      $logger.debug('wif: {}', workitem.fields)
       node_that_is_waiting = workitem.fields[NODE] || {}
       node_id_that_is_waiting = node_that_is_waiting['id'] || ""
 

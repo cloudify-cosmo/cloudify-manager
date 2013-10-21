@@ -1,7 +1,6 @@
 imports:
   - "cloudify.types"
   - "cloudmock.yaml"
-  - "app_installer_mock.yaml"
   - "testmockoperations.yaml"
 
 application_template:

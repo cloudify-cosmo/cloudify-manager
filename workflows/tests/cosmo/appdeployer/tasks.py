@@ -58,7 +58,7 @@ class BackgroundProcess(threading.Thread):
             if self.sp.returncode != 0:
                 raise RuntimeError("Application Deployment failed with exit code {0}".format(self.sp.returncode))
             logger.info("dsl has been deployed [dsl={0}]".format(self.dsl))
-            return_value.put(None)
+            return_value.put(0)
         except Exception, e:
             return_value.put(e)
 
@@ -78,9 +78,7 @@ def get_deploy_return_value(**kwargs):
     if not return_value.empty():
         r = return_value.get_nowait()
         if r is Exception:
-            logger.info("get_deploy_return_value raising exception")
             raise r
-        logger.info("get_deploy_return_value returning value " + r)
 
     return r
 
