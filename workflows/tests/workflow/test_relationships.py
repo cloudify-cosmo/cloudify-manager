@@ -25,16 +25,22 @@ class TestRelationships(TestCase):
     def test_pre_source_started_location_source(self):
         dsl_path = resource("dsl/relationship-interface-pre-source-location-source.yaml")
         deploy(dsl_path)
-        self.verify_assertions(pre_started=True,
+        self.verify_assertions(hook='pre-init',
                                runs_on_source=True)
 
     def test_post_source_started_location_target(self):
         dsl_path = resource("dsl/relationship-interface-post-source-location-target.yaml")
         deploy(dsl_path)
-        self.verify_assertions(pre_started=False,
+        self.verify_assertions(hook='post-init',
                                runs_on_source=False)
 
-    def verify_assertions(self, pre_started, runs_on_source):
+    def test_in_source_init_location_source(self):
+        dsl_path = resource("dsl/relationship-interface-in-source-init-location-source.yaml")
+        deploy(dsl_path)
+        self.verify_assertions(hook='after-touch-before-reachable-init',
+                               runs_on_source=True)
+
+    def verify_assertions(self, hook, runs_on_source):
 
         source_id = 'simple_web_server.mock_node_that_connects_to_host'
         target_id = 'simple_web_server.host'
@@ -53,11 +59,16 @@ class TestRelationships(TestCase):
         self.assertEquals('true', state['source_properties']['cloudify_runtime'][target_id]['reachable'])
         self.assertEquals('source_property_value', state['source_properties']['source_property_key'])
         self.assertEquals('target_property_value', state['target_properties']['target_property_key'])
-        if pre_started:
+        if hook == 'pre-init':
+            self.assertTrue(source_id not in state['source_properties']['cloudify_runtime'])
+            self.assertTrue(source_id not in state['target_properties']['cloudify_runtime'])
+        elif hook == 'post-init':
+            self.assertEquals('true', state['source_properties']['cloudify_runtime'][source_id]['reachable'])
+        elif hook == 'after-touch-before-reachable-init':
             self.assertTrue(source_id not in state['source_properties']['cloudify_runtime'])
             self.assertTrue(source_id not in state['target_properties']['cloudify_runtime'])
         else:
-            self.assertEquals('true', state['source_properties']['cloudify_runtime'][source_id]['reachable'])
+            self.fail('unhandled state')
 
         if runs_on_source:
             self.assertEquals(source_id, state['run_on_node_id'])
@@ -70,7 +81,13 @@ class TestRelationships(TestCase):
         result = testmock_get_state.apply_async()
         state = result.get(timeout=10)[0]
         reachable_timestamp = state['time']
-        if pre_started:
+        if hook == 'pre-init':
+            self.assertGreater(reachable_timestamp, connector_timestamp)
+        elif hook == 'post-init':
+            self.assertLess(reachable_timestamp, connector_timestamp)
+        elif hook == 'after-touch-before-reachable-init':
+            touched_timestamp = state['touched_time']
+            self.assertLess(touched_timestamp, connector_timestamp)
             self.assertGreater(reachable_timestamp, connector_timestamp)
         else:
-            self.assertLess(reachable_timestamp, connector_timestamp)
+            self.fail('unhandled state')
