@@ -1,6 +1,7 @@
 interfaces:
     mock_interface:
         operations:
+            - "touch"
             - "make_reachable"
 
 plugins:
