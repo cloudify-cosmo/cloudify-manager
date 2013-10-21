@@ -52,6 +52,7 @@ class TestRelationships(TestCase):
 
         from cosmo.connection_configurer_mock.tasks import get_state as config_get_state
         result = config_get_state.apply_async()
+
         state = result.get(timeout=10)[0]
 
         self.assertEquals(target_id, state['target_id'])
@@ -78,15 +79,16 @@ class TestRelationships(TestCase):
         connector_timestamp = state['time']
 
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
-        result = testmock_get_state.apply_async()
-        state = result.get(timeout=10)[0]
+        from cosmo.testmockoperations.tasks import get_touched_time as testmock_get_touch_time
+        state = testmock_get_state.apply_async().get(timeout=10)[0]
+        touched_timestamp = testmock_get_touch_time.delay().get(timeout=10)
+
         reachable_timestamp = state['time']
         if hook == 'pre-init':
             self.assertGreater(reachable_timestamp, connector_timestamp)
         elif hook == 'post-init':
             self.assertLess(reachable_timestamp, connector_timestamp)
         elif hook == 'after-touch-before-reachable-init':
-            touched_timestamp = state['touched_time']
             self.assertLess(touched_timestamp, connector_timestamp)
             self.assertGreater(reachable_timestamp, connector_timestamp)
         else:

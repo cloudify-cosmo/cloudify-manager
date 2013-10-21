@@ -3,6 +3,8 @@ from cosmo.events import set_reachable as reachable
 from time import time
 
 state = []
+touched_time = None
+
 
 @celery.task
 def make_reachable(__cloudify_id, **kwargs):
@@ -16,10 +18,16 @@ def make_reachable(__cloudify_id, **kwargs):
 
 
 @celery.task
-def touch(__cloudify_id, **kwargs):
-    state[0]['touched'] = True
-    state[0]['touched_time'] = time()
+def touch(**kwargs):
+    global touched_time
+    touched_time = time()
+
 
 @celery.task
 def get_state():
     return state
+
+
+@celery.task
+def get_touched_time():
+    return touched_time
