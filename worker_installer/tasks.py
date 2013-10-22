@@ -301,7 +301,7 @@ def get_broker_url(worker_config):
         return os.environ[broker_url_key]
     elif "env" in worker_config and broker_url_key in worker_config["env"]:
         return worker_config["env"][broker_url_key]
-    raise RuntimeError("Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env")
+    raise RuntimeError("Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(broker_url_key))
 
 
 def build_celeryd_config(worker_config, node_id):
