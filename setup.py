@@ -22,8 +22,8 @@ FABRIC_RUNNER_VERSION = "0.1.0"
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_VERSION)
 
 COSMO_CELERY_VERSION = "0.1.1"
-COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_VERSION)
-
+#COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_VERSION)
+COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/archive/feature/CLOUDIFY-2161-inject-management-ip.zip"
 
 setup(
     name='cosmo-plugin-agent-installer',
