@@ -16,7 +16,8 @@
 
 __author__ = 'elip'
 
-from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION, OPENSTACK_PROVISION_VERSION
+from versions import RIEMANN_LOADER_VERSION, VAGRANT_PROVISION_VERSION, WORKER_INSTALLER_VERSION, \
+    OPENSTACK_PROVISION_VERSION, DSL_PARSER_VERSION
 
 WORKER_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip"\
                    .format(WORKER_INSTALLER_VERSION)
@@ -27,6 +28,8 @@ VAGRANT_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-vagrant-prov
 
 OPENSTACK_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
     .format(OPENSTACK_PROVISION_VERSION)
+
+DSL_PARSER = "https://github.com/CloudifySource/cosmo-plugin-dsl-parser/archive/{0}.zip".format(DSL_PARSER_VERSION)
 
 plugins = [
 
@@ -42,6 +45,10 @@ plugins = [
     {
         "name": "cloudify.plugins.vagrant_host_provisioner",
         "url": VAGRANT_PROVISION
+    },
+    {
+        "name": "cloudify.plugins.dsl_parser",
+        "url": DSL_PARSER
     },
 ]
 
