@@ -28,7 +28,7 @@ from worker_installer.tasks import install, start, build_env_string
 from worker_installer.tasks import create_namespace_path
 from cosmo.constants import COSMO_PLUGIN_NAMESPACE
 
-PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
+PLUGIN_INSTALLER = 'cloudify.plugins.plugin_installer'
 
 remote_suite_logger = get_logger("TestRemoteInstallerCase")
 local_suite_logger = get_logger("TestLocalInstallerCase")
@@ -82,7 +82,7 @@ def _test_install(runner, worker_config, cloudify_runtime, local=False, virtuale
     plugins = _extract_registered_plugins(worker_config['broker'])
     if plugins is None:
         raise AssertionError("No plugins were detected on the installed worker")
-    assert 'celery.{0}@cloudify.tosca.artifacts.plugin.plugin_installer'.format(__cloudify_id) in plugins
+    assert 'celery.{0}@cloudify.plugins.plugin_installer'.format(__cloudify_id) in plugins
 
 
 def _test_create_namespace_path(runner):
