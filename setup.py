@@ -3,7 +3,8 @@ __author__ = 'elip'
 from setuptools import setup
 
 COSMO_CELERY_VERSION = "0.1.1"
-COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_VERSION)
+COSMO_CELERY_BRANCH = "develop"
+COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
 
 setup(
     name='cosmo-plugin-plugin-installer',
