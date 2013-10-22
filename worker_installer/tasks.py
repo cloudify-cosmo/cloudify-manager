@@ -151,18 +151,10 @@ def _verify_no_celery_error(runner, worker_config):
     home = "/home/" + user
     celery_error_out = '{0}/celery_error.out'.format(home)
 
-    output = None
-    with hide('aborts', 'running', 'stdout', 'stderr'):
-        try:
-            output = runner.get(celery_error_out)
-        except BaseException:
-            pass
-
-    if output:
-
-        # this means the celery worker had an uncaught exception and it wrote its content
-        # to the file above because of our custom exception handler (see celery.py)
-
+    # this means the celery worker had an uncaught exception and it wrote its content
+    # to the file above because of our custom exception handler (see celery.py)
+    if runner.exists(celery_error_out):
+        output = runner.get(celery_error_out)
         runner.run('rm {0}'.format(celery_error_out))
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(output))
 

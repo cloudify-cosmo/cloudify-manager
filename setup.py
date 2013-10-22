@@ -18,7 +18,7 @@ __author__ = 'elip'
 
 from setuptools import setup
 
-FABRIC_RUNNER_VERSION = "0.1.0"
+FABRIC_RUNNER_VERSION = "develop"
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_VERSION)
 
 COSMO_CELERY_VERSION = "0.1.1"
