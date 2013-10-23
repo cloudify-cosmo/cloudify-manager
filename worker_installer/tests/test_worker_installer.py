@@ -134,6 +134,8 @@ class TestLocalInstallerCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.RUNNER = get_local_runner()
+        os.environ["BROKER_URL"] = "localhost"
+        os.environ["MANAGEMENT_IP"] = "localhost"
 
     def test_install_worker(self):
         _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=False)
