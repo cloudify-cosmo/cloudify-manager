@@ -140,8 +140,8 @@ def prepare_configuration(worker_config, cloudify_runtime):
     worker_config['app_dir'] = worker_config['home'] + "/" + COSMO_APP_NAME
     if "env" in worker_config: 
         if "MANAGEMENT_IP" not in worker_config["env"]:
-            if "MANAGEMENT_IP" not in worker_config["env"]:
-                raise RuntimeError("MANAGEMENT_IP is not present in worker_config.env")
+            if "MANAGEMENT_IP" not in os.environ["MANAGEMENT_IP"]:
+                raise RuntimeError("MANAGEMENT_IP is not present in worker_config.env nor environment")
             worker_config["env"]["MANAGEMENT_IP"] = os.environ["MANAGEMENT_IP"]
         worker_config["env"]["AGENT_IP"] = ip
 
