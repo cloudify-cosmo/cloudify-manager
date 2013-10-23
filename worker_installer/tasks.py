@@ -199,7 +199,10 @@ def install_celery_plugin_to_dir(runner, worker_config, to_dir, plugin_url):
     logger.info("running: {0} install {1}".format(get_pip(worker_config), plugin_url))
     ###
 
-    runner.sudo("{0} install {1}".format(get_pip(worker_config), plugin_url))
+    result = runner.sudo("{0} install {1}".format(get_pip(worker_config), plugin_url), warn_only=True)
+    logger.info("result is: {0}".format(result))
+    if result.return_code != 0:
+        raise RuntimeError("return_code is {0}".format(result.return_code))
 
     # install the package to the target directory. this should also remove the plugin package from the python
     # installation.
