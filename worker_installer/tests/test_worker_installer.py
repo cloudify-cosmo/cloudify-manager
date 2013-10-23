@@ -28,7 +28,7 @@ from worker_installer.tasks import install, start, build_env_string
 from worker_installer.tasks import create_namespace_path
 from cosmo.constants import COSMO_PLUGIN_NAMESPACE
 
-PLUGIN_INSTALLER = 'cloudify.tosca.artifacts.plugin.plugin_installer'
+PLUGIN_INSTALLER = 'cloudify.plugins.plugin_installer'
 
 remote_suite_logger = get_logger("TestRemoteInstallerCase")
 local_suite_logger = get_logger("TestLocalInstallerCase")

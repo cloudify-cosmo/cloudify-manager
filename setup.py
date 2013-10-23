@@ -1,4 +1,4 @@
-#/*******************************************************************************
+#/******************************************************************************* 
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +19,14 @@ __author__ = 'elip'
 from setuptools import setup
 
 FABRIC_RUNNER_VERSION = "0.1.0"
-FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_VERSION)
+FABRIC_RUNNER_BRANCH = "develop"
+FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_BRANCH)
 
 COSMO_CELERY_VERSION = "0.1.1"
-#COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_VERSION)
-COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/archive/feature/CLOUDIFY-2161-inject-management-ip.zip"
+#COSMO_CELERY_BRANCH = "develop"
+COSMO_CELERY_BRANCH = "feature/CLOUDIFY-2161-inject-management-ip"
+COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
+
 
 setup(
     name='cosmo-plugin-agent-installer',
