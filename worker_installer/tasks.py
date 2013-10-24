@@ -24,7 +24,6 @@ import json
 
 from celery.utils.log import get_task_logger
 from celery import task
-from fabric.api import hide
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION
 from cosmo.constants import VIRTUALENV_PATH_KEY, COSMO_APP_NAME, COSMO_PLUGIN_NAMESPACE
@@ -39,6 +38,11 @@ PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-in
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
+
+MANAGEMENT_IP = "MANAGEMENT_IP"
+AGENT_IP = "AGENT_IP"
+BROKER_URL = "BROKER_URL"
+
 
 @task
 def install(worker_config, __cloudify_id, cloudify_runtime, virtualenv=True, local=False, **kwargs):
@@ -139,6 +143,15 @@ def prepare_configuration(worker_config, cloudify_runtime):
     worker_config['home'] = "/home/" + worker_config['user']
     worker_config['app_dir'] = worker_config['home'] + "/" + COSMO_APP_NAME
 
+    if "env" not in worker_config:
+        worker_config['env'] = dict()
+
+    if MANAGEMENT_IP not in worker_config["env"]:
+        if MANAGEMENT_IP not in os.environ:
+            raise RuntimeError("{0} is not present in worker_config.env nor environment".format(MANAGEMENT_IP))
+        worker_config["env"][MANAGEMENT_IP] = os.environ[MANAGEMENT_IP]
+    worker_config["env"][AGENT_IP] = ip
+
 
 def restart_celery_worker(runner, worker_config):
     runner.sudo('service celeryd restart')
@@ -161,10 +174,6 @@ def _verify_no_celery_error(runner, worker_config):
 
 def _install_celery(runner, worker_config, node_id):
 
-    cosmo_properties = {
-        'management_ip': worker_config['management_ip'],
-        'ip': worker_config['host']
-    }
     user = worker_config['user']
     app_dir = worker_config['app_dir']
     home = worker_config['home']
@@ -176,11 +185,6 @@ def _install_celery(runner, worker_config, node_id):
 
     # since sudo pip created the app dir. the owner is root. but actually it is used by celery.
     runner.sudo("chown -R {0} {1}".format(user, app_dir))
-
-    # write cosmo properties
-    logger.debug("writing cosmo properties file [node_id=%s]: %s", node_id, cosmo_properties)
-    cosmo_properties_path = path.join(app_dir, "cosmo.txt")
-    runner.put(json.dumps(cosmo_properties), cosmo_properties_path, use_sudo=True)
 
     plugin_installer_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
@@ -286,10 +290,23 @@ def build_env_string(env):
     return string
 
 
+def get_broker_url(worker_config):
+    """
+    Gets the broker URL from either os.environ or worker_config[env].
+    Raises a RuntimeError if neither exist.
+    """
+    if BROKER_URL in os.environ:
+        return os.environ[BROKER_URL]
+    elif "env" in worker_config and BROKER_URL in worker_config["env"]:
+        return worker_config["env"][BROKER_URL]
+    raise RuntimeError(
+        "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
+
+
 def build_celeryd_config(worker_config, node_id):
 
     user = worker_config['user']
-    broker_url = worker_config['broker']
+    broker_url = get_broker_url(worker_config)
     workdir = worker_config['home']
 
     env = {}

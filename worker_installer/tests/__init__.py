@@ -31,7 +31,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 local_worker_config = {
     "user": getpass.getuser(),
-    "management_ip": "localhost",
     "broker": "amqp://"
 }
 
