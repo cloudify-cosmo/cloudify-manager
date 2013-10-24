@@ -106,6 +106,8 @@ class VagrantLxcBoot:
     RIEMANN_PID = "RIEMANN_PID"
     RIEMANN_CONFIG = "RIEMANN_CONFIG"
     RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
+    MANAGEMENT_IP = "MANAGEMENT_IP"
+    BROKER_URL = "BROKER_URL"
 
     def __init__(self, args):
         self.working_dir = args.working_dir
@@ -218,20 +220,16 @@ class VagrantLxcBoot:
         # download and install the worker_installer
         self.pip(WORKER_INSTALLER)
 
-        # no need to specify port and key file. we are installing locally
-        local_ip = "localhost"
-
         worker_config = {
             "user": getpass.getuser(),
-            "management_ip": local_ip,
             "broker": "amqp://",
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
                 # when running celery in daemon mode. this environment does
                 # not exists. it is needed for vagrant.
                 "HOME": "/home/{0}".format(getpass.getuser()),
-                "MANAGEMENT_IP": self.management_ip,
-                "BROKER_URL": "amqp://guest:guest@{0}:5672//".format(self.management_ip),
+                self.MANAGEMENT_IP: self.management_ip,
+                self.BROKER_URL: "amqp://guest:guest@{0}:5672//".format(self.management_ip),
                 self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
                 self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
                 self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE]
@@ -299,11 +297,11 @@ class VagrantLxcBoot:
     def install_vagrant_lxc(self):
         self.runner.run("vagrant plugin install vagrant-lxc")
 
-    """
-    Currently not used. provides some more functionallity between the actual host and the virtual box vagrant guest.
-    See http://www.virtualbox.org/manual/ch04.html
-    """
     def install_guest_additions(self):
+        """
+        Currently not used. provides some more functionality between the actual host and the virtual box vagrant guest.
+        See http://www.virtualbox.org/manual/ch04.html
+        """
         self.apt_get("install -q -y linux-headers-3.8.0-19-generic dkms")
         self.runner.run("echo 'Downloading VBox Guest Additions...'")
         self.wget("-q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso")
