@@ -63,23 +63,6 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME, RESTART_CELERY_WORKER_TASK_NAME]
 
-  def colorize(color_code, message)
-    "\e[#{color_code}m#{message}\e[0m"
-  end
-
-  def red(message)
-    colorize(31, message)
-  end
-
-  def green(message)
-    colorize(32, message)
-  end
-
-  def yellow(message)
-    colorize(33, message)
-  end
-
-
   def do_not_thread
     true
   end
@@ -221,14 +204,14 @@ class ExecuteTaskParticipant < Ruote::Participant
             workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
           end
           unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(green(description))
+            $user_logger.debug(description)
           end
           reply(workitem)
 
         when TASK_FAILED || TASK_REVOKED
 
           unless @full_task_name == VERIFY_PLUGIN_TASK_NAME
-            $user_logger.debug(red(description))
+            $user_logger.debug(description)
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
 

@@ -140,7 +140,7 @@ public class RiemannEventsLogger {
                                             level, name, pluginEventJson);
                                     break;
                                 case "DEBUG":
-                                    pluginsLogger.debug(RiemannEventsLogDescription.PLUGIN_MESSAGE, pluginEventJson,
+                                    pluginsLogger.debug(RiemannEventsLogDescription.PLUGIN_MESSAGE,
                                             level, name, pluginEventJson);
                                     break;
                             }
