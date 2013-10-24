@@ -11,7 +11,7 @@ define install_application
                 plan: $plan
             }
         },
-        argument_names: 'plan'
+        argument_names: ''
 
     log message: 'executing workflows.install'
     set 'v:install': '$plan.workflows.install'
