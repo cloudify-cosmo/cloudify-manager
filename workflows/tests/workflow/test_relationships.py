@@ -42,8 +42,8 @@ class TestRelationships(TestCase):
 
     def verify_assertions(self, hook, runs_on_source):
 
-        source_id = 'simple_web_server.mock_node_that_connects_to_host'
-        target_id = 'simple_web_server.host'
+        source_id_prefix = 'simple_web_server.mock_node_that_connects_to_host'
+        target_id_prefix = 'simple_web_server.host'
 
         from cosmo.cloudmock.tasks import get_machines
         result = get_machines.apply_async()
@@ -55,8 +55,11 @@ class TestRelationships(TestCase):
 
         state = result.get(timeout=10)[0]
 
-        self.assertEquals(target_id, state['target_id'])
-        self.assertEquals(source_id, state['source_id'])
+        source_id = state['source_id']
+        target_id = state['target_id']
+
+        self.assertTrue(source_id.startswith(source_id_prefix))
+        self.assertTrue(target_id.startswith(target_id_prefix))
         self.assertEquals('true', state['source_properties']['cloudify_runtime'][target_id]['reachable'])
         self.assertEquals('source_property_value', state['source_properties']['source_property_key'])
         self.assertEquals('target_property_value', state['target_properties']['target_property_key'])
