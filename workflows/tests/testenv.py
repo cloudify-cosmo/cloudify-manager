@@ -95,7 +95,6 @@ class CeleryWorkerProcess(object):
             "--concurrency=1"
         ]
 
-
         os.chdir(self._tempdir)
 
         environment = os.environ.copy()
@@ -137,6 +136,7 @@ class CeleryWorkerProcess(object):
         from cosmo.celery import celery
         celery.control.broadcast('pool_shrink', arguments={'N': 0})
         celery.control.broadcast('pool_grow', arguments={'N': 1})
+
 
 class RiemannProcess(object):
     """
@@ -378,6 +378,7 @@ def get_resource(resource):
     if not path.exists(resource_path):
         raise RuntimeError("Resource '{0}' not found in: {1}".format(resource, resource_path))
     return resource_path
+
 
 def deploy_application(dsl_path, timeout=240):
     """

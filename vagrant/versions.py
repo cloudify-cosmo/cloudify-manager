@@ -1,5 +1,7 @@
 __author__ = 'elip'
 
+COSMO_VERSION = "develop"
+
 FABRIC_RUNNER_VERSION = "develop"
 WORKER_INSTALLER_VERSION = "develop"
 RIEMANN_LOADER_VERSION = "develop"

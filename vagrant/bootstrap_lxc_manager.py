@@ -24,8 +24,11 @@ import os
 
 __author__ = 'elip'
 
+import sys
 from management_plugins import WORKER_INSTALLER
 from versions import FABRIC_RUNNER_VERSION
+from versions import COSMO_VERSION
+from subprocess import check_output
 
 USER_HOME = expanduser('~')
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(FABRIC_RUNNER_VERSION)
@@ -103,6 +106,8 @@ class VagrantLxcBoot:
     RIEMANN_PID = "RIEMANN_PID"
     RIEMANN_CONFIG = "RIEMANN_CONFIG"
     RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
+    MANAGEMENT_IP = "MANAGEMENT_IP"
+    BROKER_URL = "BROKER_URL"
 
     def __init__(self, args):
         self.working_dir = args.working_dir
@@ -111,6 +116,7 @@ class VagrantLxcBoot:
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
         self.update_only = args.update_only
         self.install_openstack_provisioner = args.install_openstack_provisioner
+        self.management_ip = args.management_ip
 
     def run_command(self, command):
         p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -214,18 +220,16 @@ class VagrantLxcBoot:
         # download and install the worker_installer
         self.pip(WORKER_INSTALLER)
 
-        # no need to specify port and key file. we are installing locally
-        local_ip = "localhost"
-
         worker_config = {
             "user": getpass.getuser(),
-            "management_ip": local_ip,
             "broker": "amqp://",
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
                 # when running celery in daemon mode. this environment does
                 # not exists. it is needed for vagrant.
                 "HOME": "/home/{0}".format(getpass.getuser()),
+                self.MANAGEMENT_IP: self.management_ip,
+                self.BROKER_URL: "amqp://guest:guest@{0}:5672//".format(self.management_ip),
                 self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
                 self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
                 self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE]
@@ -293,11 +297,11 @@ class VagrantLxcBoot:
     def install_vagrant_lxc(self):
         self.runner.run("vagrant plugin install vagrant-lxc")
 
-    """
-    Currently not used. provides some more functionallity between the actual host and the virtual box vagrant guest.
-    See http://www.virtualbox.org/manual/ch04.html
-    """
     def install_guest_additions(self):
+        """
+        Currently not used. provides some more functionality between the actual host and the virtual box vagrant guest.
+        See http://www.virtualbox.org/manual/ch04.html
+        """
         self.apt_get("install -q -y linux-headers-3.8.0-19-generic dkms")
         self.runner.run("echo 'Downloading VBox Guest Additions...'")
         self.wget("-q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso")
@@ -375,7 +379,41 @@ fi
     def reboot(self):
         self.runner.sudo("shutdown -r +1")
 
+    def get_machine_ip_addresses(self):
+        output = check_output(["ip", "a"])
+        output = output.replace('\n', '')
+        ips_pattern = "<(.+?)>.*?inet\s(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+        ips = re.findall(ips_pattern, output)
+        return map(lambda ip_info: ip_info[1], filter(lambda x: "loopback" not in x[0].lower(), ips))
+
+    def set_management_ip(self):
+        try:
+            ips = self.get_machine_ip_addresses()
+            if self.management_ip:
+                if self.management_ip not in ips:
+                    print('Could not set management ip!\n' +
+                          'Specified management ip is not listed in machine\'s assigned ip addresses: {0}'.format(ips))
+                    sys.exit(1)
+            else:
+                if len(ips) == 1:
+                    self.management_ip = ips[0]
+                else:
+                    print('Could not set management ip!\n' +
+                          'IP addresses assigned to this machine: {0}\n'.format(ips) +
+                          'Run this script with \'--managemant_ip\' argument for specifying the management ' +
+                          'machine ip address which should be one of the ips assigned to this machine')
+                    sys.exit(1)
+            print("Management ip is set to: {0}".format(self.management_ip))
+        except SystemExit as e:
+            raise e
+        except BaseException:
+            print('Could not set management ip!\n' +
+                  'Run this script with \'--managemant-ip\' argument for specifying the management ' +
+                  'machine ip address which should be one of the ips assigned to this machine')
+            sys.exit(1)
+
     def bootstrap(self):
+        self.set_management_ip()
         self.install_fabric_runner()
         if not self.update_only:
             self.install_python_protobuf()
@@ -427,6 +465,14 @@ if __name__ == '__main__':
         help='Whether the openstack host provisioner should be installed in the management celery worker',
         default=False
     )
+    parser.add_argument(
+        '--management_ip',
+        help='Specifies the IP address to be used for the management machine (should be set to one of the available ' +
+             'IP addresses assigned to this machine)',
+        default=None
+    )
+
+    print("Cloudify Cosmo [{0}] Management Machine Bootstrap ->".format(COSMO_VERSION))
 
     vagrant_boot = VagrantLxcBoot(parser.parse_args())
     vagrant_boot.bootstrap()
