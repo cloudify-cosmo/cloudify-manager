@@ -24,7 +24,6 @@ import json
 
 from celery.utils.log import get_task_logger
 from celery import task
-from fabric.api import hide
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION
 from cosmo.constants import VIRTUALENV_PATH_KEY, COSMO_APP_NAME, COSMO_PLUGIN_NAMESPACE
@@ -39,6 +38,10 @@ PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-in
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
+
+MANAGEMENT_IP = "MANAGEMENT_IP"
+AGENT_IP = "AGENT_IP"
+
 
 @task
 def install(worker_config, __cloudify_id, cloudify_runtime, virtualenv=True, local=False, **kwargs):
@@ -139,11 +142,11 @@ def prepare_configuration(worker_config, cloudify_runtime):
     worker_config['home'] = "/home/" + worker_config['user']
     worker_config['app_dir'] = worker_config['home'] + "/" + COSMO_APP_NAME
     if "env" in worker_config: 
-        if "MANAGEMENT_IP" not in worker_config["env"]:
-            if "MANAGEMENT_IP" not in os.environ:
-                raise RuntimeError("MANAGEMENT_IP is not present in worker_config.env nor environment")
-            worker_config["env"]["MANAGEMENT_IP"] = os.environ["MANAGEMENT_IP"]
-        worker_config["env"]["AGENT_IP"] = ip
+        if MANAGEMENT_IP not in worker_config["env"]:
+            if MANAGEMENT_IP not in os.environ:
+                raise RuntimeError("{0} is not present in worker_config.env nor environment".format(MANAGEMENT_IP))
+            worker_config["env"][MANAGEMENT_IP] = os.environ[MANAGEMENT_IP]
+        worker_config["env"][AGENT_IP] = ip
 
 
 def restart_celery_worker(runner, worker_config):

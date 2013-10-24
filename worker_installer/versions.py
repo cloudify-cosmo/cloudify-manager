@@ -17,4 +17,4 @@
 __author__ = 'elip'
 
 PLUGIN_INSTALLER_VERSION = "develop"
-COSMO_CELERY_COMMON_VERSION = "feature/CLOUDIFY-2161-inject-management-ip"
+COSMO_CELERY_COMMON_VERSION = "develop"
