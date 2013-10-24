@@ -41,6 +41,7 @@ logger.level = logging.DEBUG
 
 MANAGEMENT_IP = "MANAGEMENT_IP"
 AGENT_IP = "AGENT_IP"
+BROKER_URL = "BROKER_URL"
 
 
 @task
@@ -291,12 +292,12 @@ def get_broker_url(worker_config):
     Gets the broker URL from either os.environ or worker_config[env].
     Raises a RuntimeError if neither exist.
     """
-    broker_url_key = "BROKER_URL"
-    if broker_url_key in os.environ:
-        return os.environ[broker_url_key]
-    elif "env" in worker_config and broker_url_key in worker_config["env"]:
-        return worker_config["env"][broker_url_key]
-    raise RuntimeError("Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(broker_url_key))
+    if BROKER_URL in os.environ:
+        return os.environ[BROKER_URL]
+    elif "env" in worker_config and BROKER_URL in worker_config["env"]:
+        return worker_config["env"][BROKER_URL]
+    raise RuntimeError(
+        "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
 
 
 def build_celeryd_config(worker_config, node_id):
