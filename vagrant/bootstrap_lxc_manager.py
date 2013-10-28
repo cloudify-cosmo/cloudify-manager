@@ -418,7 +418,7 @@ fi
             sys.exit(1)
 
     def _prepare_logstash_configuration(self):
-        logstash_config_template = os.path.join(self.config_dir, "logstash.conf")
+        logstash_config_template = os.path.join(self.config_dir, "logstash.conf.template")
         logstash_config_path = os.path.join(self.working_dir, "logstash.conf")
         cosmo_log_file = os.path.join(self.working_dir, "cosmo.log")
         if not os.path.exists(logstash_config_template):
