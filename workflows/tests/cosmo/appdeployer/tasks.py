@@ -46,6 +46,8 @@ class BackgroundProcess(threading.Thread):
                 COSMO_JAR,
                 "--dsl",
                 self.dsl,
+                "--timeout",
+                "300",
                 "--non-interactive"
             ]
             self.sp = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
