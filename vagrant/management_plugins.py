@@ -31,6 +31,7 @@ OPENSTACK_PROVISION = "https://github.com/CloudifySource/cosmo-plugin-openstack-
 
 DSL_PARSER = "https://github.com/CloudifySource/cosmo-plugin-dsl-parser/archive/{0}.zip".format(DSL_PARSER_VERSION)
 
+
 plugins = [
 
     {
@@ -43,10 +44,6 @@ plugins = [
         "url": WORKER_INSTALLER
     },
     {
-        "name": "cloudify.plugins.vagrant_host_provisioner",
-        "url": VAGRANT_PROVISION
-    },
-    {
         "name": "cloudify.plugins.dsl_parser",
         "url": DSL_PARSER
     },
@@ -55,4 +52,9 @@ plugins = [
 openstack_provisioner_plugin = {
     "name": "cloudify.plugins.openstack_host_provisioner",
     "url": OPENSTACK_PROVISION
+}
+
+vagrant_provisioner_plugin = {
+    "name": "cloudify.plugins.vagrant_host_provisioner",
+    "url": VAGRANT_PROVISION
 }

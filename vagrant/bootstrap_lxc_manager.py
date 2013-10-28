@@ -283,9 +283,13 @@ class VagrantLxcBoot:
         from management_plugins import plugins
         for plugin in plugins:
             install_plugin(plugin=plugin)
+
         if self.install_openstack_provisioner:
             from management_plugins import openstack_provisioner_plugin
             install_plugin(plugin=openstack_provisioner_plugin)
+        if self.install_vagrant_lxc:
+            from management_plugins import vagrant_provisioner_plugin
+            install_plugin(plugin=vagrant_provisioner_plugin)
 
     def install_vagrant(self):
         vagrant_file_name = "vagrant_1.2.7_x86_64.deb"
@@ -443,7 +447,7 @@ fi
             logstash_jar_path,
             logstash_config_path,
             logstash_web_port).split(' ')
-        timeout_seconds = 45
+        timeout_seconds = 60
         print("Starting logstash with web port set to: {0} [timeout={1} seconds]".format(logstash_web_port,
                                                                                          timeout_seconds))
         self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
