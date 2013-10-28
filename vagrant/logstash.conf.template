@@ -1,0 +1,41 @@
+input {
+    stdin {
+        type => "stdin-type"
+    }
+
+    file {
+        type => "cosmo-log"
+        path => "$cosmo_log_file"
+    }
+}
+
+filter {
+    multiline {
+        pattern => "^ |\}"
+        what => "previous"
+    }
+}
+
+filter {
+    grep {
+        match => ["message","^\{"]
+        drop => true
+    }
+}
+
+filter {
+    json {
+	    source => "message"
+    }
+}
+
+filter {
+    mutate {
+        replace => ["message","%{type}"]
+    }
+}
+
+output {
+    stdout { debug => true codec => "json" }
+    elasticsearch { embedded => true }
+}

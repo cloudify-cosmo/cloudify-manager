@@ -16,19 +16,22 @@
 
 import argparse
 import getpass
-from os.path import expanduser
 import subprocess
 import re
 import threading
 import os
-
-__author__ = 'elip'
-
+import datetime
+import time
 import sys
+
+from os.path import expanduser
 from management_plugins import WORKER_INSTALLER
 from versions import FABRIC_RUNNER_VERSION
 from versions import COSMO_VERSION
 from subprocess import check_output
+
+__author__ = 'elip'
+
 
 USER_HOME = expanduser('~')
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(FABRIC_RUNNER_VERSION)
@@ -117,6 +120,8 @@ class VagrantLxcBoot:
         self.update_only = args.update_only
         self.install_openstack_provisioner = args.install_openstack_provisioner
         self.management_ip = args.management_ip
+        self.install_vagrant_lxc = args.install_vagrant_lxc
+        self.install_logstash = args.install_logstash
 
     def run_command(self, command):
         p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -412,17 +417,65 @@ fi
                   'machine ip address which should be one of the ips assigned to this machine')
             sys.exit(1)
 
+    def _prepare_logstash_configuration(self):
+        logstash_config_template = os.path.join(self.config_dir, "logstash.conf")
+        logstash_config_path = os.path.join(self.working_dir, "logstash.conf")
+        cosmo_log_file = os.path.join(self.working_dir, "cosmo.log")
+        if not os.path.exists(logstash_config_template):
+            raise RuntimeError("logstash config template file not found in: {0}".format(logstash_config_template))
+        with open(logstash_config_template, "r") as config_template_file:
+            template = config_template_file.read()
+            updated_config = template.replace("$cosmo_log_file", cosmo_log_file)
+            with open(logstash_config_path, "w") as config_file:
+                config_file.write(updated_config)
+        return logstash_config_path
+
+    def _install_logstash(self):
+        logstash_jar_name = "logstash-1.2.2-flatjar.jar"
+        self.wget("https://download.elasticsearch.org/logstash/logstash/{0}".format(logstash_jar_name))
+        logstash_config_path = self._prepare_logstash_configuration()
+        logstash_jar_path = os.path.join(self.working_dir, logstash_jar_name)
+        logstash_web_port = 8080
+        if not os.path.exists(logstash_config_path):
+            raise RuntimeError("logstash configuration file [{0}] does not exist".format(logstash_config_path))
+        # Starts logstash with Kibana listening on port 8080
+        command = "java -jar {0} agent -f {1} -- web --port {2}".format(
+            logstash_jar_path,
+            logstash_config_path,
+            logstash_web_port).split(' ')
+        timeout_seconds = 45
+        print("Starting logstash with web port set to: {0} [timeout={1} seconds]".format(logstash_web_port,
+                                                                                         timeout_seconds))
+        self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        timeout = datetime.datetime.now() + datetime.timedelta(seconds=timeout_seconds)
+        timeout_exceeded = False
+        pattern = ".*8080.*LISTEN"
+        # Wait until logstash web port is in listening state
+        while not timeout_exceeded:
+            output = check_output(["netstat", "-nl"]).replace('\n', '')
+            match = re.match(pattern, output)
+            if match:
+                break
+            timeout_exceeded = datetime.datetime.now() > timeout
+            time.sleep(1)
+        if timeout_exceeded:
+            raise RuntimeError("Failed to start logstash within a timeout of {0} seconds".format(timeout_seconds))
+        print("Logstash has been successfully started")
+
     def bootstrap(self):
         self.set_management_ip()
         self.install_fabric_runner()
         if not self.update_only:
             self.install_python_protobuf()
             self.install_rabbitmq()
-            self.install_lxc_docker()
-            self.install_kernel()
-            self.install_java()
+            if self.install_vagrant_lxc:
+                self.install_lxc_docker()
+                self.install_kernel()
+                self.install_java()
+                self.install_vagrant()
             riemann_info = self.install_riemann()
-            self.install_vagrant()
+            if self.install_logstash:
+                self._install_logstash()
             self.install_cosmo()
             self.install_celery_worker(riemann_info)
         else:
@@ -458,11 +511,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--update_only',
         help='Update the cosmo agent on this machine with new plugins from github',
-        default=False,
+        action="store_true",
+        default=False
     )
     parser.add_argument(
         '--install_openstack_provisioner',
         help='Whether the openstack host provisioner should be installed in the management celery worker',
+        action="store_true",
         default=False
     )
     parser.add_argument(
@@ -470,6 +525,20 @@ if __name__ == '__main__':
         help='Specifies the IP address to be used for the management machine (should be set to one of the available ' +
              'IP addresses assigned to this machine)',
         default=None
+    )
+
+    parser.add_argument(
+        '--install_vagrant_lxc',
+        help="Specifies whether Vagrant and LXC would be installed for LXC host provisioning",
+        action="store_true",
+        default=False
+    )
+
+    parser.add_argument(
+        '--install_logstash',
+        help="Specifies whether to install and run logstash for analyzing cosmo events",
+        action="store_true",
+        default=False
     )
 
     print("Cloudify Cosmo [{0}] Management Machine Bootstrap ->".format(COSMO_VERSION))
