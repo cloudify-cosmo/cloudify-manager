@@ -9,7 +9,7 @@ application_template:
         -   name: "webserver_host"
             type: "cloudify.types.host"
             policies:
-                unknown_policy:
+                -   name: "unknown_policy"
                     rules:
                         -   type: "state_equals"
                             properties:
