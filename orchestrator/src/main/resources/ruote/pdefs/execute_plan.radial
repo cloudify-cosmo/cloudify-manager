@@ -10,8 +10,7 @@ define install_application
             properties : {
                 plan: $plan
             }
-        },
-        argument_names: 'plan'
+        }
 
     log message: 'executing workflows.install'
     set 'v:install': '$plan.workflows.install'

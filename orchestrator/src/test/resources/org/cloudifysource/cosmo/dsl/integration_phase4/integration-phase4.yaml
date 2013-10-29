@@ -10,7 +10,7 @@ imports:
     - "flask_app_connector.yaml"
     - "stub_app_installer.yaml"
 
-application_template:
+blueprint:
     name: "phase4"
     topology:
          -  name: "vagrant_host"

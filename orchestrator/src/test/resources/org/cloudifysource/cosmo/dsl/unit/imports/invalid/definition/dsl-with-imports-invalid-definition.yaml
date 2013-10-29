@@ -1,6 +1,6 @@
 imports:
     - "org/cloudifysource/cosmo/dsl/unit/imports/invalid/definition/dsl-with-imports-invalid-definition-imported.yaml"
-application_template:
+blueprint:
     name: "some_service_template"
     topology:
         -   name: "type_template"

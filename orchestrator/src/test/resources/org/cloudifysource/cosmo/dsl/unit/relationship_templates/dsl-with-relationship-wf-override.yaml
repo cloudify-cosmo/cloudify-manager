@@ -4,7 +4,7 @@ imports:
     - "middleware_component_installer"
     - "app_module_installer"
 
-application_template:
+blueprint:
     name: "app"
     topology:
         -   name: "host"

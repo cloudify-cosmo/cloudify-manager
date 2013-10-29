@@ -2,7 +2,7 @@ imports:
     - "cloudify.types"
     - "host_provisioner"
 
-application_template:
+blueprint:
     name: "test_service_template"
     topology:
         -   name: "test_host"

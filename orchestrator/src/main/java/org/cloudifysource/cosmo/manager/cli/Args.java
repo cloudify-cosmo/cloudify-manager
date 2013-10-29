@@ -38,9 +38,9 @@ public class Args {
     private String dslPath;
 
     @Parameter(names = "--timeout",
-               description = "timeout for the deployment in seconds.",
+               description = "timeout for the deployment in seconds. (Default: infinity)",
                validateWith = PositiveInteger.class)
-    private int timeout = 5 * 60; // defaults to 5 minutes.
+    private int timeout = 0; // defaults to infinity.
 
     @Parameter(names = "--help", help = true, hidden = true)
     private boolean help;

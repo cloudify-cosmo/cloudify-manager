@@ -31,7 +31,7 @@ import java.util.Map;
 public class Definitions {
 
     private List<String> imports = Lists.newArrayList();
-    private ApplicationTemplate applicationTemplate = new ApplicationTemplate();
+    private Blueprint blueprint = new Blueprint();
     private Map<String, Type> types = Maps.newHashMap();
     private Map<String, Interface> interfaces = Maps.newHashMap();
     private Map<String, Plugin> plugins = Maps.newHashMap();
@@ -55,12 +55,12 @@ public class Definitions {
         this.relationships = relationships;
     }
 
-    public ApplicationTemplate getApplicationTemplate() {
-        return applicationTemplate;
+    public Blueprint getBlueprint() {
+        return blueprint;
     }
 
-    public void setApplicationTemplate(ApplicationTemplate applicationTemplate) {
-        this.applicationTemplate = applicationTemplate;
+    public void setBlueprint(Blueprint blueprint) {
+        this.blueprint = blueprint;
     }
 
     public Map<String, Interface> getInterfaces() {
