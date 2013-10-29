@@ -3,7 +3,7 @@ imports:
     - "cloudify/plugins/host_provisioner.yaml"
     - "org/cloudifysource/cosmo/dsl/unit/service_templates/dsl-with-service-templates-override-workflow-imported.yaml"
 
-application_template:
+blueprint:
     name: "service_template1"
     topology:
         -   name: "host1"

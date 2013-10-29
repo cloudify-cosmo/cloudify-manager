@@ -27,7 +27,7 @@ import java.util.List;
  * @author Dan Kilman
  * @since 0.1
  */
-public class ApplicationTemplate extends Definition {
+public class Blueprint extends Definition {
 
     private String name;
     private List<TypeTemplate> topology = Lists.newLinkedList();

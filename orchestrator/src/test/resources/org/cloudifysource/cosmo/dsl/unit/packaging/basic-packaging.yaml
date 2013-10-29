@@ -15,7 +15,7 @@ plugins:
         properties:
             interface: "provisioner"
             url: "plugins/provisioner-plugin.zip"
-application_template:
+blueprint:
     name: "package_template"
     topology:
         -   name: "package_vm"

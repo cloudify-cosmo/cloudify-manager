@@ -37,7 +37,7 @@ policies:
         new_policy:
             ref: "new_policy.clj"
 
-application_template:
+blueprint:
     name: "web_server"
     topology:
         -   name: "webserver_host"

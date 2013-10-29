@@ -1,6 +1,6 @@
 imports:
     - "relative/dsl-relatively-imported1.yaml"
-application_template:
+blueprint:
     name: "relative_imports_template"
     topology:
         -   name: "test_a"

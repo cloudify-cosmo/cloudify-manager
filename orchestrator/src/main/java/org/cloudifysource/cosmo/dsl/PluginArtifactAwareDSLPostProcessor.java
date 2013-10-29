@@ -42,7 +42,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
-                                           Map<String, ApplicationTemplate> populatedServiceTemplates,
+                                           Map<String, Blueprint> populatedServiceTemplates,
                                            Map<String, Plugin> populatedPlugins,
                                            Map<String, Relationship> populatedRelationships) {
 
@@ -55,19 +55,19 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         Map<String, Object> nodesExtraData = Maps.newHashMap();
         Map<String, List<Policy>> policies = Maps.newHashMap();
 
-        for (ApplicationTemplate applicationTemplate : populatedServiceTemplates.values()) {
-            for (TypeTemplate typeTemplate : applicationTemplate.getTopology()) {
+        for (Blueprint blueprint : populatedServiceTemplates.values()) {
+            for (TypeTemplate typeTemplate : blueprint.getTopology()) {
                 // Type template name we be prepended with the service template
-                String nodeId = applicationTemplate.getName() + "." + typeTemplate.getName();
+                String nodeId = blueprint.getName() + "." + typeTemplate.getName();
                 typeTemplate.setName(nodeId);
                 Map<String, Object> node = processTypeTemplateNode(
-                        applicationTemplate.getName(),
+                        blueprint.getName(),
                         typeTemplate,
                         definitions,
                         interfacePluginImplementations,
                         populatedPlugins);
                 Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
-                        applicationTemplate.getName(),
+                        blueprint.getName(),
                         typeTemplate);
                 nodes.add(node);
                 nodesMap.put(nodeId, node);
