@@ -53,7 +53,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         List<Map<String, Object>> nodes = Lists.newArrayList();
         Map<String, Map<String, Object>> nodesMap = Maps.newHashMap();
         Map<String, Object> nodesExtraData = Maps.newHashMap();
-        Map<String, Map<String, Policy>> policies = Maps.newHashMap();
+        Map<String, List<Policy>> policies = Maps.newHashMap();
 
         for (ApplicationTemplate applicationTemplate : populatedServiceTemplates.values()) {
             for (TypeTemplate typeTemplate : applicationTemplate.getTopology()) {
@@ -231,8 +231,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {
-        final Map<String, Policy> policies =
-                typeTemplate.getPolicies() != null ? typeTemplate.getPolicies() : Maps.<String, Policy>newHashMap();
+        final List<Policy> policies =
+                typeTemplate.getPolicies() != null ? typeTemplate.getPolicies() : Lists.<Policy>newArrayList();
         node.put("policies", policies);
     }
 

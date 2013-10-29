@@ -8,7 +8,7 @@ application_template:
         -   name: "webserver_host"
             type: "cloudify.types.host"
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:

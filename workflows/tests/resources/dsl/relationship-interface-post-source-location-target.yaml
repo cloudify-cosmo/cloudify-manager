@@ -12,7 +12,7 @@ application_template:
             properties:
                 target_property_key: 'target_property_value'
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:
@@ -31,7 +31,7 @@ application_template:
                     bind_at: "post_started"
                     run_on_node: "target"
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:

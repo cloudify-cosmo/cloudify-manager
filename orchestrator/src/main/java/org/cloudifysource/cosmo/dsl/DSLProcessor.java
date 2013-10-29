@@ -201,14 +201,13 @@ public class DSLProcessor {
             if (template.getPolicies() == null) {
                 return;
             }
-            for (Map.Entry<String, Policy> policyEntry : template.getPolicies().entrySet()) {
+            for (Policy policyEntry : template.getPolicies()) {
                 Preconditions.checkArgument(
                         policies.getTypes().containsKey(
-                                policyEntry.getKey()),
+                                policyEntry.getName()),
                         "Policy not defined [%s] in template: %s - available policies: %s",
                         template.getName(), policyEntry, policies.getTypes());
-                final Policy policy = policyEntry.getValue();
-                for (Rule rule : policy.getRules()) {
+                for (Rule rule : policyEntry.getRules()) {
                     Preconditions.checkArgument(policies.getRules().containsKey(rule.getType()),
                             "Unknown rule type [%s] for rule: '%s' in template: %s", rule.getType(),
                             rule, template.getName());

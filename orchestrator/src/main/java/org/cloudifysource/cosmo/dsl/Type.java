@@ -39,7 +39,7 @@ public class Type extends InheritedDefinition {
     public static final Type ROOT_NODE_TYPE = initRootNodeType();
 
     private List<Object> interfaces = Lists.newArrayList();
-    private Map<String, Policy> policies = Maps.newHashMap();
+    private List<Policy> policies = Lists.newArrayList();
     private Map<String, Workflow> workflows = Maps.newHashMap();
 
     private static Type initRootNodeType() {
@@ -61,11 +61,11 @@ public class Type extends InheritedDefinition {
         this.interfaces = interfaces;
     }
 
-    public Map<String, Policy> getPolicies() {
+    public List<Policy> getPolicies() {
         return policies;
     }
 
-    public void setPolicies(Map<String, Policy> policies) {
+    public void setPolicies(List<Policy> policies) {
         this.policies = policies;
     }
 
@@ -96,6 +96,7 @@ public class Type extends InheritedDefinition {
             interfacesDescriptions.add(InterfaceDescription.from(rawInterface));
         }
 
+
         for (Object rawOtherInterface : other.getInterfaces()) {
             InterfaceDescription otherInterface = InterfaceDescription.from(rawOtherInterface);
 
@@ -114,7 +115,16 @@ public class Type extends InheritedDefinition {
             newInterfaces.add(interfaceDescription.toInterfaceRep());
         }
         setInterfaces(newInterfaces);
-        policies.putAll(other.getPolicies());
+
+        Map<String, Policy> newPoliciesMap = Maps.newLinkedHashMap();
+        for (Policy policy : getPolicies()) {
+            newPoliciesMap.put(policy.getName(), policy);
+        }
+        for (Policy policy : other.getPolicies()) {
+            newPoliciesMap.put(policy.getName(), policy);
+        }
+        setPolicies(Lists.newArrayList(newPoliciesMap.values()));
+
         workflows.putAll(other.getWorkflows());
     }
 

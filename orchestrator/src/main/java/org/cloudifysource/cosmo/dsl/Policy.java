@@ -27,6 +27,7 @@ import java.util.List;
  */
 public class Policy {
 
+    private String name;
     private List<Rule> rules;
 
     public List<Rule> getRules() {
@@ -37,4 +38,11 @@ public class Policy {
         this.rules = rules;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 }
