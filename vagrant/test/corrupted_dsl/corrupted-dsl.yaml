@@ -8,7 +8,7 @@ types:
     some_custom_type:
         derived_from: "cloudify.types.host"
 
-application_template:
+blueprint:
     name: "service_template"
     topology:
         -   name: "default_host"

@@ -5,7 +5,7 @@ imports:
     - "python_webserver_installer.yaml"
     - "stub_app_installer.yaml"
 
-application_template:
+blueprint:
     name: "simple_web_server"
     topology:
         -   name: "webserver_host"

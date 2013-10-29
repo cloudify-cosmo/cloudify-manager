@@ -3,7 +3,7 @@ imports:
     - "middleware_component_installer"
     - "app_module_installer"
 
-application_template:
+blueprint:
     name: "service_template"
     topology:
         -   name: "host1"

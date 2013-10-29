@@ -2,7 +2,7 @@ imports:
     - "cloudify.types"
     - "cloudmock.yaml"
 
-application_template:
+blueprint:
     name: "simple_web_server"
     topology:
         -   name: "webserver_host"

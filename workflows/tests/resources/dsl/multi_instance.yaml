@@ -3,7 +3,7 @@ imports:
   - "cloudmock.yaml"
   - "testmockoperations.yaml"
 
-application_template:
+blueprint:
   name: "multi_instance"
   topology:
     - name: "host"
