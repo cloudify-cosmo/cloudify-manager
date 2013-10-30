@@ -1,7 +1,8 @@
 define install_application
     log message: 'preparing plan from dsl'
-    event event: { "stage" => "Preparing template deployment" }
+    event event: { "stage" => "Loading blueprint from: ${dsl}" }
     prepare_plan dsl: $dsl
+    event event: { "stage" => "Loaded blueprint" }
 
     execute_task target: 'cloudify.management',
         exec: "cosmo.cloudify.plugins.dsl_parser.tasks.prepare_multi_instance_plan",
@@ -13,5 +14,8 @@ define install_application
         }
 
     log message: 'executing workflows.install'
+    event event: { "stage" => "Executing blueprint installation workflow" }
     set 'v:install': '$plan.workflows.install'
     install
+
+    event event: { "stage" => "Blueprint installation workflow executed successfully" }

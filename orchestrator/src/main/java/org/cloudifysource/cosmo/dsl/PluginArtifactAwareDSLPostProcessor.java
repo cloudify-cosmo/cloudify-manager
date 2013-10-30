@@ -74,6 +74,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
                 nodesExtraData.put(nodeId, nodeExtraData);
                 policies.put(nodeId, typeTemplate.getPolicies());
             }
+            result.put("name", blueprint.getName());
         }
 
         processNodesRelationshipPlugins(nodesMap, populatedPlugins);

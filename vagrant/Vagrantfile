@@ -44,7 +44,7 @@ Vagrant.configure('2') do |config|
         su vagrant -c 'mkdir #{working_dir}' &&
         cd #{working_dir} &&
         echo 'calling bootstrap script' &&
-        su vagrant -c 'python2.7 /vagrant/bootstrap_lxc_manager.py --management_ip=#{management_ip} --working_dir=#{working_dir} --cosmo_version=#{cosmo_version}'
+        su vagrant -c 'python2.7 /vagrant/bootstrap_lxc_manager.py --install_vagrant_lxc --management_ip=#{management_ip} --working_dir=#{working_dir} --cosmo_version=#{cosmo_version}'
     "
 
     manager_config.vm.provision :shell, :inline => command
