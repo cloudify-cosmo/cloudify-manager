@@ -10,28 +10,75 @@ input {
 }
 
 filter {
-    multiline {
-        pattern => "^ |\}"
-        what => "previous"
+    if [message] =~ "^[\s\t\n]*$" {
+        drop { }
     }
-}
-
-filter {
-    grep {
-        match => ["message","^\{"]
-        drop => true
+    if [message] =~ "^.*repare_multi_instance_plan" {
+        drop { }
     }
 }
 
 filter {
     json {
-	    source => "message"
+        source => "message"
     }
 }
 
 filter {
-    mutate {
-        replace => ["message","%{type}"]
+    if [type] == "task_received" {
+        drop { }
+    } else if [type] == "task_started" {
+        drop { }
+    } else if [type] == "plugin_execution" {
+        drop { }
+    } else if [type] == "sending_task" {
+        if [node] =~ "^.+" {
+            mutate {
+                add_field => [ "description", "Executing task: '%{name}' for node: '%{node}' using '%{plugin}' plugin" ]
+            }
+        } else {
+            mutate {
+                add_field => [ "description", "Executing management task: '%{name}' using '%{plugin}' plugin" ]
+            }
+        }        
+    } else if [type] == "task_failed" {
+        if [node] =~ "^.+" {
+            mutate {
+                add_field => [ "description", "Execution failed for task: '%{name}' for node: '%{node}' using '%{plugin}' plugin" ]
+            }
+        } else {
+            mutate {
+                add_field => [ "description", "Execution failed for management task: '%{name}' using '%{plugin}' plugin" ]
+            }
+        }        
+    } else if [type] == "task_succeeded" {
+        if [node] =~ "^.+" {
+            mutate {
+                add_field => [ "description", "Execution succeeded for task: '%{name}' for node: '%{node}' using '%{plugin}' plugin" ]
+            }
+        } else {
+            mutate {
+                add_field => [ "description", "Execution succeeded for task: '%{name}' using '%{plugin}' plugin" ]
+            }
+        }        
+    } else if [type] == "workflow_stage" {
+        if [node] =~ "^.+" {
+            mutate {
+                add_field => [ "description", "Workflow execution stage: '%{stage}' for node: '%{node}'" ]
+            }
+        } else {
+            mutate {
+                add_field => [ "description", "Workflow execution stage: '%{stage}'" ]
+            }
+        }
+    } else if [type] == "policy" {
+        if [message] =~ "^.*state has changed to (\d+)\.(\d+)\.(\d+)\.(\d+)" {
+            drop { }
+        } else {
+            mutate {
+                add_field => [ "description", "Node: '%{node}' has been started successfully" ]
+            }
+        }
     }
 }
 
