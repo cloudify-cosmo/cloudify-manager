@@ -277,7 +277,6 @@
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
                                 <usedDependency>org.slf4j:slf4j-log4j12</usedDependency>
-                                <usedDependency>log4j:log4j</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
