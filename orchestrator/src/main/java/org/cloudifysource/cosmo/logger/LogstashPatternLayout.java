@@ -64,6 +64,7 @@ public class LogstashPatternLayout extends PatternLayout {
                 final String singleLineJson =
                         mapper.writeValueAsString(parsed);
                 output.append(singleLineJson);
+                output.append(System.getProperty("line.separator"));
             } catch (IOException e) {
                 fallback = true;
             }
@@ -71,7 +72,6 @@ public class LogstashPatternLayout extends PatternLayout {
         if (fallback) {
             output.append(original);
         }
-        output.append(System.getProperty("line.separator"));
         return output.toString();
     }
 
