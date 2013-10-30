@@ -67,6 +67,7 @@ public abstract class AbstractDSLProcessorTest {
     /**
      */
     public static class Processed {
+        String name;
         List<Node> nodes;
         Map<String, NodeExtra> nodesExtra;
         Map<String, List<Policy>> policies;
@@ -75,6 +76,12 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Relationship> relationships;
         Map<String, Object> workflows;
 
+        public String getName() {
+            return name;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
         public List<Node> getNodes() {
             return nodes;
         }
