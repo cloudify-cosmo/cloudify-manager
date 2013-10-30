@@ -170,6 +170,11 @@
             <groupId>org.robotninjas.riemann</groupId>
             <artifactId>spring</artifactId>
         </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -272,6 +277,7 @@
                                 <usedDependency>org.cloudifysource.cosmo:logger</usedDependency>
                                 <usedDependency>org.slf4j:jcl-over-slf4j</usedDependency>
                                 <usedDependency>org.slf4j:slf4j-log4j12</usedDependency>
+                                <usedDependency>log4j:log4j</usedDependency>
                             </usedDependencies>
                         </configuration>
                     </execution>
