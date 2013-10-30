@@ -51,8 +51,8 @@ public class LogstashPatternLayout extends PatternLayout {
     @Override
     public String format(LoggingEvent event) {
         final String original = super.format(event);
-        int jsonStart = original.indexOf("{");
-        int jsonEnd = original.lastIndexOf("}");
+        final int jsonStart = original.indexOf("{");
+        final int jsonEnd = original.lastIndexOf("}");
         final StringBuilder output = new StringBuilder();
         boolean fallback = false;
         if (jsonStart != -1 && jsonEnd != -1) {
