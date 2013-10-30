@@ -421,10 +421,9 @@ fi
                   'machine ip address which should be one of the ips assigned to this machine')
             sys.exit(1)
 
-    def _prepare_logstash_configuration(self):
+    def _prepare_logstash_configuration(self, cosmo_log_file):
         logstash_config_template = os.path.join(self.config_dir, "logstash.conf.template")
         logstash_config_path = os.path.join(self.working_dir, "logstash.conf")
-        cosmo_log_file = os.path.join(self.working_dir, "cosmo.log")
         if not os.path.exists(logstash_config_template):
             raise RuntimeError("logstash config template file not found in: {0}".format(logstash_config_template))
         with open(logstash_config_template, "r") as config_template_file:
@@ -437,7 +436,9 @@ fi
     def _install_logstash(self):
         logstash_jar_name = "logstash-1.2.2-flatjar.jar"
         self.wget("https://download.elasticsearch.org/logstash/logstash/{0}".format(logstash_jar_name))
-        logstash_config_path = self._prepare_logstash_configuration()
+        cosmo_log_file = os.path.join(self.working_dir, "cosmo.log")
+        logstash_config_path = self._prepare_logstash_configuration(cosmo_log_file)
+        self.runner.run("touch {0}".format(cosmo_log_file))
         logstash_jar_path = os.path.join(self.working_dir, logstash_jar_name)
         logstash_web_port = 8080
         if not os.path.exists(logstash_config_path):
