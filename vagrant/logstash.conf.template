@@ -12,7 +12,7 @@ input {
 filter {
     if [message] =~ "^[\s\t\n]*$" {
         drop { }
-    } else if [message] =~ "^.*repare_multi_instance_plan" {
+    } else if [message] =~ "^.*prepare_multi_instance_plan" {
         drop { }
     } else if [message] =~ "^.*Workflow has been executed successfully" {
         drop { }
@@ -90,6 +90,6 @@ filter {
 }
 
 output {
-    stdout { debug => true codec => "json" }
+    #stdout { debug => true codec => "json" }
     elasticsearch { embedded => true }
 }

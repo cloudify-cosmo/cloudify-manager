@@ -473,10 +473,10 @@ fi
         if not self.update_only:
             self.install_python_protobuf()
             self.install_rabbitmq()
+            self.install_java()
             if self.install_vagrant_lxc:
                 self.install_lxc_docker()
                 self.install_kernel()
-                self.install_java()
                 self.install_vagrant()
             riemann_info = self.install_riemann()
             if self.install_logstash:
