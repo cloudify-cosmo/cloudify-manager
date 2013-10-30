@@ -5,4 +5,4 @@ plugins:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             interface: "cloudify.interfaces.host_provisioner"
-            url: "cloudmock.zip" 
+            url: "cloudmock.zip"
