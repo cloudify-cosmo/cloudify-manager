@@ -20,6 +20,7 @@ class EventParticipant < Ruote::Participant
 
   NODE = 'node'
   EVENT = 'event'
+  PLAN = 'plan'
 
   def do_not_thread
     true
@@ -50,6 +51,9 @@ class EventParticipant < Ruote::Participant
         parts = node['id'].split('.')
         event['node'] = parts[1]
         event['app'] = parts[0]
+      end
+      if workitem.fields.has_key? PLAN
+        event['blueprint'] = workitem.fields[PLAN]['name']
       end
       event['workflow_name'] = workflow_name
       event['workflow_id'] = workitem.wfid
