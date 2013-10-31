@@ -42,7 +42,7 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
 
     @Override
     public Map<String, Object> postProcess(Definitions definitions,
-                                           Map<String, ApplicationTemplate> populatedServiceTemplates,
+                                           Map<String, Blueprint> populatedServiceTemplates,
                                            Map<String, Plugin> populatedPlugins,
                                            Map<String, Relationship> populatedRelationships) {
 
@@ -53,27 +53,28 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
         List<Map<String, Object>> nodes = Lists.newArrayList();
         Map<String, Map<String, Object>> nodesMap = Maps.newHashMap();
         Map<String, Object> nodesExtraData = Maps.newHashMap();
-        Map<String, Map<String, Policy>> policies = Maps.newHashMap();
+        Map<String, List<Policy>> policies = Maps.newHashMap();
 
-        for (ApplicationTemplate applicationTemplate : populatedServiceTemplates.values()) {
-            for (TypeTemplate typeTemplate : applicationTemplate.getTopology()) {
+        for (Blueprint blueprint : populatedServiceTemplates.values()) {
+            for (TypeTemplate typeTemplate : blueprint.getTopology()) {
                 // Type template name we be prepended with the service template
-                String nodeId = applicationTemplate.getName() + "." + typeTemplate.getName();
+                String nodeId = blueprint.getName() + "." + typeTemplate.getName();
                 typeTemplate.setName(nodeId);
                 Map<String, Object> node = processTypeTemplateNode(
-                        applicationTemplate.getName(),
+                        blueprint.getName(),
                         typeTemplate,
                         definitions,
                         interfacePluginImplementations,
                         populatedPlugins);
                 Map<String, Object> nodeExtraData = processTypeTemplateNodeExtraData(
-                        applicationTemplate.getName(),
+                        blueprint.getName(),
                         typeTemplate);
                 nodes.add(node);
                 nodesMap.put(nodeId, node);
                 nodesExtraData.put(nodeId, nodeExtraData);
                 policies.put(nodeId, typeTemplate.getPolicies());
             }
+            result.put("name", blueprint.getName());
         }
 
         processNodesRelationshipPlugins(nodesMap, populatedPlugins);
@@ -231,8 +232,8 @@ public class PluginArtifactAwareDSLPostProcessor implements DSLPostProcessor {
     }
 
     private void setNodePolicies(TypeTemplate typeTemplate, Map<String, Object> node) {
-        final Map<String, Policy> policies =
-                typeTemplate.getPolicies() != null ? typeTemplate.getPolicies() : Maps.<String, Policy>newHashMap();
+        final List<Policy> policies =
+                typeTemplate.getPolicies() != null ? typeTemplate.getPolicies() : Lists.<Policy>newArrayList();
         node.put("policies", policies);
     }
 

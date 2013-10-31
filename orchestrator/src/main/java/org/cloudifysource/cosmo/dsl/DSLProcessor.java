@@ -83,7 +83,7 @@ public class DSLProcessor {
             Map<String, Relationship> populatedRelationships = buildPopulatedRelationshipsMap(
                     definitions.getRelationships());
 
-            Map<String, ApplicationTemplate> populatedServiceTemplates =
+            Map<String, Blueprint> populatedServiceTemplates =
                     buildPopulatedServiceTemplatesMap(definitions, populatedTypes, populatedRelationships);
 
             Map<String, TypeTemplate> nodeTemplates = extractNodeTemplates(definitions);
@@ -132,7 +132,7 @@ public class DSLProcessor {
 
     private static void importReferencedWorkflows(Definitions definitions,
                                                   Map<String, Type> types,
-                                                  Map<String, ApplicationTemplate> applicationTemplates,
+                                                  Map<String, Blueprint> blueprints,
                                                   Map<String, Relationship> populatedRelationships,
                                                   String baseLocation,
                                                   Map<String, String> aliasMappings) {
@@ -153,8 +153,8 @@ public class DSLProcessor {
                 importWorkflow(context, relationship.getWorkflow());
             }
         }
-        for (ApplicationTemplate applicationTemplate : applicationTemplates.values()) {
-            for (TypeTemplate template : applicationTemplate.getTopology()) {
+        for (Blueprint blueprint : blueprints.values()) {
+            for (TypeTemplate template : blueprint.getTopology()) {
                 for (Map.Entry<String, Workflow> entry : template.getWorkflows().entrySet()) {
                     importWorkflow(context, entry.getValue());
                     entry.getValue().setName(entry.getKey());
@@ -201,14 +201,13 @@ public class DSLProcessor {
             if (template.getPolicies() == null) {
                 return;
             }
-            for (Map.Entry<String, Policy> policyEntry : template.getPolicies().entrySet()) {
+            for (Policy policyEntry : template.getPolicies()) {
                 Preconditions.checkArgument(
                         policies.getTypes().containsKey(
-                                policyEntry.getKey()),
+                                policyEntry.getName()),
                         "Policy not defined [%s] in template: %s - available policies: %s",
                         template.getName(), policyEntry, policies.getTypes());
-                final Policy policy = policyEntry.getValue();
-                for (Rule rule : policy.getRules()) {
+                for (Rule rule : policyEntry.getRules()) {
                     Preconditions.checkArgument(policies.getRules().containsKey(rule.getType()),
                             "Unknown rule type [%s] for rule: '%s' in template: %s", rule.getType(),
                             rule, template.getName());
@@ -219,32 +218,32 @@ public class DSLProcessor {
 
     private static Map<String, TypeTemplate> extractNodeTemplates(Definitions definitions) {
         final Map<String, TypeTemplate> nodeTemplates = Maps.newHashMap();
-        final ApplicationTemplate applicationTemplate = definitions.getApplicationTemplate();
-        for (TypeTemplate typeTemplate : applicationTemplate.getTopology()) {
+        final Blueprint blueprint = definitions.getBlueprint();
+        for (TypeTemplate typeTemplate : blueprint.getTopology()) {
             nodeTemplates.put(
-                    String.format("%s.%s", applicationTemplate.getName(), typeTemplate.getName()), typeTemplate);
+                    String.format("%s.%s", blueprint.getName(), typeTemplate.getName()), typeTemplate);
         }
         return nodeTemplates;
     }
 
 
-    private static Map<String, ApplicationTemplate> buildPopulatedServiceTemplatesMap(
+    private static Map<String, Blueprint> buildPopulatedServiceTemplatesMap(
             Definitions definitions,
             Map<String, Type> populatedTypes,
             Map<String, Relationship> populatedRelationships) {
-        final Map<String, ApplicationTemplate> populatedServiceTemplates = Maps.newHashMap();
-        final ApplicationTemplate applicationTemplate = definitions.getApplicationTemplate();
+        final Map<String, Blueprint> populatedServiceTemplates = Maps.newHashMap();
+        final Blueprint blueprint = definitions.getBlueprint();
 
         List<TypeTemplate> populatedTopology = buildPopulatedTypeTemplatesMap(
-                applicationTemplate.getTopology(),
+                blueprint.getTopology(),
                 populatedTypes,
                 populatedRelationships);
 
-        ApplicationTemplate populatedApplicationTemplate = new ApplicationTemplate();
-        populatedApplicationTemplate.setName(applicationTemplate.getName());
-        populatedApplicationTemplate.setTopology(populatedTopology);
+        Blueprint populatedBlueprint = new Blueprint();
+        populatedBlueprint.setName(blueprint.getName());
+        populatedBlueprint.setTopology(populatedTopology);
 
-        populatedServiceTemplates.put(applicationTemplate.getName(), populatedApplicationTemplate);
+        populatedServiceTemplates.put(blueprint.getName(), populatedBlueprint);
 
         return populatedServiceTemplates;
     }
@@ -380,7 +379,7 @@ public class DSLProcessor {
         for (Relationship relationship : definitions.getRelationships().values()) {
             validateAndAddInterfaceFromRelationshipIfNecessary(definitions, relationship);
         }
-        for (TypeTemplate typeTemplate : definitions.getApplicationTemplate().getTopology()) {
+        for (TypeTemplate typeTemplate : definitions.getBlueprint().getTopology()) {
             for (RelationshipTemplate relationshipTemplate : typeTemplate.getRelationships()) {
                 validateAndAddInterfaceFromRelationshipIfNecessary(definitions, relationshipTemplate);
             }

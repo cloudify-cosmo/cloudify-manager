@@ -1,6 +1,6 @@
 define install_application
-    log message: 'preparing plan from dsl'
-    event event: { "stage" => "Preparing template deployment" }
+    log message: 'preparing plan from dsl'    
+    event event: { "stage" => "Loading blueprint deployment" }
     execute_task target: 'cloudify.management',
         exec: "cosmo.cloudify.plugins.dsl_parser.tasks.parse_dsl",
         to_f: 'plan',
@@ -11,7 +11,9 @@ define install_application
                 resources_url: $resources_url
             }
         }
+            
     prepare_plan plan: $plan
+    event event: { "stage" => "Loaded blueprint" }
 
     execute_task target: 'cloudify.management',
         exec: "cosmo.cloudify.plugins.dsl_parser.tasks.prepare_multi_instance_plan",
@@ -23,5 +25,8 @@ define install_application
         }
 
     log message: 'executing workflows.install'
+    event event: { "stage" => "Executing blueprint installation workflow" }
     set 'v:install': '$plan.workflows.install'
     install
+
+    event event: { "stage" => "Blueprint installation workflow executed successfully" }

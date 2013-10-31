@@ -4,7 +4,7 @@ imports:
     - "middleware_component_installer"
     - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
 
-application_template:
+blueprint:
     name: "service_template"
     topology:
         -   name: "host1"

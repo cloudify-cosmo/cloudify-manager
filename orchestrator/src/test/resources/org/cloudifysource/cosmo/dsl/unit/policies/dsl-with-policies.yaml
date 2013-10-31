@@ -8,7 +8,7 @@ types:
     type_with_policy:
         derived_from: "cloudify.types.host"
         policies:
-            start_detection_policy:
+            -   name: "start_detection_policy"
                 rules:
                     -   type: "state_equals"
                         properties:
@@ -19,13 +19,13 @@ types:
         derived_from: "type_with_policy"
         policies:
             # override
-            start_detection_policy:
+            -   name: "start_detection_policy"
                 rules:
                     -   type: "state_not_equals"
                         properties:
                             state: "host_state"
                             value: "terminated"
-            failure_detection_policy:
+            -   name: "failure_detection_policy"
                 rules:
                     -   type: "state_equals"
                         properties:
@@ -37,13 +37,13 @@ policies:
         new_policy:
             ref: "new_policy.clj"
 
-application_template:
+blueprint:
     name: "web_server"
     topology:
         -   name: "webserver_host"
             type: "cloudify.types.host"
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:
@@ -53,7 +53,7 @@ application_template:
                             properties:
                                 metric: "latency"
                                 value: "100"
-                failure_detection_policy:
+                -   name: "failure_detection_policy"
                     rules:
                         -   type: "state_not_equals"
                             properties:
@@ -66,7 +66,7 @@ application_template:
         -   name: "template_with_inherited_policy_and_additional_policy"
             type: "type_with_policy"
             policies:
-                failure_detection_policy:
+                -   name: "failure_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:
@@ -79,7 +79,7 @@ application_template:
         -   name: "2nd_template_with_overridden_policy"
             type: "2nd_type_with_policy"
             policies:
-                failure_detection_policy:
+                -   name: "failure_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:

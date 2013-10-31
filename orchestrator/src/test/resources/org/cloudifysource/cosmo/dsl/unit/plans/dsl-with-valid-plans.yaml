@@ -12,7 +12,7 @@ types:
             init:
                 radial: "plan4"
 
-application_template:
+blueprint:
     name: "service_template"
     topology:
         -   name: "default_host"

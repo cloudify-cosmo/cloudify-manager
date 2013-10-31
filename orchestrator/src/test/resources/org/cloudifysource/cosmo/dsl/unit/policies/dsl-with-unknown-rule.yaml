@@ -3,13 +3,13 @@ imports:
     - "host_provisioner"
     - "middleware_component_installer"
 
-application_template:
+blueprint:
     name: "web_server"
     topology:
         -   name: "webserver_host"
             type: "cloudify.types.host"
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "unknown_rule"
                             properties:

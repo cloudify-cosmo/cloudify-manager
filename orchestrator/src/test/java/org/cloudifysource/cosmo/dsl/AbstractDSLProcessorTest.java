@@ -67,14 +67,21 @@ public abstract class AbstractDSLProcessorTest {
     /**
      */
     public static class Processed {
+        String name;
         List<Node> nodes;
         Map<String, NodeExtra> nodesExtra;
-        Map<String, Map<String, Policy>> policies;
+        Map<String, List<Policy>> policies;
         Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
         private Map<String, PolicyDefinition> policiesEvents;
         Map<String, Relationship> relationships;
         Map<String, Object> workflows;
 
+        public String getName() {
+            return name;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
         public List<Node> getNodes() {
             return nodes;
         }
@@ -89,11 +96,11 @@ public abstract class AbstractDSLProcessorTest {
             this.nodesExtra = nodesExtra;
         }
 
-        public Map<String, Map<String, Policy>> getPolicies() {
+        public Map<String, List<Policy>> getPolicies() {
             return policies;
         }
 
-        public void setPolicies(Map<String, Map<String, Policy>> policies) {
+        public void setPolicies(Map<String, List<Policy>> policies) {
             this.policies = policies;
         }
 
@@ -139,7 +146,7 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> properties;
         List<ProcessedRelationshipTemplate> relationships;
         Map<String, Object> plugins;
-        Map<String, Policy> policies;
+        List<Policy> policies;
         Map<String, Object> instances;
 
         public String getId() {
@@ -190,7 +197,7 @@ public abstract class AbstractDSLProcessorTest {
             this.plugins = plugins;
         }
 
-        public Map<String, Policy> getPolicies() {
+        public List<Policy> getPolicies() {
             return policies;
         }
 
@@ -207,6 +214,7 @@ public abstract class AbstractDSLProcessorTest {
     /**
      */
     public static class Policy {
+        private String name;
         private List<Rule> rules;
 
         public void setRules(List<Rule> rules) {
@@ -215,6 +223,14 @@ public abstract class AbstractDSLProcessorTest {
 
         public List<Rule> getRules() {
             return rules;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
         }
     }
 

@@ -17,7 +17,7 @@ interfaces:
             - operation2
 relationships:
     relationship0: {}
-application_template:
+blueprint:
     name: "some_service_template"
     topology:
         -   name: "type0_template"

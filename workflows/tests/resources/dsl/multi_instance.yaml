@@ -3,7 +3,7 @@ imports:
   - "cloudmock.yaml"
   - "testmockoperations.yaml"
 
-application_template:
+blueprint:
   name: "multi_instance"
   topology:
     - name: "host"
@@ -11,7 +11,7 @@ application_template:
       instances:
         deploy: 2
       policies:
-        start_detection_policy:
+        - name: "start_detection_policy"
           rules:
             - type: "state_equals"
               properties:
@@ -25,7 +25,7 @@ application_template:
         - type: "cloudify.relationships.contained_in"
           target: "host"
       policies:
-        start_detection_policy:
+        - name: "start_detection_policy"
           rules:
             - type: "state_equals"
               properties:
