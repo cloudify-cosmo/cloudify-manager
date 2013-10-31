@@ -1,33 +1,30 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "app_module_installer"
+    - "host_provisioner"
+    - "middleware_component_installer"
 
-    imports:
-        - "cloudify.types"
-        - "app_module_installer"
-        - "host_provisioner"
-        - "middleware_component_installer"
+blueprint:
+    name: "mysql_template"
+    topology:
+        -   name: "mysql_host"
+            type: "cloudify.types.host"
+            properties:
+                image: "aws149180"
 
-    service_templates:
+        -   name: "mysql_database_server"
+            type: "cloudify.types.db_server"
+            properties:
+                port: "3306"
+                installer_recipe: "mysql_chef_recipe"
+            relationships:
+                - type: "cloudify.relationships.contained_in"
+                  target: "mysql_host"
 
-        mysql_template:
-            topology:
-                mysql_host:
-                    type: "cloudify.tosca.types.host"
-                    properties:
-                        image: "aws149180"
-
-                mysql_database_server:
-                    type: "cloudify.tosca.types.db_server"
-                    properties:
-                        port: "3306"
-                        installer_recipe: "mysql_chef_recipe"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "mysql_host"
-
-                mysql_schema:
-                    type: "cloudify.tosca.types.app_module"
-                    properties:
-                        name: "petclinic"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "mysql_database_server"
+        -   name: "mysql_schema"
+            type: "cloudify.types.app_module"
+            properties:
+                name: "petclinic"
+            relationships:
+                - type: "cloudify.relationships.contained_in"
+                  target: "mysql_database_server"

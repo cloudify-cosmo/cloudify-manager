@@ -1,8 +1,6 @@
-definitions:
-
-    artifacts:
-        cloudify.tosca.artifacts.plugin.pickledb_installer:
-            derived_from: "cloudify.tosca.artifacts.agent_plugin"
-            properties:
-                interface: "cloudify.tosca.interfaces.middleware_component_installer"
-                url: "#{plugin_repository}/pickledb_installer.zip"
+plugins:
+    cloudify.plugins.pickledb_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "cloudify.interfaces.middleware_component_installer"
+            url: "#{plugin_repository}/pickledb-installer.zip"

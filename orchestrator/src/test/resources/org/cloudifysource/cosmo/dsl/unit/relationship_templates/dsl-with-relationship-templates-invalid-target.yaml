@@ -1,18 +1,15 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
 
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-        - "middleware_component_installer"
-
-    service_templates:
-
-        service_template:
-            topology:
-                host1:
-                    type: "cloudify.tosca.types.host"
-                webserver1:
-                    type: "cloudify.tosca.types.web_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "non_existent_target"
+blueprint:
+    name: "service_template"
+    topology:
+        -   name: "host1"
+            type: "cloudify.types.host"
+        -   name: "webserver1"
+            type: "cloudify.types.web_server"
+            relationships:
+                - type: "cloudify.relationships.contained_in"
+                  target: "non_existent_target"

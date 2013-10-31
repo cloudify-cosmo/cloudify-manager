@@ -1,29 +1,27 @@
-definitions:
-    imports:
-        - "cloudify.types"
-    types:
-        vm:
-            interfaces:
-                - "provisioner"
-    interfaces:
-        provisioner:
-            operations:
-                - "start"
-                - "stop"
-    artifacts:
-        provisioner_plugin:
-            derived_from: "cloudify.tosca.artifacts.remote_plugin"
-            properties:
-                interface: "provisioner"
-                url: "plugins/provisioner-plugin.zip"
-    service_templates:
-        package_template:
-            topology:
-                package_vm:
-                    type: "vm"
-    plans:
-        package_template.package_vm:
-            init:
-                radial: |
-                    define init_method
-                        execute_operation operation: 'start'
+imports:
+    - "cloudify.types"
+types:
+    vm:
+        interfaces:
+            - "provisioner"
+interfaces:
+    provisioner:
+        operations:
+            - "start"
+            - "stop"
+plugins:
+    provisioner_plugin:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "provisioner"
+            url: "plugins/provisioner-plugin.zip"
+blueprint:
+    name: "package_template"
+    topology:
+        -   name: "package_vm"
+            type: vm
+            workflows:
+                init:
+                    radial: |
+                        define init_method
+                            execute_operation operation: 'start'

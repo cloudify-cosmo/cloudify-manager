@@ -1,10 +1,21 @@
-define execute_plan
+define install_application
     log message: 'preparing plan from dsl'
-    event event: { "stage"=>"preparing deployment plan" }
+    event event: { "stage" => "Loading blueprint from: ${dsl}" }
     prepare_plan dsl: $dsl
+    event event: { "stage" => "Loaded blueprint" }
 
-    log message: 'overriding default global workflow with ${f:global_workflow}', if: '${f:global_workflow} is set'
-    set variable: 'global_workflow', value: '$f:global_workflow', if: '${f:global_workflow} is set'
+    execute_task target: 'cloudify.management',
+        exec: "cosmo.cloudify.plugins.dsl_parser.tasks.prepare_multi_instance_plan",
+        to_f: 'plan',
+        payload: {
+            properties : {
+                plan: $plan
+            }
+        }
 
-    log message: 'executing global workflow'
-    global_workflow
+    log message: 'executing workflows.install'
+    event event: { "stage" => "Executing blueprint installation workflow" }
+    set 'v:install': '$plan.workflows.install'
+    install
+
+    event event: { "stage" => "Blueprint installation workflow executed successfully" }

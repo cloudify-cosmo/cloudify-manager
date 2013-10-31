@@ -27,6 +27,7 @@ public class PolicyDefinition {
 
     private String message;
     private String policy;
+    private String ref;
 
     public String getMessage() {
         return message;
@@ -42,5 +43,13 @@ public class PolicyDefinition {
 
     public void setPolicy(String policy) {
         this.policy = policy;
+    }
+
+    public String getRef() {
+        return ref;
+    }
+
+    public void setRef(String ref) {
+        this.ref = ref;
     }
 }

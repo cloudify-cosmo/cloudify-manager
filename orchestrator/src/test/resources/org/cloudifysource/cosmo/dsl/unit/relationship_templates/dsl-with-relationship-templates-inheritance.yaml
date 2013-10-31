@@ -1,0 +1,78 @@
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
+    - "org/cloudifysource/cosmo/dsl/unit/plugins/stub_app_installer.yaml"
+
+blueprint:
+    name: "service_template"
+    topology:
+        -   name: "host"
+            type: "cloudify.types.host"
+        -   name: "webserver"
+            type: "cloudify.types.web_server"
+            relationships:
+                - type: "relationship1"
+                  target: "host"
+                - type: "relationship2"
+                  target: "host"
+                - type: "relationship3"
+                  target: "host"
+                - type: "relationship4"
+                  target: "host"
+                - type: "relationship4"
+                  target: "host"
+                  plugin: "plugin3"
+                - type: "relationship4"
+                  target: "host"
+                  interface:
+                    name: "interface2"
+                    operations:
+                        - "interface2_operation1"
+                  workflow:
+                    radial: "workflow2"
+                  plugin: "plugin4"
+                  bind_at: "pre_started"
+                  run_on_node: "source"
+
+
+relationships:
+    relationship1: { }
+    relationship2:
+        derived_from: "cloudify.relationships.depends_on"
+    relationship3:
+        derived_from: "cloudify.relationships.depends_on"
+        interface:
+            name: "interface1"
+            operations:
+                - "interface1_operation1"
+        workflow:
+            radial: "workflow1"
+        plugin: "plugin1"
+        bind_at: "post_started"
+        run_on_node: "target"
+    relationship4:
+        derived_from: "relationship3"
+        plugin: "plugin2"
+
+plugins:
+    plugin1:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "interface1"
+            url: "url"
+    plugin2:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "interface1"
+            url: "url"
+    plugin3:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "interface1"
+            url: "url"
+    plugin4:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "interface2"
+            url: "url"

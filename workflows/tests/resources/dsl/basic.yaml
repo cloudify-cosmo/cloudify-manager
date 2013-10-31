@@ -1,0 +1,16 @@
+imports:
+    - "cloudify.types"
+    - "cloudmock.yaml"
+
+blueprint:
+    name: "simple_web_server"
+    topology:
+        -   name: "webserver_host"
+            type: "cloudify.types.host"
+            policies:
+                -   name: "start_detection_policy"
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "machine-status"
+                                state: "running"

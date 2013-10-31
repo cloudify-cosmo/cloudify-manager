@@ -23,23 +23,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A class used to represent the definitions of the dsl.
+ * A class used to represent the top level element of the dsl.
  * Used internally only by the dsl processor.
- *
  * @author Dan Kilman
  * @since 0.1
  */
 public class Definitions {
 
     private List<String> imports = Lists.newArrayList();
-    private Map<String, ServiceTemplate> serviceTemplates = Maps.newHashMap();
+    private Blueprint blueprint = new Blueprint();
     private Map<String, Type> types = Maps.newHashMap();
     private Map<String, Interface> interfaces = Maps.newHashMap();
-    private Map<String, Artifact> artifacts = Maps.newHashMap();
+    private Map<String, Plugin> plugins = Maps.newHashMap();
     private Map<String, Relationship> relationships = Maps.newHashMap();
-    private Map<String, Plan> plans = Maps.newHashMap();
     private Policies policies = new Policies();
-    private String globalPlan;
+    private Map<String, Workflow> workflows = Maps.newHashMap();
 
     public Map<String, Type> getTypes() {
         return types;
@@ -57,12 +55,12 @@ public class Definitions {
         this.relationships = relationships;
     }
 
-    public Map<String, ServiceTemplate> getServiceTemplates() {
-        return serviceTemplates;
+    public Blueprint getBlueprint() {
+        return blueprint;
     }
 
-    public void setServiceTemplates(Map<String, ServiceTemplate> serviceTemplates) {
-        this.serviceTemplates = serviceTemplates;
+    public void setBlueprint(Blueprint blueprint) {
+        this.blueprint = blueprint;
     }
 
     public Map<String, Interface> getInterfaces() {
@@ -73,20 +71,12 @@ public class Definitions {
         this.interfaces = interfaces;
     }
 
-    public Map<String, Artifact> getArtifacts() {
-        return artifacts;
+    public Map<String, Plugin> getPlugins() {
+        return plugins;
     }
 
-    public void setArtifacts(Map<String, Artifact> artifacts) {
-        this.artifacts = artifacts;
-    }
-
-    public Map<String, Plan> getPlans() {
-        return plans;
-    }
-
-    public void setPlans(Map<String, Plan> plans) {
-        this.plans = plans;
+    public void setPlugins(Map<String, Plugin> plugins) {
+        this.plugins = plugins;
     }
 
     public List<String> getImports() {
@@ -97,14 +87,6 @@ public class Definitions {
         this.imports = imports;
     }
 
-    public String getGlobalPlan() {
-        return globalPlan;
-    }
-
-    public void setGlobalPlan(String globalPlan) {
-        this.globalPlan = globalPlan;
-    }
-
     public Policies getPolicies() {
         return policies;
     }
@@ -113,4 +95,11 @@ public class Definitions {
         this.policies = policies;
     }
 
+    public Map<String, Workflow> getWorkflows() {
+        return workflows;
+    }
+
+    public void setWorkflows(Map<String, Workflow> workflows) {
+        this.workflows = workflows;
+    }
 }

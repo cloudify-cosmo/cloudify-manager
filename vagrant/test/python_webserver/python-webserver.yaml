@@ -2,79 +2,76 @@
 #
 # Describes a deployment of a python simple http server running on a vagrant lxc machine.
 #
-definitions:
+imports:
+    - "cloudify.types"
+    - "vagrant_host_provisioner"
+    - "python_webserver_installer.yaml"
+    - "stub_app_installer.yaml"
 
-    imports:
-        - "cloudify.types"
-        - "vagrant_host_provisioner"
-        - "python_webserver_installer.yaml"
-        - "stub_app_installer.yaml"
+blueprint:
+    name: "simple_web_server"
+    topology:
+        # vagrant lxc machine
+        -   name: "webserver_host"
+            type: "cloudify.types.host"
+            properties:
+                install_agent: 'true'
+                provider: lxc
+                ssh_conf:
+                    host: '10.0.3.5'
+                    port: '22' # needed since the default port for the vagrant monitor uses 2222(virtual box)
+                    nic:  'eth0'
+                vagrant_file: |
+                    Vagrant.configure("2") do |config|
+                      config.vm.box = "precise64"
+                      config.vm.provision :shell, :inline => "sudo apt-get -y install ufw && sudo ufw disable"
+                      config.vm.provider :lxc do |lxc|
+                        lxc.customize 'network.ipv4', '10.0.3.5'
+                      end
+                    end
+                worker_config:
+                    user: 'vagrant'
+                    port: '22'
+                    key: '~/.vagrant.d/insecure_private_key'
+                    management_ip: "10.0.3.1"
+                    broker: 'amqp://guest:guest@10.0.3.1:5672//' # vagrant-lxc creates an 10.0.3.0/24 subnet for
+                                                                 # communication with the lxc container
 
-    service_templates:
-        simple_web_server:
-            topology:
-                # vagrant lxc machine
-                webserver_host:
-                    type: "cloudify.tosca.types.host"
-                    properties:
-                        install_agent: 'true'
-                        provider: lxc
-                        ssh_conf:
-                            host: '10.0.3.5'
-                            port: '22' # needed since the default port for the vagrant monitor uses 2222(virtual box)
-                            nic:  'eth0'
-                        vagrant_file: |
-                            Vagrant.configure("2") do |config|
-                              config.vm.box = "precise64"
-                              config.vm.provision :shell, :inline => "sudo apt-get -y install ufw && sudo ufw disable"
-                              config.vm.provider :lxc do |lxc|
-                                lxc.customize 'network.ipv4', '10.0.3.5'
-                              end
-                            end
-                        worker_config:
-                            user: 'vagrant'
-                            port: '22'
-                            key: '~/.vagrant.d/insecure_private_key'
-                            management_ip: "10.0.3.1"
-                            broker: 'amqp://guest:guest@10.0.3.1:5672//' # vagrant-lxc creates an 10.0.3.0/24 subnet for
-                                                                         # communication with the lxc container
+                    env:
+                      VAGRANT_DEFAULT_PROVIDER: 'lxc'
 
-                    policies:
-                        start_detection_policy:
-                            rules:
-                                host_state:
-                                    type: "state_equals"
-                                    properties:
-                                        service: "vagrant machine status"
-                                        state: "running"
-                        failure_detection_policy:
-                            rules:
-                                host_state:
-                                    type: "state_not_equals"
-                                    properties:
-                                        service: "vagrant machine status"
-                                        state: "running"
-                        performance_policy:
-                            rules:
-                                host_state:
-                                    type: "metric_below"
-                                    properties:
-                                        service: "vagrant machine bytes/sec"
-                                        metric: "500.0"
+            policies:
+                start_detection_policy:
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "vagrant machine status"
+                                state: "running"
+                failure_detection_policy:
+                    rules:
+                        -   type: "state_not_equals"
+                            properties:
+                                service: "vagrant machine status"
+                                state: "running"
+                performance_policy:
+                    rules:
+                        -   type: "metric_below"
+                            properties:
+                                service: "vagrant machine bytes/sec"
+                                metric: "500.0"
 
-                # python simple http server
-                webserver_middleware:
-                    type: "cloudify.tosca.types.web_server"
-                    properties:
-                        port: 8888
-                    policies:
-                        start_detection_policy:
-                            rules:
-                                webserver_state:
-                                    type: "state_equals"
-                                    properties:
-                                        service: "webserver status"
-                                        state: "running"
-                    relationships:
-                        -   type: "cloudify.tosca.relationships.contained_in"
-                            target: "webserver_host"
+        # python simple http server
+        -   name: "webserver_middleware"
+            type: "cloudify.types.web_server"
+            properties:
+                port: 8888
+            policies:
+                start_detection_policy:
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "webserver status"
+                                state: "running"
+            relationships:
+                -   type: "cloudify.relationships.contained_in"
+                    target: "webserver_host"

@@ -1,60 +1,60 @@
---- 
-definitions: 
-  artifacts: 
-    artifact0: 
-      derived_from: artifact
-    artifact1_sub: 
-      derived_from: artifact1
-    artifact2_sub: 
-      derived_from: artifact2
-    artifact3_sub: 
-      derived_from: artifact3
-  imports: 
+plugins:
+    artifact0:
+        derived_from: plugin
+    artifact1_sub:
+        derived_from: artifact1
+    artifact2_sub:
+        derived_from: artifact2
+    artifact3_sub:
+        derived_from: artifact3
+imports:
     - org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports-imported1.yaml
     - org/cloudifysource/cosmo/dsl/unit/imports/valid/dsl-with-imports-imported2.yaml
-  interfaces: 
-    interface0: 
-      operations: 
-        - operation1
-        - operation2
-  plans: 
-    node: 
-      init: 
-        radial: node_radial_stub
-    type1: 
-      init: 
-        radial: type1_radial_stub_override
-    type2_sub: 
-      init: 
-        radial: type2_sub_radial_stub_override
-    some_service_template.type3_sub_template:
-      init: 
-        radial: type3_sub_template_radial_stub_override
-  relationships: 
+interfaces:
+    interface0:
+        operations:
+            - operation1
+            - operation2
+relationships:
     relationship0: {}
-  service_templates:
-    some_service_template:
-      topology:
-        type0_template:
-          type: type0
-        type1_sub_template:
-          type: type1_sub
-        type1_template:
-          type: type1
-        type2_sub_template:
-          type: type2_sub
-        type2_template:
-          type: type2
-        type3_sub_template:
-          type: type3_sub
-        type3_template:
-          type: type3
-  types: 
-    type0: 
-      derived_from: node
-    type1_sub: 
-      derived_from: type1
-    type2_sub: 
-      derived_from: type2
-    type3_sub: 
-      derived_from: type3
+blueprint:
+    name: "some_service_template"
+    topology:
+        -   name: "type0_template"
+            type: type0
+            workflows:
+                init:
+                    radial: "node_radial_stub"
+        -   name: "type1_sub_template"
+            type: type1_sub
+        -   name: "type1_template"
+            type: type1
+            workflows:
+                init:
+                    radial: "type1_radial_stub_override"
+        -   name: "type2_sub_template"
+            type: type2_sub
+        -   name: "type2_template"
+            type: type2
+        -   name: "type3_sub_template"
+            type: type3_sub
+            workflows:
+                init:
+                    radial: type3_sub_template_radial_stub_override
+        -   name: "type3_template"
+            type: type3
+types:
+    type0:
+        derived_from: node
+    type1_sub:
+        derived_from: type1
+        workflows:
+            init:
+                radial: type1_radial_stub_override
+    type2_sub:
+        derived_from: type2
+        workflows:
+            init:
+                radial: type2_sub_radial_stub_override
+    type3_sub:
+        derived_from: type3

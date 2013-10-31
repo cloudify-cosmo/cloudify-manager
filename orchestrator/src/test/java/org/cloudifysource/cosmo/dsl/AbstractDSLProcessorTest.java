@@ -67,25 +67,26 @@ public abstract class AbstractDSLProcessorTest {
     /**
      */
     public static class Processed {
+        String name;
         List<Node> nodes;
         Map<String, NodeExtra> nodesExtra;
-        String globalWorkflow;
-        Map<String, Map<String, Policy>> policies;
+        Map<String, List<Policy>> policies;
         Map<String, org.cloudifysource.cosmo.dsl.RuleDefinition> rules;
         private Map<String, PolicyDefinition> policiesEvents;
-        Map<String, Object> relationships;
+        Map<String, Relationship> relationships;
+        Map<String, Object> workflows;
 
+        public String getName() {
+            return name;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
         public List<Node> getNodes() {
             return nodes;
         }
         public void setNodes(List<Node> nodes) {
             this.nodes = nodes;
-        }
-        public String getGlobalWorkflow() {
-            return globalWorkflow;
-        }
-        public void setGlobalWorkflow(String globalWorkflow) {
-            this.globalWorkflow = globalWorkflow;
         }
         public Map<String, NodeExtra> getNodesExtra() {
             return nodesExtra;
@@ -95,11 +96,11 @@ public abstract class AbstractDSLProcessorTest {
             this.nodesExtra = nodesExtra;
         }
 
-        public Map<String, Map<String, Policy>> getPolicies() {
+        public Map<String, List<Policy>> getPolicies() {
             return policies;
         }
 
-        public void setPolicies(Map<String, Map<String, Policy>> policies) {
+        public void setPolicies(Map<String, List<Policy>> policies) {
             this.policies = policies;
         }
 
@@ -119,12 +120,20 @@ public abstract class AbstractDSLProcessorTest {
             return policiesEvents;
         }
 
-        public Map<String, Object> getRelationships() {
+        public Map<String, Relationship> getRelationships() {
             return relationships;
         }
 
-        public void setRelationships(Map<String, Object> relationships) {
+        public void setRelationships(Map<String, Relationship> relationships) {
             this.relationships = relationships;
+        }
+
+        public Map<String, Object> getWorkflows() {
+            return workflows;
+        }
+
+        public void setWorkflows(Map<String, Object> workflows) {
+            this.workflows = workflows;
         }
     }
 
@@ -137,7 +146,8 @@ public abstract class AbstractDSLProcessorTest {
         Map<String, Object> properties;
         List<ProcessedRelationshipTemplate> relationships;
         Map<String, Object> plugins;
-        Map<String, Policy> policies;
+        List<Policy> policies;
+        Map<String, Object> instances;
 
         public String getId() {
             return id;
@@ -187,22 +197,40 @@ public abstract class AbstractDSLProcessorTest {
             this.plugins = plugins;
         }
 
-        public Map<String, Policy> getPolicies() {
+        public List<Policy> getPolicies() {
             return policies;
         }
+
+        public Map<String, Object> getInstances() {
+            return instances;
+        }
+
+        public void setInstances(Map<String, Object> instances) {
+            this.instances = instances;
+        }
+
     }
 
     /**
      */
     public static class Policy {
-        private Map<String, Rule> rules;
+        private String name;
+        private List<Rule> rules;
 
-        public void setRules(Map<String, Rule> rules) {
+        public void setRules(List<Rule> rules) {
             this.rules = rules;
         }
 
-        public Map<String, Rule> getRules() {
+        public List<Rule> getRules() {
             return rules;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
         }
     }
 
@@ -255,8 +283,11 @@ public abstract class AbstractDSLProcessorTest {
     public static class ProcessedRelationshipTemplate {
         String type;
         String targetId;
-        List<ProcessedExecutionListItem> postTargetStart;
-        List<ProcessedExecutionListItem> postSourceStart;
+        String plugin;
+        String bindAt;
+        String runOnNode;
+        private Interface anInterface;
+        private String workflow;
 
         public String getType() {
             return type;
@@ -274,41 +305,44 @@ public abstract class AbstractDSLProcessorTest {
             this.targetId = targetId;
         }
 
-        public List<ProcessedExecutionListItem> getPostTargetStart() {
-            return postTargetStart;
+        public String getPlugin() {
+            return plugin;
         }
 
-        public void setPostTargetStart(List<ProcessedExecutionListItem> postTargetStart) {
-            this.postTargetStart = postTargetStart;
+        public void setPlugin(String plugin) {
+            this.plugin = plugin;
         }
 
-        public List<ProcessedExecutionListItem> getPostSourceStart() {
-            return postSourceStart;
+        public String getBindAt() {
+            return bindAt;
         }
 
-        public void setPostSourceStart(List<ProcessedExecutionListItem> postSourceStart) {
-            this.postSourceStart = postSourceStart;
+        public void setBindAt(String bindAt) {
+            this.bindAt = bindAt;
         }
 
-    }
-
-    /**
-     */
-    public static class ProcessedExecutionListItem {
-        private String operation;
-        private String outputField;
-        public String getOperation() {
-            return operation;
-        }
-        public void setOperation(String operation) {
-            this.operation = operation;
+        public String getRunOnNode() {
+            return runOnNode;
         }
 
-        public String getOutputField() {
-            return outputField;
+        public void setRunOnNode(String runOnNode) {
+            this.runOnNode = runOnNode;
         }
-        public void setOutputField(String outputField) {
-            this.outputField = outputField;
+
+        public Interface getInterface() {
+            return anInterface;
+        }
+
+        public void setInterface(Interface anInterface) {
+            this.anInterface = anInterface;
+        }
+
+        public String getWorkflow() {
+            return workflow;
+        }
+
+        public void setWorkflow(String workflow) {
+            this.workflow = workflow;
         }
     }
 

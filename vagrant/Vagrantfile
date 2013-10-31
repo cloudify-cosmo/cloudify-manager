@@ -24,9 +24,11 @@ Vagrant.configure('2') do |config|
 
   config.vm.define :manager do |manager_config|    
 
+    management_ip = '10.0.0.5'
+
     manager_config.vm.box = BOX_NAME
     manager_config.vm.box_url = BOX_URI
-    manager_config.vm.network :private_network, ip: '10.0.0.5'
+    manager_config.vm.network :private_network, ip: management_ip
     manager_config.vm.hostname = 'cosmo-manager'
     manager_config.vm.provider :virtualbox do |vb|
       vb.customize ['modifyvm', :id, '--memory', '2048']
@@ -36,14 +38,13 @@ Vagrant.configure('2') do |config|
     cosmo_version = '0.1-RELEASE'
 
     command = "
-        sudo apt-get -y update;
-        sudo apt-get install -y python-dev;
-        sudo apt-get install -q -y python-pip;
-        sudo pip install retrying;
-        sudo pip install timeout-decorator;
-        su vagrant -c 'mkdir #{working_dir}';
-        cd #{working_dir};
-        su vagrant -c 'python2.7 /vagrant/bootstrap_lxc_manager.py --working_dir=#{working_dir} --cosmo_version=#{cosmo_version}'
+        sudo apt-get -y update &&
+        sudo apt-get install -y python-dev &&
+        sudo apt-get install -q -y python-pip &&
+        su vagrant -c 'mkdir #{working_dir}' &&
+        cd #{working_dir} &&
+        echo 'calling bootstrap script' &&
+        su vagrant -c 'python2.7 /vagrant/bootstrap_lxc_manager.py --install_vagrant_lxc --management_ip=#{management_ip} --working_dir=#{working_dir} --cosmo_version=#{cosmo_version}'
     "
 
     manager_config.vm.provision :shell, :inline => command
