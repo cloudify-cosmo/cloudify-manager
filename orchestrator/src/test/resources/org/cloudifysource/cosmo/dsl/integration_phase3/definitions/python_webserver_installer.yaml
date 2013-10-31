@@ -7,4 +7,4 @@ plugins:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
             interface: "cloudify.interfaces.middleware_component_installer"
-            url: "https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/develop.zip"
+            url: "https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/master.zip"
