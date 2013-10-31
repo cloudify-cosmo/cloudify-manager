@@ -31,11 +31,9 @@ filter {
     } else if [type] == "task_started" {
         drop { }
     } else if [type] == "plugin_execution" {
-        if [name] == "openstack_host_provisioner" {
-            if [message] =~ "^.*Starting machine" {
-                mutate {
-                    add_field => [ "description", "OpenStack plugin: %{message}" ]
-                }
+        if [name] == "openstack_host_provisioner" and [message] =~ "^.*Starting machine" {
+            mutate {
+                add_field => [ "description", "OpenStack plugin: %{message}" ]
             }
         } else {
             drop { }
