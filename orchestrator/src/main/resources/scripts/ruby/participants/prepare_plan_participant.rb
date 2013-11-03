@@ -20,25 +20,27 @@ require_relative '../exception_logger'
 class PreparePlanParticipant < Ruote::Participant
 
   PLAN = 'plan'
-  #HOST_TYPE = 'cloudify.types.host'
-  #PLUGIN_INSTALLER_PLUGIN = 'cloudify.plugins.plugin_installer'
-  #NODE = 'node'
-  #RUNTIME = 'cloudify_runtime'
-  #PROPERTIES = 'properties'
+  NODE = 'node'
+  RUNTIME = 'cloudify_runtime'
+  PROPERTIES = 'properties'
 
   def on_workitem
     begin
       raise 'plan not set' unless workitem.params.has_key? PLAN
 
-      plan = JSON.parse(workitem.params[PLAN])
+      plan = workitem.params[PLAN]
       nodes = plan['nodes']
 
       nodes.each do |node|
-        node['relationships'].each do |relationship|
-          relationship['workflow'] = Ruote::RadialReader.read(relationship_workflow)
+        if node.has_key? 'relationships'
+          node['relationships'].each do |relationship|
+            relationship['workflow'] = Ruote::RadialReader.read(relationship['workflow'])
+          end
         end
         workflows = Hash.new
-        node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value) }
+        if node.has_key? 'workflows'
+          node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value) }
+        end
         node['workflows'] = workflows
       end
 
@@ -52,7 +54,7 @@ class PreparePlanParticipant < Ruote::Participant
 
       workitem.fields['plan'] = plan
 
-      $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
+      $logger.debug('Prepared plan: {}', plan.to_json)
       reply
 
     rescue => e

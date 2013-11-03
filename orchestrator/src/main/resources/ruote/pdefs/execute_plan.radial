@@ -8,10 +8,9 @@ define install_application
             properties : {
                 dsl_location: $dsl,
                 alias_mapping_url: $alias_mapping_url,
-                resources_url: $resources_url
+                resources_base_url: $resources_base_url
             }
         }
-            
     prepare_plan plan: $plan
     event event: { "stage" => "Loaded blueprint" }
 

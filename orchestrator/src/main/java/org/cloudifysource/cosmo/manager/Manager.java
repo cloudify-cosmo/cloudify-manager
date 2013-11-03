@@ -81,7 +81,7 @@ public class Manager {
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
         workitemFields.put("alias_mapping_url", aliasMappingLocation);
-        workitemFields.put("resources_url", resourcesLocation);
+        workitemFields.put("resources_base_url", resourcesLocation);
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
