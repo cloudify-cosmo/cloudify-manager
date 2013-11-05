@@ -42,6 +42,7 @@ import org.springframework.validation.beanvalidation.BeanValidationPostProcessor
         JettyFileServerForPluginsConfig.class,
         JettyDSLImporterConfig.class,
         DefaultRuoteWorkflowConfig.class,
+        ValidateRuoteWorkflowConfig.class,
         ManagementRuoteRuntimeConfig.class,
         StateCacheConfig.class,
         StateCacheFeederConfig.class,

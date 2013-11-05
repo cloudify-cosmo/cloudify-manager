@@ -1,3 +1,13 @@
 define validate_plan
-    log message: 'parsing plan from dsl'
-    prepare_plan dsl: $dsl
+    log message: 'preparing plan from dsl'
+    execute_task target: 'cloudify.management',
+        exec: "cosmo.cloudify.plugins.dsl_parser.tasks.parse_dsl",
+        to_f: 'plan',
+        payload: {
+            properties : {
+                dsl_location: $dsl,
+                alias_mapping_url: $alias_mapping_url,
+                resources_base_url: $resources_base_url
+            }
+        }
+    prepare_plan plan: $plan

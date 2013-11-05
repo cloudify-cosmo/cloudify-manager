@@ -2,10 +2,15 @@ __author__ = 'ran'
 
 from testenv import TestCase
 from testenv import get_resource as resource
-from testenv import deploy_application as deploy
+from testenv import validate_dsl as validate
 
 
-class TestDependencyOrder(TestCase):
-    def test_dependencies_order_with_two_nodes(self):
+class TestValidateDSL(TestCase):
+
+    def test_ok_dsl(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deploy(dsl_path)
+        validate(dsl_path)
+
+    def test_invalid_dsl(self):
+        dsl_path = resource("dsl/invalid-dsl.yaml")
+        self.assertRaises(RuntimeError, validate, dsl_path)
