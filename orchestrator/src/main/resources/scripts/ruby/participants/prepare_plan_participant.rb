@@ -54,7 +54,7 @@ class PreparePlanParticipant < Ruote::Participant
 
       workitem.fields['plan'] = plan
 
-      $logger.debug('Prepared plan: {}', plan.to_json)
+      $logger.debug('Prepared plan: {}', JSON.pretty_generate(plan))
       reply
 
     rescue => e

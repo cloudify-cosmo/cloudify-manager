@@ -75,21 +75,20 @@ public class Manager {
 
     public void deployDSL(String dslPath, long timeoutInSeconds) throws IOException {
 
-        String dslLocation = dslImporter.importDSL(Paths.get(dslPath));
-        String aliasMappingLocation = dslImporter.importAliasMapping(Paths.get(ALIAS_MAPPING_RESOURCE_PATH));
-        String resourcesLocation = dslImporter.importCosmoResources(Paths.get(COSMO_DSL_RESOURCES_PATH));
-
-
-        final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("dsl", dslLocation);
-        workitemFields.put("alias_mapping_url", aliasMappingLocation);
-        workitemFields.put("resources_base_url", resourcesLocation);
+        final Map<String, Object> workitemFields = prepareRuoteExecution(dslPath);
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
     }
 
     public void validateDSL(String dslPath, int timeoutInSeconds) throws IOException {
+        final Map<String, Object> workitemFields = prepareRuoteExecution(dslPath);
+
+        final Object wfid = validateRuoteWorkflow.asyncExecute(workitemFields);
+        ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
+    }
+
+    private Map<String, Object> prepareRuoteExecution(String dslPath) throws IOException {
         String dslLocation = dslImporter.importDSL(Paths.get(dslPath));
         String aliasMappingLocation = dslImporter.importAliasMapping(Paths.get(ALIAS_MAPPING_RESOURCE_PATH));
         String resourcesLocation = dslImporter.importCosmoResources(Paths.get(COSMO_DSL_RESOURCES_PATH));
@@ -99,9 +98,7 @@ public class Manager {
         workitemFields.put("dsl", dslLocation);
         workitemFields.put("alias_mapping_url", aliasMappingLocation);
         workitemFields.put("resources_base_url", resourcesLocation);
-
-        final Object wfid = validateRuoteWorkflow.asyncExecute(workitemFields);
-        ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
+        return workitemFields;
     }
 
     public void close() throws Exception {
