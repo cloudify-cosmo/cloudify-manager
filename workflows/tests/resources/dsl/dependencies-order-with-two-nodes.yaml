@@ -22,4 +22,8 @@ types:
             init:
                 radial: |
                     define mock_init
+                        execute_operation operation: 'set_property', params: {
+                            property_name: 'property1',
+                            value: 'value1'
+                        }
                         execute_operation operation: 'make_reachable'

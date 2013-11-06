@@ -3,6 +3,7 @@ interfaces:
         operations:
             - "touch"
             - "make_reachable"
+            - "set_property"
 
 plugins:
     testmockoperations:

@@ -11,3 +11,12 @@ define validate_plan
             }
         }
     prepare_plan plan: $plan
+
+    execute_task target: 'cloudify.management',
+            exec: "cosmo.cloudify.plugins.dsl_parser.tasks.prepare_multi_instance_plan",
+            to_f: 'plan',
+            payload: {
+                properties : {
+                    plan: $plan
+                }
+            }

@@ -370,7 +370,7 @@ class TestCase(unittest.TestCase):
 def get_resource(resource):
     """
     Gets the path for the provided resource.
-    :param resource: resource name relative to /resources.
+    :param resource: resource name relative to /resources.         http://www.dailyfailcenter.com/127148
     """
     import resources
     resources_path = path.dirname(resources.__file__)

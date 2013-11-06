@@ -16,17 +16,11 @@
 
 package org.cloudifysource.cosmo.orchestrator.workflow;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
-import org.cloudifysource.cosmo.logging.Logger;
-import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.DefaultRuoteWorkflowConfig;
 import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteRuntimeConfig;
 import org.cloudifysource.cosmo.statecache.StateCache;
-import org.cloudifysource.cosmo.statecache.StateCacheValue;
 import org.cloudifysource.cosmo.statecache.config.StateCacheConfig;
 import org.cloudifysource.cosmo.tasks.MockCeleryTaskWorker;
 import org.cloudifysource.cosmo.tasks.TaskReceivedListener;
@@ -42,9 +36,7 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -55,9 +47,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ContextConfiguration(classes = { RuoteExecutePlanTest.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
-
-    private static final String CLOUDIFY_MANAGEMENT = "cloudify.management";
-    protected Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      */
@@ -89,53 +78,6 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MockCeleryTaskWorker worker;
 
-
-
-    @Test(timeOut = 30000)
-    public void testRuntimePropertiesInjection() throws IOException, InterruptedException {
-        final String dslFile = "org/cloudifysource/cosmo/dsl/dsl-with-base-imports.yaml";
-        final String machineId = "mysql_template.mysql_host";
-        final String ip = "10.0.0.1";
-
-        Map<String, Object> fields = Maps.newHashMap();
-        fields.put("dsl", Resources.getResource(dslFile).getFile());
-        ruoteWorkflow.asyncExecute(fields);
-
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        worker.addListener(CLOUDIFY_MANAGEMENT, new TaskReceivedListener() {
-            @Override
-            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-                if (taskName.endsWith("multi_instance_plan")) {
-                    return kwargs.get("plan");
-                }
-                return null;
-            }
-        });
-
-        worker.addListener(machineId, new TaskReceivedListener() {
-            @Override
-            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
-
-                if (taskName.endsWith("verify_plugin")) {
-                    return "True";
-                }
-
-                Map<?, ?> runtimeProperties = (Map<?, ?>) kwargs.get("cloudify_runtime");
-                if (runtimeProperties.containsKey(machineId)) {
-                    Map<?, ?> machineProperties = (Map<?, ?>) runtimeProperties.get(machineId);
-                    if (Objects.equal(ip, machineProperties.get("ip"))) {
-                        latch.countDown();
-                    }
-                }
-                return null;
-            }
-        });
-
-        discoveredIpAddress(machineId, ip);
-        reachable(machineId);
-        latch.await();
-    }
 
     @Test(timeOut = 60000)
     public void testExecuteOperationFailure() {
@@ -179,17 +121,5 @@ public class RuoteExecutePlanTest extends AbstractTestNGSpringContextTests {
 
         Object wfid = workflow.asyncExecute(fields);
         ruoteRuntime.waitForWorkflow(wfid);
-    }
-
-
-    private void reachable(String nodeId) {
-        Preconditions.checkNotNull(nodeId);
-        stateCache.put(nodeId, "reachable", new StateCacheValue("true"));
-    }
-
-    private void discoveredIpAddress(String nodeId, String ipAddress) {
-        Preconditions.checkNotNull(nodeId);
-        Preconditions.checkNotNull(ipAddress);
-        stateCache.put(nodeId, "ip", new StateCacheValue(ipAddress));
     }
 }
