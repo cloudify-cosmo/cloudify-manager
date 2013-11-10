@@ -44,15 +44,15 @@ public class ManagerBoot {
         String dslPath = parsed.getDslPath();
         int timeout = parsed.getTimeout();
 
-        if (parsed.isValidate()) {
-            LOGGER.info(ManagerLogDescription.VALIDATING_DSL, dslPath);
-            Validator.validateDSL(dslPath);
-            LOGGER.info(ManagerLogDescription.DSL_VALIDATED, dslPath);
-        } else {
-            try {
-                LOGGER.info(ManagerLogDescription.BOOTING_MANAGER);
-                manager = new Manager();
-                manager.init();
+        try {
+            LOGGER.info(ManagerLogDescription.BOOTING_MANAGER);
+            manager = new Manager();
+            manager.init();
+            if (parsed.isValidate()) {
+                LOGGER.info(ManagerLogDescription.VALIDATING_DSL, dslPath);
+                manager.validateDSL(dslPath, timeout);
+                LOGGER.info(ManagerLogDescription.DSL_VALIDATED, dslPath);
+            } else {
                 LOGGER.info(ManagerLogDescription.DEPLOYING_DSL, dslPath);
                 manager.deployDSL(dslPath, timeout);
                 if (!parsed.isNonInteractive()) {
@@ -62,10 +62,13 @@ public class ManagerBoot {
                 } else {
                     LOGGER.info(ManagerLogDescription.APPLICATION_DEPLOYED);
                 }
-            } finally {
-                if (manager != null) {
-                    manager.close();
-                }
+            }
+        } catch (Throwable e) {
+            e.printStackTrace(System.err);
+            System.exit(1);
+        } finally {
+            if (manager != null) {
+                manager.close();
             }
         }
     }
@@ -78,7 +81,7 @@ public class ManagerBoot {
                 commander.usage();
                 System.exit(0);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             System.err.println(e.getMessage());
             System.exit(1);
         }

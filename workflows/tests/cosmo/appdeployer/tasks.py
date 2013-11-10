@@ -32,13 +32,14 @@ class BackgroundProcess(threading.Thread):
 
     sp = None
 
-    def __init__(self, dsl):
+    def __init__(self, dsl, **kwargs):
         self.dsl = dsl
+        self.validate = kwargs['validate'] if 'validate' in kwargs else False
         threading.Thread.__init__(self)
 
     def run(self):
         try:
-            logger.info("deploying dsl: " + self.dsl)
+            logger.info('{0} dsl: {1}'.format("validating" if self.validate else "deploying", self.dsl))
             command = [
                 "java",
                 '-XX:MaxPermSize=256m',
@@ -50,6 +51,8 @@ class BackgroundProcess(threading.Thread):
                 "300",
                 "--non-interactive"
             ]
+            if self.validate:
+                command.append('--validate')
             self.sp = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             while True:
                 line = self.sp.stdout.readline()
@@ -58,32 +61,37 @@ class BackgroundProcess(threading.Thread):
                 logger.info(line.rstrip())
             self.sp.wait()
             if self.sp.returncode != 0:
-                raise RuntimeError("Application Deployment failed with exit code {0}".format(self.sp.returncode))
-            logger.info("dsl has been deployed [dsl={0}]".format(self.dsl))
+                logger.info("dsl has been {0} unsuccessfully [dsl={1}]".format("validated" if self
+                            .validate else "deployed", self.dsl))
+                raise RuntimeError("Application {0} failed with exit code {1}".format("Validation" if self
+                                   .validate else "Deployment", self.sp.returncode))
+            logger.info("dsl has been {0} [dsl={1}]".format("validated" if self
+                        .validate else "deployed", self.dsl))
             return_value.put(0)
         except Exception, e:
             return_value.put(e)
 
     def kill(self):
-        logger.info("killing deploy process")
+        logger.info("killing {0} process".format("deploy" if self.validate else "validate"))
         self.sp.terminate()
 
 @celery.task
-def deploy(dsl, **kwargs):
+def run_manager(dsl, **kwargs):
     global thread_obj
-    thread_obj = BackgroundProcess(dsl)
+    thread_obj = BackgroundProcess(dsl, **kwargs)
     thread_obj.start()
 
 @celery.task
-def get_deploy_return_value(**kwargs):
+def get_manager_return_value(**kwargs):
     r = None
     if not return_value.empty():
         r = return_value.get_nowait()
-        if r is Exception:
+        if isinstance(r, Exception):
             raise r
 
     return r
 
 @celery.task
 def kill(**kwargs):
-    thread_obj.kill()
+    if thread_obj.is_alive():
+        thread_obj.kill()

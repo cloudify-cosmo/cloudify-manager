@@ -47,12 +47,15 @@ public class Manager {
     private static final String RUBY_RESOURCES_CLASS_LOADER_BEAN_NAME = "rubyResourcesClassLoader";
     private static final String SCRIPTS_RESOURCE_PATH = "scripts";
     private static final String RUOTE_GEMS_RESOURCE_PATH = "ruote-gems/gems";
+    private static final String ALIAS_MAPPING_RESOURCE_PATH = "org/cloudifysource/cosmo/dsl/alias-mappings.yaml";
+    private static final String COSMO_DSL_RESOURCES_PATH = "cloudify";
     private static final String TEMPORARY_DIRECTORY_BEAN_NAME = "temporaryDirectory";
 
     private AnnotationConfigApplicationContext mainContext;
     private AnnotationConfigApplicationContext bootContext;
     private boolean closed;
     private RuoteWorkflow ruoteWorkflow;
+    private RuoteWorkflow validateRuoteWorkflow;
     private RuoteRuntime ruoteRuntime;
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
     private DSLImporter dslImporter;
@@ -63,6 +66,7 @@ public class Manager {
                 (TemporaryDirectoryConfig.TemporaryDirectory) bootContext.getBean("temporaryDirectory");
         this.mainContext = registerConfig(temporaryDirectory.get().toPath(), temporaryDirectory);
         this.ruoteWorkflow = (RuoteWorkflow) mainContext.getBean("defaultRuoteWorkflow");
+        this.validateRuoteWorkflow =  (RuoteWorkflow) mainContext.getBean("validateRuoteWorkflow");
         this.ruoteRuntime = (RuoteRuntime) mainContext.getBean("ruoteRuntime");
         this.temporaryDirectory =
                 (TemporaryDirectoryConfig.TemporaryDirectory) mainContext.getBean("temporaryDirectory");
@@ -71,13 +75,30 @@ public class Manager {
 
     public void deployDSL(String dslPath, long timeoutInSeconds) throws IOException {
 
-        String dslLocation = dslImporter.importDSL(Paths.get(dslPath));
-
-        final Map<String, Object> workitemFields = Maps.newHashMap();
-        workitemFields.put("dsl", dslLocation);
+        final Map<String, Object> workitemFields = prepareRuoteExecution(dslPath);
 
         final Object wfid = ruoteWorkflow.asyncExecute(workitemFields);
         ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
+    }
+
+    public void validateDSL(String dslPath, int timeoutInSeconds) throws IOException {
+        final Map<String, Object> workitemFields = prepareRuoteExecution(dslPath);
+
+        final Object wfid = validateRuoteWorkflow.asyncExecute(workitemFields);
+        ruoteRuntime.waitForWorkflow(wfid, timeoutInSeconds);
+    }
+
+    private Map<String, Object> prepareRuoteExecution(String dslPath) throws IOException {
+        String dslLocation = dslImporter.importDSL(Paths.get(dslPath));
+        String aliasMappingLocation = dslImporter.importAliasMapping(Paths.get(ALIAS_MAPPING_RESOURCE_PATH));
+        String resourcesLocation = dslImporter.importCosmoResources(Paths.get(COSMO_DSL_RESOURCES_PATH));
+
+
+        final Map<String, Object> workitemFields = Maps.newHashMap();
+        workitemFields.put("dsl", dslLocation);
+        workitemFields.put("alias_mapping_url", aliasMappingLocation);
+        workitemFields.put("resources_base_url", resourcesLocation);
+        return workitemFields;
     }
 
     public void close() throws Exception {
@@ -110,6 +131,12 @@ public class Manager {
         ResourceExtractor.extractResource(SCRIPTS_RESOURCE_PATH, extractionPath);
         LOGGER.info(ManagerLogDescription.EXTRACTING_RESOURCES, RUOTE_GEMS_RESOURCE_PATH, extractionPath);
         ResourceExtractor.extractResource(RUOTE_GEMS_RESOURCE_PATH, extractionPath);
+        LOGGER.info(ManagerLogDescription.EXTRACTING_RESOURCES, Paths.get(ALIAS_MAPPING_RESOURCE_PATH).getParent(),
+                extractionPath);
+        ResourceExtractor.extractResource(Paths.get(ALIAS_MAPPING_RESOURCE_PATH).getParent().toString(),
+                extractionPath);
+        LOGGER.info(ManagerLogDescription.EXTRACTING_RESOURCES, COSMO_DSL_RESOURCES_PATH, extractionPath);
+        ResourceExtractor.extractResource(COSMO_DSL_RESOURCES_PATH, extractionPath);
         URLClassLoader ruoteClassLoader = new URLClassLoader(new URL[] {
                 extractionPath.toAbsolutePath().toUri().toURL() }, null);
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
@@ -126,4 +153,5 @@ public class Manager {
         contextForTempDir.refresh();
         return contextForTempDir;
     }
+
 }

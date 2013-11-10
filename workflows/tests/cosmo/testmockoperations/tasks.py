@@ -1,5 +1,6 @@
 from cosmo.celery import celery
 from cosmo.events import set_reachable as reachable
+from cosmo.events import set_property as property
 from time import time
 
 state = []
@@ -15,6 +16,11 @@ def make_reachable(__cloudify_id, **kwargs):
         'time': time(),
         'relationships': kwargs['cloudify_runtime']
     })
+
+
+@celery.task
+def set_property(__cloudify_id, property_name, value, **kwargs):
+    property(__cloudify_id, property_name, value)
 
 
 @celery.task
