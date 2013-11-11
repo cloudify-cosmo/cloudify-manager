@@ -47,7 +47,7 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "celery",
+        "celery==3.0.24",
         "bernhard",
         "nose",
         "cosmo-plugin-plugin-installer",
