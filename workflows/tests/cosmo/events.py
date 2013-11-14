@@ -35,12 +35,19 @@ def set_reachable(node_id):
     Sends a riemann event which causes the state cache to set the node's reachable state
     to true.
     """
-    logger.info("Setting {0} reachable state to 'true'".format(node_id))
+    set_property(node_id, 'reachable', 'true')
+
+
+def set_property(node_id, property_name, value):
+    """
+    Sends a riemann event which causes the state cache to set the node's property value
+    """
+    logger.info("Setting {0} {1} property to '{2}'".format(node_id, property_name, value))
     riemann_client = bernhard.Client(host="localhost")
     event = {
         "host": node_id,
-        "service": "reachable",
-        "state": "true",
+        "service": property_name,
+        "state": value,
         "tags": ["cosmo"],
         "description": json.dumps({
             "node_id": node_id,
@@ -49,4 +56,3 @@ def set_reachable(node_id):
         })
     }
     riemann_client.send(event)
-

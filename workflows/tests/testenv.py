@@ -387,20 +387,42 @@ def deploy_application(dsl_path, timeout=240):
 
     end = time.time() + timeout
 
-    from cosmo.appdeployer.tasks import deploy
-    from cosmo.appdeployer.tasks import get_deploy_return_value
+    from cosmo.appdeployer.tasks import run_manager
+    from cosmo.appdeployer.tasks import get_manager_return_value
     from cosmo.appdeployer.tasks import kill
-    result = deploy.delay(dsl_path)
+    result = run_manager.delay(dsl_path)
     result.get(timeout=60, propagate=True)
-
-    r = get_deploy_return_value.delay().get(timeout=60, propagate=False)
-
+    r = None
     try:
         while r is None:
             if end < time.time():
                 raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
             time.sleep(1)
-            r = get_deploy_return_value.delay().get(timeout=60, propagate=False)
+            r = get_manager_return_value.delay().get(timeout=60, propagate=True)
+    except Exception, e:
+        kill.delay().get()
+        raise e
+
+
+def validate_dsl(dsl_path, timeout=240):
+    """
+    A blocking method which validates a dsl from the provided dsl path.
+    """
+
+    end = time.time() + timeout
+
+    from cosmo.appdeployer.tasks import run_manager
+    from cosmo.appdeployer.tasks import get_manager_return_value
+    from cosmo.appdeployer.tasks import kill
+    result = run_manager.delay(dsl_path, validate=True)
+    result.get(timeout=60, propagate=True)
+    r = None
+    try:
+        while r is None:
+            if end < time.time():
+                raise RuntimeError('Timeout validating {0}'.format(dsl_path))
+            time.sleep(1)
+            r = get_manager_return_value.delay().get(timeout=60, propagate=True)
     except Exception, e:
         kill.delay().get()
         raise e

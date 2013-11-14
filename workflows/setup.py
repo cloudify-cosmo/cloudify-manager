@@ -33,7 +33,7 @@ RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-con
 DSL_PARSER_VERSION = "0.1.4"
 DSL_PARSER_BRANCH = "develop"
 DSL_PARSER = "https://github.com/CloudifySource/cosmo-plugin-dsl-parser/tarball/{" \
-                     "0}#egg=cosmo-plugin-dsl-parser-{0}".format(DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
+                     "0}#egg=cosmo-plugin-dsl-parser-{1}".format(DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
 
 os.chdir(sys.path[0])
 
@@ -47,7 +47,7 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "celery",
+        "celery==3.0.24",
         "bernhard",
         "nose",
         "cosmo-plugin-plugin-installer",

@@ -1,7 +1,17 @@
 define install_application
-    log message: 'preparing plan from dsl'
-    event event: { "stage" => "Loading blueprint from: ${dsl}" }
-    prepare_plan dsl: $dsl
+    log message: 'preparing plan from dsl'    
+    event event: { "stage" => "Loading blueprint deployment" }
+    execute_task target: 'cloudify.management',
+        exec: "cosmo.cloudify.plugins.dsl_parser.tasks.parse_dsl",
+        to_f: 'plan',
+        payload: {
+            properties : {
+                dsl_location: $dsl,
+                alias_mapping_url: $alias_mapping_url,
+                resources_base_url: $resources_base_url
+            }
+        }
+    prepare_plan plan: $plan
     event event: { "stage" => "Loaded blueprint" }
 
     execute_task target: 'cloudify.management',
