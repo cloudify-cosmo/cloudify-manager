@@ -16,5 +16,5 @@
 
 __author__ = 'elip'
 
-PLUGIN_INSTALLER_VERSION = "develop"
-COSMO_CELERY_COMMON_VERSION = "develop"
+PLUGIN_INSTALLER_VERSION = 'develop'
+COSMO_CELERY_COMMON_VERSION = 'develop'

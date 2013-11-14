@@ -18,18 +18,18 @@ __author__ = 'elip'
 
 from setuptools import setup
 
-FABRIC_RUNNER_VERSION = "0.1.0"
-FABRIC_RUNNER_BRANCH = "develop"
+FABRIC_RUNNER_VERSION = '0.3'
+FABRIC_RUNNER_BRANCH = 'develop'
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_BRANCH)
 
-COSMO_CELERY_VERSION = "0.1.1"
-COSMO_CELERY_BRANCH = "develop"
+COSMO_CELERY_VERSION = '0.3'
+COSMO_CELERY_BRANCH = 'develop'
 COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
 
 
 setup(
     name='cosmo-plugin-agent-installer',
-    version='0.1.0',
+    version='0.3',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['worker_installer'],
