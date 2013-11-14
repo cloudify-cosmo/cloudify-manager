@@ -288,7 +288,8 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>dep-management</artifactId>
-                <version>${project.version}</version>
+                <!-- TODO: fix this hardcoded version -->
+                <version>0.1-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
