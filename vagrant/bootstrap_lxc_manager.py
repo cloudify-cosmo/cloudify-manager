@@ -511,7 +511,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--cosmo_version',
         help='Version of cosmo that will be used to deploy the dsl',
-        default='0.1-SNAPSHOT'
+        default='0.3-SNAPSHOT'
     )
     parser.add_argument(
         '--update_only',
