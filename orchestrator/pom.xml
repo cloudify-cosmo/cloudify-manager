@@ -18,7 +18,7 @@
     <groupId>org.cloudifysource.cosmo</groupId>
     <artifactId>orchestrator</artifactId>
     <packaging>jar</packaging>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.2-RELEASE</version>
 
     <properties>
         <mainClass>org.cloudifysource.cosmo.manager.ManagerBoot</mainClass>
