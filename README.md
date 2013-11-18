@@ -1,6 +1,6 @@
 ## Getting Started with Cosmo ##
 
-Cloudify Cosmo deploys, monitors and manages complex applications. It follows the [TOSCA spec](https://www.oasis-open.org/committees/tosca).
+Cloudify Cosmo deploys, monitors and manages complex applications. It follows the [TOSCA spec](https://www.oasis-open.org/committees/tosca). 
 
 The current version of Cosmo runs on a vagrant machine, reads the application plan file, and orchestrates the application deployment and monitoring.
 The [sample application](vagrant/test/python_webserver/python-webserver.yaml) starts and monitors an LXC machine with a python web server. 

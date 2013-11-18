@@ -30,7 +30,9 @@ script:
    - "nosetests workflows/tests"
 
 after_success:
+# upload orchestrator jars for develop and for master
    - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
+   - "test ${TRAVIS_BRANCH} = master && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
    - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
 
 env:

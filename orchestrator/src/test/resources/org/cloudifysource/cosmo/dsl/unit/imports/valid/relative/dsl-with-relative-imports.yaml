@@ -1,31 +1,25 @@
-definitions:
-    imports:
-        - "relative/dsl-relatively-imported1.yaml"
-    service_templates:
-        relative_imports_template:
-            topology:
-                test_a:
-                    type: "type_a"
-
-                test_b:
-                    type: "type_b"
-
-                test_c:
-                    type: "type_c"
-
-                test_0:
-                    type: "type_0"
-
-    plans:
-        relative_imports_template.test_a:
-            init:
-                radial: "init_stub"
-        relative_imports_template.test_b:
-            init:
-                radial: "init_stub"
-        relative_imports_template.test_c:
-            init:
-                radial: "init_stub"
-        relative_imports_template.test_0:
-            init:
-                radial: "init_stub"
+imports:
+    - "relative/dsl-relatively-imported1.yaml"
+blueprint:
+    name: "relative_imports_template"
+    topology:
+        -   name: "test_a"
+            type: "type_a"
+            workflows:
+                init:
+                    radial: "init_stub"
+        -   name: "test_b"
+            type: "type_b"
+            workflows:
+                init:
+                    radial: "init_stub"
+        -   name: "test_c"
+            type: "type_c"
+            workflows:
+                init:
+                    radial: "init_stub"
+        -   name: "test_0"
+            type: "type_0"
+            workflows:
+                init:
+                    radial: "init_stub"

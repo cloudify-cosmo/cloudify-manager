@@ -16,9 +16,6 @@
 __author__ = 'idanmo'
 
 import unittest
-import os
-from os import path
-import tempfile
 
 import tasks as t
 
@@ -31,15 +28,7 @@ class CloudMockTest(unittest.TestCase):
         def dummy(node_id):
             pass
         t.reachable = dummy
-        os.environ["TEMP_DIR"] = tempfile.gettempdir()
-        self._delete_file(t._get_data_file_path())
-
-    def tearDown(self):
-        self._delete_file(t._get_data_file_path())
-
-    def _delete_file(self, file_path):
-        if path.exists(file_path):
-            os.remove(file_path)
+        t.machines = {}
 
     def test_provision(self):
         machine_id = "machine1"

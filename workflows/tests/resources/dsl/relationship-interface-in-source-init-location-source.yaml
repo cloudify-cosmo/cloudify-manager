@@ -1,0 +1,45 @@
+imports:
+    - "cloudify.types"
+    - "cloudmock.yaml"
+    - "connectionconfigurermock.yaml"
+    - "testmockoperations.yaml"
+
+blueprint:
+    name: "simple_web_server"
+    topology:
+        -   name: "host"
+            type: "cloudify.types.host"
+            properties:
+                target_property_key: 'target_property_value'
+            policies:
+                -   name: "start_detection_policy"
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "machine-status"
+                                state: "running"
+        -   name: "mock_node_that_connects_to_host"
+            type: "cloudify.types.app_module"
+            properties:
+                source_property_key: 'source_property_value'
+            interfaces:
+                - "mock_interface"
+            relationships:
+                -   type: "cloudify.relationships.connected_to"
+                    target: "host"
+                    plugin: "connection_configurer_mock"
+                    run_on_node: "source"
+            policies:
+                -   name: "start_detection_policy"
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "mock-node-status"
+                                state: "running"
+            workflows:
+                init:
+                    radial: |
+                        define app_module_init
+                            execute_operation operation: 'touch'
+                            execute_relationship_workflow type: 'cloudify.relationships.connected_to'
+                            execute_operation operation: 'make_reachable'

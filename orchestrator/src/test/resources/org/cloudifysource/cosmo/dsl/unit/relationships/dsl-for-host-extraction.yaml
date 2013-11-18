@@ -1,41 +1,38 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "middleware_component_installer"
+    - "app_module_installer"
 
-    imports:
-        - "cloudify.types"
-        - "middleware_component_installer"
-        - "app_module_installer"
+blueprint:
+    name: "service_template"
+    topology:
+        -   name: "host1"
+            type: "cloudify.types.host"
+            interfaces:
+                - cloudify.interfaces.host_provisioner: "test_host_provisioner"
+        -   name: "host2"
+            type: "cloudify.types.host"
+            interfaces:
+                - cloudify.interfaces.host_provisioner: "test_host_provisioner2"
+        -   name: "webserver1"
+            type: "cloudify.types.web_server"
+            relationships:
+                - type: "cloudify.relationships.contained_in"
+                  target: "host1"
+        -   name: "webapplication1"
+            type: "cloudify.types.app_module"
+            relationships:
+                - type: "cloudify.relationships.contained_in"
+                  target: "webserver1"
 
-    service_templates:
-
-        service_template:
-            topology:
-                host1:
-                    type: "cloudify.tosca.types.host"
-                    interfaces:
-                        - cloudify.tosca.interfaces.host_provisioner: "test_host_provisioner"
-                host2:
-                    type: "cloudify.tosca.types.host"
-                    interfaces:
-                        - cloudify.tosca.interfaces.host_provisioner: "test_host_provisioner2"
-                webserver1:
-                    type: "cloudify.tosca.types.web_server"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "host1"
-                webapplication1:
-                    type: "cloudify.tosca.types.app_module"
-                    relationships:
-                        - type: "cloudify.tosca.relationships.contained_in"
-                          target: "webserver1"
-
-    artifacts:
-        test_host_provisioner:
-            derived_from: "cloudify.tosca.artifacts.agent_plugin"
-            properties:
-                interface: "cloudify.tosca.interfaces.host_provisioner"
-                url: "cloudify/tosca/artifacts/plugins/host-provisioner.zip"
-        test_host_provisioner2:
-            derived_from: "cloudify.tosca.artifacts.remote_plugin"
-            properties:
-                interface: "cloudify.tosca.interfaces.host_provisioner"
-                url: "cloudify/tosca/artifacts/plugins/host-provisioner.zip"
+plugins:
+    test_host_provisioner:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "cloudify.interfaces.host_provisioner"
+            url: "cloudify/plugins/host-provisioner.zip"
+    test_host_provisioner2:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "cloudify.interfaces.host_provisioner"
+            url: "cloudify/plugins/host-provisioner.zip"

@@ -1,0 +1,17 @@
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+
+blueprint:
+    name: "some_service_template"
+    topology:
+        -   name: "some_host"
+            type: "cloudify.types.host"
+            workflows:
+                init:
+                    ref: "some_node_init.radial"
+
+workflows:
+    install:
+        ref: "full_global_workflow.radial"
+

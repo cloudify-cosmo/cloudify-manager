@@ -59,6 +59,13 @@ public class DSLImporter {
     }
 
 
+    public String importAliasMapping(Path aliasMappingPath) throws IOException {
+        Path source = Paths.get(this.temporaryDirectory.toString(), aliasMappingPath.toString());
+        Path newdir = Paths.get(this.targetPath);
+        Files.copy(source, newdir.resolve(source.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+        return locatorPrefix + aliasMappingPath.toFile().getName();
+    }
+
     /**
      * This method imports the dsl resource into the file server resource base.
      * It does 2 things:
@@ -70,6 +77,7 @@ public class DSLImporter {
      * @return Location to the dsl file.
      */
     public String importDSL(Path dslPath) throws IOException {
+
         File dslFile = dslPath.toFile();
         if (dslFile.isDirectory()) {
             dslPath = DSLPackageProcessor.getDSLMainFile(dslFile);
@@ -105,6 +113,15 @@ public class DSLImporter {
         copyDSL(Paths.get(parent));
         return locatorPrefix + absolutePathToDSL.toFile().getParentFile().getName() + "/" +
                 absolutePathToDSL.toFile().getName();
+    }
+
+    public String importCosmoResources(Path resourcesPath) throws IOException {
+        String source = this.temporaryDirectory.toString() + "/" + resourcesPath.toString();
+        String target = targetPath + "/resources/" + resourcesPath.toString();
+        File targetDir = new File(target);
+        targetDir.mkdirs();
+        copyDirectory(Paths.get(source), Paths.get(target));
+        return locatorPrefix + "resources/";
     }
 
     private void copyPlugins(Path pluginsPath) throws IOException {

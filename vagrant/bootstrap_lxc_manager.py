@@ -16,16 +16,22 @@
 
 import argparse
 import getpass
-from os.path import expanduser
 import subprocess
 import re
 import threading
 import os
+import datetime
+import time
+import sys
+
+from os.path import expanduser
+from management_plugins import WORKER_INSTALLER
+from versions import FABRIC_RUNNER_VERSION
+from versions import COSMO_VERSION
+from subprocess import check_output
 
 __author__ = 'elip'
 
-from management_plugins import WORKER_INSTALLER
-from versions import FABRIC_RUNNER_VERSION
 
 USER_HOME = expanduser('~')
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(FABRIC_RUNNER_VERSION)
@@ -103,12 +109,19 @@ class VagrantLxcBoot:
     RIEMANN_PID = "RIEMANN_PID"
     RIEMANN_CONFIG = "RIEMANN_CONFIG"
     RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
+    MANAGEMENT_IP = "MANAGEMENT_IP"
+    BROKER_URL = "BROKER_URL"
 
     def __init__(self, args):
         self.working_dir = args.working_dir
+        self.config_dir = args.config_dir
         self.cosmo_version = args.cosmo_version
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
         self.update_only = args.update_only
+        self.install_openstack_provisioner = args.install_openstack_provisioner
+        self.management_ip = args.management_ip
+        self.install_vagrant_lxc = args.install_vagrant_lxc
+        self.install_logstash = args.install_logstash
 
     def run_command(self, command):
         p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -170,8 +183,8 @@ class VagrantLxcBoot:
         if os.path.exists(riemann_work_path):
             self.runner.run("rm -rf {0}".format(riemann_work_path))
         os.makedirs(riemann_work_path)
-        self.runner.run("cp {0} {1}".format("/vagrant/riemann.config", riemann_config_path))
-        self.runner.run("cp {0} {1}".format("/vagrant/riemann.config.template", riemann_template_path))
+        self.runner.run("cp {0} {1}".format("{0}/riemann.config".format(self.config_dir), riemann_config_path))
+        self.runner.run("cp {0} {1}".format("{0}/riemann.config.template".format(self.config_dir), riemann_template_path))
         riemann = RiemannProcess(riemann_config_path)
         riemann.start()
         return {
@@ -208,26 +221,27 @@ class VagrantLxcBoot:
         self.pip("bernhard")
 
     def install_celery_worker(self, riemann_info):
+
         # download and install the worker_installer
         self.pip(WORKER_INSTALLER)
 
-        # no need to specify port and key file. we are installing locally
-        local_ip = "localhost"
-
         worker_config = {
             "user": getpass.getuser(),
-            "management_ip": local_ip,
             "broker": "amqp://",
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
                 # when running celery in daemon mode. this environment does
                 # not exists. it is needed for vagrant.
                 "HOME": expanduser("~"),
+                self.MANAGEMENT_IP: self.management_ip,
+                self.BROKER_URL: "amqp://guest:guest@{0}:5672//".format(self.management_ip),
                 self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
                 self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
                 self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE]
             }
         }
+
+        os.environ['VIRTUALENV'] = expanduser("~/ENV")
 
         cloudify_runtime = {
             "cloudify.management": {
@@ -248,7 +262,7 @@ class VagrantLxcBoot:
         # use the same plugin installer version used by the worker installer
         from worker_installer.versions import PLUGIN_INSTALLER_VERSION
         plugin_installer_url = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip"\
-                           .format(PLUGIN_INSTALLER_VERSION)
+                               .format(PLUGIN_INSTALLER_VERSION)
         self.pip(plugin_installer_url)
 
         # install the necessary management plugins.
@@ -270,10 +284,20 @@ class VagrantLxcBoot:
         for plugin in plugins:
             install_plugin(plugin=plugin)
 
-    def install_vagrant(self):
+        if self.install_openstack_provisioner:
+            from management_plugins import openstack_provisioner_plugin
+            install_plugin(plugin=openstack_provisioner_plugin)
+        if self.install_vagrant_lxc:
+            from management_plugins import vagrant_provisioner_plugin
+            install_plugin(plugin=vagrant_provisioner_plugin)
 
+    def install_vagrant(self):
+        vagrant_file_name = "vagrant_1.2.7_x86_64.deb"
+        vagrant_file_path = os.path.join(self.working_dir, vagrant_file_name)
+        if os.path.exists(vagrant_file_path):
+            self.runner.run("rm -rf {0}".format(vagrant_file_path))
         self.wget(
-            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/vagrant_1.2.7_x86_64.deb"
+            "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/{0}".format(vagrant_file_name)
         )
         self.runner.sudo("dpkg -i vagrant_1.2.7_x86_64.deb")
         self.install_vagrant_lxc()
@@ -282,11 +306,11 @@ class VagrantLxcBoot:
     def install_vagrant_lxc(self):
         self.runner.run("vagrant plugin install vagrant-lxc")
 
-    """
-    Currently not used. provides some more functionallity between the actual host and the virtual box vagrant guest.
-    See http://www.virtualbox.org/manual/ch04.html
-    """
     def install_guest_additions(self):
+        """
+        Currently not used. provides some more functionality between the actual host and the virtual box vagrant guest.
+        See http://www.virtualbox.org/manual/ch04.html
+        """
         self.apt_get("install -q -y linux-headers-3.8.0-19-generic dkms")
         self.runner.run("echo 'Downloading VBox Guest Additions...'")
         self.wget("-q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso")
@@ -337,7 +361,7 @@ fi
         if os.path.exists("cosmo.jar"):
             self.runner.run("rm cosmo.jar")
         self.runner.run("ln -s {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
-        self.runner.run("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir))
+        self.runner.run("cp {0} {1}".format("{0}/log4j.properties".format(self.config_dir), self.working_dir))
 
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")
@@ -364,22 +388,108 @@ fi
     def reboot(self):
         self.runner.sudo("shutdown -r +1")
 
+    def get_machine_ip_addresses(self):
+        output = check_output(["ip", "a"])
+        output = output.replace('\n', '')
+        ips_pattern = "<(.+?)>.*?inet\s(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+        ips = re.findall(ips_pattern, output)
+        return map(lambda ip_info: ip_info[1], filter(lambda x: "loopback" not in x[0].lower(), ips))
+
+    def set_management_ip(self):
+        try:
+            ips = self.get_machine_ip_addresses()
+            if self.management_ip:
+                if self.management_ip not in ips:
+                    print('Could not set management ip!\n' +
+                          'Specified management ip is not listed in machine\'s assigned ip addresses: {0}'.format(ips))
+                    sys.exit(1)
+            else:
+                if len(ips) == 1:
+                    self.management_ip = ips[0]
+                else:
+                    print('Could not set management ip!\n' +
+                          'IP addresses assigned to this machine: {0}\n'.format(ips) +
+                          'Run this script with \'--managemant_ip\' argument for specifying the management ' +
+                          'machine ip address which should be one of the ips assigned to this machine')
+                    sys.exit(1)
+            print("Management ip is set to: {0}".format(self.management_ip))
+        except SystemExit as e:
+            raise e
+        except BaseException:
+            print('Could not set management ip!\n' +
+                  'Run this script with \'--managemant-ip\' argument for specifying the management ' +
+                  'machine ip address which should be one of the ips assigned to this machine')
+            sys.exit(1)
+
+    def _prepare_logstash_configuration(self, cosmo_log_file):
+        logstash_config_template = os.path.join(self.config_dir, "logstash.conf.template")
+        logstash_config_path = os.path.join(self.working_dir, "logstash.conf")
+        if not os.path.exists(logstash_config_template):
+            raise RuntimeError("logstash config template file not found in: {0}".format(logstash_config_template))
+        with open(logstash_config_template, "r") as config_template_file:
+            template = config_template_file.read()
+            updated_config = template.replace("$cosmo_log_file", cosmo_log_file)
+            with open(logstash_config_path, "w") as config_file:
+                config_file.write(updated_config)
+        return logstash_config_path
+
+    def _install_logstash(self):
+        logstash_jar_name = "logstash-1.2.2-flatjar.jar"
+        self.wget("https://download.elasticsearch.org/logstash/logstash/{0}".format(logstash_jar_name))
+        cosmo_log_file = os.path.join(self.working_dir, "cosmo.log")
+        logstash_config_path = self._prepare_logstash_configuration(cosmo_log_file)
+        self.runner.run("touch {0}".format(cosmo_log_file))
+        logstash_jar_path = os.path.join(self.working_dir, logstash_jar_name)
+        logstash_web_port = 8080
+        if not os.path.exists(logstash_config_path):
+            raise RuntimeError("logstash configuration file [{0}] does not exist".format(logstash_config_path))
+        # Starts logstash with Kibana listening on port 8080
+        command = "java -jar {0} agent -f {1} -- web --port {2}".format(
+            logstash_jar_path,
+            logstash_config_path,
+            logstash_web_port).split(' ')
+        timeout_seconds = 60
+        print("Starting logstash with web port set to: {0} [timeout={1} seconds]".format(logstash_web_port,
+                                                                                         timeout_seconds))
+        self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        timeout = datetime.datetime.now() + datetime.timedelta(seconds=timeout_seconds)
+        timeout_exceeded = False
+        pattern = ".*8080.*LISTEN"
+        # Wait until logstash web port is in listening state
+        while not timeout_exceeded:
+            output = check_output(["netstat", "-nl"]).replace('\n', '')
+            match = re.match(pattern, output)
+            if match:
+                break
+            timeout_exceeded = datetime.datetime.now() > timeout
+            time.sleep(1)
+        if timeout_exceeded:
+            raise RuntimeError("Failed to start logstash within a timeout of {0} seconds".format(timeout_seconds))
+        print("Logstash has been successfully started")
+
     def bootstrap(self):
+        self.set_management_ip()
         self.install_fabric_runner()
         if not self.update_only:
             self.install_python_protobuf()
             self.install_rabbitmq()
-            self.install_lxc_docker()
-            self.install_kernel()
             self.install_java()
+            if self.install_vagrant_lxc:
+                self.install_lxc_docker()
+                self.install_kernel()
+                self.install_vagrant()
             riemann_info = self.install_riemann()
-            self.install_vagrant()
+            if self.install_logstash:
+                self._install_logstash()
             self.install_cosmo()
             self.install_celery_worker(riemann_info)
         else:
             # just update the worker
-            self.runner.sudo("service celeryd stop")
-            self.runner.sudo("rm -rf cosmo_celery_common-0.1.0.egg-info")
+            try:
+                self.runner.sudo("service celeryd stop")
+            except BaseException as e:
+                print "Failed stopping celeryd service. maybe it was not running? : {0}".format(e.message)
+            self.runner.sudo("rm -rf cosmo_celery_common-*")
             self.install_celery_worker(self.get_riemann_info())
 
 
@@ -394,15 +504,49 @@ if __name__ == '__main__':
         default="/home/vagrant/cosmo-work"
     )
     parser.add_argument(
+        '--config_dir',
+        help='Directory in which files such as log4j.properties and riemann.config reside',
+        default='/vagrant'
+    )
+    parser.add_argument(
         '--cosmo_version',
         help='Version of cosmo that will be used to deploy the dsl',
-        default='0.1-SNAPSHOT'
+        default='0.3-SNAPSHOT'
     )
     parser.add_argument(
         '--update_only',
         help='Update the cosmo agent on this machine with new plugins from github',
-        default=False,
+        action="store_true",
+        default=False
     )
+    parser.add_argument(
+        '--install_openstack_provisioner',
+        help='Whether the openstack host provisioner should be installed in the management celery worker',
+        action="store_true",
+        default=False
+    )
+    parser.add_argument(
+        '--management_ip',
+        help='Specifies the IP address to be used for the management machine (should be set to one of the available ' +
+             'IP addresses assigned to this machine)',
+        default=None
+    )
+
+    parser.add_argument(
+        '--install_vagrant_lxc',
+        help="Specifies whether Vagrant and LXC would be installed for LXC host provisioning",
+        action="store_true",
+        default=False
+    )
+
+    parser.add_argument(
+        '--install_logstash',
+        help="Specifies whether to install and run logstash for analyzing cosmo events",
+        action="store_true",
+        default=False
+    )
+
+    print("Cloudify Cosmo [{0}] Management Machine Bootstrap ->".format(COSMO_VERSION))
 
     vagrant_boot = VagrantLxcBoot(parser.parse_args())
     vagrant_boot.bootstrap()

@@ -1,0 +1,23 @@
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
+    - "middleware_component_installer"
+    - "app_module_installer"
+
+blueprint:
+    name: "app"
+    topology:
+        -   name: "host"
+            type: "cloudify.types.host"
+        -   name: "server"
+            type: "cloudify.types.web_server"
+            relationships:
+                -   type: "cloudify.relationships.contained_in"
+                    target: "host"
+                    workflow:
+                        radial: "overridden_workflow"
+                -   type: "cloudify.relationships.connected_to"
+                    target: "host"
+                    workflow:
+                        ref: "some_workflow.radial"
+

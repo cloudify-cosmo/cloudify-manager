@@ -92,11 +92,11 @@ def wait_for_workflow(dashboard, wfid, timeout)
   end
   status = dashboard.process(wfid)
   if status.nil? or status.errors.nil?
-    EventParticipant.log_event({'workflow execution' => 'successful'}, result['workitem'])
+    EventParticipant.log_event({'stage' => 'Workflow has been executed successfully'}, result['workitem'])
   else
     message = status.errors.first.message
     workitem = status.errors.first.workitem
-    EventParticipant.log_event({'workflow execution failed' => message}, workitem)
+    EventParticipant.log_event({'stage' => "Workflow execution failed: #{message}"}, workitem)
     Throwables::propagate(java.lang.RuntimeException.new(status.errors.first.message))
   end
 end

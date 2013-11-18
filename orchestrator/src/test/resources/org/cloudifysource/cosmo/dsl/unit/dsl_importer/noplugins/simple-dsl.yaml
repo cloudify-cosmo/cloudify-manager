@@ -1,11 +1,9 @@
-definitions:
+imports:
+    - "cloudify.types"
+    - "host_provisioner"
 
-    imports:
-        - "cloudify.types"
-        - "host_provisioner"
-
-    service_templates:
-        app:
-            topology:
-                host:
-                    type: "cloudify.tosca.types.host"
+blueprint:
+    name: "app"
+    topology:
+        -   name: "host"
+            type: "cloudify.types.host"

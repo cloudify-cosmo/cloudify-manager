@@ -1,8 +1,6 @@
-definitions:
-
-    artifacts:
-        cloudify.tosca.artifacts.plugin.flask_installer:
-            derived_from: "cloudify.tosca.artifacts.agent_plugin"
-            properties:
-                interface: "cloudify.tosca.interfaces.middleware_component_installer"
-                url: "#{plugin_repository}/flask-installer.zip"
+plugins:
+    cloudify.plugins.flask_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            interface: "cloudify.interfaces.middleware_component_installer"
+            url: "#{plugin_repository}/flask-installer.zip"
