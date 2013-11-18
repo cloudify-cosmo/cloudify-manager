@@ -1,10 +1,13 @@
 __author__ = 'dan'
 
+from file_server import FileServer
 from flask import Flask, request
 from flask.ext.restful import Api, Resource, abort
 
 app = Flask(__name__)
 api = Api(app)
+
+blueprints = []
 
 
 def verify_json_content_type():
@@ -43,12 +46,16 @@ class BaseResource(Resource):
 class Blueprints(BaseResource):
 
     def get(self):
-        return {'hello': 'world'}
+        return blueprints
 
     def post_impl(self):
-        return {'hello': 'world'}
+        body = request.json
+
+        return blueprints
 
 api.add_resource(Blueprints, '/blueprints')
 
 if __name__ == '__main__':
+    file_server = FileServer()
+    file_server.start()
     app.run(debug=True)
