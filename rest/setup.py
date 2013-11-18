@@ -29,7 +29,9 @@ setup(
     description='Cloudify manager rest server',
     zip_safe=False,
     install_requires=[
-        'Flask'
+        'Flask',
+        'flask-restful'
     ],
+    tests_require = ['nose'],
     dependency_links=[]
 )

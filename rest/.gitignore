@@ -1,1 +1,6 @@
 *.iml
+*.pyc
+build/
+*.egg-info/
+dist/
+venv/
