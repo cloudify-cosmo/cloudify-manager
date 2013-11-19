@@ -1,15 +1,29 @@
 __author__ = 'dan'
 
 from datetime import datetime
+import uuid
+from flask.ext.restful import fields
+
 
 class BlueprintState(object):
 
+    resource_fields = {
+        'name': fields.String,
+        'id': fields.String,
+        'plan': fields.String,
+        'created_at': fields.DateTime,
+        'updated_at': fields.DateTime,
+        # 'permalink': fields.Url('blueprint_ep')
+    }
+
     def __init__(self, *args, **kwargs):
-        self.id = None #TODO generate
-        self.permalink = None #TODO implement
-        self.yml = kwargs['yml']
-        self.created_at = datetime.now()
-        self.updated_at = datetime.now()
+        self.plan = kwargs['json_plan']
+        self.name = kwargs['plan']['name']
+        self.id = uuid.uuid4()
+        now = datetime.now()
+        self.created_at = now
+        self.updated_at = now
+        self.yml = None #TODO kwargs['yml']
         self.topology = None #TODO kwargs['topology']
         self.deployments = None #TODO kwargs['deployments']
 

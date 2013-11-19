@@ -11,5 +11,9 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(0, len(result.json))
 
     def test_post(self):
-        result = self.post('/blueprints', {})
+        result = self.post_file('/blueprints',
+                                '/home/dan/dev/cosmo/cosmo-mezzanine-example/mezzanine-app.tar.gz',
+                                'application_archive',
+                                'mezzanine-app.tar.gz',
+                                {'application_file': 'mezzanine-app/mezzanine_blueprint.yaml'})
         print result.status_code

@@ -2,23 +2,29 @@ __author__ = 'dan'
 
 import unittest
 import json
-from manager_rest import server, file_server
+from manager_rest import server
+
 
 class BaseServerTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.file_server = file_server.FileServer()
-        self.file_server.start()
+        server.main()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
 
     def tearDown(self):
-        self.file_server.stop()
+        server.stop_file_server()
 
     def post(self, resource_path, data):
         result = self.app.post(resource_path, content_type='application/json', data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
+
+    def post_file(self, resource_path, file_path, attribute_name, file_name, data):
+        with open(file_path) as f:
+            result = self.app.post(resource_path, data=dict({attribute_name: (f, file_name)}.items() + data.items()))
+            result.json = json.loads(result.data)
+            return result
 
     def put(self, resource_path, data):
         result = self.app.put(resource_path, content_type='application/json', data=json.dumps(data))
