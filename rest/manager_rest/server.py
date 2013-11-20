@@ -16,6 +16,7 @@ file_server = None
 blueprints_manager = BlueprintsManager()
 
 api.add_resource(resources.Blueprints, '/blueprints')
+api.add_resource(resources.BlueprintsId, '/blueprints/<string:blueprint_id>')
 
 
 def copy_resources():
@@ -23,7 +24,7 @@ def copy_resources():
     file_server_root = app.config['FILE_SERVER_ROOT']
 
     # build orchestrator dir
-    orchestrator_resources = __file__
+    orchestrator_resources = path.abspath(__file__)
     for i in range(3):
         orchestrator_resources = path.dirname(orchestrator_resources)
     orchestrator_resources = path.join(orchestrator_resources, 'orchestrator/src/main/resources')
@@ -37,13 +38,16 @@ def copy_resources():
 
 
 def stop_file_server():
+    global file_server
     if file_server is not None:
         file_server.stop()
+
 
 
 def main():
     file_server_root = tempfile.mkdtemp()
     app.config['FILE_SERVER_ROOT'] = file_server_root
+    global file_server
     file_server = FileServer(file_server_root)
     file_server.start()
     copy_resources()

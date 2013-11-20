@@ -9,6 +9,11 @@ import responses
 import tarfile
 
 
+def blueprints_manager():
+    from server import blueprints_manager
+    return blueprints_manager
+
+
 def verify_json_content_type():
     if request.content_type != 'application/json':
         abort(415)
@@ -45,13 +50,12 @@ class BaseResource(Resource):
 class Blueprints(BaseResource):
 
     def get(self):
-        from server import blueprints_manager
         return [marshal(blueprint, responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager.blueprints_list()]
+                blueprint in blueprints_manager().blueprints_list()]
 
     @marshal_with(responses.BlueprintState.resource_fields)
     def post(self):
-        from server import blueprints_manager, app
+        from server import app
         file_server_root = app.config['FILE_SERVER_ROOT']
 
         # save uploaded file
@@ -69,4 +73,12 @@ class Blueprints(BaseResource):
         resources_base = file_server_base_url + '/'
 
         # add to blueprints manager (will also dsl_parse it)
-        return blueprints_manager.publish(dsl_path, alias_mapping, resources_base), 201
+        return blueprints_manager().publish(dsl_path, alias_mapping, resources_base), 201
+
+
+class BlueprintsId(BaseResource):
+
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def get(self, blueprint_id):
+        return blueprints_manager().get_blueprint(blueprint_id)
+
