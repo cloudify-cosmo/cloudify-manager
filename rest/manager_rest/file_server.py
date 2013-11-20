@@ -21,6 +21,7 @@ class FileServer(object):
         self.process.terminate()
 
     def start_impl(self):
+        print 'Starting file server and serving files from: ', self.root_path
         os.chdir(self.root_path)
         Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
         httpd = SocketServer.TCPServer(("", PORT), Handler)
