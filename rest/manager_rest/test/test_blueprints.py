@@ -16,4 +16,4 @@ class BlueprintsTestCase(BaseServerTestCase):
                                 'application_archive',
                                 'mezzanine-app.tar.gz',
                                 {'application_file': 'mezzanine-app/mezzanine_blueprint.yaml'})
-        print result.status_code
+        print result.json

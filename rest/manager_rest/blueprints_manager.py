@@ -16,10 +16,8 @@ class BlueprintsManager(object):
 
     # TODO: call celery tasks instead of doing this directly here
     def publish(self, dsl_location, alias_mapping_url, resources_base_url):
-        json_plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
-        plan = json.loads(json_plan)
-        new_json_plan = tasks.prepare_multi_instance_plan(plan)
-        new_plan = json.loads(new_json_plan)
-        new_blueprint = BlueprintState(json_plan=new_json_plan, plan=new_plan)
+        plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
+        plan = tasks.prepare_multi_instance_plan(json.loads(plan))
+        new_blueprint = BlueprintState(json_plan=plan, plan=json.loads(plan))
         self.blueprints.append(new_blueprint)
         return new_blueprint

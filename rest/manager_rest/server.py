@@ -18,6 +18,7 @@ file_server = FileServer(file_server_root)
 
 blueprints_manager = BlueprintsManager()
 
+
 def verify_json_content_type():
     if request.content_type != 'application/json':
         abort(415)
