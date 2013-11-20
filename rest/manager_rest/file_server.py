@@ -4,8 +4,6 @@ from multiprocessing import Process
 import SimpleHTTPServer
 import SocketServer
 import os
-import signal
-import time
 
 PORT = 53229
 
@@ -29,11 +27,4 @@ class FileServer(object):
         class TCPServer(SocketServer.TCPServer):
             allow_reuse_address = True
         httpd = TCPServer(('0.0.0.0', PORT), Handler)
-        # def handle(signum, frame):
-        #     print 'Shutting down file server'
-        #     httpd.shutdown()
-        #     time.sleep(1)
-        #     httpd.server_close()
-        # for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGQUIT]:
-        #     signal.signal(sig, handle)
         httpd.serve_forever()

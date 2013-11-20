@@ -52,7 +52,7 @@ def main():
     file_server.start()
     copy_resources()
     if __name__ == '__main__':
-        app.run(debug=True)
+        app.run()
 
 if __name__ == '__main__':
     main()
