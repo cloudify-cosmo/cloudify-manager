@@ -8,6 +8,7 @@ import tempfile
 from blueprints_manager import BlueprintsManager
 from os import path
 import shutil
+import argparse
 
 app = Flask(__name__)
 api = Api(app)
@@ -43,8 +44,19 @@ def stop_file_server():
         file_server.stop()
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--port',
+        help='The port to start the rest server in',
+        default=8100,
+        type=int
+    )
+    return parser.parse_args()
+
 
 def main():
+    args = parse_arguments()
     file_server_root = tempfile.mkdtemp()
     app.config['FILE_SERVER_ROOT'] = file_server_root
     global file_server
@@ -52,7 +64,7 @@ def main():
     file_server.start()
     copy_resources()
     if __name__ == '__main__':
-        app.run()
+        app.run(port=args.port)
 
 if __name__ == '__main__':
     main()
