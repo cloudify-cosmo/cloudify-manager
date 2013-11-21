@@ -1,0 +1,4 @@
+define mezzanine_app_module_init
+    execute_operation operation: 'deploy'
+    execute_relationship_workflow type: 'cloudify.relationships.connected_to'
+    execute_operation operation: 'start'

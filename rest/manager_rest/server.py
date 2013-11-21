@@ -14,14 +14,14 @@ app = Flask(__name__)
 api = Api(app)
 
 file_server = None
-blueprints_manager = BlueprintsManager()
+blueprints_manager = None
 
 api.add_resource(resources.Blueprints, '/blueprints')
 api.add_resource(resources.BlueprintsId, '/blueprints/<string:blueprint_id>')
+api.add_resource(resources.BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
 
 
 def copy_resources():
-
     file_server_root = app.config['FILE_SERVER_ROOT']
 
     # build orchestrator dir
@@ -52,19 +52,44 @@ def parse_arguments():
         default=8100,
         type=int
     )
+    parser.add_argument(
+        '--workflow_service_base_uri',
+        help='Workflow service base URI'
+    )
     return parser.parse_args()
 
 
+class TestArgs(object):
+    workflow_service_base_uri = None
+
+
 def main():
-    args = parse_arguments()
+    if app.config['Testing']:
+        args = TestArgs()
+    else:
+        args = parse_arguments()
+
+    if args.workflow_service_base_uri is not None:
+        workflow_service_base_uri = args.workflow_service_base_uri
+        if workflow_service_base_uri.endswith('/'):
+            workflow_service_base_uri = workflow_service_base_uri[0:-1]
+        app.config['WORKFLOW_SERVICE_BASE_URI'] = workflow_service_base_uri
+
     file_server_root = tempfile.mkdtemp()
     app.config['FILE_SERVER_ROOT'] = file_server_root
+
+    global blueprints_manager
+    blueprints_manager = BlueprintsManager()
+
     global file_server
     file_server = FileServer(file_server_root)
     file_server.start()
+
     copy_resources()
-    if __name__ == '__main__':
+
+    if not app.config['Testing']:
         app.run(host='0.0.0.0', port=args.port)
 
 if __name__ == '__main__':
+    app.config['Testing'] = False
     main()

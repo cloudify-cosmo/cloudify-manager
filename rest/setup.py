@@ -34,7 +34,8 @@ setup(
     install_requires=[
         'Flask',
         'flask-restful',
-        'cosmo-plugin-dsl-parser'
+        'cosmo-plugin-dsl-parser',
+        'requests'
     ],
     tests_require = ['nose'],
     dependency_links=[DSL_PARSER]

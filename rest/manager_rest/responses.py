@@ -11,14 +11,15 @@ class BlueprintState(object):
         'name': fields.String,
         'id': fields.String,
         'plan': fields.String,
-        'created_at': fields.DateTime,
-        'updated_at': fields.DateTime,
+        'createdAt': fields.DateTime(attribute='created_at'),
+        'updatedAt': fields.DateTime(attribute='updated_at'),
         # 'permalink': fields.Url('blueprint_ep')
     }
 
     def __init__(self, *args, **kwargs):
+        self.typed_plan = kwargs['plan']
         self.plan = kwargs['json_plan']
-        self.name = kwargs['plan']['name']
+        self.name = self.typed_plan['name']
         self.id = uuid.uuid4()
         now = datetime.now()
         self.created_at = now
@@ -26,6 +27,13 @@ class BlueprintState(object):
         self.yml = None #TODO kwargs['yml']
         self.topology = None #TODO kwargs['topology']
         self.deployments = None #TODO kwargs['deployments']
+        self.executions = {}
+
+    def add_execution(self, execution):
+        self.executions[str(execution.id)] = execution
+
+    def executions_list(self):
+        return self.executions.values()
 
 
 class Topology(object):
@@ -61,3 +69,23 @@ class Deployment(object):
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
         self.nodes = kwargs['nodes']
+
+
+class Execution(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'workflowId': fields.String(attribute='workflow_id'),
+        'blueprintId': fields.String(attribute='blueprint_id'),
+        'status': fields.String,
+        'createdAt': fields.DateTime(attribute='created_at')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.id = uuid.uuid4()
+        self.status = kwargs['state']
+        self.deployment_id = None #TODO
+        self.internal_workflow_id = kwargs['internal_workflow_id']
+        self.workflow_id = kwargs['workflow_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.created_at = kwargs['created_at']

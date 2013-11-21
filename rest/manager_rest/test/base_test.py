@@ -3,18 +3,17 @@ __author__ = 'dan'
 import unittest
 import json
 from manager_rest import server
-import time
+
 
 class BaseServerTestCase(unittest.TestCase):
 
     def setUp(self):
-        server.main()
         server.app.config['Testing'] = True
+        server.main()
         self.app = server.app.test_client()
 
     def tearDown(self):
         server.stop_file_server()
-        time.sleep(2)
 
     def post(self, resource_path, data):
         result = self.app.post(resource_path, content_type='application/json', data=json.dumps(data))
