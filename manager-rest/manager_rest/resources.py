@@ -57,6 +57,10 @@ class BlueprintsId(Resource):
 
 class BlueprintsIdExecutions(Resource):
 
+    def get(self, blueprint_id):
+        return [marshal(execution, responses.Execution.resource_fields) for
+                execution in blueprints_manager().get_blueprint(blueprint_id).executions_list()]
+
     @marshal_with(responses.Execution.resource_fields)
     def post(self, blueprint_id):
         verify_json_content_type()

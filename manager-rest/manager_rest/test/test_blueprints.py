@@ -44,9 +44,13 @@ class BlueprintsTestCase(BaseServerTestCase):
         get_blueprint_by_id_response = self.get('/blueprints/{0}'.format(post_blueprints_response['id'])).json
         self.assertEquals(post_blueprints_response, get_blueprint_by_id_response)
 
-    def test_post_blueprints_id_executions(self):
+    def test_post_blueprints_id_executions_and_then_get(self):
         blueprint = self.post_file(*self.post_blueprint_args()).json
-        execution = self.post('/blueprints/{0}/executions'.format(blueprint['id']), {
+        resource_path = '/blueprints/{0}/executions'.format(blueprint['id'])
+        execution = self.post(resource_path, {
             'workflowId': 'install'
         }).json
         self.assertEquals(execution['workflowId'], 'install')
+        get_execution = self.get(resource_path).json
+        self.assertEquals(1, len(get_execution))
+        self.assertEquals(execution, get_execution[0])
