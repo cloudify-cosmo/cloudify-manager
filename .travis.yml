@@ -29,9 +29,9 @@ install:
 
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
-#   - "mvn verify -f travis-pom.xml"
+   - "mvn verify -f travis-pom.xml"
    - "cd workflow-service; rake; cd .."
-#   - "nosetests workflows/tests"
+   - "nosetests workflows/tests"
 
 after_success:
 # upload orchestrator jars for develop and for master

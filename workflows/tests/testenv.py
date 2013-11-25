@@ -39,6 +39,85 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+class RuoteServiceProcess(object):
+
+    JRUBY_VERSION = '1.7.3'
+
+    def __init__(self, port=8101):
+        self._port = port
+        self._use_rvm = self._verify_ruby_environment()
+
+    def _get_installed_ruby_packages(self):
+        pass
+
+    def _verify_ruby_environment(self):
+        """ Verifies there's a valid JRuby environment.
+        RuntimeError is raised if not, otherwise returns a boolean value which indicates
+        whether RVM should be used for changing the current ruby environment before starting the service.
+        """
+        command = ['ruby', '--version']
+        try:
+            if self.JRUBY_VERSION in subprocess.check_output(command):
+                return False
+        except subprocess.CalledProcessError:
+            pass
+
+        command = ['rvm', 'list']
+        jruby_version = "jruby-{0}".format(self.JRUBY_VERSION)
+        try:
+            if jruby_version in subprocess.check_output(command):
+                return True
+        except subprocess.CalledProcessError:
+            pass
+
+        raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]".format(self.JRUBY_VERSION))
+
+    def _verify_service_responsiveness(self):
+        import urllib2
+        service_url = "http://localhost:{0}".format(self._port)
+        up = False
+        try:
+            res = urllib2.urlopen(service_url)
+            up = res.code == 200
+        except BaseException:
+            pass
+        if not up:
+            raise RuntimeError("Ruote service is not responding @ {0}".format(service_url))
+
+    def _verify_service_started(self, timeout=30):
+        pid_pattern = ".*WEBrick::HTTPServer#start:\spid=(\d*)"
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            line = self._process.stdout.readline().rstrip()
+            if line != '':
+                match = re.match(pid_pattern, line)
+                if match:
+                    self._pid = int(match.group(1))
+                    break
+        if not self._pid:
+            raise RuntimeError("Failed to start ruote service within a {0} seconds timeout".format(timeout))
+
+    def start(self):
+        startup_script_path = path.realpath(path.join(path.dirname(__file__), '..'))
+        script = path.join(startup_script_path, 'run_ruote_service.sh')
+        command = [script, str(self._use_rvm).lower(), str(self._port)]
+
+        logger.info("Starting Ruote service")
+        self._process = subprocess.Popen(command,
+                                         cwd=startup_script_path,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        self._verify_service_started(timeout=30)
+        logger.info("Ruote service started [pid=%s]", self._pid)
+
+    def close(self):
+        if self._process:
+            self._process.kill()
+        if self._pid:
+            logger.info("Shutting down Ruote service [pid=%s]", self._pid)
+            os.system("kill {0}".format(self._pid))
+
+
 class CeleryWorkerProcess(object):
     _process = None
 
@@ -228,6 +307,7 @@ class TestEnvironment(object):
     Creates the cosmo test environment:
         - Riemann server.
         - Celery worker.
+        - Ruote service (created for each test because of StateCache state).
         - Prepares celery app dir with plugins from cosmo module and official riemann configurer and plugin installer.
     """
     _instance = None
@@ -266,6 +346,7 @@ class TestEnvironment(object):
                                                               riemann_config_path, riemann_template_path,
                                                               self._riemann_process.pid)
             self._celery_worker_process.start()
+
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
@@ -352,6 +433,8 @@ class TestCase(unittest.TestCase):
     A test case for cosmo workflow tests.
     """
 
+    _ruote_service = None
+
     @classmethod
     def setUpClass(cls):
         TestEnvironment.create(TestEnvironmentScope.CLASS)
@@ -362,10 +445,15 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
+        self._ruote_service = RuoteServiceProcess()
+        self._ruote_service.start()
 
     def tearDown(self):
+        if self._ruote_service:
+            self._ruote_service.close()
         TestEnvironment.kill_cosmo_process()
         TestEnvironment.restart_celery_worker()
+
 
 def get_resource(resource):
     """
