@@ -19,12 +19,8 @@ before_script:
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn install -Pall -f travis-pom.xml -DskipTests"
-   - "wget http://jruby.org.s3.amazonaws.com/downloads/1.7.3/jruby-bin-1.7.3.tar.gz"
-   - "tar xzvf jruby-bin-1.7.3.tar.gz"
-   - "pwd"
-   - "rvm list known"
-   - "export PATH=$PATH:`pwd`/jruby-1.7.3/bin"
-   - "gem install bundler"
+   - "rvm install jruby-1.7.3"
+   - "rvm use jruby-1.7.3"
    - "cd workflow-service; bundle install; cd .."
    - "sudo pip install virtualenv"
    - "virtualenv ~/env"
