@@ -15,10 +15,16 @@ before_script:
    - "sudo rmdir /dev/shm"
    - "sudo ln -Tsf /{run,dev}/shm"
    - "sudo chmod 777 /dev/shm" # for celery worker
+   - "wget http://jruby.org.s3.amazonaws.com/downloads/1.7.3/jruby-bin-1.7.3.tar.gz"
+   - "tar xzvf jruby-bin-1.7.3.tar.gz"
+   - "pwd"
+   - "export PATH=$PATH:~/jruby-1.7.3/bin"
+   - "gem install bundler"
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn install -Pall -f travis-pom.xml -DskipTests"
+   - "cd workflow-service; bundle install; cd .."
    - "sudo pip install virtualenv"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
@@ -27,6 +33,7 @@ install:
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
+   - "cd workflow-service; rake; cd .."
    - "nosetests workflows/tests"
 
 after_success:
