@@ -296,4 +296,12 @@ class ExecuteTaskParticipant < Ruote::Participant
     JSON.pretty_generate(dict)
   end
 
+  def to_map(java_map)
+    map = Hash.new
+    unless java_map.nil?
+      java_map.each { |key, value| map[key] = value }
+    end
+    map
+  end
+
 end
