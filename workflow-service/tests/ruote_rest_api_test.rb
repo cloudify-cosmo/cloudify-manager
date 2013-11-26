@@ -40,7 +40,7 @@ class RuoteRestApiTest < Test::Unit::TestCase
   def test_launch
     radial = %/
 define wf
-  echo '1..2..3..'
+  echo 'hello!'
 /
     post '/workflows', {
         :radial => radial
@@ -52,7 +52,41 @@ define wf
     assert_includes res.keys, :id, :created
     assert_equal false, res[:id].empty?
     assert_equal false, res[:created].empty?
+  end
 
+  def test_launch_fields
+    radial = %/
+define wf
+  echo '$key'
+/
+    fields = {
+        :key => 'value'
+    }
+    post '/workflows', {
+        :radial => radial,
+        :fields => fields
+    }.to_json
+    res = JSON.parse(last_response.body, :symbolize_names => true)
+    wait_for_workflow_state(res[:id], :terminated, 5)
+  end
+
+  def test_launch_wrong_fields_type
+    radial = %/
+define wf
+  echo '$key'
+/
+    fields = [
+        :key => 'value'
+    ]
+    begin
+      post '/workflows', {
+          :radial => radial,
+          :fields => fields
+      }.to_json
+      assert_fail_assertion 'expected exception'
+    rescue
+      # expected...
+    end
   end
 
   def test_get_workflow_state
@@ -73,8 +107,23 @@ define wf
     assert_include %w(pending launched terminated), res[:state]
   end
 
-  #def test_launch_wrong_fields_type
-  #
-  #end
+  def wait_for_workflow_state(wfid, state, timeout=5)
+    deadline = Time.now + timeout
+    while Time.now < deadline
+      begin
+        get "/workflows/#{wfid}"
+        res = JSON.parse(last_response.body, :symbolize_names => true)
+        assert_equal state.to_s, res[:state]
+        break
+      rescue
+        sleep 0.5
+      end
+    end
+    get "/workflows/#{wfid}"
+    res = JSON.parse(last_response.body, :symbolize_names => true)
+    assert_equal state.to_s, res[:state]
+    res
+  end
+
 
 end
