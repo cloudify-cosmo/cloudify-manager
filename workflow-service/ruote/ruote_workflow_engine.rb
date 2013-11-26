@@ -107,6 +107,14 @@ class RuoteWorkflowEngine
   def on_msg(context)
     new_state = nil
     error = nil
+
+    # If wfid is not present in context it means this is a sub-workflow message
+    # we don't handle such messages at this point - perhaps later when we want to
+    # visualize workflow progress etc.. this might be relevant.
+    unless context.has_key?('wfid')
+      return
+    end
+
     case context['action']
       when 'launch'
         new_state = :launched
@@ -119,7 +127,6 @@ class RuoteWorkflowEngine
         # ignore..
     end
     unless new_state.nil?
-      raise "Illegal state, wfid not in context: #{context}" unless context.has_key?('wfid')
       update_workflow_state(context['wfid'], new_state, error)
     end
   end

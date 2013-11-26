@@ -71,4 +71,21 @@ define wf
     end
   end
 
+  # This test is used for verifying there's no problem with Ruote's on_msg
+  # mechanism for monitoring workflows activity since its also relevant for
+  # sub-workflows.
+  def test_sub_workflow
+    radial = %/
+define wf
+  echo 'parent workflow echo'
+  sub_wf
+  define sub_wf
+    echo 'this is a sub workflow echo'
+    sleep for: '2s'
+/
+    wf = @ruote.launch(radial)
+    assert_equal :pending, wf.state
+    wait_for_workflow_state(wf.id, :terminated, 10)
+  end
+
 end
