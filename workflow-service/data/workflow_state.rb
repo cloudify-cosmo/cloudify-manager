@@ -18,13 +18,14 @@ require 'json'
 
 class WorkflowState
 
-  attr_accessor :id, :state, :created, :launched
+  attr_accessor :id, :state, :created, :launched, :error
 
   def initialize(id, state, created, launched=nil)
     @id = id
     @state = state
     @created = created
     @launched = launched
+    @error = nil
   end
 
   def to_json
@@ -33,7 +34,8 @@ class WorkflowState
         :id => @id,
         :state => @state,
         :created => @created,
-        :launched => @launched
+        :launched => @launched,
+        :error => @error
     }.to_json
   end
 

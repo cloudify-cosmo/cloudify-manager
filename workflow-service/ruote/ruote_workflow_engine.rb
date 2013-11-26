@@ -47,7 +47,8 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'collect_params', CollectParamsParticipant
     @dashboard.add_service('ruote_listener', self)
     # in tests this will not work since Riemann is supposed to be running.
-    unless opts.include?(:test) and not opts[:test]
+    test = opts[:test]
+    if test.nil? or test.eql?(false)
       @context = create_service_dependencies
       $ruote_properties = {
           'executor' => @context.get_bean('taskExecutor'),
@@ -105,6 +106,7 @@ class RuoteWorkflowEngine
 
   def on_msg(context)
     new_state = nil
+    error = nil
     case context['action']
       when 'launch'
         new_state = :launched
@@ -112,17 +114,18 @@ class RuoteWorkflowEngine
         new_state = :terminated
       when 'error_intercepted'
         new_state = :failed
+        error = context['error']
       else
         # ignore..
     end
     if new_state
-      update_workflow_state(context['wfid'], new_state)
+      update_workflow_state(context['wfid'], new_state, error)
     end
   end
 
   private
 
-  def update_workflow_state(wfid, state)
+  def update_workflow_state(wfid, state, error=nil)
     begin
       @mutex.lock
       if state.eql?(:pending)
@@ -134,6 +137,8 @@ class RuoteWorkflowEngine
       wf_state.state = state
       if state.eql?(:launched)
         wf_state.launched = DateTime.now
+      elsif state.eql?(:failed)
+        wf_state.error = error
       end
       wf_state
     ensure
