@@ -55,17 +55,20 @@ define wf
 
   def wait_for_workflow_state(wfid, state, timeout=5)
     deadline = Time.now + timeout
-    while Time.now < deadline
+    state_ok = false
+    while not state_ok and Time.now < deadline
       begin
         wf = @ruote.get_workflow_state(wfid)
         assert_equal state, wf.state
-        break
-      rescue
+        state_ok = true
+      rescue Exception
         sleep 0.5
       end
     end
-    wf = @ruote.get_workflow_state(wfid)
-    assert_equal state, wf.state
+    unless state_ok
+      wf = @ruote.get_workflow_state(wfid)
+      assert_equal state, wf.state
+    end
   end
 
 end

@@ -14,6 +14,8 @@
 #  * limitations under the License.
 #
 
+ENV['RACK_ENV'] = 'test'
+
 require '../app'
 require 'test/unit'
 require 'rack/test'
@@ -109,19 +111,24 @@ define wf
 
   def wait_for_workflow_state(wfid, state, timeout=5)
     deadline = Time.now + timeout
-    while Time.now < deadline
+    state_ok = false
+    res = nil
+    while not state_ok and Time.now < deadline
       begin
         get "/workflows/#{wfid}"
         res = JSON.parse(last_response.body, :symbolize_names => true)
         assert_equal state.to_s, res[:state]
-        break
-      rescue
+        state_ok = true
+      rescue Exception
         sleep 0.5
       end
     end
-    get "/workflows/#{wfid}"
-    res = JSON.parse(last_response.body, :symbolize_names => true)
-    assert_equal state.to_s, res[:state]
+    unless state_ok
+      get "/workflows/#{wfid}"
+      res = JSON.parse(last_response.body, :symbolize_names => true)
+      puts "res: #{res[:state]}"
+      assert_equal state.to_s, res[:state]
+    end
     res
   end
 
