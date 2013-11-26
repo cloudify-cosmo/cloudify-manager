@@ -36,7 +36,7 @@ class BlueprintsManager(object):
     def validate_blueprint(self, blueprint_id):
         blueprint = self.get_blueprint(blueprint_id)
         # TODO raise error if blueprint does not exist
-        plan = blueprint.plan
+        plan = blueprint.typed_plan
         response = workflow_client().validate_workflows(plan)
         # TODO raise error if error
         return BlueprintValidationStatus(blueprint_id=blueprint_id,
@@ -46,7 +46,7 @@ class BlueprintsManager(object):
         blueprint = self.get_blueprint(blueprint_id)
         # TODO raise error if workflow not found
         workflow = blueprint.typed_plan['workflows'][workflow_id]
-        plan = blueprint.plan
+        plan = blueprint.typed_plan
         response = workflow_client().execute_workflow(workflow, plan)
         # TODO raise error if there is error in response
         new_execution = Execution(state=response['state'],
@@ -62,7 +62,7 @@ class BlueprintsManager(object):
         execution = self.get_execution(execution_id)
         # TODO raise error if execution not found
         response = workflow_client().get_workflow_status(execution.internal_workflow_id)
-        print '%%%%%%%%%%%%%%%%', response
+        # TODO add error to response if exists
         execution.status = response['state']
         return execution
 
