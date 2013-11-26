@@ -3,7 +3,7 @@ __author__ = 'dan'
 import requests
 import json
 import config
-
+import time
 
 class WorkflowClient(object):
 
@@ -25,11 +25,13 @@ class WorkflowClient(object):
         '''
         execution_response = self.execute_workflow(prepare_plan_participant_workflow, plan)
         response = {'state': 'pending'}
-        while response['state'] is not 'terminated' or response['state'] is not 'failed':
+        while response['state'] != 'terminated' and response['state'] != 'failed':
             response = self.get_workflow_status(execution_response['id'])
+            time.sleep(1)
         # This is good
-        if response['state'] is 'terminated':
+        if response['state'] == 'terminated':
             return {'status': 'valid'}
+        # This is bad
         else:
             return {'status': 'invalid'}
 

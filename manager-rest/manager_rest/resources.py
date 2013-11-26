@@ -67,7 +67,7 @@ class BlueprintsIdValidate(Resource):
 
     @marshal_with(responses.BlueprintValidationStatus.resource_fields)
     def get(self, blueprint_id):
-        return blueprints_manager().get_blueprint(blueprint_id)
+        return blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class BlueprintsIdExecutions(Resource):

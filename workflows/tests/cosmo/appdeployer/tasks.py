@@ -24,8 +24,8 @@ import tarfile
 import requests
 import json
 
-COSMO_JAR = os.environ.get('COSMO_JAR')
 TEMP_DIR = os.environ.get('TEMP_DIR')
+
 
 logger = get_task_logger(__name__)
 return_value = Queue.Queue()

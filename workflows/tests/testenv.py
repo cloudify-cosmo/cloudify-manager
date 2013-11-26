@@ -548,7 +548,7 @@ def validate_dsl(dsl_path, timeout=240):
     A blocking method which validates a dsl from the provided dsl path.
     """
     from cosmo.appdeployer.tasks import submit_and_validate_blueprint
-    result = submit_and_validate_blueprint(dsl_path)
+    result = submit_and_validate_blueprint.delay(dsl_path)
     response = result.get(timeout=60, propagate=True)
-    if response['status'] is not 'valid':
+    if response['status'] != 'valid':
         raise RuntimeError('Blueprint {0} is not valid'.format(dsl_path))
