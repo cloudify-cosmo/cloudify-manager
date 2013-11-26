@@ -90,6 +90,7 @@ class RuoteServiceProcess(object):
     JRUBY_VERSION = '1.7.3'
 
     def __init__(self, port=8101):
+        self._pid = None
         self._port = port
         self._use_rvm = self._verify_ruby_environment()
 
@@ -140,7 +141,7 @@ class RuoteServiceProcess(object):
                 if match:
                     self._pid = int(match.group(1))
                     break
-        if not self._pid:
+        if self._pid is None:
             raise RuntimeError("Failed to start ruote service within a {0} seconds timeout".format(timeout))
 
     def start(self):
@@ -395,7 +396,7 @@ class TestEnvironment(object):
 
             # manager rest
             port = '8100'
-            worker_service_base_uri = 'http://TODO'
+            worker_service_base_uri = 'http://localhost:8101'
             self._manager_rest_process = ManagerRestProcess(port,
                                                             worker_service_base_uri)
             self._manager_rest_process.start()
@@ -531,15 +532,15 @@ def deploy_application(dsl_path, timeout=240):
 
     from cosmo.appdeployer.tasks import submit_and_execute_workflow, get_execution_status
     result = submit_and_execute_workflow.delay(dsl_path)
-    result.get(timeout=60, propagate=True)
+    execution_response = result.get(timeout=60, propagate=True)
     r = {'status': 'pending'}
-    while r['status'] is not 'terminated' or r['status'] is not 'failed':
+    while r['status'] != 'terminated' and r['status'] != 'failed':
         if end < time.time():
             raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
         time.sleep(1)
-        r = get_execution_status.delay().get(timeout=60, propagate=True)
-    if r['status'] is not 'terminated':
-        raise RuntimeError('Application deployment failed')
+        r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
+    if r['status'] != 'terminated':
+        raise RuntimeError('Application deployment failed. (workflow: {0})'.format(r))
 
 
 def validate_dsl(dsl_path, timeout=240):

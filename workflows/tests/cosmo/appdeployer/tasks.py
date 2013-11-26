@@ -70,13 +70,13 @@ class ManagerRestClientTestClient(object):
             raise RuntimeError('Install workflow execution failed for blueprint: {0}'.format(blueprint_response['id']))
         return response.json()
 
-    def get_execution_status(self, execution_response):
+    def get_execution_status(self, execution_id):
         response = requests.get('{0}/executions/{1}'.format(
-            self.base_manager_rest_uri, execution_response['id']),
+            self.base_manager_rest_uri, execution_id),
             headers={'Content-Type': 'application/json'})
         if response.status_code != 200:
             raise RuntimeError('Failed getting workflow execution status for workflow id {0}'.format(
-                execution_response['id']))
+                execution_id))
         return response.json()
 
     def _tar_blueprint(self, blueprint_path):

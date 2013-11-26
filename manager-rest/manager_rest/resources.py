@@ -25,7 +25,7 @@ def setup_resources(api):
     api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
     api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
-    api.add_resource(BlueprintsIdValidate, 'blueprints/<string:blueprint_id>/validate')
+    api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
 
 
 class Blueprints(Resource):
@@ -80,7 +80,7 @@ class BlueprintsIdExecutions(Resource):
     def post(self, blueprint_id):
         verify_json_content_type()
         workflow_id = request.json['workflowId']
-        return blueprints_manager().execute_workflow(blueprint_id, workflow_id)
+        return blueprints_manager().execute_workflow(blueprint_id, workflow_id), 201
 
 
 class ExecutionsId(Resource):

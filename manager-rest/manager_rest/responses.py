@@ -90,7 +90,7 @@ class Execution(object):
         'workflowId': fields.String(attribute='workflow_id'),
         'blueprintId': fields.String(attribute='blueprint_id'),
         'status': fields.String,
-        'createdAt': fields.DateTime(attribute='created_at')
+        'createdAt': fields.String(attribute='created_at')
     }
 
     def __init__(self, *args, **kwargs):
