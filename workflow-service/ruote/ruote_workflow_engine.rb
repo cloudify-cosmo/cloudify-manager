@@ -118,7 +118,8 @@ class RuoteWorkflowEngine
       else
         # ignore..
     end
-    if new_state
+    unless new_state.nil?
+      raise "Illegal state, wfid not in context: #{context}" unless context.has_key?('wfid')
       update_workflow_state(context['wfid'], new_state, error)
     end
   end
