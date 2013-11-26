@@ -61,7 +61,7 @@ define wf
         wf = @ruote.get_workflow_state(wfid)
         assert_equal state, wf.state
         state_ok = true
-      rescue
+      rescue Exception
         sleep 0.5
       end
     end

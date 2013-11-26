@@ -119,7 +119,7 @@ define wf
         res = JSON.parse(last_response.body, :symbolize_names => true)
         assert_equal state.to_s, res[:state]
         state_ok = true
-      rescue
+      rescue Exception
         sleep 0.5
       end
     end
