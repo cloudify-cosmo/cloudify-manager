@@ -448,11 +448,13 @@ def deploy_application(dsl_path, timeout=240):
     result = submit_and_execute_workflow.delay(dsl_path)
     result.get(timeout=60, propagate=True)
     r = {'status': 'pending'}
-    while r['status'] is not 'done':
+    while r['status'] is not 'terminated' or r['status'] is not 'failed':
         if end < time.time():
             raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
         time.sleep(1)
         r = get_execution_status.delay().get(timeout=60, propagate=True)
+    if r['status'] is not 'terminated':
+        raise RuntimeError('Application deployment failed')
 
 
 def validate_dsl(dsl_path, timeout=240):
@@ -461,4 +463,6 @@ def validate_dsl(dsl_path, timeout=240):
     """
     from cosmo.appdeployer.tasks import submit_and_validate_blueprint
     result = submit_and_validate_blueprint(dsl_path)
-    return result.get(timeout=60, propagate=True)
+    response = result.get(timeout=60, propagate=True)
+    if response['status'] is not 'valid':
+        raise RuntimeError('Blueprint {0} is not valid'.format(dsl_path))

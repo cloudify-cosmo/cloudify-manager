@@ -20,10 +20,18 @@ class WorkflowClient(object):
         return response.json()
 
     def validate_workflows(self, plan):
-        response = requests.put('{0}/workflows/validate'.format(self.workflow_service_base_uri),
-                                json.dumps({'fields': {'plan': plan}}))
-        # TODO: handle error code
-        return response.json()
+        prepare_plan_participant_workflow = '''define validate
+    prepare_plan plan: $plan
+        '''
+        execution_response = self.execute_workflow(prepare_plan_participant_workflow, plan)
+        response = {'state': 'pending'}
+        while response['state'] is not 'terminated' or response['state'] is not 'failed':
+            response = self.get_workflow_status(execution_response['id'])
+        # This is good
+        if response['state'] is 'terminated':
+            return {'status': 'valid'}
+        else:
+            return {'status': 'invalid'}
 
     def get_workflow_status(self, workflow_id):
         response = requests.get('{0}/workflows/{1}'.format(self.workflow_service_base_uri, workflow_id))
