@@ -152,7 +152,7 @@ class RuoteWorkflowEngine
   end
 
   def load_built_in_workflows
-    pattern = File.join(File.dirname(__FILE__), 'workflows/*.radial')
+    pattern = File.join(File.dirname(__FILE__), '../workflows/*.radial')
     Dir.glob(pattern).each do |file|
       radial = File.open(file).read
       wf_name = Pathname.new(file).basename.to_s.sub('.radial', '')
