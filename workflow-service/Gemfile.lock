@@ -22,8 +22,8 @@ GEM
     rufus-dollar (1.0.4)
     rufus-json (1.0.6)
     rufus-mnemo (1.2.3)
-    rufus-scheduler (3.0.2)
-      tzinfo
+    rufus-scheduler (2.0.24)
+      tzinfo (>= 0.3.22)
     rufus-treechecker (1.0.8)
       ruby_parser (>= 2.0.5)
     ruote (2.3.0.2)
@@ -60,6 +60,7 @@ PLATFORMS
 
 DEPENDENCIES
   rack-test (~> 0.6.2)
+  rufus-scheduler (~> 2.0.24)
   ruote (~> 2.3.0.2)
   sinatra (~> 1.4.4)
   test-unit (~> 2.5.5)

@@ -18,7 +18,7 @@ require 'sinatra'
 require 'json'
 require_relative 'ruote/ruote_workflow_engine'
 
-$ruote_service = RuoteWorkflowEngine.new(:testing => settings.test?)
+$ruote_service = RuoteWorkflowEngine.new(:test => settings.test?)
 
 
 class RuoteServiceApp < Sinatra::Base

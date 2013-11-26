@@ -55,22 +55,23 @@ define wf
 
   end
 
-#  def test_workflow_in_running_state
-#    radial = %/
-#define wf
-#  echo 'waiting...'
-#  wait for: 5s
-#/
-#    post '/workflows', {
-#        :radial => radial
-#    }.to_json
-#    assert_equal 200, last_response.status
-#    res = JSON.parse(last_response.body, :symbolize_names => true)
-#    wfid = res[:id]
-#    get "/workflows/#{wfid}"
-#    res = JSON.parse(last_response.body, :symbolize_names => true)
-#    puts res
-#  end
+  def test_get_workflow_state
+    radial = %/
+define wf
+  echo 'hello!'
+/
+    post '/workflows', {
+        :radial => radial
+    }.to_json
+    assert_equal 200, last_response.status
+    res = JSON.parse(last_response.body, :symbolize_names => true)
+    wfid = res[:id]
+    get "/workflows/#{wfid}"
+    res = JSON.parse(last_response.body, :symbolize_names => true)
+    assert_equal 'workflow_state', res[:type]
+    assert_equal wfid, res[:id]
+    assert_include %w(pending launched terminated), res[:state]
+  end
 
   #def test_launch_wrong_fields_type
   #

@@ -34,7 +34,9 @@ java_import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime
 
 class RuoteWorkflowEngine
 
-  def initialize(opts = { :testing => false })
+  def initialize(opts={})
+    @mutex = Mutex.new
+    @states = Hash.new
     @dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
     @dashboard.register_participant 'state', StateCacheParticipant
     @dashboard.register_participant 'execute_task', ExecuteTaskParticipant
@@ -43,13 +45,13 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'log', LoggerParticipant
     @dashboard.register_participant 'event', EventParticipant
     @dashboard.register_participant 'collect_params', CollectParamsParticipant
+    @dashboard.add_service('ruote_listener', self)
     # in tests this will not work since Riemann is supposed to be running.
-    testing = opts[:testing]
-    unless testing
+    unless opts.include?(:test) and not opts[:test]
       @context = create_service_dependencies
       $ruote_properties = {
-        'executor' => @context.get_bean('taskExecutor'),
-        'state_cache' => @context.get_bean('stateCache')
+          'executor' => @context.get_bean('taskExecutor'),
+          'state_cache' => @context.get_bean('stateCache')
       }
     end
     $logger = LoggerFactory.get_logger(RuoteRuntime.java_class)
@@ -74,7 +76,7 @@ class RuoteWorkflowEngine
   def launch(radial, fields={})
     workflow = Ruote::RadialReader.read(radial)
     wfid = @dashboard.launch(workflow, fields)
-    WorkflowState.new(wfid, :pending, DateTime.now)
+    update_workflow_state(wfid, :pending)
   end
 
   def cancel_workflow(wfid)
@@ -88,16 +90,13 @@ class RuoteWorkflowEngine
   # Ruote only keeps state for running workflows, that means that workflows which were just launched
   # but not yet started and terminated workflows won't have states kept in Ruote.
   def get_workflow_state(wfid)
-    #state = @dashboard.process(wfid)
-    #if state
-    #  puts "-- state is: #{state}"
-    #  puts "-- state type is #{state.class}"
-    #  puts "-- launched_time: #{state.launched_time}"
-    #else
-    #  puts "no state"
-    #end
-    #WorkflowState.new(wfid, :unknown, DateTime.now)
-    raise 'not implemented'
+    begin
+      @mutex.lock
+      verify_workflow_exists(wfid)
+      return @states[wfid]
+    ensure
+      @mutex.unlock
+    end
   end
 
   def get_workflows
@@ -105,10 +104,47 @@ class RuoteWorkflowEngine
   end
 
   def on_msg(context)
-    raise 'not implemented'
+    new_state = nil
+    case context['action']
+      when 'launch'
+        new_state = :launched
+      when 'terminated'
+        new_state = :terminated
+      when 'error_intercepted'
+        new_state = :failed
+      else
+        # ignore..
+    end
+    if new_state
+      update_workflow_state(context['wfid'], new_state)
+    end
   end
 
   private
+
+  def update_workflow_state(wfid, state)
+    begin
+      @mutex.lock
+      if state.eql?(:pending)
+        new_state = WorkflowState.new(wfid, state, DateTime.now)
+        @states[wfid] = new_state
+        return new_state
+      end
+      wf_state = verify_workflow_exists(wfid)
+      wf_state.state = state
+      if state.eql?(:launched)
+        wf_state.launched = DateTime.now
+      end
+      wf_state
+    ensure
+      @mutex.unlock
+    end
+  end
+
+  def verify_workflow_exists(wfid)
+    raise "Workflow doesn't exist [wfid=#{wfid}]" unless @states.has_key?(wfid)
+    @states[wfid]
+  end
 
   def load_built_in_workflows
     pattern = File.join(File.dirname(__FILE__), 'workflows/*.radial')
