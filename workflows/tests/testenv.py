@@ -445,7 +445,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
-        self._ruote_service = RuoteServiceProcess()
+        # self._ruote_service = RuoteServiceProcess()
         # self._ruote_service.start()
 
     def tearDown(self):
