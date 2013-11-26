@@ -44,7 +44,7 @@ class RuoteServiceApp < Sinatra::Base
     raise 'radial key is missing in request' unless req.has_key?(:radial)
     fields = {}
     if req.has_key?(:fields)
-      fields_type = type(req[:fields])
+      fields_type = req[:fields].class
       raise "fields value type is expected to be hash/map but is #{fields_type}" unless fields_type.eql?(Hash)
       fields = req[:fields]
     end
