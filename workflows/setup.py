@@ -52,7 +52,8 @@ setup(
         "nose",
         "cosmo-plugin-plugin-installer",
         "cosmo-plugin-riemann-configurer",
-        "cosmo-plugin-dsl-parser"
+        "cosmo-plugin-dsl-parser",
+        "requests"
     ],
     dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER, DSL_PARSER]
 )

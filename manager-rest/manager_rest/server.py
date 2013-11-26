@@ -1,28 +1,31 @@
 __author__ = 'dan'
 
+import config
 import resources
 from file_server import FileServer
 from flask import Flask
 from flask.ext.restful import Api
 import tempfile
-from blueprints_manager import BlueprintsManager
 from os import path
 import shutil
 import argparse
+import signal
+import sys
+import logging
+import blueprints_manager
 
 app = Flask(__name__)
+app.logger.setLevel(logging.DEBUG)
+app.logger.addHandler(logging.StreamHandler(sys.stdout))
+
 api = Api(app)
+resources.setup_resources(api)
 
 file_server = None
-blueprints_manager = None
-
-api.add_resource(resources.Blueprints, '/blueprints')
-api.add_resource(resources.BlueprintsId, '/blueprints/<string:blueprint_id>')
-api.add_resource(resources.BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
 
 
 def copy_resources():
-    file_server_root = app.config['FILE_SERVER_ROOT']
+    file_server_root = config.instance().file_server_root
 
     # build orchestrator dir
     orchestrator_resources = path.abspath(__file__)
@@ -38,10 +41,20 @@ def copy_resources():
     shutil.copy(alias_mapping_resource, path.join(file_server_root, 'cloudify/alias-mappings.yaml'))
 
 
+def setup_shutdown_hook():
+    #TODO this handler is called twice which in turn leads to an exception thrown during the file server shutdown
+    def handle(*_):
+        stop_file_server()
+        sys.exit()
+    for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGQUIT]:
+        signal.signal(sig, handle)
+
+
 def stop_file_server():
     global file_server
     if file_server is not None:
         file_server.stop()
+        file_server = None
 
 
 def parse_arguments():
@@ -59,12 +72,15 @@ def parse_arguments():
     return parser.parse_args()
 
 
-class TestArgs(object):
-    workflow_service_base_uri = None
+def reset_state():
+    config.reset()
+    blueprints_manager.reset()
 
 
 def main():
     if app.config['Testing']:
+        class TestArgs(object):
+            workflow_service_base_uri = None
         args = TestArgs()
     else:
         args = parse_arguments()
@@ -73,13 +89,10 @@ def main():
         workflow_service_base_uri = args.workflow_service_base_uri
         if workflow_service_base_uri.endswith('/'):
             workflow_service_base_uri = workflow_service_base_uri[0:-1]
-        app.config['WORKFLOW_SERVICE_BASE_URI'] = workflow_service_base_uri
+        config.instance().workflow_service_base_uri = workflow_service_base_uri
 
     file_server_root = tempfile.mkdtemp()
-    app.config['FILE_SERVER_ROOT'] = file_server_root
-
-    global blueprints_manager
-    blueprints_manager = BlueprintsManager()
+    config.instance().file_server_root = file_server_root
 
     global file_server
     file_server = FileServer(file_server_root)
@@ -91,5 +104,7 @@ def main():
         app.run(host='0.0.0.0', port=args.port)
 
 if __name__ == '__main__':
+    setup_shutdown_hook()
     app.config['Testing'] = False
+    config.instance().test_mode = False
     main()

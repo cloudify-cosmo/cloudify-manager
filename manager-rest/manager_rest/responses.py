@@ -36,6 +36,18 @@ class BlueprintState(object):
         return self.executions.values()
 
 
+class BlueprintValidationStatus(object):
+
+    resource_fields = {
+        'blueprintId': fields.String(attribute='blueprint_id'),
+        'status': fields.String
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.blueprint_id = kwargs['blueprint_id']
+        self.status = kwargs['status']
+
+
 class Topology(object):
 
     def __init__(self, *args, **kwargs):

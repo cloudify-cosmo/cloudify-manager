@@ -3,11 +3,14 @@ __author__ = 'dan'
 import unittest
 import json
 from manager_rest import server
+from manager_rest import config
 
 
 class BaseServerTestCase(unittest.TestCase):
 
     def setUp(self):
+        server.reset_state()
+        config.instance().test_mode = True
         server.app.config['Testing'] = True
         server.main()
         self.app = server.app.test_client()

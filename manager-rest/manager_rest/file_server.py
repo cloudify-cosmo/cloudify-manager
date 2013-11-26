@@ -18,13 +18,18 @@ class FileServer(object):
         self.process.start()
 
     def stop(self):
-        self.process.terminate()
+        try:
+            self.process.terminate()
+        except BaseException:
+            pass
 
     def start_impl(self):
-        print 'Starting file server and serving files from: ', self.root_path
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
+        logging.info('Starting file server and serving files from: %s', self.root_path)
         os.chdir(self.root_path)
-        Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+
         class TCPServer(SocketServer.TCPServer):
             allow_reuse_address = True
-        httpd = TCPServer(('0.0.0.0', PORT), Handler)
+        httpd = TCPServer(('0.0.0.0', PORT), SimpleHTTPServer.SimpleHTTPRequestHandler)
         httpd.serve_forever()

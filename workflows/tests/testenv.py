@@ -27,6 +27,7 @@ import cosmo
 import time
 import threading
 import re
+import requests
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -37,6 +38,52 @@ root.addHandler(ch)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+class ManagerRestProcess(object):
+
+    def __init__(self, port, workflow_service_base_uri):
+        self.process = None
+        self.port = port
+        self.workflow_service_base_uri = workflow_service_base_uri
+
+    def start(self, timeout=2000):
+        endtime = time.time() + timeout
+
+        manager_rest_command = [
+            sys.executable,
+            self.locate_manager_rest(),
+            '--port', self.port,
+            '--workflow_service_base_uri', self.workflow_service_base_uri
+        ]
+        self.process = subprocess.Popen(manager_rest_command)
+        started = False
+        while not started and time.time() < endtime:
+            time.sleep(1)
+            logger.info('Testing connection to manager rest service')
+            started = self.started()
+        if not started:
+            raise RuntimeError('Failed opening connection to manager rest service')
+
+    def started(self):
+        try:
+            requests.get('http://localhost:8100/blueprints')
+            return True
+        except:
+            return False
+
+    def close(self):
+        if not self.process is None:
+            self.process.terminate()
+
+    def locate_manager_rest(self):
+        # start with current location
+        manager_rest_location = path.abspath(__file__)
+        # get to cosmo-manager
+        for i in range(3):
+            manager_rest_location = path.dirname(manager_rest_location)
+        # build way into manager_rest
+        return path.join(manager_rest_location, 'manager-rest/manager_rest/server.py')
 
 
 class CeleryWorkerProcess(object):
@@ -266,6 +313,14 @@ class TestEnvironment(object):
                                                               riemann_config_path, riemann_template_path,
                                                               self._riemann_process.pid)
             self._celery_worker_process.start()
+
+            # manager rest
+            port = '8100'
+            worker_service_base_uri = 'http://TODO'
+            self._manager_rest_process = ManagerRestProcess(port,
+                                                            worker_service_base_uri)
+            self._manager_rest_process.start()
+
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
@@ -277,6 +332,8 @@ class TestEnvironment(object):
             self._riemann_process.close()
         if self._celery_worker_process:
             self._celery_worker_process.close()
+        if self._manager_rest_process:
+            self._manager_rest_process.close()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
             shutil.rmtree(self._tempdir, ignore_errors=True)
@@ -364,7 +421,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
-        TestEnvironment.kill_cosmo_process()
+        # TestEnvironment.kill_cosmo_process()
         TestEnvironment.restart_celery_worker()
 
 def get_resource(resource):
@@ -387,42 +444,21 @@ def deploy_application(dsl_path, timeout=240):
 
     end = time.time() + timeout
 
-    from cosmo.appdeployer.tasks import run_manager
-    from cosmo.appdeployer.tasks import get_manager_return_value
-    from cosmo.appdeployer.tasks import kill
-    result = run_manager.delay(dsl_path)
+    from cosmo.appdeployer.tasks import submit_and_execute_workflow, get_execution_status
+    result = submit_and_execute_workflow.delay(dsl_path)
     result.get(timeout=60, propagate=True)
-    r = None
-    try:
-        while r is None:
-            if end < time.time():
-                raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
-            time.sleep(1)
-            r = get_manager_return_value.delay().get(timeout=60, propagate=True)
-    except Exception, e:
-        kill.delay().get()
-        raise e
+    r = {'status': 'pending'}
+    while r['status'] is not 'done':
+        if end < time.time():
+            raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
+        time.sleep(1)
+        r = get_execution_status.delay().get(timeout=60, propagate=True)
 
 
 def validate_dsl(dsl_path, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
     """
-
-    end = time.time() + timeout
-
-    from cosmo.appdeployer.tasks import run_manager
-    from cosmo.appdeployer.tasks import get_manager_return_value
-    from cosmo.appdeployer.tasks import kill
-    result = run_manager.delay(dsl_path, validate=True)
-    result.get(timeout=60, propagate=True)
-    r = None
-    try:
-        while r is None:
-            if end < time.time():
-                raise RuntimeError('Timeout validating {0}'.format(dsl_path))
-            time.sleep(1)
-            r = get_manager_return_value.delay().get(timeout=60, propagate=True)
-    except Exception, e:
-        kill.delay().get()
-        raise e
+    from cosmo.appdeployer.tasks import submit_and_validate_blueprint
+    result = submit_and_validate_blueprint(dsl_path)
+    return result.get(timeout=60, propagate=True)
