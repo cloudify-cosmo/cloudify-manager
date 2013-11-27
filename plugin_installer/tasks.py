@@ -55,30 +55,30 @@ def install(plugin, __cloudify_id, **kwargs):
 def verify_plugin(worker_id, plugin_name, operation, **kwargs):
     out = run_command("{0} inspect registered -d {1} --no-color".format(get_celery(), worker_id))
     lines = out.splitlines()
-    registered_tasks = list()
     operation_name = operation.split(".")[-1]
     registered_operations = []
     for line in lines:
         processed_line = line.strip()
         if processed_line.startswith("*"):
             task = processed_line[1:].strip()
-            registered_operations.append(task)
-            if task.startswith(plugin_name) and task.endswith("." + operation_name):
-                cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
-                plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
-                taskspy_path = os.path.join(plugin_dir, "tasks.py")
-                parsed_tasks_file = ast.parse(open(taskspy_path, 'r').read())
-                method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
-                                            parsed_tasks_file.body)
-                if not method_description:
-                    raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
-                                       .format(operation_name, taskspy_path, plugin_name))
-                return map(lambda arg: arg.id, method_description[0].args.args)
-            else:
-                registered_tasks.append(task)
-    raise RuntimeError("""unable to locate operation {0} in celery registered tasks, make sure the plugin has an "
-                       "implementation of this operation.
-                       Registered operation are: {1}""".format(operation_name, registered_operations))
+            if task.startswith(plugin_name):
+                registered_operations.append(task)
+                if task.endswith("." + operation_name):
+                    cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
+                    plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
+                    taskspy_path = os.path.join(plugin_dir, "tasks.py")
+                    parsed_tasks_file = ast.parse(open(taskspy_path, 'r').read())
+                    method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
+                                                parsed_tasks_file.body)
+                    if not method_description:
+                        raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
+                                           .format(operation_name, taskspy_path, plugin_name))
+                    return map(lambda arg: arg.id, method_description[0].args.args)
+    raise RuntimeError(
+"""unable to locate plugin {0} operation {1} in celery registered tasks, make sure the plugin has an implementation of
+this
+operation.
+Registered plugin operation are: {2}""".format(plugin_name, operation_name, registered_operations))
 
 
 def get_pip():
