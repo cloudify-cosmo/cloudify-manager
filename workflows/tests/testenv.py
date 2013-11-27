@@ -56,6 +56,9 @@ class ManagerRestProcess(object):
             '--port', self.port,
             '--workflow_service_base_uri', self.workflow_service_base_uri
         ]
+
+        logger.info('Starting manager-rest with: {0}'.format(manager_rest_command))
+
         self.process = subprocess.Popen(manager_rest_command)
         started = False
         while not started and time.time() < endtime:
