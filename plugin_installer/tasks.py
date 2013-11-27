@@ -57,10 +57,12 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
     lines = out.splitlines()
     registered_tasks = list()
     operation_name = operation.split(".")[-1]
+    registered_operations = []
     for line in lines:
         processed_line = line.strip()
         if processed_line.startswith("*"):
             task = processed_line[1:].strip()
+            registered_operations.append(task)
             if task.startswith(plugin_name) and task.endswith("." + operation_name):
                 cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
                 plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
@@ -74,7 +76,9 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
                 return map(lambda arg: arg.id, method_description[0].args.args)
             else:
                 registered_tasks.append(task)
-    return False
+    raise RuntimeError("""unable to locate operation {0} in celery registered tasks, make sure the plugin has an "
+                       "implementation of this operation.
+                       Registered operation are: {1}""".format(operation_name, registered_operations))
 
 
 def get_pip():
