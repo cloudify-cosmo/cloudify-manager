@@ -2,21 +2,25 @@ define execute_operation
     prepare_operation operation: "${v:operation}",
                       relationship: "$v:relationship"
 
+    sequence if: '${worker_id} != celery.cloudify.management'
+        repeat
+            log message: 'waiting for plugin installation completion on host node ${node.host_id}'
+            break if: '${v:${node.host_id}_plugins_installed} == True'
+            wait for: '5s'
+
     set "v:plugin_verification_task": "cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin"
-    repeat
-        log message: 'verifying plugin: ${plugin_name} and operation ${operation} is installed on target and fetching
-         the operation argument names: ${target}'
-        execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
-            properties: {
-                worker_id: "${worker_id}",
-                plugin_name: "${plugin_name}",
-                operation: "${operation}"
-            }
-        }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
-        log message: 'plugin verification argument names fetching result for ${plugin_name} on ${target} is:
-        ${argument_names}'
-        break if: '${argument_names} != False'
-        wait for: '5s'
+
+    log message: 'verifying plugin: ${plugin_name} and operation ${operation} is installed on target and fetching the
+     operation argument names: ${target}'
+    execute_task target: '${target}', exec: "${v:plugin_verification_task}", payload: {
+        properties: {
+            worker_id: "${worker_id}",
+            plugin_name: "${plugin_name}",
+            operation: "${operation}"
+        }
+    }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
+    log message: 'plugin verification argument names fetching result for ${plugin_name} on ${target} is:
+    ${argument_names}'
 
     execute_task target: '${target}', exec: '${operation}', payload: {
         properties: '$node.properties',
