@@ -90,6 +90,7 @@ class Execution(object):
         'workflowId': fields.String(attribute='workflow_id'),
         'blueprintId': fields.String(attribute='blueprint_id'),
         'status': fields.String,
+        'error': fields.String,
         'createdAt': fields.String(attribute='created_at')
     }
 
@@ -101,3 +102,4 @@ class Execution(object):
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
+        self.error = 'None'

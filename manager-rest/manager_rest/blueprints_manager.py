@@ -61,8 +61,9 @@ class BlueprintsManager(object):
         execution = self.get_execution(execution_id)
         # TODO raise error if execution not found
         response = workflow_client().get_workflow_status(execution.internal_workflow_id)
-        # TODO add error to response if exists
         execution.status = response['state']
+        if execution.status == 'failed':
+            execution.error = response['error']
         return execution
 
 

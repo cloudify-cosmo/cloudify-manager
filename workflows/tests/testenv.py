@@ -545,7 +545,7 @@ def deploy_application(dsl_path, timeout=240):
         time.sleep(1)
         r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
     if r['status'] != 'terminated':
-        raise RuntimeError('Application deployment failed. (workflow: {0})'.format(r))
+        raise RuntimeError('Application deployment failed. (status response: {0})'.format(r))
 
 
 def validate_dsl(dsl_path, timeout=240):
