@@ -16,11 +16,10 @@ class BlueprintsManager(object):
         return self.blueprints.values()
 
     def get_blueprint(self, blueprint_id):
-        #TODO : should return None and checkout side and raise error or raise error here if not found
-        return self.blueprints[blueprint_id]
+        return self.blueprints.get(blueprint_id, None)
 
     def get_execution(self, execution_id):
-        return self.executions[execution_id]
+        return self.executions.get(execution_id, None)
 
     # TODO: call celery tasks instead of doing this directly here
     def publish_blueprint(self, dsl_location, alias_mapping_url, resources_base_url):

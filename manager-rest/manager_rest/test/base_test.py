@@ -2,8 +2,7 @@ __author__ = 'dan'
 
 import unittest
 import json
-from manager_rest import server
-from manager_rest import config
+from manager_rest import server, config
 
 
 class BaseServerTestCase(unittest.TestCase):

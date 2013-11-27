@@ -47,7 +47,7 @@ class ManagerRestProcess(object):
         self.port = port
         self.workflow_service_base_uri = workflow_service_base_uri
 
-    def start(self, timeout=2000):
+    def start(self, timeout=10):
         endtime = time.time() + timeout
 
         manager_rest_command = [
@@ -61,9 +61,11 @@ class ManagerRestProcess(object):
 
         self.process = subprocess.Popen(manager_rest_command)
         started = False
+        attempt = 1
         while not started and time.time() < endtime:
             time.sleep(1)
-            logger.info('Testing connection to manager rest service')
+            logger.info('Testing connection to manager rest service. (Attempt: {0}/{1})'.format(attempt, timeout))
+            attempt += 1
             started = self.started()
         if not started:
             raise RuntimeError('Failed opening connection to manager rest service')
