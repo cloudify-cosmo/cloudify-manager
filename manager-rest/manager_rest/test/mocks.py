@@ -12,3 +12,13 @@ class MockWorkflowClient(object):
             'state': 'pending',
             'created': datetime.now()
         }
+
+    def validate_workflows(self, plan):
+        return {
+            'status': 'valid'
+        }
+
+    def get_workflow_status(self, workflow_id):
+        return {
+            'state': 'terminated'
+        }

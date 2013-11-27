@@ -69,7 +69,7 @@ class ManagerRestProcess(object):
         try:
             requests.get('http://localhost:8100/blueprints')
             return True
-        except:
+        except BaseException:
             return False
 
     def close(self):

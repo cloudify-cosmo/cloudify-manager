@@ -5,6 +5,7 @@ import json
 import config
 import time
 
+
 class WorkflowClient(object):
 
     def __init__(self):
@@ -25,6 +26,7 @@ class WorkflowClient(object):
         '''
         execution_response = self.execute_workflow(prepare_plan_participant_workflow, plan)
         response = {'state': 'pending'}
+        # TODO timeout
         while response['state'] != 'terminated' and response['state'] != 'failed':
             response = self.get_workflow_status(execution_response['id'])
             time.sleep(1)

@@ -54,3 +54,26 @@ class BlueprintsTestCase(BaseServerTestCase):
         get_execution = self.get(resource_path).json
         self.assertEquals(1, len(get_execution))
         self.assertEquals(execution, get_execution[0])
+
+    def test_get_blueprints_id_executions_empty(self):
+        post_blueprints_response = self.post_file(*self.post_blueprint_args()).json
+        get_executions = self.get('/blueprints/{0}/executions'.format(post_blueprints_response['id'])).json
+        self.assertEquals(len(get_executions), 0)
+
+    def test_get_blueprints_id_validate(self):
+        post_blueprints_response = self.post_file(*self.post_blueprint_args()).json
+        resource_path = '/blueprints/{0}/validate'.format(post_blueprints_response['id'])
+        validation = self.get(resource_path).json
+        self.assertEqual(validation['status'], 'valid')
+
+    def test_get_executions_id(self):
+        blueprint = self.post_file(*self.post_blueprint_args()).json
+        resource_path = '/blueprints/{0}/executions'.format(blueprint['id'])
+        execution = self.post(resource_path, {
+            'workflowId': 'install'
+        }).json
+        get_execution_resource = '/executions/{0}'.format(execution['id'])
+        get_execution = self.get(get_execution_resource).json
+        self.assertEquals(get_execution['status'], 'terminated')
+
+
