@@ -22,6 +22,7 @@ import os
 from os import path
 import json
 
+from os.path import expanduser
 from celery.utils.log import get_task_logger
 from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
@@ -106,6 +107,9 @@ def restart(worker_config, cloudify_runtime, local=False, **kwargs):
     runner = create_runner(local, host_string, key_filename)
 
     restart_celery_worker(runner, worker_config)
+
+    runner.put("celery agent restarted", os.path.join(expanduser("~"), COSMO_APP_NAME), 'celery_restart_ind.txt',
+               use_sudo=True)
 
 
 def _install_virtualenv(runner, __cloudify_id):
