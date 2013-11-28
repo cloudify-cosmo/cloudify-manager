@@ -142,6 +142,7 @@ class RuoteServiceProcess(object):
         while time.time() < deadline:
             line = self._process.stdout.readline().rstrip()
             if line != '':
+                logger.info('[route] %s', line)
                 match = re.match(pid_pattern, line)
                 if match:
                     self._pid = int(match.group(1))
