@@ -52,7 +52,11 @@ def install(plugin, __cloudify_id, **kwargs):
     install_celery_plugin_to_dir(plugin)
 
 @task
-def verify_plugin(worker_id, plugin_name, operation, **kwargs):
+def verify_plugin(worker_id, plugin_name, operation, throw_on_failure, **kwargs):
+
+    """
+    Verifies that a plugin and and a specific operation is registered within the celery worker
+    """
     out = run_command("{0} inspect registered -d {1} --no-color".format(get_celery(), worker_id))
     lines = out.splitlines()
     operation_name = operation.split(".")[-1]
@@ -64,21 +68,32 @@ def verify_plugin(worker_id, plugin_name, operation, **kwargs):
             if task.startswith(plugin_name):
                 registered_operations.append(task)
                 if task.endswith("." + operation_name):
-                    cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
-                    plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
-                    taskspy_path = os.path.join(plugin_dir, "tasks.py")
-                    parsed_tasks_file = ast.parse(open(taskspy_path, 'r').read())
-                    method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
-                                                parsed_tasks_file.body)
-                    if not method_description:
-                        raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
-                                           .format(operation_name, taskspy_path, plugin_name))
-                    return map(lambda arg: arg.id, method_description[0].args.args)
-    raise RuntimeError(
+                    return True
+    #Could not locate registered plugin and the specified operation
+    if throw_on_failure:
+        raise RuntimeError(
 """unable to locate plugin {0} operation {1} in celery registered tasks, make sure the plugin has an implementation of
-this
-operation.
+this operation.
 Registered plugin operation are: {2}""".format(plugin_name, operation_name, registered_operations))
+    else:
+        return False
+
+@task
+def get_arguments(plugin_name, operation, **kwargs):
+    """
+    Gets the arguments of an installed plugin operation
+    """
+    operation_name = operation.split(".")[-1]
+    cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
+    plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
+    tasks_py_path = os.path.join(plugin_dir, "tasks.py")
+    parsed_tasks_file = ast.parse(open(tasks_py_path, 'r').read())
+    method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
+                                parsed_tasks_file.body)
+    if not method_description:
+        raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
+        .format(operation_name, tasks_py_path, plugin_name))
+    return map(lambda arg: arg.id, method_description[0].args.args)
 
 
 def get_pip():
