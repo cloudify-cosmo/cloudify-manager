@@ -132,5 +132,28 @@ define wf
     res
   end
 
+  def test_get_workflows
+    radial = %/
+define wf
+  echo 'hello!'
+/
+    post '/workflows', {
+        :radial => radial
+    }.to_json
+    get '/workflows'
+    res = parsed_response
+    puts "response: #{parsed_response}"
+    assert_successful_response res
+    data = res[:data]
+    assert_equal 1, data.size
+  end
+
+  def parsed_response
+    JSON.parse(last_response.body, :symbolize_names => true)
+  end
+
+  def assert_successful_response(response)
+    assert_equal 'success', response[:status]
+  end
 
 end

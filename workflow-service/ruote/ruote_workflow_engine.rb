@@ -101,7 +101,12 @@ class RuoteWorkflowEngine
   end
 
   def get_workflows
-    raise 'not implemented'
+    begin
+      @mutex.lock
+      @states.values
+    ensure
+      @mutex.unlock
+    end
   end
 
   def on_msg(context)

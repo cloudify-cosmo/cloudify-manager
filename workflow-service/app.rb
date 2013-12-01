@@ -34,7 +34,8 @@ class RuoteServiceApp < Sinatra::Base
 
   get '/workflows' do
     response = {
-        :workflows => []
+        :status => :success,
+        :data => $ruote_service.get_workflows
     }
     response.to_json
   end

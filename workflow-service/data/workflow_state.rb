@@ -28,7 +28,7 @@ class WorkflowState
     @error = nil
   end
 
-  def to_json
+  def to_json(*a)
     {
         :type => :workflow_state,
         :id => @id,

@@ -88,4 +88,18 @@ define wf
     wait_for_workflow_state(wf.id, :terminated, 10)
   end
 
+  def test_get_workflows
+    assert_equal 0, @ruote.get_workflows.size
+    radial = %/
+define wf
+  echo 'hello world'
+/
+    wf = @ruote.launch(radial)
+    assert_equal 1, @ruote.get_workflows.size
+    wf_state = @ruote.get_workflows[0]
+    assert_equal wf.id, wf_state.id
+    @ruote.launch(radial)
+    assert_equal 2, @ruote.get_workflows.size
+  end
+
 end
