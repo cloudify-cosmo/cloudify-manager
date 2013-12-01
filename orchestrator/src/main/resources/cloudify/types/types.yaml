@@ -4,6 +4,7 @@
 imports:
     - 'celery_worker_installer'
     - 'celery_plugin_installer'
+    - 'kv_store'
     - 'cloudify.policies'
 
 ##################################################################################
@@ -20,6 +21,7 @@ types:
             - "cloudify.interfaces.host_provisioner"
             - "cloudify.interfaces.worker_installer"
             - "cloudify.interfaces.plugin_installer"
+            - "cloudify.interfaces.kv_store"
         properties:
             install_agent: 'false'
         workflows:
@@ -152,6 +154,12 @@ interfaces:
     cloudify.interfaces.plugin_installer:
         operations:
             - "install"
+
+    # key value store on a host
+    cloudify.interfaces.kv_store:
+        operations:
+            - "put"
+            - "get"
 
     # provision and manage a storage volume
     cloudify.interfaces.volume.volume_provisioner:

@@ -20,4 +20,7 @@ define host_init
                 log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
             log message: 'restarting worker on host: ${node.id}'
             execute_operation operation: 'cloudify.interfaces.worker_installer.restart'
-            set "v:/${node.id}_plugin_installed" : 'True'
+            execute_operation operation: 'cloudify.interfaces.kv_store.put', params: {
+                key: "agent plugins installed",
+                value: true
+            }
