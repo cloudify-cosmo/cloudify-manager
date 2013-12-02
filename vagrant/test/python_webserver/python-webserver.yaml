@@ -41,24 +41,25 @@ blueprint:
                       VAGRANT_DEFAULT_PROVIDER: 'lxc'
 
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:
                                 service: "vagrant machine status"
                                 state: "running"
-                failure_detection_policy:
+                -   name: "failure_detection_policy"
                     rules:
                         -   type: "state_not_equals"
                             properties:
                                 service: "vagrant machine status"
                                 state: "running"
-                performance_policy:
-                    rules:
-                        -   type: "metric_below"
-                            properties:
-                                service: "vagrant machine bytes/sec"
-                                metric: "500.0"
+#                -   name: "performance_policy"
+#                    rules:
+#                        -   type: "metric_below"
+#                            properties:
+#                                service: "vagrant machine bytes/sec"
+#                                metric: "500.0"
+#                                state: "running"
 
         # python simple http server
         -   name: "webserver_middleware"
@@ -66,7 +67,7 @@ blueprint:
             properties:
                 port: 8888
             policies:
-                start_detection_policy:
+                -   name: "start_detection_policy"
                     rules:
                         -   type: "state_equals"
                             properties:
