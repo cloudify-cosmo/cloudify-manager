@@ -142,21 +142,37 @@ class RuoteServiceProcess(object):
             raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
 
     def _verify_service_started(self, timeout=30):
-        from subprocess import CalledProcessError
         deadline = time.time() + timeout
         while time.time() < deadline:
-            pattern = "\w*\s*(\d*).*"
-            try:
-                output = subprocess.check_output("ps aux | grep 'rackup' | grep -v grep", shell=True)
-                match = re.match(pattern, output)
-                if match:
-                    self._pid = int(match.group(1))
-                    break
-            except CalledProcessError:
-                pass
+            self._pid = self._get_serice_pid()
+            if self._pid is not None:
+                break
             time.sleep(1)
         if self._pid is None:
             raise RuntimeError("Failed to start ruote service within a {0} seconds timeout".format(timeout))
+
+    def _verify_service_ended(self, timeout=10):
+        pid = self._pid
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            pid = self._get_serice_pid()
+            if pid is None:
+                break
+            time.sleep(1)
+        if pid is not None:
+            raise RuntimeError("Failed to stop ruote service within a {0} seconds timeout".format(timeout))
+
+    def _get_serice_pid(self):
+        from subprocess import CalledProcessError
+        pattern = "\w*\s*(\d*).*"
+        try:
+            output = subprocess.check_output("ps aux | grep 'rackup' | grep -v grep", shell=True)
+            match = re.match(pattern, output)
+            if match:
+                return int(match.group(1))
+        except CalledProcessError:
+            pass
+        return None
 
     def start(self):
         startup_script_path = path.realpath(path.join(path.dirname(__file__), '..'))
@@ -175,6 +191,7 @@ class RuoteServiceProcess(object):
         if self._pid:
             logger.info("Shutting down Ruote service [pid=%s]", self._pid)
             os.system("kill {0}".format(self._pid))
+            self._verify_service_ended()
 
 
 class CeleryWorkerProcess(object):
