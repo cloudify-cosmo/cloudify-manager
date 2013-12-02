@@ -12,6 +12,7 @@ Provides a REST api on top of `Ruote` for launching and monitoring Cloudify Cosm
 * Install JRuby.
 * Make sure `bundler` is installed (gem install bundler).
 * Run:
+
 ```
 # Install required dependencies
 bundle install
