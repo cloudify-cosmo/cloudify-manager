@@ -53,5 +53,9 @@ class TestRuoteWorkflows(TestCase):
         self.assertEquals('true', node_runtime_props['reachable'])
         self.assertEquals(2, len(node_runtime_props))
 
+    def test_non_existing_operation_exception(self):
+        dsl_path = resource("dsl/wrong_operation_name.yaml")
+        self.assertRaises(RuntimeError, deploy, dsl_path)
+
 
 
