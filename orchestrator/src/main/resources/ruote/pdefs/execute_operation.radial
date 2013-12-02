@@ -22,6 +22,8 @@ define execute_operation
                     key: "agent plugins installed"
                 }
             }, to_f: 'plugins_installed', timeout: '30s', on_timeout: 'redo'
+            log message: 'plugin installation completion state on host node ${target} is ${plugins_installed}'
+
             break if: '${plugins_installed} == True'
             wait for: '5s'
 

@@ -60,8 +60,10 @@ class ExecuteTaskParticipant < Ruote::Participant
   RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.plugins.riemann_config_loader.tasks.reload_riemann_config'
   VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin'
   RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.plugins.worker_installer.tasks.restart'
+  GET_KV_STORE_TASK_NAME = 'cosmo.cloudify.plugins.kv_store.get'
 
-  TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME, RESTART_CELERY_WORKER_TASK_NAME]
+  TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME, VERIFY_PLUGIN_TASK_NAME,
+                            RESTART_CELERY_WORKER_TASK_NAME, GET_KV_STORE_TASK_NAME]
 
   def do_not_thread
     true
