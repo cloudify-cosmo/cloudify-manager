@@ -565,7 +565,7 @@ def deploy_application(dsl_path, timeout=240):
     r = {'status': 'pending'}
     while r['status'] != 'terminated' and r['status'] != 'failed':
         if end < time.time():
-            raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
+            raise TimeoutException('Timeout deploying {0}'.format(dsl_path))
         time.sleep(1)
         r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
     if r['status'] != 'terminated':
