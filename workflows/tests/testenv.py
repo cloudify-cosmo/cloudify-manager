@@ -581,3 +581,8 @@ def validate_dsl(dsl_path, timeout=240):
     response = result.get(timeout=60, propagate=True)
     if response['status'] != 'valid':
         raise RuntimeError('Blueprint {0} is not valid'.format(dsl_path))
+
+
+class TimeoutException(Exception):
+    def __init__(self, *args):
+        Exception.__init__(self, args)

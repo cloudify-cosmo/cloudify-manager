@@ -1,0 +1,30 @@
+imports:
+    - "cloudify.types"
+
+blueprint:
+    name: "mock_app"
+    topology:
+        -   name: "mock_node"
+            type: "mock_type"
+
+types:
+    mock_type:
+        interfaces:
+            -   "mock_interface"
+        workflows:
+            init:
+                radial: |
+                    define mock_init
+                        execute_operation operation: 'non_existing_in_python_impl'
+
+interfaces:
+    mock_interface:
+        operations:
+            - "non_existing_in_python_impl"
+
+plugins:
+    testmockoperations:
+        derived_from: "cloudify.plugins.remote_plugin"
+        properties:
+            interface: "mock_interface"
+            url: "mock_interface.zip"
