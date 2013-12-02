@@ -12,7 +12,7 @@ before_script:
    - "sudo dpkg -i riemann_0.2.2_all.deb"
    - "sudo touch /var/log/riemann/riemann.log"
    - "sudo chmod 666 /var/log/riemann/riemann.log"
-   - "sudo test -d /dev/shm && sudo rmdir /dev/shm"
+   - "sudo test -d /dev/shm && sudo rm -rf /dev/shm"
    - "sudo ln -Tsf /{run,dev}/shm"
    - "sudo chmod 777 /dev/shm" # for celery worker
 
