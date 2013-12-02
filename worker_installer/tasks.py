@@ -22,10 +22,11 @@ import os
 from os import path
 import json
 
+from os.path import expanduser
 from celery.utils.log import get_task_logger
 from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
-from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION
+from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION
 from cosmo.constants import VIRTUALENV_PATH_KEY, COSMO_APP_NAME, COSMO_PLUGIN_NAMESPACE
 
 
@@ -34,6 +35,9 @@ COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archiv
 
 PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/{0}.zip"\
                        .format(PLUGIN_INSTALLER_VERSION)
+
+KV_STORE_URL = "https://github.com/CloudifySource/cosmo-plugin-kv-store/archive/{0}.zip" \
+    .format(KV_STORE_VERSION)
 
 
 logger = get_task_logger(__name__)
@@ -186,10 +190,13 @@ def _install_celery(runner, worker_config, node_id):
     # since sudo pip created the app dir. the owner is root. but actually it is used by celery.
     runner.sudo("chown -R {0} {1}".format(user, app_dir))
 
-    plugin_installer_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
+    plugins_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
     # install the plugin installer
-    install_celery_plugin_to_dir(runner, worker_config, plugin_installer_installation_path, PLUGIN_INSTALLER_URL)
+    install_celery_plugin_to_dir(runner, worker_config, plugins_installation_path, PLUGIN_INSTALLER_URL)
+
+    # install the kv store
+    install_celery_plugin_to_dir(runner, worker_config, plugins_installation_path, KV_STORE_URL)
 
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
