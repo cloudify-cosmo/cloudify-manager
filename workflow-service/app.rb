@@ -16,6 +16,7 @@
 
 require 'sinatra'
 require 'json'
+require 'parslet'
 require_relative 'ruote/ruote_workflow_engine'
 
 $ruote_service = RuoteWorkflowEngine.new(:test => settings.test?)
@@ -35,31 +36,55 @@ class RuoteServiceApp < Sinatra::Base
 
   get '/workflows', :provides => :json do
     content_type :json
-    response = {
-        :status => :success,
-        :data => $ruote_service.get_workflows
-    }
-    JSON.pretty_generate response
+    begin
+      response = {
+          :status => :success,
+          :data => $ruote_service.get_workflows
+      }
+      JSON.pretty_generate response
+    rescue Exception => e
+      error_response e.message
+    end
   end
 
   post '/workflows', :provides => :json do
     content_type :json
-    req = self.parse_request_body(request)
-    raise 'radial key is missing in request' unless req.has_key?(:radial)
-    fields = {}
-    if req.has_key?(:fields)
-      fields_type = req[:fields].class
-      raise "fields value type is expected to be hash/map but is #{fields_type}" unless fields_type.eql?(Hash)
-      fields = req[:fields]
+    begin
+      req = self.parse_request_body(request)
+      validation_message = nil
+
+      unless req.has_key?(:radial)
+        validation_message = 'Radial key is missing in request body'
+      end
+
+      fields = req[:fields] || {}
+      if validation_message.nil? and not fields.class.eql?(Hash)
+        validation_message = "Fields key value type is expected to be a hash/map but is #{fields.class.to_s}"
+      end
+
+      if validation_message.nil?
+        status 201
+        JSON.pretty_generate $ruote_service.launch(req[:radial], fields)
+      else
+        error_response validation_message, 400
+      end
+    rescue Parslet::ParseFailed => e
+      error_response "Radial parsing failed: #{e.message}", 400
+    rescue Exception => e
+      error_response e.message
     end
-    status 201
-    JSON.pretty_generate $ruote_service.launch(req[:radial], fields)
   end
 
   get '/workflows/:id', :provides => :json do
     content_type :json
-    wfid = params[:id]
-    JSON.pretty_generate $ruote_service.get_workflow_state(wfid)
+    begin
+      wfid = params[:id]
+      JSON.pretty_generate $ruote_service.get_workflow_state(wfid)
+    rescue WorkflowDoesntExistError => e
+      error_response e.message, 400
+    rescue Exception => e
+      error_response e.message
+    end
   end
 
   not_found do
@@ -69,6 +94,14 @@ class RuoteServiceApp < Sinatra::Base
 
   def parse_request_body(request)
     JSON.parse(request.body.read, :symbolize_names => true)
+  end
+
+  def error_response(message, status_code=500)
+    status status_code
+    JSON.pretty_generate({
+        :status => status_code,
+        :message => message
+    })
   end
 
 end

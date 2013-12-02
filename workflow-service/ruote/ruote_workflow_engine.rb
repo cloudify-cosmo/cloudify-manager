@@ -160,7 +160,7 @@ class RuoteWorkflowEngine
   end
 
   def verify_workflow_exists(wfid)
-    raise "Workflow doesn't exist [wfid=#{wfid}]" unless @states.has_key?(wfid)
+    raise WorkflowDoesntExistError.new(wfid) unless @states.has_key?(wfid)
     @states[wfid]
   end
 
@@ -175,3 +175,8 @@ class RuoteWorkflowEngine
 
 end
 
+class WorkflowDoesntExistError < Exception
+  def initialize(wfid)
+    super("Workflow doesn't exist [wfid=#{wfid}]")
+  end
+end
