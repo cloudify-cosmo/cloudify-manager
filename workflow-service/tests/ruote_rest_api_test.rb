@@ -30,7 +30,7 @@ class RuoteRestApiTest < Test::Unit::TestCase
 
   def test_root
     get '/'
-    assert_equal 'ruote-rest-api', last_response.body
+    assert_successful_response parsed_response
   end
 
   def test_launch
@@ -41,7 +41,7 @@ define wf
     post '/workflows', {
         :radial => radial
     }.to_json
-    assert_equal 200, last_response.status
+    assert_equal 201, last_response.status
     res = JSON.parse(last_response.body, :symbolize_names => true)
     assert_equal 'workflow_state', res[:type]
     assert_equal 'pending', res[:state]
@@ -93,7 +93,7 @@ define wf
     post '/workflows', {
         :radial => radial
     }.to_json
-    assert_equal 200, last_response.status
+    assert_equal 201, last_response.status
     res = JSON.parse(last_response.body, :symbolize_names => true)
     wfid = res[:id]
     get "/workflows/#{wfid}"

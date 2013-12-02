@@ -29,7 +29,7 @@ class RuoteServiceApp < Sinatra::Base
   end
 
   get '/' do
-    'ruote-rest-api'
+    JSON.pretty_generate({:status => :success})
   end
 
   get '/workflows' do
@@ -37,7 +37,7 @@ class RuoteServiceApp < Sinatra::Base
         :status => :success,
         :data => $ruote_service.get_workflows
     }
-    response.to_json
+    JSON.pretty_generate response
   end
 
   post '/workflows' do
@@ -49,12 +49,13 @@ class RuoteServiceApp < Sinatra::Base
       raise "fields value type is expected to be hash/map but is #{fields_type}" unless fields_type.eql?(Hash)
       fields = req[:fields]
     end
-    $ruote_service.launch(req[:radial], fields).to_json
+    status 201
+    JSON.pretty_generate $ruote_service.launch(req[:radial], fields)
   end
 
   get '/workflows/:id' do
     wfid = params[:id]
-    $ruote_service.get_workflow_state(wfid).to_json
+    JSON.pretty_generate $ruote_service.get_workflow_state(wfid)
   end
 
   def parse_request_body(request)
