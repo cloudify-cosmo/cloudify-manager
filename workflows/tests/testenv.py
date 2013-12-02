@@ -124,29 +124,37 @@ class RuoteServiceProcess(object):
 
         raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]".format(self.JRUBY_VERSION))
 
-    def _verify_service_responsiveness(self):
+    def _verify_service_responsiveness(self, timeout=30):
         import urllib2
         service_url = "http://localhost:{0}".format(self._port)
         up = False
-        try:
-            res = urllib2.urlopen(service_url)
-            up = res.code == 200
-        except BaseException:
-            pass
+        deadline = time.time() + timeout
+        res = None
+        while time.time() < deadline:
+            try:
+                res = urllib2.urlopen(service_url)
+                up = res.code == 200
+                break
+            except BaseException:
+                pass
+            time.sleep(1)
         if not up:
-            raise RuntimeError("Ruote service is not responding @ {0}".format(service_url))
+            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
 
     def _verify_service_started(self, timeout=30):
-        pid_pattern = ".*WEBrick::HTTPServer#start:\spid=(\d*)"
+        from subprocess import CalledProcessError
         deadline = time.time() + timeout
         while time.time() < deadline:
-            line = self._process.stdout.readline().rstrip()
-            if line != '':
-                logger.info('[ruote] %s', line)
-                match = re.match(pid_pattern, line)
+            pattern = "\w*\s*(\d*).*"
+            try:
+                output = subprocess.check_output("ps aux | grep 'rackup' | grep -v grep", shell=True)
+                match = re.match(pattern, output)
                 if match:
                     self._pid = int(match.group(1))
                     break
+            except CalledProcessError:
+                pass
+            time.sleep(1)
         if self._pid is None:
             raise RuntimeError("Failed to start ruote service within a {0} seconds timeout".format(timeout))
 
@@ -156,11 +164,9 @@ class RuoteServiceProcess(object):
         command = [script, str(self._use_rvm).lower(), str(self._port)]
 
         logger.info("Starting Ruote service")
-        self._process = subprocess.Popen(command,
-                                         cwd=startup_script_path,
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT)
+        self._process = subprocess.Popen(command, cwd=startup_script_path)
         self._verify_service_started(timeout=30)
+        self._verify_service_responsiveness()
         logger.info("Ruote service started [pid=%s]", self._pid)
 
     def close(self):
