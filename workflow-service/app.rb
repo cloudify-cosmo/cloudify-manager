@@ -28,11 +28,13 @@ class RuoteServiceApp < Sinatra::Base
     set :raise_errors => true
   end
 
-  get '/' do
-    JSON.pretty_generate({:status => :success})
+  get '/', :provides => :json do
+    content_type :json
+    JSON.pretty_generate({:version => '1.0'})
   end
 
-  get '/workflows' do
+  get '/workflows', :provides => :json do
+    content_type :json
     response = {
         :status => :success,
         :data => $ruote_service.get_workflows
@@ -40,7 +42,8 @@ class RuoteServiceApp < Sinatra::Base
     JSON.pretty_generate response
   end
 
-  post '/workflows' do
+  post '/workflows', :provides => :json do
+    content_type :json
     req = self.parse_request_body(request)
     raise 'radial key is missing in request' unless req.has_key?(:radial)
     fields = {}
@@ -53,9 +56,15 @@ class RuoteServiceApp < Sinatra::Base
     JSON.pretty_generate $ruote_service.launch(req[:radial], fields)
   end
 
-  get '/workflows/:id' do
+  get '/workflows/:id', :provides => :json do
+    content_type :json
     wfid = params[:id]
     JSON.pretty_generate $ruote_service.get_workflow_state(wfid)
+  end
+
+  not_found do
+    status 404
+    JSON.pretty_generate({:status => :error, :error => 'Not found'})
   end
 
   def parse_request_body(request)

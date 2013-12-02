@@ -30,7 +30,7 @@ class RuoteRestApiTest < Test::Unit::TestCase
 
   def test_root
     get '/'
-    assert_successful_response parsed_response
+    assert_response_status 200
   end
 
   def test_launch
@@ -41,9 +41,8 @@ define wf
     post '/workflows', {
         :radial => radial
     }.to_json
-    assert_equal 201, last_response.status
+    assert_response_status 201
     res = JSON.parse(last_response.body, :symbolize_names => true)
-    assert_equal 'workflow_state', res[:type]
     assert_equal 'pending', res[:state]
     assert_includes res.keys, :id, :created
     assert_equal false, res[:id].empty?
@@ -98,7 +97,6 @@ define wf
     wfid = res[:id]
     get "/workflows/#{wfid}"
     res = JSON.parse(last_response.body, :symbolize_names => true)
-    assert_equal 'workflow_state', res[:type]
     assert_equal wfid, res[:id]
     assert_include %w(pending launched terminated), res[:state]
   end
@@ -136,17 +134,22 @@ define wf
     }.to_json
     get '/workflows'
     res = parsed_response
-    assert_successful_response res
+    assert_response_status 200
     data = res[:data]
     assert data.size > 0
   end
 
-  def parsed_response
-    JSON.parse(last_response.body, :symbolize_names => true)
+  def test_not_found
+    get '/woo'
+    assert_response_status 404
   end
 
-  def assert_successful_response(response)
-    assert_equal 'success', response[:status]
+  def assert_response_status(expected_status)
+    assert_equal expected_status, last_response.status
+  end
+
+  def parsed_response
+    JSON.parse(last_response.body, :symbolize_names => true)
   end
 
 end

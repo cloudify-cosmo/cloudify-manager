@@ -30,7 +30,6 @@ class WorkflowState
 
   def to_json(*a)
     {
-        :type => :workflow_state,
         :id => @id,
         :state => @state,
         :created => @created,

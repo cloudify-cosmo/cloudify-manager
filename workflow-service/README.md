@@ -42,15 +42,11 @@ Body:
 Response:
 ```json
 {
-  "status": "success",
-  "data": {
-    "type": "workflow_state",
     "id": "The workflow's Id",
     "state": "Workflow state [pending, launched, terminated, failed]",
     "created": "Time when workflow was requested to launch",
     "launched": "Actual launch time",
     "error": "On failure contains error information"
-  }
 }
 ```
 ### Get Workflow State
@@ -63,15 +59,11 @@ Parameters:
 Response:
 ```json
 {
-  "status": "success",
-  "data": {
-    "type": "workflow_state",
     "id": "The workflow's Id",
     "state": "Workflow state [pending, launched, terminated, failed]",
     "created": "Time when workflow was requested to launch",
     "launched": "Actual launch time",
     "error": "On failure contains error information"
-  }
 }
 ```
 ### Get All Workflows State
@@ -80,17 +72,11 @@ GET /workflows
 ```
 Response:
 ```json
-{
-  "status": "success",
-  "data": [
-    {
-      "type": "workflow_state",
-      "id": "The workflow's Id",
-      "state": "Workflow state [pending, launched, terminated, failed]",
-      "created": "Time when workflow was requested to launch",
-      "launched": "Actual launch time",
-      "error": "On failure contains error information"
-    }
-  ]
-}
+[
+    "id": "The workflow's Id",
+    "state": "Workflow state [pending, launched, terminated, failed]",
+    "created": "Time when workflow was requested to launch",
+    "launched": "Actual launch time",
+    "error": "On failure contains error information"
+]
 ```
