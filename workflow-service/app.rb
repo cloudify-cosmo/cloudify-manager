@@ -37,11 +37,7 @@ class RuoteServiceApp < Sinatra::Base
   get '/workflows', :provides => :json do
     content_type :json
     begin
-      response = {
-          :status => :success,
-          :data => $ruote_service.get_workflows
-      }
-      JSON.pretty_generate response
+      JSON.pretty_generate $ruote_service.get_workflows
     rescue Exception => e
       error_response e.message
     end
@@ -98,10 +94,7 @@ class RuoteServiceApp < Sinatra::Base
 
   def error_response(message, status_code=500)
     status status_code
-    JSON.pretty_generate({
-        :status => status_code,
-        :message => message
-    })
+    JSON.pretty_generate({ :status => status_code, :message => message })
   end
 
 end

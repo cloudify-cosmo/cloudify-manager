@@ -136,7 +136,7 @@ define wf
     post '/workflows', { :radial => radial }.to_json
     get '/workflows'
     assert_response_status 200
-    assert parsed_response[:data].size > 0
+    assert parsed_response.size > 0
   end
 
   def test_not_found
