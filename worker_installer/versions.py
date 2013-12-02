@@ -16,6 +16,6 @@
 
 __author__ = 'elip'
 
-PLUGIN_INSTALLER_VERSION = 'feature/CLOUDIFY-2251_transfer_installed_plugin_knowledge'
+PLUGIN_INSTALLER_VERSION = 'develop'
 COSMO_CELERY_COMMON_VERSION = 'develop'
 KV_STORE_VERSION = 'develop'
