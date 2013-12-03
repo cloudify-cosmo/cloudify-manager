@@ -18,15 +18,20 @@ require 'test/unit'
 require 'json'
 require 'time'
 require '../ruote/ruote_workflow_engine'
+require 'tmpdir'
+require 'fileutils'
 
 class RuoteTest < Test::Unit::TestCase
 
   def setup
+    @temp_dir = Dir.mktmpdir
+    ENV['WF_SERVICE_LOGS_PATH'] = @temp_dir.to_s
     @ruote = RuoteWorkflowEngine.new(:test => true)
   end
 
   def teardown
     @ruote.close
+    FileUtils.rmtree @temp_dir
   end
 
   def test_workflow_execution
@@ -100,6 +105,21 @@ define wf
     assert_equal wf.id, wf_state.id
     @ruote.launch(radial)
     assert_equal 2, @ruote.get_workflows.size
+  end
+
+  def test_log_file_exists
+    fields = {
+        'node' => {
+            'id' => 'app.node'
+        }
+    }
+    radial = %/
+define wf
+  event event: { 'stage' => 'some event' }
+/
+    wf = @ruote.launch(radial, fields)
+    wait_for_workflow_state wf.id, :terminated, 10
+    assert File.exists?(File.join(@temp_dir, 'app.log'))
   end
 
 end
