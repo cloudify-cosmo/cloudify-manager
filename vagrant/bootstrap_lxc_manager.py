@@ -32,6 +32,7 @@ from subprocess import check_output
 
 __author__ = 'elip'
 
+FNULL = open(os.devnull, 'w')
 
 USER_HOME = expanduser('~')
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/archive/{0}.zip".format(FABRIC_RUNNER_VERSION)
@@ -104,6 +105,106 @@ class RiemannProcess(object):
         return None
 
 
+class WorkflowServiceProcess(object):
+
+    def __init__(self, jbin, workflow_service_path, port=8101):
+        self.process_grep = 'rackup'
+        self.jbin = jbin
+        self.port = port
+        self.workflow_service_path = workflow_service_path
+
+    def start(self, start_timeout=30):
+        endtime = time.time() + start_timeout
+        command = [
+            '{0}/jruby'.format(self.jbin),
+            '{0}/rackup'.format(self.jbin),
+            '-p', self.port
+        ]
+        env = os.environ.copy()
+        env['RACK_ENV'] = 'development'
+        self._process = subprocess.Popen(command,
+                                         # stdout=FNULL,
+                                         # stderr=FNULL,
+                                         env=env,
+                                         cwd=self.workflow_service_path)
+        self.wait_for_service_started(endtime)
+        self.wait_for_service_responsiveness(endtime)
+
+    def find_existing_pid(self):
+        from subprocess import CalledProcessError
+        pattern = "\w*\s*(\d*).*"
+        try:
+            output = subprocess.check_output("ps aux | grep '{0}' | grep -v grep".format(self.process_grep), shell=True)
+            match = re.match(pattern, output)
+            if match:
+                return int(match.group(1))
+        except CalledProcessError:
+            pass
+        return None
+
+    def wait_for_service_started(self, endtime):
+        while time.time() < endtime:
+            self._pid = self.find_existing_pid()
+            if self._pid is not None:
+                break
+            time.sleep(1)
+
+    def wait_for_service_responsiveness(self, endtime):
+        import urllib2
+        service_url = "http://localhost:{0}".format(self.port)
+        up = False
+        res = None
+        while time.time() < endtime:
+            try:
+                res = urllib2.urlopen(service_url)
+                up = res.code == 200
+                break
+            except BaseException:
+                pass
+            time.sleep(1)
+        if not up:
+            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
+
+
+class ManagerRestProcess(object):
+
+    def __init__(self, manager_rest_path, workflow_service_base_uri, port=8100):
+        self.process_grep = 'server.py'
+        self.port = port
+        self.manager_rest_path = manager_rest_path
+        self.workflow_service_base_uri = workflow_service_base_uri
+
+    def start(self, start_timeout=30):
+        endtime = time.time() + start_timeout
+        command = [
+            sys.executable,
+            '{0}/manager_rest/server.py',
+            '--port', self.port,
+            '--workflow_service_base_uri', self.workflow_service_base_uri
+        ]
+        self._process = subprocess.Popen(command,
+                                         # stdout=FNULL,
+                                         # stderr=FNULL,
+                                         cwd=self.manager_rest_path)
+        self.wait_for_service_responsiveness(endtime)
+
+    def wait_for_service_responsiveness(self, endtime):
+        import urllib2
+        service_url = 'http://localhost:{0}/blueprints'.format(self.port)
+        up = False
+        res = None
+        while time.time() < endtime:
+            try:
+                res = urllib2.urlopen(service_url)
+                up = res.code == 200
+                break
+            except BaseException:
+                pass
+            time.sleep(1)
+        if not up:
+            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
+
+
 class VagrantLxcBoot:
 
     RIEMANN_PID = "RIEMANN_PID"
@@ -150,6 +251,9 @@ class VagrantLxcBoot:
 
     def wget(self, url):
         self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
+
+    def extract_tar_gz(self, path):
+        self.runner.run('tar xzvf {0}'.format(path))
 
     def install_rabbitmq(self):
         self.runner.sudo("sed -i '2i deb http://www.rabbitmq.com/debian/ testing main' /etc/apt/sources.list")
@@ -213,6 +317,31 @@ class VagrantLxcBoot:
 
     def install_java(self):
         self.apt_get("install -y openjdk-7-jdk")
+
+    def install_jruby(self):
+        self.wget('http://jruby.org.s3.amazonaws.com/downloads/1.7.3/jruby-bin-1.7.3.tar.gz')
+        self.extract_tar_gz('jruby-bin-1.7.3.tar.gz')
+        jbin = os.path.abspath('jruby-1.7.3/bin')
+        self.runner.run('{0}/jruby {0}/gem install bundler'.format(jbin))
+        return jbin
+
+    def install_cosmo_manager(self):
+        jbin = self.install_jruby()
+        self.wget('https://github.com/CloudifySource/cosmo-manager/archive/feature/CLOUDIFY-2222-manager-rest.tar.gz')
+        self.extract_tar_gz('CLOUDIFY-2222-manager-rest.tar.gz')
+        manager_rest_path = os.path.abspath('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/manager-rest')
+        self.pip('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/manager-rest/')
+        prev_cwd = os.getcwd()
+        workflow_service_path = os.path.abspath('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/workflow-service')
+        os.chdir(workflow_service_path)
+        try:
+            self.runner.run('{0}/jruby {0}/bundle install --without test')
+        finally:
+            os.chdir(prev_cwd)
+        workflow_service = WorkflowServiceProcess(jbin, workflow_service_path)
+        workflow_service.start()
+        manager_rest = ManagerRestProcess(manager_rest_path, 'http://localhost:8101')
+        manager_rest.start()
 
     def install_celery(self):
         self.pip("billiard==2.7.3.28")
@@ -482,6 +611,7 @@ fi
             if self.install_logstash:
                 self._install_logstash()
             self.install_cosmo()
+            self.install_cosmo_manager()
             self.install_celery_worker(riemann_info)
         else:
             # just update the worker
