@@ -252,6 +252,7 @@ class VagrantLxcBoot:
     def wget(self, url):
         self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
 
+    # TODO: quiet
     def extract_tar_gz(self, path):
         self.runner.run('tar xzvf {0}'.format(path))
 
@@ -329,13 +330,16 @@ class VagrantLxcBoot:
         jbin = self.install_jruby()
         self.wget('https://github.com/CloudifySource/cosmo-manager/archive/feature/CLOUDIFY-2222-manager-rest.tar.gz')
         self.extract_tar_gz('CLOUDIFY-2222-manager-rest.tar.gz')
+
+        self.runner.run('mvn clean package -DskipTests -Pall -f cosmo-manager-feature-CLOUDIFY-2222-manager-rest/orchestrator/pom.xml')
+
         manager_rest_path = os.path.abspath('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/manager-rest')
         self.pip('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/manager-rest/')
         prev_cwd = os.getcwd()
         workflow_service_path = os.path.abspath('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/workflow-service')
         os.chdir(workflow_service_path)
         try:
-            self.runner.run('{0}/jruby {0}/bundle install --without test')
+            self.runner.run('{0}/jruby {0}/bundle install --without test'.format(jbin))
         finally:
             os.chdir(prev_cwd)
         workflow_service = WorkflowServiceProcess(jbin, workflow_service_path)
