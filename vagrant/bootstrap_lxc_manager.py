@@ -118,7 +118,7 @@ class WorkflowServiceProcess(object):
         command = [
             '{0}/jruby'.format(self.jbin),
             '{0}/rackup'.format(self.jbin),
-            '-p', self.port
+            '-p', str(self.port)
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
@@ -179,7 +179,7 @@ class ManagerRestProcess(object):
         command = [
             sys.executable,
             '{0}/manager_rest/server.py',
-            '--port', self.port,
+            '--port', str(self.port),
             '--workflow_service_base_uri', self.workflow_service_base_uri
         ]
         self._process = subprocess.Popen(command,
