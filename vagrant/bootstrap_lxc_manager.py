@@ -149,7 +149,7 @@ class VagrantLxcBoot:
         self.runner.sudo("apt-key add {0}".format(command))
 
     def wget(self, url):
-        self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
+        self.runner.run("wget -q -N {0} -P {1}/".format(url, self.working_dir))
 
     def install_rabbitmq(self):
         self.runner.sudo("sed -i '2i deb http://www.rabbitmq.com/debian/ testing main' /etc/apt/sources.list")
@@ -468,6 +468,7 @@ fi
         print("Logstash has been successfully started")
 
     def bootstrap(self):
+        os.chdir(self.working_dir)
         self.set_management_ip()
         self.install_fabric_runner()
         if not self.update_only:
