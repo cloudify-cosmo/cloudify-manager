@@ -65,12 +65,14 @@ class RuoteWorkflowEngine
     $user_logger = LoggerFactory.get_logger('cosmo')
 
     # setup events logs appender and path
-    user_logger = Logger.get_logger('cosmo')
-    appender = CosmoBlueprintsFileAppender.new
-    appender.set_path ENV['WF_SERVICE_LOGS_PATH'] || Pathname.new('.').to_s
-    appender.set_name 'app'
-    appender.set_threshold Level::DEBUG
-    user_logger.add_appender appender
+    if ENV.has_key? 'WF_SERVICE_LOGS_PATH'
+      user_logger = Logger.get_logger('cosmo')
+      appender = CosmoBlueprintsFileAppender.new
+      appender.set_path ENV['WF_SERVICE_LOGS_PATH']
+      appender.set_name 'app'
+      appender.set_threshold Level::DEBUG
+      user_logger.add_appender appender
+    end
 
     # load built in workflows
     load_built_in_workflows
