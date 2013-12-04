@@ -21,6 +21,17 @@ bundle install
 rackup -p <port>
 ```
 
+### Logs
+Logging properties can be tweaked in `log4j.properties`.
+In order to enable logging per `blueprint` set a `WF_SERVICE_LOGS_PATH` environment variable pointing to a directory where log files will be saved.
+Each blueprint will have its own log file - `"blueprint_name".log`.
+
+For example:
+```
+export WF_SERVICE_LOGS_PATH=/var/log/cosmo/blueprints
+rackup -p 8080
+```
+
 ### Tests
 ```
 rake
