@@ -609,6 +609,7 @@ fi
         print("Logstash has been successfully started")
 
     def bootstrap(self):
+        os.chdir(self.working_dir)
         self.set_management_ip()
         self.install_fabric_runner()
         if not self.update_only:

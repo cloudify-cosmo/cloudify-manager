@@ -30,13 +30,7 @@ class RuoteRestApiTest < Test::Unit::TestCase
 
   def test_root
     get '/'
-    assert_equal 'ruote-rest-api', last_response.body
-  end
-
-  def test_no_workflows
-    get '/workflows'
-    workflows = JSON.parse(last_response.body)['workflows']
-    assert_empty workflows
+    assert_response_status 200
   end
 
   def test_launch
@@ -44,16 +38,23 @@ class RuoteRestApiTest < Test::Unit::TestCase
 define wf
   echo 'hello!'
 /
-    post '/workflows', {
-        :radial => radial
-    }.to_json
-    assert_equal 200, last_response.status
+    post '/workflows', { :radial => radial }.to_json
+    assert_response_status 201
     res = JSON.parse(last_response.body, :symbolize_names => true)
-    assert_equal 'workflow_state', res[:type]
     assert_equal 'pending', res[:state]
     assert_includes res.keys, :id, :created
     assert_equal false, res[:id].empty?
     assert_equal false, res[:created].empty?
+  end
+
+  def test_radial_wrong_syntax
+    radial = 'this cant be working...'
+    begin
+      post '/workflows', { :radial => radial }.to_json
+      assert_fail_assertion 'expected exception'
+    rescue
+      assert_response_status 400
+    end
   end
 
   def test_launch_fields
@@ -61,13 +62,8 @@ define wf
 define wf
   echo '$key'
 /
-    fields = {
-        :key => 'value'
-    }
-    post '/workflows', {
-        :radial => radial,
-        :fields => fields
-    }.to_json
+    fields = { :key => 'value' }
+    post '/workflows', { :radial => radial, :fields => fields }.to_json
     res = JSON.parse(last_response.body, :symbolize_names => true)
     wait_for_workflow_state(res[:id], :terminated, 5)
   end
@@ -77,17 +73,12 @@ define wf
 define wf
   echo '$key'
 /
-    fields = [
-        :key => 'value'
-    ]
+    fields = [ :key => 'value' ]
     begin
-      post '/workflows', {
-          :radial => radial,
-          :fields => fields
-      }.to_json
+      post '/workflows', { :radial => radial, :fields => fields }.to_json
       assert_fail_assertion 'expected exception'
     rescue
-      # expected...
+      assert_response_status 400
     end
   end
 
@@ -96,17 +87,22 @@ define wf
 define wf
   echo 'hello!'
 /
-    post '/workflows', {
-        :radial => radial
-    }.to_json
-    assert_equal 200, last_response.status
-    res = JSON.parse(last_response.body, :symbolize_names => true)
-    wfid = res[:id]
+    post '/workflows', { :radial => radial }.to_json
+    assert_equal 201, last_response.status
+    wfid = parsed_response[:id]
     get "/workflows/#{wfid}"
-    res = JSON.parse(last_response.body, :symbolize_names => true)
-    assert_equal 'workflow_state', res[:type]
-    assert_equal wfid, res[:id]
-    assert_include %w(pending launched terminated), res[:state]
+    assert_equal wfid, parsed_response[:id]
+    assert_include %w(pending launched terminated), parsed_response[:state]
+  end
+
+  def test_workflow_not_exists
+    wfid = 'woohoo'
+    begin
+      get "/workflows/#{wfid}"
+      assert_fail_assertion 'expected exception'
+    rescue
+      assert_response_status 400
+    end
   end
 
   def wait_for_workflow_state(wfid, state, timeout=5)
@@ -132,5 +128,28 @@ define wf
     res
   end
 
+  def test_get_workflows
+    radial = %/
+define wf
+  echo 'hello!'
+/
+    post '/workflows', { :radial => radial }.to_json
+    get '/workflows'
+    assert_response_status 200
+    assert parsed_response.size > 0
+  end
+
+  def test_not_found
+    get '/woo'
+    assert_response_status 404
+  end
+
+  def assert_response_status(expected_status)
+    assert_equal expected_status, last_response.status
+  end
+
+  def parsed_response
+    JSON.parse(last_response.body, :symbolize_names => true)
+  end
 
 end

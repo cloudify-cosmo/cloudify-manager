@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.logger;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
@@ -30,15 +31,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A JSON pattern layout to be used as input for logstash.
- * Each log message is a single JSON line for being easily parsed with logstash.
+ * A JSON pattern layout for Cosmo usages.
+ * Each log message is a single JSON line for being easily parsed by logstash and others.
  *
  * @author Idan Moyal
  * @since 0.1
  */
-public class LogstashPatternLayout extends PatternLayout {
+public class CosmoPatternLayout extends PatternLayout {
 
-    private static ObjectMapper mapper = createJsonObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = createJsonObjectMapper();
 
     private static ObjectMapper createJsonObjectMapper() {
         ObjectMapper mapper = new ObjectMapper(new JsonFactory());
@@ -50,29 +51,47 @@ public class LogstashPatternLayout extends PatternLayout {
 
     @Override
     public String format(LoggingEvent event) {
-        final String original = super.format(event);
-        final int jsonStart = original.indexOf("{");
-        final int jsonEnd = original.lastIndexOf("}");
-        final StringBuilder output = new StringBuilder();
-        boolean fallback = false;
-        if (jsonStart != -1 && jsonEnd != -1) {
-            String json = original.substring(jsonStart, jsonEnd + 1);
+        if (event.getProperties().containsKey("json")) {
+            return String.format("%s%s", event.getProperties().get("json"), System.getProperty("line.separator"));
+        }
+        final Map<String, Object> eventMap = extractJsonFromLogMessage(event);
+        if (eventMap != null) {
             try {
-                final Map<String, Object> parsed = mapper.readValue(json,
-                        new TypeReference<HashMap<String, Object>>() {
-                        });
-                final String singleLineJson =
-                        mapper.writeValueAsString(parsed);
-                output.append(singleLineJson);
-                output.append(System.getProperty("line.separator"));
-            } catch (IOException e) {
-                fallback = true;
+                return String.format("%s%s", convertObjectToJson(eventMap), System.getProperty("line.separator"));
+            } catch (JsonProcessingException ignored) {
             }
         }
-        if (fallback) {
-            output.append(original);
+        return super.format(event);
+    }
+
+    /**
+     * Extracts JSON content from a logging event and parses it into a Map.
+     * @param event Logging event.
+     * @return Parsed JSON as map or null if there's no JSON content.
+     */
+    public static Map<String, Object> extractJsonFromLogMessage(LoggingEvent event) {
+        final String original = event.getMessage().toString();
+        final int jsonStart = original.indexOf("{");
+        final int jsonEnd = original.lastIndexOf("}");
+        if (jsonStart != -1 && jsonEnd != -1) {
+            try {
+                String json = original.substring(jsonStart, jsonEnd + 1);
+                return OBJECT_MAPPER.readValue(json,
+                        new TypeReference<HashMap<String, Object>>() {
+                        });
+            } catch (IOException ignored) {
+            }
         }
-        return output.toString();
+        return null;
+    }
+
+    /**
+     * Converts the provided object to a JSON string.
+     * @param obj The object.
+     * @return JSON representation of the provided object.
+     */
+    public static String convertObjectToJson(Object obj) throws JsonProcessingException {
+        return OBJECT_MAPPER.writeValueAsString(obj);
     }
 
 }

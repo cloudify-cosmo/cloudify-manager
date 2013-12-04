@@ -30,6 +30,9 @@ java_import org.springframework.context.annotation.AnnotationConfigApplicationCo
 java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDependenciesConfig
 java_import org.cloudifysource.cosmo.logging.LoggerFactory
 java_import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime
+java_import org.apache.log4j.Logger
+java_import org.apache.log4j.Level
+java_import org.cloudifysource.cosmo.logger.CosmoBlueprintsFileAppender
 
 
 class RuoteWorkflowEngine
@@ -46,17 +49,32 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'event', EventParticipant
     @dashboard.register_participant 'collect_params', CollectParamsParticipant
     @dashboard.add_service('ruote_listener', self)
+
     # in tests this will not work since Riemann is supposed to be running.
     test = opts[:test]
     if test.nil? or test.eql?(false)
       @context = create_service_dependencies
       $ruote_properties = {
-          'executor' => @context.get_bean('taskExecutor'),
-          'state_cache' => @context.get_bean('stateCache')
+        'executor' => @context.get_bean('taskExecutor'),
+        'state_cache' => @context.get_bean('stateCache')
       }
     end
+
+    # create loggers
     $logger = LoggerFactory.get_logger(RuoteRuntime.java_class)
     $user_logger = LoggerFactory.get_logger('cosmo')
+
+    # setup events logs appender and path
+    if ENV.has_key? 'WF_SERVICE_LOGS_PATH'
+      user_logger = Logger.get_logger('cosmo')
+      appender = CosmoBlueprintsFileAppender.new
+      appender.set_path ENV['WF_SERVICE_LOGS_PATH']
+      appender.set_name 'app'
+      appender.set_threshold Level::DEBUG
+      user_logger.add_appender appender
+    end
+
+    # load built in workflows
     load_built_in_workflows
   end
 
@@ -94,6 +112,7 @@ class RuoteWorkflowEngine
     begin
       @mutex.lock
       verify_workflow_exists(wfid)
+
       return @states[wfid]
     ensure
       @mutex.unlock
@@ -101,7 +120,12 @@ class RuoteWorkflowEngine
   end
 
   def get_workflows
-    raise 'not implemented'
+    begin
+      @mutex.lock
+      @states.values
+    ensure
+      @mutex.unlock
+    end
   end
 
   def on_msg(context)
@@ -155,7 +179,7 @@ class RuoteWorkflowEngine
   end
 
   def verify_workflow_exists(wfid)
-    raise "Workflow doesn't exist [wfid=#{wfid}]" unless @states.has_key?(wfid)
+    raise WorkflowDoesntExistError.new(wfid) unless @states.has_key?(wfid)
     @states[wfid]
   end
 
@@ -170,3 +194,8 @@ class RuoteWorkflowEngine
 
 end
 
+class WorkflowDoesntExistError < Exception
+  def initialize(wfid)
+    super("Workflow doesn't exist [wfid=#{wfid}]")
+  end
+end
