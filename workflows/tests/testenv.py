@@ -484,7 +484,7 @@ def deploy_application(dsl_path, timeout=240):
     try:
         while r is None:
             if end < time.time():
-                raise RuntimeError('Timeout deploying {0}'.format(dsl_path))
+                raise TimeoutException('Timeout deploying {0}'.format(dsl_path))
             time.sleep(1)
             r = get_manager_return_value.delay().get(timeout=60, propagate=True)
     except Exception, e:
@@ -508,9 +508,14 @@ def validate_dsl(dsl_path, timeout=240):
     try:
         while r is None:
             if end < time.time():
-                raise RuntimeError('Timeout validating {0}'.format(dsl_path))
+                raise TimeoutException('Timeout validating {0}'.format(dsl_path))
             time.sleep(1)
             r = get_manager_return_value.delay().get(timeout=60, propagate=True)
     except Exception, e:
         kill.delay().get()
         raise e
+
+
+class TimeoutException(Exception):
+    def __init__(self, *args):
+        Exception.__init__(self, args)

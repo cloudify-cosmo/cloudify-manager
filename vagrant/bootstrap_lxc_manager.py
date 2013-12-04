@@ -82,7 +82,7 @@ class RiemannProcess(object):
         self._event = threading.Event()
         self._detector = threading.Thread(target=self._start_detector, kwargs={'process': self._process})
         self._detector.start()
-        if not self._event.wait(10):
+        if not self._event.wait(30):
             raise RuntimeError("Unable to start riemann process:\n{0}".format('\n'.join(self._riemann_logs)))
         print "Riemann server started [pid={0}]".format(self.pid)
 
@@ -149,7 +149,7 @@ class VagrantLxcBoot:
         self.runner.sudo("apt-key add {0}".format(command))
 
     def wget(self, url):
-        self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
+        self.runner.run("wget -q -N {0} -P {1}/".format(url, self.working_dir))
 
     def install_rabbitmq(self):
         self.runner.sudo("sed -i '2i deb http://www.rabbitmq.com/debian/ testing main' /etc/apt/sources.list")
@@ -300,10 +300,10 @@ class VagrantLxcBoot:
             "http://files.vagrantup.com/packages/7ec0ee1d00a916f80b109a298bab08e391945243/{0}".format(vagrant_file_name)
         )
         self.runner.sudo("dpkg -i vagrant_1.2.7_x86_64.deb")
-        self.install_vagrant_lxc()
+        self._install_vagrant_lxc()
         self.add_lxc_box("precise64", "http://dl.dropbox.com/u/13510779/lxc-precise-amd64-2013-07-12.box")
 
-    def install_vagrant_lxc(self):
+    def _install_vagrant_lxc(self):
         self.runner.run("vagrant plugin install vagrant-lxc")
 
     def install_guest_additions(self):
@@ -468,6 +468,7 @@ fi
         print("Logstash has been successfully started")
 
     def bootstrap(self):
+        os.chdir(self.working_dir)
         self.set_management_ip()
         self.install_fabric_runner()
         if not self.update_only:
