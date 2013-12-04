@@ -21,6 +21,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.FileAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
 import org.springframework.util.StringUtils;
 
@@ -59,6 +60,9 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
     @Override
     protected void append(LoggingEvent event) {
         final Map<String, Object> objectMap = CosmoPatternLayout.extractJsonFromLogMessage(event);
+        if (objectMap == null) {
+            return;
+        }
         final String blueprint = extractBlueprint(objectMap);
         if (StringUtils.hasLength(blueprint)) {
             FileAppender appender = getFileAppender(blueprint);
@@ -71,9 +75,6 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
     }
 
     private String extractBlueprint(Map<String, Object> map) {
-        if (map == null) {
-            return null;
-        }
         if (map.containsKey("blueprint")) {
             return map.get("blueprint").toString();
         }
@@ -97,6 +98,7 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
             Path filePath = Paths.get(path.toString(), String.format("%s.log", name));
             FileAppender appender = new FileAppender(new CosmoPatternLayout(), filePath.toString());
             appender.setName(name);
+            appender.setThreshold(Level.DEBUG);
             return appender;
         } catch (IOException e) {
             throw Throwables.propagate(e);
