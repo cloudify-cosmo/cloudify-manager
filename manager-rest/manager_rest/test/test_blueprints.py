@@ -25,7 +25,7 @@ class BlueprintsTestCase(BaseServerTestCase):
             tar_mock_blueprint(),
             'application_archive',
             'mezzanine-app.tar.gz',
-            {'application_file': 'mock_blueprint/mezzanine_blueprint.yaml'}
+            {'application_file': 'mock_blueprint%2Fmezzanine_blueprint.yaml'}
         ]
 
     def test_get_empty(self):

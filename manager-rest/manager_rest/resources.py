@@ -8,7 +8,7 @@ from flask.ext.restful import Resource, abort, marshal_with, marshal
 from os import path
 import responses
 import tarfile
-
+import urllib
 
 def blueprints_manager():
     import blueprints_manager
@@ -57,8 +57,10 @@ class Blueprints(Resource):
         tar = tarfile.open(archive_target_path)
         tar.extractall(file_server_root)
 
+        application_file = urllib.unquote(request.form['application_file']).decode('utf-8')
+
         file_server_base_url = 'http://localhost:{0}'.format(file_server_port)
-        dsl_path = '{0}/{1}'.format(file_server_base_url, request.form['application_file'])
+        dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
         alias_mapping = '{0}/{1}'.format(file_server_base_url, 'cloudify/alias-mappings.yaml')
         resources_base = file_server_base_url + '/'
 
