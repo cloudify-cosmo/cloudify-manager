@@ -331,7 +331,7 @@ class VagrantLxcBoot:
 
     def install_cosmo_manager(self):
         cosmo_manager_repo = 'CloudifySource/cosmo-manager'
-        branch = 'feature/CLOUDIFY-2222-manager-rest.tar.gz'
+        branch = 'feature/CLOUDIFY-2222-manager-rest'
 
         workflow_service_base_uri = 'http://localhost:8101'
 
