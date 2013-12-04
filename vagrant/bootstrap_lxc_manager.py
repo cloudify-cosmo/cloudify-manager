@@ -114,6 +114,7 @@ class WorkflowServiceProcess(object):
         self.workflow_service_path = workflow_service_path
 
     def start(self, start_timeout=30):
+        output_file = open('workflow-service.out', 'w')
         endtime = time.time() + start_timeout
         command = [
             '{0}/jruby'.format(self.jbin),
@@ -123,8 +124,9 @@ class WorkflowServiceProcess(object):
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
         self._process = subprocess.Popen(command,
-                                         # stdout=FNULL,
-                                         # stderr=FNULL,
+                                         stdin=FNULL,
+                                         stdout=output_file,
+                                         stderr=output_file,
                                          env=env,
                                          cwd=self.workflow_service_path)
         self.wait_for_service_started(endtime)
@@ -175,6 +177,7 @@ class ManagerRestProcess(object):
         self.workflow_service_base_uri = workflow_service_base_uri
 
     def start(self, start_timeout=30):
+        output_file = open('manager-rest.out', 'w')
         endtime = time.time() + start_timeout
         command = [
             sys.executable,
@@ -183,8 +186,9 @@ class ManagerRestProcess(object):
             '--workflow_service_base_uri', self.workflow_service_base_uri
         ]
         self._process = subprocess.Popen(command,
-                                         # stdout=FNULL,
-                                         # stderr=FNULL,
+                                         stdin=FNULL,
+                                         stdout=output_file,
+                                         stderr=output_file,
                                          cwd=self.manager_rest_path)
         self.wait_for_service_responsiveness(endtime)
 
