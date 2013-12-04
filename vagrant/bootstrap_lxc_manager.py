@@ -178,7 +178,7 @@ class ManagerRestProcess(object):
         endtime = time.time() + start_timeout
         command = [
             sys.executable,
-            '{0}/manager_rest/server.py',
+            '{0}/manager_rest/server.py'.format(self.manager_rest_path),
             '--port', str(self.port),
             '--workflow_service_base_uri', self.workflow_service_base_uri
         ]
@@ -249,8 +249,11 @@ class VagrantLxcBoot:
     def apt_key(self, command):
         self.runner.sudo("apt-key add {0}".format(command))
 
-    def wget(self, url):
-        self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
+    def wget(self, url, output_name=None):
+        if output_name is None:
+            self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
+        else:
+            self.runner.run("wget -N {0} -P {1}/ -O {2}".format(url, self.working_dir, output_name))
 
     # TODO: quiet
     def extract_tar_gz(self, path):
@@ -327,16 +330,21 @@ class VagrantLxcBoot:
         return jbin
 
     def install_cosmo_manager(self):
+        cosmo_manager_repo = 'CloudifySource/cosmo-manager'
+        branch = 'feature/CLOUDIFY-2222-manager-rest.tar.gz'
+
+        workflow_service_base_uri = 'http://localhost:8101'
+
+        tar_output_name = 'cosmo-manager.tar.gz'
+        cosmodir = 'cosmo-manager-{0}'.format(branch.replace('/', '-'))
         jbin = self.install_jruby()
-        self.wget('https://github.com/CloudifySource/cosmo-manager/archive/feature/CLOUDIFY-2222-manager-rest.tar.gz')
-        self.extract_tar_gz('CLOUDIFY-2222-manager-rest.tar.gz')
-
-        self.runner.run('mvn clean package -DskipTests -Pall -f cosmo-manager-feature-CLOUDIFY-2222-manager-rest/orchestrator/pom.xml')
-
-        manager_rest_path = os.path.abspath('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/manager-rest')
-        self.pip('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/manager-rest/')
+        self.wget('https://github.com/{0}/archive/{1}.tar.gz'.format(cosmo_manager_repo, branch), tar_output_name)
+        self.extract_tar_gz(tar_output_name)
+        self.runner.run('mvn clean package -DskipTests -Pall -f {0}/orchestrator/pom.xml'.format(cosmodir))
+        manager_rest_path = os.path.abspath('{0}/manager-rest'.format(cosmodir))
+        self.pip('{0}/'.format(manager_rest_path))
         prev_cwd = os.getcwd()
-        workflow_service_path = os.path.abspath('cosmo-manager-feature-CLOUDIFY-2222-manager-rest/workflow-service')
+        workflow_service_path = os.path.abspath('{0}/workflow-service'.format(cosmodir))
         os.chdir(workflow_service_path)
         try:
             self.runner.run('{0}/jruby {0}/bundle install --without test'.format(jbin))
@@ -344,7 +352,7 @@ class VagrantLxcBoot:
             os.chdir(prev_cwd)
         workflow_service = WorkflowServiceProcess(jbin, workflow_service_path)
         workflow_service.start()
-        manager_rest = ManagerRestProcess(manager_rest_path, 'http://localhost:8101')
+        manager_rest = ManagerRestProcess(manager_rest_path, workflow_service_base_uri)
         manager_rest.start()
 
     def install_celery(self):
