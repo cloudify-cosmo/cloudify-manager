@@ -6,6 +6,10 @@ from responses import BlueprintState, Execution, BlueprintValidationStatus
 from workflow_client import workflow_client
 
 
+class DslParseException(Exception):
+    pass
+
+
 class BlueprintsManager(object):
 
     def __init__(self):
@@ -25,8 +29,11 @@ class BlueprintsManager(object):
     # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url, resources_base_url):
         # TODO: error code if parsing fails (in one of the 2 tasks)
-        plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
-        plan = tasks.prepare_multi_instance_plan(json.loads(plan))
+        try:
+            plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
+            plan = tasks.prepare_multi_instance_plan(json.loads(plan))
+        except Exception:
+            raise DslParseException
         new_blueprint = BlueprintState(json_plan=plan, plan=json.loads(plan))
         self.blueprints[str(new_blueprint.id)] = new_blueprint
         return new_blueprint
