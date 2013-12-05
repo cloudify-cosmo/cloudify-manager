@@ -1,3 +1,19 @@
+#########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+#
+
 __author__ = 'dan'
 
 from file_server import PORT as file_server_port
@@ -10,9 +26,15 @@ import responses
 import tarfile
 import urllib
 
+
 def blueprints_manager():
     import blueprints_manager
     return blueprints_manager.instance()
+
+
+def events_manager():
+    import events_manager
+    return events_manager.instance()
 
 
 def verify_json_content_type():
@@ -36,6 +58,7 @@ def setup_resources(api):
     api.add_resource(BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
     api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
+    api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
 
 
 class Blueprints(Resource):
@@ -105,3 +128,13 @@ class ExecutionsId(Resource):
     def get(self, execution_id):
         verify_execution_exists(execution_id)
         return blueprints_manager().get_workflow_state(execution_id)
+
+
+class DeploymentIdEvents(Resource):
+
+    @marshal_with(responses.DeploymentEvents.resource_fields)
+    def get(self, deployment_id):
+        return events_manager().get_deployment_events(deployment_id)
+
+
+
