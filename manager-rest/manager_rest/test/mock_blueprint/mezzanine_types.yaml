@@ -1,0 +1,42 @@
+imports:
+    - 'cloudify.types'
+
+types:
+
+    mezzanine_host:
+        derived_from: 'cloudify.types.host'
+        properties:
+            install_agent: 'true'
+            worker_config:
+                user: 'ubuntu'
+                port: '22'
+                key: '~/.ssh/id_rsa'
+
+    mezzanine_middleware:
+        derived_from: 'cloudify.types.middleware_server'
+        properties:
+            chef_version: '11.4.4-2'
+            chef_server_url: 'https://15.185.152.116:443'
+            chef_validator_name: 'chef-validator'
+            chef_environment: '_default'
+            chef_validation: |
+                  -----BEGIN RSA PRIVATE KEY-----
+
+                  -----END RSA PRIVATE KEY-----
+
+    mezzanine_app_module:
+        derived_from: 'cloudify.types.app_module'
+        properties:
+            chef_version: '11.4.4-2'
+            chef_server_url: 'https://15.185.152.116:443'
+            chef_validator_name: 'chef-validator'
+            chef_environment: '_default'
+            chef_validation: |
+                  -----BEGIN RSA PRIVATE KEY-----
+
+                  -----END RSA PRIVATE KEY-----
+        interfaces:
+            - 'cloudify.interfaces.app_module_installer'
+        workflows:
+            init:
+                ref: 'mezzanine_app_module_init.radial'

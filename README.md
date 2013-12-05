@@ -1,4 +1,4 @@
-## Getting Started with Cosmo ##
+## Getting Started with Cosmo ## 
 
 Cloudify Cosmo deploys, monitors and manages complex applications. It follows the [TOSCA spec](https://www.oasis-open.org/committees/tosca). 
 
