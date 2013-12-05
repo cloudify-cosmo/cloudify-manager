@@ -113,7 +113,7 @@ class WorkflowServiceProcess(object):
         self.port = port
         self.workflow_service_path = workflow_service_path
 
-    def start(self, start_timeout=30):
+    def start(self, start_timeout=60):
         output_file = open('workflow-service.out', 'w')
         endtime = time.time() + start_timeout
         command = [
@@ -176,7 +176,7 @@ class ManagerRestProcess(object):
         self.manager_rest_path = manager_rest_path
         self.workflow_service_base_uri = workflow_service_base_uri
 
-    def start(self, start_timeout=30):
+    def start(self, start_timeout=60):
         output_file = open('manager-rest.out', 'w')
         endtime = time.time() + start_timeout
         command = [
