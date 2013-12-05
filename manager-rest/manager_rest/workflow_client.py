@@ -6,6 +6,12 @@ import config
 import time
 
 
+class WorkflowServiceError(Exception):
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+
 class WorkflowClient(object):
 
     def __init__(self):
@@ -17,7 +23,8 @@ class WorkflowClient(object):
                                      'radial': workflow,
                                      'fields': {'plan': plan}
                                  }))
-        # TODO: handle error code
+        if response.status_code != 201:
+            raise WorkflowServiceError(response.status_code)
         return response.json()
 
     def validate_workflows(self, plan):
@@ -39,7 +46,8 @@ class WorkflowClient(object):
 
     def get_workflow_status(self, workflow_id):
         response = requests.get('{0}/workflows/{1}'.format(self.workflow_service_base_uri, workflow_id))
-        # TODO: handle error code
+        if response.status_code != 200:
+            raise WorkflowServiceError(response.status_code)
         return response.json()
 
 
