@@ -33,20 +33,24 @@ class EventsManager(object):
         if only_bytes:
             deployment_events_bytes = self.get_deployment_events_bytes(deployment_id)
             return DeploymentEvents(id=deployment_id,
-                                    first_event=0,
-                                    last_event=0,
+                                    first_event=-1,
+                                    last_event=-1,
                                     events=[],
-                                    deployment_total_events=0,
+                                    deployment_total_events=-1,
                                     deployment_events_bytes=deployment_events_bytes)
         else:
             events, deployment_events_bytes = self._read_deployment_events_from_file(deployment_id)
             deployment_total_events = len(events)
-            if first_event < len(events):
-                last_event = min(len(events), first_event + events_count)
-                events = events[first_event:last_event]
+            if first_event < len(events) and events_count > 0:
+                last_event = min(len(events), first_event + events_count)-1
+                events = events[first_event:last_event+1]
+            else:
+                first_event = -1
+                last_event = -1
+                events = []
             return DeploymentEvents(id=deployment_id,
-                                    first_event=0,
-                                    last_event=0,
+                                    first_event=first_event,
+                                    last_event=last_event,
                                     events=events,
                                     deployment_total_events=deployment_total_events,
                                     deployment_events_bytes=deployment_events_bytes)
@@ -78,7 +82,7 @@ _instance = EventsManager(config.instance().events_files_path)
 
 def reset():
     global _instance
-    _instance = EventsManager()
+    _instance = EventsManager(config.instance().events_files_path)
 
 
 def instance():

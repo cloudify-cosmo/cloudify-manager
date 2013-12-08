@@ -2,20 +2,25 @@ __author__ = 'dan'
 
 import unittest
 import json
-from manager_rest import server, config
+from manager_rest import server
 
 
 class BaseServerTestCase(unittest.TestCase):
 
     def setUp(self):
-        server.reset_state()
-        config.instance().test_mode = True
+        server.reset_state(self.create_configuration())
         server.app.config['Testing'] = True
         server.main()
         self.app = server.app.test_client()
 
     def tearDown(self):
         server.stop_file_server()
+
+    def create_configuration(self):
+        from config import Config
+        config = Config()
+        config.test_mode = True
+        return config
 
     def post(self, resource_path, data):
         result = self.app.post(resource_path, content_type='application/json', data=json.dumps(data))

@@ -154,7 +154,26 @@ class ExecutionsId(Resource):
 
 class DeploymentIdEvents(Resource):
 
+    def __init__(self):
+        from flask.ext.restful import reqparse
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('from', type=int, default=0, location='args')
+        self._args_parser.add_argument('count', type=int, default=500, location='args')
+
     @marshal_with(responses.DeploymentEvents.resource_fields)
     def get(self, deployment_id):
-        return events_manager().get_deployment_events(deployment_id)
+        args = self._args_parser.parse_args()
+
+        first_event = args['from']
+        events_count = args['count']
+
+        if first_event < 0:
+            abort(400, message='from argument cannot be negative')
+        if events_count < 0:
+            abort(400, message='count argument cannot be negative')
+
+        result = events_manager().get_deployment_events(deployment_id,
+                                                        first_event=first_event,
+                                                        events_count=events_count)
+        return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
 

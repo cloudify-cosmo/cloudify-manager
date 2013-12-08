@@ -45,9 +45,12 @@ class Config(object):
 _instance = Config()
 
 
-def reset():
+def reset(configuration=None):
     global _instance
-    _instance = Config()
+    if configuration is not None:
+        _instance = configuration
+    else:
+        _instance = Config()
 
 
 def instance():
