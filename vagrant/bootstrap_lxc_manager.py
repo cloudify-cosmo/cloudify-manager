@@ -206,7 +206,7 @@ class ManagerRestProcess(object):
                 pass
             time.sleep(1)
         if not up:
-            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
+            raise RuntimeError("Manager rest service is not responding @ {0} (response: {1})".format(service_url, res))
 
 
 class VagrantLxcBoot:
