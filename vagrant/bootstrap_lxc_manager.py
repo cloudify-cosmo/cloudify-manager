@@ -172,11 +172,12 @@ class WorkflowServiceProcess(object):
 
 class ManagerRestProcess(object):
 
-    def __init__(self, manager_rest_path, workflow_service_base_uri, port=8100):
+    def __init__(self, manager_rest_path, workflow_service_base_uri, events_path, port=8100):
         self.process_grep = 'server.py'
         self.port = port
         self.manager_rest_path = manager_rest_path
         self.workflow_service_base_uri = workflow_service_base_uri
+        self.events_path = events_path
 
     def start(self, start_timeout=60):
         output_file = open('manager-rest.out', 'w')
@@ -185,7 +186,8 @@ class ManagerRestProcess(object):
             sys.executable,
             '{0}/manager_rest/server.py'.format(self.manager_rest_path),
             '--port', str(self.port),
-            '--workflow_service_base_uri', self.workflow_service_base_uri
+            '--workflow_service_base_uri', self.workflow_service_base_uri,
+            '----events_files_path', self.events_path
         ]
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
@@ -359,7 +361,7 @@ class VagrantLxcBoot:
         events_path = os.path.join(self.working_dir, 'events')
         workflow_service = WorkflowServiceProcess(jbin, workflow_service_path, events_path)
         workflow_service.start()
-        manager_rest = ManagerRestProcess(manager_rest_path, workflow_service_base_uri)
+        manager_rest = ManagerRestProcess(manager_rest_path, workflow_service_base_uri, events_path)
         manager_rest.start()
 
     def install_celery(self):

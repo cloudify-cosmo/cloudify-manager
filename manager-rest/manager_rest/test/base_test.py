@@ -49,8 +49,7 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def head(self, resource_path):
-        result = self.app.get(resource_path)
-        result.json = json.loads(result.data)
+        result = self.app.head(resource_path)
         return result
 
 

@@ -175,7 +175,8 @@ class DeploymentIdEvents(Resource):
         try:
             result = events_manager().get_deployment_events(deployment_id,
                                                             first_event=first_event,
-                                                            events_count=events_count)
+                                                            events_count=events_count,
+                                                            only_bytes=request.method == 'HEAD')
             return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
         except BaseException as e:
             abort(500, message=e.message)
