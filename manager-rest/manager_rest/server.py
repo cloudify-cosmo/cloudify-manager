@@ -13,6 +13,7 @@ import signal
 import sys
 import logging
 import blueprints_manager
+import events_manager
 
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
@@ -69,18 +70,25 @@ def parse_arguments():
         '--workflow_service_base_uri',
         help='Workflow service base URI'
     )
+    parser.add_argument(
+        '--events_files_path',
+        help='Path where event files are stored (the file\'s content will be served using the events api)',
+        default=None
+    )
     return parser.parse_args()
 
 
-def reset_state():
-    config.reset()
+def reset_state(configuration=None):
+    config.reset(configuration)
     blueprints_manager.reset()
+    events_manager.reset()
 
 
 def main():
     if app.config['Testing']:
         class TestArgs(object):
             workflow_service_base_uri = None
+            events_files_path = None
         args = TestArgs()
     else:
         args = parse_arguments()
@@ -90,6 +98,9 @@ def main():
         if workflow_service_base_uri.endswith('/'):
             workflow_service_base_uri = workflow_service_base_uri[0:-1]
         config.instance().workflow_service_base_uri = workflow_service_base_uri
+
+    if args.events_files_path:
+        config.instance().events_files_path = args.events_files_path
 
     file_server_root = tempfile.mkdtemp()
     config.instance().file_server_root = file_server_root

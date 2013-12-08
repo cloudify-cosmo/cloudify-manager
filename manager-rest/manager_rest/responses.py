@@ -103,3 +103,22 @@ class Execution(object):
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = 'None'
+
+
+class DeploymentEvents(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'firstEvent': fields.Integer(attribute='first_event'),
+        'lastEvent': fields.Integer(attribute='last_event'),
+        'events': fields.List(fields.String),
+        'deploymentTotalEvents': fields.Integer(attribute='deployment_total_events')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs['id']
+        self.first_event = kwargs['first_event']
+        self.last_event = kwargs['last_event']
+        self.events = kwargs['events']
+        self.deployment_total_events = kwargs['deployment_total_events']
+        self.deployment_events_bytes = kwargs['deployment_events_bytes']

@@ -1,3 +1,19 @@
+#########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+#
+
 __author__ = 'dan'
 
 from blueprints_manager import DslParseException
@@ -16,6 +32,11 @@ import urllib
 def blueprints_manager():
     import blueprints_manager
     return blueprints_manager.instance()
+
+
+def events_manager():
+    import events_manager
+    return events_manager.instance()
 
 
 def verify_json_content_type():
@@ -43,6 +64,7 @@ def setup_resources(api):
     api.add_resource(BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
     api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
+    api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
 
 
 class Blueprints(Resource):
@@ -128,3 +150,33 @@ class ExecutionsId(Resource):
             return blueprints_manager().get_workflow_state(execution_id)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
+
+
+class DeploymentIdEvents(Resource):
+
+    def __init__(self):
+        from flask.ext.restful import reqparse
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('from', type=int, default=0, location='args')
+        self._args_parser.add_argument('count', type=int, default=500, location='args')
+
+    @marshal_with(responses.DeploymentEvents.resource_fields)
+    def get(self, deployment_id):
+        args = self._args_parser.parse_args()
+
+        first_event = args['from']
+        events_count = args['count']
+
+        if first_event < 0:
+            abort(400, message='from argument cannot be negative')
+        if events_count < 0:
+            abort(400, message='count argument cannot be negative')
+
+        try:
+            result = events_manager().get_deployment_events(deployment_id,
+                                                            first_event=first_event,
+                                                            events_count=events_count,
+                                                            only_bytes=request.method == 'HEAD')
+            return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
+        except BaseException as e:
+            abort(500, message=e.message)
