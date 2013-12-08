@@ -29,6 +29,10 @@ class EventsManager(object):
         self._events_path = events_files_path
         self._events_file_extension = events_file_extension
 
+    # TODO: temporary hack for setting events_path
+    def set_events_path(self, events_path):
+        self._events_path = events_path
+
     def get_deployment_events(self, deployment_id, first_event=0, events_count=500, only_bytes=False):
         if only_bytes:
             deployment_events_bytes = self.get_deployment_events_bytes(deployment_id)

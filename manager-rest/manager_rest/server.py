@@ -101,6 +101,8 @@ def main():
 
     if args.events_files_path is not None:
         config.instance().events_files_path = args.events_files_path
+        # TODO: create manager with configuration - this is just a temporary hack.
+        events_manager.instance().set_events_path(args.events_files_path)
 
     file_server_root = tempfile.mkdtemp()
     config.instance().file_server_root = file_server_root
