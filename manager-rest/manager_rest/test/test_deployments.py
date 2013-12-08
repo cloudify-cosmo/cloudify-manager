@@ -117,4 +117,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEqual(400, result.status_code)
         result = self.get('/deployments/deployment_0/events?from=0&count=-1')
         self.assertEqual(400, result.status_code)
-
+        result = self.get('/deployments/deployment_0/events?from=abcd')
+        self.assertEqual(400, result.status_code)
+        result = self.get('/deployments/deployment_0/events?from=0&count=abcd')
+        self.assertEqual(400, result.status_code)

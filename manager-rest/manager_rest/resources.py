@@ -172,8 +172,10 @@ class DeploymentIdEvents(Resource):
         if events_count < 0:
             abort(400, message='count argument cannot be negative')
 
-        result = events_manager().get_deployment_events(deployment_id,
-                                                        first_event=first_event,
-                                                        events_count=events_count)
-        return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
-
+        try:
+            result = events_manager().get_deployment_events(deployment_id,
+                                                            first_event=first_event,
+                                                            events_count=events_count)
+            return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
+        except BaseException as e:
+            abort(500, message=e.message)
