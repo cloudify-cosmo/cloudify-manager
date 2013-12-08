@@ -99,7 +99,7 @@ def main():
             workflow_service_base_uri = workflow_service_base_uri[0:-1]
         config.instance().workflow_service_base_uri = workflow_service_base_uri
 
-    if args.events_files_path:
+    if args.events_files_path is not None:
         config.instance().events_files_path = args.events_files_path
 
     file_server_root = tempfile.mkdtemp()
