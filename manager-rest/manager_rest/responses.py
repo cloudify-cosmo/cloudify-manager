@@ -111,7 +111,7 @@ class DeploymentEvents(object):
         'id': fields.String,
         'firstEvent': fields.Integer(attribute='first_event'),
         'lastEvent': fields.Integer(attribute='last_event'),
-        'events': fields.List(fields.String),
+        'events': fields.List(fields.Raw),
         'deploymentTotalEvents': fields.Integer(attribute='deployment_total_events')
     }
 

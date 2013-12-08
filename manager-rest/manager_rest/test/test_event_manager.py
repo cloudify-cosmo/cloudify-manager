@@ -32,7 +32,9 @@ class EventManagerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tempdir = tempfile.mkdtemp()
-        cls.events_manager = EventsManager(cls.tempdir)
+        import config
+        config.instance()._events_files_path = cls.tempdir
+        cls.events_manager = EventsManager()
         events = [{'key1': 'value1'}, {'key2': 'value2'}]
         deployment_id = 'deployment_0'
         cls.events_file = path.join(cls.tempdir, "{0}.log".format(deployment_id))

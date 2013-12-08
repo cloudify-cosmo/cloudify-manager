@@ -19,19 +19,15 @@ __author__ = 'idanmo'
 
 import os
 import config
+import json
 from os import path
 from responses import DeploymentEvents
 
 
 class EventsManager(object):
 
-    def __init__(self, events_files_path, events_file_extension='.log'):
-        self._events_path = events_files_path
+    def __init__(self, events_file_extension='.log'):
         self._events_file_extension = events_file_extension
-
-    # TODO: temporary hack for setting events_path
-    def set_events_path(self, events_path):
-        self._events_path = events_path
 
     def get_deployment_events(self, deployment_id, first_event=0, events_count=500, only_bytes=False):
         if only_bytes:
@@ -52,6 +48,7 @@ class EventsManager(object):
                 first_event = -1
                 last_event = -1
                 events = []
+            events = map(lambda x: json.loads(x), events)
             return DeploymentEvents(id=deployment_id,
                                     first_event=first_event,
                                     last_event=last_event,
@@ -78,15 +75,16 @@ class EventsManager(object):
             return [], 0
 
     def _get_deployment_events_file_name(self, deployment_id):
-        return path.join(self._events_path, "{0}{1}".format(deployment_id, self._events_file_extension))
+        return path.join(config.instance().events_files_path,
+                         "{0}{1}".format(deployment_id, self._events_file_extension))
 
 
-_instance = EventsManager(config.instance().events_files_path)
+_instance = EventsManager()
 
 
 def reset():
     global _instance
-    _instance = EventsManager(config.instance().events_files_path)
+    _instance = EventsManager()
 
 
 def instance():
