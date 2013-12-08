@@ -107,11 +107,12 @@ class RiemannProcess(object):
 
 class WorkflowServiceProcess(object):
 
-    def __init__(self, jbin, workflow_service_path, port=8101):
+    def __init__(self, jbin, workflow_service_path, events_path, port=8101):
         self.process_grep = 'rackup'
         self.jbin = jbin
         self.port = port
         self.workflow_service_path = workflow_service_path
+        self.events_path = events_path
 
     def start(self, start_timeout=60):
         output_file = open('workflow-service.out', 'w')
@@ -123,6 +124,7 @@ class WorkflowServiceProcess(object):
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
+        env['WF_SERVICE_LOGS_PATH'] = self.events_path
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
                                          stdout=output_file,
@@ -354,7 +356,8 @@ class VagrantLxcBoot:
             self.runner.run('{0}/jruby {0}/bundle install --without test'.format(jbin))
         finally:
             os.chdir(prev_cwd)
-        workflow_service = WorkflowServiceProcess(jbin, workflow_service_path)
+        events_path = os.path.join(self.working_dir, 'events')
+        workflow_service = WorkflowServiceProcess(jbin, workflow_service_path, events_path)
         workflow_service.start()
         manager_rest = ManagerRestProcess(manager_rest_path, workflow_service_base_uri)
         manager_rest.start()

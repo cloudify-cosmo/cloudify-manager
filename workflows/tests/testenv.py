@@ -42,10 +42,11 @@ logger.setLevel(logging.INFO)
 
 class ManagerRestProcess(object):
 
-    def __init__(self, port, workflow_service_base_uri):
+    def __init__(self, port, workflow_service_base_uri, events_path):
         self.process = None
         self.port = port
         self.workflow_service_base_uri = workflow_service_base_uri
+        self.events_path = events_path
 
     def start(self, timeout=10):
         endtime = time.time() + timeout
@@ -54,7 +55,8 @@ class ManagerRestProcess(object):
             sys.executable,
             self.locate_manager_rest(),
             '--port', self.port,
-            '--workflow_service_base_uri', self.workflow_service_base_uri
+            '--workflow_service_base_uri', self.workflow_service_base_uri,
+            '--events_files_path', self.events_path
         ]
 
         logger.info('Starting manager-rest with: {0}'.format(manager_rest_command))
@@ -90,14 +92,17 @@ class ManagerRestProcess(object):
         # build way into manager_rest
         return path.join(manager_rest_location, 'manager-rest/manager_rest/server.py')
 
+
 class RuoteServiceProcess(object):
 
     JRUBY_VERSION = '1.7.3'
 
-    def __init__(self, port=8101):
+    def __init__(self, port=8101, events_path=None):
         self._pid = None
         self._port = port
         self._use_rvm = self._verify_ruby_environment()
+        self._events_path = events_path
+        self._process = None
 
     def _get_installed_ruby_packages(self):
         pass
@@ -178,9 +183,11 @@ class RuoteServiceProcess(object):
         startup_script_path = path.realpath(path.join(path.dirname(__file__), '..'))
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
-
+        env = os.environ.copy()
+        if self._events_path is not None:
+            env['WF_SERVICE_LOGS_PATH'] = self._events_path
         logger.info("Starting Ruote service")
-        self._process = subprocess.Popen(command, cwd=startup_script_path)
+        self._process = subprocess.Popen(command, cwd=startup_script_path, env=env)
         self._verify_service_started(timeout=30)
         self._verify_service_responsiveness()
         logger.info("Ruote service started [pid=%s]", self._pid)
@@ -423,11 +430,15 @@ class TestEnvironment(object):
                                                               self._riemann_process.pid)
             self._celery_worker_process.start()
 
+            # set events path (wf_service -> write, manager_rest -> read)
+            self.events_path = path.join(self._tempdir, 'events')
+
             # manager rest
             port = '8100'
             worker_service_base_uri = 'http://localhost:8101'
             self._manager_rest_process = ManagerRestProcess(port,
-                                                            worker_service_base_uri)
+                                                            worker_service_base_uri,
+                                                            self.events_path)
             self._manager_rest_process.start()
 
         except BaseException as error:
@@ -476,6 +487,8 @@ class TestEnvironment(object):
             if path.exists(plugins_tempdir):
                 shutil.rmtree(plugins_tempdir)
                 os.makedirs(plugins_tempdir)
+            if path.exists(TestEnvironment.events_path):
+                shutil.rmtree(TestEnvironment.events_path)
 
     @staticmethod
     def restart_celery_worker():
@@ -530,7 +543,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
-        self._ruote_service = RuoteServiceProcess()
+        self._ruote_service = RuoteServiceProcess(events_path=TestEnvironment.events_path)
         self._ruote_service.start()
 
     def tearDown(self):
