@@ -187,7 +187,7 @@ class ManagerRestProcess(object):
             '{0}/manager_rest/server.py'.format(self.manager_rest_path),
             '--port', str(self.port),
             '--workflow_service_base_uri', self.workflow_service_base_uri,
-            '----events_files_path', self.events_path
+            '--events_files_path', self.events_path
         ]
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
