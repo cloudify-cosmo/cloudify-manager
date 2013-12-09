@@ -6,6 +6,7 @@ class Config(object):
     def __init__(self):
         self._file_server_root = None
         self._workflow_service_base_uri = None
+        self._events_files_path = None
         self._test_mode = False
 
     @property
@@ -25,6 +26,14 @@ class Config(object):
         self._workflow_service_base_uri = value
 
     @property
+    def events_files_path(self):
+        return self._events_files_path
+
+    @events_files_path.setter
+    def events_files_path(self, value):
+        self._events_files_path = value
+
+    @property
     def test_mode(self):
         return self._test_mode
 
@@ -36,9 +45,12 @@ class Config(object):
 _instance = Config()
 
 
-def reset():
+def reset(configuration=None):
     global _instance
-    _instance = Config()
+    if configuration is not None:
+        _instance = configuration
+    else:
+        _instance = Config()
 
 
 def instance():

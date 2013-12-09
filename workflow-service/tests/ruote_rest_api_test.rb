@@ -65,7 +65,31 @@ define wf
     fields = { :key => 'value' }
     post '/workflows', { :radial => radial, :fields => fields }.to_json
     res = JSON.parse(last_response.body, :symbolize_names => true)
-    wait_for_workflow_state(res[:id], :terminated, 5)
+    wait_for_workflow_state(res[:id], :terminated)
+  end
+
+  def test_launch_tags
+    radial = %/
+define wf
+  echo 'tags!'
+/
+    tags = { 'blueprint' => 'some_blueprint' }
+    post '/workflows', { :radial => radial, :tags => tags }.to_json
+    res = JSON.parse(last_response.body, :symbolize_names => true)
+    wait_for_workflow_state(res[:id], :terminated)
+  end
+
+  def test_launch_illegal_tags
+    radial = %/
+define wf
+  echo '$key'
+/
+    begin
+      post '/workflows', { :radial => radial, :tags => 'illegal value' }.to_json
+      assert_fail_assertion 'expected exception'
+    rescue
+      assert_response_status 400
+    end
   end
 
   def test_launch_wrong_fields_type
@@ -105,7 +129,7 @@ define wf
     end
   end
 
-  def wait_for_workflow_state(wfid, state, timeout=5)
+  def wait_for_workflow_state(wfid, state, timeout=10)
     deadline = Time.now + timeout
     state_ok = false
     res = nil

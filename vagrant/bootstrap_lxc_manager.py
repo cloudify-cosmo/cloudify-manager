@@ -107,11 +107,12 @@ class RiemannProcess(object):
 
 class WorkflowServiceProcess(object):
 
-    def __init__(self, jbin, workflow_service_path, port=8101):
+    def __init__(self, jbin, workflow_service_path, events_path, port=8101):
         self.process_grep = 'rackup'
         self.jbin = jbin
         self.port = port
         self.workflow_service_path = workflow_service_path
+        self.events_path = events_path
 
     def start(self, start_timeout=60):
         output_file = open('workflow-service.out', 'w')
@@ -123,6 +124,7 @@ class WorkflowServiceProcess(object):
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
+        env['WF_SERVICE_LOGS_PATH'] = self.events_path
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
                                          stdout=output_file,
@@ -170,11 +172,12 @@ class WorkflowServiceProcess(object):
 
 class ManagerRestProcess(object):
 
-    def __init__(self, manager_rest_path, workflow_service_base_uri, port=8100):
+    def __init__(self, manager_rest_path, workflow_service_base_uri, events_path, port=8100):
         self.process_grep = 'server.py'
         self.port = port
         self.manager_rest_path = manager_rest_path
         self.workflow_service_base_uri = workflow_service_base_uri
+        self.events_path = events_path
 
     def start(self, start_timeout=60):
         output_file = open('manager-rest.out', 'w')
@@ -183,7 +186,8 @@ class ManagerRestProcess(object):
             sys.executable,
             '{0}/manager_rest/server.py'.format(self.manager_rest_path),
             '--port', str(self.port),
-            '--workflow_service_base_uri', self.workflow_service_base_uri
+            '--workflow_service_base_uri', self.workflow_service_base_uri,
+            '--events_files_path', self.events_path
         ]
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
@@ -206,7 +210,7 @@ class ManagerRestProcess(object):
                 pass
             time.sleep(1)
         if not up:
-            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
+            raise RuntimeError("Manager rest service is not responding @ {0} (response: {1})".format(service_url, res))
 
 
 class VagrantLxcBoot:
@@ -354,9 +358,10 @@ class VagrantLxcBoot:
             self.runner.run('{0}/jruby {0}/bundle install --without test'.format(jbin))
         finally:
             os.chdir(prev_cwd)
-        workflow_service = WorkflowServiceProcess(jbin, workflow_service_path)
+        events_path = os.path.join(self.working_dir, 'events')
+        workflow_service = WorkflowServiceProcess(jbin, workflow_service_path, events_path)
         workflow_service.start()
-        manager_rest = ManagerRestProcess(manager_rest_path, workflow_service_base_uri)
+        manager_rest = ManagerRestProcess(manager_rest_path, workflow_service_base_uri, events_path)
         manager_rest.start()
 
     def install_celery(self):

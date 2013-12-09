@@ -18,12 +18,13 @@ require 'json'
 
 class WorkflowState
 
-  attr_accessor :id, :state, :created, :launched, :error
+  attr_accessor :id, :state, :created, :launched, :error, :tags
 
-  def initialize(id, state, created, launched=nil)
+  def initialize(id, state, created, tags, launched=nil)
     @id = id
     @state = state
     @created = created
+    @tags = tags
     @launched = launched
     @error = nil
   end
