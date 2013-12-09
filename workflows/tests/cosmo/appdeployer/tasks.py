@@ -79,6 +79,13 @@ class ManagerRestClientTestClient(object):
                 execution_id))
         return response.json()
 
+    def get_deployment_events(self, deployment_id, first_event=0, events_count=500):
+        response = requests.get('{0}/deployments/{1}/events?from={2}&count={3}'.format(
+            self.base_manager_rest_uri, deployment_id, first_event, events_count))
+        if response.status_code != 200:
+            raise RuntimeError('Failed getting deployment events for deployment id {0}'.format(deployment_id))
+        return response.json()
+
     def _tar_blueprint(self, blueprint_path):
         blueprint_name = path.basename(path.splitext(blueprint_path)[0])
         blueprint_directory = path.dirname(blueprint_path)
@@ -105,3 +112,9 @@ def submit_and_validate_blueprint(blueprint_path, **kwargs):
 @celery.task
 def get_execution_status(execution_id, **kwargs):
     return manager_client.get_execution_status(execution_id)
+
+
+@celery.task
+def get_deployment_events(deployment_id, first_event=0, events_count=500, **kwargs):
+    return manager_client.get_deployment_events(deployment_id, first_event, events_count)
+

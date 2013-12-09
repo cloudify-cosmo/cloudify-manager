@@ -21,7 +21,8 @@ class WorkflowClient(object):
         response = requests.post('{0}/workflows'.format(self.workflow_service_base_uri),
                                  json.dumps({
                                      'radial': workflow,
-                                     'fields': {'plan': plan}
+                                     'fields': {'plan': plan},
+                                     'tags': {'blueprint': plan['name']}  # for workflow events
                                  }))
         if response.status_code != 201:
             raise WorkflowServiceError(response.status_code)

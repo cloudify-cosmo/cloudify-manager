@@ -28,6 +28,7 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.util.Map;
 
 /**
@@ -67,6 +68,7 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
         if (StringUtils.hasLength(blueprint)) {
             FileAppender appender = getFileAppender(blueprint);
             try {
+                objectMap.put("timestamp", new Timestamp(event.getTimeStamp()).toString());
                 event.setProperty("json", CosmoPatternLayout.convertObjectToJson(objectMap));
                 appender.append(event);
             } catch (JsonProcessingException ignored) {
