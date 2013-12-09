@@ -32,7 +32,7 @@ class BaseServerTestCase(unittest.TestCase):
         server.stop_file_server()
 
     def create_configuration(self):
-        from config import Config
+        from manager_rest.config import Config
         config = Config()
         config.test_mode = True
         return config

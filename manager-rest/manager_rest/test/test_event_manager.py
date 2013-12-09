@@ -23,7 +23,7 @@ import shutil
 import json
 import os
 from os import path
-from events_manager import EventsManager
+from manager_rest.events_manager import EventsManager
 
 
 class EventManagerTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class EventManagerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tempdir = tempfile.mkdtemp()
-        import config
+        from manager_rest import config
         config.instance()._events_files_path = cls.tempdir
         cls.events_manager = EventsManager()
         events = [{'key1': 'value1'}, {'key2': 'value2'}]
