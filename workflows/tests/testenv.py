@@ -124,7 +124,7 @@ class RuoteServiceProcess(object):
 
         raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]".format(self.JRUBY_VERSION))
 
-    def _verify_service_responsiveness(self, timeout=30):
+    def _verify_service_responsiveness(self, timeout=120):
         import urllib2
         service_url = "http://localhost:{0}".format(self._port)
         up = False
@@ -560,8 +560,8 @@ def deploy_application(dsl_path, timeout=240):
     end = time.time() + timeout
 
     from cosmo.appdeployer.tasks import submit_and_execute_workflow, get_execution_status
-    result = submit_and_execute_workflow.delay(dsl_path)
-    execution_response = result.get(timeout=60, propagate=True)
+    execution = submit_and_execute_workflow.delay(dsl_path)
+    blueprint, execution_response = execution.get(timeout=60, propagate=True)
     r = {'status': 'pending'}
     while r['status'] != 'terminated' and r['status'] != 'failed':
         if end < time.time():
@@ -570,6 +570,26 @@ def deploy_application(dsl_path, timeout=240):
         r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
     if r['status'] != 'terminated':
         raise RuntimeError('Application deployment failed. (status response: {0})'.format(r))
+
+    return blueprint['id']
+
+
+def undeploy_application(deployment_id, timeout=240):
+    """
+    A blocking method which undeploys an application from the provided dsl path.
+    """
+    end = time.time() + timeout
+    from cosmo.appdeployer.tasks import uninstall_deployment, get_execution_status
+    execution = uninstall_deployment.delay(deployment_id)
+    execution_response = execution.get(timeout=60, propagate=True)
+    r = {'status': 'pending'}
+    while r['status'] != 'terminated' and r['status'] != 'failed':
+        if end < time.time():
+            raise TimeoutException('Timeout undeploying {0}'.format(deployment_id))
+        time.sleep(1)
+        r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
+    if r['status'] != 'terminated':
+        raise RuntimeError('Application undeployment failed. (status response: {0})'.format(r))
 
 
 def validate_dsl(dsl_path, timeout=240):

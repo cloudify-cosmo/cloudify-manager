@@ -1,0 +1,28 @@
+define uninstalling_nodes
+
+#   log message: 'Reloading policies'
+#   event event: { "stage" => "Initializing monitoring policies" }
+#   reload_riemann_config policies: '$plan.policies',
+#                          rules: '$plan.rules',
+#                          policies_events: '$plan.policies_events'
+
+    log message: 'uninstalling nodes: ${plan.nodes}'
+    concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
+        log message: 'processing node: ${f:node}'
+        # we only call uninstall on:
+        # 1. nodes that has an uninstall workflow
+        sequence if: '$f:node.workflows.uninstall is set'
+            # 2. host nodes or nodes which are not contained in a host,
+            sequence if: '$f:node.host_id is not set or $f:node.host_id == $f.node.id'
+                #3. reachable nodes
+                state resource_id: '${node.id}', state: { reachable: "true" }, wait_until_matches: false,
+                to_f: 'node_reachable'
+                log message: 'node reachable state is: ${f:node_reachable}'
+                sequence if: '${f:node_reachable} == true'
+                    event event: { "stage" => "Uninstalling node" }
+                    log message: 'executing uninstall workflow for node: ${node.id}'
+                    set 'v:uninstall': "$f:node.workflows.uninstall"
+                    uninstall
+                    state resource_id: '${node.id}', state: { reachable: "false" }
+
+# remove riemann config policies

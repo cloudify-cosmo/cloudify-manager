@@ -21,12 +21,14 @@ from os import path
 import json
 from celery.utils.log import get_task_logger
 from cosmo.events import set_reachable
+from cosmo.events import set_unreachable
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
 
 logger = get_task_logger(__name__)
 reachable = set_reachable
+unreachable = set_unreachable
 machines = {}
 
 @celery.task
@@ -64,6 +66,7 @@ def terminate(__cloudify_id, **kwargs):
     if __cloudify_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist".format(__cloudify_id))
     del machines[__cloudify_id]
+    unreachable(__cloudify_id)
 
 @celery.task
 def get_machines(**kwargs):

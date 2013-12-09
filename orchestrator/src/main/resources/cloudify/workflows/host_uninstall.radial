@@ -1,0 +1,2 @@
+define host_uninstall
+    execute_operation operation: 'cloudify.interfaces.host_provisioner.terminate'

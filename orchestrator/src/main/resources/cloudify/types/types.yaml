@@ -27,6 +27,8 @@ types:
         workflows:
             init:
                 ref: "cloudify.workflows.host.init"
+            uninstall:
+                ref: "cloudify.workflows.host.uninstall"
 
     # A storage volume in a topology
     cloudify.types.volume:
@@ -222,6 +224,8 @@ interfaces:
 workflows:
     install:
         ref: "cloudify.workflows.install"
+    uninstall:
+        ref: "cloudify.workflows.uninstall"
 
 ##################################################################################
 # Base artifact definitions
