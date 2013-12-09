@@ -1,11 +1,4 @@
 define uninstalling_nodes
-
-#   log message: 'Reloading policies'
-#   event event: { "stage" => "Initializing monitoring policies" }
-#   reload_riemann_config policies: '$plan.policies',
-#                          rules: '$plan.rules',
-#                          policies_events: '$plan.policies_events'
-
     log message: 'uninstalling nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
         log message: 'processing node: ${f:node}'
@@ -25,4 +18,4 @@ define uninstalling_nodes
                     uninstall
                     state resource_id: '${node.id}', state: { reachable: "false" }
 
-# remove riemann config policies
+    #TODO when we support multi app deployment, remove relevant policies from riemann
