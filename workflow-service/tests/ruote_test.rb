@@ -40,6 +40,15 @@ define wf
     assert_equal :pending, wf.state
   end
 
+  def test_workflow_execution_with_tags
+    radial = %/
+define wf
+  echo 'hello world'
+/
+    wf = @ruote.launch(radial, {}, { :blueprint => 'some_blueprint' })
+    assert_equal :pending, wf.state
+  end
+
   def test_workflow_state
     radial = %/
 define wf

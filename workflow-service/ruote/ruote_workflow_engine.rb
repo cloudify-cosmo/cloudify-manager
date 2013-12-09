@@ -92,10 +92,12 @@ class RuoteWorkflowEngine
     context
   end
 
-  def launch(radial, fields={})
+  def launch(radial, fields={}, tags={})
     workflow = Ruote::RadialReader.read(radial)
     wfid = @dashboard.launch(workflow, fields)
-    update_workflow_state(wfid, :pending)
+    wf_state = update_workflow_state(wfid, :pending, tags)
+    log_workflow_state(wf_state)
+    wf_state
   end
 
   def cancel_workflow(wfid)
@@ -151,17 +153,26 @@ class RuoteWorkflowEngine
         # ignore..
     end
     unless new_state.nil?
-      update_workflow_state(context['wfid'], new_state, error)
+      wf_state = update_workflow_state(context['wfid'], new_state, nil, error)
+      log_workflow_state(wf_state)
     end
   end
 
   private
 
-  def update_workflow_state(wfid, state, error=nil)
+  def log_workflow_state(wf_state)
+    event = wf_state.tags.clone
+    event[:workflow_id] = wf_state.id
+    event[:type] = wf_state.state
+    event[:error] = wf_state.error unless wf_state.state != :failed
+    $user_logger.debug("Workflow state changed #{JSON.pretty_generate(event)}")
+  end
+
+  def update_workflow_state(wfid, state, tags=nil, error=nil)
     begin
       @mutex.lock
       if state.eql?(:pending)
-        new_state = WorkflowState.new(wfid, state, DateTime.now)
+        new_state = WorkflowState.new(wfid, state, DateTime.now, tags)
         @states[wfid] = new_state
         return new_state
       end
