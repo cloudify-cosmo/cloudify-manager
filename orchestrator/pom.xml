@@ -308,10 +308,6 @@
                     <artifactId>tasks</artifactId>
                     <type>test-jar</type>
                 </dependency>
-                <dependency>
-                    <groupId>com.beust</groupId>
-                    <artifactId>jcommander</artifactId>
-                </dependency>
             </dependencies>
 
             <build>
