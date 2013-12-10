@@ -137,7 +137,6 @@ public class CosmoBlueprintsFileAppenderTest extends AbstractTestNGSpringContext
     private void assertFileContent(String expectedContent, String filename) throws IOException {
         String content = readLogFile(filename);
         content = content.replaceAll("\"timestamp\":\".*?\",", "");
-        System.out.println("expected: " + expectedContent + " actual: " + content);
         Assert.assertEquals(expectedContent.replace("\n", System.getProperty("line.separator")), content);
     }
 
