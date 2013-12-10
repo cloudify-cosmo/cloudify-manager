@@ -28,6 +28,7 @@ class CloudMockTest(unittest.TestCase):
         def dummy(node_id):
             pass
         t.reachable = dummy
+        t.unreachable = dummy
         t.machines = {}
 
     def test_provision(self):
