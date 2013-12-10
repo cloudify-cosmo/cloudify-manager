@@ -23,6 +23,8 @@ class StateCacheParticipant < Ruote::Participant
 
   STATE_CACHE = 'state_cache'
   RESOURCE_ID = 'resource_id'
+  WAIT_UNTIL_MATCHES = 'wait_until_matches'
+  MATCHES_FIELD_PARAM_NAME = 'to_f'
   LISTENER_ID = 'listener_id'
   STATE = 'state'
   NODE = 'node'
@@ -70,11 +72,16 @@ class StateCacheParticipant < Ruote::Participant
         required_state = workitem.params[STATE]
         node_that_is_waiting = workitem.fields[NODE] || {}
         node_id_that_is_waiting = node_that_is_waiting['id'] || ""
+        wait_until_matches = if workitem.params.has_key? WAIT_UNTIL_MATCHES;
+                               workitem.params[WAIT_UNTIL_MATCHES]
+                             else
+                               true
+                             end
 
         $logger.debug('StateCacheParticipant onResourceStateChange called,
                       checking state: [resource_id={}, parameters={}, snapshot={}, required_state={},
-                      node_id_that_is_waiting={}]',
-                      resource_id, workitem.params, snapshot, required_state, node_id_that_is_waiting)
+                      node_id_that_is_waiting={}, wait_until_matches={}]',
+                      resource_id, workitem.params, snapshot, required_state, node_id_that_is_waiting, wait_until_matches)
 
         required_state.each do |key, value|
           matches = (snapshot.contains_property(resource_id, key) and
@@ -83,7 +90,7 @@ class StateCacheParticipant < Ruote::Participant
         end
 
 
-        if matches
+        if matches or not wait_until_matches
           if workitem.fields.has_key? PreparePlanParticipant::NODE
             current_node = workitem.fields[PreparePlanParticipant::NODE]
             state = snapshot.get_resource_properties(resource_id)
@@ -102,6 +109,9 @@ class StateCacheParticipant < Ruote::Participant
 
             properties = current_node[PreparePlanParticipant::PROPERTIES]
             properties[PreparePlanParticipant::RUNTIME][resource_id] = node_state
+          end
+          if workitem.params.has_key? MATCHES_FIELD_PARAM_NAME
+            workitem.fields[workitem.params[MATCHES_FIELD_PARAM_NAME]] = matches
           end
           reply(workitem)
           true

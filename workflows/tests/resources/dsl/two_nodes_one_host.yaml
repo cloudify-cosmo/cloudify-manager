@@ -1,0 +1,37 @@
+imports:
+    - "cloudify.types"
+    - "cloudmock.yaml"
+    - "testmockoperations.yaml"
+
+blueprint:
+    name: "two_nodes_one_host"
+    topology:
+        -   name: "host"
+            type: "cloudify.types.host"
+            policies:
+                -   name: "start_detection_policy"
+                    rules:
+                        -   type: "state_equals"
+                            properties:
+                                service: "machine-status"
+                                state: "running"
+        -   name: "node_in_host"
+            type: "mock_type"
+            relationships:
+                - type: "cloudify.relationships.contained_in"
+                  target: "host"
+
+
+types:
+    mock_type:
+        interfaces:
+            -   "mock_interface"
+        workflows:
+            init:
+                radial: |
+                    define mock_init
+                        execute_operation operation: 'make_reachable'
+            uninstall:
+                radial: |
+                    define mock_uninstall
+                        execute_operation operation: 'make_unreachable'
