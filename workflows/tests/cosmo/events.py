@@ -38,6 +38,14 @@ def set_reachable(node_id):
     set_property(node_id, 'reachable', 'true')
 
 
+def set_unreachable(node_id):
+    """
+    Sends a riemann event which causes the state cache to set the node's reachable state
+    to true.
+    """
+    set_property(node_id, 'reachable', 'false')
+
+
 def set_property(node_id, property_name, value):
     """
     Sends a riemann event which causes the state cache to set the node's property value

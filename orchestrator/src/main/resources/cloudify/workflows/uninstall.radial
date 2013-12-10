@@ -1,0 +1,27 @@
+define uninstalling_nodes
+    log message: 'uninstalling nodes: ${plan.nodes}'
+    concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
+        log message: 'processing node: ${f:node}'
+        # we only call uninstall on:
+        # 1. nodes that has an uninstall workflow
+        sequence if: '$f:node.workflows.uninstall is set'
+            set 'v:no_host_id': "false"
+            set 'v:is_host_node': "false"
+            sequence if: '${f:node.host_id} is not set'
+                set 'v:no_host_id': "true"
+            sequence if: '${f:node.host_id} == ${f:node.id}'
+                set 'v:is_host_node': "true"
+            # 2. host nodes or nodes which are not contained in a host,
+            sequence if: '${v:no_host_id} or ${v:is_host_node}'
+                #3. reachable nodes
+                state resource_id: '${node.id}', state: { reachable: "true" }, wait_until_matches: false,
+                to_f: 'node_reachable'
+                log message: 'node reachable state is: ${f:node_reachable}'
+                sequence if: '${f:node_reachable} == true'
+                    event event: { "stage" => "Uninstalling node" }
+                    log message: 'executing uninstall workflow for node: ${node.id}'
+                    set 'v:uninstall': "$f:node.workflows.uninstall"
+                    uninstall
+                    state resource_id: '${node.id}', state: { reachable: "false" }
+
+    #TODO when we support multi app deployment, remove relevant policies from riemann

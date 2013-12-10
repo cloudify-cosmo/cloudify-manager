@@ -86,6 +86,16 @@ class ManagerRestClientTestClient(object):
             raise RuntimeError('Failed getting deployment events for deployment id {0}'.format(deployment_id))
         return response.json()
 
+    def execute_uninstall_workflow(self, deployment_id):
+        #TODO: should be deployments instead of blueprints once we implement deployments scope
+        response = requests.post('{0}/blueprints/{1}/executions'.format(
+                                 self.base_manager_rest_uri, deployment_id),
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps({'workflowId': 'uninstall'}))
+        if response.status_code != 201:
+            raise RuntimeError('Uninstall workflow execution failed for deployment id: {0}'.format(deployment_id))
+        return response.json()
+
     def _tar_blueprint(self, blueprint_path):
         blueprint_name = path.basename(path.splitext(blueprint_path)[0])
         blueprint_directory = path.dirname(blueprint_path)
@@ -100,7 +110,7 @@ manager_client = ManagerRestClientTestClient()
 @celery.task
 def submit_and_execute_workflow(blueprint_path, **kwargs):
     blueprint = manager_client.submit_blueprint(blueprint_path)
-    return manager_client.execute_install_workflow(blueprint)
+    return blueprint, manager_client.execute_install_workflow(blueprint)
 
 
 @celery.task
@@ -117,4 +127,9 @@ def get_execution_status(execution_id, **kwargs):
 @celery.task
 def get_deployment_events(deployment_id, first_event=0, events_count=500, **kwargs):
     return manager_client.get_deployment_events(deployment_id, first_event, events_count)
+
+
+@celery.task
+def uninstall_deployment(deployment_id, **kwargs):
+    return manager_client.execute_uninstall_workflow(deployment_id)
 

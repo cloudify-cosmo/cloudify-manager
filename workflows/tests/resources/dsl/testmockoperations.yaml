@@ -3,6 +3,7 @@ interfaces:
         operations:
             - "touch"
             - "make_reachable"
+            - "make_unreachable"
             - "set_property"
 
 plugins:
