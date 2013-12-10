@@ -1,2 +1,0 @@
-define some_node_init
-    execute_operation operation: "terminate"

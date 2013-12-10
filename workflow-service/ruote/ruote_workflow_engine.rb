@@ -29,7 +29,6 @@ java_import org.cloudifysource.cosmo.tasks.EventHandler
 java_import org.springframework.context.annotation.AnnotationConfigApplicationContext
 java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDependenciesConfig
 java_import org.cloudifysource.cosmo.logging.LoggerFactory
-java_import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime
 java_import org.apache.log4j.Logger
 java_import org.apache.log4j.Level
 java_import org.cloudifysource.cosmo.logger.CosmoBlueprintsFileAppender
@@ -61,7 +60,7 @@ class RuoteWorkflowEngine
     end
 
     # create loggers
-    $logger = LoggerFactory.get_logger(RuoteRuntime.java_class)
+    $logger = LoggerFactory.get_logger('org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime')
     $user_logger = LoggerFactory.get_logger('cosmo')
 
     # setup events logs appender and path

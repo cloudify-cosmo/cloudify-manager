@@ -1,6 +1,0 @@
-imports:
-    - "/dsl-relatively-imported0.yaml"
-types:
-    type_a:
-        properties:
-            property_a: ""

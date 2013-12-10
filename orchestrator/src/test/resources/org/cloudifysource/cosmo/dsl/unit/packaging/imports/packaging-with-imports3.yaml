@@ -1,5 +1,0 @@
-imports:
-    - "cloudify.types"
-types:
-    vm3:
-        derived_from: "cloudify.types.host"

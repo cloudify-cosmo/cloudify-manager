@@ -1,7 +1,0 @@
-imports:
-    - "cloudify.types"
-types:
-    vm2:
-        derived_from: "cloudify.types.host"
-        interfaces:
-            - "provisioner"
