@@ -173,7 +173,7 @@ class RuoteWorkflowEngine
         event[:type] = :workflow_failed
         event[:error] = wf_state.error
     end
-    $user_logger.debug("Workflow state changed #{JSON.pretty_generate(event)}")
+    $user_logger.debug("Workflow state changed\n#{JSON.pretty_generate(event)}")
   end
 
   def update_workflow_state(wfid, state, tags=nil, error=nil)
