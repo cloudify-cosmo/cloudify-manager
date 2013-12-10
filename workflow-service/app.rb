@@ -58,9 +58,14 @@ class RuoteServiceApp < Sinatra::Base
         validation_message = "Fields key value type is expected to be a hash/map but is #{fields.class.to_s}"
       end
 
+      tags = req[:tags] || {}
+      if validation_message.nil? and not tags.class.eql?(Hash)
+        validation_message = "Tags key value type is expected to be a hash/map but is #{tags.class.to_s}"
+      end
+
       if validation_message.nil?
         status 201
-        JSON.pretty_generate $ruote_service.launch(req[:radial], fields)
+        JSON.pretty_generate $ruote_service.launch(req[:radial], fields, tags)
       else
         error_response validation_message, 400
       end

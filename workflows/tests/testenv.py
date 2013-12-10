@@ -27,6 +27,7 @@ import cosmo
 import time
 import threading
 import re
+import requests
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -39,13 +40,69 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+class ManagerRestProcess(object):
+
+    def __init__(self, port, workflow_service_base_uri, events_path):
+        self.process = None
+        self.port = port
+        self.workflow_service_base_uri = workflow_service_base_uri
+        self.events_path = events_path
+
+    def start(self, timeout=10):
+        endtime = time.time() + timeout
+
+        manager_rest_command = [
+            sys.executable,
+            self.locate_manager_rest(),
+            '--port', self.port,
+            '--workflow_service_base_uri', self.workflow_service_base_uri,
+            '--events_files_path', self.events_path
+        ]
+
+        logger.info('Starting manager-rest with: {0}'.format(manager_rest_command))
+
+        self.process = subprocess.Popen(manager_rest_command)
+        started = False
+        attempt = 1
+        while not started and time.time() < endtime:
+            time.sleep(1)
+            logger.info('Testing connection to manager rest service. (Attempt: {0}/{1})'.format(attempt, timeout))
+            attempt += 1
+            started = self.started()
+        if not started:
+            raise RuntimeError('Failed opening connection to manager rest service')
+
+    def started(self):
+        try:
+            requests.get('http://localhost:8100/blueprints')
+            return True
+        except BaseException:
+            return False
+
+    def close(self):
+        if not self.process is None:
+            self.process.terminate()
+
+    def locate_manager_rest(self):
+        # start with current location
+        manager_rest_location = path.abspath(__file__)
+        # get to cosmo-manager
+        for i in range(3):
+            manager_rest_location = path.dirname(manager_rest_location)
+        # build way into manager_rest
+        return path.join(manager_rest_location, 'manager-rest/manager_rest/server.py')
+
+
 class RuoteServiceProcess(object):
 
     JRUBY_VERSION = '1.7.3'
 
-    def __init__(self, port=8101):
+    def __init__(self, port=8101, events_path=None):
+        self._pid = None
         self._port = port
         self._use_rvm = self._verify_ruby_environment()
+        self._events_path = events_path
+        self._process = None
 
     def _get_installed_ruby_packages(self):
         pass
@@ -72,42 +129,67 @@ class RuoteServiceProcess(object):
 
         raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]".format(self.JRUBY_VERSION))
 
-    def _verify_service_responsiveness(self):
+    def _verify_service_responsiveness(self, timeout=30):
         import urllib2
         service_url = "http://localhost:{0}".format(self._port)
         up = False
-        try:
-            res = urllib2.urlopen(service_url)
-            up = res.code == 200
-        except BaseException:
-            pass
+        deadline = time.time() + timeout
+        res = None
+        while time.time() < deadline:
+            try:
+                res = urllib2.urlopen(service_url)
+                up = res.code == 200
+                break
+            except BaseException:
+                pass
+            time.sleep(1)
         if not up:
-            raise RuntimeError("Ruote service is not responding @ {0}".format(service_url))
+            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
 
     def _verify_service_started(self, timeout=30):
-        pid_pattern = ".*WEBrick::HTTPServer#start:\spid=(\d*)"
         deadline = time.time() + timeout
         while time.time() < deadline:
-            line = self._process.stdout.readline().rstrip()
-            if line != '':
-                match = re.match(pid_pattern, line)
-                if match:
-                    self._pid = int(match.group(1))
-                    break
-        if not self._pid:
+            self._pid = self._get_serice_pid()
+            if self._pid is not None:
+                break
+            time.sleep(1)
+        if self._pid is None:
             raise RuntimeError("Failed to start ruote service within a {0} seconds timeout".format(timeout))
+
+    def _verify_service_ended(self, timeout=10):
+        pid = self._pid
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            pid = self._get_serice_pid()
+            if pid is None:
+                break
+            time.sleep(1)
+        if pid is not None:
+            raise RuntimeError("Failed to stop ruote service within a {0} seconds timeout".format(timeout))
+
+    def _get_serice_pid(self):
+        from subprocess import CalledProcessError
+        pattern = "\w*\s*(\d*).*"
+        try:
+            output = subprocess.check_output("ps aux | grep 'rackup' | grep -v grep", shell=True)
+            match = re.match(pattern, output)
+            if match:
+                return int(match.group(1))
+        except CalledProcessError:
+            pass
+        return None
 
     def start(self):
         startup_script_path = path.realpath(path.join(path.dirname(__file__), '..'))
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
-
+        env = os.environ.copy()
+        if self._events_path is not None:
+            env['WF_SERVICE_LOGS_PATH'] = self._events_path
         logger.info("Starting Ruote service")
-        self._process = subprocess.Popen(command,
-                                         cwd=startup_script_path,
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT)
+        self._process = subprocess.Popen(command, cwd=startup_script_path, env=env)
         self._verify_service_started(timeout=30)
+        self._verify_service_responsiveness()
         logger.info("Ruote service started [pid=%s]", self._pid)
 
     def close(self):
@@ -116,6 +198,7 @@ class RuoteServiceProcess(object):
         if self._pid:
             logger.info("Shutting down Ruote service [pid=%s]", self._pid)
             os.system("kill {0}".format(self._pid))
+            self._verify_service_ended()
 
 
 class CeleryWorkerProcess(object):
@@ -137,10 +220,8 @@ class CeleryWorkerProcess(object):
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
         import plugin_installer
-        import dsl_parser
         self._copy_plugin(riemann_config_loader)
         self._copy_plugin(plugin_installer)
-        self._copy_plugin(dsl_parser)
 
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
@@ -313,6 +394,7 @@ class TestEnvironment(object):
     _instance = None
     _celery_worker_process = None
     _riemann_process = None
+    _manager_rest_process = None
     _tempdir = None
     _plugins_tempdir = None
     _scope = None
@@ -347,6 +429,17 @@ class TestEnvironment(object):
                                                               self._riemann_process.pid)
             self._celery_worker_process.start()
 
+            # set events path (wf_service -> write, manager_rest -> read)
+            self.events_path = path.join(self._tempdir, 'events')
+
+            # manager rest
+            port = '8100'
+            worker_service_base_uri = 'http://localhost:8101'
+            self._manager_rest_process = ManagerRestProcess(port,
+                                                            worker_service_base_uri,
+                                                            self.events_path)
+            self._manager_rest_process.start()
+
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
@@ -358,6 +451,8 @@ class TestEnvironment(object):
             self._riemann_process.close()
         if self._celery_worker_process:
             self._celery_worker_process.close()
+        if self._manager_rest_process:
+            self._manager_rest_process.close()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
             shutil.rmtree(self._tempdir, ignore_errors=True)
@@ -391,6 +486,8 @@ class TestEnvironment(object):
             if path.exists(plugins_tempdir):
                 shutil.rmtree(plugins_tempdir)
                 os.makedirs(plugins_tempdir)
+            if path.exists(TestEnvironment._instance.events_path):
+                shutil.rmtree(TestEnvironment._instance.events_path)
 
     @staticmethod
     def restart_celery_worker():
@@ -445,13 +542,12 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
-        # self._ruote_service = RuoteServiceProcess()
-        # self._ruote_service.start()
+        self._ruote_service = RuoteServiceProcess(events_path=TestEnvironment._instance.events_path)
+        self._ruote_service.start()
 
     def tearDown(self):
         if self._ruote_service:
             self._ruote_service.close()
-        TestEnvironment.kill_cosmo_process()
         TestEnvironment.restart_celery_worker()
 
 
@@ -475,45 +571,34 @@ def deploy_application(dsl_path, timeout=240):
 
     end = time.time() + timeout
 
-    from cosmo.appdeployer.tasks import run_manager
-    from cosmo.appdeployer.tasks import get_manager_return_value
-    from cosmo.appdeployer.tasks import kill
-    result = run_manager.delay(dsl_path)
-    result.get(timeout=60, propagate=True)
-    r = None
-    try:
-        while r is None:
-            if end < time.time():
-                raise TimeoutException('Timeout deploying {0}'.format(dsl_path))
-            time.sleep(1)
-            r = get_manager_return_value.delay().get(timeout=60, propagate=True)
-    except Exception, e:
-        kill.delay().get()
-        raise e
+    from cosmo.appdeployer.tasks import submit_and_execute_workflow, get_execution_status
+    result = submit_and_execute_workflow.delay(dsl_path)
+    execution_response = result.get(timeout=60, propagate=True)
+    r = {'status': 'pending'}
+    while r['status'] != 'terminated' and r['status'] != 'failed':
+        if end < time.time():
+            raise TimeoutException('Timeout deploying {0}'.format(dsl_path))
+        time.sleep(1)
+        r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
+    if r['status'] != 'terminated':
+        raise RuntimeError('Application deployment failed. (status response: {0})'.format(r))
 
 
 def validate_dsl(dsl_path, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
     """
+    from cosmo.appdeployer.tasks import submit_and_validate_blueprint
+    result = submit_and_validate_blueprint.delay(dsl_path)
+    response = result.get(timeout=60, propagate=True)
+    if response['status'] != 'valid':
+        raise RuntimeError('Blueprint {0} is not valid'.format(dsl_path))
 
-    end = time.time() + timeout
 
-    from cosmo.appdeployer.tasks import run_manager
-    from cosmo.appdeployer.tasks import get_manager_return_value
-    from cosmo.appdeployer.tasks import kill
-    result = run_manager.delay(dsl_path, validate=True)
-    result.get(timeout=60, propagate=True)
-    r = None
-    try:
-        while r is None:
-            if end < time.time():
-                raise TimeoutException('Timeout validating {0}'.format(dsl_path))
-            time.sleep(1)
-            r = get_manager_return_value.delay().get(timeout=60, propagate=True)
-    except Exception, e:
-        kill.delay().get()
-        raise e
+def get_deployment_events(deployment_id, first_event=0, events_count=500):
+    from cosmo.appdeployer.tasks import get_deployment_events as get_events
+    result = get_events.delay(deployment_id, first_event, events_count)
+    return result.get(timeout=10)
 
 
 class TimeoutException(Exception):

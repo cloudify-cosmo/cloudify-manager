@@ -25,13 +25,15 @@ install:
    - "sudo pip install virtualenv"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
+   - "pip install manager-rest/"
    - "python workflows/setup.py install"
 
 script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
    - "cd workflow-service; rake; cd .."
-   - "nosetests workflows/tests"
+   - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"
+   - "nosetests workflows/tests --nologcapture --nocapture"
 
 after_success:
 # upload orchestrator jars for develop and for master

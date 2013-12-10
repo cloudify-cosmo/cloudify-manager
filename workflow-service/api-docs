@@ -40,6 +40,14 @@
                             "allowMultiple": "false",
                             "dataType": "string",
                             "paramType": "string"
+                        },
+                        {
+                            "name": "tags",
+                            "description": "A map of tags which can be later used for query purposes (Tags are also visible in events)",
+                            "required": "false",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "string"
                         }
                     ],
                     "responseMessages": [
@@ -49,7 +57,7 @@
                         },
                         {
                             "code": 400,
-                            "message": "Radial/fields format error"
+                            "message": "Radial/fields/tags format error"
                         }
                     ]
                 },

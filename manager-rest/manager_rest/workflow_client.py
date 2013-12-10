@@ -1,0 +1,75 @@
+#########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+
+__author__ = 'dan'
+
+import requests
+import json
+import config
+import time
+
+
+class WorkflowServiceError(Exception):
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+
+class WorkflowClient(object):
+
+    def __init__(self):
+        self.workflow_service_base_uri = config.instance().workflow_service_base_uri
+
+    def execute_workflow(self, workflow, plan):
+        response = requests.post('{0}/workflows'.format(self.workflow_service_base_uri),
+                                 json.dumps({
+                                     'radial': workflow,
+                                     'fields': {'plan': plan},
+                                     'tags': {'blueprint': plan['name']}  # for workflow events
+                                 }))
+        if response.status_code != 201:
+            raise WorkflowServiceError(response.status_code)
+        return response.json()
+
+    def validate_workflows(self, plan):
+        prepare_plan_participant_workflow = '''define validate
+    prepare_plan plan: $plan
+        '''
+        execution_response = self.execute_workflow(prepare_plan_participant_workflow, plan)
+        response = {'state': 'pending'}
+        # TODO timeout
+        while response['state'] != 'terminated' and response['state'] != 'failed':
+            response = self.get_workflow_status(execution_response['id'])
+            time.sleep(1)
+        # This is good
+        if response['state'] == 'terminated':
+            return {'status': 'valid'}
+        # This is bad
+        else:
+            return {'status': 'invalid'}
+
+    def get_workflow_status(self, workflow_id):
+        response = requests.get('{0}/workflows/{1}'.format(self.workflow_service_base_uri, workflow_id))
+        if response.status_code != 200:
+            raise WorkflowServiceError(response.status_code)
+        return response.json()
+
+
+def workflow_client():
+    if config.instance().test_mode:
+        from test.mocks import MockWorkflowClient
+        return MockWorkflowClient()
+    else:
+        return WorkflowClient()

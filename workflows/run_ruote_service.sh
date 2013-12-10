@@ -22,4 +22,4 @@ if [ "$use_rvm" == "true" ]; then
 fi
 cd ..
 cd workflow-service
-rackup -p $port
+RACK_ENV=development rackup -p $port

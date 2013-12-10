@@ -12,31 +12,28 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
 
-require 'json'
+__author__ = 'dan'
 
-class WorkflowState
+from datetime import datetime
 
-  attr_accessor :id, :state, :created, :launched, :error, :tags
 
-  def initialize(id, state, created, tags, launched=nil)
-    @id = id
-    @state = state
-    @created = created
-    @tags = tags
-    @launched = launched
-    @error = nil
-  end
+class MockWorkflowClient(object):
 
-  def to_json(*a)
-    {
-        :id => @id,
-        :state => @state,
-        :created => @created,
-        :launched => @launched,
-        :error => @error
-    }.to_json
-  end
+    def execute_workflow(self, workflow, plan):
+        return {
+            'type': 'workflow_state',
+            'id': 'yokimura-yoshomati',
+            'state': 'pending',
+            'created': datetime.now()
+        }
 
-end
+    def validate_workflows(self, plan):
+        return {
+            'status': 'valid'
+        }
+
+    def get_workflow_status(self, workflow_id):
+        return {
+            'state': 'terminated'
+        }
