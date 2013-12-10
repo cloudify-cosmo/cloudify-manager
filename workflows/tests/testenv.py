@@ -220,10 +220,8 @@ class CeleryWorkerProcess(object):
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
         import plugin_installer
-        import dsl_parser
         self._copy_plugin(riemann_config_loader)
         self._copy_plugin(plugin_installer)
-        self._copy_plugin(dsl_parser)
 
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
@@ -396,6 +394,7 @@ class TestEnvironment(object):
     _instance = None
     _celery_worker_process = None
     _riemann_process = None
+    _manager_rest_process = None
     _tempdir = None
     _plugins_tempdir = None
     _scope = None
@@ -487,8 +486,8 @@ class TestEnvironment(object):
             if path.exists(plugins_tempdir):
                 shutil.rmtree(plugins_tempdir)
                 os.makedirs(plugins_tempdir)
-            if path.exists(TestEnvironment.events_path):
-                shutil.rmtree(TestEnvironment.events_path)
+            if path.exists(TestEnvironment._instance.events_path):
+                shutil.rmtree(TestEnvironment._instance.events_path)
 
     @staticmethod
     def restart_celery_worker():
@@ -543,7 +542,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
-        self._ruote_service = RuoteServiceProcess(events_path=TestEnvironment.events_path)
+        self._ruote_service = RuoteServiceProcess(events_path=TestEnvironment._instance.events_path)
         self._ruote_service.start()
 
     def tearDown(self):
@@ -614,6 +613,12 @@ def validate_dsl(dsl_path, timeout=240):
     response = result.get(timeout=60, propagate=True)
     if response['status'] != 'valid':
         raise RuntimeError('Blueprint {0} is not valid'.format(dsl_path))
+
+
+def get_deployment_events(deployment_id, first_event=0, events_count=500):
+    from cosmo.appdeployer.tasks import get_deployment_events as get_events
+    result = get_events.delay(deployment_id, first_event, events_count)
+    return result.get(timeout=10)
 
 
 class TimeoutException(Exception):

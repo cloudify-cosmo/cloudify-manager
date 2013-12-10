@@ -163,8 +163,17 @@ class RuoteWorkflowEngine
   def log_workflow_state(wf_state)
     event = wf_state.tags.clone
     event[:workflow_id] = wf_state.id
-    event[:type] = wf_state.state
-    event[:error] = wf_state.error unless wf_state.state != :failed
+    case wf_state.state
+      when :pending
+        event[:type] = :workflow_received
+      when :launched
+        event[:type] = :workflow_started
+      when :terminated
+        event[:type] = :workflow_terminated
+      when :failed
+        event[:type] = :workflow_failed
+        event[:error] = wf_state.error
+    end
     $user_logger.debug("Workflow state changed #{JSON.pretty_generate(event)}")
   end
 
