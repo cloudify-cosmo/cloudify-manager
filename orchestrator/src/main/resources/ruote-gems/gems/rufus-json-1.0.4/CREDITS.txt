@@ -1,5 +1,0 @@
-
-== authors
-
-John Mettraux - http://github.com/jmettraux
-

@@ -29,7 +29,6 @@ java_import org.cloudifysource.cosmo.tasks.EventHandler
 java_import org.springframework.context.annotation.AnnotationConfigApplicationContext
 java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDependenciesConfig
 java_import org.cloudifysource.cosmo.logging.LoggerFactory
-java_import org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime
 java_import org.apache.log4j.Logger
 java_import org.apache.log4j.Level
 java_import org.cloudifysource.cosmo.logger.CosmoBlueprintsFileAppender
@@ -61,7 +60,7 @@ class RuoteWorkflowEngine
     end
 
     # create loggers
-    $logger = LoggerFactory.get_logger(RuoteRuntime.java_class)
+    $logger = LoggerFactory.get_logger('org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime')
     $user_logger = LoggerFactory.get_logger('cosmo')
 
     # setup events logs appender and path
@@ -174,7 +173,7 @@ class RuoteWorkflowEngine
         event[:type] = :workflow_failed
         event[:error] = wf_state.error
     end
-    $user_logger.debug("Workflow state changed #{JSON.pretty_generate(event)}")
+    $user_logger.debug("Workflow state changed\n#{JSON.pretty_generate(event)}")
   end
 
   def update_workflow_state(wfid, state, tags=nil, error=nil)

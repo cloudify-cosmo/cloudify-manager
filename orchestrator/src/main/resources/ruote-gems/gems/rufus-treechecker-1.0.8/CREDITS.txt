@@ -1,6 +1,0 @@
-
-= CREDITS.txt
-
-Leverages ruby_parser and parsetree by Ryan Davis 
-(http://rubyforge.org/projects/parsetree/)
-

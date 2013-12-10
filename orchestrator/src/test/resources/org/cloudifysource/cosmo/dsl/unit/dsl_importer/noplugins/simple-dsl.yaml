@@ -1,9 +1,0 @@
-imports:
-    - "cloudify.types"
-    - "host_provisioner"
-
-blueprint:
-    name: "app"
-    topology:
-        -   name: "host"
-            type: "cloudify.types.host"
