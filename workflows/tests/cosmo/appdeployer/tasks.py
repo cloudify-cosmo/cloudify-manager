@@ -89,7 +89,7 @@ class ManagerRestClientTestClient(object):
     def execute_uninstall_workflow(self, deployment_id):
         #TODO: should be deployments instead of blueprints once we implement deployments scope
         response = requests.post('{0}/blueprints/{1}/executions'.format(
-            self.base_manager_rest_uri, deployment_id),
+                                 self.base_manager_rest_uri, deployment_id),
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps({'workflowId': 'uninstall'}))
         if response.status_code != 201:
