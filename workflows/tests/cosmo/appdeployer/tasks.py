@@ -110,7 +110,7 @@ manager_client = ManagerRestClientTestClient()
 @celery.task
 def submit_and_execute_workflow(blueprint_path, **kwargs):
     blueprint = manager_client.submit_blueprint(blueprint_path)
-    return manager_client.execute_install_workflow(blueprint)
+    return blueprint, manager_client.execute_install_workflow(blueprint)
 
 
 @celery.task
@@ -128,8 +128,3 @@ def get_execution_status(execution_id, **kwargs):
 def get_deployment_events(deployment_id, first_event=0, events_count=500, **kwargs):
     return manager_client.get_deployment_events(deployment_id, first_event, events_count)
 
-
-
-@celery.task
-def uninstall_deployment(deployment_id, **kwargs):
-    return manager_client.execute_uninstall_workflow(deployment_id)
