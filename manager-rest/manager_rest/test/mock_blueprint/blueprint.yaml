@@ -1,0 +1,143 @@
+imports:
+    - 'cloudify.types'
+    - 'openstack_host_provisioner'
+    - 'mezzanine_types.yaml'
+    - 'plugins/chef_appmodule_installer.yaml'
+    - 'plugins/chef_connection_configurer.yaml'
+    - 'plugins/chef_middleware_installer.yaml'
+
+blueprint:
+    name: 'mezzanine_convention'
+    topology:
+        # front end nova machine
+        -   name: 'webserver_host'
+            type: 'mezzanine_host'
+            properties:
+                nova_config:
+                    region: 'az-2.region-a.geo-1'
+                    instance:
+                        name: 'webserver-dhost'
+                        image: 67074
+                        flavor: 101
+                        key_name: 'head'
+                        userdata: |
+                            #!/bin/bash -ex
+                            grep -q novalocal /etc/hosts || echo "15.185.152.116 chef.novalocal" >> /etc/hosts
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'openstack machine status'
+                                state: 'running'
+        # db nova machine
+        -   name: 'postgres_host'
+            type: 'mezzanine_host'
+            properties:
+                nova_config:
+                    region: 'az-2.region-a.geo-1'
+                    instance:
+                        name: 'postgres-dhost'
+                        image: 67074
+                        flavor: 101
+                        key_name: 'head'
+                        userdata: |
+                            #!/bin/bash -ex
+                            grep -q novalocal /etc/hosts || echo "15.185.152.116 chef.novalocal" >> /etc/hosts
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'openstack machine status'
+                                state: 'running'
+        # mezzanine nginx web server
+        -   name: 'nginx'
+            type: 'mezzanine_middleware'
+            relationships:
+                -   type: 'cloudify.relationships.connected_to'
+                    target: 'unicorn'
+                -   type: 'cloudify.relationships.contained_in'
+                    target: 'webserver_host'
+            properties:
+                chef_install_runlist: 'recipe[cosmo-mezzanine-demo::install_web_nginx]'
+                policy_service: 'webserver status'
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'webserver status'
+                                state: 'running'
+        # mezzanine unicorn web server
+        -   name: 'unicorn'
+            type: 'mezzanine_middleware'
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: 'webserver_host'
+            properties:
+                chef_install_runlist: 'recipe[cosmo-mezzanine-demo::install_web_gunicorn]'
+                policy_service: 'webserver2 status'
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'webserver2 status'
+                                state: 'running'
+        # mezzanine db server
+        -   name: 'postgres_server'
+            type: 'mezzanine_middleware'
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: 'postgres_host'
+            properties:
+                chef_install_runlist: 'recipe[cosmo-mezzanine-demo::install_db_postgresql]'
+                policy_service: 'database status'
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'database status'
+                                state: 'running'
+        # mezzanine db schema
+        -   name: 'mezzanine_db'
+            type: 'mezzanine_app_module'
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: 'postgres_server'
+            properties:
+                chef_deploy_runlist: 'recipe[cosmo-mezzanine-demo::install_db_postgresql_db]'
+                policy_service: 'database schema status'
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'database schema status'
+                                state: 'running'
+        # mezzanine application
+        -   name: 'mezzanine_app'
+            type: 'mezzanine_app_module'
+            relationships:
+                -   type: 'cloudify.relationships.contained_in'
+                    target: 'unicorn'
+                -   type: 'cloudify.relationships.depends_on'
+                    target: 'nginx'
+                -   type: 'cloudify.relationships.connected_to'
+                    target: 'mezzanine_db'
+                    plugin: 'chef_connection_configurer'
+                    run_on_node: 'source'
+            properties:
+                chef_deploy_runlist: 'recipe[cosmo-mezzanine-demo::install_web_mezzanine],recipe[cosmo-mezzanine-demo::install_web_mezzanine_app]'
+                chef_start_runlist: 'recipe[cosmo-mezzanine-demo::start_web_mezzanine_app]'
+                chef_configure_connection_runlist: 'recipe[cosmo-mezzanine-demo::configure_web_mezzanine_app]'
+                policy_service: 'mezzanine app status'
+            policies:
+                -   name: 'start_detection_policy'
+                    rules:
+                        -   type: 'state_equals'
+                            properties:
+                                service: 'mezzanine app status'
+                                state: 'running'
