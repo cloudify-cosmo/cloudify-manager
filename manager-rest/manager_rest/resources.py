@@ -29,6 +29,7 @@ import responses
 import tarfile
 import zipfile
 import urllib
+import json
 
 
 def blueprints_manager():
@@ -113,11 +114,14 @@ class Blueprints(Resource):
 
     def _save_file_locally(self, file_server_root):
         # save uploaded file
-        if not 'application_archive' in request.files:
-            abort(400, message='Missing application_archive file data')
-        uploaded_file = request.files['application_archive']
-        archive_target_path = path.join(file_server_root, uploaded_file.filename)
-        uploaded_file.save(archive_target_path)
+        if not 'application_archive_name' in request.args or not request.data:        
+            missing = 'application archive file in body' if not request.data else 'application archive_name query parameter'
+            abort(400, message='Missing {0}'.format(missing))
+        uploaded_file_data = request.data
+        archive_target_path = path.join(file_server_root, request.args['application_archive_name'])
+        
+        with open(archive_target_path, 'w') as f:
+            f.write(uploaded_file_data)        
         return archive_target_path
 
     def _extract_file_to_file_server(self, file_server_root, archive_target_path):
@@ -140,9 +144,9 @@ class Blueprints(Resource):
             abort(400, message='400: Invalid blueprint')
 
     def _extract_application_file(self):
-        if not 'application_file' in request.form:
-            abort(400, message='Missing application_file form data')
-        application_file = urllib.unquote(request.form['application_file']).decode('utf-8')
+        if not 'application_file_name' in request.args:
+            abort(400, message='Missing application_file_name query parameter')
+        application_file = urllib.unquote(request.args['application_file_name']).decode('utf-8')
         return application_file
 
     def _extract_blueprint_directory(self):
@@ -179,10 +183,10 @@ class BlueprintsIdExecutions(Resource):
     def post(self, blueprint_id):
         verify_json_content_type()
         verify_blueprint_exists(blueprint_id)
-        request_json = request.json
-        if 'workflowId' not in request_json:
+        body_data = json.loads(request.data)
+        if 'workflowId' not in body_data:
             abort(400, message='400: Missing workflowId in json request body')
-        workflow_id = request.json['workflowId']
+        workflow_id = body_data['workflowId']
         try:
             return blueprints_manager().execute_workflow(blueprint_id, workflow_id), 201
         except WorkflowServiceError, e:
