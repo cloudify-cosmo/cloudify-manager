@@ -31,6 +31,7 @@ import zipfile
 import urllib
 import tempfile
 import shutil
+import uuid
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -83,11 +84,13 @@ class Blueprints(Resource):
     def post(self):
         file_server_root = config.instance().file_server_root
 
+        blueprint_id = uuid.uuid4()
+
         archive_target_path = self._save_file_locally(file_server_root)
-        application_dir = self._extract_file_to_file_server(file_server_root, archive_target_path)
+        application_dir = self._extract_file_to_file_server(file_server_root, archive_target_path, blueprint_id)
         self._process_plugins(file_server_root, application_dir)
 
-        return self._prepare_and_submit_blueprint(file_server_root, application_dir)
+        return self._prepare_and_submit_blueprint(file_server_root, application_dir, blueprint_id)
 
     def _process_plugins(self, file_server_root, application_dir):
         blueprint_directory = path.join(file_server_root, application_dir)
@@ -124,7 +127,7 @@ class Blueprints(Resource):
         uploaded_file.save(archive_target_path)
         return archive_target_path
 
-    def _extract_file_to_file_server(self, file_server_root, archive_target_path):
+    def _extract_file_to_file_server(self, file_server_root, archive_target_path, blueprint_id):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
         tempdir = tempfile.mkdtemp('-blueprint-submit')
@@ -134,13 +137,16 @@ class Blueprints(Resource):
             if len(archive_file_list) != 1 or not path.isdir(path.join(tempdir, archive_file_list[0])):
                 abort(400, message='400: archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
+            generated_application_dir_base_name = '{0}-{1}'.format(application_dir_base_name, blueprint_id)
             temp_application_dir = path.join(tempdir, application_dir_base_name)
-            shutil.move(temp_application_dir, file_server_root)
-            return application_dir_base_name
+            target_temp_application_dir = path.join(tempdir, generated_application_dir_base_name)
+            shutil.move(temp_application_dir, target_temp_application_dir)
+            shutil.move(target_temp_application_dir, file_server_root)
+            return generated_application_dir_base_name
         finally:
             shutil.rmtree(tempdir)
 
-    def _prepare_and_submit_blueprint(self, file_server_root, application_dir):
+    def _prepare_and_submit_blueprint(self, file_server_root, application_dir, blueprint_id):
         application_file = self._extract_application_file(file_server_root, application_dir)
 
         file_server_base_url = 'http://localhost:{0}'.format(file_server_port)
@@ -150,7 +156,7 @@ class Blueprints(Resource):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            return blueprints_manager().publish_blueprint(dsl_path, alias_mapping, resources_base), 201
+            return blueprints_manager().publish_blueprint(blueprint_id, dsl_path, alias_mapping, resources_base), 201
         except DslParseException:
             abort(400, message='400: Invalid blueprint')
 
