@@ -104,6 +104,7 @@ class Execution(object):
         'id': fields.String,
         'workflowId': fields.String(attribute='workflow_id'),
         'blueprintId': fields.String(attribute='blueprint_id'),
+        'deploymentId': fields.String(attribute='deployment_id'),
         'status': fields.String,
         'error': fields.String,
         'createdAt': fields.String(attribute='created_at')
@@ -112,7 +113,7 @@ class Execution(object):
     def __init__(self, *args, **kwargs):
         self.id = uuid.uuid4()
         self.status = kwargs['state']
-        self.deployment_id = None #TODO
+        self.deployment_id = kwargs['deployment_id']
         self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']

@@ -17,6 +17,7 @@ __author__ = 'dan'
 
 from dsl_parser import tasks
 import json
+import uuid
 from responses import BlueprintState, Execution, BlueprintValidationStatus
 from workflow_client import workflow_client
 
@@ -46,7 +47,6 @@ class BlueprintsManager(object):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
-            plan = tasks.prepare_multi_instance_plan(json.loads(plan))
         except Exception:
             raise DslParseException
         new_blueprint = BlueprintState(json_plan=plan, plan=json.loads(plan))
@@ -68,16 +68,28 @@ class BlueprintsManager(object):
         blueprint = self.get_blueprint(blueprint_id)
         workflow = blueprint.typed_plan['workflows'][workflow_id]
         plan = blueprint.typed_plan
+        deployment_id = None
+        # Special handle of install workflow, as we need to generate the deployment id and
+        # generate node unique ids for this deployment
+        if workflow_id == 'install':
+            plan, deployment_id = self._on_install_requested(plan)
+
         response = workflow_client().execute_workflow(workflow, plan)
         # TODO raise error if there is error in response
         new_execution = Execution(state=response['state'],
                                   internal_workflow_id=response['id'],
                                   created_at=response['created'],
                                   blueprint_id=blueprint_id,
-                                  workflow_id=workflow_id)
+                                  workflow_id=workflow_id,
+                                  deployment_id=deployment_id)
         blueprint.add_execution(new_execution)
         self.executions[str(new_execution.id)] = new_execution
         return new_execution
+
+    def _on_install_requested(self, plan):
+        plan = tasks.prepare_multi_instance_plan(plan)
+        deployment_id = uuid.uuid4()
+        return json.loads(plan), deployment_id
 
     def get_workflow_state(self, execution_id):
         execution = self.get_execution(execution_id)
