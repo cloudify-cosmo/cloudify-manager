@@ -23,9 +23,11 @@ import config
 
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal
+import os
 from os import path
 import responses
 import tarfile
+import zipfile
 import urllib
 
 
@@ -77,20 +79,54 @@ class Blueprints(Resource):
     def post(self):
         file_server_root = config.instance().file_server_root
 
+        archive_target_path = self._save_file_locally(file_server_root)
+        self._extract_file_to_file_server(file_server_root, archive_target_path)
+        self._process_plugins(file_server_root)
+
+        return self._prepare_and_submit_blueprint()
+
+    def _process_plugins(self, file_server_root):
+        blueprint_directory = path.join(file_server_root, self._extract_blueprint_directory())
+        plugins_directory = path.join(blueprint_directory, 'plugins')
+        if not path.isdir(plugins_directory):
+            return
+        plugins = [path.join(plugins_directory, directory)
+                   for directory in os.listdir(plugins_directory)
+                   if path.isdir(path.join(plugins_directory, directory))]
+
+        for plugin_dir in plugins:
+            final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
+            target_zip_path = path.join(file_server_root, final_zip_name)
+            self._zip_dir(plugin_dir, target_zip_path)
+
+    def _zip_dir(self, dir_to_zip, target_zip_path):
+        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
+        try:
+            plugin_dir_base_name = path.basename(dir_to_zip)
+            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
+            for base, dirs, files in os.walk(dir_to_zip):
+                for entry in files:
+                    fn = os.path.join(base, entry)
+                    zipf.write(fn, fn[rootlen:])
+        finally:
+            zipf.close()
+
+    def _save_file_locally(self, file_server_root):
         # save uploaded file
         if not 'application_archive' in request.files:
             abort(400, message='Missing application_archive file data')
         uploaded_file = request.files['application_archive']
         archive_target_path = path.join(file_server_root, uploaded_file.filename)
         uploaded_file.save(archive_target_path)
+        return archive_target_path
 
+    def _extract_file_to_file_server(self, file_server_root, archive_target_path):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
         tar.extractall(file_server_root)
 
-        if not 'application_file' in request.form:
-            abort(400, message='Missing application_file form data')
-        application_file = urllib.unquote(request.form['application_file']).decode('utf-8')
+    def _prepare_and_submit_blueprint(self):
+        application_file = self._extract_application_file()
 
         file_server_base_url = 'http://localhost:{0}'.format(file_server_port)
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
@@ -102,6 +138,18 @@ class Blueprints(Resource):
             return blueprints_manager().publish_blueprint(dsl_path, alias_mapping, resources_base), 201
         except DslParseException:
             abort(400, message='400: Invalid blueprint')
+
+    def _extract_application_file(self):
+        if not 'application_file' in request.form:
+            abort(400, message='Missing application_file form data')
+        application_file = urllib.unquote(request.form['application_file']).decode('utf-8')
+        return application_file
+
+    def _extract_blueprint_directory(self):
+        application_file = self._extract_application_file()
+        application_file_split = application_file.split('/')
+        blueprint_directory = '/'.join(application_file_split[:-1])
+        return blueprint_directory
 
 
 class BlueprintsId(Resource):
