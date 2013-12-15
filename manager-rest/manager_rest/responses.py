@@ -19,7 +19,9 @@ from datetime import datetime
 import uuid
 from flask.ext.restful import fields
 
+from flask_restful_swagger import swagger
 
+@swagger.model
 class BlueprintState(object):
 
     resource_fields = {
@@ -51,6 +53,7 @@ class BlueprintState(object):
         return self.executions.values()
 
 
+@swagger.model
 class BlueprintValidationStatus(object):
 
     resource_fields = {
@@ -63,6 +66,7 @@ class BlueprintValidationStatus(object):
         self.status = kwargs['status']
 
 
+@swagger.model
 class Topology(object):
 
     def __init__(self, *args, **kwargs):
@@ -71,6 +75,7 @@ class Topology(object):
         self.nodes = kwargs['nodes']
 
 
+@swagger.model
 class Node(object):
 
     def __init__(self, *args, **kwargs):
@@ -85,6 +90,7 @@ class Node(object):
         self.deployment_ids = kwargs['deployment_ids']
 
 
+@swagger.model
 class Deployment(object):
 
     def __init__(self, *args, **kwargs):
@@ -98,6 +104,7 @@ class Deployment(object):
         self.nodes = kwargs['nodes']
 
 
+@swagger.model
 class Execution(object):
 
     resource_fields = {
@@ -120,6 +127,7 @@ class Execution(object):
         self.error = 'None'
 
 
+@swagger.model
 class DeploymentEvents(object):
 
     resource_fields = {
