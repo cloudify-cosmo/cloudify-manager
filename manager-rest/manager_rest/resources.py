@@ -67,6 +67,7 @@ def setup_resources(api):
     api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
+    api.add_resource(Deployments, '/deployments')
 
 
 class Blueprints(Resource):
@@ -228,3 +229,10 @@ class DeploymentIdEvents(Resource):
             return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
         except BaseException as e:
             abort(500, message=e.message)
+
+
+class Deployments(Resource):
+
+    def get(self):
+        return [marshal(deployment, responses.Deployment.resource_fields) for
+                deployment in blueprints_manager().deployments_list()]
