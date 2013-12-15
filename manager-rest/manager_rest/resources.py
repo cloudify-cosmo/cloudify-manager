@@ -80,6 +80,7 @@ def setup_resources(api):
     api.add_resource(Deployments, '/deployments')
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
 
+
 class Blueprints(Resource):
 
     def get(self):
@@ -261,3 +262,18 @@ class DeploymentIdEvents(Resource):
             return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
         except BaseException as e:
             abort(500, message=e.message)
+
+
+class Deployments(Resource):
+
+    def get(self):
+        return [marshal(deployment, responses.Deployment.resource_fields) for
+                deployment in blueprints_manager().deployments_list()]
+
+
+class DeploymentsId(Resource):
+
+    @marshal_with(responses.Deployment.resource_fields)
+    def get(self, deployment_id):
+        verify_deployment_exists(deployment_id)
+        return blueprints_manager().get_deployment(deployment_id)
