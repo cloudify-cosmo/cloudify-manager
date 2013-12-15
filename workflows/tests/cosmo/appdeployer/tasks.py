@@ -41,12 +41,13 @@ class ManagerRestClientTestClient(object):
     def submit_blueprint(self, blueprint_path):
         tar_path = self._tar_blueprint(blueprint_path)
         application_file = path.basename(blueprint_path)
-        blueprint_parent_dir = path.basename(path.dirname(blueprint_path))
-        post_application_file = '{0}/{1}'.format(blueprint_parent_dir, application_file)
         with open(tar_path) as f:
             response = requests.post('{0}/blueprints'.format(self.base_manager_rest_uri),
-                                     files={'application_archive': (path.basename(tar_path), f)},
-                                     data={'application_file': post_application_file})
+                                     params={
+                                         'application_file_name': application_file
+                                     },
+                                     data=f.read(),
+                                     headers={'Content-Type': 'application/octet-stream'})
             status_code = response.status_code
             if status_code != 201:
                 raise RuntimeError('Blueprint {0} submission failed'.format(blueprint_path))

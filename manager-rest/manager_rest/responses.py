@@ -35,7 +35,7 @@ class BlueprintState(object):
         self.typed_plan = kwargs['plan']
         self.plan = kwargs['json_plan']
         self.name = self.typed_plan['name']
-        self.id = uuid.uuid4()
+        self.id = kwargs['id']
         now = datetime.now()
         self.created_at = now
         self.updated_at = now
