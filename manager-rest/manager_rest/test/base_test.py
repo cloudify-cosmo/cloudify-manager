@@ -17,6 +17,7 @@ __author__ = 'dan'
 
 import unittest
 import json
+import urllib
 from manager_rest import server
 
 
@@ -42,9 +43,13 @@ class BaseServerTestCase(unittest.TestCase):
         result.json = json.loads(result.data)
         return result
 
-    def post_file(self, resource_path, file_path, attribute_name, file_name, data):
+    def post_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.post(resource_path, data=dict({attribute_name: (f, file_name)}.items() + data.items()))
+            query_string = ''
+            if query_params and len(query_params) > 0:
+                query_string += '&' + urllib.urlencode(query_params)
+            url = '{0}?{1}'.format(resource_path, query_string)
+            result = self.app.post(url, data=f.read())
             result.json = json.loads(result.data)
             return result
 

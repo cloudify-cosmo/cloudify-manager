@@ -29,6 +29,11 @@ import responses
 import tarfile
 import zipfile
 import urllib
+import tempfile
+import shutil
+import uuid
+
+CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 
 def blueprints_manager():
@@ -85,14 +90,21 @@ class Blueprints(Resource):
     def post(self):
         file_server_root = config.instance().file_server_root
 
-        archive_target_path = self._save_file_locally(file_server_root)
-        self._extract_file_to_file_server(file_server_root, archive_target_path)
-        self._process_plugins(file_server_root)
+        blueprint_id = uuid.uuid4()
 
-        return self._prepare_and_submit_blueprint()
+        archive_target_path = tempfile.mktemp(dir=file_server_root)
+        try:
+            self._save_file_locally(archive_target_path)
+            application_dir = self._extract_file_to_file_server(file_server_root, archive_target_path, blueprint_id)
+        finally:
+            if os.path.exists(archive_target_path):
+                os.remove(archive_target_path)
+        self._process_plugins(file_server_root, application_dir)
 
-    def _process_plugins(self, file_server_root):
-        blueprint_directory = path.join(file_server_root, self._extract_blueprint_directory())
+        return self._prepare_and_submit_blueprint(file_server_root, application_dir, blueprint_id)
+
+    def _process_plugins(self, file_server_root, application_dir):
+        blueprint_directory = path.join(file_server_root, application_dir)
         plugins_directory = path.join(blueprint_directory, 'plugins')
         if not path.isdir(plugins_directory):
             return
@@ -117,22 +129,35 @@ class Blueprints(Resource):
         finally:
             zipf.close()
 
-    def _save_file_locally(self, file_server_root):
+    def _save_file_locally(self, archive_file_name):
         # save uploaded file
-        if not 'application_archive' in request.files:
-            abort(400, message='Missing application_archive file data')
-        uploaded_file = request.files['application_archive']
-        archive_target_path = path.join(file_server_root, uploaded_file.filename)
-        uploaded_file.save(archive_target_path)
-        return archive_target_path
+        if not request.data:
+            abort(400, message='Missing application archive in request body')
+        uploaded_file_data = request.data
+        with open(archive_file_name, 'w') as f:
+            f.write(uploaded_file_data)
 
-    def _extract_file_to_file_server(self, file_server_root, archive_target_path):
+    def _extract_file_to_file_server(self, file_server_root, archive_target_path, blueprint_id):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
-        tar.extractall(file_server_root)
+        tempdir = tempfile.mkdtemp('-blueprint-submit')
+        try:
+            tar.extractall(tempdir)
+            archive_file_list = os.listdir(tempdir)
+            if len(archive_file_list) != 1 or not path.isdir(path.join(tempdir, archive_file_list[0])):
+                abort(400, message='400: archive must contain exactly 1 directory')
+            application_dir_base_name = archive_file_list[0]
+            generated_application_dir_base_name = '{0}-{1}'.format(application_dir_base_name, blueprint_id)
+            temp_application_dir = path.join(tempdir, application_dir_base_name)
+            target_temp_application_dir = path.join(tempdir, generated_application_dir_base_name)
+            shutil.move(temp_application_dir, target_temp_application_dir)
+            shutil.move(target_temp_application_dir, file_server_root)
+            return generated_application_dir_base_name
+        finally:
+            shutil.rmtree(tempdir)
 
-    def _prepare_and_submit_blueprint(self):
-        application_file = self._extract_application_file()
+    def _prepare_and_submit_blueprint(self, file_server_root, application_dir, blueprint_id):
+        application_file = self._extract_application_file(file_server_root, application_dir)
 
         file_server_base_url = 'http://localhost:{0}'.format(file_server_port)
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
@@ -141,21 +166,23 @@ class Blueprints(Resource):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            return blueprints_manager().publish_blueprint(dsl_path, alias_mapping, resources_base), 201
+            return blueprints_manager().publish_blueprint(blueprint_id, dsl_path, alias_mapping, resources_base), 201
         except DslParseException:
             abort(400, message='400: Invalid blueprint')
 
-    def _extract_application_file(self):
-        if not 'application_file' in request.form:
-            abort(400, message='Missing application_file form data')
-        application_file = urllib.unquote(request.form['application_file']).decode('utf-8')
-        return application_file
-
-    def _extract_blueprint_directory(self):
-        application_file = self._extract_application_file()
-        application_file_split = application_file.split('/')
-        blueprint_directory = '/'.join(application_file_split[:-1])
-        return blueprint_directory
+    def _extract_application_file(self, file_server_root, application_dir):
+        if 'application_file_name' in request.args:
+            application_file = urllib.unquote(request.args['application_file_name']).decode('utf-8')
+            application_file = '{0}/{1}'.format(application_dir, application_file)
+            return application_file
+        else:
+            full_application_dir = path.join(file_server_root, application_dir)
+            full_application_file = path.join(full_application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
+            if path.isfile(full_application_file):
+                application_file = path.join(application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
+                return application_file
+        abort(400, message='Missing application_file_name query parameter or application directory is missing '
+                           'blueprint.yaml')
 
 
 class BlueprintsId(Resource):
@@ -234,18 +261,3 @@ class DeploymentIdEvents(Resource):
             return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
         except BaseException as e:
             abort(500, message=e.message)
-
-
-class Deployments(Resource):
-
-    def get(self):
-        return [marshal(deployment, responses.Deployment.resource_fields) for
-                deployment in blueprints_manager().deployments_list()]
-
-
-class DeploymentsId(Resource):
-
-    @marshal_with(responses.Deployment.resource_fields)
-    def get(self, deployment_id):
-        verify_deployment_exists(deployment_id)
-        return blueprints_manager().get_deployment(deployment_id)

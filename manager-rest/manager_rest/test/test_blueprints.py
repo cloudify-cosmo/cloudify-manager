@@ -22,9 +22,10 @@ import os
 import tarfile
 import requests
 
+
 class BlueprintsTestCase(BaseServerTestCase):
 
-    def post_blueprint_args(self):
+    def post_blueprint_args(self, convention=False):
         def make_tarfile(output_filename, source_dir):
             with tarfile.open(output_filename, "w:gz") as tar:
                 tar.add(source_dir, arcname=os.path.basename(source_dir))
@@ -35,13 +36,18 @@ class BlueprintsTestCase(BaseServerTestCase):
             make_tarfile(tar_path, source_dir)
             return tar_path
 
-        return [
+        result = [
             '/blueprints',
             tar_mock_blueprint(),
-            'application_archive',
-            'mezzanine-app.tar.gz',
-            {'application_file': 'mock_blueprint%2Fmezzanine_blueprint.yaml'}
         ]
+
+        if not convention:
+            data = {'application_file_name': 'mezzanine_blueprint.yaml'}
+        else:
+            data = {}
+
+        result.append(data)
+        return result
 
     def test_get_empty(self):
         result = self.get('/blueprints')
@@ -53,6 +59,10 @@ class BlueprintsTestCase(BaseServerTestCase):
         get_blueprints_response = self.get('/blueprints').json
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
+
+    def test_post_without_application_file_form_data(self):
+        post_blueprints_response = self.post_file(*self.post_blueprint_args(convention=True)).json
+        self.assertEquals('mezzanine_convention', post_blueprints_response['name'])
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.post_file(*self.post_blueprint_args()).json
