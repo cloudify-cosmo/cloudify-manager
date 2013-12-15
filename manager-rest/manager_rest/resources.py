@@ -51,6 +51,11 @@ def verify_blueprint_exists(blueprint_id):
         abort(404, message='404: blueprint {0} not found'.format(blueprint_id))
 
 
+def verify_deployment_exists(deployment_id):
+    if blueprints_manager().get_deployment(deployment_id) is None:
+        abort(404, message='404: deployment {0} not found'.format(deployment_id))
+
+
 def verify_execution_exists(execution_id):
     if blueprints_manager().get_execution(execution_id) is None:
         abort(404, message='404: execution_id {0} not found'.format(execution_id))
@@ -68,7 +73,7 @@ def setup_resources(api):
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
     api.add_resource(Deployments, '/deployments')
-
+    api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
 
 class Blueprints(Resource):
 
@@ -236,3 +241,11 @@ class Deployments(Resource):
     def get(self):
         return [marshal(deployment, responses.Deployment.resource_fields) for
                 deployment in blueprints_manager().deployments_list()]
+
+
+class DeploymentsId(Resource):
+
+    @marshal_with(responses.Deployment.resource_fields)
+    def get(self, deployment_id):
+        verify_deployment_exists(deployment_id)
+        return blueprints_manager().get_deployment(deployment_id)

@@ -101,7 +101,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         result = self.get('/deployments')
         self.assertEquals(0, len(result.json))
 
-    def test_install_then_get_single_deployment(self):
+    def test_install_then_get_deployments(self):
         blueprint = self.post_file(*self.post_blueprint_args()).json
         resource_path = '/blueprints/{0}/executions'.format(blueprint['id'])
         execution = self.post(resource_path, {
@@ -112,6 +112,26 @@ class BlueprintsTestCase(BaseServerTestCase):
         get_deployments_response = self.get('/deployments').json
         self.assertEquals(1, len(get_deployments_response))
         single_deployment = get_deployments_response[0]
+        self.assertEquals(deployment_id, single_deployment['id'])
+        self.assertEquals(blueprint['id'], single_deployment['blueprintId'])
+        self.assertEquals(execution['id'], single_deployment['executionId'])
+        self.assertEquals(execution['workflowId'], single_deployment['workflowId'])
+        self.assertEquals(execution['createdAt'], single_deployment['createdAt'])
+        self.assertEquals(execution['createdAt'], single_deployment['updatedAt'])
+        import json
+        typed_blueprint_plan = json.loads(blueprint['plan'])
+        typed_deployment_plan = json.loads(single_deployment['plan'])
+        self.assertEquals(typed_blueprint_plan['name'], typed_deployment_plan['name'])
+
+    def test_install_then_get_deployment_by_id(self):
+        blueprint = self.post_file(*self.post_blueprint_args()).json
+        resource_path = '/blueprints/{0}/executions'.format(blueprint['id'])
+        execution = self.post(resource_path, {
+            'workflowId': 'install'
+        }).json
+        deployment_id = execution['deploymentId']
+        self.assertIsNotNone(deployment_id)
+        single_deployment = self.get('/deployments/{0}'.format(deployment_id)).json
         self.assertEquals(deployment_id, single_deployment['id'])
         self.assertEquals(blueprint['id'], single_deployment['blueprintId'])
         self.assertEquals(execution['id'], single_deployment['executionId'])

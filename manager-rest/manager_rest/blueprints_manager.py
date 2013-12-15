@@ -42,6 +42,9 @@ class BlueprintsManager(object):
     def get_blueprint(self, blueprint_id):
         return self.blueprints.get(blueprint_id, None)
 
+    def get_deployment(self, deployment_id):
+        return self.deployments.get(deployment_id, None)
+
     def get_execution(self, execution_id):
         return self.executions.get(execution_id, None)
 
