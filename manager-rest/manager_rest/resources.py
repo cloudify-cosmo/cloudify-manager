@@ -86,8 +86,13 @@ class Blueprints(Resource):
 
         blueprint_id = uuid.uuid4()
 
-        archive_target_path = self._save_file_locally(file_server_root)
-        application_dir = self._extract_file_to_file_server(file_server_root, archive_target_path, blueprint_id)
+        archive_target_path = tempfile.mktemp(dir=file_server_root)
+        try:
+            self._save_file_locally(archive_target_path)
+            application_dir = self._extract_file_to_file_server(file_server_root, archive_target_path, blueprint_id)
+        finally:
+            if os.path.exists(archive_target_path):
+                os.remove(archive_target_path)
         self._process_plugins(file_server_root, application_dir)
 
         return self._prepare_and_submit_blueprint(file_server_root, application_dir, blueprint_id)
@@ -118,14 +123,13 @@ class Blueprints(Resource):
         finally:
             zipf.close()
 
-    def _save_file_locally(self, file_server_root):
+    def _save_file_locally(self, archive_file_name):
         # save uploaded file
-        if not 'application_archive' in request.files:
-            abort(400, message='Missing application_archive file data')
-        uploaded_file = request.files['application_archive']
-        archive_target_path = path.join(file_server_root, uploaded_file.filename)
-        uploaded_file.save(archive_target_path)
-        return archive_target_path
+        if not request.data:
+            abort(400, message='Missing application archive in request body')
+        uploaded_file_data = request.data
+        with open(archive_file_name, 'w') as f:
+            f.write(uploaded_file_data)
 
     def _extract_file_to_file_server(self, file_server_root, archive_target_path, blueprint_id):
         # extract application to file server
@@ -161,8 +165,8 @@ class Blueprints(Resource):
             abort(400, message='400: Invalid blueprint')
 
     def _extract_application_file(self, file_server_root, application_dir):
-        if 'application_file' in request.form:
-            application_file = urllib.unquote(request.form['application_file']).decode('utf-8')
+        if 'application_file_name' in request.args:
+            application_file = urllib.unquote(request.args['application_file_name']).decode('utf-8')
             application_file = '{0}/{1}'.format(application_dir, application_file)
             return application_file
         else:
@@ -171,7 +175,8 @@ class Blueprints(Resource):
             if path.isfile(full_application_file):
                 application_file = path.join(application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
                 return application_file
-        abort(400, message='Missing application_file form data or application directory is missing blueprint.yaml')
+        abort(400, message='Missing application_file_name query parameter or application directory is missing '
+                           'blueprint.yaml')
 
 
 class BlueprintsId(Resource):

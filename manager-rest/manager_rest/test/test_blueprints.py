@@ -39,12 +39,10 @@ class BlueprintsTestCase(BaseServerTestCase):
         result = [
             '/blueprints',
             tar_mock_blueprint(),
-            'application_archive',
-            'mezzanine-app.tar.gz'
         ]
 
         if not convention:
-            data = {'application_file': 'mezzanine_blueprint.yaml'}
+            data = {'application_file_name': 'mezzanine_blueprint.yaml'}
         else:
             data = {}
 

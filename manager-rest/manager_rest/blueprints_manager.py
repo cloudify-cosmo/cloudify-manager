@@ -47,7 +47,7 @@ class BlueprintsManager(object):
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
             plan = tasks.prepare_multi_instance_plan(json.loads(plan))
-        except Exception:
+        except Exception, ex:
             raise DslParseException
         new_blueprint = BlueprintState(id=blueprint_id, json_plan=plan, plan=json.loads(plan))
         self.blueprints[str(new_blueprint.id)] = new_blueprint
