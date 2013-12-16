@@ -21,11 +21,14 @@ from workflow_client import WorkflowServiceError
 from file_server import PORT as file_server_port
 import config
 
+from flask_restful_swagger import swagger
+
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal
 import os
 from os import path
 import responses
+import requests
 import tarfile
 import zipfile
 import urllib
@@ -71,6 +74,10 @@ def abort_workflow_service_operation(workflow_service_error):
 
 
 def setup_resources(api):
+    api = swagger.docs(api,
+                       apiVersion='0.1',
+                       basePath='http://localhost:8100')
+
     api.add_resource(Blueprints, '/blueprints')
     api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
@@ -83,12 +90,47 @@ def setup_resources(api):
 
 class Blueprints(Resource):
 
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        nickname="list",
+        notes="Returns a list a submitted blueprints."
+    )
     def get(self):
+        """
+        Returns a list a submitted blueprints.
+        """
         return [marshal(blueprint, responses.BlueprintState.resource_fields) for
                 blueprint in blueprints_manager().blueprints_list()]
 
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar gzipped directory containing the blueprint.",
+        parameters=[{
+            'name': 'application_file_name',
+            'description': 'File name of yaml containing the "main" blueprint.',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'string',
+            'paramType': 'query',
+            'defaultValue': 'blueprint.yaml'
+        }, {
+            'name': 'body',
+            'description': 'Binary form of the tar gzipped blueprint directory',
+            'required': True,
+            'allowMultiple': False,
+            'dataType': 'binary',
+            'paramType': 'body',
+        }],
+        consumes=[
+            "application/octet-stream"
+        ]
+    )
     @marshal_with(responses.BlueprintState.resource_fields)
     def post(self):
+        """
+        Submit a new blueprint.
+        """
         file_server_root = config.instance().file_server_root
 
         blueprint_id = uuid.uuid4()
@@ -188,29 +230,72 @@ class Blueprints(Resource):
 
 class BlueprintsId(Resource):
 
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="getById",
+        notes="Returns a blueprint by its id."
+    )
     @marshal_with(responses.BlueprintState.resource_fields)
     def get(self, blueprint_id):
+        """
+        Returns a blueprint by its id.
+        """
         verify_blueprint_exists(blueprint_id)
         return blueprints_manager().get_blueprint(blueprint_id)
 
 
 class BlueprintsIdValidate(Resource):
 
+    @swagger.operation(
+        responseClass=responses.BlueprintValidationStatus,
+        nickname="validate",
+        notes="Validates a given blueprint."
+    )
     @marshal_with(responses.BlueprintValidationStatus.resource_fields)
     def get(self, blueprint_id):
+        """
+        Validates a given blueprint.
+        """
         verify_blueprint_exists(blueprint_id)
         return blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class BlueprintsIdExecutions(Resource):
 
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Execution.__name__),
+        nickname="list",
+        notes="Returns a list of executions related to the provided blueprint."
+    )
     def get(self, blueprint_id):
+        """
+        Returns a list of executions related to the provided blueprint.
+        """
         verify_blueprint_exists(blueprint_id)
         return [marshal(execution, responses.Execution.resource_fields) for
                 execution in blueprints_manager().get_blueprint(blueprint_id).executions_list()]
 
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="execute",
+        notes="Executes the provided workflow and creates a new deployment for this executions.",
+        parameters=[{
+            'name': 'body',
+            'description': 'Workflow execution request',
+            'required': True,
+            'allowMultiple': False,
+            'dataType': requests.ExecutionRequest.__name__,
+            'paramType': 'body'
+        }],
+        consumes=[
+            "application/json"
+        ]
+    )
     @marshal_with(responses.Execution.resource_fields)
     def post(self, blueprint_id):
+        """
+        Execute a workflow
+        """
         verify_json_content_type()
         verify_blueprint_exists(blueprint_id)
         request_json = request.json
@@ -225,8 +310,16 @@ class BlueprintsIdExecutions(Resource):
 
 class ExecutionsId(Resource):
 
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="getById",
+        notes="Returns the execution state by its id."
+    )
     @marshal_with(responses.Execution.resource_fields)
     def get(self, execution_id):
+        """
+        Returns the execution state by its id.
+        """
         verify_execution_exists(execution_id)
         try:
             return blueprints_manager().get_workflow_state(execution_id)
@@ -242,8 +335,33 @@ class DeploymentIdEvents(Resource):
         self._args_parser.add_argument('from', type=int, default=0, location='args')
         self._args_parser.add_argument('count', type=int, default=500, location='args')
 
+    @swagger.operation(
+        responseClass=responses.DeploymentEvents,
+        nickname="readEvents",
+        notes="Returns all available events for the given deployment matching the provided parameters.",
+        parameters=[{
+            'name': 'from',
+            'description': 'Index of the first request event.',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'int',
+            'paramType': 'query',
+            'defaultValue': 0
+        }, {
+            'name': 'count',
+            'description': 'Maximum number of events to read.',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'int',
+            'paramType': 'query',
+            'defaultValue': 500
+        }]
+    )
     @marshal_with(responses.DeploymentEvents.resource_fields)
     def get(self, deployment_id):
+        """
+        Returns deployments events.
+        """
         args = self._args_parser.parse_args()
 
         first_event = args['from']
