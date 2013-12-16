@@ -44,13 +44,6 @@ class BlueprintState(object):
         self.yml = None #TODO kwargs['yml']
         self.topology = None #TODO kwargs['topology']
         self.deployments = None #TODO kwargs['deployments']
-        self.executions = {}
-
-    def add_execution(self, execution):
-        self.executions[str(execution.id)] = execution
-
-    def executions_list(self):
-        return self.executions.values()
 
 
 @swagger.model
@@ -96,10 +89,8 @@ class Deployment(object):
     resource_fields = {
         'id': fields.String,
         # 'permalink': fields.Url('blueprint_ep')
-        'createdAt': fields.String(attribute='created_at'),# TODO should be DateTime?
-        'updatedAt': fields.String(attribute='updated_at'),# TODO should be DateTime?
-        'executionId': fields.String(attribute='execution_id'),
-        'workflowId': fields.String(attribute='workflow_id'),
+        'createdAt': fields.DateTime(attribute='created_at'),
+        'updatedAt': fields.DateTime(attribute='updated_at'),
         'blueprintId': fields.String(attribute='blueprint_id'),
         'plan': fields.String,
     }
@@ -107,12 +98,18 @@ class Deployment(object):
     def __init__(self, *args, **kwargs):
         self.id = kwargs['deployment_id']
         self.permalink = None #TODO implement
-        self.created_at = kwargs['created_at']
-        self.updated_at = kwargs['updated_at']
-        self.execution_id = kwargs['execution_id']
-        self.workflow_id = kwargs['workflow_id']
+        now = datetime.now()
+        self.created_at = now
+        self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
+        self.executions = {}
+
+    def add_execution(self, execution):
+        self.executions[str(execution.id)] = execution
+
+    def executions_list(self):
+        return self.executions.values()
 
 
 @swagger.model

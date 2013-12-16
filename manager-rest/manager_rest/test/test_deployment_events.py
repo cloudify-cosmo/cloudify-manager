@@ -25,7 +25,7 @@ from os import path
 from base_test import BaseServerTestCase
 
 
-class DeploymentsTestCase(BaseServerTestCase):
+class DeploymentsEventsTestCase(BaseServerTestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
@@ -33,14 +33,14 @@ class DeploymentsTestCase(BaseServerTestCase):
         deployment_id = 'deployment_0'
         self.events_file = path.join(self.tempdir, "{0}.log".format(deployment_id))
         self.create_events_file(self.events_file, events)
-        super(DeploymentsTestCase, self).setUp()
+        super(DeploymentsEventsTestCase, self).setUp()
 
     def tearDown(self):
-        super(DeploymentsTestCase, self).tearDown()
+        super(DeploymentsEventsTestCase, self).tearDown()
         shutil.rmtree(self.tempdir)
 
     def create_configuration(self):
-        config = super(DeploymentsTestCase, self).create_configuration()
+        config = super(DeploymentsEventsTestCase, self).create_configuration()
         config.events_files_path = self.tempdir
         return config
 
