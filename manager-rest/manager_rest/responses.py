@@ -87,15 +87,26 @@ class Node(object):
 
 class Deployment(object):
 
+    resource_fields = {
+        'id': fields.String,
+        # 'permalink': fields.Url('blueprint_ep')
+        'createdAt': fields.String(attribute='created_at'),# TODO should be DateTime?
+        'updatedAt': fields.String(attribute='updated_at'),# TODO should be DateTime?
+        'executionId': fields.String(attribute='execution_id'),
+        'workflowId': fields.String(attribute='workflow_id'),
+        'blueprintId': fields.String(attribute='blueprint_id'),
+        'plan': fields.String,
+    }
+
     def __init__(self, *args, **kwargs):
-        self.id = None #TODO generate
+        self.id = kwargs['deployment_id']
         self.permalink = None #TODO implement
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
         self.execution_id = kwargs['execution_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
-        self.nodes = kwargs['nodes']
+        self.plan = kwargs['plan']
 
 
 class Execution(object):
@@ -104,6 +115,7 @@ class Execution(object):
         'id': fields.String,
         'workflowId': fields.String(attribute='workflow_id'),
         'blueprintId': fields.String(attribute='blueprint_id'),
+        'deploymentId': fields.String(attribute='deployment_id'),
         'status': fields.String,
         'error': fields.String,
         'createdAt': fields.String(attribute='created_at')
@@ -112,7 +124,7 @@ class Execution(object):
     def __init__(self, *args, **kwargs):
         self.id = uuid.uuid4()
         self.status = kwargs['state']
-        self.deployment_id = None #TODO
+        self.deployment_id = kwargs['deployment_id']
         self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
