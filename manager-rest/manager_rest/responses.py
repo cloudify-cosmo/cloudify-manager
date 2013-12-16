@@ -132,6 +132,18 @@ class Execution(object):
         self.error = 'None'
 
 
+class Node(object):
+
+    resource_fields = {
+        'properties': fields.String,
+        'runtimeInfo': fields.String(attribute='runtime_info')
+    }
+
+    def __init__(self, properties={}, runtime_info={}):
+        self.properties = properties
+        self.runtime_info = runtime_info
+
+
 class DeploymentEvents(object):
 
     resource_fields = {
