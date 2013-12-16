@@ -46,6 +46,11 @@ def events_manager():
     return events_manager.instance()
 
 
+def storage_manager():
+    eval('from storage_manager import instance')
+    return eval('instance()')
+
+
 def verify_json_content_type():
     if request.content_type != 'application/json':
         abort(415, message='415: Content type must be application/json')
@@ -72,6 +77,7 @@ def setup_resources(api):
     api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
+    api.add_resource(NodesId, '/nodes/<string:node_id>')
 
 
 class Blueprints(Resource):
@@ -220,6 +226,16 @@ class ExecutionsId(Resource):
             return blueprints_manager().get_workflow_state(execution_id)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
+
+
+class NodesId(Resource):
+
+    @marshal_with(responses.Node.resource_fields)
+    def get(self, node_id):
+        storage_manager().get_node(node_id)
+
+    def post(self, node_id):
+        verify_json_content_type()
 
 
 class DeploymentIdEvents(Resource):
