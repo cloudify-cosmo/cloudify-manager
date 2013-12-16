@@ -1,0 +1,141 @@
+{
+    "apiVersion": "1.0",
+    "swaggerVersion": "1.2",
+    "resourcePath": "/",
+    "produces": [
+        "application/json",
+        "text/plain",
+        "text/html"
+    ],
+    "info": {
+        "title": "Cosmo Workflow Engine Service",
+        "description": "Describes a REST API for launching and monitoring workflows",
+        "contact": "idan@gigaspaces.com",
+        "license": "Apache 2.0",
+        "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "apis": [
+        {
+            "path": "/workflows",
+            "description": "Workflows operations",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "Launches a workflow",
+                    "nickname": "launchWorkflow",
+                    "responseClass": "WorkflowState",
+                    "parameters": [
+                        {
+                            "name": "radial",
+                            "description": "Workflow in Ruote's radial format",
+                            "required": "true",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "body"
+                        },
+                        {
+                            "name": "fields",
+                            "description": "A map of workitem fields for the workflow execution",
+                            "required": "false",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "string"
+                        },
+                        {
+                            "name": "tags",
+                            "description": "A map of tags which can be later used for query purposes (Tags are also visible in events)",
+                            "required": "false",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "string"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "Workflow submitted and is in pending state"
+                        },
+                        {
+                            "code": 400,
+                            "message": "Radial/fields/tags format error"
+                        }
+                    ]
+                },
+                {
+                    "method": "GET",
+                    "summary": "Gets all workflows states",
+                    "nickname": "getWorkflows",
+                    "responseClass": "List[WorkflowState]",
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "Workflows states returned"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "path": "/workflows/{workflowId}",
+            "description": "Workflow operations",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "Gets workflow state",
+                    "nickname": "getWorkflow",
+                    "responseClass": "WorkflowState",
+                    "parameters": [
+                        {
+                            "name": "workflowId",
+                            "description": "Workflow id to get the state for",
+                            "required": "true",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "path"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "Workflow state for the provided workflow id returned"
+                        },
+                        {
+                            "code": 400,
+                            "message": "Provided workflow id doesn't exist"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "models": {
+        "WorkflowState": {
+            "id": "WorkflowState",
+            "description": "Represents a workflow state",
+            "required": [ "id", "state", "created" ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Workflow Id"
+                },
+                "state": {
+                    "type": "string",
+                    "description": "Workflow current state",
+                    "enum": [ "pending", "launched", "terminated", "failed" ]
+                },
+                "created": {
+                    "type": "dateTime",
+                    "description": "Time when the workflow was submitted to the workflow engine"
+                },
+                "launched": {
+                    "type": "dateTime",
+                    "description": "Time when the workflow was actually launched"
+                },
+                "error": {
+                    "type": "string",
+                    "description": "Error message in case of workflow execution failure"
+                }
+            }
+        }
+    }
+}
