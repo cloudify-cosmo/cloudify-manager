@@ -97,7 +97,7 @@ class Blueprints(Resource):
     )
     def get(self):
         """
-        Returns a list a submitted blueprints.
+        Returns a list of submitted blueprints.
         """
         return [marshal(blueprint, responses.BlueprintState.resource_fields) for
                 blueprint in blueprints_manager().blueprints_list()]
@@ -342,6 +342,9 @@ class Deployments(Resource):
         notes="Returns a list existing deployments."
     )
     def get(self):
+        """
+        Returns a list of existing deployments.
+        """
         return [marshal(deployment, responses.Deployment.resource_fields) for
                 deployment in blueprints_manager().deployments_list()]
 
@@ -384,6 +387,9 @@ class DeploymentsId(Resource):
     )
     @marshal_with(responses.Deployment.resource_fields)
     def get(self, deployment_id):
+        """
+        Returns a deployment by its id.
+        """
         verify_deployment_exists(deployment_id)
         return blueprints_manager().get_deployment(deployment_id)
 
