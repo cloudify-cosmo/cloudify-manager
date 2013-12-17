@@ -573,7 +573,7 @@ def deploy_application(dsl_path, timeout=240):
 
     from cosmo.appdeployer.tasks import submit_and_execute_workflow, get_execution_status
     execution = submit_and_execute_workflow.delay(dsl_path)
-    blueprint, execution_response = execution.get(timeout=60, propagate=True)
+    execution_response = execution.get(timeout=60, propagate=True)
     r = {'status': 'pending'}
     while r['status'] != 'terminated' and r['status'] != 'failed':
         if end < time.time():
@@ -583,7 +583,7 @@ def deploy_application(dsl_path, timeout=240):
     if r['status'] != 'terminated':
         raise RuntimeError('Application deployment failed. (status response: {0})'.format(r))
 
-    return blueprint['id']
+    return execution_response['deploymentId']
 
 
 def undeploy_application(deployment_id, timeout=240):

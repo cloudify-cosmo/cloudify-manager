@@ -20,7 +20,7 @@ from base_test import BaseServerTestCase
 import tempfile
 import os
 import tarfile
-import requests
+import requests_schema
 
 
 def post_blueprint_args(convention=False):
@@ -79,5 +79,5 @@ class BlueprintsTestCase(BaseServerTestCase):
     def test_zipped_plugin(self):
         self.post_file(*post_blueprint_args())
         from manager_rest.file_server import PORT as file_server_port
-        response = requests.get('http://localhost:{0}/stub-installer.zip'.format(file_server_port))
+        response = requests_schema.get('http://localhost:{0}/stub-installer.zip'.format(file_server_port))
         self.assertEquals(response.status_code, 200)

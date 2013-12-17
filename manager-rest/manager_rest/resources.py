@@ -28,7 +28,7 @@ from flask.ext.restful import Resource, abort, marshal_with, marshal
 import os
 from os import path
 import responses
-import requests
+import requests_schema
 import tarfile
 import zipfile
 import urllib
@@ -354,7 +354,7 @@ class Deployments(Resource):
                         'description': 'Deployment blue print',
                         'required': True,
                         'allowMultiple': False,
-                        'dataType': requests.DeploymentRequest.__name__,
+                        'dataType': requests_schema.DeploymentRequest.__name__,
                         'paramType': 'body'
                     }],
         consumes=[
@@ -412,7 +412,7 @@ class DeploymentsIdExecutions(Resource):
                         'description': 'Workflow execution request',
                         'required': True,
                         'allowMultiple': False,
-                        'dataType': requests.ExecutionRequest.__name__,
+                        'dataType': requests_schema.ExecutionRequest.__name__,
                         'paramType': 'body'
                     }],
         consumes=[
