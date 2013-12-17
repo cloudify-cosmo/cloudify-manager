@@ -30,7 +30,7 @@ import logging
 import blueprints_manager
 import events_manager
 
-app = Flask(__name__, static_folder='/home/eitany/dev/cosmo/flask-restful-swagger/static')
+app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
 app.logger.addHandler(logging.StreamHandler(sys.stdout))
 
