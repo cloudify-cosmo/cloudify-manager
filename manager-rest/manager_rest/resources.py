@@ -80,12 +80,12 @@ def setup_resources(api):
 
     api.add_resource(Blueprints, '/blueprints')
     api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
-    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
-    api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
+    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(Deployments, '/deployments')
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
+    api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
+    api.add_resource(DeploymentsIdEvents, '/deployments/<string:deployment_id>/events')
 
 
 class Blueprints(Resource):
@@ -97,7 +97,7 @@ class Blueprints(Resource):
     )
     def get(self):
         """
-        Returns a list a submitted blueprints.
+        Returns a list of submitted blueprints.
         """
         return [marshal(blueprint, responses.BlueprintState.resource_fields) for
                 blueprint in blueprints_manager().blueprints_list()]
@@ -260,54 +260,6 @@ class BlueprintsIdValidate(Resource):
         return blueprints_manager().validate_blueprint(blueprint_id)
 
 
-class BlueprintsIdExecutions(Resource):
-
-    @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Execution.__name__),
-        nickname="list",
-        notes="Returns a list of executions related to the provided blueprint."
-    )
-    def get(self, blueprint_id):
-        """
-        Returns a list of executions related to the provided blueprint.
-        """
-        verify_blueprint_exists(blueprint_id)
-        return [marshal(execution, responses.Execution.resource_fields) for
-                execution in blueprints_manager().get_blueprint(blueprint_id).executions_list()]
-
-    @swagger.operation(
-        responseClass=responses.Execution,
-        nickname="execute",
-        notes="Executes the provided workflow and creates a new deployment for this executions.",
-        parameters=[{
-            'name': 'body',
-            'description': 'Workflow execution request',
-            'required': True,
-            'allowMultiple': False,
-            'dataType': requests_schema.ExecutionRequest.__name__,
-            'paramType': 'body'
-        }],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @marshal_with(responses.Execution.resource_fields)
-    def post(self, blueprint_id):
-        """
-        Execute a workflow
-        """
-        verify_json_content_type()
-        verify_blueprint_exists(blueprint_id)
-        request_json = request.json
-        if 'workflowId' not in request_json:
-            abort(400, message='400: Missing workflowId in json request body')
-        workflow_id = request.json['workflowId']
-        try:
-            return blueprints_manager().execute_workflow(blueprint_id, workflow_id), 201
-        except WorkflowServiceError, e:
-            abort_workflow_service_operation(e)
-
-
 class ExecutionsId(Resource):
 
     @swagger.operation(
@@ -327,7 +279,7 @@ class ExecutionsId(Resource):
             abort_workflow_service_operation(e)
 
 
-class DeploymentIdEvents(Resource):
+class DeploymentsIdEvents(Resource):
 
     def __init__(self):
         from flask.ext.restful import reqparse
@@ -384,14 +336,107 @@ class DeploymentIdEvents(Resource):
 
 class Deployments(Resource):
 
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Deployment.__name__),
+        nickname="list",
+        notes="Returns a list existing deployments."
+    )
     def get(self):
+        """
+        Returns a list of existing deployments.
+        """
         return [marshal(deployment, responses.Deployment.resource_fields) for
                 deployment in blueprints_manager().deployments_list()]
+
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="createDeployment",
+        notes="Created a new deployment of the given blueprint.",
+        parameters=[{
+                        'name': 'body',
+                        'description': 'Deployment blue print',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': requests_schema.DeploymentRequest.__name__,
+                        'paramType': 'body'
+                    }],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    def post(self):
+        """
+        Creates a new deployment
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'blueprintId' not in request_json:
+            abort(400, message='400: Missing blueprintId in json request body')
+        blueprint_id = request.json['blueprintId']
+        verify_blueprint_exists(blueprint_id)
+        return blueprints_manager().create_deployment(blueprint_id), 201
 
 
 class DeploymentsId(Resource):
 
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="getById",
+        notes="Returns a deployment by its id."
+    )
     @marshal_with(responses.Deployment.resource_fields)
     def get(self, deployment_id):
+        """
+        Returns a deployment by its id.
+        """
         verify_deployment_exists(deployment_id)
         return blueprints_manager().get_deployment(deployment_id)
+
+
+class DeploymentsIdExecutions(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Execution.__name__),
+        nickname="list",
+        notes="Returns a list of executions related to the provided deployment."
+    )
+    def get(self, deployment_id):
+        """
+        Returns a list of executions related to the provided blueprint.
+        """
+        verify_deployment_exists(deployment_id)
+        return [marshal(execution, responses.Execution.resource_fields) for
+                execution in blueprints_manager().get_deployment(deployment_id).executions_list()]
+
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="execute",
+        notes="Executes the provided workflow under the given deployment context.",
+        parameters=[{
+                        'name': 'body',
+                        'description': 'Workflow execution request',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': requests_schema.ExecutionRequest.__name__,
+                        'paramType': 'body'
+                    }],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    def post(self, deployment_id):
+        """
+        Execute a workflow
+        """
+        verify_json_content_type()
+        verify_deployment_exists(deployment_id)
+        request_json = request.json
+        if 'workflowId' not in request_json:
+            abort(400, message='400: Missing workflowId in json request body')
+        workflow_id = request.json['workflowId']
+        try:
+            return blueprints_manager().execute_workflow(deployment_id, workflow_id), 201
+        except WorkflowServiceError, e:
+            abort_workflow_service_operation(e)

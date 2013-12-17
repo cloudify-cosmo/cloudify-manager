@@ -27,3 +27,10 @@ class ExecutionRequest(object):
         'workflowId': fields.String,
     }
 
+
+@swagger.model
+class DeploymentRequest(object):
+
+    resource_fields = {
+        'blueprintId': fields.String,
+    }
