@@ -132,18 +132,6 @@ class Execution(object):
         self.error = 'None'
 
 
-class Node(object):
-
-    resource_fields = {
-        'properties': fields.String,
-        'runtimeInfo': fields.String(attribute='runtime_info')
-    }
-
-    def __init__(self, properties={}, runtime_info={}):
-        self.properties = properties
-        self.runtime_info = runtime_info
-
-
 class DeploymentEvents(object):
 
     resource_fields = {
@@ -161,3 +149,25 @@ class DeploymentEvents(object):
         self.events = kwargs['events']
         self.deployment_total_events = kwargs['deployment_total_events']
         self.deployment_events_bytes = kwargs['deployment_events_bytes']
+
+
+class Nodes(object):
+
+    resource_fields = {
+        'nodes': fields.List(fields.Raw)
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.nodes = kwargs['nodes']
+
+
+class Node(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'runtimeInfo': fields.Raw(attribute='runtime_info')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs['id']
+        self.runtime_info = kwargs['runtime_info']

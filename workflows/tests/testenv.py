@@ -205,7 +205,7 @@ class CeleryWorkerProcess(object):
     _process = None
 
     def __init__(self, tempdir, plugins_tempdir, cosmo_path, cosmo_jar_path, riemann_config_path,
-                 riemann_template_path, riemann_pid):
+                 riemann_template_path, riemann_pid, manager_rest_port):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
         self._app_path = path.join(tempdir, "cosmo")
@@ -216,6 +216,7 @@ class CeleryWorkerProcess(object):
         self._riemann_config_path = riemann_config_path
         self._riemann_template_path = riemann_template_path
         self._riemann_pid = riemann_pid
+        self._manager_rest_port = manager_rest_port
 
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
@@ -263,6 +264,7 @@ class CeleryWorkerProcess(object):
         environment['RIEMANN_PID'] = str(self._riemann_pid)
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
+        environment['MANAGER_REST_PORT'] = self._manager_rest_port
 
         logger.info("Starting celery worker...")
         self._process = subprocess.Popen(celery_command, env=environment)
@@ -421,21 +423,23 @@ class TestEnvironment(object):
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
+            manager_rest_port = '8100'
+
             # celery
             cosmo_path = path.dirname(path.realpath(cosmo.__file__))
             self._celery_worker_process = CeleryWorkerProcess(self._tempdir, self._plugins_tempdir, cosmo_path,
                                                               cosmo_jar_path,
                                                               riemann_config_path, riemann_template_path,
-                                                              self._riemann_process.pid)
+                                                              self._riemann_process.pid,
+                                                              manager_rest_port)
             self._celery_worker_process.start()
 
             # set events path (wf_service -> write, manager_rest -> read)
             self.events_path = path.join(self._tempdir, 'events')
 
             # manager rest
-            port = '8100'
             worker_service_base_uri = 'http://localhost:8101'
-            self._manager_rest_process = ManagerRestProcess(port,
+            self._manager_rest_process = ManagerRestProcess(manager_rest_port,
                                                             worker_service_base_uri,
                                                             self.events_path)
             self._manager_rest_process.start()
@@ -618,6 +622,18 @@ def validate_dsl(dsl_path, timeout=240):
 def get_deployment_events(deployment_id, first_event=0, events_count=500):
     from cosmo.appdeployer.tasks import get_deployment_events as get_events
     result = get_events.delay(deployment_id, first_event, events_count)
+    return result.get(timeout=10)
+
+
+def get_deployment_nodes(deployment_id=None):
+    from cosmo.appdeployer.tasks import get_deployment_nodes as get_nodes
+    result = get_nodes.delay(deployment_id)
+    return result.get(timeout=10)
+
+
+def get_node(node_id):
+    from cosmo.appdeployer.tasks import get_node as get_node_info
+    result = get_node_info.delay(node_id)
     return result.get(timeout=10)
 
 

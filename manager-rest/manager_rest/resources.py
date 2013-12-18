@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+import imp
 
 __author__ = 'dan'
 
@@ -35,6 +36,9 @@ import uuid
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
+# TODO: make the storage_manager module name pluggable
+storage_manager = imp.load_module('storage_manager', *imp.find_module('storage_manager')).instance()
+
 
 def blueprints_manager():
     import blueprints_manager
@@ -44,11 +48,6 @@ def blueprints_manager():
 def events_manager():
     import events_manager
     return events_manager.instance()
-
-
-def storage_manager():
-    eval('from storage_manager import instance')
-    return eval('instance()')
 
 
 def verify_json_content_type():
@@ -84,6 +83,7 @@ def setup_resources(api):
     api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
     api.add_resource(Deployments, '/deployments')
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
+    api.add_resource(Nodes, '/nodes')
     api.add_resource(NodesId, '/nodes/<string:node_id>')
 
 
@@ -240,16 +240,6 @@ class ExecutionsId(Resource):
             abort_workflow_service_operation(e)
 
 
-class NodesId(Resource):
-
-    @marshal_with(responses.Node.resource_fields)
-    def get(self, node_id):
-        storage_manager().get_node(node_id)
-
-    def post(self, node_id):
-        verify_json_content_type()
-
-
 class DeploymentIdEvents(Resource):
 
     def __init__(self):
@@ -288,8 +278,44 @@ class Deployments(Resource):
 
 
 class DeploymentsId(Resource):
-
     @marshal_with(responses.Deployment.resource_fields)
     def get(self, deployment_id):
         verify_deployment_exists(deployment_id)
         return blueprints_manager().get_deployment(deployment_id)
+
+
+class Nodes(Resource):
+
+    @marshal_with(responses.Nodes.resource_fields)
+    def get(self):
+        return storage_manager.get_nodes()
+
+
+class NodesId(Resource):
+
+    @marshal_with(responses.Node.resource_fields)
+    def get(self, node_id):
+        return storage_manager.get_node(node_id)
+
+    @marshal_with(responses.Node.resource_fields)
+    def put(self, node_id):
+        verify_json_content_type()
+        if request.json.__class__ is not dict:
+            abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
+                request.json.__class__.__name__))
+        return storage_manager.put_node(node_id, request.json)
+
+    @marshal_with(responses.Node.resource_fields)
+    def patch(self, node_id):
+        verify_json_content_type()
+        if request.json.__class__ is not dict:
+            abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
+                request.json.__class__.__name__))
+        for k, v in request.json.iteritems():
+            if v.__class__ is not list:
+                abort(400, message='key: {0} in request body is expected to be a list but is: {1}'.format(
+                    k, v.__class__.__name__))
+            if len(v) != 1 and len(v) != 2:
+                abort(400, message='value for key: {0} is expected to be a list with length 1 or 2 but is {1}'.format(
+                    k, len(v)))
+        return storage_manager.update_node(node_id, request.json)

@@ -16,21 +16,52 @@
 __author__ = 'idanmo'
 
 
+from responses import Nodes
+from responses import Node
+from threading import Lock
+
+
 class StorageManager(object):
     """
     In-memory storage manager for tests.
     """
 
     def __init__(self):
-        self._store = dict()
+        self._storage = dict()
+        self._lock = Lock()
+
+    def get_nodes(self):
+        with self._lock:
+            return Nodes(nodes=map(lambda x: {'id': x}, self._storage.keys()))
 
     def get_node(self, node_id):
-        if self._store.has_key(node_id):
-            return self._store[node_id]
-        return {'runtime_info': {}, 'properties': {}}
+        with self._lock:
+            if node_id in self._storage:
+                return Node(id=node_id, runtime_info=self._storage[node_id])
+            return Node(id=node_id, runtime_info={})
 
     def put_node(self, node_id, runtime_info):
-        self._store[node_id] = runtime_info
+        with self._lock:
+            self._storage[node_id] = runtime_info
+            return Node(id=node_id, runtime_info=runtime_info)
+
+    def update_node(self, node_id, updated_properties):
+        with self._lock:
+            runtime_info = self._storage[node_id].copy() if node_id in self._storage else {}
+            for key, value in updated_properties.iteritems():
+                if len(value) == 1:
+                    if key in runtime_info:
+                        raise RuntimeError("Node update conflict - key: '{0}' is not expected to exist".format(key))
+                elif len(value) == 2:
+                    if key not in runtime_info:
+                        raise RuntimeError("Node update conflict - key: '{0}' is expected to exist".format(key))
+                    if runtime_info[key] != value[1]:
+                        raise RuntimeError(
+                            "Node update conflict - key: '{0}' value is expected to be '{1}' but is '{2}'".format(
+                                key, value[1], runtime_info[key]))
+                runtime_info[key] = value[0]
+            self._storage[node_id] = runtime_info
+            return Node(id=node_id, runtime_info=runtime_info)
 
 
 _instance = StorageManager()

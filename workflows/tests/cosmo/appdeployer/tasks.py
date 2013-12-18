@@ -87,6 +87,20 @@ class ManagerRestClientTestClient(object):
             raise RuntimeError('Failed getting deployment events for deployment id {0}'.format(deployment_id))
         return response.json()
 
+    def get_deployment_nodes(self, deployment_id=None):
+        if deployment_id is not None:
+            raise RuntimeError('not implemented')
+        response = requests.get('{0}/nodes'.format(self.base_manager_rest_uri))
+        if response.status_code != 200:
+            raise RuntimeError('Failed getting nodes for deployment id {0}'.format(deployment_id))
+        return response.json()['nodes']
+
+    def get_node(self, node_id):
+        response = requests.get('{0}/nodes/{1}'.format(self.base_manager_rest_uri, node_id))
+        if response.status_code != 200:
+            raise RuntimeError('Failed getting node for node id {0}'.format(node_id))
+        return response.json()
+
     def execute_uninstall_workflow(self, deployment_id):
         #TODO: should be deployments instead of blueprints once we implement deployments scope
         response = requests.post('{0}/blueprints/{1}/executions'.format(
@@ -128,6 +142,16 @@ def get_execution_status(execution_id, **kwargs):
 @celery.task
 def get_deployment_events(deployment_id, first_event=0, events_count=500, **kwargs):
     return manager_client.get_deployment_events(deployment_id, first_event, events_count)
+
+
+@celery.task
+def get_deployment_nodes(deployment_id, **kwargs):
+    return manager_client.get_deployment_nodes(deployment_id)
+
+
+@celery.task
+def get_node(node_id, **kwargs):
+    return manager_client.get_node(node_id)
 
 
 @celery.task
