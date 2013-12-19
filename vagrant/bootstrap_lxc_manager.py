@@ -114,7 +114,7 @@ class WorkflowServiceProcess(object):
         self.workflow_service_path = workflow_service_path
         self.events_path = events_path
 
-    def start(self, start_timeout=60):
+    def start(self, start_timeout=120):
         output_file = open('workflow-service.out', 'w')
         endtime = time.time() + start_timeout
         command = [
