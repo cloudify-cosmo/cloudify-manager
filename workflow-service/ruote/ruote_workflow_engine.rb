@@ -93,6 +93,9 @@ class RuoteWorkflowEngine
 
   def launch(radial, fields={}, tags={})
     workflow = Ruote::RadialReader.read(radial)
+    tags.each do |key, value|
+      fields[key] = value unless fields.has_key? key
+    end
     wfid = @dashboard.launch(workflow, fields)
     wf_state = update_workflow_state(wfid, :pending, tags)
     log_workflow_state(wf_state)
