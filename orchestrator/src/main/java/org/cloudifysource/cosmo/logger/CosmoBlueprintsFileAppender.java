@@ -77,8 +77,8 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
     }
 
     private String extractLoggingContext(Map<String, Object> map) {
-        if (map.containsKey("blueprint")) {
-            return map.get("blueprint").toString();
+        if (map.containsKey("deployment_id")) {
+            return map.get("deployment_id").toString();
         }
         if (map.containsKey("app")) {
             return map.get("app").toString();
