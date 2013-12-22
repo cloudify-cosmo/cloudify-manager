@@ -77,7 +77,7 @@ class BlueprintsManager(object):
         workflow = blueprint.typed_plan['workflows'][workflow_id]
         plan = blueprint.typed_plan
 
-        response = workflow_client().execute_workflow(workflow, plan)
+        response = workflow_client().execute_workflow(workflow, plan, deployment_id=deployment_id)
         # TODO raise error if there is error in response
         new_execution = Execution(state=response['state'],
                                   internal_workflow_id=response['id'],

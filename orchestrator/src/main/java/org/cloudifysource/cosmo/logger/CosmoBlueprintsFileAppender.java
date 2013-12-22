@@ -64,9 +64,9 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
         if (objectMap == null) {
             return;
         }
-        final String blueprint = extractBlueprint(objectMap);
-        if (StringUtils.hasLength(blueprint)) {
-            FileAppender appender = getFileAppender(blueprint);
+        final String loggingContext = extractLoggingContext(objectMap);
+        if (StringUtils.hasLength(loggingContext)) {
+            FileAppender appender = getFileAppender(loggingContext);
             try {
                 objectMap.put("timestamp", new Timestamp(event.getTimeStamp()).toString());
                 event.setProperty("json", CosmoPatternLayout.convertObjectToJson(objectMap));
@@ -76,9 +76,9 @@ public class CosmoBlueprintsFileAppender extends AppenderSkeleton {
         }
     }
 
-    private String extractBlueprint(Map<String, Object> map) {
-        if (map.containsKey("blueprint")) {
-            return map.get("blueprint").toString();
+    private String extractLoggingContext(Map<String, Object> map) {
+        if (map.containsKey("deployment_id")) {
+            return map.get("deployment_id").toString();
         }
         if (map.containsKey("app")) {
             return map.get("app").toString();
