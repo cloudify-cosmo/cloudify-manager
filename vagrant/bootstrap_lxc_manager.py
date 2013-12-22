@@ -259,9 +259,9 @@ class VagrantLxcBoot:
 
     def wget(self, url, output_name=None):
         if output_name is None:
-            self.runner.run("wget -N {0} -P {1}/".format(url, self.working_dir))
+            self.runner.run("wget -q -N {0} -P {1}/".format(url, self.working_dir))
         else:
-            self.runner.run("wget -N {0} -P {1}/ -O {2}".format(url, self.working_dir, output_name))
+            self.runner.run("wget -q -N {0} -P {1}/ -O {2}".format(url, self.working_dir, output_name))
 
     # TODO: quiet
     def extract_tar_gz(self, path):
