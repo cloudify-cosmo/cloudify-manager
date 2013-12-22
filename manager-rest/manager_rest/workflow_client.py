@@ -32,12 +32,15 @@ class WorkflowClient(object):
     def __init__(self):
         self.workflow_service_base_uri = config.instance().workflow_service_base_uri
 
-    def execute_workflow(self, workflow, deployment_id, plan):
+    def execute_workflow(self, workflow, plan, deployment_id=None):
+        tags = {}
+        if deployment_id:
+            tags['deployment_id'] = deployment_id# for workflow events
         response = requests.post('{0}/workflows'.format(self.workflow_service_base_uri),
                                  json.dumps({
                                      'radial': workflow,
                                      'fields': {'plan': plan},
-                                     'tags': {'deployment_id': deployment_id}  # for workflow events
+                                     'tags': tags
                                  }))
         if response.status_code != 201:
             raise WorkflowServiceError(response.status_code)
