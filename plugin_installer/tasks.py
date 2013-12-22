@@ -17,6 +17,8 @@
 import logging
 import os
 import subprocess
+import platform
+import shlex
 import ast
 import _ast
 from os.path import expanduser
@@ -135,13 +137,21 @@ def install_celery_plugin_to_dir(plugin,
 
     to_dir = create_namespace_path(plugin_name.split(".")[:-1], base_dir)
 
+    # in CentOS (and probably RHEL/Fedora as well) can't simply 'sudo' because of the "you must have a tty to run
+    # sudo" error, so using session-command instead.
+    is_session_command = platform.dist()[0] == 'centos'
+    logger.debug('is_session_command = {0}'.format(is_session_command))
+    command_format = "su --session-command='{0}'" if is_session_command else 'sudo {0}'
+
     # this will install the package and the dependencies into the python installation
-    run_command("sudo {0} install {1}".format(get_pip(), plugin_url))
+    command = "{0} install {1}".format(get_pip(), plugin_url)
+    run_command(command_format.format(command))
     logger.debug("installed plugin {0} and dependencies into python installation".format(plugin_name))
 
     # install the package to the target directory. this will also uninstall the plugin package from the python
     # installation. leaving the plugin package just inside the base dir.
-    run_command("sudo {0} install --no-deps -t {1} {2}".format(get_pip(), to_dir, plugin_url))
+    command = "{0} install --no-deps -t {1} {2}".format(get_pip(), to_dir, plugin_url)
+    run_command(command_format.format(command))
     logger.debug("installing plugin {0} into {1}".format(plugin_name, to_dir))
 
 
@@ -150,7 +160,7 @@ def get_plugin_simple_name(full_plugin_name):
 
 
 def run_command(command):
-    p = subprocess.Popen(command.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
         raise RuntimeError("Failed running command {0} [returncode={1}, "
