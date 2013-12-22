@@ -136,7 +136,12 @@ def _install_latest_pip(runner, node_id):
     logger.debug("retrieving pip script [node_id=%s]", node_id)
     runner.sudo("wget -N https://raw.github.com/pypa/pip/master/contrib/get-pip.py")
     logger.debug("installing setuptools [node_id=%s]", node_id)
-    runner.sudo("apt-get -q -y install python-pip")
+
+    #checking whether to install pip using yum or apt-get
+    package_installer = "yum" if len(runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
+    logger.debug("installing pip using {0}".format(package_installer))
+    runner.sudo("{0} -q -y install python-pip".format(package_installer))
+
     logger.debug("building pip installation [node_id=%s]", node_id)
     runner.sudo("python get-pip.py")
 
@@ -144,7 +149,8 @@ def _install_latest_pip(runner, node_id):
 def prepare_configuration(worker_config, cloudify_runtime):
     ip = get_machine_ip(cloudify_runtime)
     worker_config['host'] = ip
-    worker_config['home'] = "/home/" + worker_config['user']
+    #root user has no "/home/" prepended to its home directory
+    worker_config['home'] = "/home/" + worker_config['user'] if worker_config['user'] != 'root' else '/root'
     worker_config['app_dir'] = worker_config['home'] + "/" + COSMO_APP_NAME
 
     if "env" not in worker_config:
@@ -165,7 +171,7 @@ def restart_celery_worker(runner, worker_config):
 def _verify_no_celery_error(runner, worker_config):
 
     user = worker_config['user']
-    home = "/home/" + user
+    home = "/home/" + user if user != 'root' else '/root'
     celery_error_out = '{0}/celery_error.out'.format(home)
 
     # this means the celery worker had an uncaught exception and it wrote its content
