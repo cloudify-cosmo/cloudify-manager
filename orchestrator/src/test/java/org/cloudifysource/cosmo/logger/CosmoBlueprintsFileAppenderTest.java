@@ -117,12 +117,12 @@ public class CosmoBlueprintsFileAppenderTest extends AbstractTestNGSpringContext
         event1.put("app", "my_app1");
         logger.info(createJsonEvent(event1));
         Map<String, String> event2 = Maps.newHashMap();
-        event2.put("blueprint", "my_app2");
+        event2.put("deployment_id", "my_app2");
         logger.info(createJsonEvent(event2));
         assertFileExists("my_app1.log");
         assertFileContent("{\"app\":\"my_app1\"}\n", "my_app1.log");
         assertFileExists("my_app2.log");
-        assertFileContent("{\"blueprint\":\"my_app2\"}\n", "my_app2.log");
+        assertFileContent("{\"deployment_id\":\"my_app2\"}\n", "my_app2.log");
     }
 
     @Test
