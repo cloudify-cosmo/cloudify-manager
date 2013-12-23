@@ -31,7 +31,7 @@ java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDe
 java_import org.cloudifysource.cosmo.logging.LoggerFactory
 java_import org.apache.log4j.Logger
 java_import org.apache.log4j.Level
-java_import org.cloudifysource.cosmo.logger.CosmoBlueprintsFileAppender
+java_import org.cloudifysource.cosmo.logger.CosmoDeploymentsFileAppender
 
 
 class RuoteWorkflowEngine
@@ -66,7 +66,7 @@ class RuoteWorkflowEngine
     # setup events logs appender and path
     if ENV.has_key? 'WF_SERVICE_LOGS_PATH'
       user_logger = Logger.get_logger('cosmo')
-      appender = CosmoBlueprintsFileAppender.new
+      appender = CosmoDeploymentsFileAppender.new
       appender.set_path ENV['WF_SERVICE_LOGS_PATH']
       appender.set_name 'app'
       appender.set_threshold Level::DEBUG

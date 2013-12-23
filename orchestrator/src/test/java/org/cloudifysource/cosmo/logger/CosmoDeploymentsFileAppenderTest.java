@@ -46,9 +46,9 @@ import java.util.Map;
  * @author Idan Moyal
  * @since 0.3
  */
-@ContextConfiguration(classes = { CosmoBlueprintsFileAppenderTest.Config.class })
+@ContextConfiguration(classes = { CosmoDeploymentsFileAppenderTest.Config.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class CosmoBlueprintsFileAppenderTest extends AbstractTestNGSpringContextTests {
+public class CosmoDeploymentsFileAppenderTest extends AbstractTestNGSpringContextTests {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final Logger logger = Logger.getLogger(getClass());
@@ -63,8 +63,8 @@ public class CosmoBlueprintsFileAppenderTest extends AbstractTestNGSpringContext
         private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
         @Bean(destroyMethod = "close")
-        public CosmoBlueprintsFileAppender createWorkflowFileAppender() {
-            CosmoBlueprintsFileAppender appender = new CosmoBlueprintsFileAppender(temporaryDirectory.get().toPath());
+        public CosmoDeploymentsFileAppender createDeploymentFileAppender() {
+            CosmoDeploymentsFileAppender appender = new CosmoDeploymentsFileAppender(temporaryDirectory.get().toPath());
             appender.setName("test");
             appender.setThreshold(Level.DEBUG);
             appender.activateOptions();
@@ -76,7 +76,7 @@ public class CosmoBlueprintsFileAppenderTest extends AbstractTestNGSpringContext
     public void beforeMethod() {
         currentLevel = Logger.getRootLogger().getLevel();
         Logger.getRootLogger().setLevel(Level.DEBUG);
-        logger.addAppender(cosmoBlueprintsFileAppender);
+        logger.addAppender(cosmoDeploymentsFileAppender);
     }
 
     @AfterMethod
@@ -89,7 +89,7 @@ public class CosmoBlueprintsFileAppenderTest extends AbstractTestNGSpringContext
     private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
     @Inject
-    private CosmoBlueprintsFileAppender cosmoBlueprintsFileAppender;
+    private CosmoDeploymentsFileAppender cosmoDeploymentsFileAppender;
 
     @Test
     public void testLogWrittenToFile() throws IOException {
