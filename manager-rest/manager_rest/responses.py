@@ -19,7 +19,9 @@ from datetime import datetime
 import uuid
 from flask.ext.restful import fields
 
+from flask_restful_swagger import swagger
 
+@swagger.model
 class BlueprintState(object):
 
     resource_fields = {
@@ -42,15 +44,9 @@ class BlueprintState(object):
         self.yml = None #TODO kwargs['yml']
         self.topology = None #TODO kwargs['topology']
         self.deployments = None #TODO kwargs['deployments']
-        self.executions = {}
-
-    def add_execution(self, execution):
-        self.executions[str(execution.id)] = execution
-
-    def executions_list(self):
-        return self.executions.values()
 
 
+@swagger.model
 class BlueprintValidationStatus(object):
 
     resource_fields = {
@@ -63,6 +59,7 @@ class BlueprintValidationStatus(object):
         self.status = kwargs['status']
 
 
+@swagger.model
 class Topology(object):
 
     def __init__(self, *args, **kwargs):
@@ -71,6 +68,7 @@ class Topology(object):
         self.nodes = kwargs['nodes']
 
 
+@swagger.model
 class Node(object):
 
     def __init__(self, *args, **kwargs):
@@ -85,15 +83,14 @@ class Node(object):
         self.deployment_ids = kwargs['deployment_ids']
 
 
+@swagger.model
 class Deployment(object):
 
     resource_fields = {
         'id': fields.String,
         # 'permalink': fields.Url('blueprint_ep')
-        'createdAt': fields.String(attribute='created_at'),# TODO should be DateTime?
-        'updatedAt': fields.String(attribute='updated_at'),# TODO should be DateTime?
-        'executionId': fields.String(attribute='execution_id'),
-        'workflowId': fields.String(attribute='workflow_id'),
+        'createdAt': fields.DateTime(attribute='created_at'),
+        'updatedAt': fields.DateTime(attribute='updated_at'),
         'blueprintId': fields.String(attribute='blueprint_id'),
         'plan': fields.String,
     }
@@ -101,14 +98,21 @@ class Deployment(object):
     def __init__(self, *args, **kwargs):
         self.id = kwargs['deployment_id']
         self.permalink = None #TODO implement
-        self.created_at = kwargs['created_at']
-        self.updated_at = kwargs['updated_at']
-        self.execution_id = kwargs['execution_id']
-        self.workflow_id = kwargs['workflow_id']
+        now = datetime.now()
+        self.created_at = now
+        self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
+        self.executions = {}
+
+    def add_execution(self, execution):
+        self.executions[str(execution.id)] = execution
+
+    def executions_list(self):
+        return self.executions.values()
 
 
+@swagger.model
 class Execution(object):
 
     resource_fields = {
@@ -132,6 +136,7 @@ class Execution(object):
         self.error = 'None'
 
 
+@swagger.model
 class DeploymentEvents(object):
 
     resource_fields = {

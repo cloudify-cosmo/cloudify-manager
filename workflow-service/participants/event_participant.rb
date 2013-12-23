@@ -21,6 +21,7 @@ class EventParticipant < Ruote::Participant
   NODE = 'node'
   EVENT = 'event'
   PLAN = 'plan'
+  DEPLOYMENT_ID = 'deployment_id'
 
   def do_not_thread
     true
@@ -54,6 +55,9 @@ class EventParticipant < Ruote::Participant
       end
       if workitem.fields.has_key? PLAN
         event['blueprint'] = workitem.fields[PLAN]['name']
+      end
+      if workitem.fields.has_key? DEPLOYMENT_ID
+        event[DEPLOYMENT_ID] = workitem.fields[DEPLOYMENT_ID]
       end
       event['workflow_name'] = workflow_name
       event['workflow_id'] = workitem.wfid

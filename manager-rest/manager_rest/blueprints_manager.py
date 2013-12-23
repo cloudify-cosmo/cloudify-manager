@@ -71,48 +71,25 @@ class BlueprintsManager(object):
         return BlueprintValidationStatus(blueprint_id=blueprint_id,
                                          status=response['status'])
 
-    def execute_workflow(self, blueprint_id, workflow_id):
-        blueprint = self.get_blueprint(blueprint_id)
+    def execute_workflow(self, deployment_id, workflow_id):
+        deployment = self.get_deployment(deployment_id)
+        blueprint = self.get_blueprint(deployment.blueprint_id)
         workflow = blueprint.typed_plan['workflows'][workflow_id]
         plan = blueprint.typed_plan
-        json_plan = None
-        deployment_id = None
 
-        is_install = workflow_id == 'install'
-        # Special handle of install workflow, as we need to generate the deployment id and
-        # generate node unique ids for this deployment
-        if is_install:
-            plan, json_plan, deployment_id = self._on_install_requested(plan)
-
-        response = workflow_client().execute_workflow(workflow, plan)
+        response = workflow_client().execute_workflow(workflow, plan, deployment_id=deployment_id)
         # TODO raise error if there is error in response
         new_execution = Execution(state=response['state'],
                                   internal_workflow_id=response['id'],
                                   created_at=response['created'],
-                                  blueprint_id=blueprint_id,
+                                  blueprint_id=blueprint.id,
                                   workflow_id=workflow_id,
                                   deployment_id=deployment_id)
 
-        blueprint.add_execution(new_execution)
+        deployment.add_execution(new_execution)
         self.executions[str(new_execution.id)] = new_execution
 
-        if is_install:
-            # Deployment plan is in the multi instance node form
-            new_deployment = Deployment(deployment_id=deployment_id,
-                                        plan=json_plan,
-                                        blueprint_id=blueprint_id,
-                                        workflow_id=workflow_id,
-                                        created_at=response['created'],
-                                        updated_at=response['created'],
-                                        execution_id=new_execution.id)
-
-            self.deployments[str(deployment_id)] = new_deployment
-
         return new_execution
-
-    def _on_install_requested(self, plan):
-        json_plan = tasks.prepare_multi_instance_plan(plan)
-        return json.loads(json_plan), json_plan, uuid.uuid4()
 
     def get_workflow_state(self, execution_id):
         execution = self.get_execution(execution_id)
@@ -121,6 +98,20 @@ class BlueprintsManager(object):
         if execution.status == 'failed':
             execution.error = response['error']
         return execution
+
+    def create_deployment(self, blueprint_id):
+        blueprint = self.get_blueprint(blueprint_id)
+        plan = blueprint.typed_plan
+        json_plan = tasks.prepare_multi_instance_plan(plan)
+        deployment_id = uuid.uuid4()
+
+        new_deployment = Deployment(deployment_id=deployment_id,
+                                    plan=json_plan,
+                                    blueprint_id=blueprint_id)
+
+        self.deployments[str(deployment_id)] = new_deployment
+
+        return new_deployment
 
 
 _instance = BlueprintsManager()

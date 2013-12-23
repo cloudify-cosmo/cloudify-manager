@@ -15,25 +15,22 @@
 
 __author__ = 'dan'
 
-from datetime import datetime
+from flask.ext.restful import fields
+
+from flask_restful_swagger import swagger
 
 
-class MockWorkflowClient(object):
+@swagger.model
+class ExecutionRequest(object):
 
-    def execute_workflow(self, workflow, plan, deployment_id=None):
-        return {
-            'type': 'workflow_state',
-            'id': 'yokimura-yoshomati',
-            'state': 'pending',
-            'created': datetime.now()
-        }
+    resource_fields = {
+        'workflowId': fields.String,
+    }
 
-    def validate_workflows(self, plan):
-        return {
-            'status': 'valid'
-        }
 
-    def get_workflow_status(self, workflow_id):
-        return {
-            'state': 'terminated'
-        }
+@swagger.model
+class DeploymentRequest(object):
+
+    resource_fields = {
+        'blueprintId': fields.String,
+    }

@@ -31,7 +31,7 @@ java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDe
 java_import org.cloudifysource.cosmo.logging.LoggerFactory
 java_import org.apache.log4j.Logger
 java_import org.apache.log4j.Level
-java_import org.cloudifysource.cosmo.logger.CosmoBlueprintsFileAppender
+java_import org.cloudifysource.cosmo.logger.CosmoDeploymentsFileAppender
 
 
 class RuoteWorkflowEngine
@@ -40,6 +40,7 @@ class RuoteWorkflowEngine
     @mutex = Mutex.new
     @states = Hash.new
     @dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
+    @dashboard.add_service('ruote_listener', self)
     @dashboard.register_participant 'state', StateCacheParticipant
     @dashboard.register_participant 'execute_task', ExecuteTaskParticipant
     @dashboard.register_participant 'prepare_plan', PreparePlanParticipant
@@ -47,7 +48,6 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'log', LoggerParticipant
     @dashboard.register_participant 'event', EventParticipant
     @dashboard.register_participant 'collect_params', CollectParamsParticipant
-    @dashboard.add_service('ruote_listener', self)
 
     # in tests this will not work since Riemann is supposed to be running.
     test = opts[:test]
@@ -66,7 +66,7 @@ class RuoteWorkflowEngine
     # setup events logs appender and path
     if ENV.has_key? 'WF_SERVICE_LOGS_PATH'
       user_logger = Logger.get_logger('cosmo')
-      appender = CosmoBlueprintsFileAppender.new
+      appender = CosmoDeploymentsFileAppender.new
       appender.set_path ENV['WF_SERVICE_LOGS_PATH']
       appender.set_name 'app'
       appender.set_threshold Level::DEBUG
@@ -93,6 +93,9 @@ class RuoteWorkflowEngine
 
   def launch(radial, fields={}, tags={})
     workflow = Ruote::RadialReader.read(radial)
+    tags.each do |key, value|
+      fields[key] = value unless fields.has_key? key
+    end
     wfid = @dashboard.launch(workflow, fields)
     wf_state = update_workflow_state(wfid, :pending, tags)
     log_workflow_state(wf_state)

@@ -13,20 +13,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-import imp
-
-__author__ = 'dan'
+ = 'dan'
 
 from blueprints_manager import DslParseException
 from workflow_client import WorkflowServiceError
 from file_server import PORT as file_server_port
 import config
 
+from flask_restful_swagger import swagger
+
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal
 import os
 from os import path
 import responses
+import requests_schema
 import tarfile
 import zipfile
 import urllib
@@ -35,22 +36,11 @@ import shutil
 import uuid
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
-
-# TODO: make the storage_manager module name pluggable
 storage_manager = imp.load_module('storage_manager', *imp.find_module('storage_manager')).instance()
 
 
 def blueprints_manager():
-    import blueprints_manager
-    return blueprints_manager.instance()
-
-
-def events_manager():
-    import events_manager
-    return events_manager.instance()
-
-
-def verify_json_content_type():
+    imp erify_json_content_type():
     if request.content_type != 'application/json':
         abort(415, message='415: Content type must be application/json')
 
@@ -75,26 +65,59 @@ def abort_workflow_service_operation(workflow_service_error):
 
 
 def setup_resources(api):
+    api = swagger.docs(api,
+                       apiVersion='0.1',
+                       basePath='http://localhost:8100')
+
     api.add_resource(Blueprints, '/blueprints')
     api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsIdExecutions, '/blueprints/<string:blueprint_id>/executions')
-    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
-    api.add_resource(DeploymentIdEvents, '/deployments/<string:deployment_id>/events')
+    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(Deployments, '/deployments')
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
     api.add_resource(Nodes, '/nodes')
     api.add_resource(NodesId, '/nodes/<string:node_id>')
-
-
-class Blueprints(Resource):
-
+    api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
+    api.add_resource(DeploymentsIdEvents, '/deploymen   responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        nickname="list",
+        notes="Returns a list a submitted blueprints."
+    )
     def get(self):
+        """
+        Returns a list of submitted blueprints.
+        """
         return [marshal(blueprint, responses.BlueprintState.resource_fields) for
                 blueprint in blueprints_manager().blueprints_list()]
 
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar gzipped directory containing the blueprint.",
+        parameters=[{
+            'name': 'application_file_name',
+            'description': 'File name of yaml containing the "main" blueprint.',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'string',
+            'paramType': 'query',
+            'defaultValue': 'blueprint.yaml'
+        }, {
+            'name': 'body',
+            'description': 'Binary form of the tar gzipped blueprint directory',
+            'required': True,
+            'allowMultiple': False,
+            'dataType': 'binary',
+            'paramType': 'body',
+        }],
+        consumes=[
+            "application/octet-stream"
+        ]
+    )
     @marshal_with(responses.BlueprintState.resource_fields)
     def post(self):
+        """
+        Submit a new blueprint.
+        """
         file_server_root = config.instance().file_server_root
 
         blueprint_id = uuid.uuid4()
@@ -194,45 +217,48 @@ class Blueprints(Resource):
 
 class BlueprintsId(Resource):
 
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="getById",
+        notes="Returns a blueprint by its id."
+    )
     @marshal_with(responses.BlueprintState.resource_fields)
     def get(self, blueprint_id):
+        """
+        Returns a blueprint by its id.
+        """
         verify_blueprint_exists(blueprint_id)
         return blueprints_manager().get_blueprint(blueprint_id)
 
 
 class BlueprintsIdValidate(Resource):
 
+    @swagger.operation(
+        responseClass=responses.BlueprintValidationStatus,
+        nickname="validate",
+        notes="Validates a given blueprint."
+    )
     @marshal_with(responses.BlueprintValidationStatus.resource_fields)
     def get(self, blueprint_id):
+        """
+        Validates a given blueprint.
+        """
         verify_blueprint_exists(blueprint_id)
         return blueprints_manager().validate_blueprint(blueprint_id)
 
 
-class BlueprintsIdExecutions(Resource):
-
-    def get(self, blueprint_id):
-        verify_blueprint_exists(blueprint_id)
-        return [marshal(execution, responses.Execution.resource_fields) for
-                execution in blueprints_manager().get_blueprint(blueprint_id).executions_list()]
-
-    @marshal_with(responses.Execution.resource_fields)
-    def post(self, blueprint_id):
-        verify_json_content_type()
-        verify_blueprint_exists(blueprint_id)
-        request_json = request.json
-        if 'workflowId' not in request_json:
-            abort(400, message='400: Missing workflowId in json request body')
-        workflow_id = request.json['workflowId']
-        try:
-            return blueprints_manager().execute_workflow(blueprint_id, workflow_id), 201
-        except WorkflowServiceError, e:
-            abort_workflow_service_operation(e)
-
-
 class ExecutionsId(Resource):
 
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="getById",
+        notes="Returns the execution state by its id."
+    )
     @marshal_with(responses.Execution.resource_fields)
     def get(self, execution_id):
+        """
+        Returns the execution state by its id.
+        """
         verify_execution_exists(execution_id)
         try:
             return blueprints_manager().get_workflow_state(execution_id)
@@ -240,7 +266,7 @@ class ExecutionsId(Resource):
             abort_workflow_service_operation(e)
 
 
-class DeploymentIdEvents(Resource):
+class DeploymentsIdEvents(Resource):
 
     def __init__(self):
         from flask.ext.restful import reqparse
@@ -248,8 +274,33 @@ class DeploymentIdEvents(Resource):
         self._args_parser.add_argument('from', type=int, default=0, location='args')
         self._args_parser.add_argument('count', type=int, default=500, location='args')
 
+    @swagger.operation(
+        responseClass=responses.DeploymentEvents,
+        nickname="readEvents",
+        notes="Returns all available events for the given deployment matching the provided parameters.",
+        parameters=[{
+            'name': 'from',
+            'description': 'Index of the first request event.',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'int',
+            'paramType': 'query',
+            'defaultValue': 0
+        }, {
+            'name': 'count',
+            'description': 'Maximum number of events to read.',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'int',
+            'paramType': 'query',
+            'defaultValue': 500
+        }]
+    )
     @marshal_with(responses.DeploymentEvents.resource_fields)
     def get(self, deployment_id):
+        """
+        Returns deployments events.
+        """
         args = self._args_parser.parse_args()
 
         first_event = args['from']
@@ -272,14 +323,60 @@ class DeploymentIdEvents(Resource):
 
 class Deployments(Resource):
 
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Deployment.__name__),
+        nickname="list",
+        notes="Returns a list existing deployments."
+    )
     def get(self):
+        """
+        Returns a list of existing deployments.
+        """
         return [marshal(deployment, responses.Deployment.resource_fields) for
                 deployment in blueprints_manager().deployments_list()]
 
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="createDeployment",
+        notes="Created a new deployment of the given blueprint.",
+        parameters=[{
+                        'name': 'body',
+                        'description': 'Deployment blue print',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': requests_schema.DeploymentRequest.__name__,
+                        'paramType': 'body'
+                    }],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    def post(self):
+        """
+        Creates a new deployment
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'blueprintId' not in request_json:
+            abort(400, message='400: Missing blueprintId in json request body')
+        blueprint_id = request.json['blueprintId']
+        verify_blueprint_exists(blueprint_id)
+        return blueprints_manager().create_deployment(blueprint_id), 201
+
 
 class DeploymentsId(Resource):
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="getById",
+        notes="Returns a deployment by its id."
+    )
     @marshal_with(responses.Deployment.resource_fields)
     def get(self, deployment_id):
+        """
+        Returns a deployment by its id.
+        """
         verify_deployment_exists(deployment_id)
         return blueprints_manager().get_deployment(deployment_id)
 
@@ -319,3 +416,52 @@ class NodesId(Resource):
                 abort(400, message='value for key: {0} is expected to be a list with length 1 or 2 but is {1}'.format(
                     k, len(v)))
         return storage_manager.update_node(node_id, request.json)
+        return blueprints_manager().get_deployment(deployment_id)
+
+
+class DeploymentsIdExecutions(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Execution.__name__),
+        nickname="list",
+        notes="Returns a list of executions related to the provided deployment."
+    )
+    def get(self, deployment_id):
+        """
+        Returns a list of executions related to the provided blueprint.
+        """
+        verify_deployment_exists(deployment_id)
+        return [marshal(execution, responses.Execution.resource_fields) for
+                execution in blueprints_manager().get_deployment(deployment_id).executions_list()]
+
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="execute",
+        notes="Executes the provided workflow under the given deployment context.",
+        parameters=[{
+                        'name': 'body',
+                        'description': 'Workflow execution request',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': requests_schema.ExecutionRequest.__name__,
+                        'paramType': 'body'
+                    }],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    def post(self, deployment_id):
+        """
+        Execute a workflow
+        """
+        verify_json_content_type()
+        verify_deployment_exists(deployment_id)
+        request_json = request.json
+        if 'workflowId' not in request_json:
+            abort(400, message='400: Missing workflowId in json request body')
+        workflow_id = request.json['workflowId']
+        try:
+            return blueprints_manager().execute_workflow(deployment_id, workflow_id), 201
+        except WorkflowServiceError, e:
+            abort_workflow_service_operation(e)

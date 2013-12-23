@@ -55,6 +55,16 @@ class ManagerRestClientTestClient(object):
 
     validate = submit_blueprint
 
+    def create_deployment(self, blueprint_response):
+        response = requests.post('{0}/deployments'.format(
+                                 self.base_manager_rest_uri),
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps({'blueprintId': blueprint_response['id']}))
+        if response.status_code != 201:
+            raise RuntimeError('Create deployment failed for blueprint: {0}'.format(
+                blueprint_response['id']))
+        return response.json()
+
     def validate_blueprint(self, blueprint_response):
         response = requests.get('{0}/blueprints/{1}/validate'.format(
             self.base_manager_rest_uri, blueprint_response['id']))
@@ -62,13 +72,14 @@ class ManagerRestClientTestClient(object):
             raise RuntimeError('Validation failed for blueprint: {0}'.format(blueprint_response['id']))
         return response.json()
 
-    def execute_install_workflow(self, blueprint_response):
-        response = requests.post('{0}/blueprints/{1}/executions'.format(
-                                 self.base_manager_rest_uri, blueprint_response['id']),
+    def execute_install_workflow(self, deployment_response):
+        response = requests.post('{0}/deployments/{1}/executions'.format(
+                                 self.base_manager_rest_uri, deployment_response['id']),
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps({'workflowId': 'install'}))
         if response.status_code != 201:
-            raise RuntimeError('Install workflow execution failed for blueprint: {0}'.format(blueprint_response['id']))
+            raise RuntimeError('Install workflow execution failed for deployment: {0}'.
+                               format(deployment_response['id']))
         return response.json()
 
     def get_execution_status(self, execution_id):
@@ -102,8 +113,7 @@ class ManagerRestClientTestClient(object):
         return response.json()
 
     def execute_uninstall_workflow(self, deployment_id):
-        #TODO: should be deployments instead of blueprints once we implement deployments scope
-        response = requests.post('{0}/blueprints/{1}/executions'.format(
+        response = requests.post('{0}/deployments/{1}/executions'.format(
                                  self.base_manager_rest_uri, deployment_id),
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps({'workflowId': 'uninstall'}))
@@ -125,7 +135,8 @@ manager_client = ManagerRestClientTestClient()
 @celery.task
 def submit_and_execute_workflow(blueprint_path, **kwargs):
     blueprint = manager_client.submit_blueprint(blueprint_path)
-    return blueprint, manager_client.execute_install_workflow(blueprint)
+    deployment = manager_client.create_deployment(blueprint)
+    return manager_client.execute_install_workflow(deployment)
 
 
 @celery.task
