@@ -31,6 +31,12 @@ RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-con
                      "0}#egg=cosmo-plugin-riemann-configurer-{1}".format(RIEMANN_CONFIGURER_BRANCH,
                                                                          RIEMANN_CONFIGURER_VERSION)
 
+COSMO_MANAGER_REST_CLIENT_VERSION = '0.3'
+COSMO_MANAGER_REST_CLIENT_BRANCH = 'develop'
+COSMO_MANAGER_REST_CLIENT = "https://github.com/CloudifySource/cosmo-manager-rest-client/tarball/{" \
+                            "0}#egg=cosmo-manager-rest-client-{1}".format(COSMO_MANAGER_REST_CLIENT_BRANCH,
+                                                                          COSMO_MANAGER_REST_CLIENT_VERSION)
+
 os.chdir(sys.path[0])
 
 setup(
@@ -48,7 +54,7 @@ setup(
         "nose",
         "cosmo-plugin-plugin-installer",
         "cosmo-plugin-riemann-configurer",
-        "requests"
+        "cosmo-manager-rest-client"
     ],
-    dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER]
+    dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER, COSMO_MANAGER_REST_CLIENT]
 )

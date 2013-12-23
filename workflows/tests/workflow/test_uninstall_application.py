@@ -26,7 +26,7 @@ class TestUninstallApplication(TestCase):
     def test_uninstall_application_single_node_no_host(self):
         dsl_path = resource("dsl/single_node_no_host.yaml")
         print('starting deploy process')
-        deployment_id = deploy(dsl_path)
+        deployment_id = deploy(dsl_path).id
         print('deploy completed')
         print('starting undeploy process')
         undeploy(deployment_id)

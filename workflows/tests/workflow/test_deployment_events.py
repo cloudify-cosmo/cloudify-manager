@@ -25,8 +25,8 @@ class TestDeploymentEvents(TestCase):
 
     def test_get_deployment_events(self):
         dsl_path = resource("dsl/basic.yaml")
-        deploy(dsl_path)
-        events = get_deployment_events('simple_web_server')
-        self.assertEqual(0, events['firstEvent'])
-        self.assertTrue(int(events['lastEvent']) > 0)
+        deployment_id = deploy(dsl_path).id
+        events = get_deployment_events(deployment_id)
+        self.assertEqual(0, events.firstEvent)
+        self.assertTrue(int(events.lastEvent) > 0)
 
