@@ -161,7 +161,7 @@ def get_deployment_nodes(deployment_id, **kwargs):
 
 
 @celery.task
-def get_node(node_id, **kwargs):
+def get_node_state(node_id, **kwargs):
     return manager_client.get_node(node_id)
 
 

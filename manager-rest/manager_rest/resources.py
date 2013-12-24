@@ -13,19 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
- = 'dan'
 
-from blueprints_manager import DslParseException
-from workflow_client import WorkflowServiceError
-from file_server import PORT as file_server_port
+__author__ = 'dan'
+
+
 import config
-
-from flask_restful_swagger import swagger
-
-from flask import request
-from flask.ext.restful import Resource, abort, marshal_with, marshal
 import os
-from os import path
 import responses
 import requests_schema
 import tarfile
@@ -34,13 +27,32 @@ import urllib
 import tempfile
 import shutil
 import uuid
+import imp
+
+from blueprints_manager import DslParseException
+from workflow_client import WorkflowServiceError
+from file_server import PORT as FILE_SERVER_PORT
+from flask import request
+from flask.ext.restful import Resource, abort, marshal_with, marshal
+from flask_restful_swagger import swagger
+from os import path
+
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 storage_manager = imp.load_module('storage_manager', *imp.find_module('storage_manager')).instance()
 
 
 def blueprints_manager():
-    imp erify_json_content_type():
+    import blueprints_manager
+    return blueprints_manager.instance()
+
+
+def events_manager():
+    import events_manager
+    return events_manager.instance()
+
+
+def verify_json_content_type():
     if request.content_type != 'application/json':
         abort(415, message='415: Content type must be application/json')
 
@@ -75,10 +87,16 @@ def setup_resources(api):
     api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
     api.add_resource(Deployments, '/deployments')
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
+    api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
+    api.add_resource(DeploymentsIdEvents, '/deployments/<string:deployment_id>/events')
     api.add_resource(Nodes, '/nodes')
     api.add_resource(NodesId, '/nodes/<string:node_id>')
-    api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
-    api.add_resource(DeploymentsIdEvents, '/deploymen   responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+
+
+class Blueprints(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
         nickname="list",
         notes="Returns a list a submitted blueprints."
     )
@@ -94,21 +112,21 @@ def setup_resources(api):
         nickname="upload",
         notes="Submitted blueprint should be a tar gzipped directory containing the blueprint.",
         parameters=[{
-            'name': 'application_file_name',
-            'description': 'File name of yaml containing the "main" blueprint.',
-            'required': False,
-            'allowMultiple': False,
-            'dataType': 'string',
-            'paramType': 'query',
-            'defaultValue': 'blueprint.yaml'
-        }, {
-            'name': 'body',
-            'description': 'Binary form of the tar gzipped blueprint directory',
-            'required': True,
-            'allowMultiple': False,
-            'dataType': 'binary',
-            'paramType': 'body',
-        }],
+                        'name': 'application_file_name',
+                        'description': 'File name of yaml containing the "main" blueprint.',
+                        'required': False,
+                        'allowMultiple': False,
+                        'dataType': 'string',
+                        'paramType': 'query',
+                        'defaultValue': 'blueprint.yaml'
+                    }, {
+                        'name': 'body',
+                        'description': 'Binary form of the tar gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                        }],
         consumes=[
             "application/octet-stream"
         ]
@@ -189,7 +207,7 @@ def setup_resources(api):
     def _prepare_and_submit_blueprint(self, file_server_root, application_dir, blueprint_id):
         application_file = self._extract_application_file(file_server_root, application_dir)
 
-        file_server_base_url = 'http://localhost:{0}'.format(file_server_port)
+        file_server_base_url = 'http://localhost:{0}'.format(FILE_SERVER_PORT)
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
         alias_mapping = '{0}/{1}'.format(file_server_base_url, 'cloudify/alias-mappings.yaml')
         resources_base = file_server_base_url + '/'
@@ -445,7 +463,7 @@ class DeploymentsIdExecutions(Resource):
                         'allowMultiple': False,
                         'dataType': requests_schema.ExecutionRequest.__name__,
                         'paramType': 'body'
-                    }],
+        }],
         consumes=[
             "application/json"
         ]

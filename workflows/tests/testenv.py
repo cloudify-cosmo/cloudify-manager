@@ -631,10 +631,10 @@ def get_deployment_nodes(deployment_id=None):
     return result.get(timeout=10)
 
 
-def get_node(node_id):
-    from cosmo.appdeployer.tasks import get_node as get_node_info
-    result = get_node_info.delay(node_id)
-    return result.get(timeout=10)
+def get_node_state(node_id):
+    from cosmo.appdeployer.tasks import get_node_state as get_state
+    result = get_state.delay(node_id)
+    return result.get(timeout=10)['runtimeInfo']
 
 
 class TimeoutException(Exception):
