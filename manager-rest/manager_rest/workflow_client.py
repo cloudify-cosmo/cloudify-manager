@@ -67,7 +67,7 @@ class WorkflowClient(object):
     def get_workflow_status(self, workflow_id):
         response = requests.get('{0}/workflows/{1}'.format(self.workflow_service_base_uri, workflow_id))
         if response.status_code != 200:
-            raise WorkflowServiceError(response.status_code, response.json)
+            raise WorkflowServiceError(response.status_code, response.json())
         return response.json()
 
 
