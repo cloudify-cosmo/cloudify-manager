@@ -6,7 +6,7 @@ from time import time
 
 state = []
 touched_time = None
-unreachable_called = False
+unreachable_call_order = []
 
 
 @celery.task
@@ -22,8 +22,12 @@ def make_reachable(__cloudify_id, **kwargs):
 @celery.task
 def make_unreachable(__cloudify_id, **kwargs):
     unreachable(__cloudify_id)
-    global unreachable_called
-    unreachable_called = True
+    global unreachable_call_order
+    unreachable_call_order.append({
+        'id': __cloudify_id,
+        'time': time()
+    })
+
 
 @celery.task
 def set_property(__cloudify_id, property_name, value, **kwargs):
@@ -45,5 +49,9 @@ def get_touched_time():
     return touched_time
 
 @celery.task
-def is_unreachable_called():
-    return unreachable_called
+def is_unreachable_called(__cloudify__id, **kwargs):
+    return next((x for x in unreachable_call_order if x['id'] == __cloudify__id), None)
+
+@celery.task
+def get_unreachable_call_order():
+    return unreachable_call_order

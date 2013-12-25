@@ -32,8 +32,12 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
 
+        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         from cosmo.testmockoperations.tasks import is_unreachable_called
-        result = is_unreachable_called.apply_async()
+        states = testmock_get_state.apply_async().get(timeout=10)
+        node_id = states[0]['id']
+
+        result = is_unreachable_called.apply_async([node_id])
         self.assertTrue(result.get(timeout=10))
 
     def test_uninstall_application_single_host_node(self):
@@ -70,11 +74,11 @@ class TestUninstallApplication(TestCase):
         print('undeploy completed')
         #Checking that uninstall wasn't called on unreachable node
         from cosmo.testmockoperations.tasks import is_unreachable_called
-        result = is_unreachable_called.apply_async()
+        result = is_unreachable_called.apply_async([node_id])
         self.assertFalse(result.get(timeout=10))
 
-    def test_uninstall_not_calling_node_within_host(self):
-        dsl_path = resource("dsl/two_nodes_one_host.yaml")
+    def test_uninstall_with_dependency_order(self):
+        dsl_path = resource("dsl/uninstall_dependencies-order-with-three-nodes.yaml")
         print('starting deploy process')
         deployment_id = deploy(dsl_path)
         print('deploy completed')
@@ -82,6 +86,10 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
         #Checking that uninstall wasn't called on the contained node
-        from cosmo.testmockoperations.tasks import is_unreachable_called
-        result = is_unreachable_called.apply_async()
-        self.assertFalse(result.get(timeout=10))
+        from cosmo.testmockoperations.tasks import get_unreachable_call_order as testmock_get_unreachable_call_order
+
+        unreachable_call_order = testmock_get_unreachable_call_order.apply_async().get(timeout=10)
+        self.assertEquals(3, len(unreachable_call_order))
+        self.assertEquals('mock_app.contained_in_node2', unreachable_call_order[0]['id'])
+        self.assertEquals('mock_app.contained_in_node1', unreachable_call_order[1]['id'])
+        self.assertEquals('mock_app.containing_node', unreachable_call_order[2]['id'])

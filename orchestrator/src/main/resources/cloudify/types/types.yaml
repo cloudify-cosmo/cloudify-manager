@@ -68,6 +68,8 @@ types:
         workflows:
             init:
                 ref: "cloudify.workflows.middleware_server.init"
+            uninstall:
+                ref: "cloudify.workflows.middleware_server.uninstall"
 
     cloudify.types.db_server:
         derived_from: "cloudify.types.middleware_server"
