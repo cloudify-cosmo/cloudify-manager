@@ -83,6 +83,10 @@ def update_node_state(node_state):
 
 
 def inject_node_state(task):
+    # Necessary for keeping the returned method name as the provided task's name.
+    from functools import wraps
+
+    @wraps(task)
     def task_wrapper(*args, **kwargs):
         node_id = _get_cloudify_id_from_method_arguments(task, args, kwargs)
         state = None

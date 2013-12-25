@@ -91,6 +91,7 @@ def setup_resources(api):
     api.add_resource(DeploymentsIdEvents, '/deployments/<string:deployment_id>/events')
     api.add_resource(Nodes, '/nodes')
     api.add_resource(NodesId, '/nodes/<string:node_id>')
+    #api.add_resource(NodesIdStatus, '/nodes/<string:node_id>/status')
 
 
 class Blueprints(Resource):
@@ -434,7 +435,14 @@ class NodesId(Resource):
                 abort(400, message='value for key: {0} is expected to be a list with length 1 or 2 but is {1}'.format(
                     k, len(v)))
         return storage_manager.update_node(node_id, request.json)
-        return blueprints_manager().get_deployment(deployment_id)
+
+
+class NodesIdStatus(Resource):
+
+    pass
+    # @marshal_with(responses.Node.resource_fields)
+    # def get(self, node_id):
+    #     return riemann_manager().get_node_  reachable_state(node_id)
 
 
 class DeploymentsIdExecutions(Resource):
