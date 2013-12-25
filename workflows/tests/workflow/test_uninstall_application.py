@@ -26,7 +26,7 @@ class TestUninstallApplication(TestCase):
     def test_uninstall_application_single_node_no_host(self):
         dsl_path = resource("dsl/single_node_no_host.yaml")
         print('starting deploy process')
-        deployment_id = deploy(dsl_path)
+        deployment_id = deploy(dsl_path).id
         print('deploy completed')
         print('starting undeploy process')
         undeploy(deployment_id)
@@ -43,7 +43,7 @@ class TestUninstallApplication(TestCase):
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
         print('starting deploy process')
-        deployment_id = deploy(dsl_path)
+        deployment_id = deploy(dsl_path).id
         print('deploy completed')
         print('starting undeploy process')
         undeploy(deployment_id)
@@ -58,7 +58,7 @@ class TestUninstallApplication(TestCase):
     def test_uninstall_not_calling_unreachable_nodes(self):
         dsl_path = resource("dsl/single_node_no_host.yaml")
         print('starting deploy process')
-        deployment_id = deploy(dsl_path)
+        deployment_id = deploy(dsl_path).id
         print('deploy completed')
         print('making node unreachable from test')
         #make node unreachable
@@ -80,7 +80,7 @@ class TestUninstallApplication(TestCase):
     def test_uninstall_with_dependency_order(self):
         dsl_path = resource("dsl/uninstall_dependencies-order-with-three-nodes.yaml")
         print('starting deploy process')
-        deployment_id = deploy(dsl_path)
+        deployment_id = deploy(dsl_path).id
         print('deploy completed')
         print('starting undeploy process')
         undeploy(deployment_id)

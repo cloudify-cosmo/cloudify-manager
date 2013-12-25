@@ -27,7 +27,7 @@ import cosmo
 import time
 import threading
 import re
-import requests
+from cosmo_manager_rest_client.cosmo_manager_rest_client import CosmoManagerRestClient
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -47,6 +47,7 @@ class ManagerRestProcess(object):
         self.port = port
         self.workflow_service_base_uri = workflow_service_base_uri
         self.events_path = events_path
+        self.client = CosmoManagerRestClient('localhost')
 
     def start(self, timeout=10):
         endtime = time.time() + timeout
@@ -74,7 +75,7 @@ class ManagerRestProcess(object):
 
     def started(self):
         try:
-            requests.get('http://localhost:8100/blueprints')
+            self.client.list_blueprints()
             return True
         except BaseException:
             return False
@@ -568,57 +569,34 @@ def deploy_application(dsl_path, timeout=240):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-
-    end = time.time() + timeout
-
-    from cosmo.appdeployer.tasks import submit_and_execute_workflow, get_execution_status
-    execution = submit_and_execute_workflow.delay(dsl_path)
-    execution_response = execution.get(timeout=60, propagate=True)
-    r = {'status': 'pending'}
-    while r['status'] != 'terminated' and r['status'] != 'failed':
-        if end < time.time():
-            raise TimeoutException('Timeout deploying {0}'.format(dsl_path))
-        time.sleep(1)
-        r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
-    if r['status'] != 'terminated':
-        raise RuntimeError('Application deployment failed. (status response: {0})'.format(r))
-
-    return execution_response['deploymentId']
+    client = CosmoManagerRestClient('localhost')
+    blueprint_id = client.publish_blueprint(dsl_path).id
+    deployment = client.create_deployment(blueprint_id)
+    client.execute_deployment(deployment.id, 'install', timeout=timeout)
+    return deployment
 
 
 def undeploy_application(deployment_id, timeout=240):
     """
     A blocking method which undeploys an application from the provided dsl path.
     """
-    end = time.time() + timeout
-    from cosmo.appdeployer.tasks import uninstall_deployment, get_execution_status
-    execution = uninstall_deployment.delay(deployment_id)
-    execution_response = execution.get(timeout=60, propagate=True)
-    r = {'status': 'pending'}
-    while r['status'] != 'terminated' and r['status'] != 'failed':
-        if end < time.time():
-            raise TimeoutException('Timeout undeploying {0}'.format(deployment_id))
-        time.sleep(1)
-        r = get_execution_status.delay(execution_response['id']).get(timeout=60, propagate=True)
-    if r['status'] != 'terminated':
-        raise RuntimeError('Application undeployment failed. (status response: {0})'.format(r))
+    client = CosmoManagerRestClient('localhost')
+    client.execute_deployment(deployment_id, 'uninstall', timeout=timeout)
 
 
-def validate_dsl(dsl_path, timeout=240):
+def validate_dsl(blueprint_id, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
     """
-    from cosmo.appdeployer.tasks import submit_and_validate_blueprint
-    result = submit_and_validate_blueprint.delay(dsl_path)
-    response = result.get(timeout=60, propagate=True)
-    if response['status'] != 'valid':
-        raise RuntimeError('Blueprint {0} is not valid'.format(dsl_path))
+    client = CosmoManagerRestClient('localhost')
+    response = client.validate_blueprint(blueprint_id)
+    if response.status != 'valid':
+        raise RuntimeError('Blueprint {0} is not valid'.format(blueprint_id))
 
 
 def get_deployment_events(deployment_id, first_event=0, events_count=500):
-    from cosmo.appdeployer.tasks import get_deployment_events as get_events
-    result = get_events.delay(deployment_id, first_event, events_count)
-    return result.get(timeout=10)
+    client = CosmoManagerRestClient('localhost')
+    return client.get_deployment_events(deployment_id, from_param=first_event, count_param=events_count)
 
 
 class TimeoutException(Exception):
