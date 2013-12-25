@@ -1,18 +1,18 @@
 define uninstalling_nodes
     log message: 'uninstalling nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
-        log message: 'processing node: ${f:node}'
+        log message: 'processing node: ${node.id}'
         # wait for all dependents to be uninstalled first
         iterator on: '$f:node.dependents', to_v: 'dependent'
             log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
-            state resource_id: '${dependent}', state: { reachable: "false" }
-        unset 'v:dependent
+            state resource_id: '${v:dependent}', state: { reachable: "false" }
+        unset 'v:dependent'
 
         state resource_id: '${node.id}', state: { reachable: "true" }, wait_until_matches: false,
         to_f: 'node_reachable'
-        log message: 'node reachable state is: ${f:node_reachable}'
+        log message: 'node reachable state is: ${node_reachable}'
         # we only call uninstall on reachable nodes
-        sequence if: '${f:node_reachable} == true'
+        sequence if: '${node_reachable} == true'
             event event: { "stage" => "Uninstalling node" }
             log message: 'executing uninstall workflow for node: ${node.id}'
             set 'v:uninstall': "$f:node.workflows.uninstall"
