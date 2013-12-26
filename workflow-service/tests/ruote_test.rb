@@ -28,7 +28,7 @@ class RuoteTest < Test::Unit::TestCase
   end
 
   def teardown
-    @ruote.close
+    @ruote.close if @ruote
   end
 
   def test_workflow_execution
@@ -111,6 +111,16 @@ define wf
     assert_equal wf.id, wf_state.id
     @ruote.launch(radial)
     assert_equal 2, @ruote.get_workflows.size
+  end
+
+  def test_wait_for_node_participant
+    radial = %/
+define wf
+  state resource_id: '1234', state: { 'reachable': 'true' }
+/
+  wf = @ruote.launch(radial)
+  wait_for_workflow_state(wf.id, :terminated)
+
   end
 
 end

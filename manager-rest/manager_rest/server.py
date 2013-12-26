@@ -29,6 +29,7 @@ import sys
 import logging
 import blueprints_manager
 import events_manager
+import storage_manager
 
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
@@ -97,6 +98,7 @@ def reset_state(configuration=None):
     config.reset(configuration)
     blueprints_manager.reset()
     events_manager.reset()
+    storage_manager.reset()
 
 
 def main():

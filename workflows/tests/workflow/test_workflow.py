@@ -48,6 +48,8 @@ class TestRuoteWorkflows(TestCase):
 
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
+        from testenv import logger
+        logger.info("states are: {0}".format(states))
         node_runtime_props = states[1]['relationships']['mock_app.containing_node']
         self.assertEquals('value1', node_runtime_props['property1'])
         self.assertEquals('true', node_runtime_props['reachable'])

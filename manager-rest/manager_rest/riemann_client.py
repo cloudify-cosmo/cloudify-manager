@@ -13,28 +13,23 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanmo'
-
-import imp
+__author__ = 'idanm'
 
 
-storage_manager_module_name = 'dict_storage_manager'
-
-_instance = None
+import bernhard
 
 
-def _create_instance():
-    return imp.load_module(storage_manager_module_name,
-                           *imp.find_module(storage_manager_module_name)).create()
+class RiemannClient(object):
+
+    def __init__(self):
+        self._client = bernhard.Client(host='localhost')
+
+    def get_node_state(self, node_id):
+        return self._client.query('host = {0}'.format(node_id))
 
 
-def reset():
-    global _instance
-    _instance = _create_instance()
+_instance = RiemannClient()
 
 
 def instance():
-    global _instance
-    if _instance is None:
-        _instance = _create_instance()
     return _instance

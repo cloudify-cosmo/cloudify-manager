@@ -170,9 +170,11 @@ class Node(object):
 
     resource_fields = {
         'id': fields.String,
-        'runtimeInfo': fields.Raw(attribute='runtime_info')
+        'runtimeInfo': fields.Raw(attribute='runtime_info'),
+        'reachable': fields.Boolean
     }
 
     def __init__(self, *args, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info']
+        self.runtime_info = kwargs['runtime_info'] if 'runtime_info' in kwargs else None
+        self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None

@@ -1,10 +1,12 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    atomic (1.1.14)
     atomic (1.1.14-java)
     blankslate (2.1.2.4)
     file-tail (1.0.12)
       tins (~> 0.5)
+    mime-types (2.0)
     parslet (1.4.0)
       blankslate (~> 2.0)
     rack (1.5.2)
@@ -12,6 +14,8 @@ GEM
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
+    rest-client (1.6.7)
+      mime-types (>= 1.16)
     ruby2ruby (1.3.1)
       ruby_parser (~> 2.0)
       sexp_processor (~> 3.0)
@@ -48,6 +52,8 @@ GEM
       ruby_parser (>= 2.0.5)
       sexp_processor (>= 3.0.5)
     test-unit (2.5.5)
+    thread_safe (0.1.3)
+      atomic
     thread_safe (0.1.3-java)
       atomic
     tilt (1.4.1)
@@ -60,6 +66,7 @@ PLATFORMS
 
 DEPENDENCIES
   rack-test (~> 0.6.2)
+  rest-client (~> 1.6.7)
   rufus-scheduler (~> 2.0.24)
   ruote (~> 2.3.0.2)
   sinatra (~> 1.4.4)

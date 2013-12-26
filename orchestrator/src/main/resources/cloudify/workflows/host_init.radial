@@ -3,7 +3,7 @@ define host_init
     execute_operation operation: 'cloudify.interfaces.host_provisioner.start'
     given
         that '${node.properties.install_agent} == true'
-            state resource_id: '${node.id}', state: { reachable: "true" }
+            state node_id: '${node.id}', reachable: 'true'
             log message: 'installing agent on host: ${node.id}'
             execute_operation operation: 'cloudify.interfaces.worker_installer.install'
             execute_operation operation: 'cloudify.interfaces.worker_installer.start'

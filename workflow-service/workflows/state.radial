@@ -1,0 +1,6 @@
+define state
+    wait_for_node_state node_id: '$v:node_id', reachable: '$v:reachable', on_error: 'error_handler'
+    define error_handler
+        echo 'error!'
+        #wait for: '2s'
+        #wait_for_node_state node_id: '$v:node_id', reachable: '$v:reachable', on_error: 'error_handler'
