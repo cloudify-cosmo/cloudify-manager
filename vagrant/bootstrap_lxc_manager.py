@@ -83,7 +83,7 @@ class RiemannProcess(object):
         self._event = threading.Event()
         self._detector = threading.Thread(target=self._start_detector, kwargs={'process': self._process})
         self._detector.start()
-        if not self._event.wait(30):
+        if not self._event.wait(60):
             raise RuntimeError("Unable to start riemann process:\n{0}".format('\n'.join(self._riemann_logs)))
         print "Riemann server started [pid={0}]".format(self.pid)
 
