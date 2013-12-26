@@ -102,11 +102,11 @@ class BlueprintsManager(object):
     def create_deployment(self, blueprint_id):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.typed_plan
-        json_plan = tasks.prepare_multi_instance_plan(plan)
+        deployment_json_plan = tasks.prepare_deployment_plan(plan)
         deployment_id = uuid.uuid4()
 
         new_deployment = Deployment(deployment_id=deployment_id,
-                                    plan=json_plan,
+                                    plan=deployment_json_plan,
                                     blueprint_id=blueprint_id)
 
         self.deployments[str(deployment_id)] = new_deployment

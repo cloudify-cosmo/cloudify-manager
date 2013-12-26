@@ -8,6 +8,7 @@ cloudify.workflows.uninstall: cloudify/workflows/uninstall.radial
 cloudify.workflows.host.init: cloudify/workflows/host_init.radial
 cloudify.workflows.host.uninstall: cloudify/workflows/host_uninstall.radial
 cloudify.workflows.middleware_server.init: cloudify/workflows/middleware_server_init.radial
+cloudify.workflows.middleware_server.uninstall: cloudify/workflows/middleware_server_uninstall.radial
 cloudify.workflows.app_module.init: cloudify/workflows/app_module_init.radial
 cloudify.workflows.connected_to: cloudify/workflows/connected_to.radial
 

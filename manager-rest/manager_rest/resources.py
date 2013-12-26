@@ -81,7 +81,8 @@ def verify_execution_exists(execution_id):
 
 
 def abort_workflow_service_operation(workflow_service_error):
-    abort(500, message='500: Workflow service failed with status code {0}'.format(workflow_service_error.status_code))
+    abort(500, message='500: Workflow service failed with status code {0}, full response {1}'.format(
+          workflow_service_error.status_code, workflow_service_error.json))
 
 
 def setup_resources(api):

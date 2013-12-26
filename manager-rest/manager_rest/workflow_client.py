@@ -23,8 +23,9 @@ import time
 
 class WorkflowServiceError(Exception):
 
-    def __init__(self, status_code):
+    def __init__(self, status_code, json):
         self.status_code = status_code
+        self.json = json
 
 
 class WorkflowClient(object):
@@ -43,7 +44,7 @@ class WorkflowClient(object):
                                      'tags': tags
                                  }))
         if response.status_code != 201:
-            raise WorkflowServiceError(response.status_code)
+            raise WorkflowServiceError(response.status_code, response.json())
         return response.json()
 
     def validate_workflows(self, plan):
@@ -66,7 +67,7 @@ class WorkflowClient(object):
     def get_workflow_status(self, workflow_id):
         response = requests.get('{0}/workflows/{1}'.format(self.workflow_service_base_uri, workflow_id))
         if response.status_code != 200:
-            raise WorkflowServiceError(response.status_code)
+            raise WorkflowServiceError(response.status_code, response.json())
         return response.json()
 
 

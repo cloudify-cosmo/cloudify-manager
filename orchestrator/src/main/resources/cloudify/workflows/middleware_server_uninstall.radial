@@ -1,0 +1,3 @@
+define middleware_server_uninstall
+    execute_operation operation: 'cloudify.interfaces.middleware_component_installer.stop'
+    execute_operation operation: 'cloudify.interfaces.middleware_component_installer.uninstall'
