@@ -44,8 +44,6 @@ class NodeStateParticipant < Ruote::Participant
       response = RestClient.get "#{base_uri}/nodes/#{node_id}?reachable"
       processed = JSON.parse(response.to_str)
 
-      raise "processed is: #{processed}"
-
       requested_reachable_state = workitem.params[REACHABLE]
       reachable = processed[REACHABLE]
 
@@ -63,9 +61,11 @@ class NodeStateParticipant < Ruote::Participant
         # TODO runtime-model: handle HTTP status codes and connection errors
         response = RestClient.get "#{base_uri}/nodes/#{node_id}"
         node_state = JSON.parse(response.to_str)
-        current_node = workitem.fields[PreparePlanParticipant::NODE]
-        properties = current_node[PreparePlanParticipant::PROPERTIES]
-        properties[PreparePlanParticipant::RUNTIME][node_id] = node_state
+        if node_state.has_key? 'runtimeInfo'
+          current_node = workitem.fields[PreparePlanParticipant::NODE]
+          properties = current_node[PreparePlanParticipant::PROPERTIES]
+          properties[PreparePlanParticipant::RUNTIME][node_id] = node_state['runtimeInfo']
+        end
       end
 
       reply

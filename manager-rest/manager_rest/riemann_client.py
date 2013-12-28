@@ -25,7 +25,11 @@ class RiemannClient(object):
         self._client = bernhard.Client(host='localhost')
 
     def get_node_state(self, node_id):
-        return self._client.query('host = {0}'.format(node_id))
+        state = self._client.query('tagged "{0}"'.format(node_id))
+        if len(state) == 1:
+            reachable = 'reachable' in state[0].tags
+            return {'reachable': reachable}
+        return {'reachable': False}
 
 
 _instance = RiemannClient()

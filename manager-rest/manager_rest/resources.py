@@ -420,7 +420,8 @@ class NodesId(Resource):
     @marshal_with(responses.Node.resource_fields)
     def get(self, node_id):
         if 'reachable' in request.args:
-            return riemann_client().get_node_state(node_id)
+            state = riemann_client().get_node_state(node_id)
+            return responses.Node(id=node_id, reachable=state['reachable'])
         return storage_manager().get_node(node_id)
 
     @marshal_with(responses.Node.resource_fields)

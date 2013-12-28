@@ -45,15 +45,11 @@ class TestRuoteWorkflows(TestCase):
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
         deploy(dsl_path)
-
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
-        from testenv import logger
-        logger.info("states are: {0}".format(states))
         node_runtime_props = states[1]['relationships']['mock_app.containing_node']
         self.assertEquals('value1', node_runtime_props['property1'])
-        self.assertEquals('true', node_runtime_props['reachable'])
-        self.assertEquals(2, len(node_runtime_props))
+        self.assertEquals(1, len(node_runtime_props))
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
