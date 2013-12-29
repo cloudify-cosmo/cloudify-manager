@@ -60,14 +60,15 @@ class TestRelationships(TestCase):
 
         self.assertTrue(source_id.startswith(source_id_prefix))
         self.assertTrue(target_id.startswith(target_id_prefix))
-        self.assertEquals('true', state['source_properties']['cloudify_runtime'][target_id]['reachable'])
+        from testenv import is_node_reachable
+        self.assertTrue(is_node_reachable(target_id))
         self.assertEquals('source_property_value', state['source_properties']['source_property_key'])
         self.assertEquals('target_property_value', state['target_properties']['target_property_key'])
         if hook == 'pre-init':
             self.assertTrue(source_id not in state['source_properties']['cloudify_runtime'])
             self.assertTrue(source_id not in state['target_properties']['cloudify_runtime'])
         elif hook == 'post-init':
-            self.assertEquals('true', state['source_properties']['cloudify_runtime'][source_id]['reachable'])
+            self.assertTrue(is_node_reachable(source_id))
         elif hook == 'after-touch-before-reachable-init':
             self.assertTrue(source_id not in state['source_properties']['cloudify_runtime'])
             self.assertTrue(source_id not in state['target_properties']['cloudify_runtime'])

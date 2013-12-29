@@ -611,15 +611,21 @@ def get_deployment_events(deployment_id, first_event=0, events_count=500):
 
 
 def get_deployment_nodes(deployment_id=None):
-    from cosmo.appdeployer.tasks import get_deployment_nodes as get_nodes
-    result = get_nodes.delay(deployment_id)
-    return result.get(timeout=10)
+    client = CosmoManagerRestClient('localhost')
+    nodes = client.list_deployment_nodes(deployment_id)
+    return nodes
 
 
 def get_node_state(node_id):
-    from cosmo.appdeployer.tasks import get_node_state as get_state
-    result = get_state.delay(node_id)
-    return result.get(timeout=10)['runtimeInfo']
+    client = CosmoManagerRestClient('localhost')
+    state = client.get_node_state(node_id)
+    return state['runtimeInfo']
+
+
+def is_node_reachable(node_id):
+    client = CosmoManagerRestClient('localhost')
+    state = client.get_node_reachable_state(node_id)
+    return state['reachable'] is True
 
 
 class TimeoutException(Exception):
