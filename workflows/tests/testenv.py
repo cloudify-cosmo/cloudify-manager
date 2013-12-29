@@ -397,7 +397,7 @@ class TestEnvironment(object):
     Creates the cosmo test environment:
         - Riemann server.
         - Celery worker.
-        - Ruote service (created for each test because of StateCache state).
+        - Ruote service.
         - Prepares celery app dir with plugins from cosmo module and official riemann configurer and plugin installer.
     """
     _instance = None
@@ -407,6 +407,7 @@ class TestEnvironment(object):
     _tempdir = None
     _plugins_tempdir = None
     _scope = None
+    _ruote_service = None
 
     def __init__(self, scope):
         try:
@@ -451,6 +452,10 @@ class TestEnvironment(object):
                                                             self.events_path)
             self._manager_rest_process.start()
 
+            # ruote service
+            self._ruote_service = RuoteServiceProcess(events_path=self.events_path)
+            self._ruote_service.start()
+
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
@@ -464,6 +469,8 @@ class TestEnvironment(object):
             self._celery_worker_process.close()
         if self._manager_rest_process:
             self._manager_rest_process.close()
+        if self._ruote_service:
+            self._ruote_service.close()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
             shutil.rmtree(self._tempdir, ignore_errors=True)
@@ -541,8 +548,6 @@ class TestCase(unittest.TestCase):
     A test case for cosmo workflow tests.
     """
 
-    _ruote_service = None
-
     @classmethod
     def setUpClass(cls):
         TestEnvironment.create(TestEnvironmentScope.CLASS)
@@ -553,12 +558,8 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
-        self._ruote_service = RuoteServiceProcess(events_path=TestEnvironment._instance.events_path)
-        self._ruote_service.start()
 
     def tearDown(self):
-        if self._ruote_service:
-            self._ruote_service.close()
         TestEnvironment.restart_celery_worker()
 
 
