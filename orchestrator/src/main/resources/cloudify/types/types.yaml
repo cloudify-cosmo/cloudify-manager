@@ -97,6 +97,10 @@ types:
         workflows:
             create:
                 ref: "cloudify.workflows.middleware_server.create"
+            start:
+                ref: "cloudify.workflows.middleware_server.start"
+            stop:
+                ref: "cloudify.workflows.middleware_server.stop"
             delete:
                 ref: "cloudify.workflows.middleware_server.delete"
 

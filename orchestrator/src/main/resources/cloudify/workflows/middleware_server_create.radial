@@ -1,3 +1,2 @@
 define middleware_server_create
-    execute_operation operation: 'install'
-    execute_operation operation: 'cloudify.interfaces.middleware_component_installer.start'
+    execute_operation operation: 'cloudify.interfaces.middleware_component_installer.install'
