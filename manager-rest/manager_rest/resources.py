@@ -224,8 +224,8 @@ class Blueprints(Resource):
         # add to blueprints manager (will also dsl_parse it)
         try:
             return blueprints_manager().publish_blueprint(blueprint_id, dsl_path, alias_mapping, resources_base), 201
-        except DslParseException:
-            abort(400, message='400: Invalid blueprint')
+        except DslParseException, ex:
+            abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:

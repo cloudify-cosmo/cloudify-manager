@@ -5,18 +5,26 @@ define uninstalling_nodes
         # wait for all dependents to be uninstalled first
         iterator on: '$f:node.dependents', to_v: 'dependent'
             log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
-            state node_id: '${v:dependent}', reachable: 'false'
+            state resource_id: '${v:dependent}', state: { reachable: "false" }
         unset 'v:dependent'
 
-        state node_id: '${node.id}', reachable: 'true', wait_until_matches: false, to_f: 'node_reachable'
+        state resource_id: '${node.id}', state: { reachable: "true" }, wait_until_matches: false,
+        to_f: 'node_reachable'
         log message: 'node reachable state is: ${node_reachable}'
         # we only call uninstall on reachable nodes
         sequence if: '${node_reachable} == true'
-            event event: { "stage" => "Uninstalling node" }
-            log message: 'executing uninstall workflow for node: ${node.id}'
-            set 'v:uninstall': "$f:node.workflows.uninstall"
-            uninstall
-            unset 'v:uninstall'
-            state node_id: '${node.id}', reachable: 'false'
+            event event: { "stage" => "Stop node" }
+            log message: 'executing stop workflow for node: ${node.id}'
+            set 'v:stop': "$f:node.workflows.stop"
+            stop
+            unset 'v:stop'
+
+            event event: { "stage" => "Delete node" }
+            log message: 'executing delete workflow for node: ${node.id}'
+            set 'v:delete': "$f:node.workflows.delete"
+            delete
+            unset 'v:delete'
+
+            state resource_id: '${node.id}', state: { reachable: "false" }
 
     #TODO when we support multi app deployment, remove relevant policies from riemann

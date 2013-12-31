@@ -38,7 +38,7 @@ blueprint:
                                 service: "mock-node-status"
                                 state: "running"
             workflows:
-                init:
+                create:
                     radial: |
                         define app_module_init
                             execute_operation operation: 'make_reachable'

@@ -1,0 +1,2 @@
+define host_create
+    execute_operation operation: 'provision'

@@ -38,5 +38,5 @@ types:
         interfaces:
             - 'cloudify.interfaces.app_module_installer'
         workflows:
-            init:
+            create:
                 ref: 'mezzanine_app_module_init.radial'
