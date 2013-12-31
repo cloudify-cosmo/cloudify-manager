@@ -1,4 +1,4 @@
-define host_init
+define host_create
     execute_operation operation: 'provision'
     execute_operation operation: 'cloudify.interfaces.host_provisioner.start'
     given

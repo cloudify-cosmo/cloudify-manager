@@ -16,10 +16,11 @@ blueprint:
 
 types:
     mock_type:
+        derived_from: "cloudify.types.base"
         interfaces:
             -   "mock_interface"
         workflows:
-            init:
+            create:
                 radial: |
                     define mock_init
                         execute_operation operation: 'set_property', params: {
