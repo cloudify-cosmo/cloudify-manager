@@ -47,6 +47,8 @@ types:
         workflows:
             create:
                 ref: "cloudify.workflows.host.create"
+            start:
+                ref: "cloudify.workflows.host.start"
             delete:
                 ref: "cloudify.workflows.host.delete"
 

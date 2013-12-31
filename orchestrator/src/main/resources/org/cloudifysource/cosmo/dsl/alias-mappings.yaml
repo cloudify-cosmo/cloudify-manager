@@ -6,6 +6,7 @@ cloudify.policies: cloudify/policies/policies.yaml
 cloudify.workflows.install: cloudify/workflows/install.radial
 cloudify.workflows.uninstall: cloudify/workflows/uninstall.radial
 cloudify.workflows.host.create: cloudify/workflows/host_create.radial
+cloudify.workflows.host.start: cloudify/workflows/host_start.radial
 cloudify.workflows.host.delete: cloudify/workflows/host_delete.radial
 cloudify.workflows.middleware_server.create: cloudify/workflows/middleware_server_create.radial
 cloudify.workflows.middleware_server.delete: cloudify/workflows/middleware_server_delete.radial
