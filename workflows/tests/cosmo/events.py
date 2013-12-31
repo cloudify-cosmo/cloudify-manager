@@ -57,7 +57,7 @@ def set_node_reachable_state(node_id, reachable):
         "host": node_id,
         "service": "node reachable state",
         "state": state,
-        "tags": ["cosmo", node_id, state],
+        "tags": ["cosmo", "name={0}".format(node_id), state],
         "ttl": 9999,
         "description": json.dumps({
             "node_id": node_id,

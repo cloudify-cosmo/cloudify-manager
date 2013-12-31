@@ -17,6 +17,7 @@
 
 require 'rest_client'
 require 'json'
+require 'uri'
 
 
 class NodeStateParticipant < Ruote::Participant
@@ -33,15 +34,18 @@ class NodeStateParticipant < Ruote::Participant
       # TODO runtime-model: pass manager rest base uri as ENV variable
       ENV[MANAGER_REST_BASE_URI] = 'http://localhost:8100'
 
-      node_id = workitem.params[NODE_ID]
-      raise "#{NODE_ID} property is not set" unless defined? node_id
+      raise "#{NODE_ID} property is not set" unless workitem.params.has_key? NODE_ID
       raise "#{REACHABLE} parameter is not defined for node state  participant" unless workitem.params.has_key? REACHABLE
       raise "#{MANAGER_REST_BASE_URI} is not set in ruby env" unless ENV.has_key? MANAGER_REST_BASE_URI
 
       base_uri = ENV[MANAGER_REST_BASE_URI]
 
+      node_id = workitem.params[NODE_ID]
+      raise 'node_id is empty' unless node_id != nil and node_id.to_s.length > 0
+
       # TODO runtime-model: handle HTTP status codes and connection errors
-      response = RestClient.get "#{base_uri}/nodes/#{node_id}?reachable"
+      url = URI::escape("#{base_uri}/nodes/#{node_id}?reachable")
+      response = RestClient.get(url)
       processed = JSON.parse(response.to_str)
 
       requested_reachable_state = workitem.params[REACHABLE]
@@ -51,7 +55,7 @@ class NodeStateParticipant < Ruote::Participant
 
       wait_until_matches = workitem.params[WAIT_UNTIL_MATCHES] || true
 
-      raise 'node reachable state does not match' if wait_until_matches and not matches
+      raise "node reachable state does not match [requested=#{requested_reachable_state}, actual=#{reachable}" if wait_until_matches and not matches
 
       if workitem.params.has_key? MATCHES_FIELD_PARAM_NAME
         workitem.fields[workitem.params[MATCHES_FIELD_PARAM_NAME]] = matches

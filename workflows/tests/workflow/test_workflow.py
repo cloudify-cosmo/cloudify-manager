@@ -52,7 +52,6 @@ class TestRuoteWorkflows(TestCase):
             if 'mock_app.containing_node' in k:
                 node_runtime_props = v
                 break
-        # node_runtime_props = states[1]['relationships']['mock_app.containing_node']
         self.assertEquals('value1', node_runtime_props['property1'])
         self.assertEquals(1, len(node_runtime_props))
 
