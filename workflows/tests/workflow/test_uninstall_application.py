@@ -87,9 +87,14 @@ class TestUninstallApplication(TestCase):
         print('undeploy completed')
         #Checking that uninstall wasn't called on the contained node
         from cosmo.testmockoperations.tasks import get_unreachable_call_order as testmock_get_unreachable_call_order
+        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
+        states = testmock_get_state.apply_async().get(timeout=10)
+        node1_id = states[0]['id']
+        node2_id = states[1]['id']
+        node3_id = states[2]['id']
 
         unreachable_call_order = testmock_get_unreachable_call_order.apply_async().get(timeout=10)
         self.assertEquals(3, len(unreachable_call_order))
-        self.assertEquals('mock_app.contained_in_node2', unreachable_call_order[0]['id'])
-        self.assertEquals('mock_app.contained_in_node1', unreachable_call_order[1]['id'])
-        self.assertEquals('mock_app.containing_node', unreachable_call_order[2]['id'])
+        self.assertEquals(node3_id, unreachable_call_order[0]['id'])
+        self.assertEquals(node2_id, unreachable_call_order[1]['id'])
+        self.assertEquals(node1_id, unreachable_call_order[2]['id'])

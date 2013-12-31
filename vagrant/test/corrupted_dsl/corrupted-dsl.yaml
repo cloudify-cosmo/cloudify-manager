@@ -26,17 +26,17 @@ blueprint:
 workflows:
     # should have the template name as prefix
     default_host:
-        init:
+        create:
             radial: "plan1"
 
     service_template.overridden_host:
-        init:
+        create:
             radial: "plan2"
 
     cloudify.types.web_server:
-        init:
+        create:
             radial: "plan3"
 
     service_template.custom_template:
-        init:
+        create:
             radial: "plan4"

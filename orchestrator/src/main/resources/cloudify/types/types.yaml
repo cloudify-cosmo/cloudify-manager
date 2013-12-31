@@ -15,8 +15,28 @@ types:
     # A tier in a topology
     cloudify.types.tier: { }
 
+    # base type for provided cloudify types
+    cloudify.types.base:
+        workflows:
+            create:
+                radial: |
+                    define no_op_create
+            configure:
+                radial: |
+                    define no_op_configure
+            start:
+                radial: |
+                    define no_op_start
+            stop:
+                radial: |
+                    define no_op_stop
+            delete:
+                radial: |
+                    define no_op_delete
+
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.host_provisioner"
             - "cloudify.interfaces.worker_installer"
@@ -25,51 +45,64 @@ types:
         properties:
             install_agent: 'false'
         workflows:
-            init:
-                ref: "cloudify.workflows.host.init"
-            uninstall:
-                ref: "cloudify.workflows.host.uninstall"
+            create:
+                ref: "cloudify.workflows.host.create"
+            start:
+                ref: "cloudify.workflows.host.start"
+            delete:
+                ref: "cloudify.workflows.host.delete"
 
     # A storage volume in a topology
     cloudify.types.volume:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.volume.volume_provisioner"
 
     # A storage Container (Object Store segment)
     cloudify.types.object_container:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.object_container.container_provisioner"
 
     # An isolated virtual layer 2 domain or a logical / virtual switch
     cloudify.types.network:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.network.network_provisioner"
 
     # A virtual Load Balancer
     cloudify.types.load_balancer:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.load_balancer.lb_provisioner"
 
     # A virtual floating IP
     cloudify.types.virtual_ip:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.virtual_ip.virtual_ip_provisioner"
 
     # A security group
     cloudify.types.security_group:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.security_group.security_group_provisioner"
 
     # A middleware component in a topology
     cloudify.types.middleware_server:
+        derived_from: cloudify.types.base
         interfaces:
             - "cloudify.interfaces.middleware_component_installer"
             - "cloudify.interfaces.app_module_installer"
         workflows:
-            init:
-                ref: "cloudify.workflows.middleware_server.init"
-            uninstall:
-                ref: "cloudify.workflows.middleware_server.uninstall"
+            create:
+                ref: "cloudify.workflows.middleware_server.create"
+            start:
+                ref: "cloudify.workflows.middleware_server.start"
+            stop:
+                ref: "cloudify.workflows.middleware_server.stop"
+            delete:
+                ref: "cloudify.workflows.middleware_server.delete"
 
     cloudify.types.db_server:
         derived_from: "cloudify.types.middleware_server"
@@ -85,9 +118,10 @@ types:
 
     # An application artifact to deploy
     cloudify.types.app_module:
+        derived_from: cloudify.types.base
         workflows:
-            init:
-                ref: "cloudify.workflows.app_module.init"
+            create:
+                ref: "cloudify.workflows.app_module.create"
 
 
 ##################################################################################
@@ -244,4 +278,3 @@ plugins:
     # Worker plugin artifact - runs on Cloudify agent
     cloudify.plugins.agent_plugin:
         derived_from: "cloudify.plugins.plugin"
-

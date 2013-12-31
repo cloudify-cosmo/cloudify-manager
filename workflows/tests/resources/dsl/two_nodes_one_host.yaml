@@ -24,14 +24,15 @@ blueprint:
 
 types:
     mock_type:
+        derived_from: cloudify.types.base
         interfaces:
             -   "mock_interface"
         workflows:
-            init:
+            create:
                 radial: |
                     define mock_init
                         execute_operation operation: 'make_reachable'
-            uninstall:
+            delete:
                 radial: |
                     define mock_uninstall
                         execute_operation operation: 'make_unreachable'

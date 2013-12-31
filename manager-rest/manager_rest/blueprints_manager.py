@@ -54,8 +54,8 @@ class BlueprintsManager(object):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url, resources_base_url)
-        except Exception:
-            raise DslParseException
+        except Exception, ex:
+            raise DslParseException(*ex.args)
         new_blueprint = BlueprintState(id=blueprint_id, json_plan=plan, plan=json.loads(plan))
         self.blueprints[str(new_blueprint.id)] = new_blueprint
         return new_blueprint

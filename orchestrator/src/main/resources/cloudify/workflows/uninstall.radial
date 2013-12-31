@@ -13,11 +13,18 @@ define uninstalling_nodes
         log message: 'node reachable state is: ${node_reachable}'
         # we only call uninstall on reachable nodes
         sequence if: '${node_reachable} == true'
-            event event: { "stage" => "Uninstalling node" }
-            log message: 'executing uninstall workflow for node: ${node.id}'
-            set 'v:uninstall': "$f:node.workflows.uninstall"
-            uninstall
-            unset 'v:uninstall'
+            event event: { "stage" => "Stop node" }
+            log message: 'executing stop workflow for node: ${node.id}'
+            set 'v:stop': "$f:node.workflows.stop"
+            stop
+            unset 'v:stop'
+
+            event event: { "stage" => "Delete node" }
+            log message: 'executing delete workflow for node: ${node.id}'
+            set 'v:delete': "$f:node.workflows.delete"
+            delete
+            unset 'v:delete'
+
             state resource_id: '${node.id}', state: { reachable: "false" }
 
     #TODO when we support multi app deployment, remove relevant policies from riemann

@@ -8,24 +8,49 @@ define initialize_nodes
 
     log message: 'processing nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
-        log message: 'processing node: ${node.id}'
+        log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
+            #TODO remove once relationship new model is integrated
             sequence if: '${v:relationship.bind_at} == pre_started'
                 log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
                 set 'v:relationship_workflow': '$v:relationship.workflow'
                 relationship_workflow relationship: '$v:relationship'
         unset 'v:relationship'
 
-        event event: { "stage" => "Initializing node" }
-        log message: 'executing init workflow for node: ${node.id}'
-        set 'v:init': "$f:node.workflows.init"
-        init
+        event event: { "stage" => "Create node" }
+        log message: 'executing create workflow for node: ${node.id}'
+        set 'v:create': "$f:node.workflows.create"
+        create
+        unset 'v:create'
+
+        #execute_relationships_operation on_node: 'source' operation: 'pre_configure'
+        #execute_relationships_operation on_node: 'target' operation: 'pre_configure'
+
+        event event: { "stage" => "Configure node" }
+        log message: 'executing configure workflow for node: ${node.id}'
+        set 'v:configure': "$f:node.workflows.configure"
+        configure
+        unset 'v:configure'
+
+        #execute_relationships_operation on_node: 'source' operation: 'post_configure'
+        #execute_relationships_operation on_node: 'target' operation: 'post_configure'
+
+        event event: { "stage" => "Start node" }
+        log message: 'executing start workflow for node: ${node.id}'
+        set 'v:start': "$f:node.workflows.start"
+        start
+        unset 'v:start'
 
         state resource_id: '${node.id}', state: { reachable: "true" }
+
+        #execute_relationships_operation on_node: 'source' operation: 'establish'
+        #execute_relationships_operation on_node: 'target' operation: 'establish'
+
+        #TODO remove once relationship new model is integrated
         iterator on: '$f:node.relationships', to_v: 'relationship'
             sequence if: '${v:relationship.bind_at} == post_started'
                 log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
