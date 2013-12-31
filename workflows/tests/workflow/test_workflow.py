@@ -39,8 +39,8 @@ class TestRuoteWorkflows(TestCase):
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         self.assertEquals(2, len(states))
-        self.assertEquals('mock_app.containing_node', states[0]['id'])
-        self.assertEquals('mock_app.contained_in_node', states[1]['id'])
+        self.assertTrue('mock_app.containing_node' in states[0]['id'])
+        self.assertTrue('mock_app.contained_in_node' in states[1]['id'])
 
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
@@ -48,7 +48,12 @@ class TestRuoteWorkflows(TestCase):
 
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
-        node_runtime_props = states[1]['relationships']['mock_app.containing_node']
+        node_runtime_props = None
+        for k, v in states[1]['relationships'].iteritems():
+            if 'mock_app.containing_node' in k:
+                node_runtime_props = v
+                break
+        self.assertIsNotNone(node_runtime_props)
         self.assertEquals('value1', node_runtime_props['property1'])
         self.assertEquals('true', node_runtime_props['reachable'])
         self.assertEquals(2, len(node_runtime_props))
