@@ -45,6 +45,7 @@ class TestRuoteWorkflows(TestCase):
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
         deploy(dsl_path)
+
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         node_runtime_props = None
