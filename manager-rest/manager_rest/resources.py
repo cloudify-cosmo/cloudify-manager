@@ -413,10 +413,13 @@ class Nodes(Resource):
     @swagger.operation(
         responseClass=responses.Nodes,
         nickname="listNodes",
-        notes="Returns a list of deployment nodes."
+        notes="Returns a list of deployment nodes or all nodes if deployment id is not specified."
     )
     @marshal_with(responses.Nodes.resource_fields)
     def get(self):
+        """
+        List deployment/all nodes.
+        """
         return storage_manager().get_nodes()
 
 
@@ -425,16 +428,25 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.Node,
         nickname="getNodeState",
-        notes="Returns node runtime state",
+        notes="Returns node runtime state or reachable state only if 'reachable' query parameter was specified.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': 'string',
-                     'paramType': 'path'}]
+                     'paramType': 'path'},
+                    {'name': 'reachable',
+                     'description': 'Specifies that returned state will contain node reachable state only',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'paramType': 'query'}]
     )
     @marshal_with(responses.Node.resource_fields)
     def get(self, node_id):
+        """
+        Gets node runtime or reachable state.
+        """
         if 'reachable' in request.args:
             state = riemann_client().get_node_state(node_id)
             return responses.Node(id=node_id, reachable=state['reachable'])
@@ -443,7 +455,8 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.Node,
         nickname="putNodeState",
-        notes="Put node runtime state",
+        notes="Put node runtime state (state will be entirely replaced) " +
+              "with the provided dictionary of keys and values.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -453,6 +466,9 @@ class NodesId(Resource):
     )
     @marshal_with(responses.Node.resource_fields)
     def put(self, node_id):
+        """
+        Puts node runtime state.
+        """
         verify_json_content_type()
         if request.json.__class__ is not dict:
             abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
@@ -462,7 +478,10 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.Node,
         nickname="putNodeState",
-        notes="Put node runtime state",
+        notes="Update node runtime state with the provided dictionary of keys and values. " +
+              "Each value in the dictionary should be a list where the first item is the new value and the second " +
+              "is the old value (for having some kind of optimistic locking). " +
+              "New keys should have a single element list with the new value only.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -479,6 +498,9 @@ class NodesId(Resource):
     )
     @marshal_with(responses.Node.resource_fields)
     def patch(self, node_id):
+        """
+        Updates node runtime state.
+        """
         verify_json_content_type()
         if request.json.__class__ is not dict:
             abort(400, message='request body is expected to be of key/value map type but is {0}'.format(

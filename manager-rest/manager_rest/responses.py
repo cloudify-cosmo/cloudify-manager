@@ -156,6 +156,7 @@ class DeploymentEvents(object):
         self.deployment_events_bytes = kwargs['deployment_events_bytes']
 
 
+@swagger.model
 class Nodes(object):
 
     resource_fields = {
@@ -166,6 +167,7 @@ class Nodes(object):
         self.nodes = kwargs['nodes']
 
 
+@swagger.model
 class Node(object):
 
     resource_fields = {

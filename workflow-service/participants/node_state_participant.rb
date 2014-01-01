@@ -55,7 +55,6 @@ class NodeStateParticipant < Ruote::Participant
       end
 
       base_uri = ENV[MANAGER_REST_BASE_URI]
-
       node_id = workitem.params[NODE_ID]
       current_node = workitem.fields[PreparePlanParticipant::NODE] || nil
       result_field = workitem.params[MATCHES_FIELD_PARAM_NAME] || nil
@@ -77,7 +76,6 @@ class NodeStateParticipant < Ruote::Participant
 
       if wait_until_matches
         matches = requested_reachable_state.to_s.eql? reachable.to_s
-        $logger.debug('Node reachable state is: {} [matches={}]', reachable, matches)
 
         raise "node reachable state does not match [requested=#{requested_reachable_state}, actual=#{reachable}" if wait_until_matches and not matches
 

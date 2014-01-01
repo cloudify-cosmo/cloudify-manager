@@ -13,18 +13,24 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanm'
+__author__ = 'idanmo'
 
 
 import bernhard
 
 
 class RiemannClient(object):
+    """
+    Riemann client.
+    """
 
     def __init__(self):
         self._client = bernhard.Client(host='localhost')
 
     def get_node_state(self, node_id):
+        """
+        Get node reachable state.
+        """
         state = self._client.query('tagged "name={0}"'.format(node_id))
         if len(state) == 1:
             reachable = 'reachable' in state[0].tags
