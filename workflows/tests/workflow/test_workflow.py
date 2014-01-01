@@ -58,7 +58,7 @@ class TestRuoteWorkflows(TestCase):
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
-        self.assertRaises(RuntimeError, deploy, dsl_path)
+        self.assertRaises(Exception, deploy, dsl_path)
 
     # TODO runtime-model: can be enabled if storage will be cleared after each test (currently impossible since storage is in-memory)
     # def test_set_note_state_in_plugin(self):

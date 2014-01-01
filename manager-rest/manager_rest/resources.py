@@ -426,14 +426,12 @@ class NodesId(Resource):
         responseClass=responses.Node,
         nickname="getNodeState",
         notes="Returns node runtime state",
-        parameters=[{
-                    'name': 'node_id',
-                    'description': 'Node Id',
-                    'required': True,
-                    'allowMultiple': False,
-                    'dataType': 'string',
-                    'paramType': 'path'
-                    }]
+        parameters=[{'name': 'node_id',
+                     'description': 'Node Id',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'}]
     )
     @marshal_with(responses.Node.resource_fields)
     def get(self, node_id):
@@ -442,6 +440,17 @@ class NodesId(Resource):
             return responses.Node(id=node_id, reachable=state['reachable'])
         return storage_manager().get_node(node_id)
 
+    @swagger.operation(
+        responseClass=responses.Node,
+        nickname="putNodeState",
+        notes="Put node runtime state",
+        parameters=[{'name': 'node_id',
+                     'description': 'Node Id',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'}]
+    )
     @marshal_with(responses.Node.resource_fields)
     def put(self, node_id):
         verify_json_content_type()
@@ -450,6 +459,24 @@ class NodesId(Resource):
                 request.json.__class__.__name__))
         return storage_manager().put_node(node_id, request.json)
 
+    @swagger.operation(
+        responseClass=responses.Node,
+        nickname="putNodeState",
+        notes="Put node runtime state",
+        parameters=[{'name': 'node_id',
+                     'description': 'Node Id',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'},
+                    {'name': 'body',
+                     'description': 'Node state updated keys/values',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=["application/json"]
+    )
     @marshal_with(responses.Node.resource_fields)
     def patch(self, node_id):
         verify_json_content_type()
