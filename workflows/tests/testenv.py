@@ -185,12 +185,6 @@ class RuoteServiceProcess(object):
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
         env = os.environ.copy()
-
-
-        # TODO: runtime-model: this should be removed since Dan has already added it to the .sh script
-        env['JRUBY_OPTS'] = '-J-XX:MaxPermSize=128M'
-
-
         if self._events_path is not None:
             env['WF_SERVICE_LOGS_PATH'] = self._events_path
         logger.info("Starting Ruote service")
