@@ -1,5 +1,5 @@
 define state
-    wait_for_node_state node_id: '$v:node_id', reachable: '$v:reachable', on_error: 'error_handler'
+    wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', wait_until_matches: '$v:wait_until_matches', to_f: '$v:to_f', on_error: 'error_handler'
     define error_handler
         wait for: '3s'
-        wait_for_node_state node_id: '$v:node_id', reachable: '$v:reachable', on_error: 'error_handler'
+        wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', wait_until_matches: '$v:wait_until_matches', to_f: '$v:to_f', on_error: 'error_handler'

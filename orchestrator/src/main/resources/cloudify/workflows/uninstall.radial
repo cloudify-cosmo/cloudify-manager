@@ -5,11 +5,10 @@ define uninstalling_nodes
         # wait for all dependents to be uninstalled first
         iterator on: '$f:node.dependents', to_v: 'dependent'
             log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
-            state resource_id: '${v:dependent}', state: { reachable: "false" }
+            state action: 'wait', node_id: '${v:dependent}', reachable: 'false'
         unset 'v:dependent'
 
-        state resource_id: '${node.id}', state: { reachable: "true" }, wait_until_matches: false,
-        to_f: 'node_reachable'
+        state action: 'get', node_id: '${node.id}', to_f: 'node_reachable'
         log message: 'node reachable state is: ${node_reachable}'
         # we only call uninstall on reachable nodes
         sequence if: '${node_reachable} == true'
@@ -25,6 +24,6 @@ define uninstalling_nodes
             delete
             unset 'v:delete'
 
-            state resource_id: '${node.id}', state: { reachable: "false" }
+            state action: 'wait', node_id: '${node.id}', reachable: 'false'
 
     #TODO when we support multi app deployment, remove relevant policies from riemann

@@ -11,10 +11,7 @@ define initialize_nodes
         log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
-            state node_id: '${v:relationship.target_id}', reachable: 'true'
-            state resource_id: '${v:relationship.target_id}', state: {
-                '${v:relationship.state}' : "true"
-            }
+            state action: 'wait', node_id: '${v:relationship.target_id}', reachable: 'true'
             #TODO remove once relationship new model is integrated
             sequence if: '${v:relationship.bind_at} == pre_started'
                 log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
@@ -46,7 +43,7 @@ define initialize_nodes
         start
         unset 'v:start'
 
-        state resource_id: '${node.id}', state: { reachable: "true" }
+        state action: 'wait', node_id: '${node.id}', reachable: 'true'
 
         #execute_relationships_operation on_node: 'source' operation: 'establish'
         #execute_relationships_operation on_node: 'target' operation: 'establish'
