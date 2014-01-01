@@ -16,7 +16,8 @@
 __author__ = 'idanmo'
 
 import imp
-
+import sys
+from os import path
 
 storage_manager_module_name = 'dict_storage_manager'
 
@@ -24,8 +25,10 @@ _instance = None
 
 
 def _create_instance():
+    paths = sys.path
+    paths.append(path.dirname(__file__))
     return imp.load_module(storage_manager_module_name,
-                           *imp.find_module(storage_manager_module_name)).create()
+                           *imp.find_module(storage_manager_module_name, paths)).create()
 
 
 def reset():

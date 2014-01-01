@@ -410,6 +410,11 @@ class DeploymentsId(Resource):
 
 class Nodes(Resource):
 
+    @swagger.operation(
+        responseClass=responses.Nodes,
+        nickname="listNodes",
+        notes="Returns a list of deployment nodes."
+    )
     @marshal_with(responses.Nodes.resource_fields)
     def get(self):
         return storage_manager().get_nodes()
@@ -417,6 +422,19 @@ class Nodes(Resource):
 
 class NodesId(Resource):
 
+    @swagger.operation(
+        responseClass=responses.Node,
+        nickname="getNodeState",
+        notes="Returns node runtime state",
+        parameters=[{
+                    'name': 'node_id',
+                    'description': 'Node Id',
+                    'required': True,
+                    'allowMultiple': False,
+                    'dataType': 'string',
+                    'paramType': 'path'
+                    }]
+    )
     @marshal_with(responses.Node.resource_fields)
     def get(self, node_id):
         if 'reachable' in request.args:
