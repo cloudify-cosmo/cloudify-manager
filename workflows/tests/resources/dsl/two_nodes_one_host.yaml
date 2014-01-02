@@ -8,6 +8,10 @@ blueprint:
     topology:
         -   name: "host"
             type: "cloudify.types.host"
+            interfaces:
+                cloudify.interfaces.lifecycle:
+                    - create: cloudmock.tasks.provision
+                    - start: cloudmock.tasks.start
             policies:
                 -   name: "start_detection_policy"
                     rules:
@@ -26,7 +30,11 @@ types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
-            -   "mock_interface"
+            mock_interface:
+                - "touch": testmockoperations.tasks.touch
+                - "make_reachable": testmockoperations.tasks.make_reachable
+                - "make_unreachable": testmockoperations.tasks.make_unreachable
+                - "set_property": testmockoperations.tasks.set_property
         workflows:
             create:
                 radial: |

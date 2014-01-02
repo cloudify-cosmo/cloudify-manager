@@ -9,6 +9,8 @@
 # Parameter 2: Service port.
 #
 
+export JRUBY_OPTS=-J-XX:MaxPermSize=128M
+
 if [ $# -ne 2 ]; then
     echo "Illegal number of arguments - expected <use_rvm|true/false> <port>"
     exit 1

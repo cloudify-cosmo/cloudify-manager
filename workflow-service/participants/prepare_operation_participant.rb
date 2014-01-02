@@ -32,6 +32,7 @@ class PrepareOperationParticipant < Ruote::Participant
 
   NODE = 'node'
   OPERATION = 'operation'
+  OPERATION_MAPPING = 'operation_mapping'
   OPERATIONS = 'operations'
   TARGET = 'target'
   PLUGINS = 'plugins'
@@ -55,6 +56,7 @@ class PrepareOperationParticipant < Ruote::Participant
         target_id = relationship[TARGET_ID]
         run_on_node = relationship[RUN_ON_NODE]
         plugin_name = relationship[PLUGIN]
+        operation_mapping = 'none'
 
         raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
         raise "Relationship [#{relationship}] missing run_on_node" if run_on_node.nil? or run_on_node.empty?
@@ -84,21 +86,23 @@ class PrepareOperationParticipant < Ruote::Participant
         raise "Node has no operations: #{node}" unless operations != nil
         raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
         raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
-        plugin_name = operations[operation]
+        op_struct = operations[operation]
+        plugin_name = op_struct['plugin']
+        operation_mapping = op_struct['operation']
       end
 
-      $logger.debug('Executing operation [operation={}, plugin={}]', operation, plugin_name)
+      $logger.debug('Executing operation [operation={}, plugin={}, operation_mapping={}]',
+                    operation, plugin_name, operation_mapping)
 
       workitem.fields[TARGET] = CLOUDIFY_MANAGEMENT
-      workitem.fields[PLUGIN_NAME] = "cosmo.#{plugin_name}.tasks"
-      workitem.fields[WORKER_ID] = 'celery.cloudify.management'
       if node[PLUGINS][plugin_name][AGENT_PLUGIN].to_s.eql? 'true'
         raise 'node does not contain a host_id property' unless node.has_key? HOST_ID
         workitem.fields[TARGET] = node[HOST_ID]
-        workitem.fields[WORKER_ID] = "celery.#{node[HOST_ID]}"
       end
-      # operation can have the interface name as its prefix: 'control.start' or just 'start'
-      workitem.fields[OPERATION] = "cosmo.#{plugin_name}.tasks.#{operation.split('.')[-1]}"
+      workitem.fields[WORKER_ID] = "celery.#{workitem.fields[TARGET]}"
+      workitem.fields[OPERATION_MAPPING] = operation_mapping
+      workitem.fields[PLUGIN_NAME] = "cosmo.#{plugin_name}"
+      workitem.fields[OPERATION] = "#{workitem.fields[PLUGIN_NAME]}.#{operation_mapping}"
 
       reply
 

@@ -32,11 +32,6 @@ class PreparePlanParticipant < Ruote::Participant
       nodes = plan['nodes']
 
       nodes.each do |node|
-        if node.has_key? 'relationships'
-          node['relationships'].each do |relationship|
-            relationship['workflow'] = Ruote::RadialReader.read(relationship['workflow'])
-          end
-        end
         workflows = Hash.new
         if node.has_key? 'workflows'
           node['workflows'].each { |key, value| workflows[key] = Ruote::RadialReader.read(value) }

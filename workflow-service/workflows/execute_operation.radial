@@ -9,7 +9,7 @@ define execute_operation
         properties: {
             worker_id: "${worker_id}",
             plugin_name: "${plugin_name}",
-            operation: "${operation}",
+            operation: "${operation_mapping}",
             throw_on_failure: false
         }
     }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
@@ -36,7 +36,7 @@ define execute_operation
             properties: {
                 worker_id: "${worker_id}",
                 plugin_name: "${plugin_name}",
-                operation: "${operation}",
+                operation: "${operation_mapping}",
                 throw_on_failure: true
             }
         }, timeout: '30s', on_timeout: 'redo'
@@ -46,7 +46,7 @@ define execute_operation
     execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.get_arguments', payload: {
         properties: {
             plugin_name: "${plugin_name}",
-            operation: "${operation}"
+            operation: "${operation_mapping}"
         }
     }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
 

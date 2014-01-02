@@ -17,6 +17,14 @@ types:
 
     # base type for provided cloudify types
     cloudify.types.base:
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create
+                - configure
+                - start
+                - stop
+                - delete
+
         workflows:
             create:
                 radial: |
@@ -38,10 +46,15 @@ types:
     cloudify.types.host:
         derived_from: cloudify.types.base
         interfaces:
-            - "cloudify.interfaces.host_provisioner"
-            - "cloudify.interfaces.worker_installer"
-            - "cloudify.interfaces.plugin_installer"
-            - "cloudify.interfaces.kv_store"
+            cloudify.interfaces.worker_installer:
+                - install: cloudify.plugins.worker_installer.install
+                - start: cloudify.plugins.worker_installer.start
+                - restart: cloudify.plugins.worker_installer.restart
+            cloudify.interfaces.plugin_installer:
+                - install: cloudify.plugins.plugin_installer.install
+            cloudify.interfaces.kv_store:
+                - put: cloudify.plugins.kv_store.put
+                - get: cloudify.plugins.kv_store.get
         properties:
             install_agent: 'false'
         workflows:
@@ -55,45 +68,30 @@ types:
     # A storage volume in a topology
     cloudify.types.volume:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.volume.volume_provisioner"
 
     # A storage Container (Object Store segment)
     cloudify.types.object_container:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.object_container.container_provisioner"
 
     # An isolated virtual layer 2 domain or a logical / virtual switch
     cloudify.types.network:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.network.network_provisioner"
 
     # A virtual Load Balancer
     cloudify.types.load_balancer:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.load_balancer.lb_provisioner"
 
     # A virtual floating IP
     cloudify.types.virtual_ip:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.virtual_ip.virtual_ip_provisioner"
 
     # A security group
     cloudify.types.security_group:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.security_group.security_group_provisioner"
 
     # A middleware component in a topology
     cloudify.types.middleware_server:
         derived_from: cloudify.types.base
-        interfaces:
-            - "cloudify.interfaces.middleware_component_installer"
-            - "cloudify.interfaces.app_module_installer"
         workflows:
             create:
                 ref: "cloudify.workflows.middleware_server.create"
@@ -129,129 +127,25 @@ types:
 ##################################################################################
 relationships:
 
-    cloudify.relationships.depends_on: {}
-        #plugin: ""
-        # valid values (when plugin is defined): pre_started, post_started
-        #bind_at: ""
-        # valid values (when plugin is defined): source, target
-        #run_on_node: ""
+    cloudify.relationships.depends_on:
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                - preconfigure
+                - postconfigure
+                - establish
+                - unlink
+        target_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                - preconfigure
+                - postconfigure
+                - establish
+                - unlink
 
     cloudify.relationships.connected_to:
         derived_from: "cloudify.relationships.depends_on"
-        workflow:
-            ref: "cloudify.workflows.connected_to"
-
-        interface:
-            name: "cloudify.interfaces.connection_configurer"
-            operations:
-                - "configure_connection"
-                - "unconfigure_connection"
 
     cloudify.relationships.contained_in:
         derived_from: "cloudify.relationships.depends_on"
-
-
-##################################################################################
-# Base interface definitions
-##################################################################################
-interfaces:
-
-    # provision and manage host lifecycle
-    cloudify.interfaces.host_provisioner:
-        operations:
-            - "provision"
-            - "terminate"
-            - "start"
-            - "pause"
-            - "restart"
-
-    # installs middleware components
-    cloudify.interfaces.middleware_component_installer:
-        operations:
-            - "install"
-            - "uninstall"
-            - "start"
-            - "stop"
-            - "restart"
-
-    cloudify.interfaces.app_module_installer:
-        operations:
-            - "deploy"
-            - "undeploy"
-            - "stop"
-            - "start"
-
-    # start and manage celery worker lifecycle
-    cloudify.interfaces.worker_installer:
-        operations:
-            - "install"
-            - "start"
-            - "restart"
-
-    # installs plugins on the agent host
-    cloudify.interfaces.plugin_installer:
-        operations:
-            - "install"
-
-    # key value store on a host
-    cloudify.interfaces.kv_store:
-        operations:
-            - "put"
-            - "get"
-
-    # provision and manage a storage volume
-    cloudify.interfaces.volume.volume_provisioner:
-        operations:
-            - "create"
-            - "delete"
-            - "attach"
-            - "detach"
-
-    # provision and manage an object container
-    cloudify.interfaces.object_container.container_provisioner:
-        operations:
-            - "create"
-            - "delete"
-            - "create_metadata"
-            - "delete_metadata"
-            - "update_metadata"
-
-    # provision and manage virtual networks
-    cloudify.interfaces.network.network_provisioner:
-        operations:
-            - "create"
-            - "delete"
-            - "create_subnet"
-            - "delete_subnet"
-
-    # provision and manage a virtual load balancer
-    cloudify.interfaces.load_balancer.lb_provisioner:
-        operations:
-            - "create_device"
-            - "delete_device"
-            - "create_load_balancer"
-            - "delete_load_balancer"
-            - "update_load_balancer"
-            - "create_node"
-            - "delete_node"
-            - "update_node"
-            - "create_prob"
-            - "delete_prob"
-            - "update_prob"
-
-    # provision and manage virtual ip
-    cloudify.interfaces.virtual_ip.virtual_ip_provisioner:
-        operations:
-            - "create"
-            - "delete"
-
-    #provision and manage a security group
-    cloudify.interfaces.security_group.security_group_provisioner:
-        operations:
-            - "create"
-            - "delete"
-            - "create_rule"
-            - "delete_rule"
 
 
 ##################################################################################

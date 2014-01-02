@@ -11,21 +11,16 @@ types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
-            -   "mock_interface"
+            mock_interface:
+                - "non_existing_in_python_impl": non_existing_in_python_impl.touch
         workflows:
             create:
                 radial: |
                     define mock_init
                         execute_operation operation: 'non_existing_in_python_impl'
 
-interfaces:
-    mock_interface:
-        operations:
-            - "non_existing_in_python_impl"
-
 plugins:
     testmockoperations:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "mock_interface"
             url: "mock_interface.zip"
