@@ -606,13 +606,15 @@ def get_deployment_events(deployment_id, first_event=0, events_count=500):
 
 def get_deployment_nodes(deployment_id=None):
     client = CosmoManagerRestClient('localhost')
-    nodes = client.list_deployment_nodes(deployment_id)
+    nodes = client.list_deployment_nodes(deployment_id)['nodes']
     return nodes
 
 
-def get_node_state(node_id):
+def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id)
+    state = client.get_node_state(node_id,
+                                  get_reachable_state=get_reachable_state,
+                                  get_runtime_state=get_runtime_state)
     return state['runtimeInfo']
 
 

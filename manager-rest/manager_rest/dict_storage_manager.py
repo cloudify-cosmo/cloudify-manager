@@ -16,8 +16,6 @@
 __author__ = 'idanmo'
 
 
-from responses import Nodes
-from responses import Node
 from threading import Lock
 
 
@@ -32,18 +30,18 @@ class DictStorageManager(object):
 
     def get_nodes(self):
         with self._lock:
-            return Nodes(nodes=map(lambda x: {'id': x}, self._storage.keys()))
+            return map(lambda x: {'id': x}, self._storage.keys())
 
     def get_node(self, node_id):
         with self._lock:
             if node_id in self._storage:
-                return Node(id=node_id, runtime_info=self._storage[node_id])
-            return Node(id=node_id, runtime_info={})
+                return self._storage[node_id]
+            return {}
 
     def put_node(self, node_id, runtime_info):
         with self._lock:
             self._storage[node_id] = runtime_info
-            return Node(id=node_id, runtime_info=runtime_info)
+            return runtime_info
 
     def update_node(self, node_id, updated_properties):
         with self._lock:
@@ -61,7 +59,7 @@ class DictStorageManager(object):
                                 key, value[1], runtime_info[key]))
                 runtime_info[key] = value[0]
             self._storage[node_id] = runtime_info
-            return Node(id=node_id, runtime_info=runtime_info)
+            return runtime_info
 
 
 def create():

@@ -420,10 +420,16 @@ class Nodes(Resource):
         """
         List deployment/all nodes.
         """
-        return storage_manager().get_nodes()
+        return responses.Nodes(nodes=storage_manager().get_nodes())
 
 
 class NodesId(Resource):
+
+    def __init__(self):
+        from flask.ext.restful import reqparse
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('reachable', type=bool, default=False, location='args')
+        self._args_parser.add_argument('runtime', type=bool, default=True, location='args')
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -447,10 +453,26 @@ class NodesId(Resource):
         """
         Gets node runtime or reachable state.
         """
-        if 'reachable' in request.args:
+        args = self._args_parser.parse_args()
+        get_reachable_state = args['reachable']
+        get_runtime_state = args['runtime']
+
+        reachable_state = None
+        if get_reachable_state:
             state = riemann_client().get_node_state(node_id)
-            return responses.Node(id=node_id, reachable=state['reachable'])
-        return storage_manager().get_node(node_id)
+            reachable_state = state['reachable']
+            # this is a temporary workaround for having a reachable host ip injected to its runtime states.
+            # it will be later removed once all plugins publish such properties on their own.
+            if 'host' in state:
+                node_state = storage_manager().get_node(node_id)
+                if 'ip' not in node_state:
+                    update = {'ip': [state['host']]}
+                    storage_manager().update_node(node_id, update)
+
+        runtime_state = None
+        if get_runtime_state:
+            runtime_state = storage_manager().get_node(node_id)
+        return responses.Node(id=node_id, reachable=reachable_state, runtime_info=runtime_state)
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -473,7 +495,7 @@ class NodesId(Resource):
         if request.json.__class__ is not dict:
             abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
                 request.json.__class__.__name__))
-        return storage_manager().put_node(node_id, request.json)
+        return responses.Node(id=node_id, runtime_info=storage_manager().put_node(node_id, request.json))
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -512,7 +534,7 @@ class NodesId(Resource):
             if len(v) != 1 and len(v) != 2:
                 abort(400, message='value for key: {0} is expected to be a list with length 1 or 2 but is {1}'.format(
                     k, len(v)))
-        return storage_manager().update_node(node_id, request.json)
+        return responses.Node(id=node_id, runtime_info=storage_manager().update_node(node_id, request.json))
 
 
 class DeploymentsIdExecutions(Resource):

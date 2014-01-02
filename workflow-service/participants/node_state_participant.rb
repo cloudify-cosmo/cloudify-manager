@@ -67,23 +67,21 @@ class NodeStateParticipant < Ruote::Participant
                     result_field)
 
       # TODO runtime-model: handle HTTP status codes and connection errors
-      url = URI::escape("#{base_uri}/nodes/#{node_id}?reachable")
-      response = RestClient.get(url)
-      processed = JSON.parse(response.to_str)
 
-      requested_reachable_state = workitem.params[REACHABLE]
-      reachable = processed[REACHABLE]
+      url = URI::escape("#{base_uri}/nodes/#{node_id}?reachable=true&runtime=#{wait_until_matches and not current_node.nil?}")
+      response = RestClient.get(url)
+      node_state = JSON.parse(response.to_str)
+
+      reachable = node_state[REACHABLE]
 
       if wait_until_matches
+        requested_reachable_state = workitem.params[REACHABLE]
         matches = requested_reachable_state.to_s.eql? reachable.to_s
 
         raise "node reachable state does not match [requested=#{requested_reachable_state}, actual=#{reachable}" if wait_until_matches and not matches
 
         # if there's a node in context, inject the requested node's runtime state
         if requested_reachable_state and not current_node.nil?
-          # TODO runtime-model: handle HTTP status codes and connection errors
-          response = RestClient.get "#{base_uri}/nodes/#{node_id}"
-          node_state = JSON.parse(response.to_str)
           if node_state.has_key? 'runtimeInfo'
             current_node = workitem.fields[PreparePlanParticipant::NODE]
             properties = current_node[PreparePlanParticipant::PROPERTIES]

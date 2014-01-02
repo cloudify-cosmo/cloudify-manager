@@ -34,7 +34,7 @@ class RiemannClient(object):
         state = self._client.query('tagged "name={0}"'.format(node_id))
         if len(state) == 1:
             reachable = 'reachable' in state[0].tags
-            return {'reachable': reachable}
+            return {'reachable': reachable, 'host': state[0].host}
         return {'reachable': False}
 
 
