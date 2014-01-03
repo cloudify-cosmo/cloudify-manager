@@ -78,16 +78,18 @@ class PrepareOperationParticipant < Ruote::Participant
         else
           raise "Invalid bind location specified for relationship[#{relationship}]: #{run_on_node}"
         end
-        raise "Relationship has no #{run_on_node} operations: #{relationship}" unless operations != nil
-        raise "No such operation '#{operation}' for #{run_on_node} operations for relationship: #{relationship}" unless operations.has_key? operation
       else
-        node = workitem.fields[NODE]
-        workitem.fields.delete(RELATIONSHIP_OTHER_NODE)
+        # cleanup
         workitem.fields.delete(RUOTE_RELATIONSHIP_NODE_ID)
+        workitem.fields.delete(RELATIONSHIP_OTHER_NODE)
 
+        node = workitem.fields[NODE]
         operations = node[OPERATIONS]
-        raise "Node has no operations: #{node}" unless operations != nil
-        raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
+      end
+      if operations.nil? || operations[operation].nil?
+        workitem.fields[OPERATION] = 'no_op'
+        reply
+        return
       end
 
       raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS

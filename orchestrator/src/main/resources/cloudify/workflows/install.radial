@@ -14,6 +14,7 @@ define initialize_nodes
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
+        unset 'v:relationship'
 
         event event: { "stage" => "Create node" }
         log message: 'executing create workflow for node: ${node.id}'
@@ -21,9 +22,9 @@ define initialize_nodes
         create
         unset 'v:create'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure',
                                         run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure',
                                         run_on_node: 'target'
 
         event event: { "stage" => "Configure node" }
@@ -32,9 +33,9 @@ define initialize_nodes
         configure
         unset 'v:configure'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure',
                                         run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure',
                                         run_on_node: 'target'
 
         event event: { "stage" => "Start node" }
@@ -45,7 +46,7 @@ define initialize_nodes
 
         state resource_id: '${node.id}', state: { reachable: "true" }
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
                                         run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
                                         run_on_node: 'target'

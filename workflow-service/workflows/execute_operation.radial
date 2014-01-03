@@ -1,58 +1,62 @@
 define execute_operation
     prepare_operation operation: "${v:operation}",
-                      relationship: "$v:relationship"
-                      run_on_node "${v:run_on_node}"
+                      relationship: "$v:relationship",
+                      run_on_node: "${v:run_on_node}"
 
-    log message: 'initial check whether plugin: ${plugin_name} is installed on target: ${target} and contains
-    operation: ${operation}'
+    sequence if: '${operation} != no_op'
+        log message: 'initial check whether plugin: ${plugin_name} is installed on target: ${target} and contains
+        operation: ${operation}'
 
-    execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin', payload: {
-        properties: {
-            worker_id: "${worker_id}",
-            plugin_name: "${plugin_name}",
-            operation: "${operation_mapping}",
-            throw_on_failure: false
-        }
-    }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
-
-    sequence if: '${worker_id} != celery.cloudify.management and ${verified} != True'
-        repeat
-            log message: 'waiting for plugin installation completion on host node ${target}'
-            execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.kv_store.tasks.get', payload: {
-                properties: {
-                    key: "agent plugins installed"
-                }
-            }, to_f: 'plugins_installed', timeout: '30s', on_timeout: 'redo'
-            log message: 'plugin installation completion state on host node ${target} is ${plugins_installed}'
-
-            break if: '${plugins_installed} == True'
-            wait for: '5s'
-
-
-
-    sequence if: '${verified} != True'
-        log message: 'second attempt verification of plugin: ${plugin_name} and operation: ${operation} is
-        installed on target: ${target}'
         execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin', payload: {
             properties: {
                 worker_id: "${worker_id}",
                 plugin_name: "${plugin_name}",
                 operation: "${operation_mapping}",
-                throw_on_failure: true
+                throw_on_failure: false
             }
-        }, timeout: '30s', on_timeout: 'redo'
+        }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
 
-    log message: 'fetching plugin: ${plugin_name} and operation: ${operation} argument names from target: ${target}'
+        sequence if: '${worker_id} != celery.cloudify.management and ${verified} != True'
+            repeat
+                log message: 'waiting for plugin installation completion on host node ${target}'
+                execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.kv_store.tasks.get', payload: {
+                    properties: {
+                        key: "agent plugins installed"
+                    }
+                }, to_f: 'plugins_installed', timeout: '30s', on_timeout: 'redo'
+                log message: 'plugin installation completion state on host node ${target} is ${plugins_installed}'
 
-    execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.get_arguments', payload: {
-        properties: {
-            plugin_name: "${plugin_name}",
-            operation: "${operation_mapping}"
-        }
-    }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
+                break if: '${plugins_installed} == True'
+                wait for: '5s'
 
-    execute_task target: '${target}', exec: '${operation}', payload: {
-        properties: '$node.properties',
-        params: '$v:params',
-        relationship_properties: '$relationship_other_node.properties'
-    }, argument_names: '${argument_names}', to_f: '${v:to_f}'
+
+
+        sequence if: '${verified} != True'
+            log message: 'second attempt verification of plugin: ${plugin_name} and operation: ${operation} is
+            installed on target: ${target}'
+            execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin', payload: {
+                properties: {
+                    worker_id: "${worker_id}",
+                    plugin_name: "${plugin_name}",
+                    operation: "${operation_mapping}",
+                    throw_on_failure: true
+                }
+            }, timeout: '30s', on_timeout: 'redo'
+
+        log message: 'fetching plugin: ${plugin_name} and operation: ${operation} argument names from target: ${target}'
+
+        execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.get_arguments', payload: {
+            properties: {
+                plugin_name: "${plugin_name}",
+                operation: "${operation_mapping}"
+            }
+        }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
+
+        execute_task target: '${target}', exec: '${operation}', payload: {
+            properties: '$node.properties',
+            params: '$v:params',
+            relationship_properties: '$relationship_other_node.properties'
+        }, argument_names: '${argument_names}', to_f: '${v:to_f}'
+
+    sequence if: '${operation} == no_op'
+        log message: 'skipping ${v:operation} operation as it is not defined and is will be considered a no-op'

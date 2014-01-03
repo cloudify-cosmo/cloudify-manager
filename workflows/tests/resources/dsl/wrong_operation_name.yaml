@@ -12,7 +12,7 @@ types:
         derived_from: cloudify.types.base
         interfaces:
             mock_interface:
-                - "non_existing_in_python_impl": non_existing_in_python_impl.touch
+                - "non_existing_in_python_impl": testmockoperations.non_existent
         workflows:
             create:
                 radial: |

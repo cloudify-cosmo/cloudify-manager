@@ -37,7 +37,7 @@ blueprint:
                     target: "host"
                     source_interfaces:
                         cloudify.interfaces.relationship_lifecycle:
-                            - post_configure: connection_configurer_mock.configure_connection
+                            - post_configure: connection_configurer_mock.tasks.configure_connection
             policies:
                 -   name: "start_detection_policy"
                     rules:
@@ -48,7 +48,9 @@ blueprint:
             workflows:
                 create:
                     radial: |
-                        define app_module_init
+                        define app_module_create
                             execute_operation operation: 'touch'
-                            execute_relationship_workflow type: 'cloudify.relationships.connected_to'
+                start:
+                    radial: |
+                        define app_module_start
                             execute_operation operation: 'make_reachable'

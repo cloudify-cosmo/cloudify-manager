@@ -35,9 +35,9 @@ blueprint:
             relationships:
                 -   type: "cloudify.relationships.connected_to"
                     target: "host"
-                    source_interfaces:
+                    target_interfaces:
                         cloudify.interfaces.relationship_lifecycle:
-                            - establish: connection_configurer_mock.configure_connection
+                            - establish: connection_configurer_mock.tasks.configure_connection
             policies:
                 -   name: "start_detection_policy"
                     rules:
@@ -46,7 +46,7 @@ blueprint:
                                 service: "mock-node-status"
                                 state: "running"
             workflows:
-                create:
+                start:
                     radial: |
                         define app_module_init
                             execute_operation operation: 'make_reachable'

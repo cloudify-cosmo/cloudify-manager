@@ -1,6 +1,6 @@
 define execute_relationships_operation
     iterator on: '$f:node.relationships', to_v: 'relationship'
-        execute_operation operation: '${v:operation}'
-                          relationship: '$v:relationship'
+        execute_operation operation: '${v:operation}',
+                          relationship: '$v:relationship',
                           run_on_node: '${v:run_on_node}'
     unset 'v:relationship'
