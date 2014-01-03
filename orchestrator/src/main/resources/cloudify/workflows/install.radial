@@ -14,12 +14,6 @@ define initialize_nodes
             state resource_id: '${v:relationship.target_id}', state: {
                 '${v:relationship.state}' : "true"
             }
-            #TODO remove once relationship new model is integrated
-            sequence if: '${v:relationship.bind_at} == pre_started'
-                log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
-                set 'v:relationship_workflow': '$v:relationship.workflow'
-                relationship_workflow relationship: '$v:relationship'
-        unset 'v:relationship'
 
         event event: { "stage" => "Create node" }
         log message: 'executing create workflow for node: ${node.id}'
@@ -27,8 +21,10 @@ define initialize_nodes
         create
         unset 'v:create'
 
-        #execute_relationships_operation on_node: 'source' operation: 'pre_configure'
-        #execute_relationships_operation on_node: 'target' operation: 'pre_configure'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure'
+                                        run_on_node: 'source'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure'
+                                        run_on_node: 'target'
 
         event event: { "stage" => "Configure node" }
         log message: 'executing configure workflow for node: ${node.id}'
@@ -36,8 +32,10 @@ define initialize_nodes
         configure
         unset 'v:configure'
 
-        #execute_relationships_operation on_node: 'source' operation: 'post_configure'
-        #execute_relationships_operation on_node: 'target' operation: 'post_configure'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure'
+                                        run_on_node: 'source'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure'
+                                        run_on_node: 'target'
 
         event event: { "stage" => "Start node" }
         log message: 'executing start workflow for node: ${node.id}'
@@ -47,13 +45,7 @@ define initialize_nodes
 
         state resource_id: '${node.id}', state: { reachable: "true" }
 
-        #execute_relationships_operation on_node: 'source' operation: 'establish'
-        #execute_relationships_operation on_node: 'target' operation: 'establish'
-
-        #TODO remove once relationship new model is integrated
-        iterator on: '$f:node.relationships', to_v: 'relationship'
-            sequence if: '${v:relationship.bind_at} == post_started'
-                log message: 'performing relationship late bindings of node:${node.id} / ${v:relationship}'
-                set 'v:relationship_workflow': '$v:relationship.workflow'
-                relationship_workflow relationship: '$v:relationship'
-        unset 'v:relationship'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish'
+                                        run_on_node: 'source'
+        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish'
+                                        run_on_node: 'target'

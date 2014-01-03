@@ -1,6 +1,7 @@
 define execute_operation
     prepare_operation operation: "${v:operation}",
                       relationship: "$v:relationship"
+                      run_on_node "${v:run_on_node}"
 
     log message: 'initial check whether plugin: ${plugin_name} is installed on target: ${target} and contains
     operation: ${operation}'

@@ -34,6 +34,8 @@ class PrepareOperationParticipant < Ruote::Participant
   OPERATION = 'operation'
   OPERATION_MAPPING = 'operation_mapping'
   OPERATIONS = 'operations'
+  SOURCE_OPERATIONS = 'source_operations'
+  TARGET_OPERATIONS = 'target_operations'
   TARGET = 'target'
   PLUGINS = 'plugins'
   AGENT_PLUGIN = 'agent_plugin'
@@ -52,15 +54,12 @@ class PrepareOperationParticipant < Ruote::Participant
 
       relationship_operation = (workitem.params.has_key? RELATIONSHIP and not workitem.params[RELATIONSHIP].nil?)
       if relationship_operation
+        raise "#{RUN_ON_NODE} parameter not set" unless workitem.params.has_key? RUN_ON_NODE
+        run_on_node = workitem.params[RUN_ON_NODE]
         relationship = workitem.params[RELATIONSHIP]
         target_id = relationship[TARGET_ID]
-        run_on_node = relationship[RUN_ON_NODE]
-        plugin_name = relationship[PLUGIN]
-        operation_mapping = 'none'
 
         raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
-        raise "Relationship [#{relationship}] missing run_on_node" if run_on_node.nil? or run_on_node.empty?
-        raise "Relationship [#{relationship}] missing plugin" if plugin_name.nil? or plugin_name.empty?
 
         source_node = workitem.fields[NODE]
         target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
@@ -71,12 +70,16 @@ class PrepareOperationParticipant < Ruote::Participant
         if run_on_node == 'source'
           node = source_node
           workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = target_node[NODE_ID]
+          operations = relationship[SOURCE_OPERATIONS]
         elsif run_on_node == 'target'
           node = target_node
           workitem.fields[RUOTE_RELATIONSHIP_NODE_ID] = source_node[NODE_ID]
+          operations = relationship[TARGET_OPERATIONS]
         else
           raise "Invalid bind location specified for relationship[#{relationship}]: #{run_on_node}"
         end
+        raise "Relationship has no #{run_on_node} operations: #{relationship}" unless operations != nil
+        raise "No such operation '#{operation}' for #{run_on_node} operations for relationship: #{relationship}" unless operations.has_key? operation
       else
         node = workitem.fields[NODE]
         workitem.fields.delete(RELATIONSHIP_OTHER_NODE)
@@ -84,12 +87,13 @@ class PrepareOperationParticipant < Ruote::Participant
 
         operations = node[OPERATIONS]
         raise "Node has no operations: #{node}" unless operations != nil
-        raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
         raise "No such operation '#{operation}' for node: #{node}" unless operations.has_key? operation
-        op_struct = operations[operation]
-        plugin_name = op_struct['plugin']
-        operation_mapping = op_struct['operation']
       end
+
+      raise "Node is missing a #{PLUGINS} property" unless node.has_key? PLUGINS
+      op_struct = operations[operation]
+      plugin_name = op_struct['plugin']
+      operation_mapping = op_struct['operation']
 
       $logger.debug('Executing operation [operation={}, plugin={}, operation_mapping={}]',
                     operation, plugin_name, operation_mapping)
