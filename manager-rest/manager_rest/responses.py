@@ -160,7 +160,7 @@ class DeploymentEvents(object):
 class Nodes(object):
 
     resource_fields = {
-        'nodes': fields.List(fields.Raw)
+        'nodes': fields.List(fields.String)
     }
 
     def __init__(self, *args, **kwargs):
