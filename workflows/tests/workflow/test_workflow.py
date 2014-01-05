@@ -18,7 +18,7 @@ __author__ = 'idanmo'
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
-
+from cosmo_manager_rest_client.cosmo_manager_rest_client import CosmoManagerRestCallError
 
 class TestRuoteWorkflows(TestCase):
 
@@ -60,7 +60,7 @@ class TestRuoteWorkflows(TestCase):
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
-        self.assertRaises(RuntimeError, deploy, dsl_path)
+        self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
 
 
 

@@ -1,2 +1,2 @@
 define middleware_server_stop
-    execute_operation operation: 'cloudify.interfaces.middleware_component_installer.stop'
+    execute_operation operation: 'cloudify.interfaces.lifecycle.stop'

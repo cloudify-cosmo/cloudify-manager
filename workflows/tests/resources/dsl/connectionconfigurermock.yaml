@@ -4,5 +4,4 @@ plugins:
     connection_configurer_mock:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
-            interface: "cloudify.interfaces.connection_configurer"
             url: "connection_configurer_mock.zip"

@@ -6,5 +6,4 @@ plugins:
     cloudify.plugins.kv_store:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            interface: "cloudify.interfaces.kv_store"
             url: "cloudify/poc/plugins/kv_store.zip"

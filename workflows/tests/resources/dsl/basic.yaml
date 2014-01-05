@@ -7,6 +7,12 @@ blueprint:
     topology:
         -   name: "webserver_host"
             type: "cloudify.types.host"
+            interfaces:
+                cloudify.interfaces.lifecycle:
+                    - create: cloudmock.tasks.provision
+                    - start: cloudmock.tasks.start
+                    - stop: cloudmock.tasks.stop
+                    - delete: cloudmock.tasks.terminate
             policies:
                 -   name: "start_detection_policy"
                     rules:
