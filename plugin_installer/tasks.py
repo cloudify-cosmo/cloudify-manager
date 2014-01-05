@@ -22,6 +22,7 @@ import shlex
 import ast
 import _ast
 from os.path import expanduser
+from os import path
 
 from celery.utils.log import get_task_logger
 from celery import task
@@ -61,22 +62,21 @@ def verify_plugin(worker_id, plugin_name, operation, throw_on_failure, **kwargs)
     """
     out = run_command("{0} inspect registered -d {1} --no-color".format(get_celery(), worker_id))
     lines = out.splitlines()
-    operation_name = operation.split(".")[-1]
     registered_operations = []
     for line in lines:
         processed_line = line.strip()
         if processed_line.startswith("*"):
-            task = processed_line[1:].strip()
-            if task.startswith(plugin_name):
-                registered_operations.append(task)
-                if task.endswith("." + operation_name):
+            task_name = processed_line[1:].strip()
+            if task_name.startswith(plugin_name):
+                registered_operations.append(task_name)
+                if task_name == plugin_name + "." + operation:
                     return True
     #Could not locate registered plugin and the specified operation
     if throw_on_failure:
         raise RuntimeError(
 """unable to locate plugin {0} operation {1} in celery registered tasks, make sure the plugin has an implementation of
 this operation.
-Registered plugin operation are: {2}""".format(plugin_name, operation_name, registered_operations))
+Registered plugin operation are: {2}""".format(plugin_name, operation, registered_operations))
     else:
         return False
 
@@ -85,17 +85,33 @@ def get_arguments(plugin_name, operation, **kwargs):
     """
     Gets the arguments of an installed plugin operation
     """
-    operation_name = operation.split(".")[-1]
+    operation_split = operation.split('.')
+    module_name = '.'.join(operation_split[:-1])
+    method_name = operation.split(".")[-1]
     cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
-    plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:-1]))
-    tasks_py_path = os.path.join(plugin_dir, "tasks.py")
-    parsed_tasks_file = ast.parse(open(tasks_py_path, 'r').read())
-    method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == operation_name,
+    plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:]))
+    py_path = _extract_py_path(plugin_dir, module_name, method_name, plugin_name)
+    parsed_tasks_file = ast.parse(open(py_path, 'r').read())
+    method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == method_name,
                                 parsed_tasks_file.body)
     if not method_description:
         raise RuntimeError("unable to locate operation {0} inside plugin file {1} [plugin name={2}]"
-        .format(operation_name, tasks_py_path, plugin_name))
+                           .format(method_name, py_path, plugin_name))
     return map(lambda arg: arg.id, method_description[0].args.args)
+
+
+def _extract_py_path(plugin_dir, module_name, method_name, plugin_name):
+    module_path = module_name.replace('.', '/')
+    path1 = path.join(plugin_dir, module_path + '.py')
+    if path.isfile(path1):
+        return path1
+    if module_path != '':
+        module_path += '/'
+    path2 = path.join(plugin_dir, module_path + '__init__.py')
+    if path.isfile(path2):
+        return path2
+    raise RuntimeError('Unable to locate module containing operation {0}.{1} for plugin {2} tried '
+                       '{3} and {4}'.format(module_name, method_name, plugin_name, path1, path2))
 
 
 def get_pip():
@@ -179,14 +195,14 @@ def create_namespace_path(namespace_parts, base_dir):
     In addition, "__init.py__" files will be created in each of the path's sub directories.
     """
 
-    path = base_dir
+    plugin_path = base_dir
 
     for p in namespace_parts:
-        path = os.path.join(path, p)
-    logger.debug("plugin installation path is {0}".format(path))
+        plugin_path = os.path.join(plugin_path, p)
+    logger.debug("plugin installation path is {0}".format(plugin_path))
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+    if not os.path.exists(plugin_path):
+        os.makedirs(plugin_path)
 
     # create __init__.py files in each subfolder
     init_path = base_dir
@@ -196,5 +212,5 @@ def create_namespace_path(namespace_parts, base_dir):
         if not os.path.exists(init_file):
             open(init_file, "w").close()
 
-    return path
+    return plugin_path
 
