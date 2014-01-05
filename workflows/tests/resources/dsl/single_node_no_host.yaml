@@ -13,7 +13,11 @@ types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
-            -   "mock_interface"
+            mock_interface:
+                - "touch": testmockoperations.tasks.touch
+                - "make_reachable": testmockoperations.tasks.make_reachable
+                - "make_unreachable": testmockoperations.tasks.make_unreachable
+                - "set_property": testmockoperations.tasks.set_property
         workflows:
             create:
                 radial: |

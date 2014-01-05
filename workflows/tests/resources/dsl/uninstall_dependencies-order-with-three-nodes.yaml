@@ -1,6 +1,7 @@
 imports:
     - "cloudify.types"
     - "testmockoperations.yaml"
+    - "connectionconfigurermock.yaml"
 
 blueprint:
     name: "mock_app"
@@ -13,18 +14,28 @@ blueprint:
             relationships:
                 - type: "cloudify.relationships.contained_in"
                   target: "contained_in_node1"
+                  source_interfaces:
+                      cloudify.interfaces.relationship_lifecycle:
+                          - unlink: connection_configurer_mock.tasks.unconfigure_connection
 
         -   name: "contained_in_node1"
             type: "mock_type"
             relationships:
                 - type: "cloudify.relationships.contained_in"
                   target: "containing_node"
+                  target_interfaces:
+                      cloudify.interfaces.relationship_lifecycle:
+                          - unlink: connection_configurer_mock.tasks.unconfigure_connection
 
 types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
-            -   "mock_interface"
+            mock_interface:
+                - "touch": testmockoperations.tasks.touch
+                - "make_reachable": testmockoperations.tasks.make_reachable
+                - "make_unreachable": testmockoperations.tasks.make_unreachable
+                - "set_property": testmockoperations.tasks.set_property
         workflows:
             create:
                 radial: |

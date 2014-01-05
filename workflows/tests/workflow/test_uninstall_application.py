@@ -99,3 +99,16 @@ class TestUninstallApplication(TestCase):
         self.assertEquals(node3_id, unreachable_call_order[0]['id'])
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
+
+        from cosmo.connection_configurer_mock.tasks import get_state as config_get_state
+        configurer_state = config_get_state.apply_async().get(timeout=10)
+        self.assertEquals(2, len(configurer_state))
+        self.assertTrue(configurer_state[0]['source_id'].startswith('mock_app.contained_in_node2'))
+        self.assertTrue(configurer_state[0]['target_id'].startswith('mock_app.contained_in_node1'))
+        self.assertTrue(configurer_state[0]['run_on_node_id'].startswith('mock_app.contained_in_node2'))
+        self.assertTrue(configurer_state[1]['source_id'].startswith('mock_app.contained_in_node1'))
+        self.assertTrue(configurer_state[1]['target_id'].startswith('mock_app.containing_node'))
+        self.assertTrue(configurer_state[1]['run_on_node_id'].startswith('mock_app.containing_node'))
+
+
+

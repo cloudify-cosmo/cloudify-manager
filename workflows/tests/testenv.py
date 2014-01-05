@@ -596,7 +596,7 @@ def validate_dsl(blueprint_id, timeout=240):
     client = CosmoManagerRestClient('localhost')
     response = client.validate_blueprint(blueprint_id)
     if response.status != 'valid':
-        raise RuntimeError('Blueprint {0} is not valid'.format(blueprint_id))
+        raise RuntimeError('Blueprint {0} is not valid (status: {1})'.format(blueprint_id, response.status))
 
 
 def get_deployment_events(deployment_id, first_event=0, events_count=500):

@@ -9,6 +9,10 @@ blueprint:
     topology:
         -   name: "host"
             type: "cloudify.types.host"
+            interfaces:
+                cloudify.interfaces.lifecycle:
+                    - create: cloudmock.tasks.provision
+                    - start: cloudmock.tasks.start
             properties:
                 target_property_key: 'target_property_value'
             policies:
@@ -23,13 +27,17 @@ blueprint:
             properties:
                 source_property_key: 'source_property_value'
             interfaces:
-                - "mock_interface"
+                mock_interface:
+                    - "touch": testmockoperations.tasks.touch
+                    - "make_reachable": testmockoperations.tasks.make_reachable
+                    - "make_unreachable": testmockoperations.tasks.make_unreachable
+                    - "set_property": testmockoperations.tasks.set_property
             relationships:
                 -   type: "cloudify.relationships.connected_to"
                     target: "host"
-                    plugin: "connection_configurer_mock"
-                    bind_at: "post_started"
-                    run_on_node: "target"
+                    target_interfaces:
+                        cloudify.interfaces.relationship_lifecycle:
+                            - establish: connection_configurer_mock.tasks.configure_connection
             policies:
                 -   name: "start_detection_policy"
                     rules:
@@ -38,7 +46,7 @@ blueprint:
                                 service: "mock-node-status"
                                 state: "running"
             workflows:
-                create:
+                start:
                     radial: |
                         define app_module_init
                             execute_operation operation: 'make_reachable'

@@ -1,5 +1,5 @@
 define host_start
-    execute_operation operation: 'cloudify.interfaces.host_provisioner.start'
+    execute_operation operation: 'cloudify.interfaces.lifecycle.start'
     sequence if: '${node.properties.install_agent} == true'
         state action: 'wait', node_id: '${node.id}', reachable: 'true'
         log message: 'installing agent on host: ${node.id}'

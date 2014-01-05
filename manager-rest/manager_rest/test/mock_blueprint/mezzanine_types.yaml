@@ -35,8 +35,6 @@ types:
                   -----BEGIN RSA PRIVATE KEY-----
 
                   -----END RSA PRIVATE KEY-----
-        interfaces:
-            - 'cloudify.interfaces.app_module_installer'
         workflows:
             create:
                 ref: 'mezzanine_app_module_init.radial'

@@ -127,8 +127,6 @@ blueprint:
                     target: 'nginx'
                 -   type: 'cloudify.relationships.connected_to'
                     target: 'mezzanine_db'
-                    plugin: 'chef_connection_configurer'
-                    run_on_node: 'source'
             properties:
                 chef_deploy_runlist: 'recipe[cosmo-mezzanine-demo::install_web_mezzanine],recipe[cosmo-mezzanine-demo::install_web_mezzanine_app]'
                 chef_start_runlist: 'recipe[cosmo-mezzanine-demo::start_web_mezzanine_app]'
