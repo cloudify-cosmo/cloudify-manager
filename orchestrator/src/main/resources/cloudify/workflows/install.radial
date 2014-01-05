@@ -11,9 +11,7 @@ define initialize_nodes
         log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
-            state resource_id: '${v:relationship.target_id}', state: {
-                '${v:relationship.state}' : "true"
-            }
+            state action: 'wait', node_id: '${v:relationship.target_id}', reachable: 'true'
         unset 'v:relationship'
 
         event event: { "stage" => "Create node" }
@@ -44,7 +42,7 @@ define initialize_nodes
         start
         unset 'v:start'
 
-        state resource_id: '${node.id}', state: { reachable: "true" }
+        state node_id: '${node.id}', reachable: 'true'
 
         execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
                                         run_on_node: 'source'
