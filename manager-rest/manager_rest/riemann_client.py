@@ -38,7 +38,7 @@ class RiemannClient(object):
         host = None
         for state in results:
             host = state.host
-            if 'reachable' in state[0].tags:
+            if 'reachable' in state.tags:
                 return {'reachable': True, 'host': state.host}
         return {'reachable': False, 'host': host}
 
