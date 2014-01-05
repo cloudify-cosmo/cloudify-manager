@@ -47,14 +47,14 @@ types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.worker_installer:
-                - install: cloudify.plugins.worker_installer.install
-                - start: cloudify.plugins.worker_installer.start
-                - restart: cloudify.plugins.worker_installer.restart
+                - install: cloudify.plugins.worker_installer.tasks.install
+                - start: cloudify.plugins.worker_installer.tasks.start
+                - restart: cloudify.plugins.worker_installer.tasks.restart
             cloudify.interfaces.plugin_installer:
-                - install: cloudify.plugins.plugin_installer.install
+                - install: cloudify.plugins.plugin_installer.tasks.install
             cloudify.interfaces.kv_store:
-                - put: cloudify.plugins.kv_store.put
-                - get: cloudify.plugins.kv_store.get
+                - put: cloudify.plugins.kv_store.tasks.put
+                - get: cloudify.plugins.kv_store.tasks.get
         properties:
             install_agent: 'false'
         workflows:
