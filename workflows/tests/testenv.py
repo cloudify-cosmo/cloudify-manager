@@ -620,7 +620,7 @@ def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
 
 def is_node_reachable(node_id):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_reachable_state(node_id)
+    state = client.get_node_state(node_id, get_reachable_state=True, get_runtime_state=False)
     return state['reachable'] is True
 
 
