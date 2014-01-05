@@ -41,7 +41,7 @@ class RuoteWorkflowEngine
     @states = Hash.new
     @dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
     @dashboard.add_service('ruote_listener', self)
-    @dashboard.register_participant 'state', StateCacheParticipant
+    @dashboard.register_participant 'wait_for_node_state', NodeStateParticipant
     @dashboard.register_participant 'execute_task', ExecuteTaskParticipant
     @dashboard.register_participant 'prepare_plan', PreparePlanParticipant
     @dashboard.register_participant 'prepare_operation', PrepareOperationParticipant

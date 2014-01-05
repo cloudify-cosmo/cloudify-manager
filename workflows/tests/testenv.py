@@ -206,7 +206,7 @@ class CeleryWorkerProcess(object):
     _process = None
 
     def __init__(self, tempdir, plugins_tempdir, cosmo_path, cosmo_jar_path, riemann_config_path,
-                 riemann_template_path, riemann_pid):
+                 riemann_template_path, riemann_pid, manager_rest_port):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
         self._app_path = path.join(tempdir, "cosmo")
@@ -217,6 +217,7 @@ class CeleryWorkerProcess(object):
         self._riemann_config_path = riemann_config_path
         self._riemann_template_path = riemann_template_path
         self._riemann_pid = riemann_pid
+        self._manager_rest_port = manager_rest_port
 
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
@@ -264,6 +265,7 @@ class CeleryWorkerProcess(object):
         environment['RIEMANN_PID'] = str(self._riemann_pid)
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
+        environment['MANAGER_REST_PORT'] = self._manager_rest_port
 
         logger.info("Starting celery worker...")
         self._process = subprocess.Popen(celery_command, env=environment)
@@ -389,7 +391,7 @@ class TestEnvironment(object):
     Creates the cosmo test environment:
         - Riemann server.
         - Celery worker.
-        - Ruote service (created for each test because of StateCache state).
+        - Ruote service.
         - Prepares celery app dir with plugins from cosmo module and official riemann configurer and plugin installer.
     """
     _instance = None
@@ -399,6 +401,7 @@ class TestEnvironment(object):
     _tempdir = None
     _plugins_tempdir = None
     _scope = None
+    _ruote_service = None
 
     def __init__(self, scope):
         try:
@@ -422,24 +425,30 @@ class TestEnvironment(object):
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
+            manager_rest_port = '8100'
+
             # celery
             cosmo_path = path.dirname(path.realpath(cosmo.__file__))
             self._celery_worker_process = CeleryWorkerProcess(self._tempdir, self._plugins_tempdir, cosmo_path,
                                                               cosmo_jar_path,
                                                               riemann_config_path, riemann_template_path,
-                                                              self._riemann_process.pid)
+                                                              self._riemann_process.pid,
+                                                              manager_rest_port)
             self._celery_worker_process.start()
 
             # set events path (wf_service -> write, manager_rest -> read)
             self.events_path = path.join(self._tempdir, 'events')
 
             # manager rest
-            port = '8100'
             worker_service_base_uri = 'http://localhost:8101'
-            self._manager_rest_process = ManagerRestProcess(port,
+            self._manager_rest_process = ManagerRestProcess(manager_rest_port,
                                                             worker_service_base_uri,
                                                             self.events_path)
             self._manager_rest_process.start()
+
+            # ruote service
+            self._ruote_service = RuoteServiceProcess(events_path=self.events_path)
+            self._ruote_service.start()
 
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
@@ -454,6 +463,8 @@ class TestEnvironment(object):
             self._celery_worker_process.close()
         if self._manager_rest_process:
             self._manager_rest_process.close()
+        if self._ruote_service:
+            self._ruote_service.close()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
             shutil.rmtree(self._tempdir, ignore_errors=True)
@@ -531,8 +542,6 @@ class TestCase(unittest.TestCase):
     A test case for cosmo workflow tests.
     """
 
-    _ruote_service = None
-
     @classmethod
     def setUpClass(cls):
         TestEnvironment.create(TestEnvironmentScope.CLASS)
@@ -543,12 +552,8 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         TestEnvironment.clean_plugins_tempdir()
-        self._ruote_service = RuoteServiceProcess(events_path=TestEnvironment._instance.events_path)
-        self._ruote_service.start()
 
     def tearDown(self):
-        if self._ruote_service:
-            self._ruote_service.close()
         TestEnvironment.restart_celery_worker()
 
 
@@ -597,6 +602,26 @@ def validate_dsl(blueprint_id, timeout=240):
 def get_deployment_events(deployment_id, first_event=0, events_count=500):
     client = CosmoManagerRestClient('localhost')
     return client.get_deployment_events(deployment_id, from_param=first_event, count_param=events_count)
+
+
+def get_deployment_nodes(deployment_id=None):
+    client = CosmoManagerRestClient('localhost')
+    nodes = client.list_deployment_nodes(deployment_id)['nodes']
+    return nodes
+
+
+def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
+    client = CosmoManagerRestClient('localhost')
+    state = client.get_node_state(node_id,
+                                  get_reachable_state=get_reachable_state,
+                                  get_runtime_state=get_runtime_state)
+    return state['runtimeInfo']
+
+
+def is_node_reachable(node_id):
+    client = CosmoManagerRestClient('localhost')
+    state = client.get_node_state(node_id, get_reachable_state=True, get_runtime_state=False)
+    return state['reachable'] is True
 
 
 class TimeoutException(Exception):

@@ -24,13 +24,14 @@ from testenv import undeploy_application as undeploy
 class TestUninstallApplication(TestCase):
 
     def test_uninstall_application_single_node_no_host(self):
+        from testenv import logger
         dsl_path = resource("dsl/single_node_no_host.yaml")
-        print('starting deploy process')
+        logger.info('starting deploy process')
         deployment_id = deploy(dsl_path).id
-        print('deploy completed')
-        print('starting undeploy process')
+        logger.info('deploy completed')
+        logger.info('starting undeploy process')
         undeploy(deployment_id)
-        print('undeploy completed')
+        logger.info('undeploy completed')
 
         from cosmo.testmockoperations.tasks import get_state as testmock_get_state
         from cosmo.testmockoperations.tasks import is_unreachable_called

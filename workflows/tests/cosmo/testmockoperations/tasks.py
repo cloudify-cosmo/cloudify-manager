@@ -1,8 +1,23 @@
+########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
 from cosmo.celery import celery
 from cosmo.events import set_reachable as reachable
 from cosmo.events import set_unreachable as unreachable
-from cosmo.events import set_property as property
 from time import time
+from cosmo.runtime import inject_node_state
 
 state = []
 touched_time = None
@@ -30,8 +45,9 @@ def make_unreachable(__cloudify_id, **kwargs):
 
 
 @celery.task
-def set_property(__cloudify_id, property_name, value, **kwargs):
-    property(__cloudify_id, property_name, value)
+@inject_node_state
+def set_property(__cloudify_id, property_name, value, node_state=None,  **kwargs):
+    node_state.put(property_name, value)
 
 
 @celery.task

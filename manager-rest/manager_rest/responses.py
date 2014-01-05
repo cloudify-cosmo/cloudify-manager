@@ -154,3 +154,29 @@ class DeploymentEvents(object):
         self.events = kwargs['events']
         self.deployment_total_events = kwargs['deployment_total_events']
         self.deployment_events_bytes = kwargs['deployment_events_bytes']
+
+
+@swagger.model
+class Nodes(object):
+
+    resource_fields = {
+        'nodes': fields.List(fields.Raw)
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.nodes = kwargs['nodes']
+
+
+@swagger.model
+class Node(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'runtimeInfo': fields.Raw(attribute='runtime_info'),
+        'reachable': fields.Boolean
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs['id']
+        self.runtime_info = kwargs['runtime_info'] if 'runtime_info' in kwargs else None
+        self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None

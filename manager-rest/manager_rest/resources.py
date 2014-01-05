@@ -16,17 +16,9 @@
 
 __author__ = 'dan'
 
-from blueprints_manager import DslParseException
-from workflow_client import WorkflowServiceError
-from file_server import PORT as file_server_port
+
 import config
-
-from flask_restful_swagger import swagger
-
-from flask import request
-from flask.ext.restful import Resource, abort, marshal_with, marshal
 import os
-from os import path
 import responses
 import requests_schema
 import tarfile
@@ -35,6 +27,15 @@ import urllib
 import tempfile
 import shutil
 import uuid
+
+from blueprints_manager import DslParseException
+from workflow_client import WorkflowServiceError
+from file_server import PORT as FILE_SERVER_PORT
+from flask import request
+from flask.ext.restful import Resource, abort, marshal_with, marshal
+from flask_restful_swagger import swagger
+from os import path
+
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -47,6 +48,16 @@ def blueprints_manager():
 def events_manager():
     import events_manager
     return events_manager.instance()
+
+
+def storage_manager():
+    import storage_manager
+    return storage_manager.instance()
+
+
+def riemann_client():
+    import riemann_client
+    return riemann_client.instance()
 
 
 def verify_json_content_type():
@@ -87,6 +98,8 @@ def setup_resources(api):
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
     api.add_resource(DeploymentsIdEvents, '/deployments/<string:deployment_id>/events')
+    api.add_resource(Nodes, '/nodes')
+    api.add_resource(NodesId, '/nodes/<string:node_id>')
 
 
 class Blueprints(Resource):
@@ -108,21 +121,21 @@ class Blueprints(Resource):
         nickname="upload",
         notes="Submitted blueprint should be a tar gzipped directory containing the blueprint.",
         parameters=[{
-            'name': 'application_file_name',
-            'description': 'File name of yaml containing the "main" blueprint.',
-            'required': False,
-            'allowMultiple': False,
-            'dataType': 'string',
-            'paramType': 'query',
-            'defaultValue': 'blueprint.yaml'
-        }, {
-            'name': 'body',
-            'description': 'Binary form of the tar gzipped blueprint directory',
-            'required': True,
-            'allowMultiple': False,
-            'dataType': 'binary',
-            'paramType': 'body',
-        }],
+                        'name': 'application_file_name',
+                        'description': 'File name of yaml containing the "main" blueprint.',
+                        'required': False,
+                        'allowMultiple': False,
+                        'dataType': 'string',
+                        'paramType': 'query',
+                        'defaultValue': 'blueprint.yaml'
+                    }, {
+                        'name': 'body',
+                        'description': 'Binary form of the tar gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                        }],
         consumes=[
             "application/octet-stream"
         ]
@@ -203,7 +216,7 @@ class Blueprints(Resource):
     def _prepare_and_submit_blueprint(self, file_server_root, application_dir, blueprint_id):
         application_file = self._extract_application_file(file_server_root, application_dir)
 
-        file_server_base_url = 'http://localhost:{0}'.format(file_server_port)
+        file_server_base_url = 'http://localhost:{0}'.format(FILE_SERVER_PORT)
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
         alias_mapping = '{0}/{1}'.format(file_server_base_url, 'cloudify/alias-mappings.yaml')
         resources_base = file_server_base_url + '/'
@@ -395,6 +408,135 @@ class DeploymentsId(Resource):
         return blueprints_manager().get_deployment(deployment_id)
 
 
+class Nodes(Resource):
+
+    @swagger.operation(
+        responseClass=responses.Nodes,
+        nickname="listNodes",
+        notes="Returns a list of deployment nodes or all nodes if deployment id is not specified."
+    )
+    @marshal_with(responses.Nodes.resource_fields)
+    def get(self):
+        """
+        List deployment/all nodes.
+        """
+        return responses.Nodes(nodes=storage_manager().get_nodes())
+
+
+class NodesId(Resource):
+
+    def __init__(self):
+        from flask.ext.restful import reqparse
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('reachable', type=bool, default=False, location='args')
+        self._args_parser.add_argument('runtime', type=bool, default=True, location='args')
+
+    @swagger.operation(
+        responseClass=responses.Node,
+        nickname="getNodeState",
+        notes="Returns node runtime state or reachable state only if 'reachable' query parameter was specified.",
+        parameters=[{'name': 'node_id',
+                     'description': 'Node Id',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'},
+                    {'name': 'reachable',
+                     'description': 'Specifies that returned state will contain node reachable state only',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'paramType': 'query'}]
+    )
+    @marshal_with(responses.Node.resource_fields)
+    def get(self, node_id):
+        """
+        Gets node runtime or reachable state.
+        """
+        args = self._args_parser.parse_args()
+        get_reachable_state = args['reachable']
+        get_runtime_state = args['runtime']
+
+        reachable_state = None
+        if get_reachable_state:
+            state = riemann_client().get_node_state(node_id)
+            reachable_state = state['reachable']
+            # this is a temporary workaround for having a reachable host ip injected to its runtime states.
+            # it will be later removed once all plugins publish such properties on their own.
+            if 'host' in state:
+                node_state = storage_manager().get_node(node_id)
+                if 'ip' not in node_state:
+                    update = {'ip': [state['host']]}
+                    storage_manager().update_node(node_id, update)
+
+        runtime_state = None
+        if get_runtime_state:
+            runtime_state = storage_manager().get_node(node_id)
+        return responses.Node(id=node_id, reachable=reachable_state, runtime_info=runtime_state)
+
+    @swagger.operation(
+        responseClass=responses.Node,
+        nickname="putNodeState",
+        notes="Put node runtime state (state will be entirely replaced) " +
+              "with the provided dictionary of keys and values.",
+        parameters=[{'name': 'node_id',
+                     'description': 'Node Id',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'}]
+    )
+    @marshal_with(responses.Node.resource_fields)
+    def put(self, node_id):
+        """
+        Puts node runtime state.
+        """
+        verify_json_content_type()
+        if request.json.__class__ is not dict:
+            abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
+                request.json.__class__.__name__))
+        return responses.Node(id=node_id, runtime_info=storage_manager().put_node(node_id, request.json))
+
+    @swagger.operation(
+        responseClass=responses.Node,
+        nickname="putNodeState",
+        notes="Update node runtime state with the provided dictionary of keys and values. " +
+              "Each value in the dictionary should be a list where the first item is the new value and the second " +
+              "is the old value (for having some kind of optimistic locking). " +
+              "New keys should have a single element list with the new value only.",
+        parameters=[{'name': 'node_id',
+                     'description': 'Node Id',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'},
+                    {'name': 'body',
+                     'description': 'Node state updated keys/values',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=["application/json"]
+    )
+    @marshal_with(responses.Node.resource_fields)
+    def patch(self, node_id):
+        """
+        Updates node runtime state.
+        """
+        verify_json_content_type()
+        if request.json.__class__ is not dict:
+            abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
+                request.json.__class__.__name__))
+        for k, v in request.json.iteritems():
+            if v.__class__ is not list:
+                abort(400, message='key: {0} in request body is expected to be a list but is: {1}'.format(
+                    k, v.__class__.__name__))
+            if len(v) != 1 and len(v) != 2:
+                abort(400, message='value for key: {0} is expected to be a list with length 1 or 2 but is {1}'.format(
+                    k, len(v)))
+        return responses.Node(id=node_id, runtime_info=storage_manager().update_node(node_id, request.json))
+
+
 class DeploymentsIdExecutions(Resource):
 
     @swagger.operation(
@@ -421,7 +563,7 @@ class DeploymentsIdExecutions(Resource):
                         'allowMultiple': False,
                         'dataType': requests_schema.ExecutionRequest.__name__,
                         'paramType': 'body'
-                    }],
+        }],
         consumes=[
             "application/json"
         ]

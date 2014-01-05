@@ -13,26 +13,31 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
+__author__ = 'idanmo'
 
-from flask.ext.restful import fields
+import imp
+import sys
+from os import path
 
-from flask_restful_swagger import swagger
+storage_manager_module_name = 'dict_storage_manager'
 
-
-@swagger.model
-class ExecutionRequest(object):
-
-    resource_fields = {
-        'workflowId': fields.String,
-    }
+_instance = None
 
 
-@swagger.model
-class DeploymentRequest(object):
+def _create_instance():
+    paths = sys.path
+    paths.append(path.dirname(__file__))
+    return imp.load_module(storage_manager_module_name,
+                           *imp.find_module(storage_manager_module_name, paths)).create()
 
-    resource_fields = {
-        'blueprintId': fields.String,
-    }
+
+def reset():
+    global _instance
+    _instance = _create_instance()
 
 
+def instance():
+    global _instance
+    if _instance is None:
+        _instance = _create_instance()
+    return _instance

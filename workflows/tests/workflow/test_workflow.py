@@ -20,6 +20,7 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from cosmo_manager_rest_client.cosmo_manager_rest_client import CosmoManagerRestCallError
 
+
 class TestRuoteWorkflows(TestCase):
 
     def test_execute_operation(self):
@@ -53,14 +54,27 @@ class TestRuoteWorkflows(TestCase):
             if 'mock_app.containing_node' in k:
                 node_runtime_props = v
                 break
-        self.assertIsNotNone(node_runtime_props)
         self.assertEquals('value1', node_runtime_props['property1'])
-        self.assertEquals('true', node_runtime_props['reachable'])
+        # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
 
-
+    # TODO runtime-model: can be enabled if storage will be cleared after each test (currently impossible since storage is in-memory)
+    # def test_set_note_state_in_plugin(self):
+    #     dsl_path = resource("dsl/basic.yaml")
+    #     deploy(dsl_path)
+    #     from testenv import get_deployment_nodes
+    #     nodes = get_deployment_nodes()
+    #     self.assertEqual(1, len(nodes))
+    #
+    #     from testenv import logger
+    #     logger.info("nodes: {0}".format(nodes))
+    #
+    #     node_id = nodes[0]['id']
+    #     from testenv import get_node_state
+    #     node_state = get_node_state(node_id)
+    #     self.assertEqual(node_id, node_state['id'])
 

@@ -16,12 +16,10 @@
 __author__ = 'idanmo'
 
 from cosmo.celery import celery
-import os
-from os import path
-import json
 from celery.utils.log import get_task_logger
 from cosmo.events import set_reachable
 from cosmo.events import set_unreachable
+from cosmo.runtime import inject_node_state
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
@@ -30,6 +28,7 @@ logger = get_task_logger(__name__)
 reachable = set_reachable
 unreachable = set_unreachable
 machines = {}
+
 
 @celery.task
 def provision(__cloudify_id, **kwargs):
@@ -41,12 +40,16 @@ def provision(__cloudify_id, **kwargs):
 
 
 @celery.task
-def start(__cloudify_id, **kwargs):
+@inject_node_state
+def start(__cloudify_id, node_state=None, **kwargs):
     global machines
     logger.info("starting machine: " + __cloudify_id)
     if __cloudify_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist".format(__cloudify_id))
     machines[__cloudify_id] = RUNNING
+    if node_state is not None:
+        node_state.put('id', __cloudify_id)
+
     reachable(__cloudify_id)
 
 
