@@ -31,11 +31,16 @@ class RiemannClient(object):
         """
         Get node reachable state.
         """
-        state = self._client.query('tagged "name={0}"'.format(node_id))
-        if len(state) == 1:
-            reachable = 'reachable' in state[0].tags
-            return {'reachable': reachable, 'host': state[0].host}
-        return {'reachable': False}
+        results = self._client.query('tagged "name={0}"'.format(node_id))
+        if len(results) == 0:
+            return {'reachable': False}
+        # we might somehow have several events returned here so spot the one with a reachable flag.
+        host = None
+        for state in results:
+            host = state.host
+            if 'reachable' in state[0].tags:
+                return {'reachable': True, 'host': state.host}
+        return {'reachable': False, 'host': host}
 
 
 _instance = RiemannClient()
