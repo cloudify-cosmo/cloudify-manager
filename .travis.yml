@@ -18,6 +18,7 @@ before_script:
 
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
+   - "wget https://github.com/CloudifySource/cosmo-plugin-dsl-parser/tarball/develop#egg=cosmo-plugin-dsl-parser-0.3"
    - "mvn install -Pall -f travis-pom.xml -DskipTests"
    - "rvm install jruby-1.7.3"
    - "rvm use jruby-1.7.3"
