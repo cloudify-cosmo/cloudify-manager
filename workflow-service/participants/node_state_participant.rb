@@ -102,7 +102,7 @@ class NodeStateParticipant < Ruote::Participant
   end
 
   def do_not_thread
-    true
+    false
   end
 
 

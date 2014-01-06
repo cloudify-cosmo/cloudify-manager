@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-require_relative 'state_cache_participant'
 require_relative 'execute_task_participant'
 require_relative 'prepare_plan_participant'
 require_relative 'logger_participant'

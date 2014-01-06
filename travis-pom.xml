@@ -13,7 +13,6 @@
     <version>0</version>
     <modules>
         <module>orchestrator</module>
-        <module>state-cache</module>
     </modules>
 
 </project>

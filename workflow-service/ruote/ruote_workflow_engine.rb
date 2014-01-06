@@ -24,7 +24,6 @@ require_relative '../../orchestrator/target/cosmo.jar'
 require_relative '../participants/all'
 require_relative '../data/workflow_state'
 
-java_import org.cloudifysource.cosmo.statecache.StateCache
 java_import org.cloudifysource.cosmo.tasks.EventHandler
 java_import org.springframework.context.annotation.AnnotationConfigApplicationContext
 java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDependenciesConfig
@@ -55,7 +54,6 @@ class RuoteWorkflowEngine
       @context = create_service_dependencies
       $ruote_properties = {
         'executor' => @context.get_bean('taskExecutor'),
-        'state_cache' => @context.get_bean('stateCache')
       }
     end
 

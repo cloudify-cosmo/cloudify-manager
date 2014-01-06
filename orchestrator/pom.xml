@@ -50,10 +50,6 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>state-cache</artifactId>
-        </dependency>
         <!-- Riemann -->
         <dependency>
             <groupId>org.robotninjas.riemann</groupId>
