@@ -434,7 +434,7 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.Node,
         nickname="getNodeState",
-        notes="Returns node runtime state or reachable state only if 'reachable' query parameter was specified.",
+        notes="Returns node runtime/reachable state according to the provided query parameters.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -442,10 +442,18 @@ class NodesId(Resource):
                      'dataType': 'string',
                      'paramType': 'path'},
                     {'name': 'reachable',
-                     'description': 'Specifies that returned state will contain node reachable state only',
+                     'description': 'Specifies whether to return reachable state.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'},
+                    {'name': 'runtime',
+                     'description': 'Specifies whether to return runtime information.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': True,
                      'paramType': 'query'}]
     )
     @marshal_with(responses.Node.resource_fields)
