@@ -241,12 +241,12 @@ class VagrantLxcBoot:
         return out
 
     def install_fabric_runner(self):
-        self.run_command("sudo pip install {0}".format(FABRIC_RUNNER))
+        self.run_command("sudo pip install {0} --process-dependency-links".format(FABRIC_RUNNER))
         from cosmo_fabric.runner import FabricRetryingRunner
         self.runner = FabricRetryingRunner(local=True)
 
     def pip(self, package):
-        self.runner.sudo("pip install --timeout=120 {0}".format(package))
+        self.runner.sudo("pip install --timeout=120 {0} --process-dependency-links".format(package))
 
     def apt_get(self, command):
         self.runner.sudo("apt-get {0}".format(command))
