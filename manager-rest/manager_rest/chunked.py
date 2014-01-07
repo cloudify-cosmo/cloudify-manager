@@ -31,6 +31,4 @@ def decode(input_stream, buffer_size=8192):
             yield result
         input_stream.read(2)
         if not length:
-            # read last \r\n
-            input_stream.read(2)
             return
