@@ -28,6 +28,7 @@ import tempfile
 import shutil
 import uuid
 
+import chunked
 from blueprints_manager import DslParseException
 from workflow_client import WorkflowServiceError
 from file_server import PORT as FILE_SERVER_PORT
@@ -139,6 +140,7 @@ class Blueprints(Resource):
         consumes=[
             "application/octet-stream"
         ]
+
     )
     @marshal_with(responses.BlueprintState.resource_fields)
     def post(self):
@@ -188,11 +190,17 @@ class Blueprints(Resource):
 
     def _save_file_locally(self, archive_file_name):
         # save uploaded file
-        if not request.data:
-            abort(400, message='Missing application archive in request body')
-        uploaded_file_data = request.data
-        with open(archive_file_name, 'w') as f:
-            f.write(uploaded_file_data)
+        if 'Transfer-Encoding' in request.headers:
+            with open(archive_file_name, 'w') as f:
+                for buffered_chunked in chunked.decode(request.input_stream):
+                    f.write(buffered_chunked)
+            request.input_stream.close()
+        else:
+            if not request.data:
+                abort(400, message='Missing application archive in request body')
+            uploaded_file_data = request.data
+            with open(archive_file_name, 'w') as f:
+                f.write(uploaded_file_data)
 
     def _extract_file_to_file_server(self, file_server_root, archive_target_path, blueprint_id):
         # extract application to file server
