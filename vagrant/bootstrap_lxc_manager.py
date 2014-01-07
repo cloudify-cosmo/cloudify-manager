@@ -246,7 +246,7 @@ class VagrantLxcBoot:
         self.runner = FabricRetryingRunner(local=True)
 
     def pip(self, package):
-        self.runner.sudo("pip install --timeout=120 --process-dependency-links {0}".format(package))
+        self.runner.sudo("pip install --timeout=120 {0}".format(package))
 
     def apt_get(self, command):
         self.runner.sudo("apt-get {0}".format(command))
