@@ -20,6 +20,7 @@ def decode(input_stream, buffer_size=8192):
     while True:
         index = input_stream.readline()
         length = _to_hex(index)
+        print 'length: ', length
         remaining = length
         while remaining > 0:
             if buffer_size >= remaining:
