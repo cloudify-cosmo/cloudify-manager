@@ -141,6 +141,8 @@ def _install_latest_pip(runner, node_id):
     package_installer = "yum" if len(runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
     logger.debug("installing pip using {0}".format(package_installer))
     runner.sudo("{0} -q -y install python-pip".format(package_installer))
+    logger.debug("upgrading setuptools [node_id=%s]", node_id)
+    runner.sudo('pip install --upgrade setuptools')
 
     logger.debug("building pip installation [node_id=%s]", node_id)
     runner.sudo("python get-pip.py")
