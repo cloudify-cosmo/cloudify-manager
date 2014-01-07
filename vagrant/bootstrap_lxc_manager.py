@@ -241,7 +241,7 @@ class VagrantLxcBoot:
         return out
 
     def install_fabric_runner(self):
-        self.run_command("sudo pip install --process-dependency-links {0}".format(FABRIC_RUNNER))
+        self.run_command("sudo pip install {0}".format(FABRIC_RUNNER))
         from cosmo_fabric.runner import FabricRetryingRunner
         self.runner = FabricRetryingRunner(local=True)
 
