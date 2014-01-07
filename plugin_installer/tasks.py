@@ -160,7 +160,7 @@ def install_celery_plugin_to_dir(plugin,
     command_format = "su --session-command='{0}'" if is_session_command else 'sudo {0}'
 
     # this will install the package and the dependencies into the python installation
-    command = "{0} install {1}".format(get_pip(), plugin_url)
+    command = "{0} install --process-dependency-links {1}".format(get_pip(), plugin_url)
     run_command(command_format.format(command))
     logger.debug("installed plugin {0} and dependencies into python installation".format(plugin_name))
 
