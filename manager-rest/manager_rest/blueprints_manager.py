@@ -107,6 +107,7 @@ class BlueprintsManager(object):
 
         new_deployment = Deployment(deployment_id=deployment_id,
                                     plan=deployment_json_plan,
+                                    typed_plan=blueprint.typed_plan,
                                     blueprint_id=blueprint_id)
 
         self.deployments[str(deployment_id)] = new_deployment

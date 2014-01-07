@@ -599,3 +599,19 @@ class DeploymentsIdExecutions(Resource):
             return blueprints_manager().execute_workflow(deployment_id, workflow_id), 201
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
+
+
+class DeploymentsIdWorkflows(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Workflow.__name__),
+        nickname="list",
+        notes="Returns a list of workflows related to the provided deployment."
+    )
+    def get(self, deployment_id):
+        """
+        Returns a list of workflows related to the provided deployment.
+        """
+        verify_deployment_exists(deployment_id)
+        return [marshal(workflow, responses.Workflow.resource_fields) for
+                workflow in blueprints_manager().get_deployment(deployment_id).workflows_list()]

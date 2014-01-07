@@ -17,6 +17,7 @@ __author__ = 'dan'
 
 from datetime import datetime
 import uuid
+from copy import deepcopy
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
@@ -103,6 +104,7 @@ class Deployment(object):
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
+        self.workflows = deepcopy(kwargs['typed_plan']['workflows'])
         self.executions = {}
 
     def add_execution(self, execution):
@@ -110,6 +112,26 @@ class Deployment(object):
 
     def executions_list(self):
         return self.executions.values()
+
+    def workflows_list(self):
+        return self.workflows.values()
+
+
+@swagger.model
+class Workflow(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'blueprintId': fields.String(attribute='blueprint_id'),
+        'deploymentId': fields.String(attribute='deployment_id'),
+        'createdAt': fields.String(attribute='created_at')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs['workflow_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.deployment_id = kwargs['deployment_id']
+        self.created_at = kwargs['created_at']
 
 
 @swagger.model
