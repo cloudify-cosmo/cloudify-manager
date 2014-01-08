@@ -605,8 +605,8 @@ class DeploymentsIdExecutions(Resource):
 class DeploymentsIdWorkflows(Resource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Workflow.__name__),
-        nickname="list",
+        responseClass='Workflows'.format(responses.Workflows.__name__),
+        nickname="workflows",
         notes="Returns a list of workflows related to the provided deployment."
     )
     @marshal_with(responses.Workflows.resource_fields)
