@@ -32,7 +32,7 @@ The cosmo shell script starts cosmo and executes the specified plan file. It wil
 vagrant@cosmo-manager:~/cosmo-work$ ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
 ```
 
-Wait until the script prints the following message:
+Wait until the script prints the following message: 
 ```
 ManagerBoot Application has been successfully deployed (press CTRL+C to quit)
 ```

@@ -89,6 +89,7 @@ class Deployment(object):
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
+        self.workflows = {key: Workflow(workflow_id=key, created_at=now) for key in kwargs['typed_plan']['workflows']}
         self.executions = {}
 
     def add_execution(self, execution):
@@ -96,6 +97,37 @@ class Deployment(object):
 
     def executions_list(self):
         return self.executions.values()
+
+    def workflows_list(self):
+        return self.workflows.values()
+
+
+@swagger.model
+class Workflow(object):
+
+    resource_fields = {
+        'name': fields.String,
+        'createdAt': fields.String(attribute='created_at')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.name = kwargs['workflow_id']
+        self.created_at = kwargs['created_at']
+
+
+@swagger.model
+class Workflows(object):
+
+    resource_fields = {
+        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
+        'blueprintId': fields.String(attribute='blueprint_id'),
+        'deploymentId': fields.String(attribute='deployment_id')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.workflows = kwargs['workflows']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.deployment_id = kwargs['deployment_id']
 
 
 @swagger.model
