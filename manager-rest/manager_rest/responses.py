@@ -17,7 +17,6 @@ __author__ = 'dan'
 
 from datetime import datetime
 import uuid
-from copy import deepcopy
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
@@ -104,7 +103,7 @@ class Deployment(object):
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
-        self.workflows = deepcopy(kwargs['typed_plan']['workflows'])
+        self.workflows = {key: Workflow(workflow_id=key, created_at=now) for key in kwargs['typed_plan']['workflows']}
         self.executions = {}
 
     def add_execution(self, execution):
@@ -121,17 +120,28 @@ class Deployment(object):
 class Workflow(object):
 
     resource_fields = {
-        'id': fields.String,
-        'blueprintId': fields.String(attribute='blueprint_id'),
-        'deploymentId': fields.String(attribute='deployment_id'),
+        'name': fields.String,
         'createdAt': fields.String(attribute='created_at')
     }
 
     def __init__(self, *args, **kwargs):
-        self.id = kwargs['workflow_id']
+        self.name = kwargs['workflow_id']
+        self.created_at = kwargs['created_at']
+
+
+@swagger.model
+class Workflows(object):
+
+    resource_fields = {
+        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
+        'blueprintId': fields.String(attribute='blueprint_id'),
+        'deploymentId': fields.String(attribute='deployment_id')
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.workflows = kwargs['workflows']
         self.blueprint_id = kwargs['blueprint_id']
         self.deployment_id = kwargs['deployment_id']
-        self.created_at = kwargs['created_at']
 
 
 @swagger.model

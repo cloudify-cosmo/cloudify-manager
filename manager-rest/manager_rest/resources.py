@@ -98,6 +98,7 @@ def setup_resources(api):
     api.add_resource(Deployments, '/deployments')
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
+    api.add_resource(DeploymentsIdWorkflows, '/deployments/<string:deployment_id>/workflows')
     api.add_resource(DeploymentsIdEvents, '/deployments/<string:deployment_id>/events')
     api.add_resource(Nodes, '/nodes')
     api.add_resource(NodesId, '/nodes/<string:node_id>')
@@ -608,10 +609,16 @@ class DeploymentsIdWorkflows(Resource):
         nickname="list",
         notes="Returns a list of workflows related to the provided deployment."
     )
+    @marshal_with(responses.Workflows.resource_fields)
     def get(self, deployment_id):
         """
         Returns a list of workflows related to the provided deployment.
         """
         verify_deployment_exists(deployment_id)
-        return [marshal(workflow, responses.Workflow.resource_fields) for
-                workflow in blueprints_manager().get_deployment(deployment_id).workflows_list()]
+        deployment = blueprints_manager().get_deployment(deployment_id)
+        workflows = deployment.workflows_list()
+        return {
+            'workflows': workflows,
+            'blueprint_id': deployment.blueprint_id,
+            'deployment_id': deployment.id
+        }
