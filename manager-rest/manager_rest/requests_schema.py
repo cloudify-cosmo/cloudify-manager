@@ -34,5 +34,3 @@ class DeploymentRequest(object):
     resource_fields = {
         'blueprintId': fields.String,
     }
-
-
