@@ -20,14 +20,12 @@ __author__ = 'elip'
 
 import os
 from os import path
-import json
 
-from os.path import expanduser
 from celery.utils.log import get_task_logger
 from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION
-from cosmo.constants import VIRTUALENV_PATH_KEY, COSMO_APP_NAME, COSMO_PLUGIN_NAMESPACE
+from cloudify.constants import VIRTUALENV_PATH_KEY, COSMO_APP_NAME, COSMO_PLUGIN_NAMESPACE, CLOUDIFY_APP_DIR_KEY
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -219,7 +217,7 @@ def _install_celery(runner, worker_config, node_id):
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
-    config_file = build_celeryd_config(worker_config, node_id)
+    config_file = build_celeryd_config(worker_config, node_id, app_dir)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
 
@@ -328,7 +326,7 @@ def get_broker_url(worker_config):
         "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
 
 
-def build_celeryd_config(worker_config, node_id):
+def build_celeryd_config(worker_config, node_id, app_dir):
 
     user = worker_config['user']
     broker_url = get_broker_url(worker_config)
@@ -341,6 +339,8 @@ def build_celeryd_config(worker_config, node_id):
     if is_virtualenv(worker_config):
         # put virtualenv prefix so that other plugins will have it in their env.
         env[VIRTUALENV_PATH_KEY] = get_virtual_env_path(worker_config)
+
+    env[CLOUDIFY_APP_DIR_KEY] = app_dir
 
     env_string = build_env_string(env)
 
