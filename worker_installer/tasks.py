@@ -202,7 +202,11 @@ def _install_celery(runner, worker_config, node_id):
     # copy celery.py file to app dir
     from cloudify import celery
     module_file = celery.__file__
-    runner.run('cp {0} {1}'.format(module_file, app_dir))
+    if module_file.endswith('pyc'):
+        module_file = module_file[:-1]
+        if not path.exists(module_file):
+            raise IOError('cloudify.celery module source file not found')
+    runner.run('cp {0} {1}'.format(path.realpath(module_file), app_dir))
 
     plugins_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
