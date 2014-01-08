@@ -73,6 +73,7 @@ def install(worker_config, __cloudify_id, cloudify_runtime, virtualenv=True, loc
 
     _install_celery(runner, worker_config, __cloudify_id)
 
+
 @task
 def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
@@ -197,6 +198,11 @@ def _install_celery(runner, worker_config, node_id):
 
     # since sudo pip created the app dir. the owner is root. but actually it is used by celery.
     runner.sudo("chown -R {0} {1}".format(user, app_dir))
+
+    # copy celery.py file to app dir
+    from cloudify import celery
+    module_file = celery.__file__
+    runner.run('cp {0} {1}'.format(module_file, app_dir))
 
     plugins_installation_path = create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, app_dir)
 
