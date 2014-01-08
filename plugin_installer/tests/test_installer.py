@@ -21,7 +21,7 @@ __author__ = 'elip'
 import unittest
 from plugin_installer.tasks import get_plugin_simple_name, create_namespace_path, install_celery_plugin_to_dir
 from plugin_installer.tests import get_logger
-from cosmo.constants import COSMO_PLUGIN_NAMESPACE
+from cloudify.constants import COSMO_PLUGIN_NAMESPACE
 
 logger = get_logger("PluginInstallerTestCase")
 
@@ -62,11 +62,4 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         # check the plugin was installed to the correct directory
         assert os.path.exists(expected_plugin_path)
-
-        # check the plugin itself is not available in the python path.
-        try:
-            import mock_for_test
-            self.fail("import error expected for module {0}".format(plugin['name']))
-        except ImportError:
-            pass
 

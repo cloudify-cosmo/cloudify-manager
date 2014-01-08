@@ -27,10 +27,11 @@ from os import path
 from celery.utils.log import get_task_logger
 from celery import task
 
-from cosmo.constants import VIRTUALENV_PATH_KEY
-import cosmo
-from cosmo.events import get_cosmo_properties
-from cosmo.constants import COSMO_APP_NAME
+from cloudify.constants import VIRTUALENV_PATH_KEY
+from cloudify.utils import get_cosmo_properties
+from cloudify.utils import get_app_dir
+from cloudify.constants import COSMO_APP_NAME
+
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -53,6 +54,7 @@ def install(plugin, __cloudify_id, **kwargs):
         plugin["url"] = plugin['url'].replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
     install_celery_plugin_to_dir(plugin)
+
 
 @task
 def verify_plugin(worker_id, plugin_name, operation, throw_on_failure, **kwargs):
@@ -80,6 +82,7 @@ Registered plugin operation are: {2}""".format(plugin_name, operation, registere
     else:
         return False
 
+
 @task
 def get_arguments(plugin_name, operation, **kwargs):
     """
@@ -88,7 +91,7 @@ def get_arguments(plugin_name, operation, **kwargs):
     operation_split = operation.split('.')
     module_name = '.'.join(operation_split[:-1])
     method_name = operation.split(".")[-1]
-    cosmo_dir = os.path.abspath(os.path.dirname(cosmo.__file__))
+    cosmo_dir = os.path.abspath(get_app_dir())
     plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:]))
     py_path = _extract_py_path(plugin_dir, module_name, method_name, plugin_name)
     parsed_tasks_file = ast.parse(open(py_path, 'r').read())
