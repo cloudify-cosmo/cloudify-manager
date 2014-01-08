@@ -63,10 +63,3 @@ class PluginInstallerTestCase(unittest.TestCase):
         # check the plugin was installed to the correct directory
         assert os.path.exists(expected_plugin_path)
 
-        # check the plugin itself is not available in the python path.
-        try:
-            import mock_for_test
-            self.fail("import error expected for module {0}".format(plugin['name']))
-        except ImportError:
-            pass
-
