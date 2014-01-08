@@ -72,6 +72,7 @@ class BlueprintsManager(object):
                                          status=response['status'])
 
     def execute_workflow(self, deployment_id, workflow_id):
+        #TODO: in the future, take the workflow from the deployment rather than from the blueprint
         deployment = self.get_deployment(deployment_id)
         blueprint = self.get_blueprint(deployment.blueprint_id)
         workflow = blueprint.typed_plan['workflows'][workflow_id]
@@ -107,6 +108,7 @@ class BlueprintsManager(object):
 
         new_deployment = Deployment(deployment_id=deployment_id,
                                     plan=deployment_json_plan,
+                                    typed_plan=blueprint.typed_plan,
                                     blueprint_id=blueprint_id)
 
         self.deployments[str(deployment_id)] = new_deployment

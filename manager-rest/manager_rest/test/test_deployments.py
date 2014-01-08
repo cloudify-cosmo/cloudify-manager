@@ -102,3 +102,16 @@ class DeploymentsTestCase(BaseServerTestCase):
         get_execution = self.get(resource_path).json
         self.assertEquals(1, len(get_execution))
         self.assertEquals(execution, get_execution[0])
+
+    def test_get_workflows_of_deployment(self):
+        blueprint_id, deployment_id, blueprint_response, deployment_response = self._post_test_deployment()
+
+        resource_path = '/deployments/{0}/workflows'.format(deployment_id)
+        workflows = self.get(resource_path).json
+        self.assertEquals(workflows['blueprintId'], blueprint_id)
+        self.assertEquals(workflows['deploymentId'], deployment_id)
+        self.assertEquals(2, len(workflows['workflows']))
+        self.assertEquals(workflows['workflows'][0]['name'], 'install')
+        self.assertTrue('createdAt' in workflows['workflows'][0])
+        self.assertEquals(workflows['workflows'][1]['name'], 'uninstall')
+        self.assertTrue('createdAt' in workflows['workflows'][1])
