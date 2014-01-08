@@ -13,7 +13,7 @@ install:
     # celery needs the /dev/shm device for billiard semaphore functionality.
     # this device is not mounted by default on travis hosts.
     # see https://github.com/travis-ci/travis-core/issues/187#issuecomment-13682856
-    - sudo test -d /dev/shm && sudo rm -rf /dev/shm"
+    - sudo test -d /dev/shm && sudo rm -rf /dev/shm
     - sudo ln -Tsf /{run,dev}/shm
 
     # command to install dependencies
