@@ -23,7 +23,7 @@ FABRIC_RUNNER_BRANCH = 'develop'
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_BRANCH)
 
 COSMO_CELERY_VERSION = '0.3'
-COSMO_CELERY_BRANCH = 'develop'
+COSMO_CELERY_BRANCH = 'feature/CLOUDIFY-2336-plugin-dev-module'
 COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
 
 
