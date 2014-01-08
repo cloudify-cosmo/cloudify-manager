@@ -224,7 +224,10 @@ def _install_celery(runner, worker_config, node_id):
 def install_celery_plugin_to_dir(runner, worker_config, to_dir, plugin_url):
 
     # this will install the package and the dependencies into the python installation
-    runner.sudo("{0} install --process-dependency-links {1}".format(get_pip(worker_config), plugin_url))
+    try:
+        runner.sudo("{0} install --process-dependency-links {1}".format(get_pip(worker_config), plugin_url))
+    except RuntimeError:
+        runner.sudo("{0} install {1}".format(get_pip(worker_config), plugin_url))                       
 
     # install the package to the target directory. this should also remove the plugin package from the python
     # installation.
