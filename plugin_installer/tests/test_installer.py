@@ -21,7 +21,7 @@ __author__ = 'elip'
 import unittest
 from plugin_installer.tasks import get_plugin_simple_name, create_namespace_path, install_celery_plugin_to_dir
 from plugin_installer.tests import get_logger
-from cosmo.constants import COSMO_PLUGIN_NAMESPACE
+from cloudify.constants import COSMO_PLUGIN_NAMESPACE
 
 logger = get_logger("PluginInstallerTestCase")
 
