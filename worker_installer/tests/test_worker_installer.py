@@ -26,7 +26,7 @@ from celery import Celery
 
 from worker_installer.tasks import install, start, build_env_string
 from worker_installer.tasks import create_namespace_path
-from cosmo.constants import COSMO_PLUGIN_NAMESPACE
+from cloudify.constants import COSMO_PLUGIN_NAMESPACE
 
 PLUGIN_INSTALLER = 'cloudify.plugins.plugin_installer'
 
