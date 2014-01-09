@@ -30,7 +30,8 @@ def post_blueprint_args(convention=False):
 
     def tar_mock_blueprint():
         tar_path = tempfile.mktemp()
-        source_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_blueprint')
+        source_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'mock_blueprint')
         make_tarfile(tar_path, source_dir)
         return tar_path
 
@@ -62,22 +63,28 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
 
     def test_post_without_application_file_form_data(self):
-        post_blueprints_response = self.post_file(*post_blueprint_args(convention=True)).json
-        self.assertEquals('mezzanine_convention', post_blueprints_response['name'])
+        post_blueprints_response = self.post_file(
+            *post_blueprint_args(convention=True)).json
+        self.assertEquals('mezzanine_convention',
+                          post_blueprints_response['name'])
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
-        get_blueprint_by_id_response = self.get('/blueprints/{0}'.format(post_blueprints_response['id'])).json
-        self.assertEquals(post_blueprints_response, get_blueprint_by_id_response)
+        get_blueprint_by_id_response = self.get(
+            '/blueprints/{0}'.format(post_blueprints_response['id'])).json
+        self.assertEquals(post_blueprints_response,
+                          get_blueprint_by_id_response)
 
     def test_get_blueprints_id_validate(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
-        resource_path = '/blueprints/{0}/validate'.format(post_blueprints_response['id'])
+        resource_path = '/blueprints/{0}/validate'.format(
+            post_blueprints_response['id'])
         validation = self.get(resource_path).json
         self.assertEqual(validation['status'], 'valid')
 
     def test_zipped_plugin(self):
         self.post_file(*post_blueprint_args())
-        from manager_rest.file_server import PORT as file_server_port
-        response = requests.get('http://localhost:{0}/stub-installer.zip'.format(file_server_port))
+        from manager_rest.file_server import PORT as FILE_SERVER_PORT
+        response = requests.get(
+            'http://localhost:{0}/stub-installer.zip'.format(FILE_SERVER_PORT))
         self.assertEquals(response.status_code, 200)

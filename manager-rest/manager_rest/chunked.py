@@ -9,7 +9,8 @@ def _from_pattern(pattern, obj_type, *args):
         match = pattern.search(value)
         if match is not None:
             return obj_type(match.group(1), *args)
-        raise ValueError('unable to coerce "%s" into a %s' % (value, obj_type.__name__))
+        raise ValueError('unable to coerce "%s" into a %s' %
+                         (value, obj_type.__name__))
     return coerce_value
 
 _to_hex = _from_pattern(re.compile('([-+]?[0-9A-F]+)', re.IGNORECASE), int, 16)

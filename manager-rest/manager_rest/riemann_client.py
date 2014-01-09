@@ -34,7 +34,8 @@ class RiemannClient(object):
         results = self._client.query('tagged "name={0}"'.format(node_id))
         if len(results) == 0:
             return {'reachable': False}
-        # we might somehow have several events returned here so spot the one with a reachable flag.
+        # we might somehow have several events returned
+        # here so spot the one with a reachable flag.
         host = None
         for state in results:
             host = state.host

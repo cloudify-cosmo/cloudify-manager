@@ -45,18 +45,23 @@ class DictStorageManager(object):
 
     def update_node(self, node_id, updated_properties):
         with self._lock:
-            runtime_info = self._storage[node_id].copy() if node_id in self._storage else {}
+            runtime_info = self._storage[node_id].copy() if node_id\
+                in self._storage else {}
             for key, value in updated_properties.iteritems():
                 if len(value) == 1:
                     if key in runtime_info:
-                        raise RuntimeError("Node update conflict - key: '{0}' is not expected to exist".format(key))
+                        raise RuntimeError("Node update conflict - key: '{0}'"
+                                           " is not expected to exist"
+                                           .format(key))
                 elif len(value) == 2:
                     if key not in runtime_info:
-                        raise RuntimeError("Node update conflict - key: '{0}' is expected to exist".format(key))
+                        raise RuntimeError("Node update conflict - key: '{0}'"
+                                           " is expected to exist".format(key))
                     if runtime_info[key] != value[1]:
                         raise RuntimeError(
-                            "Node update conflict - key: '{0}' value is expected to be '{1}' but is '{2}'".format(
-                                key, value[1], runtime_info[key]))
+                            "Node update conflict - key: '{0}' value is "
+                            "expected to be '{1}' but is '{2}'"
+                            .format(key, value[1], runtime_info[key]))
                 runtime_info[key] = value[0]
             self._storage[node_id] = runtime_info
             return runtime_info

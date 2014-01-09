@@ -31,7 +31,8 @@ class DeploymentsEventsTestCase(BaseServerTestCase):
         self.tempdir = tempfile.mkdtemp()
         events = [{'key1': 'value1'}, {'key2': 'value2'}, {'key3': 'value3'}]
         deployment_id = 'deployment_0'
-        self.events_file = path.join(self.tempdir, "{0}.log".format(deployment_id))
+        self.events_file = path.join(self.tempdir,
+                                     "{0}.log".format(deployment_id))
         self.create_events_file(self.events_file, events)
         super(DeploymentsEventsTestCase, self).setUp()
 
@@ -51,7 +52,8 @@ class DeploymentsEventsTestCase(BaseServerTestCase):
                 f.write("{0}{1}".format(json.dumps(event), os.linesep))
 
     def assert_bytes(self, result, expected_bytes):
-        self.assertEqual(expected_bytes, int(result.headers['Deployment-Events-Bytes']))
+        self.assertEqual(expected_bytes,
+                         int(result.headers['Deployment-Events-Bytes']))
 
     def assert_result(self,
                       result,
@@ -62,9 +64,11 @@ class DeploymentsEventsTestCase(BaseServerTestCase):
         self.assertEqual(deployment_id, result.json['id'])
         self.assertEqual(first_event, result.json['firstEvent'])
         self.assertEqual(last_event, result.json['lastEvent'])
-        self.assertEqual(deployment_total_events, result.json['deploymentTotalEvents'])
+        self.assertEqual(deployment_total_events,
+                         result.json['deploymentTotalEvents'])
         if first_event != -1 and last_event != -1:
-            self.assertEqual(last_event - first_event + 1, len(result.json['events']))
+            self.assertEqual(last_event - first_event + 1,
+                             len(result.json['events']))
         else:
             self.assertEqual(0, len(result.json['events']))
         self.assert_bytes(result, path.getsize(self.events_file))

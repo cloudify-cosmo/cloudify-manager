@@ -29,17 +29,21 @@ class EventsManager(object):
     def __init__(self, events_file_extension='.log'):
         self._events_file_extension = events_file_extension
 
-    def get_deployment_events(self, deployment_id, first_event=0, events_count=500, only_bytes=False):
+    def get_deployment_events(self, deployment_id, first_event=0,
+                              events_count=500, only_bytes=False):
         if only_bytes:
-            deployment_events_bytes = self.get_deployment_events_bytes(deployment_id)
-            return DeploymentEvents(id=deployment_id,
-                                    first_event=-1,
-                                    last_event=-1,
-                                    events=[],
-                                    deployment_total_events=-1,
-                                    deployment_events_bytes=deployment_events_bytes)
+            deployment_events_bytes = self.get_deployment_events_bytes(
+                deployment_id)
+            return DeploymentEvents(
+                id=deployment_id,
+                first_event=-1,
+                last_event=-1,
+                events=[],
+                deployment_total_events=-1,
+                deployment_events_bytes=deployment_events_bytes)
         else:
-            events, deployment_events_bytes = self._read_deployment_events_from_file(deployment_id)
+            (events, deployment_events_bytes) = \
+                self._read_deployment_events_from_file(deployment_id)
             deployment_total_events = len(events)
             if first_event < len(events) and events_count > 0:
                 last_event = min(len(events), first_event + events_count)-1
@@ -49,12 +53,13 @@ class EventsManager(object):
                 last_event = -1
                 events = []
             events = map(lambda x: json.loads(x), events)
-            return DeploymentEvents(id=deployment_id,
-                                    first_event=first_event,
-                                    last_event=last_event,
-                                    events=events,
-                                    deployment_total_events=deployment_total_events,
-                                    deployment_events_bytes=deployment_events_bytes)
+            return DeploymentEvents(
+                id=deployment_id,
+                first_event=first_event,
+                last_event=last_event,
+                events=events,
+                deployment_total_events=deployment_total_events,
+                deployment_events_bytes=deployment_events_bytes)
 
     def get_deployment_events_bytes(self, deployment_id):
         events_file = self._get_deployment_events_file_name(deployment_id)
@@ -69,14 +74,16 @@ class EventsManager(object):
         try:
             with open(events_file, 'r') as f:
                 raw_events = f.read()
-                events = filter(lambda x: len(x) > 0, raw_events.split(os.linesep))
+                events = filter(lambda x: len(x) > 0,
+                                raw_events.split(os.linesep))
                 return events, len(raw_events)
         except IOError:
             return [], 0
 
     def _get_deployment_events_file_name(self, deployment_id):
         return path.join(config.instance().events_files_path,
-                         "{0}{1}".format(deployment_id, self._events_file_extension))
+                         "{0}{1}".format(deployment_id,
+                                         self._events_file_extension))
 
 
 _instance = EventsManager()

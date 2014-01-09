@@ -23,6 +23,7 @@ install:
    - "rvm use jruby-1.7.3"
    - "cd workflow-service; bundle install; cd .."
    - "sudo pip install virtualenv"
+   - "sudo pip install flake8"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
    - "pip install manager-rest/ --process-dependency-links"
@@ -32,6 +33,7 @@ script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
    - "cd workflow-service; rake; cd .."
+   - "flake8 manager-rest/"
    - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"
    - "nosetests workflows/tests --nologcapture --nocapture"
 
