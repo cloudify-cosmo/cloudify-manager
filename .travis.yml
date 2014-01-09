@@ -77,3 +77,4 @@ env:
 #
 #  How to find local maven repo: http:# stackoverflow.com/questions/5916157/how-to-get-the-maven-local-repo
 #  Do not use mvn -X switch as it exposes the environment variables and exposes the secret key.
+
