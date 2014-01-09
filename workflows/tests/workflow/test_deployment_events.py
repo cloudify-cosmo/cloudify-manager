@@ -29,4 +29,3 @@ class TestDeploymentEvents(TestCase):
         events = get_deployment_events(deployment_id)
         self.assertEqual(0, events.firstEvent)
         self.assertTrue(int(events.lastEvent) > 0)
-

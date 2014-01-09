@@ -32,7 +32,8 @@ def get_cosmo_properties():
 
 def set_reachable(node_id):
     """
-    Sends a riemann event which causes the state cache to set the node's reachable state
+    Sends a riemann event which causes the state cache to set the node's
+    reachable state
     to true.
     """
     set_node_reachable_state(node_id, True)
@@ -40,7 +41,8 @@ def set_reachable(node_id):
 
 def set_unreachable(node_id):
     """
-    Sends a riemann event which causes the state cache to set the node's reachable state
+    Sends a riemann event which causes the state cache to set the node's
+    reachable state
     to true.
     """
     set_node_reachable_state(node_id, False)
@@ -48,9 +50,11 @@ def set_unreachable(node_id):
 
 def set_node_reachable_state(node_id, reachable):
     """
-    Sends a riemann event which causes the state cache to set the node's property value
+    Sends a riemann event which causes the state cache to set the node's
+    property value
     """
-    logger.info("Setting node '{0}' reachable state to '{1}'".format(node_id, reachable))
+    logger.info("Setting node '{0}' reachable state to '{1}'"
+                .format(node_id, reachable))
     riemann_client = bernhard.Client(host="localhost")
     state = 'reachable' if reachable else 'unreachable'
     event = {
@@ -66,4 +70,3 @@ def set_node_reachable_state(node_id, reachable):
         })
     }
     riemann_client.send(event)
-

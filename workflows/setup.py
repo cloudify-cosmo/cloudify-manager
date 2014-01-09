@@ -22,20 +22,26 @@ import sys
 
 PLUGIN_INSTALLER_VERSION = '0.3'
 PLUGIN_INSTALLER_BRANCH = 'develop'
-PLUGIN_INSTALLER = "https://github.com/CloudifySource/cosmo-plugin-plugin-installer/tarball/{" \
-    "0}#egg=cosmo-plugin-plugin-installer-{1}".format(PLUGIN_INSTALLER_BRANCH, PLUGIN_INSTALLER_VERSION)
+PLUGIN_INSTALLER = "https://github.com/CloudifySource/" \
+                   "cosmo-plugin-plugin-installer/tarball/{" \
+                   "0}#egg=cosmo-plugin-plugin-installer-{1}"\
+                   .format(PLUGIN_INSTALLER_BRANCH, PLUGIN_INSTALLER_VERSION)
 
 RIEMANN_CONFIGURER_VERSION = '0.3'
 RIEMANN_CONFIGURER_BRANCH = 'develop'
-RIEMANN_CONFIGURER = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/tarball/{" \
-                     "0}#egg=cosmo-plugin-riemann-configurer-{1}".format(RIEMANN_CONFIGURER_BRANCH,
-                                                                         RIEMANN_CONFIGURER_VERSION)
+RIEMANN_CONFIGURER = "https://github.com/CloudifySource/" \
+                     "cosmo-plugin-riemann-configurer/tarball/{" \
+                     "0}#egg=cosmo-plugin-riemann-configurer-{1}"\
+                     .format(RIEMANN_CONFIGURER_BRANCH,
+                             RIEMANN_CONFIGURER_VERSION)
 
 COSMO_MANAGER_REST_CLIENT_VERSION = '0.3'
 COSMO_MANAGER_REST_CLIENT_BRANCH = 'develop'
-COSMO_MANAGER_REST_CLIENT = "https://github.com/CloudifySource/cosmo-manager-rest-client/tarball/{" \
-                            "0}#egg=cosmo-manager-rest-client-{1}".format(COSMO_MANAGER_REST_CLIENT_BRANCH,
-                                                                          COSMO_MANAGER_REST_CLIENT_VERSION)
+COSMO_MANAGER_REST_CLIENT = "https://github.com/CloudifySource/" \
+                            "cosmo-manager-rest-client/tarball/{" \
+                            "0}#egg=cosmo-manager-rest-client-{1}"\
+                            .format(COSMO_MANAGER_REST_CLIENT_BRANCH,
+                                    COSMO_MANAGER_REST_CLIENT_VERSION)
 
 os.chdir(sys.path[0])
 
@@ -56,5 +62,7 @@ setup(
         "cosmo-plugin-riemann-configurer",
         "cosmo-manager-rest-client"
     ],
-    dependency_links=[PLUGIN_INSTALLER, RIEMANN_CONFIGURER, COSMO_MANAGER_REST_CLIENT]
+    dependency_links=[PLUGIN_INSTALLER,
+                      RIEMANN_CONFIGURER,
+                      COSMO_MANAGER_REST_CLIENT]
 )

@@ -27,12 +27,14 @@ import cosmo
 import time
 import threading
 import re
-from cosmo_manager_rest_client.cosmo_manager_rest_client import CosmoManagerRestClient
+from cosmo_manager_rest_client.cosmo_manager_rest_client \
+    import CosmoManagerRestClient
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s',
+                              datefmt='%H:%M:%S')
 ch.setFormatter(formatter)
 root.addHandler(ch)
 
@@ -60,18 +62,21 @@ class ManagerRestProcess(object):
             '--events_files_path', self.events_path
         ]
 
-        logger.info('Starting manager-rest with: {0}'.format(manager_rest_command))
+        logger.info('Starting manager-rest with: {0}'
+                    .format(manager_rest_command))
 
         self.process = subprocess.Popen(manager_rest_command)
         started = False
         attempt = 1
         while not started and time.time() < endtime:
             time.sleep(1)
-            logger.info('Testing connection to manager rest service. (Attempt: {0}/{1})'.format(attempt, timeout))
+            logger.info('Testing connection to manager rest service. '
+                        '(Attempt: {0}/{1})'.format(attempt, timeout))
             attempt += 1
             started = self.started()
         if not started:
-            raise RuntimeError('Failed opening connection to manager rest service')
+            raise RuntimeError('Failed opening connection to manager rest '
+                               'service')
 
     def started(self):
         try:
@@ -91,7 +96,8 @@ class ManagerRestProcess(object):
         for i in range(3):
             manager_rest_location = path.dirname(manager_rest_location)
         # build way into manager_rest
-        return path.join(manager_rest_location, 'manager-rest/manager_rest/server.py')
+        return path.join(manager_rest_location,
+                         'manager-rest/manager_rest/server.py')
 
 
 class RuoteServiceProcess(object):
@@ -110,8 +116,9 @@ class RuoteServiceProcess(object):
 
     def _verify_ruby_environment(self):
         """ Verifies there's a valid JRuby environment.
-        RuntimeError is raised if not, otherwise returns a boolean value which indicates
-        whether RVM should be used for changing the current ruby environment before starting the service.
+        RuntimeError is raised if not, otherwise returns a boolean
+        value which indicates whether RVM should be used for changing the
+         current ruby environment before starting the service.
         """
         command = ['ruby', '--version']
         try:
@@ -128,7 +135,8 @@ class RuoteServiceProcess(object):
         except subprocess.CalledProcessError:
             pass
 
-        raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]".format(self.JRUBY_VERSION))
+        raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]"
+                           .format(self.JRUBY_VERSION))
 
     def _verify_service_responsiveness(self, timeout=120):
         import urllib2
@@ -145,7 +153,8 @@ class RuoteServiceProcess(object):
                 pass
             time.sleep(1)
         if not up:
-            raise RuntimeError("Ruote service is not responding @ {0} (response: {1})".format(service_url, res))
+            raise RuntimeError("Ruote service is not responding @ {0} "
+                               "(response: {1})".format(service_url, res))
 
     def _verify_service_started(self, timeout=30):
         deadline = time.time() + timeout
@@ -155,7 +164,8 @@ class RuoteServiceProcess(object):
                 break
             time.sleep(1)
         if self._pid is None:
-            raise RuntimeError("Failed to start ruote service within a {0} seconds timeout".format(timeout))
+            raise RuntimeError("Failed to start ruote service within a {0} "
+                               "seconds timeout".format(timeout))
 
     def _verify_service_ended(self, timeout=10):
         pid = self._pid
@@ -166,13 +176,15 @@ class RuoteServiceProcess(object):
                 break
             time.sleep(1)
         if pid is not None:
-            raise RuntimeError("Failed to stop ruote service within a {0} seconds timeout".format(timeout))
+            raise RuntimeError("Failed to stop ruote service within a {0} "
+                               "seconds timeout".format(timeout))
 
     def _get_serice_pid(self):
         from subprocess import CalledProcessError
         pattern = "\w*\s*(\d*).*"
         try:
-            output = subprocess.check_output("ps aux | grep 'rackup' | grep -v grep", shell=True)
+            output = subprocess.check_output(
+                "ps aux | grep 'rackup' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
@@ -181,14 +193,17 @@ class RuoteServiceProcess(object):
         return None
 
     def start(self):
-        startup_script_path = path.realpath(path.join(path.dirname(__file__), '..'))
+        startup_script_path = path.realpath(path.join(path.dirname(__file__),
+                                                      '..'))
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
         env = os.environ.copy()
         if self._events_path is not None:
             env['WF_SERVICE_LOGS_PATH'] = self._events_path
         logger.info("Starting Ruote service")
-        self._process = subprocess.Popen(command, cwd=startup_script_path, env=env)
+        self._process = subprocess.Popen(command,
+                                         cwd=startup_script_path,
+                                         env=env)
         self._verify_service_started(timeout=30)
         self._verify_service_responsiveness()
         logger.info("Ruote service started [pid=%s]", self._pid)
@@ -205,8 +220,9 @@ class RuoteServiceProcess(object):
 class CeleryWorkerProcess(object):
     _process = None
 
-    def __init__(self, tempdir, plugins_tempdir, cosmo_path, cosmo_jar_path, riemann_config_path,
-                 riemann_template_path, riemann_pid, manager_rest_port):
+    def __init__(self, tempdir, plugins_tempdir, cosmo_path, cosmo_jar_path,
+                 riemann_config_path, riemann_template_path, riemann_pid,
+                 manager_rest_port):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
         self._app_path = path.join(tempdir, "cosmo")
@@ -228,7 +244,8 @@ class CeleryWorkerProcess(object):
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
         self._create_python_module_path(self._cosmo_plugins)
-        shutil.copytree(installed_plugin_path, path.join(self._cosmo_plugins, plugin.__name__))
+        shutil.copytree(installed_plugin_path, path.join(self._cosmo_plugins,
+                                                         plugin.__name__))
 
     def _create_python_module_path(self, module_path):
         if not path.exists(module_path):
@@ -273,23 +290,26 @@ class CeleryWorkerProcess(object):
 
         timeout = 30
         deadline = time.time() + timeout
-        while not path.exists(self._celery_pid_file) and time.time() < deadline:
+        while not path.exists(self._celery_pid_file) and \
+                (time.time() < deadline):
             time.sleep(1)
 
         if not path.exists(self._celery_pid_file):
             if path.exists(celery_log_file):
                 with open(celery_log_file, "r") as f:
                     celery_log = f.read()
-                    logger.info("{0} content:\n{1}".format(celery_log_file, celery_log))
-            raise RuntimeError("Failed to start celery worker: {0} - process did not start after {1} seconds".format(
-                self._process.returncode,
-                timeout))
+                    logger.info("{0} content:\n{1}".format(celery_log_file,
+                                                           celery_log))
+            raise RuntimeError("Failed to start celery worker: {0} - process "
+                               "did not start after {1} seconds"
+                               .format(self._process.returncode, timeout))
 
         logger.info("Celery worker started [pid=%s]", self._process.pid)
 
     def close(self):
         if self._process:
-            logger.info("Shutting down celery worker [pid=%s]", self._process.pid)
+            logger.info("Shutting down celery worker [pid=%s]",
+                        self._process.pid)
             self._process.kill()
 
     def restart(self):
@@ -337,33 +357,40 @@ class RiemannProcess(object):
         logger.info("Starting riemann server...")
         self.pid = self._find_existing_riemann_process()
         if self.pid:
-            logger.info("Riemann server is already running [pid={0}]".format(self.pid))
+            logger.info("Riemann server is already running [pid={0}]"
+                        .format(self.pid))
             return
         command = [
             'riemann',
             self._config_path
         ]
-        self._process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self._process = subprocess.Popen(command,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
         self._event = threading.Event()
-        self._detector = threading.Thread(target=self._start_detector, kwargs={'process': self._process})
+        self._detector = threading.Thread(target=self._start_detector,
+                                          kwargs={'process': self._process})
         self._detector.daemon = True
         self._detector.start()
         timeout = 30
         if not self._event.wait(timeout):
-            raise RuntimeError("Unable to start riemann process:\n{0} (timed out after {1} seconds)".format('\n'.join(
-                self._riemann_logs), timeout))
+            raise RuntimeError("Unable to start riemann process:\n{0} "
+                               "(timed out after {1} seconds)"
+                               .format('\n'.join(self._riemann_logs), timeout))
         logger.info("Riemann server started [pid={0}]".format(self.pid))
 
     def close(self):
         if self.pid:
-            logger.info("Shutting down riemann server [pid={0}]".format(self.pid))
+            logger.info("Shutting down riemann server [pid={0}]"
+                        .format(self.pid))
             os.system("kill {0}".format(self.pid))
 
     def _find_existing_riemann_process(self):
         from subprocess import CalledProcessError
         pattern = "\w*\s*(\d*).*"
         try:
-            output = subprocess.check_output("ps aux | grep 'riemann.jar' | grep -v grep", shell=True)
+            output = subprocess.check_output(
+                "ps aux | grep 'riemann.jar' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
@@ -384,7 +411,8 @@ class TestEnvironmentScope(object):
             TestEnvironmentScope.MODULE,
             TestEnvironmentScope.PACKAGE
         ]:
-            raise AttributeError("Unknown test environment scope: " + str(scope))
+            raise AttributeError("Unknown test environment scope: " +
+                                 str(scope))
 
 
 class TestEnvironment(object):
@@ -393,7 +421,8 @@ class TestEnvironment(object):
         - Riemann server.
         - Celery worker.
         - Ruote service.
-        - Prepares celery app dir with plugins from cosmo module and official riemann configurer and plugin installer.
+        - Prepares celery app dir with plugins from cosmo module and official
+          riemann configurer and plugin installer.
     """
     _instance = None
     _celery_worker_process = None
@@ -408,21 +437,25 @@ class TestEnvironment(object):
         try:
             TestEnvironmentScope.validate(scope)
 
-            logger.info("Setting up test environment... [scope={0}]".format(scope))
+            logger.info("Setting up test environment... [scope={0}]"
+                        .format(scope))
             self._scope = scope
 
             # temp directory
             self._tempdir = tempfile.mkdtemp(suffix="test", prefix="cloudify")
             self._plugins_tempdir = path.join(self._tempdir, "cosmo-work")
-            logger.info("Test environment will be stored in: %s", self._tempdir)
+            logger.info("Test environment will be stored in: %s",
+                        self._tempdir)
             cosmo_jar_path = self._get_cosmo_jar_path()
             if not path.exists(self._plugins_tempdir):
                 os.makedirs(self._plugins_tempdir)
 
             # riemann
             riemann_config_path = path.join(self._tempdir, "riemann.config")
-            riemann_template_path = path.join(self._tempdir, "riemann.config.template")
-            self._generate_riemann_config(riemann_config_path, riemann_template_path)
+            riemann_template_path = path.join(self._tempdir,
+                                              "riemann.config.template")
+            self._generate_riemann_config(riemann_config_path,
+                                          riemann_template_path)
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
@@ -430,11 +463,12 @@ class TestEnvironment(object):
 
             # celery
             cosmo_path = path.dirname(path.realpath(cosmo.__file__))
-            self._celery_worker_process = CeleryWorkerProcess(self._tempdir, self._plugins_tempdir, cosmo_path,
-                                                              cosmo_jar_path,
-                                                              riemann_config_path, riemann_template_path,
-                                                              self._riemann_process.pid,
-                                                              manager_rest_port)
+            self._celery_worker_process = CeleryWorkerProcess(
+                self._tempdir, self._plugins_tempdir, cosmo_path,
+                cosmo_jar_path,
+                riemann_config_path, riemann_template_path,
+                self._riemann_process.pid,
+                manager_rest_port)
             self._celery_worker_process.start()
 
             # set events path (wf_service -> write, manager_rest -> read)
@@ -442,13 +476,15 @@ class TestEnvironment(object):
 
             # manager rest
             worker_service_base_uri = 'http://localhost:8101'
-            self._manager_rest_process = ManagerRestProcess(manager_rest_port,
-                                                            worker_service_base_uri,
-                                                            self.events_path)
+            self._manager_rest_process = ManagerRestProcess(
+                manager_rest_port,
+                worker_service_base_uri,
+                self.events_path)
             self._manager_rest_process.start()
 
             # ruote service
-            self._ruote_service = RuoteServiceProcess(events_path=self.events_path)
+            self._ruote_service = RuoteServiceProcess(
+                events_path=self.events_path)
             self._ruote_service.start()
 
         except BaseException as error:
@@ -457,7 +493,8 @@ class TestEnvironment(object):
             raise error
 
     def _destroy(self):
-        logger.info("Destroying test environment... [scope={0}]".format(self._scope))
+        logger.info("Destroying test environment... [scope={0}]"
+                    .format(self._scope))
         if self._riemann_process:
             self._riemann_process.close()
         if self._celery_worker_process:
@@ -483,10 +520,12 @@ class TestEnvironment(object):
     @staticmethod
     def destroy(scope=TestEnvironmentScope.PACKAGE):
         """
-        Destroys the test environment if the provided scope matches the scope the environment was created with.
+        Destroys the test environment if the provided scope matches the scope
+        the environment was created with.
         :param scope: The scope this method is invoked from.
         """
-        if TestEnvironment._instance and TestEnvironment._instance._scope == scope:
+        if TestEnvironment._instance and \
+           (TestEnvironment._instance._scope == scope):
             TestEnvironment._instance._destroy()
 
     @staticmethod
@@ -504,7 +543,8 @@ class TestEnvironment(object):
 
     @staticmethod
     def restart_celery_worker():
-        if TestEnvironment._instance and TestEnvironment._instance._celery_worker_process:
+        if TestEnvironment._instance and \
+           (TestEnvironment._instance._celery_worker_process):
             TestEnvironment._instance._celery_worker_process.restart()
 
     @staticmethod
@@ -514,24 +554,30 @@ class TestEnvironment(object):
         """
         pattern = "\w*\s*(\d*).*"
         try:
-            output = subprocess.check_output("ps aux | grep 'cosmo.jar' | grep -v grep", shell=True)
+            output = subprocess.check_output(
+                "ps aux | grep 'cosmo.jar' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 pid = match.group(1)
-                logger.info("'cosmo.jar' process is still running [pid={0}] - terminating...".format(pid))
+                logger.info("'cosmo.jar' process is still running "
+                            "[pid={0}] - terminating...".format(pid))
                 os.system("kill {0}".format(pid))
         except BaseException:
             pass
 
     @classmethod
     def _get_cosmo_jar_path(cls):
-        cosmo_jar_path = path.realpath(path.join(path.dirname(__file__), '../../orchestrator/target/cosmo.jar'))
+        cosmo_jar_path = path.realpath(
+            path.join(path.dirname(__file__),
+                      '../../orchestrator/target/cosmo.jar'))
         if not path.exists(cosmo_jar_path):
-            raise RuntimeError("cosmo.jar not found in: {0}".format(cosmo_jar_path))
+            raise RuntimeError("cosmo.jar not found in: {0}"
+                               .format(cosmo_jar_path))
         return cosmo_jar_path
 
     @classmethod
-    def _generate_riemann_config(cls, riemann_config_path, riemann_template_path):
+    def _generate_riemann_config(cls, riemann_config_path,
+                                 riemann_template_path):
         source_path = get_resource('riemann/riemann.config')
         shutil.copy(source_path, riemann_config_path)
         source_path = get_resource('riemann/riemann.config.template')
@@ -567,7 +613,8 @@ def get_resource(resource):
     resources_path = path.dirname(resources.__file__)
     resource_path = path.join(resources_path, resource)
     if not path.exists(resource_path):
-        raise RuntimeError("Resource '{0}' not found in: {1}".format(resource, resource_path))
+        raise RuntimeError("Resource '{0}' not found in: {1}"
+                           .format(resource, resource_path))
     return resource_path
 
 
@@ -584,7 +631,8 @@ def deploy_application(dsl_path, timeout=240):
 
 def undeploy_application(deployment_id, timeout=240):
     """
-    A blocking method which undeploys an application from the provided dsl path.
+    A blocking method which undeploys an application from the provided dsl
+    path.
     """
     client = CosmoManagerRestClient('localhost')
     client.execute_deployment(deployment_id, 'uninstall', timeout=timeout)
@@ -597,12 +645,14 @@ def validate_dsl(blueprint_id, timeout=240):
     client = CosmoManagerRestClient('localhost')
     response = client.validate_blueprint(blueprint_id)
     if response.status != 'valid':
-        raise RuntimeError('Blueprint {0} is not valid (status: {1})'.format(blueprint_id, response.status))
+        raise RuntimeError('Blueprint {0} is not valid (status: {1})'
+                           .format(blueprint_id, response.status))
 
 
 def get_deployment_events(deployment_id, first_event=0, events_count=500):
     client = CosmoManagerRestClient('localhost')
-    return client.get_deployment_events(deployment_id, from_param=first_event, count_param=events_count)
+    return client.get_deployment_events(deployment_id, from_param=first_event,
+                                        count_param=events_count)
 
 
 def get_deployment_nodes(deployment_id=None):
@@ -621,7 +671,8 @@ def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
 
 def is_node_reachable(node_id):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id, get_reachable_state=True, get_runtime_state=False)
+    state = client.get_node_state(node_id, get_reachable_state=True,
+                                  get_runtime_state=False)
     return state['reachable'] is True
 
 
