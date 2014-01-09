@@ -89,7 +89,8 @@ class Deployment(object):
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
-        self.workflows = {key: Workflow(workflow_id=key, created_at=now) for key in kwargs['typed_plan']['workflows']}
+        self.workflows = {key: Workflow(workflow_id=key, created_at=now)
+                          for key in kwargs['typed_plan']['workflows']}
         self.executions = {}
 
     def add_execution(self, execution):

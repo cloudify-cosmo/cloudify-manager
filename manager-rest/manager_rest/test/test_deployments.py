@@ -128,7 +128,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(execution, get_execution[0])
 
     def test_get_workflows_of_deployment(self):
-        blueprint_id, deployment_id, blueprint_response, deployment_response = self._post_test_deployment()
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._post_test_deployment()
 
         resource_path = '/deployments/{0}/workflows'.format(deployment_id)
         workflows = self.get(resource_path).json
