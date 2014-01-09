@@ -663,8 +663,6 @@ class DeploymentsIdExecutions(Resource):
                                                          workflow_id), 201
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
-<<<<<<< HEAD
-=======
 
 
 class DeploymentsIdWorkflows(Resource):
@@ -687,4 +685,3 @@ class DeploymentsIdWorkflows(Resource):
             'blueprint_id': deployment.blueprint_id,
             'deployment_id': deployment.id
         }
->>>>>>> develop
