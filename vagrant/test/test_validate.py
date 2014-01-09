@@ -1,4 +1,4 @@
-#/*******************************************************************************
+#/****************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# *******************************************************************************/
+# *****************************************************************************
 
 __author__ = 'elip'
 
 import unittest
-from test import update_cosmo_jar
 from test import get_remote_runner, REMOTE_WORKING_DIR
 
 
@@ -32,13 +31,15 @@ class ValidateDSLTestCase(unittest.TestCase):
 
     def test_valid(self):
 
-        self.RUNNER.run("{0}/cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml --validate"
+        self.RUNNER.run("{0}/cosmo.sh --dsl=/vagrant/test/python_webserver/"
+                        "python-webserver.yaml --validate"
                         .format(REMOTE_WORKING_DIR))
 
     def test_invalid(self):
 
         try:
-            self.RUNNER.run("{0}/cosmo.sh --dsl=/vagrant/test/corrupted_dsl/corrupted-dsl.yaml --validate"
+            self.RUNNER.run("{0}/cosmo.sh --dsl=/vagrant/test/corrupted_dsl/"
+                            "corrupted-dsl.yaml --validate"
                             .format(REMOTE_WORKING_DIR))
             self.fail("Expected validation exception but none occurred")
         except BaseException:
