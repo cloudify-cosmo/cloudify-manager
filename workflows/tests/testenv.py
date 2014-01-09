@@ -266,6 +266,7 @@ class CeleryWorkerProcess(object):
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
+        environment['CLOUDIFY_APP_DIR'] = self._app_path
 
         logger.info("Starting celery worker...")
         self._process = subprocess.Popen(celery_command, env=environment)
