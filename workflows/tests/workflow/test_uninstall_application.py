@@ -33,7 +33,8 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         logger.info('undeploy completed')
 
-        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
+        from cosmo.testmockoperations.tasks import get_state as \
+            testmock_get_state
         from cosmo.testmockoperations.tasks import is_unreachable_called
         states = testmock_get_state.apply_async().get(timeout=10)
         node_id = states[0]['id']
@@ -63,7 +64,8 @@ class TestUninstallApplication(TestCase):
         print('deploy completed')
         print('making node unreachable from test')
         #make node unreachable
-        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
+        from cosmo.testmockoperations.tasks import get_state as \
+            testmock_get_state
         from cosmo.events import set_unreachable
         states = testmock_get_state.apply_async().get(timeout=10)
         node_id = states[0]['id']
@@ -79,7 +81,8 @@ class TestUninstallApplication(TestCase):
         self.assertFalse(result.get(timeout=10))
 
     def test_uninstall_with_dependency_order(self):
-        dsl_path = resource("dsl/uninstall_dependencies-order-with-three-nodes.yaml")
+        dsl_path = resource(
+            "dsl/uninstall_dependencies-order-with-three-nodes.yaml")
         print('starting deploy process')
         deployment_id = deploy(dsl_path).id
         print('deploy completed')
@@ -87,28 +90,35 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
         #Checking that uninstall wasn't called on the contained node
-        from cosmo.testmockoperations.tasks import get_unreachable_call_order as testmock_get_unreachable_call_order
-        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
+        from cosmo.testmockoperations.tasks import get_unreachable_call_order \
+            as testmock_get_unreachable_call_order
+        from cosmo.testmockoperations.tasks import get_state \
+            as testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         node1_id = states[0]['id']
         node2_id = states[1]['id']
         node3_id = states[2]['id']
 
-        unreachable_call_order = testmock_get_unreachable_call_order.apply_async().get(timeout=10)
+        unreachable_call_order = testmock_get_unreachable_call_order\
+            .apply_async().get(timeout=10)
         self.assertEquals(3, len(unreachable_call_order))
         self.assertEquals(node3_id, unreachable_call_order[0]['id'])
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
 
-        from cosmo.connection_configurer_mock.tasks import get_state as config_get_state
+        from cosmo.connection_configurer_mock.tasks import get_state \
+            as config_get_state
         configurer_state = config_get_state.apply_async().get(timeout=10)
         self.assertEquals(2, len(configurer_state))
-        self.assertTrue(configurer_state[0]['source_id'].startswith('mock_app.contained_in_node2'))
-        self.assertTrue(configurer_state[0]['target_id'].startswith('mock_app.contained_in_node1'))
-        self.assertTrue(configurer_state[0]['run_on_node_id'].startswith('mock_app.contained_in_node2'))
-        self.assertTrue(configurer_state[1]['source_id'].startswith('mock_app.contained_in_node1'))
-        self.assertTrue(configurer_state[1]['target_id'].startswith('mock_app.containing_node'))
-        self.assertTrue(configurer_state[1]['run_on_node_id'].startswith('mock_app.containing_node'))
-
-
-
+        self.assertTrue(configurer_state[0]['source_id']
+            .startswith('mock_app.contained_in_node2'))
+        self.assertTrue(configurer_state[0]['target_id']
+            .startswith('mock_app.contained_in_node1'))
+        self.assertTrue(configurer_state[0]['run_on_node_id']
+            .startswith('mock_app.contained_in_node2'))
+        self.assertTrue(configurer_state[1]['source_id']
+            .startswith('mock_app.contained_in_node1'))
+        self.assertTrue(configurer_state[1]['target_id']
+            .startswith('mock_app.containing_node'))
+        self.assertTrue(configurer_state[1]['run_on_node_id']
+            .startswith('mock_app.containing_node'))

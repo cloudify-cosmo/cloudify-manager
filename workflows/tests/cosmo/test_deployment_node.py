@@ -60,4 +60,3 @@ class TestDeploymentNode(unittest.TestCase):
         self.assertEqual(2, len(updated['key']))
         self.assertEqual('v', updated['key'][0])
         self.assertEqual('value', updated['key'][1])
-

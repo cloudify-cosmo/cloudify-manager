@@ -64,4 +64,3 @@ class CloudMockTest(unittest.TestCase):
         t.terminate(__cloudify_id=machine_id)
         machines = t.get_machines()
         self.assertEqual(0, len(machines))
-
