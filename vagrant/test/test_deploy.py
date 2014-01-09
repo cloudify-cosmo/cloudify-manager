@@ -1,4 +1,4 @@
-#/*******************************************************************************
+#/****************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# *******************************************************************************/
+# *****************************************************************************
 
 import unittest
 
@@ -36,7 +36,8 @@ class DeployDSLTestCase(unittest.TestCase):
 
         self.RUNNER.run("{0}/cosmo.sh "
                         "--timeout={1} "
-                        "--dsl=/vagrant/test/python_webserver/python-webserver.yaml "
+                        "--dsl=/vagrant/test/python_webserver/"
+                        "python-webserver.yaml "
                         "--non-interactive"
                         .format(REMOTE_WORKING_DIR, timeout))
 
@@ -48,7 +49,8 @@ class DeployDSLTestCase(unittest.TestCase):
 
         # make sure undeploy was completed
         try:
-            self.RUNNER.get("/tmp/vagrant-vms/simple_web_server.webserver_host")
+            self.RUNNER.get("/tmp/vagrant-vms/"
+                            "simple_web_server.webserver_host")
             self.fail("Expected file error")
         except BaseException:
             pass

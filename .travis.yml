@@ -33,6 +33,7 @@ script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
    - "mvn verify -f travis-pom.xml"
    - "cd workflow-service; rake; cd .."
+   - "flake8 vagrant/"
    - "flake8 manager-rest/"
    - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"
    - "nosetests workflows/tests --nologcapture --nocapture"

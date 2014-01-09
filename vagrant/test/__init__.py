@@ -1,4 +1,4 @@
-#/*******************************************************************************
+#/****************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# *******************************************************************************/
+# *****************************************************************************
 
 import logging
 import os
@@ -22,7 +22,8 @@ from cosmo_fabric.runner import FabricRetryingRunner
 
 __author__ = 'elip'
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 REMOTE_WORKING_DIR = "/home/vagrant/cosmo-work"
 
@@ -38,7 +39,8 @@ def get_remote_runner():
     host_string = '%(user)s@%(host)s:%(port)s' % host_config
     key_filename = host_config['key']
 
-    return FabricRetryingRunner(key_filename=key_filename, host_string=host_string)
+    return FabricRetryingRunner(key_filename=key_filename,
+                                host_string=host_string)
 
 
 def get_local_runner():
@@ -68,6 +70,5 @@ def update_cosmo_jar():
     # replace orchestrator jar on the management host
     get_remote_runner().run("cd {0} "
                             "&& rm cosmo.jar "
-                            "&& cp -r /vagrant/cosmo.jar .".format(REMOTE_WORKING_DIR))
-
-
+                            "&& cp -r /vagrant/cosmo.jar ."
+                            .format(REMOTE_WORKING_DIR))
