@@ -22,6 +22,7 @@ from cosmo.runtime import inject_node_state
 state = []
 touched_time = None
 unreachable_call_order = []
+mock_operation_invocation = []
 
 
 @celery.task
@@ -71,3 +72,16 @@ def is_unreachable_called(__cloudify__id, **kwargs):
 @celery.task
 def get_unreachable_call_order():
     return unreachable_call_order
+
+@celery.task
+def mock_operation(__cloudify__id, mockprop, **kwargs):
+    global mock_operation_invocation
+    mock_operation_invocation.append({
+        'id': __cloudify__id,
+        'mockprop': mockprop,
+        'kwargs': kwargs
+    })
+
+@celery.task
+def get_mock_operation_invocations():
+    return mock_operation_invocation
