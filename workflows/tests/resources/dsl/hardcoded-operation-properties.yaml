@@ -27,6 +27,7 @@ types:
                     define mock_create
                         execute_operation operation: 'make_reachable'
             start:
+                radial: |
                     define mock_start
                         execute_operation operation: 'mock_operation'
             delete:

@@ -70,9 +70,9 @@ def get_touched_time():
 
 
 @celery.task
-def is_unreachable_called(__cloudify__id, **kwargs):
+def is_unreachable_called(__cloudify_id, **kwargs):
     return next((x for x in
-                 unreachable_call_order if x['id'] == __cloudify__id), None)
+                 unreachable_call_order if x['id'] == __cloudify_id), None)
 
 
 @celery.task
@@ -81,10 +81,10 @@ def get_unreachable_call_order():
 
 
 @celery.task
-def mock_operation(__cloudify__id, mockprop, **kwargs):
+def mock_operation(__cloudify_id, mockprop, **kwargs):
     global mock_operation_invocation
     mock_operation_invocation.append({
-        'id': __cloudify__id,
+        'id': __cloudify_id,
         'mockprop': mockprop,
         'kwargs': kwargs
     })

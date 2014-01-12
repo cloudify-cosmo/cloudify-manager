@@ -53,7 +53,7 @@ define execute_operation
         }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
 
         execute_task target: '${target}', exec: '${operation}', payload: {
-            properties: '$node.properties',
+            properties: '$operation_properties',
             params: '$v:params',
             relationship_properties: '$relationship_other_node.properties'
         }, argument_names: '${argument_names}', to_f: '${v:to_f}'
