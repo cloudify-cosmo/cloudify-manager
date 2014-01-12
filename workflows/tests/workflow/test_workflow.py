@@ -62,21 +62,6 @@ class TestRuoteWorkflows(TestCase):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
 
-    def test_inject_properties_to_operation(self):
-        dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
-        deploy(dsl_path)
-        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
-        states = testmock_get_state.apply_async().get(timeout=10)
-        from cosmo.testmockoperations.tasks import \
-            get_mock_operation_invocations as testmock_get_mock_operation_invocations
-        invocations = testmock_get_mock_operation_invocations.apply_async().get(timeout=10)
-        self.assertEqual(1, len(invocations))
-        invocation = invocations[0]
-        self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual(1, len(invocation['kwargs']))
-        self.assertEqual('mockpropvalue2', invocation['kwargs']['mockprop2'])
-        self.assertEqual(states[0]['id'], invocation['id'])
-
     # TODO runtime-model: can be enabled if storage will be cleared after each test (currently impossible since storage is in-memory)
     # def test_set_note_state_in_plugin(self):
     #     dsl_path = resource("dsl/basic.yaml")

@@ -31,18 +31,20 @@ class WorkflowServiceError(Exception):
 class WorkflowClient(object):
 
     def __init__(self):
-        self.workflow_service_base_uri = config.instance().workflow_service_base_uri
+        self.workflow_service_base_uri = \
+            config.instance().workflow_service_base_uri
 
     def execute_workflow(self, workflow, plan, deployment_id=None):
         tags = {}
         if deployment_id:
-            tags['deployment_id'] = deployment_id# for workflow events
-        response = requests.post('{0}/workflows'.format(self.workflow_service_base_uri),
-                                 json.dumps({
-                                     'radial': workflow,
-                                     'fields': {'plan': plan},
-                                     'tags': tags
-                                 }))
+            tags['deployment_id'] = deployment_id  # for workflow events
+        response = requests.post(
+            '{0}/workflows'.format(self.workflow_service_base_uri),
+            json.dumps({
+                'radial': workflow,
+                'fields': {'plan': plan},
+                'tags': tags
+            }))
         if response.status_code != 201:
             raise WorkflowServiceError(response.status_code, response.json())
         return response.json()
@@ -51,10 +53,12 @@ class WorkflowClient(object):
         prepare_plan_participant_workflow = '''define validate
     prepare_plan plan: $plan
         '''
-        execution_response = self.execute_workflow(prepare_plan_participant_workflow, plan)
+        execution_response = self.execute_workflow(
+            prepare_plan_participant_workflow, plan)
         response = {'state': 'pending'}
         # TODO timeout
-        while response['state'] != 'terminated' and response['state'] != 'failed':
+        while (response['state'] != 'terminated') and \
+              (response['state'] != 'failed'):
             response = self.get_workflow_status(execution_response['id'])
             time.sleep(1)
         # This is good
@@ -65,7 +69,8 @@ class WorkflowClient(object):
             return {'status': 'invalid'}
 
     def get_workflow_status(self, workflow_id):
-        response = requests.get('{0}/workflows/{1}'.format(self.workflow_service_base_uri, workflow_id))
+        response = requests.get('{0}/workflows/{1}'.format(
+            self.workflow_service_base_uri, workflow_id))
         if response.status_code != 200:
             raise WorkflowServiceError(response.status_code, response.json())
         return response.json()

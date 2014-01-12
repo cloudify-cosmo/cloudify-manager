@@ -68,22 +68,28 @@ def verify_json_content_type():
 
 def verify_blueprint_exists(blueprint_id):
     if blueprints_manager().get_blueprint(blueprint_id) is None:
-        abort(404, message='404: blueprint {0} not found'.format(blueprint_id))
+        abort(404,
+              message='404: blueprint {0} not found'.format(blueprint_id))
 
 
 def verify_deployment_exists(deployment_id):
     if blueprints_manager().get_deployment(deployment_id) is None:
-        abort(404, message='404: deployment {0} not found'.format(deployment_id))
+        abort(404,
+              message='404: deployment {0} not found'.format(deployment_id))
 
 
 def verify_execution_exists(execution_id):
     if blueprints_manager().get_execution(execution_id) is None:
-        abort(404, message='404: execution_id {0} not found'.format(execution_id))
+        abort(404,
+              message='404: execution_id {0} not found'.format(execution_id))
 
 
 def abort_workflow_service_operation(workflow_service_error):
-    abort(500, message='500: Workflow service failed with status code {0}, full response {1}'.format(
-          workflow_service_error.status_code, workflow_service_error.json))
+    abort(500,
+          message='500: Workflow service failed with status code {0},'
+                  ' full response {1}'
+                  .format(workflow_service_error.status_code,
+                          workflow_service_error.json))
 
 
 def setup_resources(api):
@@ -91,17 +97,28 @@ def setup_resources(api):
                        apiVersion='0.1',
                        basePath='http://localhost:8100')
 
-    api.add_resource(Blueprints, '/blueprints')
-    api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsIdValidate, '/blueprints/<string:blueprint_id>/validate')
-    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
-    api.add_resource(Deployments, '/deployments')
-    api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
-    api.add_resource(DeploymentsIdExecutions, '/deployments/<string:deployment_id>/executions')
-    api.add_resource(DeploymentsIdWorkflows, '/deployments/<string:deployment_id>/workflows')
-    api.add_resource(DeploymentsIdEvents, '/deployments/<string:deployment_id>/events')
-    api.add_resource(Nodes, '/nodes')
-    api.add_resource(NodesId, '/nodes/<string:node_id>')
+    api.add_resource(Blueprints,
+                     '/blueprints')
+    api.add_resource(BlueprintsId,
+                     '/blueprints/<string:blueprint_id>')
+    api.add_resource(BlueprintsIdValidate,
+                     '/blueprints/<string:blueprint_id>/validate')
+    api.add_resource(ExecutionsId,
+                     '/executions/<string:execution_id>')
+    api.add_resource(Deployments,
+                     '/deployments')
+    api.add_resource(DeploymentsId,
+                     '/deployments/<string:deployment_id>')
+    api.add_resource(DeploymentsIdExecutions,
+                     '/deployments/<string:deployment_id>/executions')
+    api.add_resource(DeploymentsIdWorkflows,
+                     '/deployments/<string:deployment_id>/workflows')
+    api.add_resource(DeploymentsIdEvents,
+                     '/deployments/<string:deployment_id>/events')
+    api.add_resource(Nodes,
+                     '/nodes')
+    api.add_resource(NodesId,
+                     '/nodes/<string:node_id>')
 
 
 class Blueprints(Resource):
@@ -115,29 +132,32 @@ class Blueprints(Resource):
         """
         Returns a list of submitted blueprints.
         """
-        return [marshal(blueprint, responses.BlueprintState.resource_fields) for
+        return [marshal(blueprint,
+                        responses.BlueprintState.resource_fields) for
                 blueprint in blueprints_manager().blueprints_list()]
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="upload",
-        notes="Submitted blueprint should be a tar gzipped directory containing the blueprint.",
-        parameters=[{
-                        'name': 'application_file_name',
-                        'description': 'File name of yaml containing the "main" blueprint.',
-                        'required': False,
-                        'allowMultiple': False,
-                        'dataType': 'string',
-                        'paramType': 'query',
-                        'defaultValue': 'blueprint.yaml'
-                    }, {
+        notes="Submitted blueprint should be a tar "
+              "gzipped directory containing the blueprint.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {
                         'name': 'body',
-                        'description': 'Binary form of the tar gzipped blueprint directory',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
                         'required': True,
                         'allowMultiple': False,
                         'dataType': 'binary',
                         'paramType': 'body',
-                        }],
+                    }],
         consumes=[
             "application/octet-stream"
         ]
@@ -155,13 +175,16 @@ class Blueprints(Resource):
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
-            application_dir = self._extract_file_to_file_server(file_server_root, archive_target_path, blueprint_id)
+            application_dir = self._extract_file_to_file_server(
+                file_server_root, archive_target_path, blueprint_id)
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
         self._process_plugins(file_server_root, application_dir)
 
-        return self._prepare_and_submit_blueprint(file_server_root, application_dir, blueprint_id)
+        return self._prepare_and_submit_blueprint(file_server_root,
+                                                  application_dir,
+                                                  blueprint_id)
 
     def _process_plugins(self, file_server_root, application_dir):
         blueprint_directory = path.join(file_server_root, application_dir)
@@ -198,57 +221,72 @@ class Blueprints(Resource):
             request.input_stream.close()
         else:
             if not request.data:
-                abort(400, message='Missing application archive in request body')
+                abort(400,
+                      message='Missing application archive in request body')
             uploaded_file_data = request.data
             with open(archive_file_name, 'w') as f:
                 f.write(uploaded_file_data)
 
-    def _extract_file_to_file_server(self, file_server_root, archive_target_path, blueprint_id):
+    def _extract_file_to_file_server(self, file_server_root,
+                                     archive_target_path, blueprint_id):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
         tempdir = tempfile.mkdtemp('-blueprint-submit')
         try:
             tar.extractall(tempdir)
             archive_file_list = os.listdir(tempdir)
-            if len(archive_file_list) != 1 or not path.isdir(path.join(tempdir, archive_file_list[0])):
-                abort(400, message='400: archive must contain exactly 1 directory')
+            if len(archive_file_list) != 1 or not path.isdir(
+                    path.join(tempdir, archive_file_list[0])):
+                abort(400,
+                      message='400: archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
-            generated_application_dir_base_name = '{0}-{1}'.format(application_dir_base_name, blueprint_id)
-            temp_application_dir = path.join(tempdir, application_dir_base_name)
-            target_temp_application_dir = path.join(tempdir, generated_application_dir_base_name)
+            generated_application_dir_base_name = '{0}-{1}'.format(
+                application_dir_base_name, blueprint_id)
+            temp_application_dir = path.join(tempdir,
+                                             application_dir_base_name)
+            target_temp_application_dir = path.join(
+                tempdir, generated_application_dir_base_name)
             shutil.move(temp_application_dir, target_temp_application_dir)
             shutil.move(target_temp_application_dir, file_server_root)
             return generated_application_dir_base_name
         finally:
             shutil.rmtree(tempdir)
 
-    def _prepare_and_submit_blueprint(self, file_server_root, application_dir, blueprint_id):
-        application_file = self._extract_application_file(file_server_root, application_dir)
+    def _prepare_and_submit_blueprint(self, file_server_root,
+                                      application_dir, blueprint_id):
+        application_file = self._extract_application_file(file_server_root,
+                                                          application_dir)
 
         file_server_base_url = 'http://localhost:{0}'.format(FILE_SERVER_PORT)
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
-        alias_mapping = '{0}/{1}'.format(file_server_base_url, 'cloudify/alias-mappings.yaml')
+        alias_mapping = '{0}/{1}'.format(file_server_base_url,
+                                         'cloudify/alias-mappings.yaml')
         resources_base = file_server_base_url + '/'
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            return blueprints_manager().publish_blueprint(blueprint_id, dsl_path, alias_mapping, resources_base), 201
+            return blueprints_manager().publish_blueprint(
+                blueprint_id, dsl_path, alias_mapping, resources_base), 201
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:
-            application_file = urllib.unquote(request.args['application_file_name']).decode('utf-8')
-            application_file = '{0}/{1}'.format(application_dir, application_file)
+            application_file = urllib.unquote(
+                request.args['application_file_name']).decode('utf-8')
+            application_file = '{0}/{1}'.format(application_dir,
+                                                application_file)
             return application_file
         else:
             full_application_dir = path.join(file_server_root, application_dir)
-            full_application_file = path.join(full_application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
+            full_application_file = path.join(
+                full_application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
             if path.isfile(full_application_file):
-                application_file = path.join(application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
+                application_file = path.join(
+                    application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
                 return application_file
-        abort(400, message='Missing application_file_name query parameter or application directory is missing '
-                           'blueprint.yaml')
+        abort(400, message='Missing application_file_name query parameter or '
+                           'application directory is missing blueprint.yaml')
 
 
 class BlueprintsId(Resource):
@@ -307,13 +345,16 @@ class DeploymentsIdEvents(Resource):
     def __init__(self):
         from flask.ext.restful import reqparse
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('from', type=int, default=0, location='args')
-        self._args_parser.add_argument('count', type=int, default=500, location='args')
+        self._args_parser.add_argument('from', type=int,
+                                       default=0, location='args')
+        self._args_parser.add_argument('count', type=int,
+                                       default=500, location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentEvents,
         nickname="readEvents",
-        notes="Returns all available events for the given deployment matching the provided parameters.",
+        notes="Returns all available events for the given "
+              "deployment matching the provided parameters.",
         parameters=[{
             'name': 'from',
             'description': 'Index of the first request event.',
@@ -348,11 +389,14 @@ class DeploymentsIdEvents(Resource):
             abort(400, message='count argument cannot be negative')
 
         try:
-            result = events_manager().get_deployment_events(deployment_id,
-                                                            first_event=first_event,
-                                                            events_count=events_count,
-                                                            only_bytes=request.method == 'HEAD')
-            return result, 200, {'Deployment-Events-Bytes': result.deployment_events_bytes}
+            result = events_manager().get_deployment_events(
+                deployment_id,
+                first_event=first_event,
+                events_count=events_count,
+                only_bytes=request.method == 'HEAD')
+            return result, 200, {
+                'Deployment-Events-Bytes': result.deployment_events_bytes
+            }
         except BaseException as e:
             abort(500, message=e.message)
 
@@ -375,14 +419,12 @@ class Deployments(Resource):
         responseClass=responses.Deployment,
         nickname="createDeployment",
         notes="Created a new deployment of the given blueprint.",
-        parameters=[{
-                        'name': 'body',
-                        'description': 'Deployment blue print',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': requests_schema.DeploymentRequest.__name__,
-                        'paramType': 'body'
-                    }],
+        parameters=[{'name': 'body',
+                     'description': 'Deployment blue print',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.DeploymentRequest.__name__,
+                     'paramType': 'body'}],
         consumes=[
             "application/json"
         ]
@@ -422,7 +464,8 @@ class Nodes(Resource):
     @swagger.operation(
         responseClass=responses.Nodes,
         nickname="listNodes",
-        notes="Returns a list of deployment nodes or all nodes if deployment id is not specified."
+        notes="Returns a list of deployment nodes or "
+              "all nodes if deployment id is not specified."
     )
     @marshal_with(responses.Nodes.resource_fields)
     def get(self):
@@ -437,13 +480,16 @@ class NodesId(Resource):
     def __init__(self):
         from flask.ext.restful import reqparse
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=bool, default=False, location='args')
-        self._args_parser.add_argument('runtime', type=bool, default=True, location='args')
+        self._args_parser.add_argument('reachable', type=bool,
+                                       default=False, location='args')
+        self._args_parser.add_argument('runtime', type=bool,
+                                       default=True, location='args')
 
     @swagger.operation(
         responseClass=responses.Node,
         nickname="getNodeState",
-        notes="Returns node runtime/reachable state according to the provided query parameters.",
+        notes="Returns node runtime/reachable state "
+              "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -451,14 +497,16 @@ class NodesId(Resource):
                      'dataType': 'string',
                      'paramType': 'path'},
                     {'name': 'reachable',
-                     'description': 'Specifies whether to return reachable state.',
+                     'description': 'Specifies whether to return reachable '
+                                    'state.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
                      'defaultValue': False,
                      'paramType': 'query'},
                     {'name': 'runtime',
-                     'description': 'Specifies whether to return runtime information.',
+                     'description': 'Specifies whether to return runtime '
+                                    'information.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -478,8 +526,10 @@ class NodesId(Resource):
         if get_reachable_state:
             state = riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
-            # this is a temporary workaround for having a reachable host ip injected to its runtime states.
-            # it will be later removed once all plugins publish such properties on their own.
+            # this is a temporary workaround for having a reachable
+            # host ip injected to its runtime states.
+            # it will be later removed once all plugins publish
+            # such properties on their own.
             if 'host' in state:
                 node_state = storage_manager().get_node(node_id)
                 if 'ip' not in node_state:
@@ -489,7 +539,8 @@ class NodesId(Resource):
         runtime_state = None
         if get_runtime_state:
             runtime_state = storage_manager().get_node(node_id)
-        return responses.Node(id=node_id, reachable=reachable_state, runtime_info=runtime_state)
+        return responses.Node(id=node_id, reachable=reachable_state,
+                              runtime_info=runtime_state)
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -510,17 +561,22 @@ class NodesId(Resource):
         """
         verify_json_content_type()
         if request.json.__class__ is not dict:
-            abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
-                request.json.__class__.__name__))
-        return responses.Node(id=node_id, runtime_info=storage_manager().put_node(node_id, request.json))
+            abort(400, message='request body is expected to be'
+                               ' of key/value map type but is {0}'
+                               .format(request.json.__class__.__name__))
+        return responses.Node(
+            id=node_id,
+            runtime_info=storage_manager().put_node(node_id, request.json))
 
     @swagger.operation(
         responseClass=responses.Node,
         nickname="putNodeState",
-        notes="Update node runtime state with the provided dictionary of keys and values. " +
-              "Each value in the dictionary should be a list where the first item is the new value and the second " +
-              "is the old value (for having some kind of optimistic locking). " +
-              "New keys should have a single element list with the new value only.",
+        notes="Update node runtime state with the provided dictionary "
+              "of keys and values. Each value in the dictionary should be a "
+              "list where the first item is the new value and the second "
+              "is the old value (for having some kind of optimistic locking). "
+              "New keys should have a single element list with the new value "
+              "only.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -542,16 +598,21 @@ class NodesId(Resource):
         """
         verify_json_content_type()
         if request.json.__class__ is not dict:
-            abort(400, message='request body is expected to be of key/value map type but is {0}'.format(
-                request.json.__class__.__name__))
+            abort(400, message='request body is expected to be of key/value'
+                               ' map type but is {0}'
+                               .format(request.json.__class__.__name__))
         for k, v in request.json.iteritems():
             if v.__class__ is not list:
-                abort(400, message='key: {0} in request body is expected to be a list but is: {1}'.format(
-                    k, v.__class__.__name__))
+                abort(400, message='key: {0} in request body is expected '
+                                   'to be a list but is: {1}'
+                                   .format(k, v.__class__.__name__))
             if len(v) != 1 and len(v) != 2:
-                abort(400, message='value for key: {0} is expected to be a list with length 1 or 2 but is {1}'.format(
-                    k, len(v)))
-        return responses.Node(id=node_id, runtime_info=storage_manager().update_node(node_id, request.json))
+                abort(400, message='value for key: {0} is expected to be a'
+                                   ' list with length 1 or 2 but is {1}'
+                                   .format(k, len(v)))
+        return responses.Node(
+            id=node_id,
+            runtime_info=storage_manager().update_node(node_id, request.json))
 
 
 class DeploymentsIdExecutions(Resource):
@@ -559,7 +620,8 @@ class DeploymentsIdExecutions(Resource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
-        notes="Returns a list of executions related to the provided deployment."
+        notes="Returns a list of executions related to the provided"
+              " deployment."
     )
     def get(self, deployment_id):
         """
@@ -567,20 +629,20 @@ class DeploymentsIdExecutions(Resource):
         """
         verify_deployment_exists(deployment_id)
         return [marshal(execution, responses.Execution.resource_fields) for
-                execution in blueprints_manager().get_deployment(deployment_id).executions_list()]
+                execution in blueprints_manager()
+                .get_deployment(deployment_id).executions_list()]
 
     @swagger.operation(
         responseClass=responses.Execution,
         nickname="execute",
-        notes="Executes the provided workflow under the given deployment context.",
-        parameters=[{
-                        'name': 'body',
-                        'description': 'Workflow execution request',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': requests_schema.ExecutionRequest.__name__,
-                        'paramType': 'body'
-        }],
+        notes="Executes the provided workflow under the given deployment "
+              "context.",
+        parameters=[{'name': 'body',
+                     'description': 'Workflow execution request',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.ExecutionRequest.__name__,
+                     'paramType': 'body'}],
         consumes=[
             "application/json"
         ]
@@ -597,7 +659,8 @@ class DeploymentsIdExecutions(Resource):
             abort(400, message='400: Missing workflowId in json request body')
         workflow_id = request.json['workflowId']
         try:
-            return blueprints_manager().execute_workflow(deployment_id, workflow_id), 201
+            return blueprints_manager().execute_workflow(deployment_id,
+                                                         workflow_id), 201
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
 

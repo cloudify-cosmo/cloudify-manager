@@ -34,7 +34,8 @@ class DeploymentNode(object):
         self.id = node_id
         self._runtime_properties = runtime_properties
         if runtime_properties is not None:
-            self._runtime_properties = {k: [v, None] for k, v in runtime_properties.iteritems()}
+            self._runtime_properties = {k: [v, None] for k, v in
+                                        runtime_properties.iteritems()}
 
     def get(self, key):
         return self._runtime_properties[key][0]
@@ -54,7 +55,8 @@ class DeploymentNode(object):
     def get_updated_properties(self):
         if self._runtime_properties is None:
             return {}
-        return {k: v for k, v in self._runtime_properties.iteritems() if len(v) == 1 or v[1] is not None}
+        return {k: v for k, v in self._runtime_properties.iteritems()
+                if len(v) == 1 or v[1] is not None}
 
 
 # TODO runtime-model: use manager-rest-client
@@ -62,7 +64,8 @@ def get_node_state(node_id):
     response = requests.get("{0}/nodes/{1}".format(_get_base_uri(), node_id))
     if response.status_code != 200:
         raise RuntimeError(
-            "Error getting node from cloudify runtime for node id {0} [code={1}]".format(node_id, response.status_code))
+            "Error getting node from cloudify runtime for node id {0} "
+            "[code={1}]".format(node_id, response.status_code))
     return DeploymentNode(node_id, response.json()['runtimeInfo'])
 
 
@@ -72,18 +75,21 @@ def update_node_state(node_state):
     if len(updated_properties) == 0:
         return None
     import json
-    response = requests.patch("{0}/nodes/{1}".format(_get_base_uri(), node_state.id),
+    response = requests.patch("{0}/nodes/{1}".format(_get_base_uri(),
+                                                     node_state.id),
                               headers={'Content-Type': 'application/json'},
                               data=json.dumps(updated_properties))
     if response.status_code != 200:
         raise RuntimeError(
-            "Error getting node from cloudify runtime for node id {0} [code={1}]".format(node_state.id,
-                                                                                         response.status_code))
+            "Error getting node from cloudify runtime for "
+            "node id {0} [code={1}]".format(node_state.id,
+                                            response.status_code))
     return response.json()
 
 
 def inject_node_state(task):
-    # Necessary for keeping the returned method name as the provided task's name.
+    # Necessary for keeping the returned method name as the provided
+    # task's name.
     from functools import wraps
 
     @wraps(task)
@@ -101,7 +107,7 @@ def inject_node_state(task):
         if state is not None:
             try:
                 update_node_state(state)
-            except Exception as e:
+            except Exception:
                 # TODO: log exception
                 pass
     return task_wrapper
@@ -116,4 +122,3 @@ def _get_cloudify_id_from_method_arguments(method, args, kwargs):
     except ValueError:
         pass
     return None
-

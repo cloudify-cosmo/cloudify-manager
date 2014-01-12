@@ -28,7 +28,8 @@ def _create_instance():
     paths = sys.path
     paths.append(path.dirname(__file__))
     return imp.load_module(storage_manager_module_name,
-                           *imp.find_module(storage_manager_module_name, paths)).create()
+                           *imp.find_module(
+                               storage_manager_module_name, paths)).create()
 
 
 def reset():

@@ -40,4 +40,3 @@ def build_includes(workdir, app):
     return includes
 
 includes = build_includes(os.getcwd(), 'cosmo')
-

@@ -39,7 +39,8 @@ class BaseServerTestCase(unittest.TestCase):
         return config
 
     def post(self, resource_path, data):
-        result = self.app.post(resource_path, content_type='application/json', data=json.dumps(data))
+        result = self.app.post(resource_path, content_type='application/json',
+                               data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
@@ -54,12 +55,14 @@ class BaseServerTestCase(unittest.TestCase):
             return result
 
     def put(self, resource_path, data):
-        result = self.app.put(resource_path, content_type='application/json', data=json.dumps(data))
+        result = self.app.put(resource_path, content_type='application/json',
+                              data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
     def patch(self, resource_path, data):
-        result = self.app.patch(resource_path, content_type='application/json', data=json.dumps(data))
+        result = self.app.patch(resource_path, content_type='application/json',
+                                data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
@@ -71,6 +74,3 @@ class BaseServerTestCase(unittest.TestCase):
     def head(self, resource_path):
         result = self.app.head(resource_path)
         return result
-
-
-

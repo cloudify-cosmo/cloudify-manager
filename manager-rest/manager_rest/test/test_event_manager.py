@@ -37,7 +37,8 @@ class EventManagerTests(unittest.TestCase):
         cls.events_manager = EventsManager()
         events = [{'key1': 'value1'}, {'key2': 'value2'}]
         deployment_id = 'deployment_0'
-        cls.events_file = path.join(cls.tempdir, "{0}.log".format(deployment_id))
+        cls.events_file = path.join(cls.tempdir,
+                                    "{0}.log".format(deployment_id))
         cls.create_events_file(cls.events_file, events)
 
     @classmethod
@@ -53,9 +54,11 @@ class EventManagerTests(unittest.TestCase):
 
     def test_no_events(self):
         deployment_id = 'no_events'
-        result = self.events_manager.get_deployment_events(deployment_id, only_bytes=True)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           only_bytes=True)
         self.assertEquals(0, result.deployment_events_bytes)
-        result = self.events_manager.get_deployment_events(deployment_id, only_bytes=False)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           only_bytes=False)
         self.assertEquals(-1, result.first_event)
         self.assertEquals(-1, result.last_event)
         self.assertEquals(0, len(result.events))
@@ -64,8 +67,10 @@ class EventManagerTests(unittest.TestCase):
 
     def test_get_deployment_events_bytes(self):
         deployment_id = 'deployment_0'
-        result = self.events_manager.get_deployment_events(deployment_id, only_bytes=True)
-        self.assertEquals(path.getsize(self.events_file), result.deployment_events_bytes)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           only_bytes=True)
+        self.assertEquals(path.getsize(self.events_file),
+                          result.deployment_events_bytes)
         self.assertEquals(-1, result.first_event)
         self.assertEquals(-1, result.last_event)
         self.assertEquals(0, len(result.events))
@@ -74,7 +79,8 @@ class EventManagerTests(unittest.TestCase):
     def test_get_deployment_events(self):
         deployment_id = 'deployment_0'
         result = self.events_manager.get_deployment_events(deployment_id)
-        self.assertEquals(path.getsize(self.events_file), result.deployment_events_bytes)
+        self.assertEquals(path.getsize(self.events_file),
+                          result.deployment_events_bytes)
         self.assertEquals(0, result.first_event)
         self.assertEquals(1, result.last_event)
         self.assertEquals(2, len(result.events))
@@ -82,8 +88,10 @@ class EventManagerTests(unittest.TestCase):
 
     def test_get_deployment_events_with_from_event(self):
         deployment_id = 'deployment_0'
-        result = self.events_manager.get_deployment_events(deployment_id, first_event=1)
-        self.assertEquals(path.getsize(self.events_file), result.deployment_events_bytes)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           first_event=1)
+        self.assertEquals(path.getsize(self.events_file),
+                          result.deployment_events_bytes)
         self.assertEquals(1, result.first_event)
         self.assertEquals(1, result.last_event)
         self.assertEquals(1, len(result.events))
@@ -91,8 +99,11 @@ class EventManagerTests(unittest.TestCase):
 
     def test_get_deployment_events_from_event_count(self):
         deployment_id = 'deployment_0'
-        result = self.events_manager.get_deployment_events(deployment_id, first_event=0, events_count=1)
-        self.assertEquals(path.getsize(self.events_file), result.deployment_events_bytes)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           first_event=0,
+                                                           events_count=1)
+        self.assertEquals(path.getsize(self.events_file),
+                          result.deployment_events_bytes)
         self.assertEquals(0, result.first_event)
         self.assertEquals(0, result.last_event)
         self.assertEquals(1, len(result.events))
@@ -100,8 +111,10 @@ class EventManagerTests(unittest.TestCase):
 
     def test_get_deployment_events_from_not_in_range(self):
         deployment_id = 'deployment_0'
-        result = self.events_manager.get_deployment_events(deployment_id, first_event=5)
-        self.assertEquals(path.getsize(self.events_file), result.deployment_events_bytes)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           first_event=5)
+        self.assertEquals(path.getsize(self.events_file),
+                          result.deployment_events_bytes)
         self.assertEquals(-1, result.first_event)
         self.assertEquals(-1, result.last_event)
         self.assertEquals(0, len(result.events))
@@ -109,8 +122,11 @@ class EventManagerTests(unittest.TestCase):
 
     def test_get_deployment_events_zero_count(self):
         deployment_id = 'deployment_0'
-        result = self.events_manager.get_deployment_events(deployment_id, first_event=0, events_count=0)
-        self.assertEquals(path.getsize(self.events_file), result.deployment_events_bytes)
+        result = self.events_manager.get_deployment_events(deployment_id,
+                                                           first_event=0,
+                                                           events_count=0)
+        self.assertEquals(path.getsize(self.events_file),
+                          result.deployment_events_bytes)
         self.assertEquals(-1, result.first_event)
         self.assertEquals(-1, result.last_event)
         self.assertEquals(0, len(result.events))

@@ -35,6 +35,7 @@ def make_reachable(__cloudify_id, **kwargs):
         'relationships': kwargs['cloudify_runtime']
     })
 
+
 @celery.task
 def make_unreachable(__cloudify_id, **kwargs):
     unreachable(__cloudify_id)
@@ -47,7 +48,8 @@ def make_unreachable(__cloudify_id, **kwargs):
 
 @celery.task
 @inject_node_state
-def set_property(__cloudify_id, property_name, value, node_state=None,  **kwargs):
+def set_property(__cloudify_id, property_name, value, node_state=None,
+                 **kwargs):
     node_state.put(property_name, value)
 
 
@@ -61,17 +63,22 @@ def touch(**kwargs):
 def get_state():
     return state
 
+
 @celery.task
 def get_touched_time():
     return touched_time
 
+
 @celery.task
 def is_unreachable_called(__cloudify__id, **kwargs):
-    return next((x for x in unreachable_call_order if x['id'] == __cloudify__id), None)
+    return next((x for x in
+                 unreachable_call_order if x['id'] == __cloudify__id), None)
+
 
 @celery.task
 def get_unreachable_call_order():
     return unreachable_call_order
+
 
 @celery.task
 def mock_operation(__cloudify__id, mockprop, **kwargs):

@@ -19,5 +19,5 @@ class TestValidateDSL(TestCase):
 
         with self.assertRaises(Exception) as cm:
             deploy(dsl_path)
-            self.assertTrue('invalid blueprint' in cm.exception.message.lower(), cm.exception.message)
-
+            self.assertTrue('invalid blueprint' in
+                            cm.exception.message.lower(), cm.exception.message)

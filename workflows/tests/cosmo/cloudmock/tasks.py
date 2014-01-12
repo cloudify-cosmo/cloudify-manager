@@ -35,7 +35,8 @@ def provision(__cloudify_id, **kwargs):
     global machines
     logger.info("provisioning machine: " + __cloudify_id)
     if __cloudify_id in machines:
-        raise RuntimeError("machine with id [{0}] already exists".format(__cloudify_id))
+        raise RuntimeError("machine with id [{0}] already exists"
+                           .format(__cloudify_id))
     machines[__cloudify_id] = NOT_RUNNING
 
 
@@ -45,7 +46,8 @@ def start(__cloudify_id, node_state=None, **kwargs):
     global machines
     logger.info("starting machine: " + __cloudify_id)
     if __cloudify_id not in machines:
-        raise RuntimeError("machine with id [{0}] does not exist".format(__cloudify_id))
+        raise RuntimeError("machine with id [{0}] does not exist"
+                           .format(__cloudify_id))
     machines[__cloudify_id] = RUNNING
     if node_state is not None:
         node_state.put('id', __cloudify_id)
@@ -58,7 +60,8 @@ def stop(__cloudify_id, **kwargs):
     global machines
     logger.info("stopping machine: " + __cloudify_id)
     if __cloudify_id not in machines:
-        raise RuntimeError("machine with id [{0}] does not exist".format(__cloudify_id))
+        raise RuntimeError("machine with id [{0}] does not exist"
+                           .format(__cloudify_id))
     machines[__cloudify_id] = NOT_RUNNING
 
 
@@ -67,9 +70,11 @@ def terminate(__cloudify_id, **kwargs):
     global machines
     logger.info("terminating machine: " + __cloudify_id)
     if __cloudify_id not in machines:
-        raise RuntimeError("machine with id [{0}] does not exist".format(__cloudify_id))
+        raise RuntimeError("machine with id [{0}] does not exist"
+                           .format(__cloudify_id))
     del machines[__cloudify_id]
     unreachable(__cloudify_id)
+
 
 @celery.task
 def get_machines(**kwargs):

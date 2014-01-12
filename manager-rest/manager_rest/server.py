@@ -48,18 +48,25 @@ def copy_resources():
     orchestrator_resources = path.abspath(__file__)
     for i in range(3):
         orchestrator_resources = path.dirname(orchestrator_resources)
-    orchestrator_resources = path.join(orchestrator_resources, 'orchestrator/src/main/resources')
+    orchestrator_resources = path.join(orchestrator_resources,
+                                       'orchestrator/src/main/resources')
 
     # resources for dsl parser
     cloudify_resources = path.join(orchestrator_resources, 'cloudify')
-    shutil.copytree(cloudify_resources, path.join(file_server_root, 'cloudify'))
+    shutil.copytree(cloudify_resources, path.join(file_server_root,
+                                                  'cloudify'))
 
-    alias_mapping_resource = path.join(orchestrator_resources, 'org/cloudifysource/cosmo/dsl/alias-mappings.yaml')
-    shutil.copy(alias_mapping_resource, path.join(file_server_root, 'cloudify/alias-mappings.yaml'))
+    alias_mapping_resource = path.join(orchestrator_resources,
+                                       'org/cloudifysource/cosmo/dsl'
+                                       '/alias-mappings.yaml')
+    shutil.copy(alias_mapping_resource, path.join(file_server_root,
+                                                  'cloudify'
+                                                  '/alias-mappings.yaml'))
 
 
 def setup_shutdown_hook():
-    #TODO this handler is called twice which in turn leads to an exception thrown during the file server shutdown
+    #TODO this handler is called twice which in turn
+    # leads to an exception thrown during the file server shutdown
     def handle(*_):
         stop_file_server()
         sys.exit()
@@ -88,7 +95,8 @@ def parse_arguments():
     )
     parser.add_argument(
         '--events_files_path',
-        help='Path where event files are stored (the file\'s content will be served using the events api)',
+        help='Path where event files are stored '
+             '(the file\'s content will be served using the events api)',
         default=None
     )
     return parser.parse_args()

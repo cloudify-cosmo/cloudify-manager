@@ -19,6 +19,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 
+
 class TestMultiInstanceApplication(TestCase):
 
     def test_deploy_multi_instance_application(self):

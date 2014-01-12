@@ -74,10 +74,12 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('value', response.json['runtimeInfo']['new_key'])
 
     def test_patch_node_conflict(self):
-        response = self.patch('/nodes/1234', {'key': ['new_value', 'old_value']})
+        response = self.patch('/nodes/1234', {'key': ['new_value',
+                                                      'old_value']})
         self.assertEqual(500, response.status_code)
         self.put('/nodes/1234', {'key': 'value'})
-        response = self.patch('/nodes/1234', {'key': ['new_value', 'old_value']})
+        response = self.patch('/nodes/1234', {'key': ['new_value',
+                                                      'old_value']})
         self.assertEqual(500, response.status_code)
 
     def test_invalid_input(self):

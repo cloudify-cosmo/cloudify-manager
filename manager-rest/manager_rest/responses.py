@@ -21,6 +21,7 @@ from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
 
+
 @swagger.model
 class BlueprintState(object):
 
@@ -41,9 +42,9 @@ class BlueprintState(object):
         now = datetime.now()
         self.created_at = now
         self.updated_at = now
-        self.yml = None #TODO kwargs['yml']
-        self.topology = None #TODO kwargs['topology']
-        self.deployments = None #TODO kwargs['deployments']
+        self.yml = None  # TODO kwargs['yml']
+        self.topology = None  # TODO kwargs['topology']
+        self.deployments = None  # TODO kwargs['deployments']
 
 
 @swagger.model
@@ -63,24 +64,9 @@ class BlueprintValidationStatus(object):
 class Topology(object):
 
     def __init__(self, *args, **kwargs):
-        self.id = None #TODO generate
-        self.permalink = None #TODO implement
+        self.id = None  # TODO generate
+        self.permalink = None  # TODO implement
         self.nodes = kwargs['nodes']
-
-
-@swagger.model
-class Node(object):
-
-    def __init__(self, *args, **kwargs):
-        self.id = None #TODO generate
-        self.permalink = None #TODO implement
-        self.name = kwargs['name']
-        self.type = kwargs['type']
-        self.base_type = kwargs['base_type']
-        self.required_instances = kwargs['required_instances']
-        self.relationships = kwargs['relationships']
-        self.properties = kwargs['properties']
-        self.deployment_ids = kwargs['deployment_ids']
 
 
 @swagger.model
@@ -97,13 +83,14 @@ class Deployment(object):
 
     def __init__(self, *args, **kwargs):
         self.id = kwargs['deployment_id']
-        self.permalink = None #TODO implement
+        self.permalink = None  # TODO implement
         now = datetime.now()
         self.created_at = now
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
-        self.workflows = {key: Workflow(workflow_id=key, created_at=now) for key in kwargs['typed_plan']['workflows']}
+        self.workflows = {key: Workflow(workflow_id=key, created_at=now)
+                          for key in kwargs['typed_plan']['workflows']}
         self.executions = {}
 
     def add_execution(self, execution):
@@ -176,7 +163,8 @@ class DeploymentEvents(object):
         'firstEvent': fields.Integer(attribute='first_event'),
         'lastEvent': fields.Integer(attribute='last_event'),
         'events': fields.List(fields.Raw),
-        'deploymentTotalEvents': fields.Integer(attribute='deployment_total_events')
+        'deploymentTotalEvents': fields.Integer(
+            attribute='deployment_total_events')
     }
 
     def __init__(self, *args, **kwargs):
@@ -210,5 +198,6 @@ class Node(object):
 
     def __init__(self, *args, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info'] if 'runtime_info' in kwargs else None
+        self.runtime_info = \
+            kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None

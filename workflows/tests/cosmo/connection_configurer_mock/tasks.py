@@ -30,6 +30,7 @@ def append_to_state(__source_cloudify_id,
         'run_on_node_id': __run_on_node_cloudify_id
     })
 
+
 @celery.task
 def get_state():
     return state

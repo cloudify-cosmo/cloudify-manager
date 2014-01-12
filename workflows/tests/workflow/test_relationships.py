@@ -23,19 +23,22 @@ from testenv import deploy_application as deploy
 class TestRelationships(TestCase):
 
     def test_pre_source_started_location_source(self):
-        dsl_path = resource("dsl/relationship-interface-pre-source-location-source.yaml")
+        dsl_path = resource(
+            "dsl/relationship-interface-pre-source-location-source.yaml")
         deploy(dsl_path)
         self.verify_assertions(hook='pre-init',
                                runs_on_source=True)
 
     def test_post_source_started_location_target(self):
-        dsl_path = resource("dsl/relationship-interface-post-source-location-target.yaml")
+        dsl_path = resource(
+            "dsl/relationship-interface-post-source-location-target.yaml")
         deploy(dsl_path)
         self.verify_assertions(hook='post-init',
                                runs_on_source=False)
 
     def test_in_source_init_location_source(self):
-        dsl_path = resource("dsl/relationship-interface-in-source-init-location-source.yaml")
+        dsl_path = resource(
+            "dsl/relationship-interface-in-source-init-location-source.yaml")
         deploy(dsl_path)
         self.verify_assertions(hook='after-touch-before-reachable-init',
                                runs_on_source=True)
@@ -50,7 +53,8 @@ class TestRelationships(TestCase):
         machines = result.get(timeout=10)
         self.assertEquals(1, len(machines))
 
-        from cosmo.connection_configurer_mock.tasks import get_state as config_get_state
+        from cosmo.connection_configurer_mock.tasks import get_state \
+            as config_get_state
         result = config_get_state.apply_async()
 
         state = result.get(timeout=10)[0]
@@ -62,16 +66,22 @@ class TestRelationships(TestCase):
         self.assertTrue(target_id.startswith(target_id_prefix))
         from testenv import is_node_reachable
         self.assertTrue(is_node_reachable(target_id))
-        self.assertEquals('source_property_value', state['source_properties']['source_property_key'])
-        self.assertEquals('target_property_value', state['target_properties']['target_property_key'])
+        self.assertEquals('source_property_value',
+                          state['source_properties']['source_property_key'])
+        self.assertEquals('target_property_value',
+                          state['target_properties']['target_property_key'])
         if hook == 'pre-init':
-            self.assertTrue(source_id not in state['source_properties']['cloudify_runtime'])
-            self.assertTrue(source_id not in state['target_properties']['cloudify_runtime'])
+            self.assertTrue(source_id not in
+                            state['source_properties']['cloudify_runtime'])
+            self.assertTrue(source_id not in
+                            state['target_properties']['cloudify_runtime'])
         elif hook == 'post-init':
             self.assertTrue(is_node_reachable(source_id))
         elif hook == 'after-touch-before-reachable-init':
-            self.assertTrue(source_id not in state['source_properties']['cloudify_runtime'])
-            self.assertTrue(source_id not in state['target_properties']['cloudify_runtime'])
+            self.assertTrue(source_id not in
+                            state['source_properties']['cloudify_runtime'])
+            self.assertTrue(source_id not in
+                            state['target_properties']['cloudify_runtime'])
         else:
             self.fail('unhandled state')
 
@@ -82,8 +92,10 @@ class TestRelationships(TestCase):
 
         connector_timestamp = state['time']
 
-        from cosmo.testmockoperations.tasks import get_state as testmock_get_state
-        from cosmo.testmockoperations.tasks import get_touched_time as testmock_get_touch_time
+        from cosmo.testmockoperations.tasks import get_state \
+            as testmock_get_state
+        from cosmo.testmockoperations.tasks import get_touched_time \
+            as testmock_get_touch_time
         state = testmock_get_state.apply_async().get(timeout=10)[0]
         touched_timestamp = testmock_get_touch_time.delay().get(timeout=10)
 
