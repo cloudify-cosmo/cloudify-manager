@@ -35,6 +35,8 @@ DSL_PARSER_BRANCH = '0.2'
 DSL_PARSER = "https://github.com/CloudifySource/cosmo-plugin-dsl-parser/tarball/{" \
                      "0}#egg=cosmo-plugin-dsl-parser-{1}".format(DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
 
+os.chdir(sys.path[0])
+
 setup(
     name='cloudify-workflows',
     version='0.2',
