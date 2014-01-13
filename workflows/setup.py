@@ -43,6 +43,8 @@ COSMO_MANAGER_REST_CLIENT = "https://github.com/CloudifySource/" \
                             .format(COSMO_MANAGER_REST_CLIENT_BRANCH,
                                     COSMO_MANAGER_REST_CLIENT_VERSION)
 
+os.chdir(sys.path[0])
+
 setup(
     name='cloudify-workflows',
     version='0.3',
