@@ -77,6 +77,10 @@ types:
     cloudify.types.network:
         derived_from: cloudify.types.base
 
+    # A network router
+    cloudify.types.router:
+        derived_from: cloudify.types.base
+
     # A virtual Load Balancer
     cloudify.types.load_balancer:
         derived_from: cloudify.types.base
