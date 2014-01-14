@@ -1,2 +1,0 @@
-define middleware_server_delete
-    execute_operation operation: 'cloudify.interfaces.lifecycle.delete'

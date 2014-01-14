@@ -27,20 +27,15 @@ types:
 
         workflows:
             create:
-                radial: |
-                    define no_op_create
+                ref: cloudify.workflows.node.create
             configure:
-                radial: |
-                    define no_op_configure
+                ref: cloudify.workflows.node.configure
             start:
-                radial: |
-                    define no_op_start
+                ref: cloudify.workflows.node.start
             stop:
-                radial: |
-                    define no_op_stop
+                ref: cloudify.workflows.node.stop
             delete:
-                radial: |
-                    define no_op_delete
+                ref: cloudify.workflows.node.delete
 
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
@@ -58,12 +53,8 @@ types:
         properties:
             install_agent: 'false'
         workflows:
-            create:
-                ref: "cloudify.workflows.host.create"
             start:
                 ref: "cloudify.workflows.host.start"
-            delete:
-                ref: "cloudify.workflows.host.delete"
 
     # A storage volume in a topology
     cloudify.types.volume:
@@ -92,15 +83,6 @@ types:
     # A middleware component in a topology
     cloudify.types.middleware_server:
         derived_from: cloudify.types.base
-        workflows:
-            create:
-                ref: "cloudify.workflows.middleware_server.create"
-            start:
-                ref: "cloudify.workflows.middleware_server.start"
-            stop:
-                ref: "cloudify.workflows.middleware_server.stop"
-            delete:
-                ref: "cloudify.workflows.middleware_server.delete"
 
     cloudify.types.db_server:
         derived_from: "cloudify.types.middleware_server"
@@ -117,9 +99,6 @@ types:
     # An application artifact to deploy
     cloudify.types.app_module:
         derived_from: cloudify.types.base
-        workflows:
-            create:
-                ref: "cloudify.workflows.app_module.create"
 
 
 ##################################################################################
