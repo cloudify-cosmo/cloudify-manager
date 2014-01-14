@@ -244,8 +244,14 @@ class CeleryWorkerProcess(object):
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
         self._create_python_module_path(self._cosmo_plugins)
-        shutil.copytree(installed_plugin_path, path.join(self._cosmo_plugins,
-                                                         plugin.__name__))
+        target = path.join(self._cosmo_plugins, plugin.__name__)
+        shutil.copytree(installed_plugin_path, target)
+        self._remove_test_dir_if_exists(target)
+
+    def _remove_test_dir_if_exists(self, plugin_path):
+        tests_dir = path.join(plugin_path, 'tests')
+        if path.isdir(tests_dir):
+            shutil.rmtree(tests_dir)
 
     def _create_python_module_path(self, module_path):
         if not path.exists(module_path):
@@ -653,6 +659,11 @@ def get_deployment_events(deployment_id, first_event=0, events_count=500):
     client = CosmoManagerRestClient('localhost')
     return client.get_deployment_events(deployment_id, from_param=first_event,
                                         count_param=events_count)
+
+
+def get_deployment_workflows(deployment_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.list_workflows(deployment_id)
 
 
 def get_deployment_nodes(deployment_id=None):

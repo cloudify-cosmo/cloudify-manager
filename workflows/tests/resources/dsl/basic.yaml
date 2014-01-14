@@ -20,3 +20,9 @@ blueprint:
                             properties:
                                 service: "machine-status"
                                 state: "running"
+workflows:
+    mock_workflow:
+        radial: |
+            define mock_workflow
+                execute_operation operation: 'make_mock_operation'
+

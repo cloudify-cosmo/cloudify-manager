@@ -1,2 +1,2 @@
-define host_delete
+define node_delete
     execute_operation operation: 'cloudify.interfaces.lifecycle.delete'
