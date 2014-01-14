@@ -249,7 +249,9 @@ class CeleryWorkerProcess(object):
         self._remove_test_dir_if_exists(target)
 
     def _remove_test_dir_if_exists(self, plugin_path):
-        shutil.rmtree(path.join(plugin_path, 'tests'))
+        tests_dir = path.join(plugin_path, 'tests')
+        if path.isdir(tests_dir):
+            shutil.rmtree(tests_dir)
 
     def _create_python_module_path(self, module_path):
         if not path.exists(module_path):
