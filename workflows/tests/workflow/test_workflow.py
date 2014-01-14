@@ -72,8 +72,8 @@ class TestRuoteWorkflows(TestCase):
             testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         from cosmo.testmockoperations.tasks import \
-            get_mock_operation_invocations as testmock_get_mock_operation_invocations
-        invocations = testmock_get_mock_operation_invocations.apply_async().get(timeout=10)
+            get_mock_operation_invocations as testmock_get__invocations
+        invocations = testmock_get__invocations.apply_async().get(timeout=10)
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
@@ -98,4 +98,3 @@ class TestRuoteWorkflows(TestCase):
     #     from testenv import get_node_state
     #     node_state = get_node_state(node_id)
     #     self.assertEqual(node_id, node_state['id'])
-
