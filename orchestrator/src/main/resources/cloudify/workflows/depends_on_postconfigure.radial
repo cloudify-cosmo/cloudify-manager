@@ -1,0 +1,7 @@
+define depends_on_postconfigure
+    execute_operation operation: 'cloudify.interfaces.relationship_lifecycle.postconfigure',
+                      relationship: '$v:relationship',
+                      run_on_node: 'source'
+    execute_operation operation: 'cloudify.interfaces.relationship_lifecycle.postconfigure',
+                      relationship: '$v:relationship',
+                      run_on_node: 'target'

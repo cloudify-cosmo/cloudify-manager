@@ -244,8 +244,14 @@ class CeleryWorkerProcess(object):
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
         self._create_python_module_path(self._cosmo_plugins)
-        shutil.copytree(installed_plugin_path, path.join(self._cosmo_plugins,
-                                                         plugin.__name__))
+        target = path.join(self._cosmo_plugins, plugin.__name__)
+        shutil.copytree(installed_plugin_path, target)
+        self._remove_test_dir_if_exists(target)
+
+    def _remove_test_dir_if_exists(self, plugin_path):
+        tests_dir = path.join(plugin_path, 'tests')
+        if path.isdir(tests_dir):
+            shutil.rmtree(tests_dir)
 
     def _create_python_module_path(self, module_path):
         if not path.exists(module_path):

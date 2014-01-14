@@ -1,7 +1,0 @@
-define execute_relationship_workflow
-    iterator on: '$f:node.relationships', to_v: 'relationship'
-        sequence if: '${v:relationship.type} == ${v:type}'
-            log message: 'performing relationship bindings of node:${node.id} / ${v:relationship}'
-            set 'v:relationship_workflow': '$v:relationship.workflow'
-            relationship_workflow relationship: '$v:relationship'
-    unset 'v:relationship'

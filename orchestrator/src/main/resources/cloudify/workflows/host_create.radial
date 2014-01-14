@@ -1,2 +1,0 @@
-define host_create
-    execute_operation operation: 'cloudify.interfaces.lifecycle.create'
