@@ -655,6 +655,11 @@ def get_deployment_events(deployment_id, first_event=0, events_count=500):
                                         count_param=events_count)
 
 
+def get_deployment_workflows(deployment_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.list_workflows(deployment_id)
+
+
 def get_deployment_nodes(deployment_id=None):
     client = CosmoManagerRestClient('localhost')
     nodes = client.list_deployment_nodes(deployment_id)['nodes']
