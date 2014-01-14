@@ -14,6 +14,10 @@ cloudify.workflows.middleware_server.stop: cloudify/workflows/middleware_server_
 cloudify.workflows.middleware_server.delete: cloudify/workflows/middleware_server_delete.radial
 cloudify.workflows.app_module.create: cloudify/workflows/app_module_create.radial
 cloudify.workflows.connected_to: cloudify/workflows/connected_to.radial
+cloudify.workflows.depends_on_preconfigure: cloudify/workflows/depends_on_preconfigure.radial
+cloudify.workflows.depends_on_postconfigure: cloudify/workflows/depends_on_postconfigure.radial
+cloudify.workflows.depends_on_establish: cloudify/workflows/depends_on_establish.radial
+cloudify.workflows.depends_on_unlink: cloudify/workflows/depends_on_unlink.radial
 
 # policies
 cloudify.policies.start_detection: cloudify/policies/start_detection.clj

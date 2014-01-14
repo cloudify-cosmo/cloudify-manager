@@ -1,7 +1,7 @@
 define initialize_nodes
 
-    log message: 'Reloading policies'
-    event event: { "stage" => "Initializing monitoring policies" }
+    log message: 'reloading policies'
+    event event: { "stage" => "initializing monitoring policies" }
     reload_riemann_config policies: '$plan.policies',
                           rules: '$plan.rules',
                           policies_events: '$plan.policies_events'
@@ -14,29 +14,23 @@ define initialize_nodes
             state action: 'wait', node_id: '${v:relationship.target_id}', reachable: 'true'
         unset 'v:relationship'
 
-        event event: { "stage" => "Create node" }
+        event event: { "stage" => "create node" }
         log message: 'executing create workflow for node: ${node.id}'
         set 'v:create': "$f:node.workflows.create"
         create
         unset 'v:create'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure',
-                                        run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure',
-                                        run_on_node: 'target'
+        execute_relationships_workflow workflow: 'preconfigure'
 
-        event event: { "stage" => "Configure node" }
+        event event: { "stage" => "configure node" }
         log message: 'executing configure workflow for node: ${node.id}'
         set 'v:configure': "$f:node.workflows.configure"
         configure
         unset 'v:configure'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure',
-                                        run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure',
-                                        run_on_node: 'target'
+        execute_relationships_workflow workflow: 'postconfigure'
 
-        event event: { "stage" => "Start node" }
+        event event: { "stage" => "start node" }
         log message: 'executing start workflow for node: ${node.id}'
         set 'v:start': "$f:node.workflows.start"
         start
@@ -44,7 +38,4 @@ define initialize_nodes
 
         state node_id: '${node.id}', reachable: 'true'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
-                                        run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
-                                        run_on_node: 'target'
+        execute_relationships_workflow workflow: 'establish'

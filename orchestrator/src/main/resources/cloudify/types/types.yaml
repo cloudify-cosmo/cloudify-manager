@@ -128,6 +128,15 @@ types:
 relationships:
 
     cloudify.relationships.depends_on:
+        workflows:
+            preconfigure:
+                ref: cloudify.workflows.depends_on_preconfigure
+            postconfigure:
+                ref: cloudify.workflows.depends_on_postconfigure
+            establish:
+                ref: cloudify.workflows.depends_on_establish
+            unlink:
+                ref: cloudify.workflows.depends_on_unlink
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 - preconfigure
