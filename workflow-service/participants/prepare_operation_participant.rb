@@ -33,6 +33,7 @@ class PrepareOperationParticipant < Ruote::Participant
   NODE = 'node'
   OPERATION = 'operation'
   OPERATION_MAPPING = 'operation_mapping'
+  OPERATION_PROPERTIES = 'operation_properties'
   OPERATIONS = 'operations'
   SOURCE_OPERATIONS = 'source_operations'
   TARGET_OPERATIONS = 'target_operations'
@@ -96,6 +97,10 @@ class PrepareOperationParticipant < Ruote::Participant
       op_struct = operations[operation]
       plugin_name = op_struct['plugin']
       operation_mapping = op_struct['operation']
+      operation_properties = nil
+      if op_struct.has_key? 'properties'
+        operation_properties = op_struct['properties']
+      end
 
       $logger.debug('Executing operation [operation={}, plugin={}, operation_mapping={}]',
                     operation, plugin_name, operation_mapping)
@@ -110,6 +115,15 @@ class PrepareOperationParticipant < Ruote::Participant
       workitem.fields[PLUGIN_NAME] = "cosmo.#{plugin_name}"
       workitem.fields[OPERATION] = "#{workitem.fields[PLUGIN_NAME]}.#{operation_mapping}"
 
+      if operation_properties.nil?
+        workitem.fields[OPERATION_PROPERTIES] = workitem.fields[NODE][PreparePlanParticipant::PROPERTIES]
+      else
+        if workitem.fields[NODE][PreparePlanParticipant::PROPERTIES].has_key? PreparePlanParticipant::RUNTIME
+          operation_properties[PreparePlanParticipant::RUNTIME] =
+              workitem.fields[NODE][PreparePlanParticipant::PROPERTIES][PreparePlanParticipant::RUNTIME]
+        end
+        workitem.fields[OPERATION_PROPERTIES] = operation_properties
+      end
       reply
 
     rescue => e
