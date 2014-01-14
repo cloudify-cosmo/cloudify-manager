@@ -7,9 +7,10 @@ cloudify.workflows.install: cloudify/workflows/install.radial
 cloudify.workflows.uninstall: cloudify/workflows/uninstall.radial
 cloudify.workflows.node.create: cloudify/workflows/node_create.radial
 cloudify.workflows.node.configure: cloudify/workflows/node_configure.radial
-cloudify.workflows.host.start: cloudify/workflows/host_start.radial
+cloudify.workflows.node.start: cloudify/workflows/node_start.radial
 cloudify.workflows.node.stop: cloudify/workflows/node_stop.radial
 cloudify.workflows.node.delete: cloudify/workflows/node_delete.radial
+cloudify.workflows.host.start: cloudify/workflows/host_start.radial
 cloudify.workflows.depends_on_preconfigure: cloudify/workflows/depends_on_preconfigure.radial
 cloudify.workflows.depends_on_postconfigure: cloudify/workflows/depends_on_postconfigure.radial
 cloudify.workflows.depends_on_establish: cloudify/workflows/depends_on_establish.radial
