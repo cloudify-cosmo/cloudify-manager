@@ -32,7 +32,7 @@ class RiemannClient(object):
         """
         Get node reachable state.
         """
-        return self.get_nodes_state([node_id])[0]
+        return self.get_nodes_state([node_id])[node_id]
 
     def get_nodes_state(self, node_ids):
         """
