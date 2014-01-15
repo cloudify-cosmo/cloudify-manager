@@ -24,27 +24,23 @@ policies:
 
             message: "${service} state has changed to #{state.value}"
             rule: |
-              (changed-state
                 (where
                     (and
                         (service "${service}")
                         (state "${state}")
                         (tagged "name=$node_id"))
                     $node_policy_events)
-              )
 
         state_not_equals:
 
             message: "${service} has changed to #{state.value}"
             rule: |
-              (changed-state
                 (where
                     (and
                         (service "${service}")
                         (not (state "${state}"))
                         (tagged "name=$node_id"))
                     $node_policy_events)
-              )
 
         metric_below:
 

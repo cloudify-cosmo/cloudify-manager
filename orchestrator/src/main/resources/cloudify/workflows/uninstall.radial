@@ -18,10 +18,7 @@ define uninstalling_nodes
             stop
             unset 'v:stop'
 
-            execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.unlink',
-                                        run_on_node: 'source'
-            execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.unlink',
-                                        run_on_node: 'target'
+            execute_relationships_workflow workflow: 'unlink'
 
             event event: { "stage" => "Delete node" }
             log message: 'executing delete workflow for node: ${node.id}'

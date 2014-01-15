@@ -20,10 +20,7 @@ define initialize_nodes
         create
         unset 'v:create'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure',
-                                        run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.pre_configure',
-                                        run_on_node: 'target'
+        execute_relationships_workflow workflow: 'preconfigure'
 
         event event: { "stage" => "Configure node" }
         log message: 'executing configure workflow for node: ${node.id}'
@@ -31,10 +28,7 @@ define initialize_nodes
         configure
         unset 'v:configure'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure',
-                                        run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.post_configure',
-                                        run_on_node: 'target'
+        execute_relationships_workflow workflow: 'postconfigure'
 
         event event: { "stage" => "Start node" }
         log message: 'executing start workflow for node: ${node.id}'
@@ -44,7 +38,4 @@ define initialize_nodes
 
         state node_id: '${node.id}', reachable: 'true'
 
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
-                                        run_on_node: 'source'
-        execute_relationships_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
-                                        run_on_node: 'target'
+        execute_relationships_workflow workflow: 'establish'

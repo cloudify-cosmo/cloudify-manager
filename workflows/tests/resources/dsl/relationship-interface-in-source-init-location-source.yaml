@@ -37,7 +37,7 @@ blueprint:
                     target: "host"
                     source_interfaces:
                         cloudify.interfaces.relationship_lifecycle:
-                            - post_configure: connection_configurer_mock.tasks.configure_connection
+                            - postconfigure: connection_configurer_mock.tasks.configure_connection
             policies:
                 -   name: "start_detection_policy"
                     rules:

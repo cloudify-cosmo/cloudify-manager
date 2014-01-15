@@ -1,2 +1,2 @@
-define middleware_server_stop
+define node_stop
     execute_operation operation: 'cloudify.interfaces.lifecycle.stop'
