@@ -165,7 +165,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         assert_node_exists('mezzanine.webserver_host')
 
     # rename and run manually after starting a riemann server
-    def test_get_nodes_of_deployment_with_reachable(self):
+    def _test_get_nodes_of_deployment_with_reachable(self):
 
         import bernhard
         import json

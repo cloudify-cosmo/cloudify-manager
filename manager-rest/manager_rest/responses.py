@@ -118,7 +118,7 @@ class Workflow(object):
 
 
 @swagger.model
-#@swagger.nested(workflows=Workflow.__name__)
+@swagger.nested(workflows=Workflow.__name__)
 class Workflows(object):
 
     resource_fields = {
@@ -192,7 +192,7 @@ class DeploymentNodesNode(object):
 
 
 @swagger.model
-# @swagger.nested(nodes=DeploymentNodesNode.__name__)
+@swagger.nested(nodes=DeploymentNodesNode.__name__)
 class DeploymentNodes(object):
 
     resource_fields = {
