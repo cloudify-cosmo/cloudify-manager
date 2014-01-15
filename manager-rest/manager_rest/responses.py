@@ -89,8 +89,9 @@ class Deployment(object):
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
+        self.typed_plan = kwargs['typed_plan']
         self.workflows = {key: Workflow(workflow_id=key, created_at=now)
-                          for key in kwargs['typed_plan']['workflows']}
+                          for key in self.typed_plan['workflows']}
         self.executions = {}
 
     def add_execution(self, execution):
@@ -117,6 +118,7 @@ class Workflow(object):
 
 
 @swagger.model
+@swagger.nested(workflows=Workflow.__name__)
 class Workflows(object):
 
     resource_fields = {
@@ -174,6 +176,34 @@ class DeploymentEvents(object):
         self.events = kwargs['events']
         self.deployment_total_events = kwargs['deployment_total_events']
         self.deployment_events_bytes = kwargs['deployment_events_bytes']
+
+
+@swagger.model
+class DeploymentNodesNode(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'reachable': fields.Boolean
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs['id']
+        self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+
+
+@swagger.model
+@swagger.nested(nodes=DeploymentNodesNode.__name__)
+class DeploymentNodes(object):
+
+    resource_fields = {
+        'deploymentId': fields.String(attribute='deployment_id'),
+        'nodes': fields.List(
+            fields.Nested(DeploymentNodesNode.resource_fields))
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.deployment_id = kwargs['deployment_id']
+        self.nodes = kwargs['nodes']
 
 
 @swagger.model
