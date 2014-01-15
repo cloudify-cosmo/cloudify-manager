@@ -36,7 +36,7 @@ RIEMANN_CONFIGURER = "https://github.com/CloudifySource/" \
                              RIEMANN_CONFIGURER_VERSION)
 
 COSMO_MANAGER_REST_CLIENT_VERSION = '0.3'
-COSMO_MANAGER_REST_CLIENT_BRANCH = 'feature/CLOUDIFY-2368-deployment-nodes'
+COSMO_MANAGER_REST_CLIENT_BRANCH = 'develop'
 COSMO_MANAGER_REST_CLIENT = "https://github.com/CloudifySource/" \
                             "cosmo-manager-rest-client/tarball/{" \
                             "0}#egg=cosmo-manager-rest-client-{1}"\
