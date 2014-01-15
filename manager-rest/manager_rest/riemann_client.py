@@ -17,6 +17,7 @@ __author__ = 'idanmo'
 
 
 import bernhard
+from StringIO import StringIO
 
 
 class RiemannClient(object):
@@ -31,18 +32,41 @@ class RiemannClient(object):
         """
         Get node reachable state.
         """
-        results = self._client.query('tagged "name={0}"'.format(node_id))
-        if len(results) == 0:
-            return {'reachable': False}
-        # we might somehow have several events returned
-        # here so spot the one with a reachable flag.
-        host = None
-        for state in results:
-            host = state.host
-            if 'reachable' in state.tags:
-                return {'reachable': True, 'host': state.host}
-        return {'reachable': False, 'host': host}
+        return self.get_nodes_state([node_id])[0]
 
+    def get_nodes_state(self, node_ids):
+        """
+        Get nodes reachable state.
+        """
+        node_result = {}
+        query = StringIO()
+        or_query = ' or '
+        for node_id in node_ids:
+            node_result[node_id] = []
+            query.write('tagged "name={0}"{1}'.format(node_id, or_query))
+        query.truncate(len(query.getvalue()) - len(or_query))
+
+        raw_results = self._client.query(query.getvalue())
+        for raw_result in raw_results:
+            for tag in raw_result.tags:
+                if tag.startswith('name='):
+                    raw_result_node_id = tag[len('name='):]
+                    node_result[raw_result_node_id].append(raw_result)
+                    break
+
+        node_reachable_states = {}
+        for node_id, states in node_result.iteritems():
+            node_reachable_state = {'reachable': False}
+            for state in states:
+                host = state.host
+                node_reachable_state = {'reachable': False, 'host': host}
+                if 'reachable' in state.tags:
+                    node_reachable_state = {'reachable': True,
+                                            'host': state.host}
+                    break
+            node_reachable_states[node_id] = node_reachable_state
+
+        return node_reachable_states
 
 _instance = RiemannClient()
 
