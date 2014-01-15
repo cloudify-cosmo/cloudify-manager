@@ -33,7 +33,7 @@ from blueprints_manager import DslParseException
 from workflow_client import WorkflowServiceError
 from file_server import PORT as FILE_SERVER_PORT
 from flask import request
-from flask.ext.restful import Resource, abort, marshal_with, marshal
+from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 from os import path
 
@@ -115,6 +115,8 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/workflows')
     api.add_resource(DeploymentsIdEvents,
                      '/deployments/<string:deployment_id>/events')
+    api.add_resource(DeploymentsIdNodes,
+                     '/deployments/<string:deployment_id>/nodes')
     api.add_resource(Nodes,
                      '/nodes')
     api.add_resource(NodesId,
@@ -343,7 +345,6 @@ class ExecutionsId(Resource):
 class DeploymentsIdEvents(Resource):
 
     def __init__(self):
-        from flask.ext.restful import reqparse
         self._args_parser = reqparse.RequestParser()
         self._args_parser.add_argument('from', type=int,
                                        default=0, location='args')
@@ -399,6 +400,55 @@ class DeploymentsIdEvents(Resource):
             }
         except BaseException as e:
             abort(500, message=e.message)
+
+
+class DeploymentsIdNodes(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('reachable', type=bool,
+                                       default=False, location='args')
+
+    @swagger.operation(
+        responseClass=responses.DeploymentNodes,
+        nickname="list",
+        notes="Returns an object containing nodes associated with "
+              "this deployment.",
+        parameters=[{'name': 'reachable',
+                     'description': 'Specifies whether to return reachable '
+                                    'state for the nodes.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
+    )
+    @marshal_with(responses.DeploymentNodes.resource_fields)
+    def get(self, deployment_id):
+        """
+        Returns an object containing nodes associated with this deployment.
+        """
+        args = self._args_parser.parse_args()
+        get_reachable_state = args['reachable']
+        verify_deployment_exists(deployment_id)
+
+        deployment = blueprints_manager().get_deployment(deployment_id)
+        node_ids = map(lambda node: node['id'],
+                       deployment.typed_plan['nodes'])
+
+        reachable_states = {}
+        if get_reachable_state:
+            reachable_states = riemann_client().get_nodes_state(node_ids)
+
+        nodes = []
+        for node_id in node_ids:
+            node_result = responses.DeploymentNodesNode(id=node_id)
+            if get_reachable_state:
+                state = reachable_states[node_id]
+                node_result.reachable = state['reachable']
+            nodes.append(node_result)
+        return responses.DeploymentNodes(deployment_id=deployment_id,
+                                         nodes=nodes)
 
 
 class Deployments(Resource):
@@ -478,7 +528,6 @@ class Nodes(Resource):
 class NodesId(Resource):
 
     def __init__(self):
-        from flask.ext.restful import reqparse
         self._args_parser = reqparse.RequestParser()
         self._args_parser.add_argument('reachable', type=bool,
                                        default=False, location='args')
