@@ -15,51 +15,81 @@
 # *******************************************************************************/
 
 import os
-import tempfile
+from os.path import dirname
+import sys
+
 
 __author__ = 'elip'
+
 import unittest
-from plugin_installer.tasks import get_plugin_simple_name, create_namespace_path, install_celery_plugin_to_dir
+from plugin_installer.tasks import get_plugin_simple_name, install_celery_plugin, uninstall_celery_plugin
 from plugin_installer.tests import get_logger
-from cloudify.constants import COSMO_PLUGIN_NAMESPACE
+from cosmo.constants import VIRTUALENV_PATH_KEY
+
 
 logger = get_logger("PluginInstallerTestCase")
 
 
 class PluginInstallerTestCase(unittest.TestCase):
 
+    plugins = {
+        "plugin": {
+            "name": "test.plugin.mock_for_test",
+            "url": os.path.join(os.path.dirname(__file__), "mock-plugin"),
+            "package": "mock-plugin"
+        },
+        "plugin_with_dependencies": {
+            "name": "test.plugin.mock_with_dependencies_for_test",
+            "url": os.path.join(os.path.dirname(__file__), "mock-with-dependencies-plugin"),
+            "package": "mock-with-dependencies-plugin"
+        }
+    }
+
+    def setUp(self):
+        python_home = dirname(dirname(sys.executable))
+
+        logger.info("Setting virtualenv path to {0}".format(python_home))
+
+        os.environ[VIRTUALENV_PATH_KEY] = python_home
+
+    def tearDown(self):
+
+        logger.info("Uninstalling all plugins that were installed by the test")
+
+        for plugin in self.plugins.itervalues():
+            try:
+                uninstall_celery_plugin(plugin_name=plugin['package'])
+            except BaseException as e:
+                logger.warning("Failed to uninstall plugin {0} : {1}".format(plugin['package'], e.message))
+
     def test_get_plugin_simple_name(self):
         name = "a.b.c"
         self.assertEqual(get_plugin_simple_name(name), "c")
 
-    def test_create_namespace_path(self):
-
-        base_dir = tempfile.NamedTemporaryFile().name
-
-        create_namespace_path(COSMO_PLUGIN_NAMESPACE, base_dir)
-
-        # lets make sure the correct structure was created
-        namespace_path = base_dir
-        for folder in COSMO_PLUGIN_NAMESPACE:
-            namespace_path = os.path.join(namespace_path, folder)
-            with open(os.path.join(namespace_path,  "__init__.py")) as f:
-                init_data = f.read()
-                # we create empty init files
-                assert init_data == ""
-
     def test_install(self):
 
-        plugin = {
-            "name": "test.plugin.mock_for_test",
-            "url": os.path.join(os.path.dirname(__file__), "mock-plugin"),
-        }
+        install_celery_plugin(plugin=self.plugins['plugin'])
 
-        base_dir = tempfile.NamedTemporaryFile().name
+        # check the plugin was installed
+        from mock_for_test import module as m
+        print m.var
 
-        install_celery_plugin_to_dir(plugin=plugin, base_dir=base_dir)
+    def test_install_with_dependencies(self):
 
-        expected_plugin_path = os.path.join(base_dir, plugin['name'].replace(".", "/"))
+        install_celery_plugin(plugin=self.plugins['plugin_with_dependencies'])
 
-        # check the plugin was installed to the correct directory
-        assert os.path.exists(expected_plugin_path)
+        # check the plugin was installed
+        from mock_with_dependencies_for_test import module as m
+        print m.var
+
+        # check the dependency was installed
+        from python_webserver_installer import tasks as t
+        t.install()
+
+
+
+
+
+
+
 

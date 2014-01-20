@@ -16,35 +16,30 @@
 
 import logging
 import os
+from os.path import dirname
 import subprocess
-import platform
 import shlex
 import ast
 import _ast
-from os.path import expanduser
 from os import path
 
 from celery.utils.log import get_task_logger
-from celery import task
-
 from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.utils import get_cosmo_properties
-from cloudify.utils import get_app_dir
-from cloudify.constants import COSMO_APP_NAME
+from cloudify.decorators import operation
 
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
 
-@task
+@operation
 def install(plugin, __cloudify_id, **kwargs):
 
     """
     Installs plugin as celery task according to the provided plugins details.
     plugin parameter is expected to be in the following format: { name: "...", url: "..." }
-    The plugin's url should be an http url pointing to either a zip or tar.gz file and the compressed file
-    should contain a "tasks.py" module with celery tasks.
+    The plugin url should be a URL pointing to either a zip or tar.gz file.
     """
 
     logger.debug("installing plugin [%s] in host [%s]", plugin, __cloudify_id)
@@ -53,11 +48,18 @@ def install(plugin, __cloudify_id, **kwargs):
     if management_ip:
         plugin["url"] = plugin['url'].replace("#{plugin_repository}", "http://{0}:{1}".format(management_ip, "53229"))
 
-    install_celery_plugin_to_dir(plugin)
+    install_celery_plugin(plugin)
 
 
-@task
-def verify_plugin(worker_id, plugin_name, operation, throw_on_failure, **kwargs):
+def uninstall(plugin, __cloudify_id, **kwargs):
+
+    logger.debug("uninstalling plugin [%s] in host [%s]", plugin, __cloudify_id)
+
+    uninstall_celery_plugin(plugin['name'])
+
+
+@operation
+def verify_plugin(worker_id, plugin_name, operation, throw_on_failure,  **kwargs):
 
     """
     Verifies that a plugin and and a specific operation is registered within the celery worker
@@ -83,7 +85,7 @@ Registered plugin operation are: {2}""".format(plugin_name, operation, registere
         return False
 
 
-@task
+@operation
 def get_arguments(plugin_name, operation, **kwargs):
     """
     Gets the arguments of an installed plugin operation
@@ -91,8 +93,8 @@ def get_arguments(plugin_name, operation, **kwargs):
     operation_split = operation.split('.')
     module_name = '.'.join(operation_split[:-1])
     method_name = operation.split(".")[-1]
-    cosmo_dir = os.path.abspath(get_app_dir())
-    plugin_dir = os.path.join(cosmo_dir, os.sep.join(plugin_name.split(".")[1:]))
+    cosmo_dir = dirname(dirname(os.path.abspath(__file__)))
+    plugin_dir = os.path.join(cosmo_dir, plugin_name)
     py_path = _extract_py_path(plugin_dir, module_name, method_name, plugin_name)
     parsed_tasks_file = ast.parse(open(py_path, 'r').read())
     method_description = filter(lambda item: type(item) == _ast.FunctionDef and item.name == method_name,
@@ -132,46 +134,42 @@ def get_prefix_for_command(command):
         return command
 
 
-def install_celery_plugin_to_dir(plugin,
-                                 base_dir=os.path.join(expanduser("~"), COSMO_APP_NAME)):
+def install_celery_plugin(plugin):
 
     """
-    Installs a plugin from a url to the given base dir.
-    NOTE : Plugin dependencies will be installed to the python installation,
-           but the plugin itself will not be, this is to avoid conflicts because the plugin is installed to the
-           celery dir, which is also sourced to the PYTHONPATH of the system.
+    Installs a plugin from a url as a python library.
 
     ``plugin['url']`` url to zipped version of the python project.
 
             - needed for pip installation.
 
-    ``plugin['name']`` is the full name of the plugin. including namespace specification
+    ``plugin['name']`` is the full name of the plugin.
 
-            - needed for namespace directory structure creation.
-
+            - needed for logging.
     """
 
     plugin_name = plugin["name"]
     plugin_url = plugin["url"]
 
-    to_dir = create_namespace_path(plugin_name.split(".")[:-1], base_dir)
-
-    # in CentOS (and probably RHEL/Fedora as well) can't simply 'sudo' because of the "you must have a tty to run
-    # sudo" error, so using session-command instead.
-    is_session_command = platform.dist()[0] == 'centos'
-    logger.debug('is_session_command = {0}'.format(is_session_command))
-    command_format = "su --session-command='{0}'" if is_session_command else 'sudo {0}'
-
-    # this will install the package and the dependencies into the python installation
+    # this will install the plugin and its dependencies into the python installation
     command = "{0} install --process-dependency-links {1}".format(get_pip(), plugin_url)
-    run_command(command_format.format(command))
+    run_command(command)
     logger.debug("installed plugin {0} and dependencies into python installation".format(plugin_name))
 
-    # install the package to the target directory. this will also uninstall the plugin package from the python
-    # installation. leaving the plugin package just inside the base dir.
-    command = "{0} install --no-deps -t {1} {2}".format(get_pip(), to_dir, plugin_url)
-    run_command(command_format.format(command))
-    logger.debug("installing plugin {0} into {1}".format(plugin_name, to_dir))
+
+def uninstall_celery_plugin(plugin_name):
+
+    """
+    Uninstalls a plugin from a url as a python library.
+
+    ``plugin_name`` is the full name of the plugin.
+
+    """
+
+    # this will install the plugin and its dependencies into the python installation
+    command = "{0} uninstall -y {1}".format(get_pip(), plugin_name)
+    run_command(command)
+    logger.debug("uninstalled plugin {0} from python installation".format(plugin_name))
 
 
 def get_plugin_simple_name(full_plugin_name):
@@ -184,36 +182,6 @@ def run_command(command):
     if p.returncode != 0:
         raise RuntimeError("Failed running command {0} [returncode={1}, "
                            "output={2}, error={3}]".format(command, p.returncode, out, err))
+    if out is None:
+        raise RuntimeError("Running command {0} returned None!".format(command))
     return out
-
-
-def create_namespace_path(namespace_parts, base_dir):
-
-    """
-    Creates the namespaces path the plugin directory will reside in.
-    For example
-        input : cloudify.tosca.artifacts.plugin.python_webserver_installer
-        input : basedir
-        output : a directory path ${basedir}/cloudify/tosca/artifacts/plugin
-    In addition, "__init.py__" files will be created in each of the path's sub directories.
-    """
-
-    plugin_path = base_dir
-
-    for p in namespace_parts:
-        plugin_path = os.path.join(plugin_path, p)
-    logger.debug("plugin installation path is {0}".format(plugin_path))
-
-    if not os.path.exists(plugin_path):
-        os.makedirs(plugin_path)
-
-    # create __init__.py files in each subfolder
-    init_path = base_dir
-    for p in namespace_parts:
-        init_path = os.path.join(init_path, p)
-        init_file = os.path.join(init_path, "__init__.py")
-        if not os.path.exists(init_file):
-            open(init_file, "w").close()
-
-    return plugin_path
-

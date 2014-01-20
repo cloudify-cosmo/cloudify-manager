@@ -4,6 +4,8 @@ python:
 
 install:
 
+    # command to upgrade pip
+    - pip install --upgrade pip
     # command to install dependencies
     - python setup.py install
 
