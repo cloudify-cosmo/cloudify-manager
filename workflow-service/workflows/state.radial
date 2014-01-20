@@ -1,5 +1,4 @@
 define state
-    wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', to_f: '$v:to_f', on_error: 'error_handler'
-    define error_handler
-        wait for: '3s'
-        wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', to_f: '$v:to_f', on_error: 'error_handler'
+    set 'v:max_retries': '999999'
+    set 'v:retry_time': '10'
+    wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', to_f: '$v:to_f', on_error: '${v:retry_time}s: retry * ${v:max_retries}'
