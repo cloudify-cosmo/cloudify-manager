@@ -325,9 +325,9 @@ class CeleryWorkerProcess(object):
         Restarts the single celery worker process.
         Does not change the pid of celery itself
         """
-        from cosmo.celery import celery
-        celery.control.broadcast('pool_shrink', arguments={'N': 0})
-        celery.control.broadcast('pool_grow', arguments={'N': 1})
+        from cosmo.celery import celery as c
+        c.control.broadcast('pool_shrink', arguments={'N': 0})
+        c.control.broadcast('pool_grow', arguments={'N': 1})
 
 
 class RiemannProcess(object):

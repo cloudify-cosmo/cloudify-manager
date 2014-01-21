@@ -90,6 +90,6 @@ def mock_operation(__cloudify_id, mockprop, **kwargs):
     })
 
 
-@celery.task
+@operation
 def get_mock_operation_invocations():
     return mock_operation_invocation
