@@ -17,7 +17,7 @@ __author__ = 'idanmo'
 
 
 import unittest
-from runtime import DeploymentNode
+from cloudify.manager import DeploymentNode
 
 
 class TestDeploymentNode(unittest.TestCase):

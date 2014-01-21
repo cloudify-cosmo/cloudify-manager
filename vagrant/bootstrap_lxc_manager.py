@@ -533,55 +533,6 @@ rm /root/guest_additions.sh
         self.runner.run("echo '\"vagrant reload\" can be used in about 2 "
                         "minutes to activate the new guest additions.'")
 
-    def install_cosmo(self):
-
-        run_script = """#!/bin/sh
-if [ $# -gt 0 ] && [ "$1" = "undeploy" ]
-then
-        echo "Undeploying..."
-        curdir=`pwd`
-        for dir in /tmp/vagrant-vms/*/
-        do
-                if [ -d "$dir" ]; then
-                        cd $dir
-                        vagrant destroy -f > /dev/null 2>&1
-                fi
-        done
-        cd $curdir
-        rm -rf /tmp/vagrant-vms/*
-        echo "done!"
-else
-        ARGS="$@"
-        java -Xms512m -Xmx1024m -XX:PermSize=128m \
--Dlog4j.configuration=file://{0}/log4j.properties -jar {0}/cosmo.jar $ARGS
-fi
-""".format(self.working_dir)
-
-        get_cosmo = "https://s3.amazonaws.com/" \
-                    "cosmo-snapshot-maven-repository/travisci/home/travis/" \
-                    ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + \
-                    self.cosmo_version + "/" + self.jar_name + ".jar"
-
-        self.wget(get_cosmo)
-
-        if os.path.exists("cosmo.jar"):
-            self.runner.run("rm cosmo.jar")
-        self.runner.run("ln -s {0}/{1}.jar cosmo.jar".format(self.working_dir,
-                                                             self.jar_name))
-        self.runner.run("cp {0} {1}".format("{0}/log4j.properties"
-                                            .format(self.config_dir),
-                                            self.working_dir))
-
-        script_path = self.working_dir + "/cosmo.sh"
-        cosmo_exec = open(script_path, "w")
-        cosmo_exec.write(run_script)
-
-        self.runner.run("chmod +x " + script_path)
-
-        self.runner.run("echo \"alias cosmo='{0}/cosmo.sh'\" > "
-                        "{1}/.bash_aliases".format(self.working_dir,
-                                                   USER_HOME))
-
     def add_lxc_box(self, name, url):
         pattern = "precise64.*"
         output = subprocess.check_output(["vagrant", "box", "list"])
@@ -711,7 +662,6 @@ fi
             riemann_info = self.install_riemann()
             if self.install_logstash:
                 self._install_logstash()
-            self.install_cosmo()
             self.install_cosmo_manager()
             self.install_celery_worker(riemann_info)
         else:

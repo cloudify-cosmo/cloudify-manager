@@ -38,5 +38,3 @@ class TestMultiInstanceApplication(TestCase):
             host_id = app_state['relationships'].keys()[0]
             machines_with_apps.add(host_id)
         self.assertEquals(machines, machines_with_apps)
-
-        pass
