@@ -27,6 +27,8 @@ import cosmo
 import time
 import threading
 import re
+# import celery in order to override cloudify.operation decorator explicitly
+from cosmo import celery  # NOQA
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 
@@ -220,7 +222,7 @@ class RuoteServiceProcess(object):
 class CeleryWorkerProcess(object):
     _process = None
 
-    def __init__(self, tempdir, plugins_tempdir, cosmo_path, cosmo_jar_path,
+    def __init__(self, tempdir, plugins_tempdir, cosmo_path,
                  riemann_config_path, riemann_template_path, riemann_pid,
                  manager_rest_port):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
@@ -229,7 +231,6 @@ class CeleryWorkerProcess(object):
         self._tempdir = tempdir
         self._plugins_tempdir = plugins_tempdir
         self._cosmo_plugins = path.join(self._app_path, "cloudify/plugins")
-        self._cosmo_jar_path = cosmo_jar_path
         self._riemann_config_path = riemann_config_path
         self._riemann_template_path = riemann_template_path
         self._riemann_pid = riemann_pid
@@ -284,12 +285,13 @@ class CeleryWorkerProcess(object):
 
         environment = os.environ.copy()
         environment['TEMP_DIR'] = self._plugins_tempdir
-        environment['COSMO_JAR'] = self._cosmo_jar_path
         environment['RIEMANN_PID'] = str(self._riemann_pid)
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
         environment['CLOUDIFY_APP_DIR'] = self._app_path
+        environment['MANAGEMENT_IP'] = 'localhost'
+        environment['AGENT_IP'] = 'localhost'
 
         logger.info("Starting celery worker...")
         self._process = subprocess.Popen(celery_command, env=environment)
@@ -452,7 +454,6 @@ class TestEnvironment(object):
             self._plugins_tempdir = path.join(self._tempdir, "cosmo-work")
             logger.info("Test environment will be stored in: %s",
                         self._tempdir)
-            cosmo_jar_path = self._get_cosmo_jar_path()
             if not path.exists(self._plugins_tempdir):
                 os.makedirs(self._plugins_tempdir)
 
@@ -471,7 +472,6 @@ class TestEnvironment(object):
             cosmo_path = path.dirname(path.realpath(cosmo.__file__))
             self._celery_worker_process = CeleryWorkerProcess(
                 self._tempdir, self._plugins_tempdir, cosmo_path,
-                cosmo_jar_path,
                 riemann_config_path, riemann_template_path,
                 self._riemann_process.pid,
                 manager_rest_port)
@@ -552,34 +552,6 @@ class TestEnvironment(object):
         if TestEnvironment._instance and \
            (TestEnvironment._instance._celery_worker_process):
             TestEnvironment._instance._celery_worker_process.restart()
-
-    @staticmethod
-    def kill_cosmo_process():
-        """
-        Kills 'cosmo.jar' process if it exists.
-        """
-        pattern = "\w*\s*(\d*).*"
-        try:
-            output = subprocess.check_output(
-                "ps aux | grep 'cosmo.jar' | grep -v grep", shell=True)
-            match = re.match(pattern, output)
-            if match:
-                pid = match.group(1)
-                logger.info("'cosmo.jar' process is still running "
-                            "[pid={0}] - terminating...".format(pid))
-                os.system("kill {0}".format(pid))
-        except BaseException:
-            pass
-
-    @classmethod
-    def _get_cosmo_jar_path(cls):
-        cosmo_jar_path = path.realpath(
-            path.join(path.dirname(__file__),
-                      '../../orchestrator/target/cosmo.jar'))
-        if not path.exists(cosmo_jar_path):
-            raise RuntimeError("cosmo.jar not found in: {0}"
-                               .format(cosmo_jar_path))
-        return cosmo_jar_path
 
     @classmethod
     def _generate_riemann_config(cls, riemann_config_path,
