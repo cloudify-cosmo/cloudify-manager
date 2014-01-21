@@ -383,7 +383,6 @@ class DeploymentsIdEvents(Resource):
 
         first_event = args['from']
         events_count = args['count']
-
         if first_event < 0:
             abort(400, message='from argument cannot be negative')
         if events_count < 0:
