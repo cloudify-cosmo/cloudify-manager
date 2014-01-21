@@ -34,7 +34,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'Flask',
-        'flask-restful',
+        'flask-restful==0.2.5',
         'flask-restful-swagger',
         'cosmo-plugin-dsl-parser',
         'requests',
