@@ -51,7 +51,7 @@ types:
                 - put: cloudify.plugins.kv_store.tasks.put
                 - get: cloudify.plugins.kv_store.tasks.get
         properties:
-            install_agent: 'false'
+            - install_agent: 'false'
         workflows:
             start:
                 ref: "cloudify.workflows.host.start"
