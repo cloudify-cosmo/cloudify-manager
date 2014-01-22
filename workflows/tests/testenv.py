@@ -27,8 +27,6 @@ import cosmo
 import time
 import threading
 import re
-# import celery in order to override cloudify.operation decorator explicitly
-from cosmo import celery  # NOQA
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 

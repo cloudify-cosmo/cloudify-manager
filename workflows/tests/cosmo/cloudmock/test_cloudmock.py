@@ -33,7 +33,6 @@ class CloudMockTest(unittest.TestCase):
         decorators.get_node_state = dummy
         decorators.update_node_state = dummy
 
-
     def test_provision(self):
         machine_id = "machine1"
         t.provision(__cloudify_id=machine_id)
