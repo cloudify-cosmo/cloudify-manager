@@ -51,7 +51,7 @@ types:
                 - put: cloudify.plugins.kv_store.tasks.put
                 - get: cloudify.plugins.kv_store.tasks.get
         properties:
-            install_agent: 'false'
+            - install_agent: false
         workflows:
             start:
                 ref: "cloudify.workflows.host.start"
@@ -93,6 +93,8 @@ types:
 
     cloudify.types.web_server:
         derived_from: "cloudify.types.middleware_server"
+        properties:
+            - port: 80
 
     cloudify.types.app_server:
         derived_from: "cloudify.types.middleware_server"
