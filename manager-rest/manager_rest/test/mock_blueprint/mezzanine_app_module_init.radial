@@ -1,3 +1,0 @@
-define mezzanine_app_module_init
-    execute_operation operation: 'cloudify.interfaces.lifecycle.create'
-    execute_operation operation: 'cloudify.interfaces.lifecycle.start'

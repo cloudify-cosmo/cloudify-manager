@@ -1,0 +1,63 @@
+#######
+# Types and implementation details.
+#
+# Virtual machine is started using Cloudify's built-in OpenStack plugin.
+# Python simple HTTP server is started using Cloudify's Python web server plugin
+# which can be found here: https://github.com/CloudifySource/cosmo-plugin-python-webserver
+#
+
+# cloudify.types contains Cloudify's built-in types, relationships, workflows etc...
+# openstack_host_provisioner contains Cloudify's built-in OpenStack plugin definition.
+
+imports:
+    - cloudify.types
+    - openstack_host_provisioner
+
+# Python web server plugin definition with a specification to run in an agent vm.
+# Plugin will be downloaded and installed from the provided url.
+plugins:
+    python_webserver_installer:
+        derived_from: cloudify.plugins.agent_plugin
+        properties:
+            url: https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/develop.zip
+
+types:
+    openstack_host:
+        derived_from: cloudify.types.host
+        properties:
+            -   worker_config:
+                    user: ubuntu
+                    port: 22
+                    key: ~/.ssh/cloudify-agents.pem
+            -   nova_config:
+                    region: az-2.region-a.geo-1
+                    instance:
+                        name: web_server_vm_idan
+                        image: 67074
+                        flavor: 101
+                        key_name: cloudify_agents_idan
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                -   create: cloudify.plugins.openstack_host_provisioner.tasks.provision
+                -   start: cloudify.plugins.openstack_host_provisioner.tasks.start
+        policies:
+            -   name: start_detection_policy
+                rules:
+                    -   type: state_equals
+                        properties:
+                            service: openstack machine status
+                            state: running
+    web_server:
+        derived_from: cloudify.types.web_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                -   configure: python_webserver_installer.tasks.configure
+                -   start: python_webserver_installer.tasks.start
+        policies:
+            -   name: start_detection_policy
+                rules:
+                    -   type: state_equals
+                        properties:
+                            service: webserver status
+                            state: running
+

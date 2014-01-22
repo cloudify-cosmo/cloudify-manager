@@ -14,11 +14,12 @@
 #    * limitations under the License.
 
 from __future__ import absolute_import
+import logging
 from celery import Celery
 from celery.signals import after_setup_task_logger
 from cloudify.utils import build_includes
+from cloudify import decorators
 from os import path
-import logging
 
 __author__ = 'idanmo'
 
@@ -27,6 +28,8 @@ celery = Celery('cosmo.celery',
                 broker='amqp://',
                 backend='amqp://',
                 include=build_includes(path.dirname(__file__)))
+
+decorators.operation = celery.task
 
 # Optional configuration, see the application user guide.
 celery.conf.update(

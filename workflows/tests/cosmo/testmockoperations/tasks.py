@@ -13,11 +13,11 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from cosmo.celery import celery
 from cosmo.events import set_reachable as reachable
 from cosmo.events import set_unreachable as unreachable
 from time import time
-from cosmo.runtime import inject_node_state
+from cloudify.decorators import with_node_state
+from cloudify.decorators import operation
 
 state = []
 touched_time = None
@@ -25,7 +25,7 @@ unreachable_call_order = []
 mock_operation_invocation = []
 
 
-@celery.task
+@operation
 def make_reachable(__cloudify_id, **kwargs):
     reachable(__cloudify_id)
     global state
@@ -36,7 +36,7 @@ def make_reachable(__cloudify_id, **kwargs):
     })
 
 
-@celery.task
+@operation
 def make_unreachable(__cloudify_id, **kwargs):
     unreachable(__cloudify_id)
     global unreachable_call_order
@@ -46,41 +46,41 @@ def make_unreachable(__cloudify_id, **kwargs):
     })
 
 
-@celery.task
-@inject_node_state
+@operation
+@with_node_state
 def set_property(__cloudify_id, property_name, value, node_state=None,
                  **kwargs):
     node_state.put(property_name, value)
 
 
-@celery.task
+@operation
 def touch(**kwargs):
     global touched_time
     touched_time = time()
 
 
-@celery.task
+@operation
 def get_state():
     return state
 
 
-@celery.task
+@operation
 def get_touched_time():
     return touched_time
 
 
-@celery.task
+@operation
 def is_unreachable_called(__cloudify_id, **kwargs):
     return next((x for x in
                  unreachable_call_order if x['id'] == __cloudify_id), None)
 
 
-@celery.task
+@operation
 def get_unreachable_call_order():
     return unreachable_call_order
 
 
-@celery.task
+@operation
 def mock_operation(__cloudify_id, mockprop, **kwargs):
     global mock_operation_invocation
     mock_operation_invocation.append({
@@ -90,6 +90,6 @@ def mock_operation(__cloudify_id, mockprop, **kwargs):
     })
 
 
-@celery.task
+@operation
 def get_mock_operation_invocations():
     return mock_operation_invocation

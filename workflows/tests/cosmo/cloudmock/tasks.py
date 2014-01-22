@@ -15,23 +15,24 @@
 
 __author__ = 'idanmo'
 
-from cosmo.celery import celery
-from celery.utils.log import get_task_logger
 from cosmo.events import set_reachable
 from cosmo.events import set_unreachable
-from cosmo.runtime import inject_node_state
+from cloudify.decorators import with_node_state
+from cloudify.decorators import with_logger
+from cloudify.decorators import operation
+
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
 
-logger = get_task_logger(__name__)
 reachable = set_reachable
 unreachable = set_unreachable
 machines = {}
 
 
-@celery.task
-def provision(__cloudify_id, **kwargs):
+@operation
+@with_logger
+def provision(__cloudify_id, logger, **kwargs):
     global machines
     logger.info("provisioning machine: " + __cloudify_id)
     if __cloudify_id in machines:
@@ -40,9 +41,10 @@ def provision(__cloudify_id, **kwargs):
     machines[__cloudify_id] = NOT_RUNNING
 
 
-@celery.task
-@inject_node_state
-def start(__cloudify_id, node_state=None, **kwargs):
+@operation
+@with_node_state
+@with_logger
+def start(__cloudify_id, node_state, logger, **kwargs):
     global machines
     logger.info("starting machine: " + __cloudify_id)
     if __cloudify_id not in machines:
@@ -50,13 +52,14 @@ def start(__cloudify_id, node_state=None, **kwargs):
                            .format(__cloudify_id))
     machines[__cloudify_id] = RUNNING
     if node_state is not None:
-        node_state.put('id', __cloudify_id)
+        node_state['id'] = __cloudify_id
 
     reachable(__cloudify_id)
 
 
-@celery.task
-def stop(__cloudify_id, **kwargs):
+@operation
+@with_logger
+def stop(__cloudify_id, logger, **kwargs):
     global machines
     logger.info("stopping machine: " + __cloudify_id)
     if __cloudify_id not in machines:
@@ -65,8 +68,9 @@ def stop(__cloudify_id, **kwargs):
     machines[__cloudify_id] = NOT_RUNNING
 
 
-@celery.task
-def terminate(__cloudify_id, **kwargs):
+@operation
+@with_logger
+def terminate(__cloudify_id, logger, **kwargs):
     global machines
     logger.info("terminating machine: " + __cloudify_id)
     if __cloudify_id not in machines:
@@ -76,7 +80,6 @@ def terminate(__cloudify_id, **kwargs):
     unreachable(__cloudify_id)
 
 
-@celery.task
+@operation
 def get_machines(**kwargs):
-    logger.info("getting machines...")
     return machines

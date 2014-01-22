@@ -16,7 +16,6 @@
 __author__ = 'idanmo'
 
 import unittest
-
 import tasks as t
 
 
@@ -25,11 +24,14 @@ class CloudMockTest(unittest.TestCase):
     Tests cloud mock plugin.
     """
     def setUp(self):
-        def dummy(node_id):
-            pass
+        def dummy(arg, **kwargs):
+            return None
         t.reachable = dummy
         t.unreachable = dummy
         t.machines = {}
+        from cloudify import decorators
+        decorators.get_node_state = dummy
+        decorators.update_node_state = dummy
 
     def test_provision(self):
         machine_id = "machine1"

@@ -41,7 +41,7 @@ def post_blueprint_args(convention=False):
         ]
 
     if not convention:
-        data = {'application_file_name': 'mezzanine_blueprint.yaml'}
+        data = {'application_file_name': 'blueprint.yaml'}
     else:
         data = {}
 
@@ -57,7 +57,7 @@ class BlueprintsTestCase(BaseServerTestCase):
 
     def test_post_and_then_get(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
-        self.assertEquals('mezzanine', post_blueprints_response['name'])
+        self.assertEquals('hello_world', post_blueprints_response['name'])
         get_blueprints_response = self.get('/blueprints').json
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
@@ -65,11 +65,12 @@ class BlueprintsTestCase(BaseServerTestCase):
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.post_file(
             *post_blueprint_args(convention=True)).json
-        self.assertEquals('mezzanine_convention',
+        self.assertEquals('hello_world',
                           post_blueprints_response['name'])
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
+        print "##### response:", post_blueprints_response
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         self.assertEquals(post_blueprints_response,
