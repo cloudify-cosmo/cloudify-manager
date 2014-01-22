@@ -24,6 +24,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def _post_test_deployment(self):
         blueprint_response = self.post_file(*post_blueprint_args()).json
+        print "######## ", blueprint_response
         blueprint_id = blueprint_response['id']
         #Execute post deployment
         deployment_response = self.post('/deployments',
@@ -149,20 +150,15 @@ class DeploymentsTestCase(BaseServerTestCase):
         resource_path = '/deployments/{0}/nodes'.format(deployment_id)
         nodes = self.get(resource_path).json
         self.assertEquals(deployment_id, nodes['deploymentId'])
-        self.assertEquals(7, len(nodes['nodes']))
+        self.assertEquals(2, len(nodes['nodes']))
 
         def assert_node_exists(starts_with):
             self.assertTrue(any(map(
                 lambda n: n['id'].startswith(starts_with),
                 nodes['nodes'])),
                 'Failed finding node with prefix {0}'.format(starts_with))
-        assert_node_exists('mezzanine.mezzanine_db')
-        assert_node_exists('mezzanine.postgres_host')
-        assert_node_exists('mezzanine.postgres_server')
-        assert_node_exists('mezzanine.mezzanine_app')
-        assert_node_exists('mezzanine.nginx')
-        assert_node_exists('mezzanine.unicorn')
-        assert_node_exists('mezzanine.webserver_host')
+        assert_node_exists('hello_world.vm')
+        assert_node_exists('hello_world.http_web_server')
 
     # rename and run manually after starting a riemann server
     def _test_get_nodes_of_deployment_with_reachable(self):
