@@ -23,7 +23,7 @@ FABRIC_RUNNER_BRANCH = 'develop'
 FABRIC_RUNNER = "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}".format(FABRIC_RUNNER_BRANCH)
 
 COSMO_CELERY_VERSION = '0.3'
-COSMO_CELERY_BRANCH = 'develop'
+COSMO_CELERY_BRANCH = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
 COSMO_CELERY = "https://github.com/CloudifySource/cosmo-celery-common/tarball/{0}".format(COSMO_CELERY_BRANCH)
 
 
@@ -38,6 +38,10 @@ setup(
     install_requires=[
         "cosmo-fabric-runner",
         "cosmo-celery-common"
+    ],
+    tests_require=[
+        "nose",
+        "python-vagrant"
     ],
     dependency_links=["{0}#egg=cosmo-fabric-runner-{1}".format(FABRIC_RUNNER, FABRIC_RUNNER_VERSION),
                       "{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY, COSMO_CELERY_VERSION)]

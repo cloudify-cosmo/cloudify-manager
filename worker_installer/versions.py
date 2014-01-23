@@ -16,6 +16,6 @@
 
 __author__ = 'elip'
 
-PLUGIN_INSTALLER_VERSION = 'develop'
-COSMO_CELERY_COMMON_VERSION = 'develop'
-KV_STORE_VERSION = 'develop'
+PLUGIN_INSTALLER_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
+COSMO_CELERY_COMMON_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
+KV_STORE_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'

@@ -14,13 +14,14 @@
 #    * limitations under the License.
 # *******************************************************************************/
 import getpass
-
 import logging
 import os
 import random
 import string
 import tempfile
+
 from worker_installer.tasks import FabricRetryingRunner
+
 
 __author__ = 'idanm'
 
@@ -31,15 +32,22 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 local_worker_config = {
     "user": getpass.getuser(),
-    "broker": "amqp://"
+    "broker": "amqp://",
+    "env": {
+        "BROKER_URL": "amqp://guest:guest@localhost:5672//",
+        "MANAGEMENT_IP": "localhost"
+    }
 }
 
 remote_worker_config = {
     "user": "vagrant",
     "port": 22,
     "key": "~/.vagrant.d/insecure_private_key",
-    "management_ip": VAGRANT_MACHINE_IP,
-    "broker": "amqp://guest:guest@10.0.0.1:5672//"
+    "env": {
+        "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
+        "MANAGEMENT_IP": VAGRANT_MACHINE_IP
+
+    },
 }
 
 
