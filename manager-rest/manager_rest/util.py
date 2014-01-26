@@ -2,7 +2,8 @@ from os import path
 import shutil
 
 
-def copy_resources(file_server_root):
+def copy_resources(file_server_root,
+                   orchestrator_dir=None):
 
     # build orchestrator dir
     orchestrator_resources = path.abspath(__file__)
@@ -12,8 +13,13 @@ def copy_resources(file_server_root):
     if not path.isdir(path.join(orchestrator_resources, 'orchestrator')):
         for i in range(2):
             orchestrator_resources = path.dirname(orchestrator_resources)
-    orchestrator_resources = path.join(orchestrator_resources,
-                                       'orchestrator/src/main/resources')
+
+    if orchestrator_dir is not None:
+        orchestrator_resources = path.join(orchestrator_dir,
+                                           'src/main/resources')
+    else:
+        orchestrator_resources = path.join(orchestrator_resources,
+                                           'orchestrator/src/main/resources')
     # resources for dsl parser
     cloudify_resources = path.join(orchestrator_resources, 'cloudify')
     shutil.copytree(cloudify_resources, path.join(file_server_root,

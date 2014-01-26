@@ -510,7 +510,12 @@ class TestEnvironment(object):
             self._file_server_process.start()
 
             # copy resources (base yaml/radials etc)
-            copy_resources(fileserver_dir)
+            orchestrator_location = path.abspath(__file__)
+            for i in range(3):
+                orchestrator_location = path.dirname(orchestrator_location)
+            orchestrator_location = path.join(orchestrator_location,
+                                              'orchestrator')
+            copy_resources(fileserver_dir, orchestrator_location)
 
             # manager rest
             file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
