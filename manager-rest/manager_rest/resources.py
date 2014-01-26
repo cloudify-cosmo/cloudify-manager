@@ -172,7 +172,7 @@ class Blueprints(Resource):
         """
         file_server_root = config.instance().file_server_root
 
-        blueprint_id = uuid.uuid4()
+        blueprint_id = str(uuid.uuid4())
 
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:

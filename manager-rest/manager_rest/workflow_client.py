@@ -34,15 +34,22 @@ class WorkflowClient(object):
         self.workflow_service_base_uri = \
             config.instance().workflow_service_base_uri
 
-    def execute_workflow(self, workflow, plan, deployment_id=None):
+    def execute_workflow(self, name, workflow, plan, blueprint_id=None,
+                         deployment_id=None, execution_id=None):
         tags = {}
-        if deployment_id:
+        if deployment_id is not None:
             tags['deployment_id'] = deployment_id  # for workflow events
         response = requests.post(
             '{0}/workflows'.format(self.workflow_service_base_uri),
             json.dumps({
                 'radial': workflow,
-                'fields': {'plan': plan},
+                'fields': {
+                    'plan': plan,
+                    'workflow_id': name,
+                    'blueprint_id': blueprint_id,
+                    'deployment_id': deployment_id,
+                    'execution_id': execution_id
+                },
                 'tags': tags
             }))
         if response.status_code != 201:
@@ -54,7 +61,7 @@ class WorkflowClient(object):
     prepare_plan plan: $plan
         '''
         execution_response = self.execute_workflow(
-            prepare_plan_participant_workflow, plan)
+            'validate', prepare_plan_participant_workflow, plan)
         response = {'state': 'pending'}
         # TODO timeout
         while (response['state'] != 'terminated') and \

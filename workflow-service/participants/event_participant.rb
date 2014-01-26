@@ -15,6 +15,9 @@
 #
 
 require_relative 'exception_logger'
+require_relative '../amqp/amqp_client'
+require 'time'
+
 
 class EventParticipant < Ruote::Participant
 
@@ -73,6 +76,11 @@ class EventParticipant < Ruote::Participant
       $user_logger.debug("[workflow]\n#{json_event}")
     end
 
+    AMQPClient.instance.publish_event({
+        :type => 'workflow_stage',
+        :message => event['stage'],
+        :workitem => workitem
+    })
   end
 
 end

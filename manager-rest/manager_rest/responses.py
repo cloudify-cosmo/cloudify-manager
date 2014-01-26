@@ -147,7 +147,7 @@ class Execution(object):
     }
 
     def __init__(self, *args, **kwargs):
-        self.id = uuid.uuid4()
+        self.id = kwargs['id']
         self.status = kwargs['state']
         self.deployment_id = kwargs['deployment_id']
         self.internal_workflow_id = kwargs['internal_workflow_id']

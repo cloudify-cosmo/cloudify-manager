@@ -22,6 +22,7 @@ require 'securerandom'
 require 'set'
 require_relative 'prepare_operation_participant'
 require_relative 'exception_logger'
+require_relative '../amqp/amqp_client'
 
 
 class ExecuteTaskParticipant < Ruote::Participant
@@ -82,12 +83,12 @@ class ExecuteTaskParticipant < Ruote::Participant
       executor = $ruote_properties[EXECUTOR]
 
       exec = workitem.params[EXEC]
-      target = workitem.params[TARGET]
+      @target = workitem.params[TARGET]
       payload = to_map(workitem.params[PAYLOAD])
       argument_names = workitem.params[ARGUMENT_NAMES]
 
       $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
-                    target, exec, payload, argument_names)
+                    @target, exec, payload, argument_names)
 
       final_properties = Hash.new
 
@@ -113,12 +114,12 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       properties = to_map(final_properties)
 
-      task_id = SecureRandom.uuid
+      @task_id = SecureRandom.uuid
       @task_arguments = extract_task_arguments(properties, argument_names)
 
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
-                    task_id,
-                    target,
+                    @task_id,
+                    @target,
                     exec,
                     properties)
 
@@ -131,17 +132,31 @@ class ExecuteTaskParticipant < Ruote::Participant
       unless TASK_TO_FILTER.include? @full_task_name
         event = {}
         event['type'] = SENDING_TASK
-        populate_event_content(event, task_id, false)
+        populate_event_content(event, @task_id, false)
         description = event_to_s(event)
         $user_logger.debug(description)
+        send_task_event(workitem, :sending_type)
       end
 
-      executor.send_task(target, task_id, exec, json_props, self)
+      executor.send_task(@target, @task_id, exec, json_props, self)
 
     rescue => e
       log_exception(e, 'execute_task')
       flunk(workitem, e)
     end
+  end
+
+  def send_task_event(workitem, event_type, message=nil)
+    AMQPClient.instance.publish_event({
+      :workitem => workitem,
+      :type => event_type,
+      :message => message,
+      :task_id => @task_id,
+      :task_name => @full_task_name,
+      :task_target => @target,
+      :plugin => workitem.fields['plugin_name'] || nil,
+      :operation => workitem.fields['node_operation'] || nil
+    })
   end
 
   def populate_event_content(event, task_id, log_debug)
@@ -211,6 +226,7 @@ class ExecuteTaskParticipant < Ruote::Participant
           end
           unless TASK_TO_FILTER.include? @full_task_name
             $user_logger.debug(description)
+            send_task_event(workitem, :task_succeeded)
           end
           reply(workitem)
 
@@ -218,6 +234,7 @@ class ExecuteTaskParticipant < Ruote::Participant
 
           unless @full_task_name == VERIFY_PLUGIN_TASK_NAME
             $user_logger.debug(description)
+            send_task_event(workitem, :task_failed, enriched_event['exception'])
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
 

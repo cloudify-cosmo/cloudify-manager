@@ -70,7 +70,6 @@ class BlueprintsTestCase(BaseServerTestCase):
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
-        print "##### response:", post_blueprints_response
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         self.assertEquals(post_blueprints_response,
