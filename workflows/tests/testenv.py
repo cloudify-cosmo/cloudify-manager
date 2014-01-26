@@ -44,9 +44,16 @@ logger.setLevel(logging.INFO)
 
 class ManagerRestProcess(object):
 
-    def __init__(self, port, workflow_service_base_uri, events_path):
+    def __init__(self,
+                 port,
+                 file_server_dir,
+                 file_server_base_uri,
+                 workflow_service_base_uri,
+                 events_path):
         self.process = None
         self.port = port
+        self.file_server_dir = file_server_dir
+        self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
         self.events_path = events_path
         self.client = CosmoManagerRestClient('localhost')
@@ -54,18 +61,27 @@ class ManagerRestProcess(object):
     def start(self, timeout=10):
         endtime = time.time() + timeout
 
+        env = os.environ.copy()
+        env['MANAGER_REST_FILE_SERVER_ROOT'] = self.file_server_dir
+        env['MANAGER_REST_FILE_SERVER_BASE_URI'] = self.file_server_base_uri
+        env['MANAGER_REST_WORKFLOW_SERVICE_BASE_URI'] = \
+            self.workflow_service_base_uri
+        env['MANAGER_REST_EVENTS_FILE_PATH'] = self.events_path
+
         manager_rest_command = [
-            sys.executable,
-            self.locate_manager_rest(),
-            '--port', self.port,
-            '--workflow_service_base_uri', self.workflow_service_base_uri,
-            '--events_files_path', self.events_path
+            'gunicorn',
+            '-w', '1',
+            '-b', '0.0.0.0:{0}'.format(self.port),
+            '--timeout', '300',
+            'server:app'
         ]
 
         logger.info('Starting manager-rest with: {0}'
                     .format(manager_rest_command))
 
-        self.process = subprocess.Popen(manager_rest_command)
+        self.process = subprocess.Popen(manager_rest_command,
+                                        env=env,
+                                        cwd=self.locate_manager_rest_dir())
         started = False
         attempt = 1
         while not started and time.time() < endtime:
@@ -89,7 +105,7 @@ class ManagerRestProcess(object):
         if not self.process is None:
             self.process.terminate()
 
-    def locate_manager_rest(self):
+    def locate_manager_rest_dir(self):
         # start with current location
         manager_rest_location = path.abspath(__file__)
         # get to cosmo-manager
@@ -97,7 +113,7 @@ class ManagerRestProcess(object):
             manager_rest_location = path.dirname(manager_rest_location)
         # build way into manager_rest
         return path.join(manager_rest_location,
-                         'manager-rest/manager_rest/server.py')
+                         'manager-rest/manager_rest')
 
 
 class RuoteServiceProcess(object):
@@ -478,10 +494,31 @@ class TestEnvironment(object):
             # set events path (wf_service -> write, manager_rest -> read)
             self.events_path = path.join(self._tempdir, 'events')
 
+            # workaround to update path
+            manager_rest_path = \
+                path.dirname(path.dirname(path.dirname(__file__)))
+            manager_rest_path = path.join(manager_rest_path, 'manager-rest')
+            sys.path.append(manager_rest_path)
+
+            # file server
+            fileserver_dir = path.join(self._tempdir, 'fileserver')
+            os.mkdir(fileserver_dir)
+            from manager_rest.file_server import FileServer
+            from manager_rest.file_server import PORT as FS_PORT
+            from manager_rest.util import copy_resources
+            self._file_server_process = FileServer(fileserver_dir)
+            self._file_server_process.start()
+
+            # copy resources (base yaml/radials etc)
+            copy_resources(fileserver_dir)
+
             # manager rest
+            file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
             worker_service_base_uri = 'http://localhost:8101'
             self._manager_rest_process = ManagerRestProcess(
                 manager_rest_port,
+                fileserver_dir,
+                file_server_base_uri,
                 worker_service_base_uri,
                 self.events_path)
             self._manager_rest_process.start()
@@ -507,6 +544,8 @@ class TestEnvironment(object):
             self._manager_rest_process.close()
         if self._ruote_service:
             self._ruote_service.close()
+        if self._file_server_process:
+            self._file_server_process.stop()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
             shutil.rmtree(self._tempdir, ignore_errors=True)

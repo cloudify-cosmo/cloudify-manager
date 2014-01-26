@@ -20,6 +20,7 @@ class Config(object):
 
     def __init__(self):
         self._file_server_root = None
+        self._file_server_base_uri = None
         self._workflow_service_base_uri = None
         self._events_files_path = None
         self._test_mode = False
@@ -31,6 +32,14 @@ class Config(object):
     @file_server_root.setter
     def file_server_root(self, value):
         self._file_server_root = value
+
+    @property
+    def file_server_base_uri(self):
+        return self._file_server_base_uri
+
+    @file_server_base_uri.setter
+    def file_server_base_uri(self, value):
+        self._file_server_base_uri = value
 
     @property
     def workflow_service_base_uri(self):

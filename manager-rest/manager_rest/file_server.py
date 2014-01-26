@@ -19,6 +19,8 @@ from multiprocessing import Process
 import SimpleHTTPServer
 import SocketServer
 import os
+import socket
+import time
 
 PORT = 53229
 
@@ -35,6 +37,8 @@ class FileServer(object):
     def stop(self):
         try:
             self.process.terminate()
+            while self.is_alive():
+                time.sleep(0.1)
         except BaseException:
             pass
 
@@ -50,3 +54,12 @@ class FileServer(object):
         httpd = TCPServer(('0.0.0.0', PORT),
                           SimpleHTTPServer.SimpleHTTPRequestHandler)
         httpd.serve_forever()
+
+    def is_alive(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.connect(('localhost', PORT))
+            s.close()
+            return True
+        except socket.error:
+            return False

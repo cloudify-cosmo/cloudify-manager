@@ -18,25 +18,33 @@ __author__ = 'dan'
 import unittest
 import json
 import urllib
-from manager_rest import server
+import tempfile
+from manager_rest import server, util, config
+from manager_rest.file_server import FileServer
 
 
 class BaseServerTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.file_server = FileServer(self.tmpdir)
+        self.file_server.start()
         server.reset_state(self.create_configuration())
+        util.copy_resources(config.instance().file_server_root)
+        server.setup_app()
         server.app.config['Testing'] = True
-        server.main()
         self.app = server.app.test_client()
 
     def tearDown(self):
-        server.stop_file_server()
+        self.file_server.stop()
 
     def create_configuration(self):
         from manager_rest.config import Config
-        config = Config()
-        config.test_mode = True
-        return config
+        test_config = Config()
+        test_config.test_mode = True
+        test_config.file_server_root = self.tmpdir
+        test_config.file_server_base_uri = 'http://localhost:53229'
+        return test_config
 
     def post(self, resource_path, data):
         result = self.app.post(resource_path, content_type='application/json',
