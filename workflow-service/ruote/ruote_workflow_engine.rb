@@ -23,6 +23,7 @@ require 'pathname'
 require_relative '../../orchestrator/target/cosmo.jar'
 require_relative '../participants/all'
 require_relative '../data/workflow_state'
+require_relative '../utils/logs'
 
 java_import org.cloudifysource.cosmo.tasks.EventHandler
 java_import org.springframework.context.annotation.AnnotationConfigApplicationContext
@@ -59,17 +60,6 @@ class RuoteWorkflowEngine
 
     # create loggers
     $logger = LoggerFactory.get_logger('org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime')
-    $user_logger = LoggerFactory.get_logger('cosmo')
-
-    # setup events logs appender and path
-    if ENV.has_key? 'WF_SERVICE_LOGS_PATH'
-      user_logger = Logger.get_logger('cosmo')
-      appender = CosmoDeploymentsFileAppender.new
-      appender.set_path ENV['WF_SERVICE_LOGS_PATH']
-      appender.set_name 'app'
-      appender.set_threshold Level::DEBUG
-      user_logger.add_appender appender
-    end
 
     # load built in workflows
     load_built_in_workflows
@@ -174,7 +164,12 @@ class RuoteWorkflowEngine
         event[:type] = :workflow_failed
         event[:error] = wf_state.error
     end
-    $user_logger.debug("Workflow state changed\n#{JSON.pretty_generate(event)}")
+    log(:debug, "workflow state changed: #{event[:type]}", {
+        :wfid => wf_state.id,
+        :arguments => {
+            :event => event
+        }
+    })
   end
 
   def update_workflow_state(wfid, state, tags=nil, error=nil)

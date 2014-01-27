@@ -53,7 +53,7 @@ class PreparePlanParticipant < Ruote::Participant
       reply
 
     rescue => e
-      log_exception(e, 'prepare_plan')
+      log_exception(workitem, e, 'prepare_plan')
       flunk(workitem, e)
     end
   end

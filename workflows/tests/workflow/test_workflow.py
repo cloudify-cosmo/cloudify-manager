@@ -22,7 +22,7 @@ from cosmo_manager_rest_client.cosmo_manager_rest_client import \
     CosmoManagerRestCallError
 
 
-class TestRuoteWorkflows(TestCase):
+class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")

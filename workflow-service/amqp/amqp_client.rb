@@ -22,45 +22,75 @@ class AMQPClient
   include Singleton
 
   def initialize
+    settings = {
+      :auto_delete => true,
+      :durable => true,
+      :exclusive => false
+    }
     @conn = MarchHare.connect
     @channel = @conn.create_channel
-    @queue = @channel.queue('cloudify-events')
+    @events_queue = @channel.queue('cloudify-events', settings)
+    @logs_queue = @channel.queue('cloudify-logs', settings)
   end
 
-  def self.publish_event(event={})
-    AMQPClient.instance.publish_event(event)
+  def self.publish_event(type, event={})
+    AMQPClient.instance.publish_event(type, event)
   end
 
-  def publish_event(event={})
-    workitem = event[:workitem]
-    node_id = nil
-    node_name = nil
-    if workitem.fields.has_key? 'node'
-      node_id = workitem.fields['node']['id']
-      node_name = workitem.fields['node']['name'] || 'n/a'
-    end
-    event = {
-        :bundle_code => event[:bundle_code] || nil,
-        :timestamp => Time.now.to_s,
-        :type => event[:type] || nil,
-        :message => event[:message] || nil,
-        :context => {
-            :operation => event[:operation] || nil,
-            :plugin => event[:plugin] || nil,
-            :task_name => event[:task_name] || nil,
-            :task_id => event[:task_id] || nil,
-            :task_target => event[:task_target] || nil,
-            :node_id => node_id,
-            :node_name => node_name,
-            :blueprint_id => workitem.fields['blueprint_id'] || 'n/a',
-            :deployment_id => workitem.fields['deployment_id'] || 'n/a',
-            :workflow_id => workitem.fields['workflow_id'] || 'n/a',
-            :execution_id => workitem.fields['execution_id'] || 'n/a',
-            :wfid => workitem.wfid
-        }
+  def self.publish_log(level, message, context={})
+    AMQPClient.instance.publish_log(level, message, context)
+  end
+
+  def publish_event(type, context={})
+    raise 'Cannot create amqp message - workitem not in message_params' unless context.has_key? :workitem
+    context[:message] = {
+        :text => context[:message] || nil,
+        :arguments => context[:arguments] || nil
     }
-    @queue.publish(event.to_json, :routing_key => @queue.name)
+    event = generate_amqp_message(context)
+    event[:type] = type
+    @events_queue.publish(event.to_json,
+                          :routing_key => 'logstash')
   end
 
+  def publish_log(level, message, context)
+    context[:message] = {
+        :text => message,
+        :arguments => context[:arguments] || nil
+    }
+    log = generate_amqp_message(context)
+    log[:logger] = context[:logger] || :ruote
+    log[:level] = level
+    @logs_queue.publish(log.to_json,
+                        :routing_key => 'logstash')
+  end
+
+  def generate_amqp_message(message_params={})
+    workitem = message_params[:workitem] || nil
+    message = {
+      :code => message_params[:code] || nil,
+      :timestamp => Time.now.to_s,
+      :message => message_params[:message] || nil,
+      :context => {
+        :operation => message_params[:operation] || nil,
+        :plugin => message_params[:plugin] || nil,
+        :task_name => message_params[:task_name] || nil,
+        :task_id => message_params[:task_id] || nil,
+        :task_target => message_params[:task_target] || nil,
+      }
+    }
+    if not workitem.nil?
+      if workitem.fields.has_key? 'node'
+        message[:context][:node_id] = workitem.fields['node']['id']
+        message[:context][:node_name] = workitem.fields['node']['name'] || nil
+      end
+      message[:context][:blueprint_id] = workitem.fields['blueprint_id'] || nil
+      message[:context][:deployment_id] = workitem.fields['deployment_id'] || nil,
+      message[:context][:workflow_id] = workitem.fields['workflow_id'] || nil,
+      message[:context][:execution_id] = workitem.fields['execution_id'] || nil,
+      message[:context][:wfid] = workitem.wfid
+    end
+    return message
+  end
 
 end

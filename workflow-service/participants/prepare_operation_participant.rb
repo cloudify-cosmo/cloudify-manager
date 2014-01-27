@@ -129,7 +129,7 @@ class PrepareOperationParticipant < Ruote::Participant
       reply
 
     rescue => e
-      log_exception(e, 'prepare_operation')
+      log_exception(workitem, e, 'prepare_operation')
       flunk(workitem, e)
     end
   end

@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +14,13 @@
 #  * limitations under the License.
 #
 
-require_relative 'exception_logger'
+require_relative '../amqp/amqp_client'
 
 
-class LoggerParticipant < Ruote::Participant
-
-  MESSAGE = 'message'
-
-  def on_workitem
-    begin
-      raise 'message not set' unless workitem.params.has_key? MESSAGE
-      message = workitem.params[MESSAGE]
-      $logger.debug('ruote-workflow: {}', message)
-      reply
-    rescue => e
-      log_exception(workitem, e, 'logger')
-      flunk(workitem, e)
-    end
+def event(type, event_params={})
+  begin
+    AMQPClient::publish_event(type, event_params)
+  rescue Exception => e
+    $logger.debug("Error publishing event: #{e.message}")
   end
-
 end
