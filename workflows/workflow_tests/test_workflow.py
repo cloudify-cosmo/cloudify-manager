@@ -15,11 +15,12 @@
 
 __author__ = 'idanmo'
 
-from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
 from cosmo_manager_rest_client.cosmo_manager_rest_client import \
     CosmoManagerRestCallError
+
+from workflow_tests.testenv import TestCase
+from workflow_tests.testenv import get_resource as resource
+from workflow_tests.testenv import deploy_application as deploy
 
 
 class BasicWorkflowsTest(TestCase):
@@ -28,8 +29,8 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/basic.yaml")
         deploy(dsl_path)
 
-        from cosmo.cloudmock.tasks import get_machines
-        result = get_machines.apply_async()
+        from plugins.cloudmock.tasks import get_machines
+        result = self.send_task(get_machines)
         machines = result.get(timeout=10)
 
         self.assertEquals(1, len(machines))
@@ -38,9 +39,9 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
         deploy(dsl_path)
 
-        from cosmo.testmockoperations.tasks import get_state as \
+        from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = testmock_get_state.apply_async().get(timeout=10)
+        states = self.send_task(testmock_get_state).get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('containing_node' in states[0]['id'])
         self.assertTrue('contained_in_node' in states[1]['id'])
@@ -49,9 +50,9 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
         deploy(dsl_path)
 
-        from cosmo.testmockoperations.tasks import get_state as \
+        from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = testmock_get_state.apply_async().get(timeout=10)
+        states = self.send_task(testmock_get_state).get(timeout=10)
         node_runtime_props = None
         for k, v in states[1]['capabilities'].iteritems():
             if 'containing_node' in k:
@@ -61,19 +62,19 @@ class BasicWorkflowsTest(TestCase):
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
-    def test_non_existing_operation_exception(self):
+    def test_non_existing_opberation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
 
     def test_inject_properties_to_operation(self):
         dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
         deploy(dsl_path)
-        from cosmo.testmockoperations.tasks import get_state as \
+        from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = testmock_get_state.apply_async().get(timeout=10)
-        from cosmo.testmockoperations.tasks import \
-            get_mock_operation_invocations as testmock_get_invocations
-        invocations = testmock_get_invocations.apply_async().get(timeout=10)
+        states = self.send_task(testmock_get_state).get(timeout=10)
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations as testmock_get__invocations
+        invocations = self.send_task(testmock_get__invocations).get(timeout=10)
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])

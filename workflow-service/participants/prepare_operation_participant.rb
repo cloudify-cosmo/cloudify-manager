@@ -113,7 +113,7 @@ class PrepareOperationParticipant < Ruote::Participant
       end
       workitem.fields[WORKER_ID] = "celery.#{workitem.fields[TARGET]}"
       workitem.fields[OPERATION_MAPPING] = operation_mapping
-      workitem.fields[PLUGIN_NAME] = "cosmo.#{plugin_name}"
+      workitem.fields[PLUGIN_NAME] = plugin_name
       workitem.fields[OPERATION] = "#{workitem.fields[PLUGIN_NAME]}.#{operation_mapping}"
       workitem.fields[NODE_OPERATION] = operation
 

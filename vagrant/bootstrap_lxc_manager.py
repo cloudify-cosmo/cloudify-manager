@@ -23,12 +23,14 @@ import datetime
 import time
 import sys
 import tempfile
+from os.path import expanduser
+from subprocess import check_output
+
 import yaml
 
-from os.path import expanduser
 from management_plugins import WORKER_INSTALLER
 from versions import FABRIC_RUNNER_VERSION
-from subprocess import check_output
+
 
 __author__ = 'elip'
 
@@ -130,6 +132,10 @@ class WorkflowServiceProcess(object):
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
+        env['WF_SERVICE_LOGS_PATH'] = self.events_path
+
+        print "starting workflow service with command: {0}".format(command)
+
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
                                          stdout=output_file,
@@ -215,6 +221,8 @@ class ManagerRestProcess(object):
             '--timeout', '300',
             'server:app'
         ]
+
+        print "starting manager rest service with command: {0}".format(command)
 
         self._process = subprocess.Popen(command,
                                          env=env,
