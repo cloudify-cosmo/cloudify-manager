@@ -15,9 +15,10 @@
 
 __author__ = 'idanmo'
 
-from cosmo.events import set_reachable
-from cosmo.events import set_unreachable
 from cloudify.decorators import operation
+
+from plugins.test_events import set_reachable
+from plugins.test_events import set_unreachable
 
 
 RUNNING = "running"

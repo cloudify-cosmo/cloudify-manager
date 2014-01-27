@@ -58,11 +58,11 @@ class ExecuteTaskParticipant < Ruote::Participant
   TARGET_NODE_PROPERTIES = '__target_properties'
   RELATIONSHIP_NODE = 'relationship_other_node'
 
-  RELOAD_RIEMANN_CONFIG_TASK_NAME = 'cosmo.cloudify.plugins.riemann_config_loader.tasks.reload_riemann_config'
-  VERIFY_PLUGIN_TASK_NAME = 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin'
-  GET_ARGUMENTS_TASK_NAME = 'cosmo.cloudify.plugins.plugin_installer.tasks.get_arguments'
-  RESTART_CELERY_WORKER_TASK_NAME = 'cosmo.cloudify.plugins.worker_installer.tasks.restart'
-  GET_KV_STORE_TASK_NAME = 'cosmo.cloudify.plugins.kv_store.get'
+  RELOAD_RIEMANN_CONFIG_TASK_NAME = 'riemann_config_loader.tasks.reload_riemann_config'
+  VERIFY_PLUGIN_TASK_NAME = 'plugin_installer.tasks.verify_plugin'
+  GET_ARGUMENTS_TASK_NAME = 'plugin_installer.tasks.get_arguments'
+  RESTART_CELERY_WORKER_TASK_NAME = 'worker_installer.tasks.restart'
+  GET_KV_STORE_TASK_NAME = 'plugins.kv_store.get'
 
   TASK_TO_FILTER = Set.new [RELOAD_RIEMANN_CONFIG_TASK_NAME,
                             VERIFY_PLUGIN_TASK_NAME,

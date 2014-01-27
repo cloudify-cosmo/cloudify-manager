@@ -14,8 +14,10 @@
 #    * limitations under the License.
 
 
-from cloudify.decorators import operation
 from time import time
+
+from cloudify.decorators import operation
+
 
 state = []
 
