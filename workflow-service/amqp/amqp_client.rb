@@ -48,7 +48,8 @@ class AMQPClient
         :arguments => context[:arguments] || nil
     }
     event = generate_amqp_message(context)
-    event[:type] = type
+    event[:type] = :cloudify_event
+    event[:event_type] = type
     @events_queue.publish(event.to_json,
                           :routing_key => 'logstash')
   end
@@ -61,6 +62,7 @@ class AMQPClient
     log = generate_amqp_message(context)
     log[:logger] = context[:logger] || :ruote
     log[:level] = level
+    log[:type] = :cloudify_log
     @logs_queue.publish(log.to_json,
                         :routing_key => 'logstash')
   end
