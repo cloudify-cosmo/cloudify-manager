@@ -87,9 +87,9 @@ class AMQPClient
         message[:context][:node_name] = workitem.fields['node']['name'] || nil
       end
       message[:context][:blueprint_id] = workitem.fields['blueprint_id'] || nil
-      message[:context][:deployment_id] = workitem.fields['deployment_id'] || nil,
-      message[:context][:workflow_id] = workitem.fields['workflow_id'] || nil,
-      message[:context][:execution_id] = workitem.fields['execution_id'] || nil,
+      message[:context][:deployment_id] = workitem.fields['deployment_id'] || nil
+      message[:context][:workflow_id] = workitem.fields['workflow_id'] || nil
+      message[:context][:execution_id] = workitem.fields['execution_id'] || nil
       message[:context][:wfid] = workitem.wfid
     end
     return message

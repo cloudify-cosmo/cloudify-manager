@@ -50,7 +50,7 @@ class EventParticipant < Ruote::Participant
   def self.log_event(event, workitem=nil)
     event(:workflow_stage, {
         :workitem => workitem,
-        :message => event['stage'],
+        :message => event['stage']
     })
   end
 
