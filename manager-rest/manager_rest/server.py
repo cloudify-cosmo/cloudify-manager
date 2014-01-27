@@ -18,6 +18,7 @@ __author__ = 'dan'
 import sys
 import logging
 import os
+import yaml
 
 from flask import Flask
 from flask.ext.restful import Api
@@ -49,16 +50,17 @@ def setup_app():
     resources.setup_resources(api)
 
 
-if 'MANAGER_REST_FILE_SERVER_BASE_URI' in os.environ:
-    config.instance().file_server_base_uri = \
-        os.environ['MANAGER_REST_FILE_SERVER_BASE_URI']
+if 'MANAGER_REST_CONFIG_PATH' in os.environ:
+    with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
+        yaml_conf = yaml.load(f.read())
+    obj_conf = config.instance()
+    if 'file_server_root' in yaml_conf:
+        obj_conf.file_server_root = yaml_conf['file_server_root']
+    if 'file_server_base_uri' in yaml_conf:
+        obj_conf.file_server_base_uri = yaml_conf['file_server_base_uri']
+    if 'workflow_service_base_uri' in yaml_conf:
+        obj_conf.workflow_service_base_uri = \
+            yaml_conf['workflow_service_base_uri']
+    if 'events_file_path' in yaml_conf:
+        obj_conf.events_files_path = yaml_conf['events_file_path']
     setup_app()
-if 'MANAGER_REST_FILE_SERVER_ROOT' in os.environ:
-    config.instance().file_server_root = \
-        os.environ['MANAGER_REST_FILE_SERVER_ROOT']
-if 'MANAGER_REST_WORKFLOW_SERVICE_BASE_URI' in os.environ:
-    config.instance().workflow_service_base_uri = \
-        os.environ['MANAGER_REST_WORKFLOW_SERVICE_BASE_URI']
-if 'MANAGER_REST_EVENTS_FILE_PATH' in os.environ:
-    config.instance().events_files_path = \
-        os.environ['MANAGER_REST_EVENTS_FILE_PATH']

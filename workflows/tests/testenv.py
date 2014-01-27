@@ -15,6 +15,7 @@
 
 __author__ = 'idanmo'
 
+import yaml
 import unittest
 import shutil
 import tempfile
@@ -61,12 +62,19 @@ class ManagerRestProcess(object):
     def start(self, timeout=10):
         endtime = time.time() + timeout
 
+        configuration = {
+            'file_server_root': self.file_server_dir,
+            'file_server_base_uri': self.file_server_base_uri,
+            'workflow_service_base_uri': self.workflow_service_base_uri,
+            'events_file_path': self.events_path
+        }
+
+        config_path = tempfile.mktemp()
+        with open(config_path, 'w') as f:
+            f.write(yaml.dump(configuration))
+
         env = os.environ.copy()
-        env['MANAGER_REST_FILE_SERVER_ROOT'] = self.file_server_dir
-        env['MANAGER_REST_FILE_SERVER_BASE_URI'] = self.file_server_base_uri
-        env['MANAGER_REST_WORKFLOW_SERVICE_BASE_URI'] = \
-            self.workflow_service_base_uri
-        env['MANAGER_REST_EVENTS_FILE_PATH'] = self.events_path
+        env['MANAGER_REST_CONFIG_PATH'] = config_path
 
         manager_rest_command = [
             'gunicorn',
