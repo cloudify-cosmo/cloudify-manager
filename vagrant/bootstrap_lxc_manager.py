@@ -212,6 +212,8 @@ class ManagerRestProcess(object):
         config_path = tempfile.mktemp()
         with open(config_path, 'w') as f:
             f.write(yaml.dump(configuration))
+        env = os.environ.copy()
+        env['MANAGER_REST_CONFIG_PATH'] = config_path
 
         command = [
             'gunicorn',
@@ -220,7 +222,9 @@ class ManagerRestProcess(object):
             '--timeout', '300',
             'server:app'
         ]
+
         self._process = subprocess.Popen(command,
+                                         env=env,
                                          stdin=FNULL,
                                          stdout=output_file,
                                          stderr=output_file,
@@ -439,9 +443,8 @@ class VagrantLxcBoot:
         for i in range(2):
             orchestrator_dir = os.path.dirname(orchestrator_dir)
         orchestrator_dir = os.path.join(orchestrator_dir,
-                                          'orchestrator')
+                                        'orchestrator')
         copy_resources(file_server_dir, orchestrator_dir)
-
 
     def install_celery(self):
         self.pip("billiard==2.7.3.28")
