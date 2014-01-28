@@ -38,7 +38,9 @@ setup(
         'flask-restful-swagger',
         'cosmo-plugin-dsl-parser',
         'requests',
-        'bernhard'
+        'bernhard',
+        'gunicorn==18.0',
+        'PyYAML==3.10'
     ],
     tests_require=['nose'],
     dependency_links=[DSL_PARSER]

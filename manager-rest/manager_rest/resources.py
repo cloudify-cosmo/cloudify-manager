@@ -31,7 +31,6 @@ import uuid
 import chunked
 from blueprints_manager import DslParseException
 from workflow_client import WorkflowServiceError
-from file_server import PORT as FILE_SERVER_PORT
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
@@ -220,7 +219,6 @@ class Blueprints(Resource):
             with open(archive_file_name, 'w') as f:
                 for buffered_chunked in chunked.decode(request.input_stream):
                     f.write(buffered_chunked)
-            request.input_stream.close()
         else:
             if not request.data:
                 abort(400,
@@ -259,7 +257,7 @@ class Blueprints(Resource):
         application_file = self._extract_application_file(file_server_root,
                                                           application_dir)
 
-        file_server_base_url = 'http://localhost:{0}'.format(FILE_SERVER_PORT)
+        file_server_base_url = config.instance().file_server_base_uri
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
         alias_mapping = '{0}/{1}'.format(file_server_base_url,
                                          'cloudify/alias-mappings.yaml')
