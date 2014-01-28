@@ -391,7 +391,7 @@ class VagrantLxcBoot:
 
     def install_cosmo_manager(self):
         cosmo_manager_repo = 'CloudifySource/cosmo-manager'
-        branch = 'feature/CLOUDIFY-2413-gunicorn-setup'
+        branch = 'develop'
 
         workflow_service_base_uri = 'http://localhost:8101'
 
