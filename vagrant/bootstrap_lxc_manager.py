@@ -446,7 +446,6 @@ class VagrantLxcBoot:
         if not file_server_process.is_alive():
             raise RuntimeError("File server is not responding")
 
-
         orchestrator_dir = os.path.abspath(__file__)
         for i in range(2):
             orchestrator_dir = os.path.dirname(orchestrator_dir)
