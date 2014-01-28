@@ -438,7 +438,7 @@ class VagrantLxcBoot:
         from manager_rest.util import copy_resources
 
         file_server_process = FileServer(file_server_dir, fork=True)
-        # file_server_process.start()
+        file_server_process.start()
         orchestrator_dir = os.path.abspath(__file__)
         for i in range(2):
             orchestrator_dir = os.path.dirname(orchestrator_dir)

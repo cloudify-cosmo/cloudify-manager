@@ -30,7 +30,7 @@ class FileServer(object):
 
     def __init__(self, root_path, fork=False):
         self.root_path = root_path
-        self.process = Process(target=self.start_impl, args=(fork,))
+        self.process = Process(target=self.start_impl, args=(fork,), name='file_server')
 
     def start(self):
         self.process.start()
@@ -48,6 +48,10 @@ class FileServer(object):
             child_pid = os.fork()
             if child_pid != 0:
                 sys.exit()
+            else:
+                child_pid = os.fork()
+                if child_pid != 0:
+                    sys.exit()
 
         import logging
         logging.basicConfig(level=logging.DEBUG)
