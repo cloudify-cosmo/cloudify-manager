@@ -16,6 +16,7 @@
 __author__ = 'dan'
 
 from multiprocessing import Process
+import subprocess
 import SimpleHTTPServer
 import SocketServer
 import os
@@ -24,16 +25,25 @@ import socket
 import time
 
 PORT = 53229
+FNULL = open(os.devnull, 'w')
 
 
 class FileServer(object):
 
-    def __init__(self, root_path, fork=False):
+    def __init__(self, root_path, use_subprocess=False):
         self.root_path = root_path
-        self.process = Process(target=self.start_impl, args=(fork,), name='file_server')
+        self.process = Process(target=self.start_impl)
+        self.use_subprocess = use_subprocess
 
     def start(self):
-        self.process.start()
+        if self.use_subprocess:
+            subprocess.Popen(
+                [sys.executable, __file__, self.root_path],
+                stdin=FNULL,
+                stdout=FNULL,
+                stderr=FNULL)
+        else:
+            self.process.start()
 
     def stop(self):
         try:
@@ -43,16 +53,7 @@ class FileServer(object):
         except BaseException:
             pass
 
-    def start_impl(self, fork):
-        if fork:
-            child_pid = os.fork()
-            if child_pid != 0:
-                sys.exit()
-            else:
-                child_pid = os.fork()
-                if child_pid != 0:
-                    sys.exit()
-
+    def start_impl(self):
         import logging
         logging.basicConfig(level=logging.DEBUG)
         logging.info('Starting file server and serving files from: %s',
@@ -73,3 +74,6 @@ class FileServer(object):
             return True
         except socket.error:
             return False
+
+if __name__ == '__main__':
+    FileServer(sys.argv[1]).start_impl()

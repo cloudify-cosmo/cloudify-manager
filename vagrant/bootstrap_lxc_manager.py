@@ -433,12 +433,20 @@ class VagrantLxcBoot:
                                           events_path)
         manager_rest.start()
 
-    def start_file_server(self, file_server_dir):
+    def start_file_server(self, file_server_dir, timeout=10):
+        endtime = time.time() + timeout
+
         from manager_rest.file_server import FileServer
         from manager_rest.util import copy_resources
 
-        file_server_process = FileServer(file_server_dir, fork=True)
+        file_server_process = FileServer(file_server_dir, use_subprocess=True)
         file_server_process.start()
+        while not file_server_process.is_alive() and time.time() < endtime:
+            time.sleep(1)
+        if not file_server_process.is_alive():
+            raise RuntimeError("File server is not responding")
+
+
         orchestrator_dir = os.path.abspath(__file__)
         for i in range(2):
             orchestrator_dir = os.path.dirname(orchestrator_dir)
