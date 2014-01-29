@@ -24,8 +24,6 @@ install:
    - "sudo pip install flake8"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
-   - "pip install https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/tarball/feature/CLOUDIFY-2421-node-name#egg=cosmo-plugin-riemann-configurer-0.3 --process-dependency-links"
-   - "pip install https://github.com/CloudifySource/cosmo-plugin-dsl-parser/tarball/feature/CLOUDIFY-2421-node-name#egg=cosmo-plugin-dsl-parser-0.3 --process-dependency-links"
    - "pip install manager-rest/ --process-dependency-links"
    - "python workflows/setup.py install"
 
