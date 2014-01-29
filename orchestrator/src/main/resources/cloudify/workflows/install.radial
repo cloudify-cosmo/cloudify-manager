@@ -2,7 +2,8 @@ define initialize_nodes
 
     log message: 'Reloading policies'
     event event: { "stage" => "Initializing monitoring policies" }
-    reload_riemann_config policies: '$plan.policies',
+    reload_riemann_config app_id: '${plan.name}',
+                          policies: '$plan.policies',
                           rules: '$plan.rules',
                           policies_events: '$plan.policies_events'
 

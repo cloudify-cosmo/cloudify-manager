@@ -64,6 +64,7 @@ def set_node_reachable_state(node_id, reachable):
         "tags": ["cosmo", "name={0}".format(node_id), state],
         "ttl": 9999,
         "description": json.dumps({
+            "app_id": "workflows_stub_name",
             "node_id": node_id,
             "policy": "",
             "message": ""
