@@ -13,13 +13,7 @@ blueprint:
                     - start: cloudmock.tasks.start
                     - stop: cloudmock.tasks.stop
                     - delete: cloudmock.tasks.terminate
-            policies:
-                -   name: "start_detection_policy"
-                    rules:
-                        -   type: "state_equals"
-                            properties:
-                                service: "machine-status"
-                                state: "running"
+
 workflows:
     mock_workflow:
         radial: |
