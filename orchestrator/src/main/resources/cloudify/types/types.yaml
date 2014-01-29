@@ -37,13 +37,6 @@ types:
             delete:
                 ref: cloudify.workflows.node.delete
 
-        policies:
-            -   name: start_detection_policy
-                rules:
-                    -   type: state_equals
-                        properties:
-                            service:
-                            state: running
 
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
