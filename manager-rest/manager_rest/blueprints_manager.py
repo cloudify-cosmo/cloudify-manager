@@ -23,31 +23,31 @@ from responses import BlueprintState, Execution, BlueprintValidationStatus, \
 from workflow_client import workflow_client
 
 
+def storage_manager():
+    import storage_manager
+    return storage_manager.instance()
+
+
 class DslParseException(Exception):
     pass
 
 
 class BlueprintsManager(object):
 
-    def __init__(self):
-        self.blueprints = {}
-        self.executions = {}
-        self.deployments = {}
-
     def blueprints_list(self):
-        return self.blueprints.values()
+        return storage_manager().blueprints_list()
 
     def deployments_list(self):
-        return self.deployments.values()
+        return storage_manager().deployments_list()
 
     def get_blueprint(self, blueprint_id):
-        return self.blueprints.get(blueprint_id, None)
+        return storage_manager().get_blueprint(blueprint_id)
 
     def get_deployment(self, deployment_id):
-        return self.deployments.get(deployment_id, None)
+        return storage_manager().get_deployment(deployment_id)
 
     def get_execution(self, execution_id):
-        return self.executions.get(execution_id, None)
+        return storage_manager().get_execution(execution_id)
 
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
@@ -61,7 +61,7 @@ class BlueprintsManager(object):
             raise DslParseException(*ex.args)
         new_blueprint = BlueprintState(id=blueprint_id, json_plan=plan,
                                        plan=json.loads(plan))
-        self.blueprints[str(new_blueprint.id)] = new_blueprint
+        storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
     # currently validation is split to 2 phases: the first
@@ -95,8 +95,9 @@ class BlueprintsManager(object):
                                   workflow_id=workflow_id,
                                   deployment_id=deployment_id)
 
-        deployment.add_execution(new_execution)
-        self.executions[str(new_execution.id)] = new_execution
+        storage_manager().add_execution_to_deployment(deployment.id,
+                                                      new_execution)
+        storage_manager().put_execution(new_execution.id, new_execution)
 
         return new_execution
 
@@ -120,7 +121,7 @@ class BlueprintsManager(object):
                                     typed_plan=blueprint.typed_plan,
                                     blueprint_id=blueprint_id)
 
-        self.deployments[str(deployment_id)] = new_deployment
+        storage_manager().put_deployment(deployment_id, new_deployment)
 
         return new_deployment
 

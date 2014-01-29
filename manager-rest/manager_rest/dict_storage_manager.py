@@ -16,55 +16,89 @@
 __author__ = 'idanmo'
 
 
-from threading import Lock
-
-
 class DictStorageManager(object):
     """
     In-memory dict based storage manager for tests.
     """
 
     def __init__(self):
-        self._storage = dict()
-        self._lock = Lock()
+        self._nodes = dict()
+        self._blueprints = dict()
+        self._executions = dict()
+        self._deployments = dict()
 
     def get_nodes(self):
-        with self._lock:
-            return map(lambda x: {'id': x}, self._storage.keys())
+        return map(lambda x: {'id': x}, self._nodes.keys())
 
     def get_node(self, node_id):
-        with self._lock:
-            if node_id in self._storage:
-                return self._storage[node_id]
-            return {}
+        if node_id in self._nodes:
+            return self._nodes[node_id]
+        return {}
 
     def put_node(self, node_id, runtime_info):
-        with self._lock:
-            self._storage[node_id] = runtime_info
-            return runtime_info
+        self._nodes[node_id] = runtime_info
+        return runtime_info
 
     def update_node(self, node_id, updated_properties):
-        with self._lock:
-            runtime_info = self._storage[node_id].copy() if node_id\
-                in self._storage else {}
-            for key, value in updated_properties.iteritems():
-                if len(value) == 1:
-                    if key in runtime_info:
-                        raise RuntimeError("Node update conflict - key: '{0}'"
-                                           " is not expected to exist"
-                                           .format(key))
-                elif len(value) == 2:
-                    if key not in runtime_info:
-                        raise RuntimeError("Node update conflict - key: '{0}'"
-                                           " is expected to exist".format(key))
-                    if runtime_info[key] != value[1]:
-                        raise RuntimeError(
-                            "Node update conflict - key: '{0}' value is "
-                            "expected to be '{1}' but is '{2}'"
-                            .format(key, value[1], runtime_info[key]))
-                runtime_info[key] = value[0]
-            self._storage[node_id] = runtime_info
-            return runtime_info
+        runtime_info = self._nodes[node_id].copy() if node_id\
+            in self._nodes else {}
+        for key, value in updated_properties.iteritems():
+            if len(value) == 1:
+                if key in runtime_info:
+                    raise RuntimeError("Node update conflict - key: '{0}'"
+                                       " is not expected to exist"
+                                       .format(key))
+            elif len(value) == 2:
+                if key not in runtime_info:
+                    raise RuntimeError("Node update conflict - key: '{0}'"
+                                       " is expected to exist".format(key))
+                if runtime_info[key] != value[1]:
+                    raise RuntimeError(
+                        "Node update conflict - key: '{0}' value is "
+                        "expected to be '{1}' but is '{2}'"
+                        .format(key, value[1], runtime_info[key]))
+            runtime_info[key] = value[0]
+        self._nodes[node_id] = runtime_info
+        return runtime_info
+
+    def blueprints_list(self):
+        return self._blueprints.values()
+
+    def deployments_list(self):
+        return self._deployments.values()
+
+    def get_blueprint(self, blueprint_id):
+        return self._blueprints.get(blueprint_id, None)
+
+    def get_deployment(self, deployment_id):
+        return self._deployments.get(deployment_id, None)
+
+    def get_execution(self, execution_id):
+        return self._executions.get(execution_id, None)
+
+    def put_blueprint(self, blueprint_id, blueprint):
+        if str(blueprint_id) in self._blueprints:
+            raise RuntimeError('Blueprint {0} already exists'.format(
+                blueprint_id))
+        self._blueprints[str(blueprint_id)] = blueprint
+
+    def put_deployment(self, deployment_id, deployment):
+        if str(deployment_id) in self._deployments:
+            raise RuntimeError('Deployment {0} already exists'.format(
+                deployment_id))
+        self._deployments[str(deployment_id)] = deployment
+
+    def put_execution(self, execution_id, execution):
+        if str(execution_id) in self._executions:
+            raise RuntimeError('Execution {0} already exists'.format(
+                execution_id))
+        self._executions[str(execution_id)] = execution
+
+    def add_execution_to_deployment(self, deployment_id, execution):
+        if str(deployment_id) not in self._deployments:
+            raise RuntimeError("Deployment {0} doesn't exist".format(
+                deployment_id))
+        self._deployments[str(deployment_id)].add_execution(execution)
 
 
 def create():
