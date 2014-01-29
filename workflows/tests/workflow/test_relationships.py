@@ -45,8 +45,8 @@ class TestRelationships(TestCase):
 
     def verify_assertions(self, hook, runs_on_source):
 
-        source_id_prefix = 'simple_web_server.mock_node_that_connects_to_host'
-        target_id_prefix = 'simple_web_server.host'
+        source_id_prefix = 'mock_node_that_connects_to_host'
+        target_id_prefix = 'host'
 
         from cosmo.cloudmock.tasks import get_machines
         result = get_machines.apply_async()

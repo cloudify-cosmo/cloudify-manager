@@ -39,6 +39,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   PAYLOAD = 'payload'
   ARGUMENT_NAMES = 'argument_names'
   NODE = 'node'
+  PLAN = 'plan'
   NODE_ID = '__cloudify_id'
   CLOUDIFY_RUNTIME = 'cloudify_runtime'
   EVENT_RESULT = 'result'
@@ -160,9 +161,11 @@ class ExecuteTaskParticipant < Ruote::Participant
     # we should enrich the event even further.
     if workitem.fields.has_key? NODE
       node = workitem.fields[NODE]
-      parts = node['id'].split('.')
-      event['node_id'] = parts[1]
-      event['app_id'] = parts[0]
+      event['node_id'] = node['id']
+    end
+    if workitem.fields.has_key? PLAN
+      plan = workitem.fields[PLAN]
+      event['app_id'] = plan['name']
     end
 
     # log every event coming from task executions.

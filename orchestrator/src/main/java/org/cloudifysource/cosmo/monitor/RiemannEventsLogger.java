@@ -155,10 +155,7 @@ public class RiemannEventsLogger {
 
                         // construct a pretty event to be logged to the user
                         String nodeId = (String) description.get("node_id");
-
-                        String[] fullNodeId = nodeId.split("\\.");
-                        String simpleNodeName = fullNodeId[1];
-                        String simpleAppName = fullNodeId[0];
+                        String appName = (String) description.get("app_id");
 
                         String policy = (String) description.get("policy");
                         String message = propertyPlaceHolderHelper.replace((String) description.get("message"), event);
@@ -166,8 +163,8 @@ public class RiemannEventsLogger {
                         Map<String, Object> eventData = Maps.newHashMap();
                         eventData.put("type", "policy");
                         eventData.put("policy", policy);
-                        eventData.put("app", simpleAppName);
-                        eventData.put("node", simpleNodeName);
+                        eventData.put("app", appName);
+                        eventData.put("node", nodeId);
                         eventData.put("message", message);
                         userOutputLogger.debug("[monitor]\n{}",
                                 objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eventData));
