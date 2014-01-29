@@ -391,7 +391,7 @@ class VagrantLxcBoot:
 
     def pip_repo(self, repo, pip_branch):
         self.pip('https://github.com/CloudifySource/'
-                 '{0}/archive/{1}.zip --process-dependency-links'
+                 '{0}/archive/{1}.zip'
                  .format(repo, pip_branch))
 
     def install_cosmo_manager(self):
