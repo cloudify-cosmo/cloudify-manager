@@ -358,7 +358,7 @@ class VagrantLxcBoot:
                   'downloads/1.7.3/jruby-bin-1.7.3.tar.gz')
         self.extract_tar_gz('jruby-bin-1.7.3.tar.gz')
         jbin = os.path.abspath('jruby-1.7.3/bin')
-        self.runner.run('{0}/jruby {0}/gem install bundler'.format(jbin))
+        self.runner.run('{0}/jruby {0}/gem install bundler --pre'.format(jbin))
         return jbin
 
     def install_cosmo_manager(self):
