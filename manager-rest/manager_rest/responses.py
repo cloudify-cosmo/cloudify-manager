@@ -158,27 +158,6 @@ class Execution(object):
 
 
 @swagger.model
-class DeploymentEvents(object):
-
-    resource_fields = {
-        'id': fields.String,
-        'firstEvent': fields.Integer(attribute='first_event'),
-        'lastEvent': fields.Integer(attribute='last_event'),
-        'events': fields.List(fields.Raw),
-        'deploymentTotalEvents': fields.Integer(
-            attribute='deployment_total_events')
-    }
-
-    def __init__(self, *args, **kwargs):
-        self.id = kwargs['id']
-        self.first_event = kwargs['first_event']
-        self.last_event = kwargs['last_event']
-        self.events = kwargs['events']
-        self.deployment_total_events = kwargs['deployment_total_events']
-        self.deployment_events_bytes = kwargs['deployment_events_bytes']
-
-
-@swagger.model
 class DeploymentNodesNode(object):
 
     resource_fields = {
@@ -231,3 +210,4 @@ class Node(object):
         self.runtime_info = \
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+

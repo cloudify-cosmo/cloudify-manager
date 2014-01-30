@@ -21,7 +21,6 @@ class Config(object):
     def __init__(self):
         self._file_server_root = None
         self._workflow_service_base_uri = None
-        self._events_files_path = None
         self._test_mode = False
 
     @property
@@ -39,14 +38,6 @@ class Config(object):
     @workflow_service_base_uri.setter
     def workflow_service_base_uri(self, value):
         self._workflow_service_base_uri = value
-
-    @property
-    def events_files_path(self):
-        return self._events_files_path
-
-    @events_files_path.setter
-    def events_files_path(self, value):
-        self._events_files_path = value
 
     @property
     def test_mode(self):
