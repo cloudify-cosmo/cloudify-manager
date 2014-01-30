@@ -27,8 +27,7 @@ policies:
                 (where
                     (and
                         (service "${service}")
-                        (state "${state}")
-                        (tagged "name=$node_id"))
+                        (state "${state}"))
                     $node_policy_events)
 
         state_not_equals:
@@ -38,8 +37,7 @@ policies:
                 (where
                     (and
                         (service "${service}")
-                        (not (state "${state}"))
-                        (tagged "name=$node_id"))
+                        (not (state "${state}")))
                     $node_policy_events)
 
         metric_below:
@@ -62,7 +60,6 @@ policies:
                                 (not (nil? metric))
                                 (< metric ${metric})
                             )
-                            (tagged "name=$node_id")
                         )
                         $node_policy_events
                     )
