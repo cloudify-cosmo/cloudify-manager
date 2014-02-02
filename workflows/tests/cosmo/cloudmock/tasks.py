@@ -17,9 +17,8 @@ __author__ = 'idanmo'
 
 from cosmo.events import set_reachable
 from cosmo.events import set_unreachable
-from cloudify.decorators import with_node_state
-from cloudify.decorators import with_logger
 from cloudify.decorators import operation
+from cloudify.decorators import context
 
 
 RUNNING = "running"
@@ -31,10 +30,10 @@ machines = {}
 
 
 @operation
-@with_logger
-def provision(__cloudify_id, logger, **kwargs):
+@context
+def provision(__cloudify_id, ctx, **kwargs):
     global machines
-    logger.info("provisioning machine: " + __cloudify_id)
+    ctx.logger.info("provisioning machine: " + __cloudify_id)
     if __cloudify_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
                            .format(__cloudify_id))
@@ -42,26 +41,24 @@ def provision(__cloudify_id, logger, **kwargs):
 
 
 @operation
-@with_node_state
-@with_logger
-def start(__cloudify_id, node_state, logger, **kwargs):
+@context
+def start(ctx, __cloudify_id, **kwargs):
     global machines
-    logger.info("starting machine: " + __cloudify_id)
+    ctx.logger.info("starting machine: " + __cloudify_id)
     if __cloudify_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(__cloudify_id))
     machines[__cloudify_id] = RUNNING
-    if node_state is not None:
-        node_state['id'] = __cloudify_id
+    ctx['id'] = __cloudify_id
 
     reachable(__cloudify_id)
 
 
 @operation
-@with_logger
-def stop(__cloudify_id, logger, **kwargs):
+@context
+def stop(__cloudify_id, ctx, **kwargs):
     global machines
-    logger.info("stopping machine: " + __cloudify_id)
+    ctx.logger.info("stopping machine: " + __cloudify_id)
     if __cloudify_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(__cloudify_id))
@@ -69,10 +66,10 @@ def stop(__cloudify_id, logger, **kwargs):
 
 
 @operation
-@with_logger
-def terminate(__cloudify_id, logger, **kwargs):
+@context
+def terminate(__cloudify_id, ctx, **kwargs):
     global machines
-    logger.info("terminating machine: " + __cloudify_id)
+    ctx.logger.info("terminating machine: " + __cloudify_id)
     if __cloudify_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(__cloudify_id))

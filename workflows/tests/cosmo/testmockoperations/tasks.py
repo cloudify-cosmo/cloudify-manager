@@ -16,7 +16,7 @@
 from cosmo.events import set_reachable as reachable
 from cosmo.events import set_unreachable as unreachable
 from time import time
-from cloudify.decorators import with_node_state
+from cloudify.decorators import context
 from cloudify.decorators import operation
 
 state = []
@@ -47,10 +47,9 @@ def make_unreachable(__cloudify_id, **kwargs):
 
 
 @operation
-@with_node_state
-def set_property(__cloudify_id, property_name, value, node_state=None,
-                 **kwargs):
-    node_state.put(property_name, value)
+@context
+def set_property(property_name, value, ctx, **kwargs):
+    ctx[property_name] = value
 
 
 @operation

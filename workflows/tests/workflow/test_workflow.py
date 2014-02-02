@@ -77,7 +77,7 @@ class TestRuoteWorkflows(TestCase):
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual(2, len(invocation['kwargs']))
+        self.assertEqual(3, len(invocation['kwargs']))
         self.assertEqual('mockpropvalue2', invocation['kwargs']['mockprop2'])
         self.assertTrue('cloudify_runtime' in invocation['kwargs'])
         self.assertEqual(states[0]['id'], invocation['id'])
