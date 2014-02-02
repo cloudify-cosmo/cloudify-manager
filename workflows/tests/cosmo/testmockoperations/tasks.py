@@ -25,22 +25,22 @@ mock_operation_invocation = []
 
 
 @operation
-def make_reachable(__cloudify_id, ctx, **kwargs):
-    reachable(__cloudify_id)
+def make_reachable(ctx, **kwargs):
+    reachable(ctx.node_id)
     global state
     state.append({
-        'id': __cloudify_id,
+        'id': ctx.node_id,
         'time': time(),
         'capabilities': ctx.capabilities.get_all()
     })
 
 
 @operation
-def make_unreachable(__cloudify_id, **kwargs):
-    unreachable(__cloudify_id)
+def make_unreachable(ctx, **kwargs):
+    unreachable(ctx.node_id)
     global unreachable_call_order
     unreachable_call_order.append({
-        'id': __cloudify_id,
+        'id': ctx.node_id,
         'time': time()
     })
 
@@ -67,9 +67,9 @@ def get_touched_time(**kwargs):
 
 
 @operation
-def is_unreachable_called(__cloudify_id, **kwargs):
+def is_unreachable_called(ctx, **kwargs):
     return next((x for x in
-                 unreachable_call_order if x['id'] == __cloudify_id), None)
+                 unreachable_call_order if x['id'] == ctx.node_id), None)
 
 
 @operation
@@ -78,10 +78,10 @@ def get_unreachable_call_order(**kwargs):
 
 
 @operation
-def mock_operation(__cloudify_id, ctx, mockprop, **kwargs):
+def mock_operation(ctx, mockprop, **kwargs):
     global mock_operation_invocation
     mock_operation_invocation.append({
-        'id': __cloudify_id,
+        'id': ctx.node_id,
         'mockprop': mockprop,
         'kwargs': kwargs
     })
