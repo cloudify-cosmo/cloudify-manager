@@ -100,11 +100,11 @@ class ExecuteTaskParticipant < Ruote::Participant
         source_node_id = workitem.fields[NODE]['id']
         target_node_id = workitem.fields[RELATIONSHIP_NODE]['id']
         run_node_id = relationship_node_id == source_node_id ? target_node_id : source_node_id
-        safe_merge!(final_properties, {SOURCE_NODE_ID => source_node_id,
-                                       TARGET_NODE_ID => target_node_id,
-                                       SOURCE_NODE_PROPERTIES => source_properties,
-                                       TARGET_NODE_PROPERTIES => target_properties,
-                                       RUN_NODE_ID => run_node_id})
+        #safe_merge!(final_properties, {SOURCE_NODE_ID => source_node_id,
+        #                               TARGET_NODE_ID => target_node_id,
+        #                               SOURCE_NODE_PROPERTIES => source_properties,
+        #                               TARGET_NODE_PROPERTIES => target_properties,
+        #                               RUN_NODE_ID => run_node_id})
       else
         payload_properties = payload[PROPERTIES] || Hash.new
         payload_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE

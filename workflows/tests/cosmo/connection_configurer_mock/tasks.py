@@ -21,29 +21,24 @@ state = []
 
 
 @operation
-def configure_connection(**kwargs):
-    append_to_state(**kwargs)
+def configure_connection(ctx, **kwargs):
+    append_to_state(ctx)
 
 
 @operation
-def unconfigure_connection(**kwargs):
-    append_to_state(**kwargs)
+def unconfigure_connection(ctx, **kwargs):
+    append_to_state(ctx)
 
 
-def append_to_state(__source_cloudify_id,
-                    __target_cloudify_id,
-                    __run_on_node_cloudify_id,
-                    __source_properties,
-                    __target_properties,
-                    **kwargs):
+def append_to_state(ctx):
     global state
     state.append({
-        'source_id': __source_cloudify_id,
-        'target_id': __target_cloudify_id,
+        'id': ctx.node_id,
+        'related_id': ctx.related.node_id,
         'time': time(),
-        'source_properties': __source_properties,
-        'target_properties': __target_properties,
-        'run_on_node_id': __run_on_node_cloudify_id
+        'properties': ctx.properties,
+        'related_properties': ctx.related.properties,
+        'capabilities': ctx.capabilities.get_all()
     })
 
 
