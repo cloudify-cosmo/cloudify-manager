@@ -153,6 +153,13 @@ class ExecuteTaskParticipant < Ruote::Participant
     if workitem.fields.has_key? NODE
       context[:node_id] = workitem.fields[NODE]['id'] || nil
       context[:node_name] = workitem.fields[NODE]['name'] || nil
+      if workitem.params.has_key? PAYLOAD and workitem.params[PAYLOAD].has_key? PROPERTIES
+        context[:node_properties] = workitem.params[PAYLOAD][PROPERTIES].clone
+        context[:node_properties].delete(CLOUDIFY_RUNTIME)
+        context[:node_properties].delete(NODE_ID)
+      else
+        context[:node_properties] = nil
+      end
     else
       context[:node_id] = nil
       context[:node_name] = nil

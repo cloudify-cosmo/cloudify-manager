@@ -31,13 +31,13 @@ machines = {}
 
 @operation
 @context
-def provision(__cloudify_id, ctx, **kwargs):
+def provision(ctx, **kwargs):
     global machines
-    ctx.logger.info("provisioning machine: " + __cloudify_id)
-    if __cloudify_id in machines:
+    ctx.logger.info("provisioning machine: " + ctx.node_id)
+    if ctx.node_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
-                           .format(__cloudify_id))
-    machines[__cloudify_id] = NOT_RUNNING
+                           .format(ctx.node_id))
+    machines[ctx.node_id] = NOT_RUNNING
 
 
 @operation
