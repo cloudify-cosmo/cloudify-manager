@@ -32,6 +32,7 @@ class PrepareOperationParticipant < Ruote::Participant
 
   NODE = 'node'
   OPERATION = 'operation'
+  NODE_OPERATION = 'node_operation'
   OPERATION_MAPPING = 'operation_mapping'
   OPERATION_PROPERTIES = 'operation_properties'
   OPERATIONS = 'operations'
@@ -114,6 +115,7 @@ class PrepareOperationParticipant < Ruote::Participant
       workitem.fields[OPERATION_MAPPING] = operation_mapping
       workitem.fields[PLUGIN_NAME] = "cosmo.#{plugin_name}"
       workitem.fields[OPERATION] = "#{workitem.fields[PLUGIN_NAME]}.#{operation_mapping}"
+      workitem.fields[NODE_OPERATION] = operation
 
       if operation_properties.nil?
         workitem.fields[OPERATION_PROPERTIES] = workitem.fields[NODE][PreparePlanParticipant::PROPERTIES]
