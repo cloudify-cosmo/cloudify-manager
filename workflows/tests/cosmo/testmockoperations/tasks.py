@@ -25,13 +25,13 @@ mock_operation_invocation = []
 
 
 @operation
-def make_reachable(__cloudify_id, **kwargs):
+def make_reachable(__cloudify_id, ctx, **kwargs):
     reachable(__cloudify_id)
     global state
     state.append({
         'id': __cloudify_id,
         'time': time(),
-        'relationships': kwargs['cloudify_runtime']
+        'capabilities': ctx.capabilities.get_all()
     })
 
 
@@ -78,7 +78,7 @@ def get_unreachable_call_order(**kwargs):
 
 
 @operation
-def mock_operation(__cloudify_id, mockprop, **kwargs):
+def mock_operation(__cloudify_id, ctx, mockprop, **kwargs):
     global mock_operation_invocation
     mock_operation_invocation.append({
         'id': __cloudify_id,

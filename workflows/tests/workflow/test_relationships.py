@@ -80,7 +80,8 @@ class TestRelationships(TestCase):
                 state['related_properties']['target_property_key'])
         else:
             self.assertEquals('source_property_value',
-                              state['related_properties']['source_property_key'])
+                              state['related_properties']
+                              ['source_property_key'])
             self.assertEquals(
                 'target_property_value',
                 state['properties']['target_property_key'])
