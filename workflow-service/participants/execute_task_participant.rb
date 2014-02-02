@@ -92,8 +92,6 @@ class ExecuteTaskParticipant < Ruote::Participant
                     target, exec, payload, argument_names)
 
       final_properties = Hash.new
-      final_properties['__cloudify_context'] = create_cloudify_context(
-          task_id, exec, target)
 
       if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && exec != VERIFY_PLUGIN_TASK_NAME && exec != GET_ARGUMENTS_TASK_NAME
         relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
@@ -114,6 +112,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
 
       safe_merge!(final_properties, payload[PARAMS] || Hash.new)
+      add_cloudify_context_to_properties(final_properties, task_id, exec, target)
 
       properties = to_map(final_properties)
 
@@ -147,21 +146,29 @@ class ExecuteTaskParticipant < Ruote::Participant
     end
   end
 
-  def create_cloudify_context(task_id, task_name, task_target)
+  def add_cloudify_context_to_properties(props, task_id, task_name, task_target)
     context = Hash.new
     context['__cloudify_context'] = '0.3'
     context[:wfid] = workitem.wfid
-    context[:node_id] = workitem.fields.has_key? NODE ? workitem.fields[NODE]['id'] : nil
+    if workitem.fields.has_key? NODE
+      context[:node_id] = workitem.fields[NODE]['id'] || nil
+      context[:node_name] = workitem.fields[NODE]['name'] || nil
+    else
+      context[:node_id] = nil
+      context[:node_name] = nil
+    end
     context[:task_id] = task_id
     context[:task_name] = task_name
     context[:task_target] = task_target
     context[:plugin] = workitem.fields[PrepareOperationParticipant::PLUGIN_NAME] || nil
-    context[:node_name] = workitem.fields.has_key? NODE ? workitem.fields[NODE]['id'] : nil
     context[:operation] = workitem.fields[PrepareOperationParticipant::NODE_OPERATION] || nil
     context[:blueprint_id] = workitem.fields['blueprint_id'] || nil
     context[:deployment_id] = workitem.fields['deployment_id'] || nil
     context[:execution_id] = workitem.fields['execution_id'] || nil
-    return context
+    if props.has_key? CLOUDIFY_RUNTIME
+      context[:capabilities] = props[CLOUDIFY_RUNTIME]
+    end
+    props['__cloudify_context'] = context
   end
 
 
