@@ -18,7 +18,6 @@ __author__ = 'idanmo'
 from cosmo.events import set_reachable
 from cosmo.events import set_unreachable
 from cloudify.decorators import operation
-from cloudify.decorators import context
 
 
 RUNNING = "running"
@@ -30,7 +29,6 @@ machines = {}
 
 
 @operation
-@context
 def provision(ctx, **kwargs):
     global machines
     ctx.logger.info("provisioning machine: " + ctx.node_id)
@@ -41,7 +39,6 @@ def provision(ctx, **kwargs):
 
 
 @operation
-@context
 def start(ctx, __cloudify_id, **kwargs):
     global machines
     ctx.logger.info("starting machine: " + __cloudify_id)
@@ -55,7 +52,6 @@ def start(ctx, __cloudify_id, **kwargs):
 
 
 @operation
-@context
 def stop(__cloudify_id, ctx, **kwargs):
     global machines
     ctx.logger.info("stopping machine: " + __cloudify_id)
@@ -66,7 +62,6 @@ def stop(__cloudify_id, ctx, **kwargs):
 
 
 @operation
-@context
 def terminate(__cloudify_id, ctx, **kwargs):
     global machines
     ctx.logger.info("terminating machine: " + __cloudify_id)

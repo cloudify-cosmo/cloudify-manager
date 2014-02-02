@@ -16,7 +16,6 @@
 from cosmo.events import set_reachable as reachable
 from cosmo.events import set_unreachable as unreachable
 from time import time
-from cloudify.decorators import context
 from cloudify.decorators import operation
 
 state = []
@@ -47,7 +46,6 @@ def make_unreachable(__cloudify_id, **kwargs):
 
 
 @operation
-@context
 def set_property(property_name, value, ctx, **kwargs):
     ctx[property_name] = value
 
@@ -59,12 +57,12 @@ def touch(**kwargs):
 
 
 @operation
-def get_state():
+def get_state(**kwargs):
     return state
 
 
 @operation
-def get_touched_time():
+def get_touched_time(**kwargs):
     return touched_time
 
 
@@ -75,7 +73,7 @@ def is_unreachable_called(__cloudify_id, **kwargs):
 
 
 @operation
-def get_unreachable_call_order():
+def get_unreachable_call_order(**kwargs):
     return unreachable_call_order
 
 
@@ -90,5 +88,5 @@ def mock_operation(__cloudify_id, mockprop, **kwargs):
 
 
 @operation
-def get_mock_operation_invocations():
+def get_mock_operation_invocations(**kwargs):
     return mock_operation_invocation

@@ -150,20 +150,52 @@ class ExecuteTaskParticipant < Ruote::Participant
     context = Hash.new
     context['__cloudify_context'] = '0.3'
     context[:wfid] = workitem.wfid
-    if workitem.fields.has_key? NODE
-      context[:node_id] = workitem.fields[NODE]['id'] || nil
-      context[:node_name] = workitem.fields[NODE]['name'] || nil
-      if workitem.params.has_key? PAYLOAD and workitem.params[PAYLOAD].has_key? PROPERTIES
-        context[:node_properties] = workitem.params[PAYLOAD][PROPERTIES].clone
-        context[:node_properties].delete(CLOUDIFY_RUNTIME)
-        context[:node_properties].delete(NODE_ID)
+
+    payload = workitem.params[PAYLOAD] || Hash.new
+
+    if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
+      source_id = workitem.fields[NODE]['id']
+      target_id = workitem.fields[RELATIONSHIP_NODE]['id']
+      source_properties = payload[PROPERTIES] || Hash.new
+      target_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
+      relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
+
+      if relationship_node_id == source_id
+        node_id = target_id
+        node_properties = target_properties.clone
+        related_node_id = source_id
+        related_node_properties = source_properties.clone
       else
-        context[:node_properties] = nil
+        node_id = source_id
+        node_properties = source_properties.clone
+        related_node_id = target_id
+        related_node_properties = target_properties.clone
       end
-    else
-      context[:node_id] = nil
-      context[:node_name] = nil
+
+      node_in_context = workitem.fields[PLAN][PrepareOperationParticipant::NODES].find {|node| node[PrepareOperationParticipant::NODE_ID] == node_id }
+      node_name = node_in_context['name']
+
+      node_properties.delete(CLOUDIFY_RUNTIME)
+      related_node_properties.delete(CLOUDIFY_RUNTIME)
+
+      context[:related] = {
+          :node_id => related_node_id,
+          :node_properties => related_node_properties
+      }
+
+    elsif workitem.fields.has_key? NODE
+      node_id = workitem.fields[NODE]['id'] || nil
+      node_name = workitem.fields[NODE]['name'] || nil
+      if payload.has_key? PROPERTIES
+        node_properties = workitem.params[PAYLOAD][PROPERTIES].clone
+        node_properties.delete(NODE_ID)
+        node_properties.delete(CLOUDIFY_RUNTIME)
+      end
     end
+
+    context[:node_id] = node_id
+    context[:node_name] = node_name
+    context[:node_properties] = node_properties
     context[:task_id] = task_id
     context[:task_name] = task_name
     context[:task_target] = task_target
