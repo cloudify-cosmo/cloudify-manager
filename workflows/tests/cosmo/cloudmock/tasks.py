@@ -31,7 +31,6 @@ machines = {}
 @operation
 def provision(ctx, **kwargs):
     global machines
-    ctx.logger.info("provisioning machine: " + ctx.node_id)
     if ctx.node_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
                            .format(ctx.node_id))
@@ -39,37 +38,36 @@ def provision(ctx, **kwargs):
 
 
 @operation
-def start(ctx, __cloudify_id, **kwargs):
+def start(ctx, **kwargs):
     global machines
-    ctx.logger.info("starting machine: " + __cloudify_id)
-    if __cloudify_id not in machines:
+    if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(__cloudify_id))
-    machines[__cloudify_id] = RUNNING
-    ctx['id'] = __cloudify_id
+                           .format(ctx.node_id))
+    machines[ctx.node_id] = RUNNING
+    ctx['id'] = ctx.node_id
 
-    reachable(__cloudify_id)
+    reachable(ctx.node_id)
 
 
 @operation
-def stop(__cloudify_id, ctx, **kwargs):
+def stop(ctx, **kwargs):
     global machines
-    ctx.logger.info("stopping machine: " + __cloudify_id)
-    if __cloudify_id not in machines:
+    ctx.logger.info("stopping machine: " + ctx.node_id)
+    if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(__cloudify_id))
-    machines[__cloudify_id] = NOT_RUNNING
+                           .format(ctx.node_id))
+    machines[ctx.node_id] = NOT_RUNNING
 
 
 @operation
-def terminate(__cloudify_id, ctx, **kwargs):
+def terminate(ctx, **kwargs):
     global machines
-    ctx.logger.info("terminating machine: " + __cloudify_id)
-    if __cloudify_id not in machines:
+    ctx.logger.info("terminating machine: " + ctx.node_id)
+    if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(__cloudify_id))
-    del machines[__cloudify_id]
-    unreachable(__cloudify_id)
+                           .format(ctx.node_id))
+    del machines[ctx.node_id]
+    unreachable(ctx.node_id)
 
 
 @operation

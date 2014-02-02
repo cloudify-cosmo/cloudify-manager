@@ -53,7 +53,7 @@ class TestRuoteWorkflows(TestCase):
             testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         node_runtime_props = None
-        for k, v in states[1]['relationships'].iteritems():
+        for k, v in states[1]['capabilities'].iteritems():
             if 'containing_node' in k:
                 node_runtime_props = v
                 break
