@@ -31,6 +31,8 @@ machines = {}
 @operation
 def provision(ctx, **kwargs):
     global machines
+    ctx.logger.info("cloudmock provision: [node_id={0}, machines={1}]".format(
+        ctx.node_id, machines))
     if ctx.node_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
                            .format(ctx.node_id))
@@ -40,6 +42,8 @@ def provision(ctx, **kwargs):
 @operation
 def start(ctx, **kwargs):
     global machines
+    ctx.logger.info("cloudmock start: [node_id={0}, machines={1}]".format(
+        ctx.node_id, machines))
     if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))

@@ -67,9 +67,9 @@ def get_touched_time(**kwargs):
 
 
 @operation
-def is_unreachable_called(ctx, **kwargs):
+def is_unreachable_called(node_id, **kwargs):
     return next((x for x in
-                 unreachable_call_order if x['id'] == ctx.node_id), None)
+                 unreachable_call_order if x['id'] == node_id), None)
 
 
 @operation
