@@ -12,13 +12,6 @@ blueprint:
                 cloudify.interfaces.lifecycle:
                     - create: cloudmock.tasks.provision
                     - start: cloudmock.tasks.start
-            policies:
-                -   name: "start_detection_policy"
-                    rules:
-                        -   type: "state_equals"
-                            properties:
-                                service: "machine-status"
-                                state: "running"
         -   name: "node_in_host"
             type: "mock_type"
             relationships:

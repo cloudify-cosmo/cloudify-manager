@@ -49,12 +49,11 @@ class EventParticipant < Ruote::Participant
       workflow_name = workitem.wf_name
       if workitem.fields.has_key? NODE
         node = workitem.fields[NODE]
-        parts = node['id'].split('.')
-        event['node'] = parts[1]
-        event['app'] = parts[0]
+        event['node'] = node['id']
       end
       if workitem.fields.has_key? PLAN
         event['blueprint'] = workitem.fields[PLAN]['name']
+        event['app'] = workitem.fields[PLAN]['name']
       end
       if workitem.fields.has_key? DEPLOYMENT_ID
         event[DEPLOYMENT_ID] = workitem.fields[DEPLOYMENT_ID]

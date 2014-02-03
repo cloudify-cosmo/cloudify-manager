@@ -59,11 +59,12 @@ def set_node_reachable_state(node_id, reachable):
     state = 'reachable' if reachable else 'unreachable'
     event = {
         "host": node_id,
-        "service": "node reachable state",
+        "service": node_id,
         "state": state,
         "tags": ["cosmo", "name={0}".format(node_id), state],
         "ttl": 9999,
         "description": json.dumps({
+            "app_id": "workflows_stub_name",
             "node_id": node_id,
             "policy": "",
             "message": ""

@@ -16,7 +16,6 @@
 from cosmo.events import set_reachable as reachable
 from cosmo.events import set_unreachable as unreachable
 from time import time
-from cloudify.decorators import with_node_state
 from cloudify.decorators import operation
 
 state = []
@@ -26,31 +25,29 @@ mock_operation_invocation = []
 
 
 @operation
-def make_reachable(__cloudify_id, **kwargs):
-    reachable(__cloudify_id)
+def make_reachable(ctx, **kwargs):
+    reachable(ctx.node_id)
     global state
     state.append({
-        'id': __cloudify_id,
+        'id': ctx.node_id,
         'time': time(),
-        'relationships': kwargs['cloudify_runtime']
+        'capabilities': ctx.capabilities.get_all()
     })
 
 
 @operation
-def make_unreachable(__cloudify_id, **kwargs):
-    unreachable(__cloudify_id)
+def make_unreachable(ctx, **kwargs):
+    unreachable(ctx.node_id)
     global unreachable_call_order
     unreachable_call_order.append({
-        'id': __cloudify_id,
+        'id': ctx.node_id,
         'time': time()
     })
 
 
 @operation
-@with_node_state
-def set_property(__cloudify_id, property_name, value, node_state=None,
-                 **kwargs):
-    node_state.put(property_name, value)
+def set_property(property_name, value, ctx, **kwargs):
+    ctx[property_name] = value
 
 
 @operation
@@ -60,36 +57,36 @@ def touch(**kwargs):
 
 
 @operation
-def get_state():
+def get_state(**kwargs):
     return state
 
 
 @operation
-def get_touched_time():
+def get_touched_time(**kwargs):
     return touched_time
 
 
 @operation
-def is_unreachable_called(__cloudify_id, **kwargs):
+def is_unreachable_called(node_id, **kwargs):
     return next((x for x in
-                 unreachable_call_order if x['id'] == __cloudify_id), None)
+                 unreachable_call_order if x['id'] == node_id), None)
 
 
 @operation
-def get_unreachable_call_order():
+def get_unreachable_call_order(**kwargs):
     return unreachable_call_order
 
 
 @operation
-def mock_operation(__cloudify_id, mockprop, **kwargs):
+def mock_operation(ctx, mockprop, **kwargs):
     global mock_operation_invocation
     mock_operation_invocation.append({
-        'id': __cloudify_id,
+        'id': ctx.node_id,
         'mockprop': mockprop,
         'kwargs': kwargs
     })
 
 
 @operation
-def get_mock_operation_invocations():
+def get_mock_operation_invocations(**kwargs):
     return mock_operation_invocation

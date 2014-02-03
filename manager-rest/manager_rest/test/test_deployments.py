@@ -156,8 +156,8 @@ class DeploymentsTestCase(BaseServerTestCase):
                 lambda n: n['id'].startswith(starts_with),
                 nodes['nodes'])),
                 'Failed finding node with prefix {0}'.format(starts_with))
-        assert_node_exists('hello_world.vm')
-        assert_node_exists('hello_world.http_web_server')
+        assert_node_exists('vm')
+        assert_node_exists('http_web_server')
 
     # rename and run manually after starting a riemann server
     def _test_get_nodes_of_deployment_with_reachable(self):
@@ -211,10 +211,10 @@ class DeploymentsTestCase(BaseServerTestCase):
                 nodes['nodes'])),
                 'Failed finding node with prefix {0}'
                 .format(starts_with))
-        assert_node_value('mezzanine.mezzanine_db', False)
-        assert_node_value('mezzanine.postgres_host', True)
-        assert_node_value('mezzanine.postgres_server', True)
-        assert_node_value('mezzanine.mezzanine_app', False)
-        assert_node_value('mezzanine.nginx', True)
-        assert_node_value('mezzanine.unicorn', True)
-        assert_node_value('mezzanine.webserver_host', False)
+        assert_node_value('mezzanine_db', False)
+        assert_node_value('postgres_host', True)
+        assert_node_value('postgres_server', True)
+        assert_node_value('mezzanine_app', False)
+        assert_node_value('nginx', True)
+        assert_node_value('unicorn', True)
+        assert_node_value('webserver_host', False)
