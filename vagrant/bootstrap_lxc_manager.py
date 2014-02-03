@@ -389,18 +389,9 @@ class VagrantLxcBoot:
         self.runner.run('{0}/jruby {0}/gem install bundler'.format(jbin))
         return jbin
 
-    def pip_repo(self, repo, pip_branch):
-        self.pip('https://github.com/CloudifySource/'
-                 '{0}/archive/{1}.zip'
-                 .format(repo, pip_branch))
-
     def install_cosmo_manager(self):
         cosmo_manager_repo = 'CloudifySource/cosmo-manager'
-        branch = 'feature/CLOUDIFY-2426-simplify-policies'
-        # TODO remove us
-        self.pip_repo('cosmo-plugin-dsl-parser',
-                      'feature/feature/CLOUDIFY-2426-simplify-policies')
-
+        branch = 'develop'
         workflow_service_base_uri = 'http://localhost:8101'
 
         tar_output_name = 'cosmo-manager.tar.gz'
