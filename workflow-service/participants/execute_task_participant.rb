@@ -86,35 +86,23 @@ class ExecuteTaskParticipant < Ruote::Participant
       target = workitem.params[TARGET]
       payload = to_map(workitem.params[PAYLOAD])
       argument_names = workitem.params[ARGUMENT_NAMES]
+      task_id = SecureRandom.uuid
 
       $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
                     target, exec, payload, argument_names)
 
-      final_properties = Hash.new
-
       if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && exec != VERIFY_PLUGIN_TASK_NAME && exec != GET_ARGUMENTS_TASK_NAME
-        relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
-        source_properties = payload[PROPERTIES] || Hash.new
-        target_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
-        source_node_id = workitem.fields[NODE]['id']
-        target_node_id = workitem.fields[RELATIONSHIP_NODE]['id']
-        run_node_id = relationship_node_id == source_node_id ? target_node_id : source_node_id
-        safe_merge!(final_properties, {SOURCE_NODE_ID => source_node_id,
-                                       TARGET_NODE_ID => target_node_id,
-                                       SOURCE_NODE_PROPERTIES => source_properties,
-                                       TARGET_NODE_PROPERTIES => target_properties,
-                                       RUN_NODE_ID => run_node_id})
+        final_properties = Hash.new
       else
-        payload_properties = payload[PROPERTIES] || Hash.new
-        payload_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE
-        safe_merge!(final_properties, payload_properties)
+        final_properties = payload[PROPERTIES] || Hash.new
+        final_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE
       end
 
       safe_merge!(final_properties, payload[PARAMS] || Hash.new)
+      add_cloudify_context_to_properties(final_properties, payload, task_id, exec, target)
 
       properties = to_map(final_properties)
 
-      task_id = SecureRandom.uuid
       @task_arguments = extract_task_arguments(properties, argument_names)
 
       $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
@@ -144,6 +132,71 @@ class ExecuteTaskParticipant < Ruote::Participant
       flunk(workitem, e)
     end
   end
+
+  def add_cloudify_context_to_properties(props, payload, task_id, task_name, task_target)
+    context = Hash.new
+    context['__cloudify_context'] = '0.3'
+    context[:wfid] = workitem.wfid
+    node_id = nil
+    node_name = nil
+    node_properties = nil
+
+    if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
+      source_id = workitem.fields[NODE]['id']
+      target_id = workitem.fields[RELATIONSHIP_NODE]['id']
+      source_properties = payload[PROPERTIES] || Hash.new
+      target_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
+      relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
+
+      if relationship_node_id == source_id
+        node_id = target_id
+        node_properties = target_properties.clone
+        related_node_id = source_id
+        related_node_properties = source_properties.clone
+      else
+        node_id = source_id
+        node_properties = source_properties.clone
+        related_node_id = target_id
+        related_node_properties = target_properties.clone
+      end
+
+      node_in_context = workitem.fields[PLAN][PrepareOperationParticipant::NODES].find {|node| node[PrepareOperationParticipant::NODE_ID] == node_id }
+      node_name = node_in_context['name']
+
+      node_properties.delete(CLOUDIFY_RUNTIME)
+      related_node_properties.delete(CLOUDIFY_RUNTIME)
+
+      context[:related] = {
+          :node_id => related_node_id,
+          :node_properties => related_node_properties
+      }
+    elsif workitem.fields.has_key? NODE
+      node_id = workitem.fields[NODE]['id'] || nil
+      node_name = workitem.fields[NODE]['name'] || nil
+      if payload.has_key? PROPERTIES
+        node_properties = payload[PROPERTIES].clone
+        node_properties.delete(NODE_ID)
+        node_properties.delete(CLOUDIFY_RUNTIME)
+      end
+    end
+
+    context[:node_id] = node_id
+    context[:node_name] = node_name
+    context[:node_properties] = node_properties
+    context[:task_id] = task_id
+    context[:task_name] = task_name
+    context[:task_target] = task_target
+    context[:plugin] = workitem.fields[PrepareOperationParticipant::PLUGIN_NAME] || nil
+    context[:operation] = workitem.fields[PrepareOperationParticipant::NODE_OPERATION] || nil
+    context[:blueprint_id] = workitem.fields['blueprint_id'] || nil
+    context[:deployment_id] = workitem.fields['deployment_id'] || nil
+    context[:execution_id] = workitem.fields['execution_id'] || nil
+    if props.has_key? CLOUDIFY_RUNTIME
+      context[:capabilities] = props[CLOUDIFY_RUNTIME]
+    end
+    props['__cloudify_context'] = context
+  end
+
 
   def populate_event_content(event, task_id, log_debug)
     sub_workflow_name = workitem.sub_wf_name

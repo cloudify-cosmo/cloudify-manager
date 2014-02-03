@@ -53,7 +53,7 @@ class TestRuoteWorkflows(TestCase):
             testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         node_runtime_props = None
-        for k, v in states[1]['relationships'].iteritems():
+        for k, v in states[1]['capabilities'].iteritems():
             if 'containing_node' in k:
                 node_runtime_props = v
                 break
@@ -72,14 +72,13 @@ class TestRuoteWorkflows(TestCase):
             testmock_get_state
         states = testmock_get_state.apply_async().get(timeout=10)
         from cosmo.testmockoperations.tasks import \
-            get_mock_operation_invocations as testmock_get__invocations
-        invocations = testmock_get__invocations.apply_async().get(timeout=10)
+            get_mock_operation_invocations as testmock_get_invocations
+        invocations = testmock_get_invocations.apply_async().get(timeout=10)
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual(2, len(invocation['kwargs']))
         self.assertEqual('mockpropvalue2', invocation['kwargs']['mockprop2'])
-        self.assertTrue('cloudify_runtime' in invocation['kwargs'])
+        self.assertTrue('__cloudify_context' in invocation['kwargs'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
     # TODO runtime-model: can be enabled if storage will be cleared

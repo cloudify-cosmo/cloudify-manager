@@ -45,8 +45,12 @@ class TestRelationships(TestCase):
 
     def verify_assertions(self, hook, runs_on_source):
 
-        source_id_prefix = 'mock_node_that_connects_to_host'
-        target_id_prefix = 'host'
+        if runs_on_source:
+            node_id_id_prefix = 'mock_node_that_connects_to_host'
+            related_id_prefix = 'host'
+        else:
+            node_id_id_prefix = 'host'
+            related_id_prefix = 'mock_node_that_connects_to_host'
 
         from cosmo.cloudmock.tasks import get_machines
         result = get_machines.apply_async()
@@ -59,36 +63,39 @@ class TestRelationships(TestCase):
 
         state = result.get(timeout=10)[0]
 
-        source_id = state['source_id']
-        target_id = state['target_id']
+        node_id = state['id']
+        related_id = state['related_id']
 
-        self.assertTrue(source_id.startswith(source_id_prefix))
-        self.assertTrue(target_id.startswith(target_id_prefix))
+        self.assertTrue(node_id.startswith(node_id_id_prefix))
+        self.assertTrue(related_id.startswith(related_id_prefix))
+
         from testenv import is_node_reachable
-        self.assertTrue(is_node_reachable(target_id))
-        self.assertEquals('source_property_value',
-                          state['source_properties']['source_property_key'])
-        self.assertEquals('target_property_value',
-                          state['target_properties']['target_property_key'])
-        if hook == 'pre-init':
-            self.assertTrue(source_id not in
-                            state['source_properties']['cloudify_runtime'])
-            self.assertTrue(source_id not in
-                            state['target_properties']['cloudify_runtime'])
-        elif hook == 'post-init':
-            self.assertTrue(is_node_reachable(source_id))
-        elif hook == 'after-touch-before-reachable-init':
-            self.assertTrue(source_id not in
-                            state['source_properties']['cloudify_runtime'])
-            self.assertTrue(source_id not in
-                            state['target_properties']['cloudify_runtime'])
-        else:
-            self.fail('unhandled state')
+        self.assertTrue(is_node_reachable(related_id))
 
         if runs_on_source:
-            self.assertEquals(source_id, state['run_on_node_id'])
+            self.assertEquals('source_property_value',
+                              state['properties']['source_property_key'])
+            self.assertEquals(
+                'target_property_value',
+                state['related_properties']['target_property_key'])
         else:
-            self.assertEquals(target_id, state['run_on_node_id'])
+            self.assertEquals('source_property_value',
+                              state['related_properties']
+                              ['source_property_key'])
+            self.assertEquals(
+                'target_property_value',
+                state['properties']['target_property_key'])
+
+        if hook == 'pre-init':
+            self.assertTrue(node_id not in
+                            state['capabilities'])
+        elif hook == 'post-init':
+            self.assertTrue(is_node_reachable(node_id))
+        elif hook == 'after-touch-before-reachable-init':
+            self.assertTrue(node_id not in
+                            state['capabilities'])
+        else:
+            self.fail('unhandled state')
 
         connector_timestamp = state['time']
 
