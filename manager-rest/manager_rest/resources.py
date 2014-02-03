@@ -171,21 +171,18 @@ class Blueprints(Resource):
         """
         file_server_root = config.instance().file_server_root
 
-        blueprint_id = uuid.uuid4()
-
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
-                file_server_root, archive_target_path, blueprint_id)
+                file_server_root, archive_target_path)
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
         self._process_plugins(file_server_root, application_dir)
 
         return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  blueprint_id)
+                                                  application_dir), 201
 
     def _process_plugins(self, file_server_root, application_dir):
         blueprint_directory = path.join(file_server_root, application_dir)
@@ -228,7 +225,7 @@ class Blueprints(Resource):
                 f.write(uploaded_file_data)
 
     def _extract_file_to_file_server(self, file_server_root,
-                                     archive_target_path, blueprint_id):
+                                     archive_target_path):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
         tempdir = tempfile.mkdtemp('-blueprint-submit')
@@ -240,20 +237,24 @@ class Blueprints(Resource):
                 abort(400,
                       message='400: archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
-            generated_application_dir_base_name = '{0}-{1}'.format(
-                application_dir_base_name, blueprint_id)
+            #generating temporary unique name for app dir, to allow multiple
+            #uploads of apps with the same name (as it appears in the file
+            # system, not the app name field inside the blueprint.
+            # the latter is guaranteed to be unique).
+            generated_app_dir_name = '{0}-{1}'.format(
+                application_dir_base_name, uuid.uuid4())
             temp_application_dir = path.join(tempdir,
                                              application_dir_base_name)
-            target_temp_application_dir = path.join(
-                tempdir, generated_application_dir_base_name)
-            shutil.move(temp_application_dir, target_temp_application_dir)
-            shutil.move(target_temp_application_dir, file_server_root)
-            return generated_application_dir_base_name
+            temp_application_target_dir = path.join(tempdir,
+                                                    generated_app_dir_name)
+            shutil.move(temp_application_dir, temp_application_target_dir)
+            shutil.move(temp_application_target_dir, file_server_root)
+            return generated_app_dir_name
         finally:
             shutil.rmtree(tempdir)
 
     def _prepare_and_submit_blueprint(self, file_server_root,
-                                      application_dir, blueprint_id):
+                                      application_dir):
         application_file = self._extract_application_file(file_server_root,
                                                           application_dir)
 
@@ -265,8 +266,14 @@ class Blueprints(Resource):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            return blueprints_manager().publish_blueprint(
-                blueprint_id, dsl_path, alias_mapping, resources_base), 201
+            blueprint = blueprints_manager().publish_blueprint(
+                dsl_path, alias_mapping, resources_base)
+
+            #moving the app directory in the file server to be under a
+            # directory named after the blueprint's app name field
+            shutil.move(os.path.join(file_server_root, application_dir),
+                        os.path.join(file_server_root, blueprint.id))
+            return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
 
@@ -431,7 +438,7 @@ class DeploymentsIdNodes(Resource):
 
         deployment = blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
-                       deployment.typed_plan['nodes'])
+                       deployment.plan['nodes'])
 
         reachable_states = {}
         if get_reachable_state:

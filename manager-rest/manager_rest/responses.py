@@ -28,17 +28,16 @@ class BlueprintState(object):
     resource_fields = {
         'name': fields.String,
         'id': fields.String,
-        'plan': fields.String,
+        'plan': fields.Raw,
         'createdAt': fields.DateTime(attribute='created_at'),
         'updatedAt': fields.DateTime(attribute='updated_at'),
         # 'permalink': fields.Url('blueprint_ep')
     }
 
     def __init__(self, *args, **kwargs):
-        self.typed_plan = kwargs['plan']
-        self.plan = kwargs['json_plan']
-        self.name = self.typed_plan['name']
-        self.id = kwargs['id']
+        self.plan = kwargs['plan']
+        self.name = self.plan['name']
+        self.id = self.plan['name']
         now = datetime.now()
         self.created_at = now
         self.updated_at = now
@@ -78,7 +77,7 @@ class Deployment(object):
         'createdAt': fields.DateTime(attribute='created_at'),
         'updatedAt': fields.DateTime(attribute='updated_at'),
         'blueprintId': fields.String(attribute='blueprint_id'),
-        'plan': fields.String,
+        'plan': fields.Raw,
     }
 
     def __init__(self, *args, **kwargs):
@@ -89,9 +88,8 @@ class Deployment(object):
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
-        self.typed_plan = kwargs['typed_plan']
         self.workflows = {key: Workflow(workflow_id=key, created_at=now)
-                          for key in self.typed_plan['workflows']}
+                          for key in self.plan['workflows']}
         self.executions = {}
 
     def add_execution(self, execution):

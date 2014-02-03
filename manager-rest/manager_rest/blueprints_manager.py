@@ -51,7 +51,7 @@ class BlueprintsManager(object):
 
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
-    def publish_blueprint(self, blueprint_id, dsl_location, alias_mapping_url,
+    def publish_blueprint(self, dsl_location, alias_mapping_url,
                           resources_base_url):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
@@ -59,8 +59,7 @@ class BlueprintsManager(object):
                                    resources_base_url)
         except Exception, ex:
             raise DslParseException(*ex.args)
-        new_blueprint = BlueprintState(id=blueprint_id, json_plan=plan,
-                                       plan=json.loads(plan))
+        new_blueprint = BlueprintState(plan=json.loads(plan))
         storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -71,7 +70,7 @@ class BlueprintsManager(object):
     # so we can parse all the workflows and see things are ok
     def validate_blueprint(self, blueprint_id):
         blueprint = self.get_blueprint(blueprint_id)
-        plan = blueprint.typed_plan
+        plan = blueprint.plan
         response = workflow_client().validate_workflows(plan)
         # TODO raise error if error
         return BlueprintValidationStatus(blueprint_id=blueprint_id,
@@ -82,8 +81,8 @@ class BlueprintsManager(object):
         # deployment rather than from the blueprint
         deployment = self.get_deployment(deployment_id)
         blueprint = self.get_blueprint(deployment.blueprint_id)
-        workflow = blueprint.typed_plan['workflows'][workflow_id]
-        plan = blueprint.typed_plan
+        workflow = blueprint.plan['workflows'][workflow_id]
+        plan = blueprint.plan
 
         response = workflow_client().execute_workflow(
             workflow, plan, deployment_id=deployment_id)
@@ -112,13 +111,12 @@ class BlueprintsManager(object):
 
     def create_deployment(self, blueprint_id):
         blueprint = self.get_blueprint(blueprint_id)
-        plan = blueprint.typed_plan
+        plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
         deployment_id = uuid.uuid4()
 
         new_deployment = Deployment(deployment_id=deployment_id,
-                                    plan=deployment_json_plan,
-                                    typed_plan=blueprint.typed_plan,
+                                    plan=json.loads(deployment_json_plan),
                                     blueprint_id=blueprint_id)
 
         storage_manager().put_deployment(deployment_id, new_deployment)
