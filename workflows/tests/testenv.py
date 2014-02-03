@@ -56,7 +56,7 @@ class ManagerRestProcess(object):
                  port,
                  file_server_dir,
                  file_server_base_uri,
-                 workflow_service_base_uri)
+                 workflow_service_base_uri):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
@@ -453,7 +453,11 @@ def start_events_and_logs_polling():
     if not RABBITMQ_POLLING_ENABLED:
         return
 
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    pika_logger = logging.getLogger('pika')
+    pika_logger.setLevel(logging.INFO)
+
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
     queues = ['cloudify-events', 'cloudify-logs']
     for q in queues:

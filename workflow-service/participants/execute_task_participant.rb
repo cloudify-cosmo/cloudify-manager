@@ -105,7 +105,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
 
       safe_merge!(final_properties, payload[PARAMS] || Hash.new)
-      add_cloudify_context_to_properties(final_properties, payload, task_id, exec, target)
+      add_cloudify_context_to_properties(final_properties, payload)
 
       properties = to_map(final_properties)
 
@@ -154,7 +154,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     })
   end
 
-  def add_cloudify_context_to_properties(props, payload, task_id, task_name, task_target)
+  def add_cloudify_context_to_properties(props, payload)
     context = Hash.new
     context['__cloudify_context'] = '0.3'
     context[:wfid] = workitem.wfid
@@ -204,9 +204,9 @@ class ExecuteTaskParticipant < Ruote::Participant
     context[:node_id] = node_id
     context[:node_name] = node_name
     context[:node_properties] = node_properties
-    context[:task_id] = task_id
-    context[:task_name] = task_name
-    context[:task_target] = task_target
+    context[:task_id] = @task_id
+    context[:task_name] = @full_task_name
+    context[:task_target] = @target
     context[:plugin] = workitem.fields[PrepareOperationParticipant::PLUGIN_NAME] || nil
     context[:operation] = workitem.fields[PrepareOperationParticipant::NODE_OPERATION] || nil
     context[:blueprint_id] = workitem.fields['blueprint_id'] || nil

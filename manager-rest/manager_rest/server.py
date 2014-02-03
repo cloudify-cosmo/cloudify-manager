@@ -26,7 +26,6 @@ from flask.ext.restful import Api
 import config
 import resources
 import blueprints_manager
-import events_manager
 import storage_manager
 
 
@@ -36,7 +35,6 @@ app = None
 def reset_state(configuration=None):
     config.reset(configuration)
     blueprints_manager.reset()
-    events_manager.reset()
     storage_manager.reset()
 
 
@@ -61,6 +59,4 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'workflow_service_base_uri' in yaml_conf:
         obj_conf.workflow_service_base_uri = \
             yaml_conf['workflow_service_base_uri']
-    if 'events_file_path' in yaml_conf:
-        obj_conf.events_files_path = yaml_conf['events_file_path']
     setup_app()
