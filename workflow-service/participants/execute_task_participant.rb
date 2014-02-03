@@ -91,8 +91,6 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
                     target, exec, payload, argument_names)
 
-      final_properties = nil
-
       if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && exec != VERIFY_PLUGIN_TASK_NAME && exec != GET_ARGUMENTS_TASK_NAME
         final_properties = Hash.new
       else
@@ -139,8 +137,11 @@ class ExecuteTaskParticipant < Ruote::Participant
     context = Hash.new
     context['__cloudify_context'] = '0.3'
     context[:wfid] = workitem.wfid
+    node_id = nil
+    node_name = nil
+    node_properties = nil
 
-      if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
+    if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
       source_id = workitem.fields[NODE]['id']
       target_id = workitem.fields[RELATIONSHIP_NODE]['id']
       source_properties = payload[PROPERTIES] || Hash.new
@@ -169,12 +170,11 @@ class ExecuteTaskParticipant < Ruote::Participant
           :node_id => related_node_id,
           :node_properties => related_node_properties
       }
-
     elsif workitem.fields.has_key? NODE
       node_id = workitem.fields[NODE]['id'] || nil
       node_name = workitem.fields[NODE]['name'] || nil
       if payload.has_key? PROPERTIES
-        node_properties = workitem.params[PAYLOAD][PROPERTIES].clone
+        node_properties = payload[PROPERTIES].clone
         node_properties.delete(NODE_ID)
         node_properties.delete(CLOUDIFY_RUNTIME)
       end
