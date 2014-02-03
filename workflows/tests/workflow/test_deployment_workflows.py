@@ -21,9 +21,9 @@ from testenv import deploy_application as deploy
 from testenv import get_deployment_workflows
 
 
-class TestRuoteWorkflows(TestCase):
+class TestDeploymentWorkflows(TestCase):
 
-    def test_execute_operation(self):
+    def test_deployment_workflows(self):
         dsl_path = resource("dsl/basic.yaml")
         deployment = deploy(dsl_path)
         deployment_id = deployment.id

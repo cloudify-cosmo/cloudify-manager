@@ -15,13 +15,6 @@ blueprint:
                     - start: cloudmock.tasks.start
             properties:
                 target_property_key: 'target_property_value'
-            policies:
-                -   name: "start_detection_policy"
-                    rules:
-                        -   type: "state_equals"
-                            properties:
-                                service: "machine-status"
-                                state: "running"
         -   name: "mock_node_that_connects_to_host"
             type: "test_app_module_type"
             properties:
@@ -38,13 +31,6 @@ blueprint:
                     source_interfaces:
                         cloudify.interfaces.relationship_lifecycle:
                             - postconfigure: connection_configurer_mock.tasks.configure_connection
-            policies:
-                -   name: "start_detection_policy"
-                    rules:
-                        -   type: "state_equals"
-                            properties:
-                                service: "mock-node-status"
-                                state: "running"
             workflows:
                 create:
                     radial: |

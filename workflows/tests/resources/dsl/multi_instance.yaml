@@ -14,13 +14,6 @@ blueprint:
           - start: cloudmock.tasks.start
       instances:
         deploy: 2
-      policies:
-        - name: "start_detection_policy"
-          rules:
-            - type: "state_equals"
-              properties:
-                service: "machine-status"
-                state: "running"
     - name: "app_module"
       type: "cloudify.types.app_module"
       interfaces:
@@ -32,13 +25,6 @@ blueprint:
       relationships:
         - type: "cloudify.relationships.contained_in"
           target: "host"
-      policies:
-        - name: "start_detection_policy"
-          rules:
-            - type: "state_equals"
-              properties:
-                service: "mock-node-status"
-                state: "running"
       workflows:
         create:
           radial: |

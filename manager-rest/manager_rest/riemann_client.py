@@ -43,16 +43,13 @@ class RiemannClient(object):
         or_query = ' or '
         for node_id in node_ids:
             node_result[node_id] = []
-            query.write('tagged "name={0}"{1}'.format(node_id, or_query))
+            query.write('service = "{0}"{1}'.format(node_id, or_query))
         query.truncate(len(query.getvalue()) - len(or_query))
 
         raw_results = self._client.query(query.getvalue())
         for raw_result in raw_results:
-            for tag in raw_result.tags:
-                if tag.startswith('name='):
-                    raw_result_node_id = tag[len('name='):]
-                    node_result[raw_result_node_id].append(raw_result)
-                    break
+            raw_result_node_id = raw_result.service
+            node_result[raw_result_node_id].append(raw_result)
 
         node_reachable_states = {}
         for node_id, states in node_result.iteritems():
