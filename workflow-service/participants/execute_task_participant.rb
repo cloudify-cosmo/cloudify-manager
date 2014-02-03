@@ -91,28 +91,17 @@ class ExecuteTaskParticipant < Ruote::Participant
       $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
                     target, exec, payload, argument_names)
 
-      final_properties = Hash.new
+      final_properties = nil
 
       if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && exec != VERIFY_PLUGIN_TASK_NAME && exec != GET_ARGUMENTS_TASK_NAME
-        relationship_node_id = workitem.fields[RUOTE_RELATIONSHIP_NODE_ID]
-        source_properties = payload[PROPERTIES] || Hash.new
-        target_properties = payload[RELATIONSHIP_PROPERTIES] || Hash.new
-        source_node_id = workitem.fields[NODE]['id']
-        target_node_id = workitem.fields[RELATIONSHIP_NODE]['id']
-        run_node_id = relationship_node_id == source_node_id ? target_node_id : source_node_id
-        #safe_merge!(final_properties, {SOURCE_NODE_ID => source_node_id,
-        #                               TARGET_NODE_ID => target_node_id,
-        #                               SOURCE_NODE_PROPERTIES => source_properties,
-        #                               TARGET_NODE_PROPERTIES => target_properties,
-        #                               RUN_NODE_ID => run_node_id})
+        final_properties = Hash.new
       else
-        payload_properties = payload[PROPERTIES] || Hash.new
-        payload_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE
-        safe_merge!(final_properties, payload_properties)
+        final_properties = payload[PROPERTIES] || Hash.new
+        final_properties[NODE_ID] = workitem.fields[NODE]['id'] if workitem.fields.has_key? NODE
       end
 
       safe_merge!(final_properties, payload[PARAMS] || Hash.new)
-      add_cloudify_context_to_properties(final_properties, task_id, exec, target)
+      add_cloudify_context_to_properties(final_properties, payload, task_id, exec, target)
 
       properties = to_map(final_properties)
 
@@ -146,14 +135,12 @@ class ExecuteTaskParticipant < Ruote::Participant
     end
   end
 
-  def add_cloudify_context_to_properties(props, task_id, task_name, task_target)
+  def add_cloudify_context_to_properties(props, payload, task_id, task_name, task_target)
     context = Hash.new
     context['__cloudify_context'] = '0.3'
     context[:wfid] = workitem.wfid
 
-    payload = workitem.params[PAYLOAD] || Hash.new
-
-    if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
+      if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
       source_id = workitem.fields[NODE]['id']
       target_id = workitem.fields[RELATIONSHIP_NODE]['id']
       source_properties = payload[PROPERTIES] || Hash.new
