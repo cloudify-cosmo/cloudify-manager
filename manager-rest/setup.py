@@ -39,6 +39,8 @@ setup(
         'cosmo-plugin-dsl-parser',
         'requests',
         'bernhard',
+        'gunicorn==18.0',
+        'PyYAML==3.10'
         'elasticsearch==0.4.4'
     ],
     tests_require=['nose'],

@@ -37,6 +37,7 @@ types:
             delete:
                 ref: cloudify.workflows.node.delete
 
+
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
         derived_from: cloudify.types.base

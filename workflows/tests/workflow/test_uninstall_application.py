@@ -110,15 +110,11 @@ class TestUninstallApplication(TestCase):
             as config_get_state
         configurer_state = config_get_state.apply_async().get(timeout=10)
         self.assertEquals(2, len(configurer_state))
-        self.assertTrue(configurer_state[0]['source_id']
-            .startswith('mock_app.contained_in_node2'))
-        self.assertTrue(configurer_state[0]['target_id']
-            .startswith('mock_app.contained_in_node1'))
-        self.assertTrue(configurer_state[0]['run_on_node_id']
-            .startswith('mock_app.contained_in_node2'))
-        self.assertTrue(configurer_state[1]['source_id']
-            .startswith('mock_app.contained_in_node1'))
-        self.assertTrue(configurer_state[1]['target_id']
-            .startswith('mock_app.containing_node'))
-        self.assertTrue(configurer_state[1]['run_on_node_id']
-            .startswith('mock_app.containing_node'))
+        self.assertTrue(configurer_state[0]['id']
+            .startswith('contained_in_node2'))
+        self.assertTrue(configurer_state[0]['related_id']
+            .startswith('contained_in_node1'))
+        self.assertTrue(configurer_state[1]['id']
+            .startswith('containing_node'))
+        self.assertTrue(configurer_state[1]['related_id']
+            .startswith('contained_in_node1'))

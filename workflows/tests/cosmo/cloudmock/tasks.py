@@ -17,8 +17,6 @@ __author__ = 'idanmo'
 
 from cosmo.events import set_reachable
 from cosmo.events import set_unreachable
-from cloudify.decorators import with_node_state
-from cloudify.decorators import with_logger
 from cloudify.decorators import operation
 
 
@@ -31,53 +29,49 @@ machines = {}
 
 
 @operation
-@with_logger
-def provision(__cloudify_id, logger, **kwargs):
+def provision(ctx, **kwargs):
     global machines
-    logger.info("provisioning machine: " + __cloudify_id)
-    if __cloudify_id in machines:
+    ctx.logger.info("cloudmock provision: [node_id={0}, machines={1}]".format(
+        ctx.node_id, machines))
+    if ctx.node_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
-                           .format(__cloudify_id))
-    machines[__cloudify_id] = NOT_RUNNING
+                           .format(ctx.node_id))
+    machines[ctx.node_id] = NOT_RUNNING
 
 
 @operation
-@with_node_state
-@with_logger
-def start(__cloudify_id, node_state, logger, **kwargs):
+def start(ctx, **kwargs):
     global machines
-    logger.info("starting machine: " + __cloudify_id)
-    if __cloudify_id not in machines:
+    ctx.logger.info("cloudmock start: [node_id={0}, machines={1}]".format(
+        ctx.node_id, machines))
+    if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(__cloudify_id))
-    machines[__cloudify_id] = RUNNING
-    if node_state is not None:
-        node_state['id'] = __cloudify_id
+                           .format(ctx.node_id))
+    machines[ctx.node_id] = RUNNING
+    ctx['id'] = ctx.node_id
 
-    reachable(__cloudify_id)
+    reachable(ctx.node_id)
 
 
 @operation
-@with_logger
-def stop(__cloudify_id, logger, **kwargs):
+def stop(ctx, **kwargs):
     global machines
-    logger.info("stopping machine: " + __cloudify_id)
-    if __cloudify_id not in machines:
+    ctx.logger.info("stopping machine: " + ctx.node_id)
+    if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(__cloudify_id))
-    machines[__cloudify_id] = NOT_RUNNING
+                           .format(ctx.node_id))
+    machines[ctx.node_id] = NOT_RUNNING
 
 
 @operation
-@with_logger
-def terminate(__cloudify_id, logger, **kwargs):
+def terminate(ctx, **kwargs):
     global machines
-    logger.info("terminating machine: " + __cloudify_id)
-    if __cloudify_id not in machines:
+    ctx.logger.info("terminating machine: " + ctx.node_id)
+    if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(__cloudify_id))
-    del machines[__cloudify_id]
-    unreachable(__cloudify_id)
+                           .format(ctx.node_id))
+    del machines[ctx.node_id]
+    unreachable(ctx.node_id)
 
 
 @operation

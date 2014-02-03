@@ -22,6 +22,8 @@ import os
 import datetime
 import time
 import sys
+import tempfile
+import yaml
 
 from os.path import expanduser
 from management_plugins import WORKER_INSTALLER
@@ -178,9 +180,14 @@ class WorkflowServiceProcess(object):
 
 class ManagerRestProcess(object):
 
-    def __init__(self, manager_rest_path, workflow_service_base_uri,
+    def __init__(self,
+                 manager_rest_path,
+                 file_server_dir,
+                 file_server_base_uri,
+                 workflow_service_base_uri,
                  port=8100):
-        self.process_grep = 'server.py'
+        self.file_server_dir = file_server_dir
+        self.file_server_base_uri = file_server_base_uri
         self.port = port
         self.manager_rest_path = manager_rest_path
         self.workflow_service_base_uri = workflow_service_base_uri
@@ -188,17 +195,34 @@ class ManagerRestProcess(object):
     def start(self, start_timeout=60):
         output_file = open('manager-rest.out', 'w')
         endtime = time.time() + start_timeout
+
+        configuration = {
+            'file_server_root': self.file_server_dir,
+            'file_server_base_uri': self.file_server_base_uri,
+            'workflow_service_base_uri': self.workflow_service_base_uri
+        }
+
+        config_path = tempfile.mktemp()
+        with open(config_path, 'w') as f:
+            f.write(yaml.dump(configuration))
+        env = os.environ.copy()
+        env['MANAGER_REST_CONFIG_PATH'] = config_path
+
         command = [
-            sys.executable,
-            '{0}/manager_rest/server.py'.format(self.manager_rest_path),
-            '--port', str(self.port),
-            '--workflow_service_base_uri', self.workflow_service_base_uri
+            'gunicorn',
+            '-w', '1',
+            '-b', '0.0.0.0:{0}'.format(self.port),
+            '--timeout', '300',
+            'server:app'
         ]
+
         self._process = subprocess.Popen(command,
+                                         env=env,
                                          stdin=FNULL,
                                          stdout=output_file,
                                          stderr=output_file,
-                                         cwd=self.manager_rest_path)
+                                         cwd='{0}/manager_rest'.format(
+                                             self.manager_rest_path))
         self.wait_for_service_responsiveness(endtime)
 
     def wait_for_service_responsiveness(self, endtime):
@@ -386,9 +410,37 @@ class VagrantLxcBoot:
         workflow_service = WorkflowServiceProcess(jbin,
                                                   workflow_service_path)
         workflow_service.start()
+
+        file_server_dir = tempfile.mkdtemp()
+        file_server_base_uri = 'http://localhost:53229'
+
+        self.start_file_server(file_server_dir)
+
         manager_rest = ManagerRestProcess(manager_rest_path,
+                                          file_server_dir,
+                                          file_server_base_uri,
                                           workflow_service_base_uri)
         manager_rest.start()
+
+    def start_file_server(self, file_server_dir, timeout=10):
+        endtime = time.time() + timeout
+
+        from manager_rest.file_server import FileServer
+        from manager_rest.util import copy_resources
+
+        file_server_process = FileServer(file_server_dir, use_subprocess=True)
+        file_server_process.start()
+        while not file_server_process.is_alive() and time.time() < endtime:
+            time.sleep(1)
+        if not file_server_process.is_alive():
+            raise RuntimeError("File server is not responding")
+
+        orchestrator_dir = os.path.abspath(__file__)
+        for i in range(2):
+            orchestrator_dir = os.path.dirname(orchestrator_dir)
+        orchestrator_dir = os.path.join(orchestrator_dir,
+                                        'orchestrator')
+        copy_resources(file_server_dir, orchestrator_dir)
 
     def install_celery(self):
         self.pip("billiard==2.7.3.28")
