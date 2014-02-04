@@ -1,613 +1,141 @@
 {
-   "swaggerVersion":"1.2",
-   "apis":[
-      {
-         "operations":[
-            {
-               "parameters":[
-
-               ],
-               "responseClass":"List[BlueprintState]",
-               "notes":"Returns a list a submitted blueprints.",
-               "summary":"Returns a list of submitted blueprints.",
-               "nickname":"list",
-               "method":"GET"
-            },
-            {
-               "parameters":[
-                  {
-                     "defaultValue":"blueprint.yaml",
-                     "name":"application_file_name",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":false,
-                     "paramType":"query",
-                     "description":"File name of yaml containing the \"main\" blueprint."
-                  },
-                  {
-                     "name":"body",
-                     "dataType":"binary",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"body",
-                     "description":"Binary form of the tar gzipped blueprint directory"
-                  }
-               ],
-               "responseClass":"BlueprintState",
-               "notes":"Submitted blueprint should be a tar gzipped directory containing the blueprint.",
-               "consumes":[
-                  "application/octet-stream"
-               ],
-               "summary":"Submit a new blueprint.",
-               "nickname":"upload",
-               "method":"POST"
+    "apiVersion": "1.0",
+    "swaggerVersion": "1.2",
+    "resourcePath": "/",
+    "produces": [
+        "application/json",
+        "text/plain",
+        "text/html"
+    ],
+    "info": {
+        "title": "Cosmo Workflow Engine Service",
+        "description": "Describes a REST API for launching and monitoring workflows",
+        "contact": "idan@gigaspaces.com",
+        "license": "Apache 2.0",
+        "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "apis": [
+        {
+            "path": "/workflows",
+            "description": "Workflows operations",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "Launches a workflow",
+                    "nickname": "launchWorkflow",
+                    "responseClass": "WorkflowState",
+                    "parameters": [
+                        {
+                            "name": "radial",
+                            "description": "Workflow in Ruote's radial format",
+                            "required": "true",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "body"
+                        },
+                        {
+                            "name": "fields",
+                            "description": "A map of workitem fields for the workflow execution",
+                            "required": "false",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "string"
+                        },
+                        {
+                            "name": "tags",
+                            "description": "A map of tags which can be later used for query purposes (Tags are also visible in events)",
+                            "required": "false",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "string"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 201,
+                            "message": "Workflow submitted and is in pending state"
+                        },
+                        {
+                            "code": 400,
+                            "message": "Radial/fields/tags format error"
+                        }
+                    ]
+                },
+                {
+                    "method": "GET",
+                    "summary": "Gets all workflows states",
+                    "nickname": "getWorkflows",
+                    "responseClass": "List[WorkflowState]",
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "Workflows states returned"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "path": "/workflows/{workflowId}",
+            "description": "Workflow operations",
+            "operations": [
+                {
+                    "method": "GET",
+                    "summary": "Gets workflow state",
+                    "nickname": "getWorkflow",
+                    "responseClass": "WorkflowState",
+                    "parameters": [
+                        {
+                            "name": "workflowId",
+                            "description": "Workflow id to get the state for",
+                            "required": "true",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "path"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "Workflow state for the provided workflow id returned"
+                        },
+                        {
+                            "code": 400,
+                            "message": "Provided workflow id doesn't exist"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "models": {
+        "WorkflowState": {
+            "id": "WorkflowState",
+            "description": "Represents a workflow state",
+            "required": [ "id", "state", "created" ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Workflow Id"
+                },
+                "state": {
+                    "type": "string",
+                    "description": "Workflow current state",
+                    "enum": [ "pending", "launched", "terminated", "failed" ]
+                },
+                "created": {
+                    "type": "dateTime",
+                    "description": "Time when the workflow was submitted to the workflow engine"
+                },
+                "launched": {
+                    "type": "dateTime",
+                    "description": "Time when the workflow was actually launched"
+                },
+                "error": {
+                    "type": "string",
+                    "description": "Error message in case of workflow execution failure"
+                }
             }
-         ],
-         "path":"/blueprints",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"blueprint_id"
-                  }
-               ],
-               "responseClass":"BlueprintState",
-               "notes":"Returns a blueprint by its id.",
-               "summary":"Returns a blueprint by its id.",
-               "nickname":"getById",
-               "method":"GET"
-            }
-         ],
-         "path":"/blueprints/{blueprint_id}",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"blueprint_id"
-                  }
-               ],
-               "responseClass":"BlueprintValidationStatus",
-               "notes":"Validates a given blueprint.",
-               "summary":"Validates a given blueprint.",
-               "nickname":"validate",
-               "method":"GET"
-            }
-         ],
-         "path":"/blueprints/{blueprint_id}/validate",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"execution_id"
-                  }
-               ],
-               "responseClass":"Execution",
-               "notes":"Returns the execution state by its id.",
-               "summary":"Returns the execution state by its id.",
-               "nickname":"getById",
-               "method":"GET"
-            }
-         ],
-         "path":"/executions/{execution_id}",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-
-               ],
-               "responseClass":"List[Deployment]",
-               "notes":"Returns a list existing deployments.",
-               "summary":"Returns a list of existing deployments.",
-               "nickname":"list",
-               "method":"GET"
-            },
-            {
-               "parameters":[
-                  {
-                     "name":"body",
-                     "dataType":"DeploymentRequest",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"body",
-                     "description":"Deployment blue print"
-                  }
-               ],
-               "responseClass":"Deployment",
-               "notes":"Created a new deployment of the given blueprint.",
-               "consumes":[
-                  "application/json"
-               ],
-               "summary":"Creates a new deployment",
-               "nickname":"createDeployment",
-               "method":"POST"
-            }
-         ],
-         "path":"/deployments",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"deployment_id"
-                  }
-               ],
-               "responseClass":"BlueprintState",
-               "notes":"Returns a deployment by its id.",
-               "summary":"Returns a deployment by its id.",
-               "nickname":"getById",
-               "method":"GET"
-            }
-         ],
-         "path":"/deployments/{deployment_id}",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"deployment_id"
-                  }
-               ],
-               "responseClass":"List[Execution]",
-               "notes":"Returns a list of executions related to the provided deployment.",
-               "summary":"Returns a list of executions related to the provided blueprint.",
-               "nickname":"list",
-               "method":"GET"
-            },
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"deployment_id"
-                  },
-                  {
-                     "name":"body",
-                     "dataType":"ExecutionRequest",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"body",
-                     "description":"Workflow execution request"
-                  }
-               ],
-               "responseClass":"Execution",
-               "notes":"Executes the provided workflow under the given deployment context.",
-               "consumes":[
-                  "application/json"
-               ],
-               "summary":"Execute a workflow",
-               "nickname":"execute",
-               "method":"POST"
-            }
-         ],
-         "path":"/deployments/{deployment_id}/executions",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"deployment_id"
-                  }
-               ],
-               "responseClass":"Workflows",
-               "notes":"Returns a list of workflows related to the provided deployment.",
-               "summary":"Returns a list of workflows related to the provided deployment.",
-               "nickname":"workflows",
-               "method":"GET"
-            }
-         ],
-         "path":"/deployments/{deployment_id}/workflows",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "dataType":"string",
-                     "paramType":"path",
-                     "name":"deployment_id"
-                  },
-                  {
-                     "paramType":"query",
-                     "name":"reachable",
-                     "dataType":"boolean",
-                     "allowMultiple":false,
-                     "required":false,
-                     "defaultValue":false,
-                     "description":"Specifies whether to return reachable state for the nodes."
-                  }
-               ],
-               "responseClass":"DeploymentNodes",
-               "notes":"Returns an object containing nodes associated with this deployment.",
-               "summary":"Returns an object containing nodes associated with this deployment.",
-               "nickname":"list",
-               "method":"GET"
-            }
-         ],
-         "path":"/deployments/{deployment_id}/nodes",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-
-               ],
-               "responseClass":"Nodes",
-               "notes":"Returns a list of deployment nodes or all nodes if deployment id is not specified.",
-               "summary":"List deployment/all nodes.",
-               "nickname":"listNodes",
-               "method":"GET"
-            }
-         ],
-         "path":"/nodes",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "name":"node_id",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"path",
-                     "description":"Node Id"
-                  },
-                  {
-                     "paramType":"query",
-                     "name":"reachable",
-                     "dataType":"boolean",
-                     "allowMultiple":false,
-                     "required":false,
-                     "defaultValue":false,
-                     "description":"Specifies whether to return reachable state."
-                  },
-                  {
-                     "paramType":"query",
-                     "name":"runtime",
-                     "dataType":"boolean",
-                     "allowMultiple":false,
-                     "required":false,
-                     "defaultValue":true,
-                     "description":"Specifies whether to return runtime information."
-                  }
-               ],
-               "responseClass":"Node",
-               "notes":"Returns node runtime/reachable state according to the provided query parameters.",
-               "summary":"Gets node runtime or reachable state.",
-               "nickname":"getNodeState",
-               "method":"GET"
-            },
-            {
-               "parameters":[
-                  {
-                     "name":"node_id",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"path",
-                     "description":"Node Id"
-                  },
-                  {
-                     "name":"body",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"body",
-                     "description":"Node state updated keys/values"
-                  }
-               ],
-               "responseClass":"Node",
-               "notes":"Update node runtime state with the provided dictionary of keys and values. Each value in the dictionary should be a list where the first item is the new value and the second is the old value (for having some kind of optimistic locking). New keys should have a single element list with the new value only.",
-               "consumes":[
-                  "application/json"
-               ],
-               "summary":"Updates node runtime state.",
-               "nickname":"putNodeState",
-               "method":"PATCH"
-            },
-            {
-               "parameters":[
-                  {
-                     "name":"node_id",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"path",
-                     "description":"Node Id"
-                  }
-               ],
-               "responseClass":"Node",
-               "notes":"Put node runtime state (state will be entirely replaced) with the provided dictionary of keys and values.",
-               "summary":"Puts node runtime state.",
-               "nickname":"putNodeState",
-               "method":"PUT"
-            }
-         ],
-         "path":"/nodes/{node_id}",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "name":"body",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"body",
-                     "description":"ElasticSearch query."
-                  }
-               ],
-               "notes":"Returns a list of events for the provided ElasticSearch query. The response format is as ElasticSearch response format.",
-               "method":"GET",
-               "summary":"Returns events for the provided ElasticSearch query",
-               "nickname":"events",
-               "consumes":[
-                  "application/json"
-               ]
-            }
-         ],
-         "path":"/events",
-         "description":null
-      },
-      {
-         "operations":[
-            {
-               "parameters":[
-                  {
-                     "name":"body",
-                     "dataType":"string",
-                     "allowMultiple":false,
-                     "required":true,
-                     "paramType":"body",
-                     "description":"ElasticSearch query."
-                  }
-               ],
-               "notes":"Returns a list of logs for the provided ElasticSearch query. The response format is as ElasticSearch response format.",
-               "method":"GET",
-               "summary":"Returns logs for the provided ElasticSearch query",
-               "nickname":"logs",
-               "consumes":[
-                  "application/json"
-               ]
-            }
-         ],
-         "path":"/logs",
-         "description":null
-      }
-   ],
-   "models":{
-      "Node":{
-         "properties":{
-            "runtimeInfo":{
-               "type":"null"
-            },
-            "reachable":{
-               "type":"boolean"
-            },
-            "id":{
-               "type":"string"
-            }
-         },
-         "id":"Node",
-         "description":null
-      },
-      "Execution":{
-         "properties":{
-            "status":{
-               "type":"string"
-            },
-            "workflowId":{
-               "type":"string"
-            },
-            "deploymentId":{
-               "type":"string"
-            },
-            "error":{
-               "type":"string"
-            },
-            "blueprintId":{
-               "type":"string"
-            },
-            "id":{
-               "type":"string"
-            },
-            "createdAt":{
-               "type":"string"
-            }
-         },
-         "id":"Execution",
-         "description":null
-      },
-      "Workflow":{
-         "properties":{
-            "name":{
-               "type":"string"
-            },
-            "createdAt":{
-               "type":"string"
-            }
-         },
-         "id":"Workflow",
-         "description":null
-      },
-      "Deployment":{
-         "properties":{
-            "blueprintId":{
-               "type":"string"
-            },
-            "updatedAt":{
-               "type":"date-time"
-            },
-            "plan":{
-               "type":"string"
-            },
-            "createdAt":{
-               "type":"date-time"
-            },
-            "id":{
-               "type":"string"
-            }
-         },
-         "id":"Deployment",
-         "description":null
-      },
-      "DeploymentNodes":{
-         "properties":{
-            "deploymentId":{
-               "type":"string"
-            },
-            "nodes":{
-               "items":{
-                  "$ref":"DeploymentNodesNode"
-               },
-               "type":"array"
-            }
-         },
-         "id":"DeploymentNodes",
-         "description":null
-      },
-      "DeploymentRequest":{
-         "properties":{
-            "blueprintId":{
-               "type":"string"
-            }
-         },
-         "id":"DeploymentRequest",
-         "description":null
-      },
-      "Workflows":{
-         "properties":{
-            "blueprintId":{
-               "type":"string"
-            },
-            "deploymentId":{
-               "type":"string"
-            },
-            "workflows":{
-               "items":{
-                  "$ref":"Workflow"
-               },
-               "type":"array"
-            }
-         },
-         "id":"Workflows",
-         "description":null
-      },
-      "DeploymentNodesNode":{
-         "properties":{
-            "reachable":{
-               "type":"boolean"
-            },
-            "id":{
-               "type":"string"
-            }
-         },
-         "id":"DeploymentNodesNode",
-         "description":null
-      },
-      "ExecutionRequest":{
-         "properties":{
-            "workflowId":{
-               "type":"string"
-            }
-         },
-         "id":"ExecutionRequest",
-         "description":null
-      },
-      "BlueprintState":{
-         "properties":{
-            "id":{
-               "type":"string"
-            },
-            "createdAt":{
-               "type":"date-time"
-            },
-            "plan":{
-               "type":"string"
-            },
-            "name":{
-               "type":"string"
-            },
-            "updatedAt":{
-               "type":"date-time"
-            }
-         },
-         "id":"BlueprintState",
-         "description":null
-      },
-      "BlueprintValidationStatus":{
-         "properties":{
-            "status":{
-               "type":"string"
-            },
-            "blueprintId":{
-               "type":"string"
-            }
-         },
-         "id":"BlueprintValidationStatus",
-         "description":null
-      },
-      "Nodes":{
-         "properties":{
-            "nodes":{
-               "items":{
-                  "$ref":null
-               },
-               "type":"array"
-            }
-         },
-         "id":"Nodes",
-         "description":null
-      },
-      "Topology":{
-         "properties":{
-
-         },
-         "required":[
-
-         ],
-         "id":"Topology",
-         "description":null
-      }
-   },
-   "basePath":"http://localhost:8100",
-   "produces":[
-      "application/json"
-   ],
-   "resourcePath":"/",
-   "apiVersion":"0.1"
+        }
+    }
 }
