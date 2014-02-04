@@ -97,7 +97,7 @@ class ExecuteTaskParticipant < Ruote::Participant
               :argument_names => argument_names
           })
 
-      if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && exec != VERIFY_PLUGIN_TASK_NAME && exec != GET_ARGUMENTS_TASK_NAME
+      if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && @full_task_name != VERIFY_PLUGIN_TASK_NAME && @full_task_name != GET_ARGUMENTS_TASK_NAME
         final_properties = Hash.new
       else
         final_properties = payload[PROPERTIES] || Hash.new
