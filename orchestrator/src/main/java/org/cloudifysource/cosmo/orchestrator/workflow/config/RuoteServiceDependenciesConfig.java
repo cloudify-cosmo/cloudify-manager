@@ -16,7 +16,6 @@
 
 package org.cloudifysource.cosmo.orchestrator.workflow.config;
 
-import org.cloudifysource.cosmo.monitor.config.RiemannEventsLoggerConfig;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +34,6 @@ import javax.inject.Inject;
 @Configuration
 @Import({
         TaskExecutorConfig.class,
-        RiemannEventsLoggerConfig.class
 })
 @PropertySource("org/cloudifysource/cosmo/manager/ruote/ruote.properties")
 public class RuoteServiceDependenciesConfig {

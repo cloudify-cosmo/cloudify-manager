@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,13 @@
 #  * limitations under the License.
 #
 
-source 'https://rubygems.org'
+require_relative '../amqp/amqp_client'
 
-gem 'rufus-scheduler', '~> 2.0.24'
-gem 'sinatra', '~> 1.4.4'
-gem 'ruote', '~> 2.3.0.2'
-gem 'rest-client', '~> 1.6.7'
-gem 'march_hare', '~> 2.1.0'
 
-group :test do
-  gem 'rack-test', '~> 0.6.2'
-  gem 'test-unit', '~> 2.5.5'
+def event(type, event_params={})
+  begin
+    AMQPClient::publish_event(type, event_params)
+  rescue Exception => e
+    $logger.debug("Error publishing event: #{e.message}")
+  end
 end
-

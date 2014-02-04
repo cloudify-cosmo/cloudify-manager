@@ -20,7 +20,9 @@ from datetime import datetime
 
 class MockWorkflowClient(object):
 
-    def execute_workflow(self, workflow, plan, deployment_id=None):
+    def execute_workflow(self, name, workflow, plan,
+                         blueprint_id=None, deployment_id=None,
+                         execution_id=None):
         return {
             'type': 'workflow_state',
             'id': 'yokimura-yoshomati',

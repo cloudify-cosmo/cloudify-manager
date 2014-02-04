@@ -58,6 +58,7 @@ setup(
         "celery==3.0.24",
         "bernhard",
         "nose",
+        "pika==0.9.13",
         "cosmo-plugin-plugin-installer",
         "cosmo-plugin-riemann-configurer",
         "cosmo-manager-rest-client"

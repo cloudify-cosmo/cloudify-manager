@@ -28,7 +28,7 @@ class LoggerParticipant < Ruote::Participant
       $logger.debug('ruote-workflow: {}', message)
       reply
     rescue => e
-      log_exception(e, 'logger')
+      log_exception(workitem, e, 'logger')
       flunk(workitem, e)
     end
   end

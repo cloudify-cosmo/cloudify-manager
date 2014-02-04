@@ -1,18 +1,17 @@
-#/****************************************************************************
-# * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-# *
-# * Licensed under the Apache License, Version 2.0 (the "License");
-# * you may not use this file except in compliance with the License.
-# * You may obtain a copy of the License at
-# *
-# *       http://www.apache.org/licenses/LICENSE-2.0
-# *
-# * Unless required by applicable law or agreed to in writing, software
-# * distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-# *****************************************************************************
+#########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 import argparse
 import getpass
@@ -29,7 +28,6 @@ import yaml
 from os.path import expanduser
 from management_plugins import WORKER_INSTALLER
 from versions import FABRIC_RUNNER_VERSION
-from versions import COSMO_VERSION
 from subprocess import check_output
 
 __author__ = 'elip'
@@ -116,12 +114,11 @@ class RiemannProcess(object):
 
 class WorkflowServiceProcess(object):
 
-    def __init__(self, jbin, workflow_service_path, events_path, port=8101):
+    def __init__(self, jbin, workflow_service_path, port=8101):
         self.process_grep = 'rackup'
         self.jbin = jbin
         self.port = port
         self.workflow_service_path = workflow_service_path
-        self.events_path = events_path
 
     def start(self, start_timeout=120):
         output_file = open('workflow-service.out', 'w')
@@ -133,7 +130,6 @@ class WorkflowServiceProcess(object):
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
-        env['WF_SERVICE_LOGS_PATH'] = self.events_path
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
                                          stdout=output_file,
@@ -189,14 +185,12 @@ class ManagerRestProcess(object):
                  file_server_dir,
                  file_server_base_uri,
                  workflow_service_base_uri,
-                 events_path,
                  port=8100):
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.port = port
         self.manager_rest_path = manager_rest_path
         self.workflow_service_base_uri = workflow_service_base_uri
-        self.events_path = events_path
 
     def start(self, start_timeout=60):
         output_file = open('manager-rest.out', 'w')
@@ -205,8 +199,7 @@ class ManagerRestProcess(object):
         configuration = {
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
-            'workflow_service_base_uri': self.workflow_service_base_uri,
-            'events_file_path': self.events_path
+            'workflow_service_base_uri': self.workflow_service_base_uri
         }
 
         config_path = tempfile.mktemp()
@@ -257,12 +250,12 @@ class VagrantLxcBoot:
     RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
     MANAGEMENT_IP = "MANAGEMENT_IP"
     BROKER_URL = "BROKER_URL"
+    MANAGER_REST_PORT = "MANAGER_REST_PORT"
 
     def __init__(self, args):
         self.working_dir = args.working_dir
         self.config_dir = args.config_dir
         self.cosmo_version = args.cosmo_version
-        self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
         self.update_only = args.update_only
         self.install_openstack_provisioner = args.install_openstack_provisioner
         self.management_ip = args.management_ip
@@ -386,12 +379,13 @@ class VagrantLxcBoot:
                   'downloads/1.7.3/jruby-bin-1.7.3.tar.gz')
         self.extract_tar_gz('jruby-bin-1.7.3.tar.gz')
         jbin = os.path.abspath('jruby-1.7.3/bin')
-        self.runner.run('{0}/jruby {0}/gem install bundler'.format(jbin))
+        self.runner.run('{0}/jruby {0}/gem install bundler --pre'.format(jbin))
         return jbin
 
     def install_cosmo_manager(self):
         cosmo_manager_repo = 'CloudifySource/cosmo-manager'
-        branch = 'develop'
+        branch = self.cosmo_version
+
         workflow_service_base_uri = 'http://localhost:8101'
 
         tar_output_name = 'cosmo-manager.tar.gz'
@@ -414,10 +408,8 @@ class VagrantLxcBoot:
                             .format(jbin))
         finally:
             os.chdir(prev_cwd)
-        events_path = os.path.join(self.working_dir, 'events')
         workflow_service = WorkflowServiceProcess(jbin,
-                                                  workflow_service_path,
-                                                  events_path)
+                                                  workflow_service_path)
         workflow_service.start()
 
         file_server_dir = tempfile.mkdtemp()
@@ -428,8 +420,7 @@ class VagrantLxcBoot:
         manager_rest = ManagerRestProcess(manager_rest_path,
                                           file_server_dir,
                                           file_server_base_uri,
-                                          workflow_service_base_uri,
-                                          events_path)
+                                          workflow_service_base_uri)
         manager_rest.start()
 
     def start_file_server(self, file_server_dir, timeout=10):
@@ -476,7 +467,8 @@ class VagrantLxcBoot:
                                  .format(self.management_ip),
                 self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
                 self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
-                self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE]
+                self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE],
+                self.MANAGER_REST_PORT: "8100"
             }
         }
 
@@ -642,32 +634,13 @@ rm /root/guest_additions.sh
                   'assigned to this machine')
             sys.exit(1)
 
-    def _prepare_logstash_configuration(self, cosmo_log_file):
-        logstash_config_template = os.path.join(self.config_dir,
-                                                "logstash.conf.template")
-        logstash_config_path = os.path.join(self.working_dir, "logstash.conf")
-        if not os.path.exists(logstash_config_template):
-            raise RuntimeError("logstash config template "
-                               "file not found in: {0}"
-                               .format(logstash_config_template))
-        with open(logstash_config_template, "r") as config_template_file:
-            template = config_template_file.read()
-            updated_config = template.replace("$cosmo_log_file",
-                                              cosmo_log_file)
-            with open(logstash_config_path, "w") as config_file:
-                config_file.write(updated_config)
-        return logstash_config_path
-
     def _install_logstash(self):
-        logstash_jar_name = "logstash-1.2.2-flatjar.jar"
+        logstash_jar_name = "logstash-1.3.3-flatjar.jar"
         self.wget("https://download.elasticsearch.org/logstash/logstash/{0}"
                   .format(logstash_jar_name))
-        cosmo_log_file = os.path.join(self.working_dir, "cosmo.log")
-        logstash_config_path = \
-            self._prepare_logstash_configuration(cosmo_log_file)
-        self.runner.run("touch {0}".format(cosmo_log_file))
         logstash_jar_path = os.path.join(self.working_dir, logstash_jar_name)
         logstash_web_port = 8080
+        logstash_config_path = os.path.join(self.config_dir, 'logstash.conf')
         if not os.path.exists(logstash_config_path):
             raise RuntimeError("logstash configuration file [{0}] "
                                "does not exist".format(logstash_config_path))
@@ -747,7 +720,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--cosmo_version',
         help='Version of cosmo that will be used to deploy the dsl',
-        default='0.3-SNAPSHOT'
+        default='develop'
     )
     parser.add_argument(
         '--update_only',
@@ -787,8 +760,7 @@ if __name__ == '__main__':
         default=False
     )
 
-    print("Cloudify Cosmo [{0}] Management Machine Bootstrap ->"
-          .format(COSMO_VERSION))
+    print("Cloudify Cosmo [{0}] Management Machine Bootstrap")
 
     vagrant_boot = VagrantLxcBoot(parser.parse_args())
     vagrant_boot.bootstrap()

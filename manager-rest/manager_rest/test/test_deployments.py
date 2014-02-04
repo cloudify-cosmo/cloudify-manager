@@ -24,7 +24,6 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def _post_test_deployment(self):
         blueprint_response = self.post_file(*post_blueprint_args()).json
-        print "######## ", blueprint_response
         blueprint_id = blueprint_response['id']
         #Execute post deployment
         deployment_response = self.post('/deployments',

@@ -16,7 +16,6 @@
 __author__ = 'dan'
 
 from datetime import datetime
-import uuid
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
@@ -147,7 +146,7 @@ class Execution(object):
     }
 
     def __init__(self, *args, **kwargs):
-        self.id = uuid.uuid4()
+        self.id = kwargs['id']
         self.status = kwargs['state']
         self.deployment_id = kwargs['deployment_id']
         self.internal_workflow_id = kwargs['internal_workflow_id']
@@ -155,27 +154,6 @@ class Execution(object):
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = 'None'
-
-
-@swagger.model
-class DeploymentEvents(object):
-
-    resource_fields = {
-        'id': fields.String,
-        'firstEvent': fields.Integer(attribute='first_event'),
-        'lastEvent': fields.Integer(attribute='last_event'),
-        'events': fields.List(fields.Raw),
-        'deploymentTotalEvents': fields.Integer(
-            attribute='deployment_total_events')
-    }
-
-    def __init__(self, *args, **kwargs):
-        self.id = kwargs['id']
-        self.first_event = kwargs['first_event']
-        self.last_event = kwargs['last_event']
-        self.events = kwargs['events']
-        self.deployment_total_events = kwargs['deployment_total_events']
-        self.deployment_events_bytes = kwargs['deployment_events_bytes']
 
 
 @swagger.model

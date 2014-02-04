@@ -50,27 +50,6 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>tasks</artifactId>
         </dependency>
-        <!-- Riemann -->
-        <dependency>
-            <groupId>org.robotninjas.riemann</groupId>
-            <artifactId>client</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>ch.qos.logback</groupId>
-                    <artifactId>logback-classic</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.robotninjas.riemann</groupId>
-            <artifactId>json</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-            <!-- TODO: Remove version from here -->
-            <version>3.6.2.Final</version>
-        </dependency>
         <!-- Spring DI -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -106,11 +85,6 @@
             <type>test-jar</type>
         </dependency>
         <dependency>
-            <groupId>org.easytesting</groupId>
-            <artifactId>fest-assert-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <scope>test</scope>
@@ -125,15 +99,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.robotninjas.riemann</groupId>
-            <artifactId>spring</artifactId>
-            <type>test-jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.robotninjas.riemann</groupId>
-            <artifactId>spring</artifactId>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>
@@ -293,11 +258,6 @@
                 <dependency>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
-                </dependency>
-                <dependency>
-                    <groupId>org.robotninjas.riemann</groupId>
-                    <artifactId>spring</artifactId>
-                    <type>test-jar</type>
                 </dependency>
                 <dependency>
                     <groupId>${project.groupId}</groupId>

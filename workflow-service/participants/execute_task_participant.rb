@@ -22,6 +22,9 @@ require 'securerandom'
 require 'set'
 require_relative 'prepare_operation_participant'
 require_relative 'exception_logger'
+require_relative '../amqp/amqp_client'
+require_relative '../utils/logs'
+require_relative '../utils/events'
 
 
 class ExecuteTaskParticipant < Ruote::Participant
@@ -82,16 +85,19 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       executor = $ruote_properties[EXECUTOR]
 
-      exec = workitem.params[EXEC]
-      target = workitem.params[TARGET]
+      @full_task_name = workitem.params[EXEC]
+      @target = workitem.params[TARGET]
+      @task_id = SecureRandom.uuid
       payload = to_map(workitem.params[PAYLOAD])
       argument_names = workitem.params[ARGUMENT_NAMES]
-      task_id = SecureRandom.uuid
 
-      $logger.debug('Received task execution request [target={}, exec={}, payload={}, argument_names={}]',
-                    target, exec, payload, argument_names)
+      log_task(:debug,
+               "Received task execution request [target=#{@target}, name=#{@full_task_name}, payload=#{payload}, argument_names=#{argument_names}]", {
+              :payload => payload,
+              :argument_names => argument_names
+          })
 
-      if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && exec != VERIFY_PLUGIN_TASK_NAME && exec != GET_ARGUMENTS_TASK_NAME
+      if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && @full_task_name != VERIFY_PLUGIN_TASK_NAME && @full_task_name != GET_ARGUMENTS_TASK_NAME
         final_properties = Hash.new
       else
         final_properties = payload[PROPERTIES] || Hash.new
@@ -99,41 +105,56 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
 
       safe_merge!(final_properties, payload[PARAMS] || Hash.new)
-      add_cloudify_context_to_properties(final_properties, payload, task_id, exec, target)
+      add_cloudify_context_to_properties(final_properties, payload)
 
       properties = to_map(final_properties)
 
       @task_arguments = extract_task_arguments(properties, argument_names)
 
-      $logger.debug('Executing task [taskId={}, target={}, exec={}, properties={}]',
-                    task_id,
-                    target,
-                    exec,
-                    properties)
+      log_task(:debug,
+               "Executing task [taskId=#{@task_id}, target=#{@target}, name=#{@full_task_name}, properties=#{properties}]", {
+              :properties => properties
+          })
 
       json_props = JSON.generate(properties)
 
-      $logger.debug('Generated JSON from {} = {}', properties, json_props)
-
-      @full_task_name = exec
-
       unless TASK_TO_FILTER.include? @full_task_name
-        event = {}
-        event['type'] = SENDING_TASK
-        populate_event_content(event, task_id, false)
-        description = event_to_s(event)
-        $user_logger.debug(description)
+        send_task_event(:sending_task)
       end
 
-      executor.send_task(target, task_id, exec, json_props, self)
+      executor.send_task(@target, @task_id, @full_task_name, json_props, self)
 
     rescue => e
-      log_exception(e, 'execute_task')
+      log_exception(workitem, e, 'execute_task')
       flunk(workitem, e)
     end
   end
 
-  def add_cloudify_context_to_properties(props, payload, task_id, task_name, task_target)
+  def send_task_event(event_type, message=nil)
+    event(event_type, {
+      :workitem => workitem,
+      :message => message,
+      :task_id => @task_id,
+      :task_name => @full_task_name,
+      :task_target => @target,
+      :plugin => workitem.fields['plugin_name'] || nil,
+      :operation => workitem.fields['node_operation'] || nil
+    })
+  end
+
+  def log_task(level, message, arguments)
+    log(level, message, {
+      :workitem => workitem,
+      :task_id => @task_id,
+      :task_name => @full_task_name,
+      :task_target => @target,
+      :plugin => workitem.fields['plugin_name'] || nil,
+      :operation => workitem.fields['node_operation'] || nil,
+      :arguments => arguments
+    })
+  end
+
+  def add_cloudify_context_to_properties(props, payload)
     context = Hash.new
     context['__cloudify_context'] = '0.3'
     context[:wfid] = workitem.wfid
@@ -183,9 +204,9 @@ class ExecuteTaskParticipant < Ruote::Participant
     context[:node_id] = node_id
     context[:node_name] = node_name
     context[:node_properties] = node_properties
-    context[:task_id] = task_id
-    context[:task_name] = task_name
-    context[:task_target] = task_target
+    context[:task_id] = @task_id
+    context[:task_name] = @full_task_name
+    context[:task_target] = @target
     context[:plugin] = workitem.fields[PrepareOperationParticipant::PLUGIN_NAME] || nil
     context[:operation] = workitem.fields[PrepareOperationParticipant::NODE_OPERATION] || nil
     context[:blueprint_id] = workitem.fields['blueprint_id'] || nil
@@ -224,7 +245,9 @@ class ExecuteTaskParticipant < Ruote::Participant
     # log every event coming from task executions.
     # this log will not be displayed to the user by default
     if log_debug
-      $logger.debug('[event] {}', JSON.generate(event))
+      log_task(:debug, "task event: #{event}", {
+          :event => event
+      })
     end
 
     if @full_task_name.nil?
@@ -255,8 +278,6 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       populate_event_content(enriched_event, task_id, true)
 
-      description = event_to_s(enriched_event)
-
       case event_type
 
         when TASK_SUCCEEDED
@@ -266,24 +287,24 @@ class ExecuteTaskParticipant < Ruote::Participant
             workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
           end
           unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(description)
+            send_task_event(:task_succeeded)
           end
           reply(workitem)
 
         when TASK_FAILED || TASK_REVOKED
 
           unless @full_task_name == VERIFY_PLUGIN_TASK_NAME
-            $user_logger.debug(description)
+            send_task_event(:task_failed, enriched_event['exception'])
           end
           flunk(workitem, Exception.new(enriched_event['exception']))
 
         else
           unless TASK_TO_FILTER.include? @full_task_name
-            $user_logger.debug(description)
+            # ignore...
           end
       end
     rescue => e
-      log_exception(e, 'execute_task')
+      log_exception(workitem, e, 'execute_task')
       flunk(workitem, e)
     end
   end
@@ -321,23 +342,6 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
     end
     merge_into
-  end
-
-  def event_to_s(event)
-
-    new_event = {
-        'name' => event['task_name'], 'plugin' => event['plugin'], 'app' => event['app_id'],
-        'node' => event['node_id'], 'workflow_id' => event['wfid'], 'workflow_name' => event['wfname'],
-        'args' => @task_arguments, 'type' => event['type'].gsub('-', '_')
-    }
-    unless event['exception'].nil?
-      new_event['error'] = event['exception']
-      new_event['trace'] = event['traceback']
-    end
-
-    event_string = dict_to_s(new_event)
-    "[#{event['type']}]\n#{event_string}"
-
   end
 
   def get_plugin_name_from_task(full_task_name)

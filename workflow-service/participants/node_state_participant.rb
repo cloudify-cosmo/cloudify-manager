@@ -96,7 +96,7 @@ class NodeStateParticipant < Ruote::Participant
       reply
 
     rescue => e
-      log_exception(e, 'node_state')
+      log_exception(workitem, e, 'node_state')
       flunk(workitem, e)
     end
   end
