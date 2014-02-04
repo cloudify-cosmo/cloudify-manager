@@ -16,7 +16,6 @@
 __author__ = 'dan'
 
 from datetime import datetime
-import uuid
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
@@ -210,4 +209,3 @@ class Node(object):
         self.runtime_info = \
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
-

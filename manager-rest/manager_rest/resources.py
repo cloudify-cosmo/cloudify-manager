@@ -27,7 +27,6 @@ import urllib
 import tempfile
 import shutil
 import uuid
-import json
 import chunked
 import elasticsearch
 
@@ -693,11 +692,11 @@ class Events(Resource):
         notes='Returns a list of events for the provided ElasticSearch query. '
               'The response format is as ElasticSearch response format.',
         parameters=[{'name': 'body',
-                         'description': 'ElasticSearch query.',
-                         'required': True,
-                         'allowMultiple': False,
-                         'dataType': 'string',
-                         'paramType': 'body'}],
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
         consumes=['application/json']
     )
     def get(self):
