@@ -477,7 +477,8 @@ def start_events_and_logs_polling():
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
         channel.start_consuming()
 
-    logger.info("Starting RabbitMQ events/logs polling... [queues={0}]".format(queues))
+    logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
+        queues))
 
     events_thread = threading.Thread(target=fetch_events)
     events_thread.daemon = True
@@ -519,7 +520,6 @@ class TestEnvironment(object):
                 os.makedirs(self._plugins_tempdir)
 
             # events/logs polling
-            logger.info("Starting RabbitMQ events/logs!")
             start_events_and_logs_polling()
 
             # riemann

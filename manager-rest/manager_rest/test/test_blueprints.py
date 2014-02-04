@@ -38,7 +38,7 @@ def post_blueprint_args(convention=False):
     result = [
         '/blueprints',
         tar_mock_blueprint(),
-        ]
+    ]
 
     if not convention:
         data = {'application_file_name': 'blueprint.yaml'}
@@ -59,8 +59,6 @@ class BlueprintsTestCase(BaseServerTestCase):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
         self.assertEquals('hello_world', post_blueprints_response['name'])
         get_blueprints_response = self.get('/blueprints').json
-        import json
-        print json.dumps(get_blueprints_response[0]['plan'], indent=2)
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
 

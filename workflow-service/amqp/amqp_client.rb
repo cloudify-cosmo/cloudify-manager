@@ -70,7 +70,7 @@ class AMQPClient
   def generate_amqp_message(message_params={})
     workitem = message_params[:workitem] || nil
     message = {
-      :code => message_params[:code] || nil,
+      :message_code => message_params[:message_code] || nil,
       :timestamp => Time.now.to_s,
       :message => message_params[:message] || nil,
       :context => {
