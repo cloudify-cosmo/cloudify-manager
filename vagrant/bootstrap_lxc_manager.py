@@ -250,6 +250,7 @@ class VagrantLxcBoot:
     RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
     MANAGEMENT_IP = "MANAGEMENT_IP"
     BROKER_URL = "BROKER_URL"
+    MANAGER_REST_PORT = "MANAGER_REST_PORT"
 
     def __init__(self, args):
         self.working_dir = args.working_dir
@@ -466,7 +467,8 @@ class VagrantLxcBoot:
                                  .format(self.management_ip),
                 self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
                 self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
-                self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE]
+                self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE],
+                self.MANAGER_REST_PORT: "8100"
             }
         }
 
