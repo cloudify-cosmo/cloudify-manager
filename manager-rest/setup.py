@@ -33,6 +33,7 @@ setup(
     description='Cloudify manager rest server',
     zip_safe=False,
     install_requires=[
+        'six',
         'Flask',
         'flask-restful==0.2.5',
         'flask-restful-swagger',
