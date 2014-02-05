@@ -131,7 +131,6 @@ class WorkflowServiceProcess(object):
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
-        env['WF_SERVICE_LOGS_PATH'] = self.events_path
 
         print "starting workflow service with command: {0}".format(command)
 
