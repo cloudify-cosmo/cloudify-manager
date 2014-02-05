@@ -239,9 +239,6 @@ class RuoteServiceProcess(object):
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
         env = os.environ.copy()
-        logger.info("Starting Ruote service")
-        if self._events_path is not None:
-            env['WF_SERVICE_LOGS_PATH'] = self._events_path
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
@@ -763,12 +760,6 @@ def validate_dsl(blueprint_id, timeout=240):
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
                            .format(blueprint_id, response.status))
-
-
-def get_deployment_events(deployment_id, first_event=0, events_count=500):
-    client = CosmoManagerRestClient('localhost')
-    return client.get_deployment_events(deployment_id, from_param=first_event,
-                                        count_param=events_count)
 
 
 def get_deployment_workflows(deployment_id):
