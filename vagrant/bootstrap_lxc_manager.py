@@ -27,7 +27,6 @@ from os.path import expanduser
 from subprocess import check_output
 
 import yaml
-
 from management_plugins import WORKER_INSTALLER
 from versions import FABRIC_RUNNER_VERSION
 
@@ -522,7 +521,7 @@ class VagrantLxcBoot:
     def install_management_plugins(self):
 
         # install the management plugins
-        from plugin_installer.tasks import install_celery_plugin_to_dir \
+        from plugin_installer.tasks import install_celery_plugin \
             as install_plugin
 
         from management_plugins import plugins
