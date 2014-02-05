@@ -59,7 +59,7 @@ class BlueprintsManager(object):
                                    resources_base_url)
         except Exception, ex:
             raise DslParseException(*ex.args)
-        new_blueprint = BlueprintState(plan=json.loads(plan))
+        new_blueprint = BlueprintState().init(plan=json.loads(plan))
         storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -73,8 +73,8 @@ class BlueprintsManager(object):
         plan = blueprint.plan
         response = workflow_client().validate_workflows(plan)
         # TODO raise error if error
-        return BlueprintValidationStatus(blueprint_id=blueprint_id,
-                                         status=response['status'])
+        return BlueprintValidationStatus().init(blueprint_id=blueprint_id,
+                                                status=response['status'])
 
     def execute_workflow(self, deployment_id, workflow_id):
         #TODO: in the future, take the workflow from the
@@ -87,12 +87,13 @@ class BlueprintsManager(object):
         response = workflow_client().execute_workflow(
             workflow, plan, deployment_id=deployment_id)
         # TODO raise error if there is error in response
-        new_execution = Execution(state=response['state'],
-                                  internal_workflow_id=response['id'],
-                                  created_at=response['created'],
-                                  blueprint_id=blueprint.id,
-                                  workflow_id=workflow_id,
-                                  deployment_id=deployment_id)
+        new_execution = Execution().init(
+            state=response['state'],
+            internal_workflow_id=response['id'],
+            created_at=response['created'],
+            blueprint_id=blueprint.id,
+            workflow_id=workflow_id,
+            deployment_id=deployment_id)
 
         storage_manager().add_execution_to_deployment(deployment.id,
                                                       new_execution)
@@ -115,9 +116,9 @@ class BlueprintsManager(object):
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
         deployment_id = uuid.uuid4()
 
-        new_deployment = Deployment(deployment_id=deployment_id,
-                                    plan=json.loads(deployment_json_plan),
-                                    blueprint_id=blueprint_id)
+        new_deployment = Deployment().init(
+            deployment_id=deployment_id, plan=json.loads(
+                deployment_json_plan), blueprint_id=blueprint_id)
 
         storage_manager().put_deployment(deployment_id, new_deployment)
 

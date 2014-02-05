@@ -17,6 +17,7 @@ __author__ = 'ran'
 
 import os
 import json
+import responses
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
@@ -33,6 +34,8 @@ class FileStorageManager(object):
 
     def __init__(self, storage_path):
         self._storage_path = storage_path
+        if os.path.isfile(storage_path):
+            os.remove(storage_path)
 
     def _init_file(self):
         data = {
@@ -47,10 +50,12 @@ class FileStorageManager(object):
         if not os.path.isfile(self._storage_path):
             self._init_file()
         with open(self._storage_path, 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+            return responses.deserialize_object(data)
 
     def _dump_data(self, data):
         with open(self._storage_path, 'w') as f:
+            data = responses.serialize_object(data)
             json.dump(data, f)
 
     def get_nodes(self):

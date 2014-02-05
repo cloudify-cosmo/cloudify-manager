@@ -446,13 +446,13 @@ class DeploymentsIdNodes(Resource):
 
         nodes = []
         for node_id in node_ids:
-            node_result = responses.DeploymentNodesNode(id=node_id)
+            node_result = responses.DeploymentNodesNode().init(id=node_id)
             if get_reachable_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
             nodes.append(node_result)
-        return responses.DeploymentNodes(deployment_id=deployment_id,
-                                         nodes=nodes)
+        return responses.DeploymentNodes().init(deployment_id=deployment_id,
+                                                nodes=nodes)
 
 
 class Deployments(Resource):
@@ -526,7 +526,7 @@ class Nodes(Resource):
         """
         List deployment/all nodes.
         """
-        return responses.Nodes(nodes=storage_manager().get_nodes())
+        return responses.Nodes().init(nodes=storage_manager().get_nodes())
 
 
 class NodesId(Resource):
@@ -592,8 +592,8 @@ class NodesId(Resource):
         runtime_state = None
         if get_runtime_state:
             runtime_state = storage_manager().get_node(node_id)
-        return responses.Node(id=node_id, reachable=reachable_state,
-                              runtime_info=runtime_state)
+        return responses.Node().init(id=node_id, reachable=reachable_state,
+                                     runtime_info=runtime_state)
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -617,7 +617,7 @@ class NodesId(Resource):
             abort(400, message='request body is expected to be'
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
-        return responses.Node(
+        return responses.Node().init(
             id=node_id,
             runtime_info=storage_manager().put_node(node_id, request.json))
 
@@ -663,7 +663,7 @@ class NodesId(Resource):
                 abort(400, message='value for key: {0} is expected to be a'
                                    ' list with length 1 or 2 but is {1}'
                                    .format(k, len(v)))
-        return responses.Node(
+        return responses.Node().init(
             id=node_id,
             runtime_info=storage_manager().update_node(node_id, request.json))
 
@@ -721,7 +721,7 @@ class DeploymentsIdExecutions(Resource):
 class DeploymentsIdWorkflows(Resource):
 
     @swagger.operation(
-        responseClass='Workflows'.format(responses.Workflows.__name__),
+        responseClass='Workflows',
         nickname="workflows",
         notes="Returns a list of workflows related to the provided deployment."
     )

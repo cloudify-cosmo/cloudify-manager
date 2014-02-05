@@ -34,7 +34,7 @@ class EventsManager(object):
         if only_bytes:
             deployment_events_bytes = self.get_deployment_events_bytes(
                 deployment_id)
-            return DeploymentEvents(
+            return DeploymentEvents().init(
                 id=deployment_id,
                 first_event=-1,
                 last_event=-1,
@@ -53,7 +53,7 @@ class EventsManager(object):
                 last_event = -1
                 events = []
             events = map(lambda x: json.loads(x), events)
-            return DeploymentEvents(
+            return DeploymentEvents().init(
                 id=deployment_id,
                 first_event=first_event,
                 last_event=last_event,
