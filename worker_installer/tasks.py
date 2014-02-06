@@ -50,11 +50,6 @@ OPENSTACK_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-open
 VAGRANT_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip" \
     .format(VAGRANT_PROVISIONER_VERSION)
 
-MANAGEMENT_ONLY_PLUGINS_URLS = [RIEMANN_CONFIGURER_URL,
-                                AGENT_INSTALLER_URL,
-                                OPENSTACK_PROVISIONER_URL,
-                                VAGRANT_PROVISIONER_URL]
-
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -154,6 +149,11 @@ def prepare_configuration(worker_config, cloudify_runtime, node_id):
     if "log_file" not in worker_config:
         worker_config["log_file"] = "{0}/log/celery/{1}_worker.log".format(worker_config[VIRTUALENV_PATH_KEY], node_id)
 
+    if "install_vagrant" not in worker_config:
+        worker_config["install_vagrant"] = False
+
+    if "install_openstack" not in worker_config:
+        worker_config["install_openstack"] = True
 
     if MANAGEMENT_IP not in worker_config["env"]:
         if MANAGEMENT_IP not in os.environ:
@@ -192,9 +192,20 @@ def _install_celery(runner, worker_config, node_id):
 
     if _is_management_node(node_id):
 
-        for url in MANAGEMENT_ONLY_PLUGINS_URLS:
             # install the agent installer
-            install_celery_plugin(runner, worker_config, url)
+            install_celery_plugin(runner, worker_config, AGENT_INSTALLER_URL)
+
+            # install the agent installer
+            install_celery_plugin(runner, worker_config, RIEMANN_CONFIGURER_URL)
+
+            if worker_config["install_vagrant"]:
+                # install the agent installer
+                install_celery_plugin(runner, worker_config, VAGRANT_PROVISIONER_URL)
+
+            if worker_config["install_openstack"]:
+                # install the agent installer
+                install_celery_plugin(runner, worker_config, OPENSTACK_PROVISIONER_URL)
+
 
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
