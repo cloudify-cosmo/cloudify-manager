@@ -66,7 +66,7 @@ def _test_install(worker_config, cloudify_runtime, local=False):
     install(worker_config, __cloudify_id, cloudify_runtime, local=local)
 
     logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    start(worker_config, cloudify_runtime, local=local)
+    start(worker_config, cloudify_runtime, __cloudify_id, local=local)
 
     # lets make sure it did
     logger.info("extracting plugins from newly installed worker")

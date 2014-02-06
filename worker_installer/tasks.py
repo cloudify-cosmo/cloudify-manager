@@ -24,7 +24,7 @@ from celery.utils.log import get_task_logger
 from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION
-from cloudify.constants import COSMO_APP_NAME, CLOUDIFY_APP_DIR_KEY, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS
+from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -47,7 +47,7 @@ BROKER_URL = "BROKER_URL"
 @task
 def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwargs):
 
-    prepare_configuration(worker_config, cloudify_runtime)
+    prepare_configuration(worker_config, cloudify_runtime, __cloudify_id)
 
     host_string = key_filename = None
     if not local:
@@ -58,18 +58,18 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
 
     _install_latest_pip(runner, __cloudify_id)
 
-    logger.info("installing worker. virtualenv = {0}".format(worker_config['virtualenv_path']))
+    logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
 
-    _create_virtualenv(runner, worker_config['virtualenv_path'], __cloudify_id)
+    _create_virtualenv(runner, worker_config[VIRTUALENV_PATH_KEY], __cloudify_id)
     _install_celery(runner, worker_config, __cloudify_id)
 
 
 @task
-def start(worker_config, cloudify_runtime, local=False, **kwargs):
+def start(worker_config, cloudify_runtime, __cloudify_id, local=False, **kwargs):
 
     logger.info("starting celery worker")
 
-    prepare_configuration(worker_config, cloudify_runtime)
+    prepare_configuration(worker_config, cloudify_runtime, __cloudify_id)
 
     host_string = key_filename = None
     if not local:
@@ -80,15 +80,15 @@ def start(worker_config, cloudify_runtime, local=False, **kwargs):
 
     runner.sudo("service celeryd start")
 
-    logger.debug(runner.get("{0}/log/celery/celery.log".format(worker_config['app_dir'])))
+    logger.debug(runner.get(worker_config['log_file']))
 
     _verify_no_celery_error(runner)
 
 
 @task
-def restart(worker_config, cloudify_runtime, local=False, **kwargs):
+def restart(worker_config, cloudify_runtime, __cloudify_id, local=False, **kwargs):
 
-    prepare_configuration(worker_config, cloudify_runtime)
+    prepare_configuration(worker_config, cloudify_runtime, __cloudify_id)
 
     host_string = key_filename = None
     if not local:
@@ -119,17 +119,21 @@ def _install_latest_pip(runner, node_id):
     runner.sudo("python get-pip.py")
 
 
-def prepare_configuration(worker_config, cloudify_runtime):
+def prepare_configuration(worker_config, cloudify_runtime, node_id):
     ip = get_machine_ip(cloudify_runtime)
     worker_config['host'] = ip
     #root user has no "/home/" prepended to its home directory
     worker_config['home'] = "/home/" + worker_config['user'] if worker_config['user'] != 'root' else '/root'
-    worker_config['app_dir'] = worker_config['home'] + "/celery"
 
-    if "env" not in worker_config:
-        worker_config['env'] = dict()
-    if "virtualenv_path" not in worker_config:
-        worker_config['virtualenv_path'] = worker_config['app_dir'] + "/ENV"
+    if VIRTUALENV_PATH_KEY not in worker_config:
+        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery"
+
+    if "pid_file" not in worker_config:
+        worker_config["pid_file"] = "{0}/run/celery/{1}_worker.pid".format(worker_config[VIRTUALENV_PATH_KEY], node_id)
+
+    if "log_file" not in worker_config:
+        worker_config["log_file"] = "{0}/log/celery/{1}_worker.log".format(worker_config[VIRTUALENV_PATH_KEY], node_id)
+
 
     if MANAGEMENT_IP not in worker_config["env"]:
         if MANAGEMENT_IP not in os.environ:
@@ -157,8 +161,6 @@ def _verify_no_celery_error(runner):
 
 def _install_celery(runner, worker_config, node_id):
 
-    app_dir = worker_config['app_dir']
-
     # this will also install celery because of transitive dependencies
     install_celery_plugin(runner, worker_config, COSMO_CELERY_URL)
 
@@ -171,7 +173,7 @@ def _install_celery(runner, worker_config, node_id):
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
-    config_file = build_celeryd_config(worker_config, node_id, app_dir)
+    config_file = build_celeryd_config(worker_config, node_id)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
 
@@ -193,15 +195,15 @@ def get_machine_ip(cloudify_runtime):
 
 
 def get_pip(worker_config):
-    return get_prefix_for_command(worker_config['virtualenv_path'], "pip")
+    return get_prefix_for_command(worker_config[VIRTUALENV_PATH_KEY], "pip")
 
 
 def get_celery(worker_config):
-    return get_prefix_for_command(worker_config['virtualenv_path'], "celery")
+    return get_prefix_for_command(worker_config[VIRTUALENV_PATH_KEY], "celery")
 
 
 def get_celeryd_multi(worker_config):
-    return get_prefix_for_command(worker_config['virtualenv_path'], "celeryd-multi")
+    return get_prefix_for_command(worker_config[VIRTUALENV_PATH_KEY], "celeryd-multi")
 
 
 def get_prefix_for_command(virtualenv_path, command):
@@ -240,18 +242,17 @@ def get_broker_url(worker_config):
         "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
 
 
-def build_celeryd_config(worker_config, node_id, app_dir):
+def build_celeryd_config(worker_config, node_id):
 
     user = worker_config['user']
     broker_url = get_broker_url(worker_config)
-    virtualenv_path = worker_config['virtualenv_path']
+    virtualenv_path = worker_config[VIRTUALENV_PATH_KEY]
 
     env = {}
     if 'env' in worker_config:
         env = worker_config['env']
 
     env[VIRTUALENV_PATH_KEY] = virtualenv_path
-    env[CLOUDIFY_APP_DIR_KEY] = app_dir
 
     env_string = build_env_string(env)
 
@@ -276,8 +277,8 @@ CELERYD_OPTS="\
 ''' % dict(env=env_string,
            celeryd_multi=get_celeryd_multi(worker_config),
            user=user,
-           pid_file="{0}/run/celery/%n.pid".format(app_dir),
-           log_file="{0}/log/celery/%n.log".format(app_dir),
+           pid_file=worker_config['pid_file'],
+           log_file=worker_config['log_file'],
            includes=",".join(BUILT_IN_AGENT_PLUGINS),
            app=COSMO_APP_NAME,
            node_id=node_id,
