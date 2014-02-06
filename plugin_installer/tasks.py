@@ -179,7 +179,7 @@ def get_plugin_simple_name(full_plugin_name):
 
 def run_command(command):
     shlex_split = shlex.split(command)
-    logger.info("Running command {0}".format(command))
+    print "Running command {0}".format(command)
     p = subprocess.Popen(shlex_split, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
