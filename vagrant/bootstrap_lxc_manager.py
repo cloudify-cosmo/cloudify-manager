@@ -502,6 +502,7 @@ class VagrantLxcBoot:
         os.environ['VIRTUALENV'] = worker_config['home'] + "/celery"
 
         # install the necessary management plugins.
+        print "installing management plugins"
         self.install_management_plugins()
 
         # start the worker now for all plugins to be registered
@@ -523,6 +524,7 @@ class VagrantLxcBoot:
 
         from management_plugins import plugins
         for plugin in plugins:
+            print "installing plugin {0}".format(plugin)
             install_plugin(plugin=plugin)
 
         if self.install_openstack_provisioner:

@@ -48,11 +48,7 @@ plugins = [
     {
         "name": "cosmo-plugin-agent-installer",
         "url": WORKER_INSTALLER
-    },
-    {
-        "name": "cosmo-plugin-dsl-parser",
-        "url": DSL_PARSER
-    },
+    }
 ]
 
 openstack_provisioner_plugin = {
