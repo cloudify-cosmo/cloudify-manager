@@ -496,24 +496,6 @@ class VagrantLxcBoot:
               __cloudify_id=__cloudify_id,
               local=True)
 
-    def install_management_plugins(self):
-
-        # install the management plugins
-        from plugin_installer.tasks import install_celery_plugin \
-            as install_plugin
-
-        from management_plugins import plugins
-        for plugin in plugins:
-            print "installing plugin {0}".format(plugin)
-            install_plugin(plugin=plugin)
-
-        if self.install_openstack_provisioner:
-            from management_plugins import openstack_provisioner_plugin
-            install_plugin(plugin=openstack_provisioner_plugin)
-        if self.install_vagrant_lxc:
-            from management_plugins import vagrant_provisioner_plugin
-            install_plugin(plugin=vagrant_provisioner_plugin)
-
     def install_vagrant(self):
         vagrant_file_name = "vagrant_1.2.7_x86_64.deb"
         vagrant_file_path = os.path.join(self.working_dir, vagrant_file_name)
