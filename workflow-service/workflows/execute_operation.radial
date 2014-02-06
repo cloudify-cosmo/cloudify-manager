@@ -19,7 +19,7 @@ define execute_operation
         sequence if: '${worker_id} != celery.cloudify.management and ${verified} != True'
             repeat
                 log message: 'waiting for plugin installation completion on host node ${target}'
-                execute_task target: '${target}', exec: 'plugins.kv_store.tasks.get', payload: {
+                execute_task target: '${target}', exec: 'kv_store.tasks.get', payload: {
                     properties: {
                         key: "agent plugins installed"
                     }
