@@ -1,4 +1,10 @@
 define state
-    set 'v:max_retries': '999999'
-    set 'v:retry_time': '10'
-    wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', to_f: '$v:to_f', on_error: '${v:retry_time}s: retry * ${v:max_retries}'
+    repeat
+        sequence if: '${v:to_f} is not set'
+            set 'v:to_f': 'state_result'
+        wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', to_f: '$v:to_f'
+        log message: 'wait for node state action ${v:action} result is: ${v:to_f} = ${${v:to_f}}'
+        break if: '${v:action} == get'
+        break if: '${${v:to_f}} == true'
+        wait for: '10s'
+    unset 'v:to_f'
