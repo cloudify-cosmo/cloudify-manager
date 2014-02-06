@@ -654,8 +654,8 @@ class TestEnvironment(object):
 
     @staticmethod
     def reset_rest_manager_data():
-        if TestEnvironment._instance and TestEnvironment._instance\
-            ._manager_rest_process:
+        if TestEnvironment._instance and \
+           TestEnvironment._instance._manager_rest_process:
             TestEnvironment._instance._manager_rest_process.reset_data()
 
     @classmethod
