@@ -34,8 +34,9 @@ import json
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 from celery import Celery
+from cloudify.constants import MANAGEMENT_NODE_ID
 
-CLOUDIFY_MANAGEMENT_QUEUE = "cloudify.management"
+CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -334,7 +335,7 @@ class CeleryWorkerProcess(object):
             "worker",
             "--events",
             "--loglevel=debug",
-            "--hostname=celery.cloudify.management",
+            "--hostname=celery.{0}".format(MANAGEMENT_NODE_ID),
             "--purge",
             "--app=cloudify",
             "--logfile={0}".format(celery_log_file),
