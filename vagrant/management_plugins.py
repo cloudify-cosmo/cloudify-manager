@@ -41,26 +41,26 @@ DSL_PARSER = "https://github.com/CloudifySource/"\
 plugins = [
 
     {
-        "name": "cloudify.plugins.riemann_config_loader",
+        "name": "cosmo-plugin-riemann-configurer",
         "url": RIEMANN_LOADER
 
     },
     {
-        "name": "cloudify.plugins.worker_installer",
+        "name": "cosmo-plugin-agent-installer",
         "url": WORKER_INSTALLER
     },
     {
-        "name": "cloudify.plugins.dsl_parser",
+        "name": "cosmo-plugin-dsl-parser",
         "url": DSL_PARSER
     },
 ]
 
 openstack_provisioner_plugin = {
-    "name": "cloudify.plugins.openstack_host_provisioner",
+    "name": "cosmo-plugin-openstack-provisioner",
     "url": OPENSTACK_PROVISION
 }
 
 vagrant_provisioner_plugin = {
-    "name": "cloudify.plugins.vagrant_host_provisioner",
+    "name": "cosmo-plugin-vagrant-provisioner",
     "url": VAGRANT_PROVISION
 }

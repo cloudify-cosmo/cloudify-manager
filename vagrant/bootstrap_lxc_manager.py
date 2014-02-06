@@ -27,6 +27,7 @@ from os.path import expanduser
 from subprocess import check_output
 
 import yaml
+
 from management_plugins import WORKER_INSTALLER
 from versions import FABRIC_RUNNER_VERSION
 
@@ -448,12 +449,6 @@ class VagrantLxcBoot:
         orchestrator_dir = os.path.join(orchestrator_dir,
                                         'orchestrator')
         copy_resources(file_server_dir, orchestrator_dir)
-
-    def install_celery(self):
-        self.pip("billiard==2.7.3.28")
-        self.pip("celery==3.0.19")
-        self.pip("python-vagrant")
-        self.pip("bernhard")
 
     def install_celery_worker(self, riemann_info):
 
