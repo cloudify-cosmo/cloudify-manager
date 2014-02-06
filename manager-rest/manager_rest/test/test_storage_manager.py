@@ -15,8 +15,6 @@
 
 __author__ = 'ran'
 
-import json
-import unittest
 from datetime import datetime
 from manager_rest import storage_manager, responses
 import base_test
