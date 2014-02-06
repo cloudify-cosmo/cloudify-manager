@@ -458,6 +458,8 @@ class VagrantLxcBoot:
         worker_config = {
             "user": getpass.getuser(),
             "broker": "amqp://",
+            "install_vagrant": self.install_vagrant_lxc,
+            "install_openstack": self.install_openstack_provisioner,
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
                 # when running celery in daemon mode. this environment does
