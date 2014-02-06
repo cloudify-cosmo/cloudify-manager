@@ -297,6 +297,8 @@ def build_celeryd_config(worker_config, node_id):
 
     env_string = build_env_string(env)
 
+    print "worker_config is {0}".format(worker_config)
+
     if _is_management_node(node_id):
         includes_list = BUILT_IN_MANAGEMENT_PLUGINS
         if worker_config["install_openstack"]:
