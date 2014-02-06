@@ -77,18 +77,15 @@ class BlueprintsManager(object):
                                                 status=response['status'])
 
     def execute_workflow(self, deployment_id, workflow_id):
-        #TODO: in the future, take the workflow from the
-        # deployment rather than from the blueprint
         deployment = self.get_deployment(deployment_id)
-        blueprint = self.get_blueprint(deployment.blueprint_id)
-        workflow = blueprint.plan['workflows'][workflow_id]
-        plan = blueprint.plan
+        workflow = deployment.plan['workflows'][workflow_id]
+        plan = deployment.plan
 
         execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(
             workflow_id,
             workflow, plan,
-            blueprint_id=blueprint.id,
+            blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
             execution_id=execution_id)
         # TODO raise error if there is error in response
@@ -98,7 +95,7 @@ class BlueprintsManager(object):
             state=response['state'],
             internal_workflow_id=response['id'],
             created_at=response['created'],
-            blueprint_id=blueprint.id,
+            blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id)
 
