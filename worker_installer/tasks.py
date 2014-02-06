@@ -297,13 +297,12 @@ def build_celeryd_config(worker_config, node_id):
 
     env_string = build_env_string(env)
 
-    includes_list = []
     if _is_management_node(node_id):
-        includes = BUILT_IN_MANAGEMENT_PLUGINS
+        includes_list = BUILT_IN_MANAGEMENT_PLUGINS
         if worker_config["install_openstack"]:
-            includes.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
+            includes_list.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
         if worker_config["install_vagrant"]:
-            includes.append(VAGRANT_PROVISIONER_PLUGIN_PATH)
+            includes_list.append(VAGRANT_PROVISIONER_PLUGIN_PATH)
     else:
         includes_list = BUILT_IN_AGENT_PLUGINS
 
