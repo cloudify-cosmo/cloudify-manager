@@ -131,6 +131,7 @@ def get_prefix_for_command(command):
     try:
         return os.path.join(os.environ[VIRTUALENV_PATH_KEY], "bin", command)
     except KeyError:
+        logger.warning("virtual env does not exist. running regular command {0}".format(command))
         return command
 
 
