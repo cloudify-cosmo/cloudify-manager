@@ -508,6 +508,7 @@ class VagrantLxcBoot:
         from worker_installer.tasks import start
         start(worker_config=worker_config,
               cloudify_runtime=cloudify_runtime,
+              __cloudify_id=__cloudify_id,
               local=True)
 
         # uninstall the plugin installer from python installation.
