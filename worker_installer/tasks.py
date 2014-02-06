@@ -23,8 +23,10 @@ import os
 from celery.utils.log import get_task_logger
 from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
-from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION
-from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS
+from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
+    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
+from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, MANAGEMENT_NODE_ID, \
+    BUILT_IN_MANAGEMENT_PLUGINS
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -34,7 +36,13 @@ PLUGIN_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-plugin-in
                        .format(PLUGIN_INSTALLER_VERSION)
 
 KV_STORE_URL = "https://github.com/CloudifySource/cosmo-plugin-kv-store/archive/{0}.zip" \
-    .format(KV_STORE_VERSION)
+               .format(KV_STORE_VERSION)
+
+RIEMANN_CONFIGURER_URL = "https://github.com/CloudifySource/cosmo-plugin-riemann-configurer/archive/{0}.zip" \
+                         .format(RIEMANN_CONFIGURER_VERSION)
+
+AGENT_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip" \
+                      .format(AGENT_INSTALLER_VERSION)
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -170,11 +178,24 @@ def _install_celery(runner, worker_config, node_id):
     # install the kv store
     install_celery_plugin(runner, worker_config, KV_STORE_URL)
 
+    if _is_management_node(node_id):
+
+        # install the agent installer
+        install_celery_plugin(runner, worker_config, AGENT_INSTALLER_URL)
+
+        # install the riemann configurer
+        install_celery_plugin(runner, worker_config, RIEMANN_CONFIGURER_URL)
+
+
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
     runner.sudo("chmod +x /etc/init.d/celeryd")
     config_file = build_celeryd_config(worker_config, node_id)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
+
+
+def _is_management_node(node_id):
+    return node_id == MANAGEMENT_NODE_ID
 
 
 def install_celery_plugin(runner, worker_config, plugin_url):
@@ -279,7 +300,7 @@ CELERYD_OPTS="\
            user=user,
            pid_file=worker_config['pid_file'],
            log_file=worker_config['log_file'],
-           includes=",".join(BUILT_IN_AGENT_PLUGINS),
+           includes=",".join(BUILT_IN_MANAGEMENT_PLUGINS if _is_management_node(node_id) else BUILT_IN_AGENT_PLUGINS),
            app=COSMO_APP_NAME,
            node_id=node_id,
            broker_url=broker_url)
