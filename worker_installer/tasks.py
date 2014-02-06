@@ -26,7 +26,7 @@ from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, MANAGEMENT_NODE_ID, \
-    BUILT_IN_MANAGEMENT_PLUGINS
+    BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, VAGRANT_PROVISIONER_PLUGIN_PATH
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -297,6 +297,16 @@ def build_celeryd_config(worker_config, node_id):
 
     env_string = build_env_string(env)
 
+    includes_list = []
+    if _is_management_node(node_id):
+        includes = BUILT_IN_MANAGEMENT_PLUGINS
+        if worker_config["install_openstack"]:
+            includes.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
+        if worker_config["install_vagrant"]:
+            includes.append(VAGRANT_PROVISIONER_PLUGIN_PATH)
+    else:
+        includes_list = BUILT_IN_AGENT_PLUGINS
+
     return '''
 %(env)s
 CELERYD_MULTI="%(celeryd_multi)s"
@@ -320,7 +330,7 @@ CELERYD_OPTS="\
            user=user,
            pid_file=worker_config['pid_file'],
            log_file=worker_config['log_file'],
-           includes=",".join(BUILT_IN_MANAGEMENT_PLUGINS if _is_management_node(node_id) else BUILT_IN_AGENT_PLUGINS),
+           includes=",".join(includes_list),
            app=COSMO_APP_NAME,
            node_id=node_id,
            broker_url=broker_url)
