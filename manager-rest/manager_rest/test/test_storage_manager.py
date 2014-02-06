@@ -20,6 +20,7 @@ import unittest
 from datetime import datetime
 from manager_rest import storage_manager, responses
 import base_test
+import manager_rest.serialization as ser
 
 
 class StorageManagerTests(base_test.BaseServerTestCase):
@@ -35,7 +36,9 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(blueprint.__dict__, blueprint_from_list.__dict__)
         self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
 
-    def test_json_encode_decode(self):
+    def test_persistent_object_json_encode_decode(self):
+        #testing to_json and from_json of a single recursive persistent object
+
         workflows = responses.Workflows()
         workflows.blueprint_id = 'blueprint-id'
         workflow1 = responses.Workflow().init(workflow_id='workflow1',
@@ -43,11 +46,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         workflow2 = responses.Workflow().init(workflow_id='workflow2',
                                               created_at='just-now-too')
         workflows.workflows = [workflow1, workflow2]
-        workflows_dict = workflows.to_dict()
-        workflows_json_encoded = json.dumps(workflows_dict)
-        workflows_json_decoded = json.loads(workflows_json_encoded)
-        workflows_restored = workflows.from_dict(
-            workflows_json_decoded['data'])
+        workflows_json = workflows.to_json()
+        workflows_restored = workflows.from_json(workflows_json)
 
         self.assertEquals(workflows.blueprint_id,
                           workflows_restored.blueprint_id)
@@ -68,4 +68,47 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertTrue(hasattr(workflows_restored.workflows[1],
                                 'resource_fields'))
 
+    def test_serialization_deserialization(self):
+        #similar to test_persistent_object_json_encode_decode, but checks
+        # the static serialization and deserialization functions on a list
+        # of multiple persistent objects
 
+        workflows = responses.Workflows()
+        workflows.blueprint_id = 'blueprint-id'
+        workflow1 = responses.Workflow().init(workflow_id='workflow1',
+                                              created_at='just-now')
+        workflow2 = responses.Workflow().init(workflow_id='workflow2',
+                                              created_at='just-now-too')
+        workflows.workflows = [workflow1, workflow2]
+
+        blueprint = responses.BlueprintState()
+        blueprint.id = 'blueprint-id'
+        blueprint.created_at = str(datetime.now())
+
+        persistent_objects = [workflows, blueprint]
+        serialized_data = ser.serialize_object(persistent_objects)
+        restored_objects = ser.deserialize_object(serialized_data)
+
+        self.assertEquals(2, len(restored_objects))
+        blueprint_restored = restored_objects[1]
+        workflows_restored = restored_objects[0]
+
+        self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
+        self.assertEquals(workflows.blueprint_id,
+                          workflows_restored.blueprint_id)
+        self.assertEquals(workflows.deployment_id,
+                          workflows_restored.deployment_id)
+        self.assertEquals(2, len(workflows_restored.workflows))
+        self.assertEquals(workflows.workflows[0].created_at,
+                          workflows_restored.workflows[0].created_at)
+        self.assertEquals(workflows.workflows[0].name,
+                          workflows_restored.workflows[0].name)
+        self.assertEquals(workflows.workflows[1].created_at,
+                          workflows_restored.workflows[1].created_at)
+        self.assertEquals(workflows.workflows[1].name,
+                          workflows_restored.workflows[1].name)
+        self.assertTrue(hasattr(workflows_restored, 'resource_fields'))
+        self.assertTrue(hasattr(workflows_restored.workflows[0],
+                                'resource_fields'))
+        self.assertTrue(hasattr(workflows_restored.workflows[1],
+                                'resource_fields'))

@@ -16,7 +16,6 @@
 __author__ = 'ran'
 
 import json
-from responses import *  # NOQA
 
 TYPE_FIELD_NAME = '_type'
 DATA_FIELD_NAME = 'data'
@@ -30,7 +29,13 @@ def serialize_object(obj):
         return [serialize_object(val) for val in obj]
 
     if hasattr(obj, 'to_dict'):
-        return obj.to_dict()
+        obj_data = obj.to_dict()
+        obj_data_with_meta = {
+            TYPE_FIELD_NAME: '{0}.{1}'.format(obj.__class__.__module__,
+                                              obj.__class__.__name__),
+            DATA_FIELD_NAME: obj_data
+        }
+        return obj_data_with_meta
     return obj
 
 
@@ -41,8 +46,16 @@ def deserialize_object(obj):
     if isinstance(obj, dict):
         if TYPE_FIELD_NAME in obj:
             #nested object
-            return globals()[obj[TYPE_FIELD_NAME]]().from_dict(
-                obj[DATA_FIELD_NAME])
+            obj_type = obj[TYPE_FIELD_NAME]
+            obj_class_name = obj_type.split('.')[-1]
+            obj_module_name = obj_type[:len(obj_type)-len(obj_class_name)-1]
+            if '.' in obj_module_name:
+                module = __import__(obj_module_name,
+                                    fromlist=obj_module_name.split('.')[-1])
+            else:
+                module = __import__(obj_module_name)
+            cls = getattr(module, obj_class_name)
+            return cls().from_dict(obj[DATA_FIELD_NAME])
         return {key: deserialize_object(val) for key, val
                 in obj.iteritems()}
 
@@ -69,22 +82,12 @@ class SerializableObjectBase(object):
         serialization/deserialization logic if necessary.
         Note that custom class fields will get serialized as well. To avoid
         this, you may override the _get_instance_attr_to_value method.
-
-        Note: this module must have imports for any class which inherits
-        from this class, to allow the deserialization methods to create
-        instances of them.
     """
 
     def to_dict(self):
         instance_attr_to_value = self._get_instance_attr_to_value()
-
         data = serialize_object(instance_attr_to_value)
-
-        data_with_meta = {
-            TYPE_FIELD_NAME: self.__class__.__name__,
-            DATA_FIELD_NAME: data
-        }
-        return data_with_meta
+        return data
 
     @classmethod
     def from_dict(cls, data):
@@ -99,11 +102,11 @@ class SerializableObjectBase(object):
         return obj
 
     def to_json(self):
-        json.dumps(self.to_dict())
+        return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls):
-        json.loads(self.from_dict())
+    def from_json(cls, json_data):
+        return cls.from_dict(json.loads(json_data))
 
     def _get_instance_attr_to_value(self):
         attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)

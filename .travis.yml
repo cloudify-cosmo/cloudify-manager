@@ -19,6 +19,7 @@ install:
    - "mvn install -Pall -f travis-pom.xml -DskipTests"
    - "rvm install jruby-1.7.3"
    - "rvm use jruby-1.7.3"
+   - "gem install bundler --pre"
    - "cd workflow-service; bundle install; cd .."
    - "sudo pip install virtualenv"
    - "sudo pip install flake8"

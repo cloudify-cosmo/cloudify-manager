@@ -84,10 +84,17 @@ class BlueprintsManager(object):
         workflow = blueprint.plan['workflows'][workflow_id]
         plan = blueprint.plan
 
+        execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(
-            workflow, plan, deployment_id=deployment_id)
+            workflow_id,
+            workflow, plan,
+            blueprint_id=blueprint.id,
+            deployment_id=deployment_id,
+            execution_id=execution_id)
         # TODO raise error if there is error in response
+
         new_execution = Execution().init(
+            id=execution_id,
             state=response['state'],
             internal_workflow_id=response['id'],
             created_at=response['created'],
@@ -114,7 +121,7 @@ class BlueprintsManager(object):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
-        deployment_id = uuid.uuid4()
+        deployment_id = str(uuid.uuid4())
 
         new_deployment = Deployment().init(
             deployment_id=deployment_id, plan=json.loads(

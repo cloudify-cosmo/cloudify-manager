@@ -28,6 +28,8 @@ import cosmo
 import time
 import threading
 import re
+import pika
+import json
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 
@@ -44,6 +46,11 @@ root.addHandler(ch)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+RABBITMQ_POLLING_KEY = 'RABBITMQ_POLLING'
+
+RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
+    or os.environ[RABBITMQ_POLLING_KEY].lower() != 'false'
+
 
 class ManagerRestProcess(object):
 
@@ -52,14 +59,12 @@ class ManagerRestProcess(object):
                  file_server_dir,
                  file_server_base_uri,
                  workflow_service_base_uri,
-                 events_path,
                  storage_file_path):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
-        self.events_path = events_path
         self.storage_file_path = storage_file_path
         self.client = CosmoManagerRestClient('localhost')
 
@@ -69,8 +74,7 @@ class ManagerRestProcess(object):
         configuration = {
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
-            'workflow_service_base_uri': self.workflow_service_base_uri,
-            'events_file_path': self.events_path
+            'workflow_service_base_uri': self.workflow_service_base_uri
         }
 
         config_path = tempfile.mktemp()
@@ -137,11 +141,10 @@ class RuoteServiceProcess(object):
 
     JRUBY_VERSION = '1.7.3'
 
-    def __init__(self, port=8101, events_path=None):
+    def __init__(self, port=8101):
         self._pid = None
         self._port = port
         self._use_rvm = self._verify_ruby_environment()
-        self._events_path = events_path
         self._process = None
 
     def _get_installed_ruby_packages(self):
@@ -231,8 +234,6 @@ class RuoteServiceProcess(object):
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
         env = os.environ.copy()
-        if self._events_path is not None:
-            env['WF_SERVICE_LOGS_PATH'] = self._events_path
         logger.info("Starting Ruote service")
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
@@ -454,6 +455,45 @@ class TestEnvironmentScope(object):
                                  str(scope))
 
 
+def start_events_and_logs_polling():
+    """
+    Fetches events and logs from RabbitMQ.
+    """
+    if not RABBITMQ_POLLING_ENABLED:
+        return
+
+    pika_logger = logging.getLogger('pika')
+    pika_logger.setLevel(logging.INFO)
+
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
+    channel = connection.channel()
+    queues = ['cloudify-events', 'cloudify-logs']
+    for q in queues:
+        channel.queue_declare(queue=q, auto_delete=True, durable=True,
+                              exclusive=False)
+
+    def callback(ch, method, properties, body):
+        try:
+            output = json.loads(body)
+            output = json.dumps(output, indent=4)
+            logger.info("\n{0}".format(output))
+        except Exception:
+            logger.info("event/log format error - output: {0}".format(body))
+
+    def fetch_events():
+        channel.basic_consume(callback, queue=queues[0], no_ack=True)
+        channel.basic_consume(callback, queue=queues[1], no_ack=True)
+        channel.start_consuming()
+
+    logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
+        queues))
+
+    events_thread = threading.Thread(target=fetch_events)
+    events_thread.daemon = True
+    events_thread.start()
+
+
 class TestEnvironment(object):
     """
     Creates the cosmo test environment:
@@ -489,6 +529,9 @@ class TestEnvironment(object):
             if not path.exists(self._plugins_tempdir):
                 os.makedirs(self._plugins_tempdir)
 
+            # events/logs polling
+            start_events_and_logs_polling()
+
             # riemann
             riemann_config_path = path.join(self._tempdir, "riemann.config")
             riemann_template_path = path.join(self._tempdir,
@@ -508,10 +551,6 @@ class TestEnvironment(object):
                 self._riemann_process.pid,
                 manager_rest_port)
             self._celery_worker_process.start()
-
-            # set events path (wf_service -> write, manager_rest -> read)
-            self.events_path = path.join(self._tempdir, 'events')
-
             self.storage_file_path = STORAGE_FILE_PATH
 
             # workaround to update path
@@ -545,13 +584,12 @@ class TestEnvironment(object):
                 fileserver_dir,
                 file_server_base_uri,
                 worker_service_base_uri,
-                self.events_path,
                 self.storage_file_path)
             self._manager_rest_process.start()
 
             # ruote service
-            self._ruote_service = RuoteServiceProcess(
-                events_path=self.events_path)
+            self._ruote_service = RuoteServiceProcess()
+
             self._ruote_service.start()
 
         except BaseException as error:
@@ -607,8 +645,6 @@ class TestEnvironment(object):
             if path.exists(plugins_tempdir):
                 shutil.rmtree(plugins_tempdir)
                 os.makedirs(plugins_tempdir)
-            if path.exists(TestEnvironment._instance.events_path):
-                shutil.rmtree(TestEnvironment._instance.events_path)
 
     @staticmethod
     def restart_celery_worker():

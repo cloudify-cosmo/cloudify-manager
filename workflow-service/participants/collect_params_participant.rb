@@ -15,6 +15,7 @@
 #
 
 require_relative 'exception_logger'
+require_relative '../utils/logs'
 
 class CollectParamsParticipant < Ruote::Participant
 
@@ -32,12 +33,20 @@ class CollectParamsParticipant < Ruote::Participant
         value = workitem.fields[name]
         result[name] = value unless value.nil?
       end
-      $logger.debug('CollectParamsParticipant: names: [{}], to_f:[{}], result: [{}]',
-                    param_names, output_field_name, result)
+      log(:debug,
+        "CollectParamsParticipant: names: [#{param_names}], to_f:[#{output_field_name}], result: [#{result}]",
+        {
+          :workitem => workitem,
+          :arguments => {
+            :param_names => param_names,
+            :output_field_name => output_field_name,
+            :result => result
+          }
+        })
       workitem.fields[output_field_name] = result
       reply
     rescue => e
-      log_exception(e, 'collect_params')
+      log_exception(workitem, e, 'collect_params')
       flunk(workitem, e)
     end
   end

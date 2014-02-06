@@ -27,8 +27,9 @@ import urllib
 import tempfile
 import shutil
 import uuid
-
 import chunked
+import elasticsearch
+
 from blueprints_manager import DslParseException
 from workflow_client import WorkflowServiceError
 from flask import request
@@ -43,11 +44,6 @@ CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 def blueprints_manager():
     import blueprints_manager
     return blueprints_manager.instance()
-
-
-def events_manager():
-    import events_manager
-    return events_manager.instance()
 
 
 def storage_manager():
@@ -112,14 +108,14 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/executions')
     api.add_resource(DeploymentsIdWorkflows,
                      '/deployments/<string:deployment_id>/workflows')
-    api.add_resource(DeploymentsIdEvents,
-                     '/deployments/<string:deployment_id>/events')
     api.add_resource(DeploymentsIdNodes,
                      '/deployments/<string:deployment_id>/nodes')
     api.add_resource(Nodes,
                      '/nodes')
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
+    api.add_resource(Events, '/events')
+    api.add_resource(Logs, '/logs')
 
 
 class Blueprints(Resource):
@@ -170,7 +166,6 @@ class Blueprints(Resource):
         Submit a new blueprint.
         """
         file_server_root = config.instance().file_server_root
-
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
@@ -345,65 +340,6 @@ class ExecutionsId(Resource):
             return blueprints_manager().get_workflow_state(execution_id)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
-
-
-class DeploymentsIdEvents(Resource):
-
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('from', type=int,
-                                       default=0, location='args')
-        self._args_parser.add_argument('count', type=int,
-                                       default=500, location='args')
-
-    @swagger.operation(
-        responseClass=responses.DeploymentEvents,
-        nickname="readEvents",
-        notes="Returns all available events for the given "
-              "deployment matching the provided parameters.",
-        parameters=[{
-            'name': 'from',
-            'description': 'Index of the first request event.',
-            'required': False,
-            'allowMultiple': False,
-            'dataType': 'int',
-            'paramType': 'query',
-            'defaultValue': 0
-        }, {
-            'name': 'count',
-            'description': 'Maximum number of events to read.',
-            'required': False,
-            'allowMultiple': False,
-            'dataType': 'int',
-            'paramType': 'query',
-            'defaultValue': 500
-        }]
-    )
-    @marshal_with(responses.DeploymentEvents.resource_fields)
-    def get(self, deployment_id):
-        """
-        Returns deployments events.
-        """
-        args = self._args_parser.parse_args()
-
-        first_event = args['from']
-        events_count = args['count']
-        if first_event < 0:
-            abort(400, message='from argument cannot be negative')
-        if events_count < 0:
-            abort(400, message='count argument cannot be negative')
-
-        try:
-            result = events_manager().get_deployment_events(
-                deployment_id,
-                first_event=first_event,
-                events_count=events_count,
-                only_bytes=request.method == 'HEAD')
-            return result, 200, {
-                'Deployment-Events-Bytes': result.deployment_events_bytes
-            }
-        except BaseException as e:
-            abort(500, message=e.message)
 
 
 class DeploymentsIdNodes(Resource):
@@ -738,3 +674,61 @@ class DeploymentsIdWorkflows(Resource):
             'blueprint_id': deployment.blueprint_id,
             'deployment_id': deployment.id
         }
+
+
+def query_elastic_search(index, doc_type, body):
+    """Query ElasticSearch with the provided index, type and query body.
+
+    Returns:
+    ElasticSearch result as is (Python dict).
+    """
+    es = elasticsearch.Elasticsearch()
+    return es.search(index=index, doc_type=doc_type, body=body)
+
+
+class Events(Resource):
+
+    @swagger.operation(
+        nickname='events',
+        notes='Returns a list of events for the provided ElasticSearch query. '
+              'The response format is as ElasticSearch response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    def get(self):
+        """
+        Returns events for the provided ElasticSearch query
+        """
+        verify_json_content_type()
+        return query_elastic_search('cloudify_events_and_logs',
+                                    'cloudify_event',
+                                    request.json)
+
+
+class Logs(Resource):
+
+    @swagger.operation(
+        nickname='logs',
+        notes='Returns a list of logs for the provided ElasticSearch query. '
+              'The response format is as ElasticSearch response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    def get(self):
+        """
+        Returns logs for the provided ElasticSearch query
+        """
+        verify_json_content_type()
+        return query_elastic_search('cloudify_events_and_logs',
+                                    'cloudify_log',
+                                    request.json)

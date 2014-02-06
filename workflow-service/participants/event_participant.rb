@@ -15,6 +15,10 @@
 #
 
 require_relative 'exception_logger'
+require_relative '../amqp/amqp_client'
+require_relative '../utils/events'
+require 'time'
+
 
 class EventParticipant < Ruote::Participant
 
@@ -38,40 +42,16 @@ class EventParticipant < Ruote::Participant
       reply(workitem)
 
     rescue => e
-      log_exception(e, 'event')
+      log_exception(workitem, e, 'event')
       flunk(workitem, e)
     end
   end
 
   def self.log_event(event, workitem=nil)
-    if workitem != nil
-      sub_workflow_name = workitem.sub_wf_name
-      workflow_name = workitem.wf_name
-      if workitem.fields.has_key? NODE
-        node = workitem.fields[NODE]
-        event['node'] = node['id']
-      end
-      if workitem.fields.has_key? PLAN
-        event['blueprint'] = workitem.fields[PLAN]['name']
-        event['app'] = workitem.fields[PLAN]['name']
-      end
-      if workitem.fields.has_key? DEPLOYMENT_ID
-        event[DEPLOYMENT_ID] = workitem.fields[DEPLOYMENT_ID]
-      end
-      event['workflow_name'] = workflow_name
-      event['workflow_id'] = workitem.wfid
-      event['type'] = 'workflow_stage'
-      json_event = JSON.pretty_generate(event)
-      if sub_workflow_name == workflow_name
-        # no need to print sub workflow if there is none
-        $user_logger.debug("[#{workflow_name}]\n#{json_event}")
-      else
-        $user_logger.debug("[#{workflow_name}.#{sub_workflow_name}]\n#{json_event}")
-      end
-    else
-      $user_logger.debug("[workflow]\n#{json_event}")
-    end
-
+    event(:workflow_stage, {
+        :workitem => workitem,
+        :message => event['stage']
+    })
   end
 
 end

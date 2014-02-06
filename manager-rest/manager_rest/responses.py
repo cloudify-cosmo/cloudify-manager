@@ -16,8 +16,7 @@
 __author__ = 'dan'
 
 from datetime import datetime
-import uuid
-from serialization import SerializableObjectBase
+from manager_rest.serialization import SerializableObjectBase
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
@@ -56,7 +55,7 @@ class BlueprintState(SerializableObjectBase):
 
 
 @swagger.model
-class BlueprintValidationStatus(object):
+class BlueprintValidationStatus(SerializableObjectBase):
 
     resource_fields = {
         'blueprintId': fields.String(attribute='blueprint_id'),
@@ -70,10 +69,11 @@ class BlueprintValidationStatus(object):
     def init(self, *args, **kwargs):
         self.blueprint_id = kwargs['blueprint_id']
         self.status = kwargs['status']
+        return self
 
 
 @swagger.model
-class Topology(object):
+class Topology(SerializableObjectBase):
 
     def __init__(self):
         self.id = None
@@ -84,10 +84,11 @@ class Topology(object):
         self.id = None  # TODO generate
         self.permalink = None  # TODO implement
         self.nodes = kwargs['nodes']
+        return self
 
 
 @swagger.model
-class Deployment(object):
+class Deployment(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
@@ -120,6 +121,7 @@ class Deployment(object):
                                                created_at=now)
                           for key in self.plan['workflows']}
         self.executions = {}
+        return self
 
     def add_execution(self, execution):
         self.executions[str(execution.id)] = execution
@@ -145,7 +147,7 @@ class Workflow(SerializableObjectBase):
 
     def init(self, *args, **kwargs):
         self.name = kwargs['workflow_id']
-        self.created_at = kwargs['created_at']
+        self.created_at = str(kwargs['created_at'])
         return self
 
 
@@ -172,7 +174,7 @@ class Workflows(SerializableObjectBase):
 
 
 @swagger.model
-class Execution(object):
+class Execution(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
@@ -195,47 +197,19 @@ class Execution(object):
         self.error = None
 
     def init(self, *args, **kwargs):
-        self.id = uuid.uuid4()
+        self.id = kwargs['id']
         self.status = kwargs['state']
         self.deployment_id = kwargs['deployment_id']
         self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
-        self.created_at = kwargs['created_at']
+        self.created_at = str(kwargs['created_at'])
         self.error = 'None'
+        return self
 
 
 @swagger.model
-class DeploymentEvents(object):
-
-    resource_fields = {
-        'id': fields.String,
-        'firstEvent': fields.Integer(attribute='first_event'),
-        'lastEvent': fields.Integer(attribute='last_event'),
-        'events': fields.List(fields.Raw),
-        'deploymentTotalEvents': fields.Integer(
-            attribute='deployment_total_events')
-    }
-
-    def __init__(self):
-        self.id = None
-        self.first_event = None
-        self.last_event = None
-        self.events = None
-        self.deployment_total_events = None
-        self.deployment_events_bytes = None
-
-    def init(self, *args, **kwargs):
-        self.id = kwargs['id']
-        self.first_event = kwargs['first_event']
-        self.last_event = kwargs['last_event']
-        self.events = kwargs['events']
-        self.deployment_total_events = kwargs['deployment_total_events']
-        self.deployment_events_bytes = kwargs['deployment_events_bytes']
-
-
-@swagger.model
-class DeploymentNodesNode(object):
+class DeploymentNodesNode(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
@@ -249,11 +223,12 @@ class DeploymentNodesNode(object):
     def init(self, *args, **kwargs):
         self.id = kwargs['id']
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        return self
 
 
 @swagger.model
 @swagger.nested(nodes=DeploymentNodesNode.__name__)
-class DeploymentNodes(object):
+class DeploymentNodes(SerializableObjectBase):
 
     resource_fields = {
         'deploymentId': fields.String(attribute='deployment_id'),
@@ -268,10 +243,11 @@ class DeploymentNodes(object):
     def init(self, *args, **kwargs):
         self.deployment_id = kwargs['deployment_id']
         self.nodes = kwargs['nodes']
+        return self
 
 
 @swagger.model
-class Nodes(object):
+class Nodes(SerializableObjectBase):
 
     resource_fields = {
         'nodes': fields.List(fields.Raw)
@@ -282,10 +258,11 @@ class Nodes(object):
 
     def init(self, *args, **kwargs):
         self.nodes = kwargs['nodes']
+        return self
 
 
 @swagger.model
-class Node(object):
+class Node(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
@@ -303,3 +280,4 @@ class Node(object):
         self.runtime_info = \
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        return self
