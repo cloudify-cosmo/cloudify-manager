@@ -29,5 +29,6 @@ setup(
     install_requires=[
         "cosmo-plugin-python-webserver"
     ],
-    dependency_links=["https://github.com/CloudifySource/cosmo-plugin-python-webserver/tarball/master#egg=cosmo-plugin-python-webserver-0.1.0"]
+    dependency_links=["https://github.com/CloudifySource/cosmo-plugin-python-webserver/tarball/develop#egg=cosmo"
+                      "-plugin-python-webserver-0.1.0"]
 )
