@@ -473,8 +473,6 @@ class VagrantLxcBoot:
             }
         }
 
-        os.environ['VIRTUALENV'] = expanduser("~/ENV")
-
         cloudify_runtime = {
             "cloudify.management": {
                 "ip": "cloudify.management"
@@ -498,6 +496,10 @@ class VagrantLxcBoot:
                                "cosmo-plugin-plugin-installer/archive/{0}.zip"\
                                .format(PLUGIN_INSTALLER_VERSION)
         self.pip(plugin_installer_url)
+
+        # we call plugin installer tasks directly from this process.
+        # so we need to explicitly set the environment.
+        os.environ['VIRTUALENV'] = worker_config['home'] + "/celery"
 
         # install the necessary management plugins.
         self.install_management_plugins()
