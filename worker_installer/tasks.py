@@ -24,7 +24,7 @@ from celery.utils.log import get_task_logger
 from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
-    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
+    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, MANAGEMENT_NODE_ID, \
     BUILT_IN_MANAGEMENT_PLUGINS
 
@@ -43,6 +43,18 @@ RIEMANN_CONFIGURER_URL = "https://github.com/CloudifySource/cosmo-plugin-riemann
 
 AGENT_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip" \
                       .format(AGENT_INSTALLER_VERSION)
+
+OPENSTACK_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
+    .format(OPENSTACK_PROVISIONER_VERSION)
+
+VAGRANT_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip" \
+    .format(VAGRANT_PROVISIONER_VERSION)
+
+MANAGEMENT_ONLY_PLUGINS_URLS = [RIEMANN_CONFIGURER_URL,
+                                AGENT_INSTALLER_URL,
+                                OPENSTACK_PROVISIONER_URL,
+                                VAGRANT_PROVISIONER_URL]
+
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -180,12 +192,9 @@ def _install_celery(runner, worker_config, node_id):
 
     if _is_management_node(node_id):
 
-        # install the agent installer
-        install_celery_plugin(runner, worker_config, AGENT_INSTALLER_URL)
-
-        # install the riemann configurer
-        install_celery_plugin(runner, worker_config, RIEMANN_CONFIGURER_URL)
-
+        for url in MANAGEMENT_ONLY_PLUGINS_URLS:
+            # install the agent installer
+            install_celery_plugin(runner, worker_config, url)
 
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
