@@ -24,7 +24,7 @@ __author__ = 'elip'
 import unittest
 from plugin_installer.tasks import get_plugin_simple_name, install_celery_plugin, uninstall_celery_plugin
 from plugin_installer.tests import get_logger
-from cosmo.constants import VIRTUALENV_PATH_KEY
+from cloudify.constants import VIRTUALENV_PATH_KEY
 
 
 logger = get_logger("PluginInstallerTestCase")
