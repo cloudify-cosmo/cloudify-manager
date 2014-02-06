@@ -473,13 +473,14 @@ class VagrantLxcBoot:
             }
         }
 
+        from cloudify.constants import MANAGEMENT_NODE_ID
         cloudify_runtime = {
-            "cloudify.management": {
-                "ip": "cloudify.management"
+            MANAGEMENT_NODE_ID: {
+                "ip": MANAGEMENT_NODE_ID
             }
         }
 
-        __cloudify_id = "cloudify.management"
+        __cloudify_id = MANAGEMENT_NODE_ID
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
@@ -488,33 +489,12 @@ class VagrantLxcBoot:
                        cloudify_runtime=cloudify_runtime,
                        local=True)
 
-        # download and install the plugin_installer to install management
-        # plugins use the same plugin installer version used by the worker
-        # installer
-        from worker_installer.versions import PLUGIN_INSTALLER_VERSION
-        plugin_installer_url = "https://github.com/CloudifySource/" \
-                               "cosmo-plugin-plugin-installer/archive/{0}.zip"\
-                               .format(PLUGIN_INSTALLER_VERSION)
-        self.pip(plugin_installer_url)
-
-        # we call plugin installer tasks directly from this process.
-        # so we need to explicitly set the environment.
-        os.environ['VIRTUALENV'] = worker_config['home'] + "/celery"
-
-        # install the necessary management plugins.
-        print "installing management plugins"
-        self.install_management_plugins()
-
         # start the worker now for all plugins to be registered
         from worker_installer.tasks import start
         start(worker_config=worker_config,
               cloudify_runtime=cloudify_runtime,
               __cloudify_id=__cloudify_id,
               local=True)
-
-        # uninstall the plugin installer from python installation.
-        # not needed anymore.
-        self.runner.sudo("pip uninstall -y -q cosmo-plugin-plugin-installer")
 
     def install_management_plugins(self):
 
