@@ -1,4 +1,4 @@
-#/*******************************************************************************
+#/***************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# *******************************************************************************/
+# ***************************************************************************/
 
 import os
 from os.path import dirname
@@ -22,7 +22,8 @@ import sys
 __author__ = 'elip'
 
 import unittest
-from plugin_installer.tasks import get_plugin_simple_name, install_celery_plugin, uninstall_celery_plugin
+from plugin_installer.tasks import get_plugin_simple_name, \
+    install_celery_plugin, uninstall_celery_plugin
 from plugin_installer.tests import get_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY
 
@@ -39,7 +40,8 @@ class PluginInstallerTestCase(unittest.TestCase):
         },
         "plugin_with_dependencies": {
             "name": "mock-with-dependencies-plugin",
-            "url": os.path.join(os.path.dirname(__file__), "mock-with-dependencies-plugin")
+            "url": os.path.join(os.path.dirname(__file__),
+                                "mock-with-dependencies-plugin")
         }
     }
 
@@ -58,7 +60,8 @@ class PluginInstallerTestCase(unittest.TestCase):
             try:
                 uninstall_celery_plugin(plugin_name=plugin['name'])
             except BaseException as e:
-                logger.warning("Failed to uninstall plugin {0} : {1}".format(plugin['name'], e.message))
+                logger.warning("Failed to uninstall plugin {0} : {1}"
+                               .format(plugin['name'], e.message))
 
     def test_get_plugin_simple_name(self):
         name = "a.b.c"
@@ -83,11 +86,3 @@ class PluginInstallerTestCase(unittest.TestCase):
         # check the dependency was installed
         from python_webserver_installer import tasks as t
         t.get_ip
-
-
-
-
-
-
-
-
