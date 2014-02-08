@@ -34,14 +34,12 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     plugins = {
         "plugin": {
-            "name": "test.plugin.mock_for_test",
-            "url": os.path.join(os.path.dirname(__file__), "mock-plugin"),
-            "package": "mock-plugin"
+            "name": "mock-plugin",
+            "url": os.path.join(os.path.dirname(__file__), "mock-plugin")
         },
         "plugin_with_dependencies": {
-            "name": "test.plugin.mock_with_dependencies_for_test",
-            "url": os.path.join(os.path.dirname(__file__), "mock-with-dependencies-plugin"),
-            "package": "mock-with-dependencies-plugin"
+            "name": "mock-with-dependencies-plugin",
+            "url": os.path.join(os.path.dirname(__file__), "mock-with-dependencies-plugin")
         }
     }
 
@@ -58,9 +56,9 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         for plugin in self.plugins.itervalues():
             try:
-                uninstall_celery_plugin(plugin_name=plugin['package'])
+                uninstall_celery_plugin(plugin_name=plugin['name'])
             except BaseException as e:
-                logger.warning("Failed to uninstall plugin {0} : {1}".format(plugin['package'], e.message))
+                logger.warning("Failed to uninstall plugin {0} : {1}".format(plugin['name'], e.message))
 
     def test_get_plugin_simple_name(self):
         name = "a.b.c"
@@ -84,7 +82,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         # check the dependency was installed
         from python_webserver_installer import tasks as t
-        t.install()
+        t.get_ip
 
 
 

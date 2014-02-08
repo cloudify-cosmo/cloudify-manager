@@ -119,6 +119,10 @@ def _extract_py_path(plugin_dir, module_name, method_name, plugin_name):
                        '{3} and {4}'.format(module_name, method_name, plugin_name, path1, path2))
 
 
+def get_python():
+    return get_prefix_for_command("python")
+
+
 def get_pip():
     return get_prefix_for_command("pip")
 
@@ -155,7 +159,8 @@ def install_celery_plugin(plugin):
     # this will install the plugin and its dependencies into the python installation
     command = "{0} install --process-dependency-links {1}".format(get_pip(), plugin_url)
     run_command(command)
-    logger.debug("installed plugin {0} and dependencies into python installation".format(plugin_name))
+    logger.debug("installed plugin {0} and dependencies into python installation {1}"
+                 .format(plugin_name, get_python()))
 
 
 def uninstall_celery_plugin(plugin_name):
@@ -170,7 +175,7 @@ def uninstall_celery_plugin(plugin_name):
     # this will install the plugin and its dependencies into the python installation
     command = "{0} uninstall -y {1}".format(get_pip(), plugin_name)
     run_command(command)
-    logger.debug("uninstalled plugin {0} from python installation".format(plugin_name))
+    logger.debug("uninstalled plugin {0} from python installation {1}".format(plugin_name, get_python()))
 
 
 def get_plugin_simple_name(full_plugin_name):
