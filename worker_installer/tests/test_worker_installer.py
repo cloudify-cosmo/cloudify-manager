@@ -17,7 +17,8 @@
 import unittest
 import time
 
-from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, local_worker_config
+from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, \
+    id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, get_local_worker_config
 
 
 __author__ = 'elip'
@@ -120,10 +121,10 @@ class TestLocalInstallerCase(unittest.TestCase):
         os.environ["MANAGEMENT_IP"] = "localhost"
 
     def test_install_worker(self):
-        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, manager=False)
+        _test_install(self.RUNNER, get_local_worker_config(), local_cloudify_runtime, local=True, manager=False)
 
     def test_install_management_worker(self):
-        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, manager=True)
+        _test_install(self.RUNNER, get_local_worker_config(), local_cloudify_runtime, local=True, manager=True)
 
     def test_create_env_string(self):
         env = {
