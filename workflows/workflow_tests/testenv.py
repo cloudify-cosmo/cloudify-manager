@@ -353,7 +353,6 @@ class CeleryWorkerProcess(object):
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
-        environment['CLOUDIFY_APP_DIR'] = self._app_path
         environment['MANAGEMENT_IP'] = 'localhost'
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
