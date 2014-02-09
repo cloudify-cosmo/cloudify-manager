@@ -33,6 +33,8 @@ import json
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 
+STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
+
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
@@ -56,12 +58,14 @@ class ManagerRestProcess(object):
                  port,
                  file_server_dir,
                  file_server_base_uri,
-                 workflow_service_base_uri):
+                 workflow_service_base_uri,
+                 storage_file_path):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
+        self.storage_file_path = storage_file_path
         self.client = CosmoManagerRestClient('localhost')
 
     def start(self, timeout=10):
@@ -101,6 +105,7 @@ class ManagerRestProcess(object):
             logger.info('Testing connection to manager rest service. '
                         '(Attempt: {0}/{1})'.format(attempt, timeout))
             attempt += 1
+            self.reset_data()
             started = self.started()
         if not started:
             raise RuntimeError('Failed opening connection to manager rest '
@@ -116,6 +121,10 @@ class ManagerRestProcess(object):
     def close(self):
         if not self.process is None:
             self.process.terminate()
+
+    def reset_data(self):
+        if os.path.isfile(self.storage_file_path):
+            os.remove(self.storage_file_path)
 
     def locate_manager_rest_dir(self):
         # start with current location
@@ -502,6 +511,7 @@ class TestEnvironment(object):
     _plugins_tempdir = None
     _scope = None
     _ruote_service = None
+    _file_server_process = None
 
     def __init__(self, scope):
         try:
@@ -541,6 +551,7 @@ class TestEnvironment(object):
                 self._riemann_process.pid,
                 manager_rest_port)
             self._celery_worker_process.start()
+            self.storage_file_path = STORAGE_FILE_PATH
 
             # workaround to update path
             manager_rest_path = \
@@ -572,7 +583,8 @@ class TestEnvironment(object):
                 manager_rest_port,
                 fileserver_dir,
                 file_server_base_uri,
-                worker_service_base_uri)
+                worker_service_base_uri,
+                self.storage_file_path)
             self._manager_rest_process.start()
 
             # ruote service
@@ -640,6 +652,12 @@ class TestEnvironment(object):
            (TestEnvironment._instance._celery_worker_process):
             TestEnvironment._instance._celery_worker_process.restart()
 
+    @staticmethod
+    def reset_rest_manager_data():
+        if TestEnvironment._instance and \
+           TestEnvironment._instance._manager_rest_process:
+            TestEnvironment._instance._manager_rest_process.reset_data()
+
     @classmethod
     def _generate_riemann_config(cls, riemann_config_path,
                                  riemann_template_path):
@@ -667,6 +685,7 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         TestEnvironment.restart_celery_worker()
+        TestEnvironment.reset_rest_manager_data()
 
 
 def get_resource(resource):
