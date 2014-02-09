@@ -97,10 +97,12 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         temp_folder = os.path.join(tempfile.gettempdir())
         try:
-            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes".format(temp_folder))
-            with open("{0}/celeryd-includes".format(temp_folder), mode='r') as f:
+            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
+                               .format(temp_folder))
+            with open("{0}/celeryd-includes"
+                      .format(temp_folder), mode='r') as f:
                 includes = f.read()
-                self.assertEquals("INCLUDES=a.tasks,b.tasks", includes)
+                self.assertEquals("\nINCLUDES=a.tasks,b.tasks\n", includes)
 
         finally:
             os.remove("{0}/celeryd-includes".format(temp_folder))
@@ -108,12 +110,18 @@ class PluginInstallerTestCase(unittest.TestCase):
     def test_append_to_existing_includes(self):
         temp_folder = os.path.join(tempfile.gettempdir())
         try:
-            with open("{0}/celeryd-includes".format(temp_folder), mode='w') as f:
+            with open("{0}/celeryd-includes"
+                      .format(temp_folder), mode='w') as f:
                 f.write("INCLUDES=test.tasks")
-            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes".format(temp_folder))
-            with open("{0}/celeryd-includes".format(temp_folder), mode='r') as f:
+            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
+                               .format(temp_folder))
+            with open("{0}/celeryd-includes"
+                      .format(temp_folder), mode='r') as f:
                 includes = f.read()
-                self.assertEquals("INCLUDES=test.tasks\nINCLUDES=test.tasks,a.tasks,b.tasks", includes)
+                self.assertEquals(
+                    "INCLUDES=test.tasks\nINCLUDES="
+                    "test.tasks,a.tasks,b.tasks\n",
+                    includes)
 
         finally:
             os.remove("{0}/celeryd-includes".format(temp_folder))

@@ -160,7 +160,8 @@ def get_prefix_for_command(command):
 def append_to_includes(module_paths, includes_path=None):
 
     if not includes_path:
-        includes_path = "{0}/celeryd-includes".format(os.environ[VIRTUALENV_PATH_KEY])
+        includes_path = "{0}/celeryd-includes"\
+                        .format(os.environ[VIRTUALENV_PATH_KEY])
 
     with open(includes_path, mode='a+r') as f:
         includes_definition = f.read()
@@ -207,7 +208,8 @@ def install_celery_plugin(plugin):
 def extract_module_paths(plugin_name):
 
     module_paths = []
-    files = run_command("{0} show -f {1}".format(get_pip(), plugin_name)).splitlines()
+    files = run_command("{0} show -f {1}"
+                        .format(get_pip(), plugin_name)).splitlines()
     for module in files:
         if module.endswith(".py") and not "__init__" in module:
             # the files paths are relative to the package __init__.py file.
@@ -228,10 +230,10 @@ def extract_plugin_name(plugin_url):
 
     if len(diff) != 1:
         raise RuntimeError("Cannot extract plugin name for plugin {0}. "
-                           "Newly installed libs are : {1}".format(plugin_url, diff))
+                           "Newly installed libs are : {1}"
+                           .format(plugin_url, diff))
 
     return diff.pop().split("==")[0]
-
 
 
 def uninstall_celery_plugin(plugin_name):
