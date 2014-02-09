@@ -614,12 +614,12 @@ class DeploymentsIdExecutions(Resource):
     )
     def get(self, deployment_id):
         """
-        Returns a list of executions related to the provided blueprint.
+        Returns a list of executions related to the provided deployment.
         """
         verify_deployment_exists(deployment_id)
         return [marshal(execution, responses.Execution.resource_fields) for
-                execution in blueprints_manager()
-                .get_deployment(deployment_id).executions_list()]
+                execution in storage_manager().get_deployment_executions(
+                deployment_id)]
 
     @swagger.operation(
         responseClass=responses.Execution,

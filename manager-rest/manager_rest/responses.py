@@ -107,7 +107,6 @@ class Deployment(SerializableObjectBase):
         self.blueprint_id = None
         self.plan = None
         self.workflows = None
-        self.executions = None
 
     def init(self, *args, **kwargs):
         self.id = kwargs['deployment_id']
@@ -120,14 +119,7 @@ class Deployment(SerializableObjectBase):
         self.workflows = {key: Workflow().init(workflow_id=key,
                                                created_at=now)
                           for key in self.plan['workflows']}
-        self.executions = {}
         return self
-
-    def add_execution(self, execution):
-        self.executions[str(execution.id)] = execution
-
-    def executions_list(self):
-        return self.executions.values()
 
     def workflows_list(self):
         return self.workflows.values()

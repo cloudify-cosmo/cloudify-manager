@@ -67,6 +67,9 @@ class DictStorageManager(object):
     def deployments_list(self):
         return self._deployments.values()
 
+    def executions_list(self):
+        return self._executions.values()
+
     def get_blueprint(self, blueprint_id):
         return self._blueprints.get(blueprint_id, None)
 
@@ -75,6 +78,11 @@ class DictStorageManager(object):
 
     def get_execution(self, execution_id):
         return self._executions.get(execution_id, None)
+
+    def get_deployment_executions(self, deployment_id):
+        executions = self.executions_list()
+        return [execution for execution in executions
+                if execution.deployment_id == deployment_id]
 
     def put_blueprint(self, blueprint_id, blueprint):
         if str(blueprint_id) in self._blueprints:
@@ -93,12 +101,6 @@ class DictStorageManager(object):
             raise RuntimeError('Execution {0} already exists'.format(
                 execution_id))
         self._executions[str(execution_id)] = execution
-
-    def add_execution_to_deployment(self, deployment_id, execution):
-        if str(deployment_id) not in self._deployments:
-            raise RuntimeError("Deployment {0} doesn't exist".format(
-                deployment_id))
-        self._deployments[str(deployment_id)].add_execution(execution)
 
 
 def create():

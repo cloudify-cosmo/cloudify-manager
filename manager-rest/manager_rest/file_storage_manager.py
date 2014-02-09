@@ -1,4 +1,4 @@
-#########
+ #########
 # Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,6 +106,15 @@ class FileStorageManager(object):
         data = self._load_data()
         return data[DEPLOYMENTS].values()
 
+    def executions_list(self):
+        data = self._load_data()
+        return data[EXECUTIONS].values()
+
+    def get_deployment_executions(self, deployment_id):
+        executions = self.executions_list()
+        return [execution for execution in executions if execution
+                .deployment_id == deployment_id]
+
     def get_blueprint(self, blueprint_id):
         data = self._load_data()
         return data[BLUEPRINTS].get(blueprint_id, None)
@@ -140,14 +149,6 @@ class FileStorageManager(object):
             raise RuntimeError('Execution {0} already exists'.format(
                 execution_id))
         data[EXECUTIONS][str(execution_id)] = execution
-        self._dump_data(data)
-
-    def add_execution_to_deployment(self, deployment_id, execution):
-        data = self._load_data()
-        if str(deployment_id) not in data[DEPLOYMENTS]:
-            raise RuntimeError("Deployment {0} doesn't exist".format(
-                deployment_id))
-        data[DEPLOYMENTS][str(deployment_id)].add_execution(execution)
         self._dump_data(data)
 
 

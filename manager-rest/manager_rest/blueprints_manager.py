@@ -40,6 +40,9 @@ class BlueprintsManager(object):
     def deployments_list(self):
         return storage_manager().deployments_list()
 
+    def executions_list(self):
+        return storage_manager().executions_list()
+
     def get_blueprint(self, blueprint_id):
         return storage_manager().get_blueprint(blueprint_id)
 
@@ -99,8 +102,6 @@ class BlueprintsManager(object):
             workflow_id=workflow_id,
             deployment_id=deployment_id)
 
-        storage_manager().add_execution_to_deployment(deployment.id,
-                                                      new_execution)
         storage_manager().put_execution(new_execution.id, new_execution)
 
         return new_execution
