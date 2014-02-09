@@ -31,6 +31,7 @@ key_name = args.key_name
 host_name = args.host_name
 management_ip = args.management_ip
 
+flavor = 101
 image = 67074
 region = 'az-2.region-a.geo-1'
 
@@ -124,12 +125,15 @@ def modify_blueprint():
 
     # make modifications
     blueprint_yaml['imports'][0] = 'hello_world_sanity.yaml'
-    hello_yaml['types']['openstack_host']['properties'][1]['worker_config']['key'] = key_path
-    hello_yaml['types']['openstack_host']['properties'][2]['nova_config']['region'] = region
-    hello_yaml['types']['openstack_host']['properties'][2]['nova_config']['instance']['name'] = host_name
-    hello_yaml['types']['openstack_host']['properties'][2]['nova_config']['instance']['image'] = image
-    hello_yaml['types']['openstack_host']['properties'][2]['nova_config']['instance']['key_name'] = key_name
-    
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config'] = {}
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['region'] = region
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance'] = {}
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['name'] = host_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['image'] = image
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['key_name'] = key_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['flavor'] = flavor
+
     # store new yamls
     sanity_blueprint.write_text(yaml.dump(blueprint_yaml))
     sanity_hello_world.write_text(yaml.dump(hello_yaml))
@@ -190,6 +194,7 @@ def assert_valid_deployment(before_state, after_state):
             assert 'ips' in value['runtimeInfo'], 'Missing ips in runtimeInfo: {0}'.format(nodes_state)
             private_ip = value['runtimeInfo']['ip']
             ips = value['runtimeInfo']['ips']
+            print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
             assert value['reachable'] is True, 'vm node should be reachable: {0}'.format(nodes_state)
         else:
