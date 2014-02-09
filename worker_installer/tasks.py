@@ -26,7 +26,8 @@ from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, MANAGEMENT_NODE_ID, \
-    BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, VAGRANT_PROVISIONER_PLUGIN_PATH
+    BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, \
+    VAGRANT_PROVISIONER_PLUGIN_PATH, MANAGER_IP_KEY, LOCAL_IP_KEY
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -54,8 +55,6 @@ VAGRANT_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-vagran
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
 
-MANAGEMENT_IP = "MANAGEMENT_IP"
-AGENT_IP = "AGENT_IP"
 BROKER_URL = "BROKER_URL"
 
 
@@ -143,6 +142,9 @@ def prepare_configuration(worker_config, cloudify_runtime, node_id):
     if VIRTUALENV_PATH_KEY not in worker_config:
         worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery"
 
+    if "env" not in worker_config:
+        worker_config["env"] = {}
+
     if "pid_file" not in worker_config:
         worker_config["pid_file"] = "{0}/run/celery/{1}_worker.pid".format(worker_config[VIRTUALENV_PATH_KEY], node_id)
 
@@ -155,11 +157,10 @@ def prepare_configuration(worker_config, cloudify_runtime, node_id):
     if "install_openstack" not in worker_config:
         worker_config["install_openstack"] = True
 
-    if MANAGEMENT_IP not in worker_config["env"]:
-        if MANAGEMENT_IP not in os.environ:
-            raise RuntimeError("{0} is not present in worker_config.env nor environment".format(MANAGEMENT_IP))
-        worker_config["env"][MANAGEMENT_IP] = os.environ[MANAGEMENT_IP]
-    worker_config["env"][AGENT_IP] = ip
+    if MANAGER_IP_KEY not in os.environ:
+        raise RuntimeError("{0} is not present in worker_config.env nor environment".format(MANAGER_IP_KEY))
+    worker_config["env"][MANAGER_IP_KEY] = os.environ[MANAGER_IP_KEY]
+    worker_config["env"][LOCAL_IP_KEY] = ip
 
 
 def restart_celery_worker(runner):
