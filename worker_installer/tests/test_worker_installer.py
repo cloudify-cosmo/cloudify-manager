@@ -56,11 +56,15 @@ def _extract_registered_plugins(broker_url):
     return plugins
 
 
-def _test_install(worker_config, cloudify_runtime, local=False):
+def _test_install(runner, worker_config, cloudify_runtime, local=False, manager=False):
 
-    __cloudify_id = "management_host"
-
-    # this should install the plugin installer inside the celery worker
+    if manager:
+        __cloudify_id = "cloudify.management"
+        # needed for the fabric runner which is dependency of the agent installer
+        runner.sudo("apt-get -y -q update")
+        runner.sudo("apt-get -y -q install python-dev")
+    else:
+        __cloudify_id = "cloudify.agent"
 
     logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
     install(worker_config, __cloudify_id, cloudify_runtime, local=local)
@@ -99,7 +103,10 @@ class TestRemoteInstallerCase(unittest.TestCase):
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
     def test_install_worker(self):
-        _test_install(remote_worker_config, remote_cloudify_runtime, local=False)
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, manager=False)
+
+    def test_install_management_worker(self):
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, manager=True)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
