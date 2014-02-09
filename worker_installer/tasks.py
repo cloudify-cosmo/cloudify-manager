@@ -215,6 +215,19 @@ def _install_celery(runner, worker_config, node_id):
     config_file = build_celeryd_config(worker_config, node_id)
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
+    # build initial includes
+    if _is_management_node(node_id):
+        includes_list = BUILT_IN_MANAGEMENT_PLUGINS
+        if worker_config["install_openstack"]:
+            includes_list.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
+        if worker_config["install_vagrant"]:
+            includes_list.append(VAGRANT_PROVISIONER_PLUGIN_PATH)
+    else:
+        includes_list = BUILT_IN_AGENT_PLUGINS
+
+    runner.put("INCLUDES={0}\n".format(",".join(includes_list)),
+               "{0}/celeryd-includes".format(worker_config[VIRTUALENV_PATH_KEY]), use_sudo=True)
+
 
 def _is_management_node(node_id):
     return node_id == MANAGEMENT_NODE_ID
@@ -299,18 +312,8 @@ def build_celeryd_config(worker_config, node_id):
 
     env_string = build_env_string(env)
 
-    print "worker_config is {0}".format(worker_config)
-
-    if _is_management_node(node_id):
-        includes_list = BUILT_IN_MANAGEMENT_PLUGINS
-        if worker_config["install_openstack"]:
-            includes_list.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
-        if worker_config["install_vagrant"]:
-            includes_list.append(VAGRANT_PROVISIONER_PLUGIN_PATH)
-    else:
-        includes_list = BUILT_IN_AGENT_PLUGINS
-
     return '''
+. %(celeryd_includes)s
 %(env)s
 CELERYD_MULTI="%(celeryd_multi)s"
 CELERYD_USER="%(user)s"
@@ -324,16 +327,16 @@ CELERYD_OPTS="\
 --events \
 --loglevel=debug \
 --app=%(app)s \
---include=%(includes)s \
+--include=$INCLUDES \
 -Q %(node_id)s \
 --broker=%(broker_url)s \
 --hostname=%(node_id)s"
-''' % dict(env=env_string,
+''' % dict(celeryd_includes="{0}/celeryd-includes".format(worker_config[VIRTUALENV_PATH_KEY]),
+           env=env_string,
            celeryd_multi=get_celeryd_multi(worker_config),
            user=user,
            pid_file=worker_config['pid_file'],
            log_file=worker_config['log_file'],
-           includes=",".join(includes_list),
            app=COSMO_APP_NAME,
            node_id=node_id,
            broker_url=broker_url)
