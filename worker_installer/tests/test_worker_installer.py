@@ -120,7 +120,10 @@ class TestLocalInstallerCase(unittest.TestCase):
         os.environ["MANAGEMENT_IP"] = "localhost"
 
     def test_install_worker(self):
-        _test_install(local_worker_config, local_cloudify_runtime, local=True)
+        _test_install(local_worker_config, local_cloudify_runtime, local=True, manager=False)
+
+    def test_install_management_worker(self):
+        _test_install(local_worker_config, local_cloudify_runtime, local=True, manager=True)
 
     def test_create_env_string(self):
         env = {
