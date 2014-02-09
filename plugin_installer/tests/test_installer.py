@@ -17,13 +17,15 @@
 import os
 from os.path import dirname
 import sys
+import tempfile
 
 
 __author__ = 'elip'
 
 import unittest
 from plugin_installer.tasks import get_plugin_simple_name, \
-    install_celery_plugin, uninstall_celery_plugin
+    install_celery_plugin, uninstall_celery_plugin, \
+    extract_plugin_name, append_to_includes, extract_module_paths
 from plugin_installer.tests import get_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY
 
@@ -86,3 +88,38 @@ class PluginInstallerTestCase(unittest.TestCase):
         # check the dependency was installed
         from python_webserver_installer import tasks as t
         t.get_ip
+
+    def test_extract_plugin_name(self):
+        name = extract_plugin_name(self.plugins['plugin']['url'])
+        assert name == "mock-plugin"
+
+    def test_append_to_empty_includes(self):
+
+        temp_folder = os.path.join(tempfile.gettempdir())
+        try:
+            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes".format(temp_folder))
+            with open("{0}/celeryd-includes".format(temp_folder), mode='r') as f:
+                includes = f.read()
+                self.assertEquals("INCLUDES=a.tasks,b.tasks", includes)
+
+        finally:
+            os.remove("{0}/celeryd-includes".format(temp_folder))
+
+    def test_append_to_existing_includes(self):
+        temp_folder = os.path.join(tempfile.gettempdir())
+        try:
+            with open("{0}/celeryd-includes".format(temp_folder), mode='w') as f:
+                f.write("INCLUDES=test.tasks")
+            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes".format(temp_folder))
+            with open("{0}/celeryd-includes".format(temp_folder), mode='r') as f:
+                includes = f.read()
+                self.assertEquals("INCLUDES=test.tasks\nINCLUDES=test.tasks,a.tasks,b.tasks", includes)
+
+        finally:
+            os.remove("{0}/celeryd-includes".format(temp_folder))
+
+    def test_extract_module_paths(self):
+
+        install_celery_plugin(self.plugins['plugin'])
+
+        assert "mock_for_test.module" in extract_module_paths("mock-plugin")

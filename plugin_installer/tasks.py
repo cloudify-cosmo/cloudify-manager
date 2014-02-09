@@ -157,6 +157,22 @@ def get_prefix_for_command(command):
         return command
 
 
+def append_to_includes(module_paths, includes_path=None):
+
+    if not includes_path:
+        includes_path = "{0}/celeryd-includes".format(os.environ[VIRTUALENV_PATH_KEY])
+
+    with open(includes_path, mode='a+r') as f:
+        includes_definition = f.read()
+        if includes_definition:
+            includes = includes_definition.split("=")[1]
+            new_includes = "{0},{1}".format(includes, module_paths)
+        else:
+            new_includes = module_paths
+
+        f.write("\nINCLUDES={0}\n".format(new_includes))
+
+
 def install_celery_plugin(plugin):
     """
     Installs a plugin from a url as a python library.
@@ -170,8 +186,11 @@ def install_celery_plugin(plugin):
             - needed for logging.
     """
 
-    plugin_name = plugin["name"]
     plugin_url = plugin["url"]
+
+    plugin_name = extract_plugin_name(plugin_url)
+
+    module_paths = extract_module_paths(plugin_name)
 
     # this will install the plugin and
     # its dependencies into the python installation
@@ -181,6 +200,38 @@ def install_celery_plugin(plugin):
     logger.debug("installed plugin {0} and "
                  "dependencies into python installation {1}"
                  .format(plugin_name, get_python()))
+
+    append_to_includes(",".join(module_paths))
+
+
+def extract_module_paths(plugin_name):
+
+    module_paths = []
+    files = run_command("{0} show -f {1}".format(get_pip(), plugin_name)).splitlines()
+    for module in files:
+        if module.endswith(".py") and not "__init__" in module:
+            # the files paths are relative to the package __init__.py file.
+            module_paths.append(module.replace("../", "")
+                                .replace("/", ".").replace(".py", "").strip())
+    return module_paths
+
+
+def extract_plugin_name(plugin_url):
+
+    before = set(run_command("{0} freeze".format(get_pip())).splitlines())
+
+    run_command("{0} install --no-deps {1}".format(get_pip(), plugin_url))
+
+    after = set(run_command("{0} freeze".format(get_pip())).splitlines())
+
+    diff = after.difference(before)
+
+    if len(diff) != 1:
+        raise RuntimeError("Cannot extract plugin name for plugin {0}. "
+                           "Newly installed libs are : {1}".format(plugin_url, diff))
+
+    return diff.pop().split("==")[0]
+
 
 
 def uninstall_celery_plugin(plugin_name):
@@ -205,7 +256,6 @@ def get_plugin_simple_name(full_plugin_name):
 
 def run_command(command):
     shlex_split = shlex.split(command)
-    print "Running command {0}".format(command)
     p = subprocess.Popen(shlex_split,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
