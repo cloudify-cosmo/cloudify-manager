@@ -352,14 +352,35 @@ class CeleryWorkerProcess(object):
                         self._process.pid)
             self._process.kill()
 
+    @staticmethod
+    def _get_celery_process_ids():
+        from subprocess import CalledProcessError
+        try:
+            output = subprocess.check_output(
+                "ps aux | grep 'celery' | grep -v grep | awk '{print $2}'",
+                shell=True)
+            ids = filter(lambda x: len(x) > 0, output.split(os.linesep))
+            return ids
+        except CalledProcessError:
+            return []
+
     def restart(self):
         """
         Restarts the single celery worker process.
-        Does not change the pid of celery itself
+        Celery's child process will have a different PID.
         """
+        process_ids = self._get_celery_process_ids()
         from cosmo.celery import celery as c
         c.control.broadcast('pool_shrink', arguments={'N': 0})
         c.control.broadcast('pool_grow', arguments={'N': 1})
+        timeout = time.time() + 30
+        while self._get_celery_process_ids() == process_ids:
+            time.sleep(1)
+            if time.time() > timeout:
+                raise RuntimeError(
+                    'Celery worker restart timeout '
+                    '[current_ids={0}, previous_ids={1}'.format(
+                        self._get_celery_process_ids(), process_ids))
 
 
 class RiemannProcess(object):

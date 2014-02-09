@@ -687,11 +687,6 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 
 class Events(Resource):
 
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('logs', type=bool,
-                                       default=False, location='args')
-
     @swagger.operation(
         nickname='events',
         notes='Returns a list of events for the provided ElasticSearch query. '

@@ -16,7 +16,7 @@
 __author__ = 'dan'
 
 from datetime import datetime
-from manager_rest.serialization import SerializableObjectBase
+from serialization import SerializableObjectBase
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
