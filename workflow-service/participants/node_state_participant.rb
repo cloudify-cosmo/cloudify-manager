@@ -77,20 +77,26 @@ class NodeStateParticipant < Ruote::Participant
       if wait_until_matches
         requested_reachable_state = workitem.params[REACHABLE]
         matches = requested_reachable_state.to_s.eql? reachable.to_s
-
-        raise "node reachable state does not match [requested=#{requested_reachable_state}, actual=#{reachable}" if wait_until_matches and not matches
-
-        # if there's a node in context, inject the requested node's runtime state
-        if requested_reachable_state and not current_node.nil?
-          if node_state.has_key? 'runtimeInfo'
-            current_node = workitem.fields[PreparePlanParticipant::NODE]
-            properties = current_node[PreparePlanParticipant::PROPERTIES]
-            properties[PreparePlanParticipant::RUNTIME][node_id] = node_state['runtimeInfo']
-          end
+        unless result_field.nil?
+          workitem.fields[result_field] = matches
         end
+
+        if matches
+          # if there's a node in context, inject the requested node's runtime state
+          if requested_reachable_state and not current_node.nil?
+            if node_state.has_key? 'runtimeInfo'
+              current_node = workitem.fields[PreparePlanParticipant::NODE]
+              properties = current_node[PreparePlanParticipant::PROPERTIES]
+              properties[PreparePlanParticipant::RUNTIME][node_id] = node_state['runtimeInfo']
+            end
+          end
+        elsif result_field.nil?
+          raise "node reachable state does not match [requested=#{requested_reachable_state}, actual=#{reachable}"
+        end
+
       elsif not result_field.nil?
-          $logger.debug('Node reachable state is set as \'{}\' workitem field [state={}]', result_field, reachable)
-          workitem.fields[result_field] = reachable
+        $logger.debug('Node reachable state is set as \'{}\' workitem field [state={}]', result_field, reachable)
+        workitem.fields[result_field] = reachable
       end
 
       reply
