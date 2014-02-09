@@ -469,10 +469,12 @@ def start_events_and_logs_polling():
             output = json.loads(body)
             output = json.dumps(output, indent=4)
             logger.info("\n{0}".format(output))
-        except Exception:
-            logger.info("event/log format error - output: {0}".format(body))
+        except Exception as e:
+            logger.info(
+                "event/log format error - output: {0} [message={1}]".format(
+                    body, e.message))
 
-    def fetch_events():
+    def consume():
         channel.basic_consume(callback, queue=queues[0], no_ack=True)
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
         channel.start_consuming()
@@ -480,9 +482,9 @@ def start_events_and_logs_polling():
     logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
         queues))
 
-    events_thread = threading.Thread(target=fetch_events)
-    events_thread.daemon = True
-    events_thread.start()
+    polling_thread = threading.Thread(target=consume)
+    polling_thread.daemon = True
+    polling_thread.start()
 
 
 class TestEnvironment(object):
@@ -712,12 +714,6 @@ def validate_dsl(blueprint_id, timeout=240):
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
                            .format(blueprint_id, response.status))
-
-
-def get_deployment_events(deployment_id, first_event=0, events_count=500):
-    client = CosmoManagerRestClient('localhost')
-    return client.get_deployment_events(deployment_id, from_param=first_event,
-                                        count_param=events_count)
 
 
 def get_deployment_workflows(deployment_id):

@@ -46,11 +46,6 @@ def blueprints_manager():
     return blueprints_manager.instance()
 
 
-def events_manager():
-    import events_manager
-    return events_manager.instance()
-
-
 def storage_manager():
     import storage_manager
     return storage_manager.instance()
@@ -120,7 +115,6 @@ def setup_resources(api):
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
     api.add_resource(Events, '/events')
-    api.add_resource(Logs, '/logs')
 
 
 class Blueprints(Resource):
@@ -675,8 +669,8 @@ class DeploymentsIdWorkflows(Resource):
         }
 
 
-def query_elastic_search(index, doc_type, body):
-    """Query ElasticSearch with the provided index, type and query body.
+def _query_elastic_search(index=None, doc_type=None, body=None):
+    """Query ElasticSearch with the provided index and query body.
 
     Returns:
     ElasticSearch result as is (Python dict).
@@ -686,6 +680,11 @@ def query_elastic_search(index, doc_type, body):
 
 
 class Events(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('logs', type=bool,
+                                       default=False, location='args')
 
     @swagger.operation(
         nickname='events',
@@ -704,30 +703,5 @@ class Events(Resource):
         Returns events for the provided ElasticSearch query
         """
         verify_json_content_type()
-        return query_elastic_search('cloudify_events_and_logs',
-                                    'cloudify_event',
-                                    request.json)
-
-
-class Logs(Resource):
-
-    @swagger.operation(
-        nickname='logs',
-        notes='Returns a list of logs for the provided ElasticSearch query. '
-              'The response format is as ElasticSearch response format.',
-        parameters=[{'name': 'body',
-                     'description': 'ElasticSearch query.',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'}],
-        consumes=['application/json']
-    )
-    def get(self):
-        """
-        Returns logs for the provided ElasticSearch query
-        """
-        verify_json_content_type()
-        return query_elastic_search('cloudify_events_and_logs',
-                                    'cloudify_log',
-                                    request.json)
+        return _query_elastic_search(index='cloudify_events',
+                                     body=request.json)

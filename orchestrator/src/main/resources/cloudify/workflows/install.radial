@@ -15,7 +15,7 @@ define initialize_nodes
             state action: 'wait', node_id: '${v:relationship.target_id}', reachable: 'true'
         unset 'v:relationship'
 
-        event event: { "stage" => "Create node" }
+        event event: { "stage" => "Creating node" }
         log message: 'executing create workflow for node: ${node.id}'
         set 'v:create': "$f:node.workflows.create"
         create
@@ -23,7 +23,7 @@ define initialize_nodes
 
         execute_relationships_workflow workflow: 'preconfigure'
 
-        event event: { "stage" => "Configure node" }
+        event event: { "stage" => "Configuring node" }
         log message: 'executing configure workflow for node: ${node.id}'
         set 'v:configure': "$f:node.workflows.configure"
         configure
@@ -31,7 +31,7 @@ define initialize_nodes
 
         execute_relationships_workflow workflow: 'postconfigure'
 
-        event event: { "stage" => "Start node" }
+        event event: { "stage" => "Starting node" }
         log message: 'executing start workflow for node: ${node.id}'
         set 'v:start': "$f:node.workflows.start"
         start
