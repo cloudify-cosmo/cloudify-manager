@@ -157,7 +157,7 @@ def prepare_configuration(worker_config, cloudify_runtime, node_id):
     if "install_openstack" not in worker_config:
         worker_config["install_openstack"] = True
 
-    if MANAGER_IP_KEY not in os.environ:
+    if MANAGER_IP_KEY not in worker_config["env"] and MANAGER_IP_KEY not in os.environ:
         raise RuntimeError("{0} is not present in worker_config.env nor environment".format(MANAGER_IP_KEY))
     worker_config["env"][MANAGER_IP_KEY] = os.environ[MANAGER_IP_KEY]
     worker_config["env"][LOCAL_IP_KEY] = ip
