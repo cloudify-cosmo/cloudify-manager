@@ -25,7 +25,7 @@ __author__ = 'elip'
 import unittest
 from plugin_installer.tasks import get_plugin_simple_name, \
     install_celery_plugin, uninstall_celery_plugin, \
-    extract_plugin_name, append_to_includes, extract_module_paths
+    extract_plugin_name, write_to_includes, extract_module_paths
 from plugin_installer.tests import get_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY
 
@@ -93,34 +93,33 @@ class PluginInstallerTestCase(unittest.TestCase):
         name = extract_plugin_name(self.plugins['plugin']['url'])
         assert name == "mock-plugin"
 
-    def test_append_to_empty_includes(self):
+    def test_write_to_empty_includes(self):
 
         temp_folder = os.path.join(tempfile.gettempdir())
         try:
-            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
-                               .format(temp_folder))
+            write_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
+                              .format(temp_folder))
             with open("{0}/celeryd-includes"
                       .format(temp_folder), mode='r') as f:
                 includes = f.read()
-                self.assertEquals("\nINCLUDES=a.tasks,b.tasks\n", includes)
+                self.assertEquals("INCLUDES=a.tasks,b.tasks\n", includes)
 
         finally:
             os.remove("{0}/celeryd-includes".format(temp_folder))
 
-    def test_append_to_existing_includes(self):
+    def test_write_to_existing_includes(self):
         temp_folder = os.path.join(tempfile.gettempdir())
         try:
             with open("{0}/celeryd-includes"
                       .format(temp_folder), mode='w') as f:
-                f.write("INCLUDES=test.tasks")
-            append_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
-                               .format(temp_folder))
+                f.write("INCLUDES=test.tasks\n")
+            write_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
+                              .format(temp_folder))
             with open("{0}/celeryd-includes"
                       .format(temp_folder), mode='r') as f:
                 includes = f.read()
                 self.assertEquals(
-                    "INCLUDES=test.tasks\nINCLUDES="
-                    "test.tasks,a.tasks,b.tasks\n",
+                    "INCLUDES=test.tasks,a.tasks,b.tasks\n",
                     includes)
 
         finally:
@@ -130,4 +129,6 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         install_celery_plugin(self.plugins['plugin'])
 
-        assert "mock_for_test.module" in extract_module_paths("mock-plugin")
+        paths = extract_module_paths("mock-plugin")
+
+        assert "mock_for_test.module" in paths

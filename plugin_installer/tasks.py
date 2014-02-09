@@ -157,21 +157,22 @@ def get_prefix_for_command(command):
         return command
 
 
-def append_to_includes(module_paths, includes_path=None):
+def write_to_includes(module_paths, includes_path=None):
 
     if not includes_path:
         includes_path = "{0}/celeryd-includes"\
                         .format(os.environ[VIRTUALENV_PATH_KEY])
 
-    with open(includes_path, mode='a+r') as f:
-        includes_definition = f.read()
-        if includes_definition:
-            includes = includes_definition.split("=")[1]
+    if os.path.exists(includes_path):
+        with open(includes_path, mode='r') as f:
+            includes_definition = f.read()
+            includes = includes_definition.split("=")[1].replace("\n", "")
             new_includes = "{0},{1}".format(includes, module_paths)
-        else:
-            new_includes = module_paths
+    else:
+        new_includes = module_paths
 
-        f.write("\nINCLUDES={0}\n".format(new_includes))
+    with open(includes_path, mode='w') as f:
+        f.write("INCLUDES={0}\n".format(new_includes))
 
 
 def install_celery_plugin(plugin):
@@ -202,7 +203,7 @@ def install_celery_plugin(plugin):
                  "dependencies into python installation {1}"
                  .format(plugin_name, get_python()))
 
-    append_to_includes(",".join(module_paths))
+    write_to_includes(",".join(module_paths))
 
 
 def extract_module_paths(plugin_name):
