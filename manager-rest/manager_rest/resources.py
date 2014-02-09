@@ -165,22 +165,18 @@ class Blueprints(Resource):
         Submit a new blueprint.
         """
         file_server_root = config.instance().file_server_root
-
-        blueprint_id = str(uuid.uuid4())
-
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
-                file_server_root, archive_target_path, blueprint_id)
+                file_server_root, archive_target_path)
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
         self._process_plugins(file_server_root, application_dir)
 
         return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  blueprint_id)
+                                                  application_dir), 201
 
     def _process_plugins(self, file_server_root, application_dir):
         blueprint_directory = path.join(file_server_root, application_dir)
@@ -223,7 +219,7 @@ class Blueprints(Resource):
                 f.write(uploaded_file_data)
 
     def _extract_file_to_file_server(self, file_server_root,
-                                     archive_target_path, blueprint_id):
+                                     archive_target_path):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
         tempdir = tempfile.mkdtemp('-blueprint-submit')
@@ -235,20 +231,24 @@ class Blueprints(Resource):
                 abort(400,
                       message='400: archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
-            generated_application_dir_base_name = '{0}-{1}'.format(
-                application_dir_base_name, blueprint_id)
+            #generating temporary unique name for app dir, to allow multiple
+            #uploads of apps with the same name (as it appears in the file
+            # system, not the app name field inside the blueprint.
+            # the latter is guaranteed to be unique).
+            generated_app_dir_name = '{0}-{1}'.format(
+                application_dir_base_name, uuid.uuid4())
             temp_application_dir = path.join(tempdir,
                                              application_dir_base_name)
-            target_temp_application_dir = path.join(
-                tempdir, generated_application_dir_base_name)
-            shutil.move(temp_application_dir, target_temp_application_dir)
-            shutil.move(target_temp_application_dir, file_server_root)
-            return generated_application_dir_base_name
+            temp_application_target_dir = path.join(tempdir,
+                                                    generated_app_dir_name)
+            shutil.move(temp_application_dir, temp_application_target_dir)
+            shutil.move(temp_application_target_dir, file_server_root)
+            return generated_app_dir_name
         finally:
             shutil.rmtree(tempdir)
 
     def _prepare_and_submit_blueprint(self, file_server_root,
-                                      application_dir, blueprint_id):
+                                      application_dir):
         application_file = self._extract_application_file(file_server_root,
                                                           application_dir)
 
@@ -260,8 +260,14 @@ class Blueprints(Resource):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            return blueprints_manager().publish_blueprint(
-                blueprint_id, dsl_path, alias_mapping, resources_base), 201
+            blueprint = blueprints_manager().publish_blueprint(
+                dsl_path, alias_mapping, resources_base)
+
+            #moving the app directory in the file server to be under a
+            # directory named after the blueprint's app name field
+            shutil.move(os.path.join(file_server_root, application_dir),
+                        os.path.join(file_server_root, blueprint.id))
+            return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
 
@@ -367,7 +373,7 @@ class DeploymentsIdNodes(Resource):
 
         deployment = blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
-                       deployment.typed_plan['nodes'])
+                       deployment.plan['nodes'])
 
         reachable_states = {}
         if get_reachable_state:
@@ -375,13 +381,13 @@ class DeploymentsIdNodes(Resource):
 
         nodes = []
         for node_id in node_ids:
-            node_result = responses.DeploymentNodesNode(id=node_id)
+            node_result = responses.DeploymentNodesNode().init(id=node_id)
             if get_reachable_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
             nodes.append(node_result)
-        return responses.DeploymentNodes(deployment_id=deployment_id,
-                                         nodes=nodes)
+        return responses.DeploymentNodes().init(deployment_id=deployment_id,
+                                                nodes=nodes)
 
 
 class Deployments(Resource):
@@ -455,7 +461,7 @@ class Nodes(Resource):
         """
         List deployment/all nodes.
         """
-        return responses.Nodes(nodes=storage_manager().get_nodes())
+        return responses.Nodes().init(nodes=storage_manager().get_nodes())
 
 
 class NodesId(Resource):
@@ -521,8 +527,8 @@ class NodesId(Resource):
         runtime_state = None
         if get_runtime_state:
             runtime_state = storage_manager().get_node(node_id)
-        return responses.Node(id=node_id, reachable=reachable_state,
-                              runtime_info=runtime_state)
+        return responses.Node().init(id=node_id, reachable=reachable_state,
+                                     runtime_info=runtime_state)
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -546,7 +552,7 @@ class NodesId(Resource):
             abort(400, message='request body is expected to be'
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
-        return responses.Node(
+        return responses.Node().init(
             id=node_id,
             runtime_info=storage_manager().put_node(node_id, request.json))
 
@@ -592,7 +598,7 @@ class NodesId(Resource):
                 abort(400, message='value for key: {0} is expected to be a'
                                    ' list with length 1 or 2 but is {1}'
                                    .format(k, len(v)))
-        return responses.Node(
+        return responses.Node().init(
             id=node_id,
             runtime_info=storage_manager().update_node(node_id, request.json))
 
@@ -607,12 +613,12 @@ class DeploymentsIdExecutions(Resource):
     )
     def get(self, deployment_id):
         """
-        Returns a list of executions related to the provided blueprint.
+        Returns a list of executions related to the provided deployment.
         """
         verify_deployment_exists(deployment_id)
         return [marshal(execution, responses.Execution.resource_fields) for
-                execution in blueprints_manager()
-                .get_deployment(deployment_id).executions_list()]
+                execution in storage_manager().get_deployment_executions(
+                    deployment_id)]
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -650,7 +656,7 @@ class DeploymentsIdExecutions(Resource):
 class DeploymentsIdWorkflows(Resource):
 
     @swagger.operation(
-        responseClass='Workflows'.format(responses.Workflows.__name__),
+        responseClass='Workflows',
         nickname="workflows",
         notes="Returns a list of workflows related to the provided deployment."
     )
