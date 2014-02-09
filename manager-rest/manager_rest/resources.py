@@ -619,7 +619,7 @@ class DeploymentsIdExecutions(Resource):
         verify_deployment_exists(deployment_id)
         return [marshal(execution, responses.Execution.resource_fields) for
                 execution in storage_manager().get_deployment_executions(
-                deployment_id)]
+                    deployment_id)]
 
     @swagger.operation(
         responseClass=responses.Execution,
