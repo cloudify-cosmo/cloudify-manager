@@ -394,13 +394,34 @@ class CeleryWorkerProcess(object):
                         self._process.pid)
             self._process.kill()
 
+    @staticmethod
+    def _get_celery_process_ids():
+        from subprocess import CalledProcessError
+        try:
+            output = subprocess.check_output(
+                "ps aux | grep 'celery' | grep -v grep | awk '{print $2}'",
+                shell=True)
+            ids = filter(lambda x: len(x) > 0, output.split(os.linesep))
+            return ids
+        except CalledProcessError:
+            return []
+
     def restart(self):
         """
         Restarts the single celery worker process.
-        Does not change the pid of celery itself
+        Celery's child process will have a different PID.
         """
+        process_ids = self._get_celery_process_ids()
         celery.control.broadcast('pool_shrink', arguments={'N': 0})
         celery.control.broadcast('pool_grow', arguments={'N': 1})
+        timeout = time.time() + 30
+        while self._get_celery_process_ids() == process_ids:
+            time.sleep(1)
+            if time.time() > timeout:
+                raise RuntimeError(
+                    'Celery worker restart timeout '
+                    '[current_ids={0}, previous_ids={1}'.format(
+                        self._get_celery_process_ids(), process_ids))
 
 
 class RiemannProcess(object):
@@ -519,10 +540,12 @@ def start_events_and_logs_polling():
             output = json.loads(body)
             output = json.dumps(output, indent=4)
             logger.info("\n{0}".format(output))
-        except Exception:
-            logger.info("event/log format error - output: {0}".format(body))
+        except Exception as e:
+            logger.info(
+                "event/log format error - output: {0} [message={1}]".format(
+                    body, e.message))
 
-    def fetch_events():
+    def consume():
         channel.basic_consume(callback, queue=queues[0], no_ack=True)
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
         channel.start_consuming()
@@ -530,9 +553,9 @@ def start_events_and_logs_polling():
     logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
         queues))
 
-    events_thread = threading.Thread(target=fetch_events)
-    events_thread.daemon = True
-    events_thread.start()
+    polling_thread = threading.Thread(target=consume)
+    polling_thread.daemon = True
+    polling_thread.start()
 
 
 class TestEnvironment(object):
