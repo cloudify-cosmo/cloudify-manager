@@ -279,10 +279,8 @@ def _create_virtualenv(runner, env_path, __cloudify_id):
     runner.sudo("pip install virtualenv")
     logger.debug("creating virtualenv [node_id=%s]", __cloudify_id)
     runner.run("virtualenv {0}".format(env_path))
-    runner.run("{0}/bin/pip --version".format(env_path))
     logger.info("upgrading pip installation within virtualenv")
     runner.run("{0}/bin/pip install --upgrade pip".format(env_path))
-    runner.run("{0}/bin/pip --version".format(env_path))
 
 
 def get_broker_url(worker_config):
