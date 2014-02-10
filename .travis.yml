@@ -25,6 +25,7 @@ install:
    - "sudo pip install flake8"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
+   - "pip install nose"
    - "cd manager-rest && pip install --process-dependency-links . && cd .."
    - "cd workflows && pip install --process-dependency-links . && cd .."   
 
