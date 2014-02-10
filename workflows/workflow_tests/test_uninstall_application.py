@@ -33,13 +33,13 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         logger.info('undeploy completed')
 
-        from cosmo.testmockoperations.tasks import get_state as \
+        from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        from cosmo.testmockoperations.tasks import is_unreachable_called
-        states = testmock_get_state.apply_async().get(timeout=10)
+        from plugins.testmockoperations.tasks import is_unreachable_called
+        states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
 
-        result = is_unreachable_called.apply_async([node_id])
+        result = self.send_task(is_unreachable_called, [node_id])
         self.assertTrue(result.get(timeout=10))
 
     def test_uninstall_application_single_host_node(self):
@@ -51,8 +51,8 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
 
-        from cosmo.cloudmock.tasks import get_machines
-        result = get_machines.apply_async()
+        from plugins.cloudmock.tasks import get_machines
+        result = self.send_task(get_machines)
         machines = result.get(timeout=10)
 
         self.assertEquals(0, len(machines))
@@ -64,10 +64,10 @@ class TestUninstallApplication(TestCase):
         print('deploy completed')
         print('making node unreachable from test')
         #make node unreachable
-        from cosmo.testmockoperations.tasks import get_state as \
+        from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        from cosmo.events import set_unreachable
-        states = testmock_get_state.apply_async().get(timeout=10)
+        from plugins.test_events import set_unreachable
+        states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
         set_unreachable(node_id)
         import time
@@ -76,8 +76,8 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
         #Checking that uninstall wasn't called on unreachable node
-        from cosmo.testmockoperations.tasks import is_unreachable_called
-        result = is_unreachable_called.apply_async([node_id])
+        from plugins.testmockoperations.tasks import is_unreachable_called
+        result = self.send_task(is_unreachable_called, [node_id])
         self.assertFalse(result.get(timeout=10))
 
     def test_uninstall_with_dependency_order(self):
@@ -90,25 +90,27 @@ class TestUninstallApplication(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
         #Checking that uninstall wasn't called on the contained node
-        from cosmo.testmockoperations.tasks import get_unreachable_call_order \
+        from plugins.testmockoperations.tasks import \
+            get_unreachable_call_order \
             as testmock_get_unreachable_call_order
-        from cosmo.testmockoperations.tasks import get_state \
+        from plugins.testmockoperations.tasks import get_state \
             as testmock_get_state
-        states = testmock_get_state.apply_async().get(timeout=10)
+        states = self.send_task(testmock_get_state).get(timeout=10)
         node1_id = states[0]['id']
         node2_id = states[1]['id']
         node3_id = states[2]['id']
 
-        unreachable_call_order = testmock_get_unreachable_call_order\
-            .apply_async().get(timeout=10)
+        unreachable_call_order = self\
+            .send_task(testmock_get_unreachable_call_order)\
+            .get(timeout=10)
         self.assertEquals(3, len(unreachable_call_order))
         self.assertEquals(node3_id, unreachable_call_order[0]['id'])
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
 
-        from cosmo.connection_configurer_mock.tasks import get_state \
+        from plugins.connection_configurer_mock.tasks import get_state \
             as config_get_state
-        configurer_state = config_get_state.apply_async().get(timeout=10)
+        configurer_state = self.send_task(config_get_state).get(timeout=10)
         self.assertEquals(2, len(configurer_state))
         self.assertTrue(configurer_state[0]['id']
             .startswith('contained_in_node2'))

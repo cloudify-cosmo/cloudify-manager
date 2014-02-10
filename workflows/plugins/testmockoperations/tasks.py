@@ -13,10 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from cosmo.events import set_reachable as reachable
-from cosmo.events import set_unreachable as unreachable
 from time import time
+
 from cloudify.decorators import operation
+
+from plugins.test_events import set_reachable as reachable
+from plugins.test_events import set_unreachable as unreachable
+
 
 state = []
 touched_time = None

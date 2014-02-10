@@ -3,7 +3,7 @@ imports:
     - "cloudify.types"
 
 plugins:
-    cloudify.plugins.openstack_host_provisioner:
+    openstack_host_provisioner:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "cloudify/plugins/vagrant-host-plugin.zip"

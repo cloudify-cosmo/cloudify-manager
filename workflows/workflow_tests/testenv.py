@@ -12,11 +12,12 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+from os.path import dirname, abspath
+import unittest
 
 __author__ = 'idanmo'
 
 import yaml
-import unittest
 import shutil
 import tempfile
 from os import path
@@ -24,7 +25,7 @@ import subprocess
 import logging
 import os
 import sys
-import cosmo
+import plugins
 import time
 import threading
 import re
@@ -32,6 +33,10 @@ import pika
 import json
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
+from celery import Celery
+from cloudify.constants import MANAGEMENT_NODE_ID
+
+CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
@@ -50,6 +55,14 @@ RABBITMQ_POLLING_KEY = 'RABBITMQ_POLLING'
 
 RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
     or os.environ[RABBITMQ_POLLING_KEY].lower() != 'false'
+
+celery = Celery(broker='amqp://',
+                backend='amqp://')
+
+# set the client celery to send tasks to the worker queue.
+celery.conf.update(
+    CELERY_TASK_SERIALIZER="json"
+)
 
 
 class ManagerRestProcess(object):
@@ -84,8 +97,10 @@ class ManagerRestProcess(object):
         env = os.environ.copy()
         env['MANAGER_REST_CONFIG_PATH'] = config_path
 
+        python_path = sys.executable
+
         manager_rest_command = [
-            'gunicorn',
+            '{0}/gunicorn'.format(dirname(python_path)),
             '-w', '1',
             '-b', '0.0.0.0:{0}'.format(self.port),
             '--timeout', '300',
@@ -234,7 +249,7 @@ class RuoteServiceProcess(object):
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._use_rvm).lower(), str(self._port)]
         env = os.environ.copy()
-        logger.info("Starting Ruote service")
+        logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
                                          env=env)
@@ -259,14 +274,35 @@ class CeleryWorkerProcess(object):
                  manager_rest_port):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
-        self._app_path = path.join(tempdir, "cosmo")
+        self._app_path = path.join(tempdir, "plugins")
         self._tempdir = tempdir
         self._plugins_tempdir = plugins_tempdir
-        self._cosmo_plugins = path.join(self._app_path, "cloudify/plugins")
+        self._cosmo_plugins = self._app_path
         self._riemann_config_path = riemann_config_path
         self._riemann_template_path = riemann_template_path
         self._riemann_pid = riemann_pid
         self._manager_rest_port = manager_rest_port
+
+    def _build_includes(self):
+
+        # mandatory REAL plugins for the tests framework
+        includes = ['plugin_installer.tasks', 'riemann_config_loader.tasks']
+
+        # iterate over the mock plugins directory and include all of them
+        mock_plugins_path = os.path\
+            .join(dirname(dirname(abspath(__file__))), "plugins")
+
+        for plugin_dir_name in os.walk(mock_plugins_path).next()[1]:
+            tasks_path = os.path\
+                .join(mock_plugins_path, plugin_dir_name, "tasks.py")
+            if os.path.exists(tasks_path):
+                includes.append("{0}.tasks".format(plugin_dir_name))
+            else:
+                logger.warning("Could not find tasks.py file under plugin {0}."
+                               " This plugin will not be loaded!"
+                               .format(plugin_dir_name))
+
+        return includes
 
     def _copy_cosmo_plugins(self):
         import riemann_config_loader
@@ -297,23 +333,28 @@ class CeleryWorkerProcess(object):
     def start(self):
         logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
         shutil.copytree(self._cosmo_path, self._app_path)
+        logger.info("Copying cosmo plugins")
         self._copy_cosmo_plugins()
         celery_log_file = path.join(self._tempdir, "celery.log")
+        python_path = sys.executable
+        logger.info("Building includes list for celery worker")
+        includes = self._build_includes()
         celery_command = [
-            "celery",
+            "{0}/celery".format(dirname(python_path)),
             "worker",
             "--events",
             "--loglevel=debug",
-            "--app=cosmo",
-            "--hostname=celery.cloudify.management",
+            "--hostname=celery.{0}".format(MANAGEMENT_NODE_ID),
             "--purge",
+            "--app=cloudify",
             "--logfile={0}".format(celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
-            "--queues=cloudify.management",
-            "--concurrency=1"
+            "--queues={0}".format(CLOUDIFY_MANAGEMENT_QUEUE),
+            "--concurrency=1",
+            "--include={0}".format(','.join(includes))
         ]
 
-        os.chdir(self._tempdir)
+        os.chdir(os.path.join(self._tempdir, "plugins"))
 
         environment = os.environ.copy()
         environment['TEMP_DIR'] = self._plugins_tempdir
@@ -321,11 +362,12 @@ class CeleryWorkerProcess(object):
         environment['RIEMANN_CONFIG'] = self._riemann_config_path
         environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
-        environment['CLOUDIFY_APP_DIR'] = self._app_path
         environment['MANAGEMENT_IP'] = 'localhost'
         environment['AGENT_IP'] = 'localhost'
+        environment['VIRTUALENV'] = dirname(dirname(python_path))
 
-        logger.info("Starting celery worker...")
+        logger.info("Starting celery worker with command {0}"
+                    .format(celery_command))
         self._process = subprocess.Popen(celery_command, env=environment)
 
         timeout = 30
@@ -352,35 +394,13 @@ class CeleryWorkerProcess(object):
                         self._process.pid)
             self._process.kill()
 
-    @staticmethod
-    def _get_celery_process_ids():
-        from subprocess import CalledProcessError
-        try:
-            output = subprocess.check_output(
-                "ps aux | grep 'celery' | grep -v grep | awk '{print $2}'",
-                shell=True)
-            ids = filter(lambda x: len(x) > 0, output.split(os.linesep))
-            return ids
-        except CalledProcessError:
-            return []
-
     def restart(self):
         """
         Restarts the single celery worker process.
-        Celery's child process will have a different PID.
+        Does not change the pid of celery itself
         """
-        process_ids = self._get_celery_process_ids()
-        from cosmo.celery import celery as c
-        c.control.broadcast('pool_shrink', arguments={'N': 0})
-        c.control.broadcast('pool_grow', arguments={'N': 1})
-        timeout = time.time() + 30
-        while self._get_celery_process_ids() == process_ids:
-            time.sleep(1)
-            if time.time() > timeout:
-                raise RuntimeError(
-                    'Celery worker restart timeout '
-                    '[current_ids={0}, previous_ids={1}'.format(
-                        self._get_celery_process_ids(), process_ids))
+        celery.control.broadcast('pool_shrink', arguments={'N': 0})
+        celery.control.broadcast('pool_grow', arguments={'N': 1})
 
 
 class RiemannProcess(object):
@@ -499,12 +519,10 @@ def start_events_and_logs_polling():
             output = json.loads(body)
             output = json.dumps(output, indent=4)
             logger.info("\n{0}".format(output))
-        except Exception as e:
-            logger.info(
-                "event/log format error - output: {0} [message={1}]".format(
-                    body, e.message))
+        except Exception:
+            logger.info("event/log format error - output: {0}".format(body))
 
-    def consume():
+    def fetch_events():
         channel.basic_consume(callback, queue=queues[0], no_ack=True)
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
         channel.start_consuming()
@@ -512,9 +530,9 @@ def start_events_and_logs_polling():
     logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
         queues))
 
-    polling_thread = threading.Thread(target=consume)
-    polling_thread.daemon = True
-    polling_thread.start()
+    events_thread = threading.Thread(target=fetch_events)
+    events_thread.daemon = True
+    events_thread.start()
 
 
 class TestEnvironment(object):
@@ -567,9 +585,9 @@ class TestEnvironment(object):
             manager_rest_port = '8100'
 
             # celery
-            cosmo_path = path.dirname(path.realpath(cosmo.__file__))
+            plugins_path = path.dirname(path.realpath(plugins.__file__))
             self._celery_worker_process = CeleryWorkerProcess(
-                self._tempdir, self._plugins_tempdir, cosmo_path,
+                self._tempdir, self._plugins_tempdir, plugins_path,
                 riemann_config_path, riemann_template_path,
                 self._riemann_process.pid,
                 manager_rest_port)
@@ -709,6 +727,13 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         TestEnvironment.restart_celery_worker()
         TestEnvironment.reset_rest_manager_data()
+
+    def send_task(self, task, args=None):
+        task_name = task.name.replace("plugins.", "")
+        return celery.send_task(
+            name=task_name,
+            args=args,
+            queue=CLOUDIFY_MANAGEMENT_QUEUE)
 
 
 def get_resource(resource):

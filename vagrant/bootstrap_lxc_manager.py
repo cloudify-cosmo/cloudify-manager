@@ -23,21 +23,28 @@ import datetime
 import time
 import sys
 import tempfile
+from os.path import expanduser
+from subprocess import check_output
+
 import yaml
 
-from os.path import expanduser
-from management_plugins import WORKER_INSTALLER
-from versions import FABRIC_RUNNER_VERSION
-from subprocess import check_output
 
 __author__ = 'elip'
 
 FNULL = open(os.devnull, 'w')
 
 USER_HOME = expanduser('~')
+
+FABRIC_RUNNER_VERSION = 'develop'
 FABRIC_RUNNER = "https://github.com/CloudifySource/" \
                 "cosmo-fabric-runner/archive/{0}.zip"\
                 .format(FABRIC_RUNNER_VERSION)
+
+WORKER_INSTALLER_VERSION = 'develop'
+
+WORKER_INSTALLER = "https://github.com/CloudifySource/" \
+                   "cosmo-plugin-agent-installer/archive/{0}.zip" \
+    .format(WORKER_INSTALLER_VERSION)
 
 
 class RiemannProcess(object):
@@ -130,6 +137,9 @@ class WorkflowServiceProcess(object):
         ]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
+
+        print "starting workflow service with command: {0}".format(command)
+
         self._process = subprocess.Popen(command,
                                          stdin=FNULL,
                                          stdout=output_file,
@@ -215,6 +225,8 @@ class ManagerRestProcess(object):
             '--timeout', '300',
             'server:app'
         ]
+
+        print "starting manager rest service with command: {0}".format(command)
 
         self._process = subprocess.Popen(command,
                                          env=env,
@@ -443,12 +455,6 @@ class VagrantLxcBoot:
                                         'orchestrator')
         copy_resources(file_server_dir, orchestrator_dir)
 
-    def install_celery(self):
-        self.pip("billiard==2.7.3.28")
-        self.pip("celery==3.0.19")
-        self.pip("python-vagrant")
-        self.pip("bernhard")
-
     def install_celery_worker(self, riemann_info):
 
         # download and install the worker_installer
@@ -457,6 +463,8 @@ class VagrantLxcBoot:
         worker_config = {
             "user": getpass.getuser(),
             "broker": "amqp://",
+            "install_vagrant": self.install_vagrant_lxc,
+            "install_openstack": self.install_openstack_provisioner,
             "env": {
                 "VAGRANT_DEFAULT_PROVIDER": "lxc",
                 # when running celery in daemon mode. this environment does
@@ -472,15 +480,14 @@ class VagrantLxcBoot:
             }
         }
 
-        os.environ['VIRTUALENV'] = expanduser("~/ENV")
-
+        from cloudify.constants import MANAGEMENT_NODE_ID
         cloudify_runtime = {
-            "cloudify.management": {
-                "ip": "cloudify.management"
+            MANAGEMENT_NODE_ID: {
+                "ip": MANAGEMENT_NODE_ID
             }
         }
 
-        __cloudify_id = "cloudify.management"
+        __cloudify_id = MANAGEMENT_NODE_ID
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
@@ -489,44 +496,12 @@ class VagrantLxcBoot:
                        cloudify_runtime=cloudify_runtime,
                        local=True)
 
-        # download and install the plugin_installer to install management
-        # plugins use the same plugin installer version used by the worker
-        # installer
-        from worker_installer.versions import PLUGIN_INSTALLER_VERSION
-        plugin_installer_url = "https://github.com/CloudifySource/" \
-                               "cosmo-plugin-plugin-installer/archive/{0}.zip"\
-                               .format(PLUGIN_INSTALLER_VERSION)
-        self.pip(plugin_installer_url)
-
-        # install the necessary management plugins.
-        self.install_management_plugins()
-
         # start the worker now for all plugins to be registered
         from worker_installer.tasks import start
         start(worker_config=worker_config,
               cloudify_runtime=cloudify_runtime,
+              __cloudify_id=__cloudify_id,
               local=True)
-
-        # uninstall the plugin installer from python installation.
-        # not needed anymore.
-        self.runner.sudo("pip uninstall -y -q cosmo-plugin-plugin-installer")
-
-    def install_management_plugins(self):
-
-        # install the management plugins
-        from plugin_installer.tasks import install_celery_plugin_to_dir \
-            as install_plugin
-
-        from management_plugins import plugins
-        for plugin in plugins:
-            install_plugin(plugin=plugin)
-
-        if self.install_openstack_provisioner:
-            from management_plugins import openstack_provisioner_plugin
-            install_plugin(plugin=openstack_provisioner_plugin)
-        if self.install_vagrant_lxc:
-            from management_plugins import vagrant_provisioner_plugin
-            install_plugin(plugin=vagrant_provisioner_plugin)
 
     def install_vagrant(self):
         vagrant_file_name = "vagrant_1.2.7_x86_64.deb"

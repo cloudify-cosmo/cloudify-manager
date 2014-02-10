@@ -26,13 +26,13 @@ class TestMultiInstanceApplication(TestCase):
         dsl_path = resource("dsl/multi_instance.yaml")
         deploy(dsl_path)
 
-        from cosmo.cloudmock.tasks import get_machines
-        result = get_machines.apply_async()
+        from plugins.cloudmock.tasks import get_machines
+        result = self.send_task(get_machines)
         machines = set(result.get(timeout=10))
         self.assertEquals(2, len(machines))
 
-        from cosmo.testmockoperations.tasks import get_state as get_state
-        apps_state = get_state.apply_async().get(timeout=10)
+        from plugins.testmockoperations.tasks import get_state as get_state
+        apps_state = self.send_task(get_state).get(timeout=10)
         machines_with_apps = set([])
         for app_state in apps_state:
             host_id = app_state['capabilities'].keys()[0]
