@@ -15,89 +15,75 @@
 # *******************************************************************************/
 
 import unittest
-from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, local_worker_config
+import time
+
+from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, \
+    id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, get_local_worker_config
+
 
 __author__ = 'elip'
 
 import os
-import tempfile
 
 from celery import Celery
 
 from worker_installer.tasks import install, start, build_env_string
-from worker_installer.tasks import create_namespace_path
-from cloudify.constants import COSMO_PLUGIN_NAMESPACE
 
-PLUGIN_INSTALLER = 'cloudify.plugins.plugin_installer'
-
-remote_suite_logger = get_logger("TestRemoteInstallerCase")
-local_suite_logger = get_logger("TestLocalInstallerCase")
+logger = get_logger("test_worker_installer")
 
 
-def _extract_registered_plugins(borker_url):
+def _extract_registered_plugins(broker_url):
 
-    c = Celery(broker=borker_url, backend=borker_url)
+    c = Celery(broker=broker_url, backend=broker_url)
+    logger.info("Querying celery for registered tasks")
     tasks = c.control.inspect.registered(c.control.inspect())
+
+    # retry a few times
+    attempt = 0
+    while tasks is None and attempt <= 3:
+        logger.info("Could not find tasks. Querying celery again for registered tasks")
+        tasks = c.control.inspect.registered(c.control.inspect())
+        attempt += 1
+        time.sleep(3)
     if tasks is None:
         return set()
 
     plugins = set()
     for node, node_tasks in tasks.items():
         for task in node_tasks:
-            plugin_name_split = task.split('.')[:-1]
-            if not plugin_name_split[0] == 'cosmo':
-                continue
-            if not plugin_name_split[-1] == 'tasks':
-                continue
-            plugin_name = '.'.join(plugin_name_split[1:-1])
+            plugin_name = task.split('.')[0]
             full_plugin_name = '{0}@{1}'.format(node, plugin_name)
             plugins.add(full_plugin_name)
-    return list(plugins)
+    return plugins
 
 
-def _test_install(runner, worker_config, cloudify_runtime, local=False, virtualenv=False):
+def _test_install(runner, worker_config, cloudify_runtime, local=False, manager=False):
 
-    logger = remote_suite_logger
-    if local:
-        logger = local_suite_logger
-
-    try:
-        # try and stop any celery processes that may have started due to other tests.
-        runner.sudo("service celeryd stop")
-    except BaseException as e:
-        logger.warning("Failed to stop celery process : {0}".format(e.message))
-
-    __cloudify_id = "management_host"
-
-    # this should install the plugin installer inside the celery worker
+    if manager:
+        __cloudify_id = "cloudify.management"
+        # needed for the fabric runner which is dependency of the agent installer
+        runner.sudo("apt-get -y -q update")
+        runner.sudo("apt-get -y -q install python-dev")
+    else:
+        __cloudify_id = "cloudify.agent"
 
     logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    install(worker_config, __cloudify_id, cloudify_runtime, local=local, virtualenv=virtualenv)
+    install(worker_config, __cloudify_id, cloudify_runtime, local=local)
 
     logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    start(worker_config, cloudify_runtime, local=local)
+    start(worker_config, cloudify_runtime, __cloudify_id, local=local)
 
     # lets make sure it did
     logger.info("extracting plugins from newly installed worker")
-    plugins = _extract_registered_plugins(worker_config['broker'])
-    if plugins is None:
+    plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
+    if not plugins:
         raise AssertionError("No plugins were detected on the installed worker")
-    assert 'celery.{0}@cloudify.plugins.plugin_installer'.format(__cloudify_id) in plugins
 
+    logger.info("Detected plugins : {0}".format(plugins))
 
-def _test_create_namespace_path(runner):
-
-    base_dir = tempfile.NamedTemporaryFile().name
-
-    create_namespace_path(runner, COSMO_PLUGIN_NAMESPACE, base_dir)
-
-    # lets make sure the correct strcture was created
-    namespace_path = base_dir
-    for folder in COSMO_PLUGIN_NAMESPACE:
-        namespace_path = os.path.join(namespace_path, folder)
-        init_data = runner.get(os.path.join(namespace_path,  "__init__.py"))
-        # we create empty init files
-        assert init_data == "\n"
+    # check built in agent plugins are registered
+    assert 'celery.{0}@plugin_installer'.format(__cloudify_id) in plugins
+    assert 'celery.{0}@kv_store'.format(__cloudify_id) in plugins
 
 
 class TestRemoteInstallerCase(unittest.TestCase):
@@ -118,13 +104,10 @@ class TestRemoteInstallerCase(unittest.TestCase):
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
     def test_install_worker(self):
-        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, virtualenv=False)
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, manager=False)
 
-    def test_create_namespace_path(self):
-        _test_create_namespace_path(self.RUNNER)
-
-    def test_install_virtual_env(self):
-        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, virtualenv=True)
+    def test_install_management_worker(self):
+        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, manager=True)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
@@ -138,10 +121,10 @@ class TestLocalInstallerCase(unittest.TestCase):
         os.environ["MANAGEMENT_IP"] = "localhost"
 
     def test_install_worker(self):
-        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=False)
+        _test_install(self.RUNNER, get_local_worker_config(), local_cloudify_runtime, local=True, manager=False)
 
-    def test_create_namespace_path(self):
-        _test_create_namespace_path(self.RUNNER)
+    def test_install_management_worker(self):
+        _test_install(self.RUNNER, get_local_worker_config(), local_cloudify_runtime, local=True, manager=True)
 
     def test_create_env_string(self):
         env = {
@@ -158,9 +141,6 @@ class TestLocalInstallerCase(unittest.TestCase):
         expected_string = ""
 
         assert expected_string == build_env_string({})
-
-    def test_install_virtual_env(self):
-        _test_install(self.RUNNER, local_worker_config, local_cloudify_runtime, local=True, virtualenv=True)
 
 if __name__ == '__main__':
     unittest.main()

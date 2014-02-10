@@ -39,6 +39,10 @@ setup(
         "cosmo-fabric-runner",
         "cosmo-celery-common"
     ],
+    tests_require=[
+        "nose",
+        "python-vagrant"
+    ],
     dependency_links=["{0}#egg=cosmo-fabric-runner-{1}".format(FABRIC_RUNNER, FABRIC_RUNNER_VERSION),
                       "{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY, COSMO_CELERY_VERSION)]
 )
