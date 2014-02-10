@@ -14,9 +14,11 @@
 #    * limitations under the License.
 
 from __future__ import absolute_import
+import json
+
 from celery.utils.log import get_task_logger
 import bernhard
-import json
+
 
 __author__ = 'idanmo'
 
@@ -55,6 +57,7 @@ def set_node_reachable_state(node_id, reachable):
     """
     logger.info("Setting node '{0}' reachable state to '{1}'"
                 .format(node_id, reachable))
+
     riemann_client = bernhard.Client(host="localhost")
     state = 'reachable' if reachable else 'unreachable'
     event = {

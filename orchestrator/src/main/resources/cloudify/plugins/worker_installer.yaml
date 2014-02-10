@@ -3,7 +3,7 @@ imports:
     - "cloudify.types"
 
 plugins:
-    cloudify.plugins.worker_installer:
+    worker_installer:
         derived_from: "cloudify.plugins.remote_plugin"
         properties:
             url: "cloudify/poc/plugins/celery-worker-installer.zip"

@@ -38,8 +38,8 @@ types:
                         key_name: cloudify_agents_idan
         interfaces:
             cloudify.interfaces.lifecycle:
-                -   create: cloudify.plugins.openstack_host_provisioner.tasks.provision
-                -   start: cloudify.plugins.openstack_host_provisioner.tasks.start
+                -   create: openstack_host_provisioner.tasks.provision
+                -   start: openstack_host_provisioner.tasks.start
         policies:
             -   name: start_detection_policy
                 rules:

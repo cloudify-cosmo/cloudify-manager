@@ -7,7 +7,7 @@ define execute_operation
         log message: 'initial check whether plugin: ${plugin_name} is installed on target: ${target} and contains
         operation: ${operation}'
 
-        execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin', payload: {
+        execute_task target: '${target}', exec: 'plugin_installer.tasks.verify_plugin', payload: {
             properties: {
                 worker_id: "${worker_id}",
                 plugin_name: "${plugin_name}",
@@ -19,7 +19,7 @@ define execute_operation
         sequence if: '${worker_id} != celery.cloudify.management and ${verified} != True'
             repeat
                 log message: 'waiting for plugin installation completion on host node ${target}'
-                execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.kv_store.tasks.get', payload: {
+                execute_task target: '${target}', exec: 'kv_store.tasks.get', payload: {
                     properties: {
                         key: "agent plugins installed"
                     }
@@ -34,7 +34,7 @@ define execute_operation
         sequence if: '${verified} != True'
             log message: 'second attempt verification of plugin: ${plugin_name} and operation: ${operation} is
             installed on target: ${target}'
-            execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.verify_plugin', payload: {
+            execute_task target: '${target}', exec: 'plugin_installer.tasks.verify_plugin', payload: {
                 properties: {
                     worker_id: "${worker_id}",
                     plugin_name: "${plugin_name}",
@@ -45,7 +45,7 @@ define execute_operation
 
         log message: 'fetching plugin: ${plugin_name} and operation: ${operation} argument names from target: ${target}'
 
-        execute_task target: '${target}', exec: 'cosmo.cloudify.plugins.plugin_installer.tasks.get_arguments', payload: {
+        execute_task target: '${target}', exec: 'plugin_installer.tasks.get_arguments', payload: {
             properties: {
                 plugin_name: "${plugin_name}",
                 operation: "${operation_mapping}"

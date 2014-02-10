@@ -25,8 +25,8 @@ install:
    - "sudo pip install flake8"
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
-   - "pip install manager-rest/ --process-dependency-links"
-   - "python workflows/setup.py install"
+   - "cd manager-rest && pip install --process-dependency-links . && cd .."
+   - "cd workflows && pip install --process-dependency-links . && cd .."   
 
 script:
    - "mvn verify -f travis-pom.xml"
@@ -35,5 +35,5 @@ script:
    - "flake8 manager-rest/"
    - "flake8 workflows/"
    - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"
-   - "nosetests workflows/tests --nologcapture --nocapture"
+   - "nosetests workflows/workflow_tests --nologcapture --nocapture"
 
