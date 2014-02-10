@@ -23,35 +23,38 @@ from responses import BlueprintState, Execution, BlueprintValidationStatus, \
 from workflow_client import workflow_client
 
 
+def storage_manager():
+    import storage_manager
+    return storage_manager.instance()
+
+
 class DslParseException(Exception):
     pass
 
 
 class BlueprintsManager(object):
 
-    def __init__(self):
-        self.blueprints = {}
-        self.executions = {}
-        self.deployments = {}
-
     def blueprints_list(self):
-        return self.blueprints.values()
+        return storage_manager().blueprints_list()
 
     def deployments_list(self):
-        return self.deployments.values()
+        return storage_manager().deployments_list()
+
+    def executions_list(self):
+        return storage_manager().executions_list()
 
     def get_blueprint(self, blueprint_id):
-        return self.blueprints.get(blueprint_id, None)
+        return storage_manager().get_blueprint(blueprint_id)
 
     def get_deployment(self, deployment_id):
-        return self.deployments.get(deployment_id, None)
+        return storage_manager().get_deployment(deployment_id)
 
     def get_execution(self, execution_id):
-        return self.executions.get(execution_id, None)
+        return storage_manager().get_execution(execution_id)
 
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
-    def publish_blueprint(self, blueprint_id, dsl_location, alias_mapping_url,
+    def publish_blueprint(self, dsl_location, alias_mapping_url,
                           resources_base_url):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
@@ -59,9 +62,8 @@ class BlueprintsManager(object):
                                    resources_base_url)
         except Exception, ex:
             raise DslParseException(*ex.args)
-        new_blueprint = BlueprintState(id=blueprint_id, json_plan=plan,
-                                       plan=json.loads(plan))
-        self.blueprints[str(new_blueprint.id)] = new_blueprint
+        new_blueprint = BlueprintState().init(plan=json.loads(plan))
+        storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
     # currently validation is split to 2 phases: the first
@@ -71,38 +73,36 @@ class BlueprintsManager(object):
     # so we can parse all the workflows and see things are ok
     def validate_blueprint(self, blueprint_id):
         blueprint = self.get_blueprint(blueprint_id)
-        plan = blueprint.typed_plan
+        plan = blueprint.plan
         response = workflow_client().validate_workflows(plan)
         # TODO raise error if error
-        return BlueprintValidationStatus(blueprint_id=blueprint_id,
-                                         status=response['status'])
+        return BlueprintValidationStatus().init(blueprint_id=blueprint_id,
+                                                status=response['status'])
 
     def execute_workflow(self, deployment_id, workflow_id):
-        #TODO: in the future, take the workflow from the
-        # deployment rather than from the blueprint
         deployment = self.get_deployment(deployment_id)
-        blueprint = self.get_blueprint(deployment.blueprint_id)
-        workflow = blueprint.typed_plan['workflows'][workflow_id]
-        plan = blueprint.typed_plan
+        workflow = deployment.plan['workflows'][workflow_id]
+        plan = deployment.plan
 
         execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(
             workflow_id,
             workflow, plan,
-            blueprint_id=blueprint.id,
+            blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
             execution_id=execution_id)
         # TODO raise error if there is error in response
-        new_execution = Execution(id=execution_id,
-                                  state=response['state'],
-                                  internal_workflow_id=response['id'],
-                                  created_at=response['created'],
-                                  blueprint_id=blueprint.id,
-                                  workflow_id=workflow_id,
-                                  deployment_id=deployment_id)
 
-        deployment.add_execution(new_execution)
-        self.executions[str(new_execution.id)] = new_execution
+        new_execution = Execution().init(
+            id=execution_id,
+            state=response['state'],
+            internal_workflow_id=response['id'],
+            created_at=response['created'],
+            blueprint_id=deployment.blueprint_id,
+            workflow_id=workflow_id,
+            deployment_id=deployment_id)
+
+        storage_manager().put_execution(new_execution.id, new_execution)
 
         return new_execution
 
@@ -117,16 +117,15 @@ class BlueprintsManager(object):
 
     def create_deployment(self, blueprint_id):
         blueprint = self.get_blueprint(blueprint_id)
-        plan = blueprint.typed_plan
+        plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
         deployment_id = str(uuid.uuid4())
 
-        new_deployment = Deployment(deployment_id=deployment_id,
-                                    plan=deployment_json_plan,
-                                    typed_plan=blueprint.typed_plan,
-                                    blueprint_id=blueprint_id)
+        new_deployment = Deployment().init(
+            deployment_id=deployment_id, plan=json.loads(
+                deployment_json_plan), blueprint_id=blueprint_id)
 
-        self.deployments[str(deployment_id)] = new_deployment
+        storage_manager().put_deployment(deployment_id, new_deployment)
 
         return new_deployment
 

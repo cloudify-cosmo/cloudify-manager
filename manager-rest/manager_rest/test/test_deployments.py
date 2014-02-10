@@ -45,9 +45,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(blueprint_id, deployment_response['blueprintId'])
         self.assertIsNotNone(deployment_response['createdAt'])
         self.assertIsNotNone(deployment_response['updatedAt'])
-        import json
-        typed_blueprint_plan = json.loads(blueprint_response['plan'])
-        typed_deployment_plan = json.loads(deployment_response['plan'])
+        typed_blueprint_plan = blueprint_response['plan']
+        typed_deployment_plan = deployment_response['plan']
         self.assertEquals(typed_blueprint_plan['name'],
                           typed_deployment_plan['name'])
 

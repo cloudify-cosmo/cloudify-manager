@@ -16,109 +16,136 @@
 __author__ = 'dan'
 
 from datetime import datetime
+from manager_rest.serialization import SerializableObjectBase
 from flask.ext.restful import fields
 
 from flask_restful_swagger import swagger
 
 
 @swagger.model
-class BlueprintState(object):
+class BlueprintState(SerializableObjectBase):
 
     resource_fields = {
-        'name': fields.String,
         'id': fields.String,
-        'plan': fields.String,
-        'createdAt': fields.DateTime(attribute='created_at'),
-        'updatedAt': fields.DateTime(attribute='updated_at'),
+        'plan': fields.Raw,
+        'createdAt': fields.String(attribute='created_at'),
+        'updatedAt': fields.String(attribute='updated_at'),
         # 'permalink': fields.Url('blueprint_ep')
     }
 
-    def __init__(self, *args, **kwargs):
-        self.typed_plan = kwargs['plan']
-        self.plan = kwargs['json_plan']
-        self.name = self.typed_plan['name']
-        self.id = kwargs['id']
-        now = datetime.now()
+    def __init__(self):
+        self.plan = None
+        self.id = None
+        self.created_at = None
+        self.updated_at = None
+        self.yml = None
+        self.topology = None
+        self.deployments = None
+
+    def init(self, *args, **kwargs):
+        self.plan = kwargs['plan']
+        self.id = self.plan['name']
+        now = str(datetime.now())
         self.created_at = now
         self.updated_at = now
         self.yml = None  # TODO kwargs['yml']
         self.topology = None  # TODO kwargs['topology']
         self.deployments = None  # TODO kwargs['deployments']
+        return self
 
 
 @swagger.model
-class BlueprintValidationStatus(object):
+class BlueprintValidationStatus(SerializableObjectBase):
 
     resource_fields = {
         'blueprintId': fields.String(attribute='blueprint_id'),
         'status': fields.String
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.blueprint_id = None
+        self.status = None
+
+    def init(self, *args, **kwargs):
         self.blueprint_id = kwargs['blueprint_id']
         self.status = kwargs['status']
+        return self
 
 
 @swagger.model
-class Topology(object):
+class Topology(SerializableObjectBase):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.id = None
+        self.permalink = None
+        self.nodes = None
+
+    def init(self, *args, **kwargs):
         self.id = None  # TODO generate
         self.permalink = None  # TODO implement
         self.nodes = kwargs['nodes']
+        return self
 
 
 @swagger.model
-class Deployment(object):
+class Deployment(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
         # 'permalink': fields.Url('blueprint_ep')
-        'createdAt': fields.DateTime(attribute='created_at'),
-        'updatedAt': fields.DateTime(attribute='updated_at'),
+        'createdAt': fields.String(attribute='created_at'),
+        'updatedAt': fields.String(attribute='updated_at'),
         'blueprintId': fields.String(attribute='blueprint_id'),
-        'plan': fields.String,
+        'plan': fields.Raw,
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.id = None
+        self.permalink = None
+        self.created_at = None
+        self.updated_at = None
+        self.blueprint_id = None
+        self.plan = None
+        self.workflows = None
+
+    def init(self, *args, **kwargs):
         self.id = kwargs['deployment_id']
         self.permalink = None  # TODO implement
-        now = datetime.now()
+        now = str(datetime.now())
         self.created_at = now
         self.updated_at = now
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
-        self.typed_plan = kwargs['typed_plan']
-        self.workflows = {key: Workflow(workflow_id=key, created_at=now)
-                          for key in self.typed_plan['workflows']}
-        self.executions = {}
-
-    def add_execution(self, execution):
-        self.executions[str(execution.id)] = execution
-
-    def executions_list(self):
-        return self.executions.values()
+        self.workflows = {key: Workflow().init(workflow_id=key,
+                                               created_at=now)
+                          for key in self.plan['workflows']}
+        return self
 
     def workflows_list(self):
         return self.workflows.values()
 
 
 @swagger.model
-class Workflow(object):
+class Workflow(SerializableObjectBase):
 
     resource_fields = {
         'name': fields.String,
         'createdAt': fields.String(attribute='created_at')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.name = None
+        self.created_at = None
+
+    def init(self, *args, **kwargs):
         self.name = kwargs['workflow_id']
-        self.created_at = kwargs['created_at']
+        self.created_at = str(kwargs['created_at'])
+        return self
 
 
 @swagger.model
 @swagger.nested(workflows=Workflow.__name__)
-class Workflows(object):
+class Workflows(SerializableObjectBase):
 
     resource_fields = {
         'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
@@ -126,14 +153,20 @@ class Workflows(object):
         'deploymentId': fields.String(attribute='deployment_id')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.workflows = None
+        self.blueprint_id = None
+        self.deployment_id = None
+
+    def init(self, *args, **kwargs):
         self.workflows = kwargs['workflows']
         self.blueprint_id = kwargs['blueprint_id']
         self.deployment_id = kwargs['deployment_id']
+        return self
 
 
 @swagger.model
-class Execution(object):
+class Execution(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
@@ -145,33 +178,49 @@ class Execution(object):
         'createdAt': fields.String(attribute='created_at')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.id = None
+        self.status = None
+        self.deployment_id = None
+        self.internal_workflow_id = None
+        self.workflow_id = None
+        self.blueprint_id = None
+        self.created_at = None
+        self.error = None
+
+    def init(self, *args, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['state']
         self.deployment_id = kwargs['deployment_id']
         self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
-        self.created_at = kwargs['created_at']
+        self.created_at = str(kwargs['created_at'])
         self.error = 'None'
+        return self
 
 
 @swagger.model
-class DeploymentNodesNode(object):
+class DeploymentNodesNode(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
         'reachable': fields.Boolean
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.id = None
+        self.reachable = None
+
+    def init(self, *args, **kwargs):
         self.id = kwargs['id']
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        return self
 
 
 @swagger.model
 @swagger.nested(nodes=DeploymentNodesNode.__name__)
-class DeploymentNodes(object):
+class DeploymentNodes(SerializableObjectBase):
 
     resource_fields = {
         'deploymentId': fields.String(attribute='deployment_id'),
@@ -179,24 +228,33 @@ class DeploymentNodes(object):
             fields.Nested(DeploymentNodesNode.resource_fields))
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.deployment_id = None
+        self.nodes = None
+
+    def init(self, *args, **kwargs):
         self.deployment_id = kwargs['deployment_id']
         self.nodes = kwargs['nodes']
+        return self
 
 
 @swagger.model
-class Nodes(object):
+class Nodes(SerializableObjectBase):
 
     resource_fields = {
         'nodes': fields.List(fields.Raw)
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.nodes = None
+
+    def init(self, *args, **kwargs):
         self.nodes = kwargs['nodes']
+        return self
 
 
 @swagger.model
-class Node(object):
+class Node(SerializableObjectBase):
 
     resource_fields = {
         'id': fields.String,
@@ -204,8 +262,14 @@ class Node(object):
         'reachable': fields.Boolean
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        self.id = None
+        self.runtime_info = None
+        self.reachable = None
+
+    def init(self, *args, **kwargs):
         self.id = kwargs['id']
         self.runtime_info = \
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        return self

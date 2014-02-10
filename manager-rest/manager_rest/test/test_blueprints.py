@@ -57,7 +57,7 @@ class BlueprintsTestCase(BaseServerTestCase):
 
     def test_post_and_then_get(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
-        self.assertEquals('hello_world', post_blueprints_response['name'])
+        self.assertEquals('hello_world', post_blueprints_response['id'])
         get_blueprints_response = self.get('/blueprints').json
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
@@ -66,7 +66,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         post_blueprints_response = self.post_file(
             *post_blueprint_args(convention=True)).json
         self.assertEquals('hello_world',
-                          post_blueprints_response['name'])
+                          post_blueprints_response['id'])
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
