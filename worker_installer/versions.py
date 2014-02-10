@@ -16,10 +16,10 @@
 
 __author__ = 'elip'
 
-PLUGIN_INSTALLER_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
-COSMO_CELERY_COMMON_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
-KV_STORE_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
-RIEMANN_CONFIGURER_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
-AGENT_INSTALLER_VERSION = 'feature/CLOUDIFY-2370-plugins-as-python-libs'
+PLUGIN_INSTALLER_VERSION = 'develop'
+COSMO_CELERY_COMMON_VERSION = 'develop'
+KV_STORE_VERSION = 'develop'
+RIEMANN_CONFIGURER_VERSION = 'develop'
+AGENT_INSTALLER_VERSION = 'develop'
 OPENSTACK_PROVISIONER_VERSION = 'develop'
 VAGRANT_PROVISIONER_VERSION = 'develop'
