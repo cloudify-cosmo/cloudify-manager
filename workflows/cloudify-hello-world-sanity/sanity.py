@@ -33,7 +33,7 @@ management_ip = args.management_ip
 
 flavor = 101
 image = 67074
-region = 'az-2.region-a.geo-1'
+region = 'az-3.region-a.geo-1'
 
 hello_world_repo_url = 'https://github.com/CloudifySource/cloudify-hello-world.git'
 hello_world_repo_branch = 'develop'
