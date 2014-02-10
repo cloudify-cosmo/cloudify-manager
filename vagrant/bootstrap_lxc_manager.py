@@ -28,18 +28,23 @@ from subprocess import check_output
 
 import yaml
 
-from management_plugins import WORKER_INSTALLER
-from versions import FABRIC_RUNNER_VERSION
-
 
 __author__ = 'elip'
 
 FNULL = open(os.devnull, 'w')
 
 USER_HOME = expanduser('~')
+
+FABRIC_RUNNER_VERSION = 'develop'
 FABRIC_RUNNER = "https://github.com/CloudifySource/" \
                 "cosmo-fabric-runner/archive/{0}.zip"\
                 .format(FABRIC_RUNNER_VERSION)
+
+WORKER_INSTALLER_VERSION = 'develop'
+
+WORKER_INSTALLER = "https://github.com/CloudifySource/" \
+                   "cosmo-plugin-agent-installer/archive/{0}.zip" \
+    .format(WORKER_INSTALLER_VERSION)
 
 
 class RiemannProcess(object):
