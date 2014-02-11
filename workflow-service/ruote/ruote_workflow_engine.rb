@@ -24,6 +24,7 @@ require_relative '../../orchestrator/target/cosmo.jar'
 require_relative '../participants/all'
 require_relative '../data/workflow_state'
 require_relative '../utils/logs'
+require_relative '../utils/events'
 
 java_import org.cloudifysource.cosmo.tasks.EventHandler
 java_import org.springframework.context.annotation.AnnotationConfigApplicationContext
@@ -131,14 +132,22 @@ class RuoteWorkflowEngine
       return
     end
 
+    workitem = Ruote::Workitem.new(context['workitem'] || {})
+    workflow_id = workitem.fields['workflow_id'] || nil
+
     case context['action']
       when 'launch'
         new_state = :launched
+        send_event(:workflow_started, "Starting '#{workflow_id}' workflow execution", workitem)
       when 'terminated'
+        workitem = Ruote::Workitem.new(context['workitem'])
         new_state = :terminated
+        send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
       when 'error_intercepted'
+        workitem = Ruote::Workitem.new(context['workitem'])
         new_state = :failed
         error = context['error']
+        send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{error}", workitem, error)
       else
         # ignore..
     end
@@ -149,6 +158,19 @@ class RuoteWorkflowEngine
   end
 
   private
+
+  def send_event(event_type, message, workitem, error=nil)
+    event = {
+        :workitem => workitem,
+        :message => message
+    }
+    if not error.nil?
+      event[:arguments] = {
+          :error => error
+      }
+    end
+    AMQPClient::publish_event(event_type, event)
+  end
 
   def log_workflow_state(wf_state)
     event = wf_state.tags.clone
