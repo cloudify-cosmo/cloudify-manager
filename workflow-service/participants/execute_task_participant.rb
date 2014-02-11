@@ -49,6 +49,7 @@ class ExecuteTaskParticipant < Ruote::Participant
   RESULT_WORKITEM_FIELD = 'to_f'
   SENDING_TASK = 'sending-task'
   TASK_SUCCEEDED = 'task-succeeded'
+  TASK_STARTED = 'task-started'
   TASK_FAILED = 'task-failed'
   TASK_REVOKED = 'task-revoked'
 
@@ -130,7 +131,20 @@ class ExecuteTaskParticipant < Ruote::Participant
     end
   end
 
-  def send_task_event(event_type, message=nil)
+  def send_task_event(event_type, custom_message=nil)
+    case event_type
+      when :sending_task
+        message = "Sending task '#{@full_task_name}'"
+      when :task_started
+        message = "Task started '#{@full_task_name}'"
+      when :task_failed
+        message = "Task failed '#{@full_task_name}'"
+      when :task_succeeded
+        message = "Task succeeded '#{@full_task_name}'"
+    end
+    if not custom_message.nil?
+      message = "#{message} -> #{custom_message}"
+    end
     event(event_type, {
       :workitem => workitem,
       :message => message,
@@ -212,6 +226,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     context[:blueprint_id] = workitem.fields['blueprint_id'] || nil
     context[:deployment_id] = workitem.fields['deployment_id'] || nil
     context[:execution_id] = workitem.fields['execution_id'] || nil
+    context[:workflow_id] = workitem.fields['workflow_id'] || nil
     if props.has_key? CLOUDIFY_RUNTIME
       context[:capabilities] = props[CLOUDIFY_RUNTIME]
     end
@@ -280,6 +295,11 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       case event_type
 
+        when TASK_STARTED
+          unless TASK_TO_FILTER.include? @full_task_name
+            send_task_event(:task_started)
+          end
+
         when TASK_SUCCEEDED
 
           if workitem.params.has_key? RESULT_WORKITEM_FIELD
@@ -299,9 +319,7 @@ class ExecuteTaskParticipant < Ruote::Participant
           flunk(workitem, Exception.new(enriched_event['exception']))
 
         else
-          unless TASK_TO_FILTER.include? @full_task_name
-            # ignore...
-          end
+          # ignore...
       end
     rescue => e
       log_exception(workitem, e, 'execute_task')

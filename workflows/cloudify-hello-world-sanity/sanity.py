@@ -200,7 +200,7 @@ def assert_valid_deployment(before_state, after_state):
         else:
             webserver_node_id = key
 
-    events = client.get_execution_events(execution_by_id.id)
+    events, total_events = client.get_execution_events(execution_by_id.id)
     assert len(events) > 0, 'Expected at least 1 event for execution id: {0}'.format(execution_by_id.id)
 
     web_server_page_response = requests.get('http://{0}:8080'.format(public_ip))

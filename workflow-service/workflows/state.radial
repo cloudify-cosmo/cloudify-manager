@@ -6,5 +6,5 @@ define state
         log message: 'wait for node state action ${v:action} result is: ${v:to_f} = ${${v:to_f}}'
         break if: '${v:action} == get'
         break if: '${${v:to_f}} == true'
-        wait for: '10s'
+        wait for: '5s'
     unset 'v:to_f'
