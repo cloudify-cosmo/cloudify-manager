@@ -140,11 +140,9 @@ class RuoteWorkflowEngine
         new_state = :launched
         send_event(:workflow_started, "Starting '#{workflow_id}' workflow execution", workitem)
       when 'terminated'
-        workitem = Ruote::Workitem.new(context['workitem'])
         new_state = :terminated
         send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
       when 'error_intercepted'
-        workitem = Ruote::Workitem.new(context['workitem'])
         new_state = :failed
         error = context['error']
         send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{error}", workitem, error)
