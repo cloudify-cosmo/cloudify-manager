@@ -388,7 +388,7 @@ class VagrantLxcBoot:
         self.wget('https://get.rvm.io', 'install_rvm.sh')
         self.runner.run('bash install_rvm.sh stable')
         self.runner.run('bash -i -c "rvm install ruby-2.1.0"')
-        self.runner.run('bash -i -c "rvm --default set ruby-2.1.0"')
+        self.runner.run('bash -i -c "rvm --default use ruby-2.1.0"')
         self.runner.run('bash -i -c "gem install bundler"')
 
     def install_cosmo_manager(self):
