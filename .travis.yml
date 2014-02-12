@@ -18,6 +18,7 @@ before_script:
 install:
    - "rvm install ruby-2.1.0"
    - "rvm use ruby-2.1.0"
+   - "rvm --default use ruby-2.1.0"
    - "gem install bundler"
    - "cd workflow-service; bundle install; cd .."
    - "sudo pip install virtualenv"

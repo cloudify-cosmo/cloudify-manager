@@ -154,40 +154,22 @@ class ManagerRestProcess(object):
 
 class RuoteServiceProcess(object):
 
-    RUBY_VERSION = '2.1.0'
-
     def __init__(self, port=8101):
         self._pid = None
         self._port = port
-        self._use_rvm = self._verify_ruby_environment()
         self._process = None
 
     def _get_installed_ruby_packages(self):
         pass
 
     def _verify_ruby_environment(self):
-        """ Verifies there's a valid JRuby environment.
-        RuntimeError is raised if not, otherwise returns a boolean
-        value which indicates whether RVM should be used for changing the
-         current ruby environment before starting the service.
+        """ Verifies there's a valid Ruby environment.
+        RuntimeError is raised if not
         """
-        command = ['rvm', 'list']
-        ruby_version = "ruby-{0}".format(self.RUBY_VERSION)
         try:
-            if ruby_version in subprocess.check_output(command):
-                return True
+            subprocess.check_output(['ruby', '--version']).startswith('ruby')
         except subprocess.CalledProcessError:
-            pass
-
-        command = ['ruby', '--version']
-        try:
-            if self.RUBY_VERSION in subprocess.check_output(command):
-                return False
-        except subprocess.CalledProcessError:
-            pass
-
-        raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]"
-                           .format(self.RUBY_VERSION))
+            raise RuntimeError("Failed finding ruby installation")
 
     def _verify_service_responsiveness(self, timeout=120):
         import urllib2
@@ -247,7 +229,7 @@ class RuoteServiceProcess(object):
         startup_script_path = path.realpath(path.join(path.dirname(__file__),
                                                       '..'))
         script = path.join(startup_script_path, 'run_ruote_service.sh')
-        command = [script, str(self._use_rvm).lower(), str(self._port)]
+        command = [script, str(self._port)]
         env = os.environ.copy()
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,

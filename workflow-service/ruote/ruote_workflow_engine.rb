@@ -23,6 +23,7 @@ require_relative '../participants/all'
 require_relative '../data/workflow_state'
 require_relative '../utils/logs'
 require_relative '../utils/events'
+require_relative '../amqp/task_executor'
 
 class MockLogger
   def initialize; end
