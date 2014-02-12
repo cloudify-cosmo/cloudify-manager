@@ -121,20 +121,15 @@ class RiemannProcess(object):
 
 class WorkflowServiceProcess(object):
 
-    def __init__(self, jbin, workflow_service_path, port=8101):
-        self.process_grep = 'rackup'
-        self.jbin = jbin
+    def __init__(self, workflow_service_path, port=8101):
+        self.process_grep = 'unicorn master'
         self.port = port
         self.workflow_service_path = workflow_service_path
 
     def start(self, start_timeout=120):
         output_file = open('workflow-service.out', 'w')
         endtime = time.time() + start_timeout
-        command = [
-            '{0}/jruby'.format(self.jbin),
-            '{0}/rackup'.format(self.jbin),
-            '-p', str(self.port)
-        ]
+        command = ['unicorn', '-l ', '0.0.0.0:{0}'.format(str(self.port))]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
 
@@ -386,13 +381,14 @@ class VagrantLxcBoot:
     def install_java(self):
         self.apt_get("install -y openjdk-7-jdk")
 
-    def install_jruby(self):
-        self.wget('http://jruby.org.s3.amazonaws.com/'
-                  'downloads/1.7.3/jruby-bin-1.7.3.tar.gz')
-        self.extract_tar_gz('jruby-bin-1.7.3.tar.gz')
-        jbin = os.path.abspath('jruby-1.7.3/bin')
-        self.runner.run('{0}/jruby {0}/gem install bundler --pre'.format(jbin))
-        return jbin
+    def install_ruby(self):
+        self.apt_get('install -q -y build-essential git-core curl '
+                     'libmysqlclient18')
+        self.wget('https://get.rvm.io', 'install_rvm.sh')
+        self.runner.run('bash install_rvm.sh -s stable')
+        self.runner.run('rvm install ruby-2.1.0')
+        self.runner.run('rvm --default set ruby-2.1.0')
+        self.runner.run('gem install bundler')
 
     def install_cosmo_manager(self):
         cosmo_manager_repo = 'CloudifySource/cosmo-manager'
@@ -402,12 +398,10 @@ class VagrantLxcBoot:
 
         tar_output_name = 'cosmo-manager.tar.gz'
         cosmodir = 'cosmo-manager-{0}'.format(branch.replace('/', '-'))
-        jbin = self.install_jruby()
+        self.install_ruby()
         self.wget('https://github.com/{0}/archive/{1}.tar.gz'
                   .format(cosmo_manager_repo, branch), tar_output_name)
         self.extract_tar_gz(tar_output_name)
-        self.runner.run('mvn clean package -DskipTests -Pall -f '
-                        '{0}/orchestrator/pom.xml'.format(cosmodir))
         manager_rest_path = os.path.abspath(
             '{0}/manager-rest'.format(cosmodir))
         self.pip('{0}/'.format(manager_rest_path))
@@ -416,12 +410,10 @@ class VagrantLxcBoot:
                                                 .format(cosmodir))
         os.chdir(workflow_service_path)
         try:
-            self.runner.run('{0}/jruby {0}/bundle install --without test'
-                            .format(jbin))
+            self.runner.run('bundle install --without test')
         finally:
             os.chdir(prev_cwd)
-        workflow_service = WorkflowServiceProcess(jbin,
-                                                  workflow_service_path)
+        workflow_service = WorkflowServiceProcess(workflow_service_path)
         workflow_service.start()
 
         file_server_dir = tempfile.mkdtemp()
