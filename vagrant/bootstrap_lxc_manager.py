@@ -129,7 +129,8 @@ class WorkflowServiceProcess(object):
     def start(self, start_timeout=120):
         output_file = open('workflow-service.out', 'w')
         endtime = time.time() + start_timeout
-        command = ['unicorn', '-l ', '0.0.0.0:{0}'.format(str(self.port))]
+        command = ['bash', '-c', '"unicorn -l 0.0.0.0:{0}"'
+                                 .format(str(self.port))]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
 
@@ -386,9 +387,9 @@ class VagrantLxcBoot:
                      'libmysqlclient18')
         self.wget('https://get.rvm.io', 'install_rvm.sh')
         self.runner.run('bash install_rvm.sh stable')
-        self.runner.run('rvm install ruby-2.1.0')
-        self.runner.run('rvm --default set ruby-2.1.0')
-        self.runner.run('gem install bundler')
+        self.runner.run('bash -c "rvm install ruby-2.1.0"')
+        self.runner.run('bash -c "rvm --default set ruby-2.1.0"')
+        self.runner.run('bash -c "gem install bundler"')
 
     def install_cosmo_manager(self):
         cosmo_manager_repo = 'CloudifySource/cosmo-manager'
@@ -410,7 +411,7 @@ class VagrantLxcBoot:
                                                 .format(cosmodir))
         os.chdir(workflow_service_path)
         try:
-            self.runner.run('bundle install --without test')
+            self.runner.run('bash -c "bundle install --without test"')
         finally:
             os.chdir(prev_cwd)
         workflow_service = WorkflowServiceProcess(workflow_service_path)
