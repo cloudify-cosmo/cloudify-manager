@@ -140,7 +140,10 @@ def prepare_configuration(worker_config, cloudify_runtime, node_id):
     worker_config['home'] = "/home/" + worker_config['user'] if worker_config['user'] != 'root' else '/root'
 
     if VIRTUALENV_PATH_KEY not in worker_config:
-        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery"
+        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery-env"
+
+    if CELERY_CONFIG_DIR not in worker_config:
+        worker_config[CELERY_CONFIG_DIR] = worker_config['home'] + "/celery-config"
 
     if "env" not in worker_config:
         worker_config["env"] = {}
