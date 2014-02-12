@@ -14,9 +14,6 @@
 #  * limitations under the License.
 #
 
-java_import org.cloudifysource::cosmo::tasks::TaskEventListener
-java_import org.cloudifysource::cosmo::tasks::TaskExecutor
-
 require 'json'
 require 'securerandom'
 require 'set'
@@ -28,7 +25,6 @@ require_relative '../utils/events'
 
 
 class ExecuteTaskParticipant < Ruote::Participant
-  include TaskEventListener
 
   @full_task_name = nil
   @task_arguments = nil
@@ -119,13 +115,11 @@ class ExecuteTaskParticipant < Ruote::Participant
               :properties => properties
           })
 
-      json_props = JSON.generate(properties)
-
       unless TASK_TO_FILTER.include? @full_task_name
         send_task_event(:sending_task)
       end
 
-      executor.send_task(@target, @task_id, @full_task_name, json_props, self)
+      executor.send_task(@target, @task_id, @full_task_name, properties, self)
 
     rescue => e
       log_exception(workitem, e, 'execute_task')
@@ -288,10 +282,10 @@ class ExecuteTaskParticipant < Ruote::Participant
     props
   end
 
-  def onTaskEvent(task_id, event_type, json_event)
+  def onTaskEvent(task_id, event_type, event)
     begin
 
-      enriched_event = JSON.parse(json_event)
+      enriched_event = event
 
       populate_event_content(enriched_event, task_id, true)
 

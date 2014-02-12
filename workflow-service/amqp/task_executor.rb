@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +14,17 @@
 #  * limitations under the License.
 #
 
-source 'https://rubygems.org'
+require_relative 'amqp_client'
 
-gem 'unicorn', '~> 4.8.2'
-gem 'rufus-scheduler', '~> 2.0.24'
-gem 'sinatra', '~> 1.4.4'
-gem 'ruote', '~> 2.3.0.2'
-gem 'rest-client', '~> 1.6.7'
-gem 'bunny', '~> 1.1.2'
+class TaskExecutor
 
-group :test do
-  gem 'rack-test', '~> 0.6.2'
-  gem 'test-unit', '~> 2.5.5'
+  def initialize; end
+
+  def send_task(target, task_id, full_task_name, properties, listener)
+    AMQPClient.send_to_celery_queue({
+      :id => task_id,
+      :task => full_task_name.to_s,
+      :kwargs => properties
+    }, target, listener)
+  end
 end
-

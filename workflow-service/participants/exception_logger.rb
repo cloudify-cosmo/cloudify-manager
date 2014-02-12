@@ -14,8 +14,6 @@
 #  * limitations under the License.
 #
 
-java_import org.cloudifysource.cosmo.orchestrator.workflow.ruote.RuoteLogDescription
-java_import com.google.common.base.Throwables
 
 require_relative '../utils/logs'
 
@@ -23,8 +21,6 @@ def log_exception(workitem, exception, participant_name='ruote', raise_exception
   backtrace = nil?
   if exception.kind_of? Exception
     backtrace = exception.backtrace if exception.respond_to?(:backtrace)
-  else
-    backtrace = Throwables::get_stack_trace_as_string(exception)
   end
   log(:error, "Exception caught in '#{participant_name}' participant [exception=#{exception}, stacktrace=#{backtrace}]",
     {

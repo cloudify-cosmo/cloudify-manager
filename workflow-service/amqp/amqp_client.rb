@@ -16,7 +16,7 @@
 
 require 'json'
 require 'singleton'
-require 'march_hare'
+require 'bunny'
 
 class AMQPClient
   include Singleton
@@ -27,10 +27,12 @@ class AMQPClient
       :durable => true,
       :exclusive => false
     }
-    @conn = MarchHare.connect
+    @conn = Bunny.new.start
     @channel = @conn.create_channel
     @events_queue = @channel.queue('cloudify-events', settings)
     @logs_queue = @channel.queue('cloudify-logs', settings)
+
+    initialize_celery_client!
   end
 
   def self.publish_event(type, event={})
@@ -39,6 +41,62 @@ class AMQPClient
 
   def self.publish_log(level, message, context={})
     AMQPClient.instance.publish_log(level, message, context)
+  end
+
+  def self.send_to_celery_queue(message, queue_name, handler)
+    AMQPClient.instance.send_to_celery_queue(message, queue_name, handler)
+  end
+
+  def initialize_celery_client!
+    @celery = {}
+    @celery[:bound_queues] = {}
+    @celery[:task_event_handlers] = {}
+    @celery[:request_exchange] = @channel.direct('celery', :durable => true)
+    @celery[:event_exchange] = @channel.topic('celeryev', :durable => true)
+    @celery[:event_queue] = @channel.queue('celeryev', {
+        :auto_delete => true,
+        :durable => false,
+        :exclusive => false
+    })
+    @celery[:event_queue].bind(@celery[:event_exchange], :routing_key => "#")
+    @celery[:event_queue].subscribe do |_, _, payload|
+      payload = JSON.parse(payload)
+      event_type = payload['type']
+      if celery_task_event?(event_type)
+        task_id = payload['uuid']
+        handler = @celery[:task_event_handlers][task_id]
+        unless handler.nil?
+          handler.onTaskEvent(task_id, event_type, payload)
+          if celery_task_ended_event?(event_type)
+            @celery[:task_event_handlers].delete(task_id)
+          end
+        end
+      end
+    end
+  end
+
+  def celery_task_event?(event_type)
+    event_type.respond_to?(:start_with?) && event_type.start_with?('task-')
+  end
+
+  def celery_task_ended_event?(event_type)
+    event_type == 'task-succeeded' || event_type == 'task-failed' || event_type == 'task-revoked'
+  end
+
+  def send_to_celery_queue(message, queue_name, handler)
+    @celery[:task_event_handlers][message[:id].to_s] = handler
+    queue = @channel.queue(queue_name, {
+        :auto_delete => false,
+        :durable => true,
+        :exclusive => false
+    })
+    unless @celery[:bound_queues].has_key?(queue_name)
+      queue.bind(@celery[:request_exchange], :routing_key => queue_name)
+      @celery[:bound_queues][queue_name] = @celery[:request_exchange]
+    end
+    queue.publish(message.to_json, {
+        :content_type => 'application/json'
+    })
   end
 
   def publish_event(type, context={})

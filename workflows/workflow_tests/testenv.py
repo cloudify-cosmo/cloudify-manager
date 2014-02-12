@@ -154,7 +154,7 @@ class ManagerRestProcess(object):
 
 class RuoteServiceProcess(object):
 
-    JRUBY_VERSION = '1.7.3'
+    RUBY_VERSION = '2.1.0'
 
     def __init__(self, port=8101):
         self._pid = None
@@ -171,23 +171,23 @@ class RuoteServiceProcess(object):
         value which indicates whether RVM should be used for changing the
          current ruby environment before starting the service.
         """
-        command = ['ruby', '--version']
-        try:
-            if self.JRUBY_VERSION in subprocess.check_output(command):
-                return False
-        except subprocess.CalledProcessError:
-            pass
-
         command = ['rvm', 'list']
-        jruby_version = "jruby-{0}".format(self.JRUBY_VERSION)
+        ruby_version = "ruby-{0}".format(self.RUBY_VERSION)
         try:
-            if jruby_version in subprocess.check_output(command):
+            if ruby_version in subprocess.check_output(command):
                 return True
         except subprocess.CalledProcessError:
             pass
 
+        command = ['ruby', '--version']
+        try:
+            if self.RUBY_VERSION in subprocess.check_output(command):
+                return False
+        except subprocess.CalledProcessError:
+            pass
+
         raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]"
-                           .format(self.JRUBY_VERSION))
+                           .format(self.RUBY_VERSION))
 
     def _verify_service_responsiveness(self, timeout=120):
         import urllib2
@@ -235,7 +235,7 @@ class RuoteServiceProcess(object):
         pattern = "\w*\s*(\d*).*"
         try:
             output = subprocess.check_output(
-                "ps aux | grep 'rackup' | grep -v grep", shell=True)
+                "ps aux | grep 'unicorn master' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
@@ -262,7 +262,7 @@ class RuoteServiceProcess(object):
             self._process.kill()
         if self._pid:
             logger.info("Shutting down Ruote service [pid=%s]", self._pid)
-            os.system("kill {0}".format(self._pid))
+            os.system("kill -9 {0}".format(self._pid))
             self._verify_service_ended()
 
 
@@ -676,7 +676,7 @@ class TestEnvironment(object):
             self._file_server_process.stop()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
-            shutil.rmtree(self._tempdir, ignore_errors=True)
+            #shutil.rmtree(self._tempdir, ignore_errors=True)
 
     @staticmethod
     def create(scope=TestEnvironmentScope.PACKAGE):
