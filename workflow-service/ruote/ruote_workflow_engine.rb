@@ -28,9 +28,11 @@ require_relative '../amqp/task_executor'
 class MockLogger
   def initialize; end
   def debug(message, *args)
-    File.open('/home/dan/work/logs/out.log', 'a') { |f|
-      f.write("#{message}, #{args}\n")
-    }
+    message = "#{message}, #{args}\n"
+    #File.open('/home/dan/work/logs/out.log', 'a') { |f|
+    #  f.write()
+    #}
+    puts message
   end
 end
 
