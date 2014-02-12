@@ -32,7 +32,7 @@ class MockLogger
     #File.open('/home/dan/work/logs/out.log', 'a') { |f|
     #  f.write()
     #}
-    puts message
+    #puts message
   end
 end
 

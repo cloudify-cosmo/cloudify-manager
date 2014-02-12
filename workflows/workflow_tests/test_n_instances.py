@@ -39,7 +39,7 @@ class TestMultiInstanceApplication(TestCase):
             machines_with_apps.add(host_id)
         self.assertEquals(machines, machines_with_apps)
 
-    def test_deploy_multi_instance_many_different_hosts(self):
+    def _test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
         deploy(dsl_path)
 
