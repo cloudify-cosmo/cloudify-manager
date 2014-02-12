@@ -385,7 +385,7 @@ class VagrantLxcBoot:
         self.apt_get('install -q -y build-essential git-core curl '
                      'libmysqlclient18')
         self.wget('https://get.rvm.io', 'install_rvm.sh')
-        self.runner.run('bash install_rvm.sh -s stable')
+        self.runner.run('bash install_rvm.sh stable')
         self.runner.run('rvm install ruby-2.1.0')
         self.runner.run('rvm --default set ruby-2.1.0')
         self.runner.run('gem install bundler')
