@@ -30,7 +30,6 @@ install:
    - "cd workflows && pip install --process-dependency-links . && cd .."   
 
 script:
-   - "mvn verify -f travis-pom.xml"
    - "cd workflow-service; rake; cd .."
    - "flake8 vagrant/"
    - "flake8 manager-rest/"
