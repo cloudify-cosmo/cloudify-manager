@@ -21,6 +21,8 @@ parser.add_argument('--key_path')
 parser.add_argument('--key_name')
 parser.add_argument('--host_name')
 parser.add_argument('--management_ip')
+parser.add_argument('--region')
+parser.add_argument('--image')
 args = parser.parse_args()
 
 ###################################
@@ -31,10 +33,10 @@ key_path = args.key_path
 key_name = args.key_name
 host_name = args.host_name
 management_ip = args.management_ip
+region = args.region
+image = int(args.image)
 
 flavor = 101
-image = 67074
-region = 'az-3.region-a.geo-1'
 
 hello_world_repo_url = 'https://github.com/CloudifySource/cloudify-hello-world.git'
 hello_world_repo_branch = 'develop'
