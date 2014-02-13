@@ -44,10 +44,13 @@ end
 class StubLogger
   def initialize; end
   def debug(message, *args)
-    #message = "#{message}, #{args}\n"
-    #File.open('/home/dan/work/logs/out.log', 'a') { |f|
-    #  f.write()
-    #}
-    #puts message
+    if LOG_LEVEL == :debug
+      date = Time.now.getutc.to_s.split(' ')[0]
+      temp_filename = "/tmp/#{date}-workflow-service.log"
+      message = "#{message}, #{args}\n"
+      File.open(temp_filename, 'a') { |f|
+        f.write(message)
+      }
+    end
   end
 end

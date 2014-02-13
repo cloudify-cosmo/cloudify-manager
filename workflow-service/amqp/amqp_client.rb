@@ -59,6 +59,12 @@ class AMQPClient
         :exclusive => false
     })
     @celery[:event_queue].bind(@celery[:event_exchange], :routing_key => "#")
+    # TODO it seems that messages could be received more than once
+    # TODO check it out, this probably has something to do with the exchange
+    #
+    # TODO also need to handle handlers that are not cleaned due to
+    # task ended event never arriving. Use some self cleanup mechanism
+    # that is tied to the task timeout
     @celery[:event_queue].subscribe do |_, _, payload|
       payload = JSON.parse(payload)
       event_type = payload['type']
@@ -90,6 +96,7 @@ class AMQPClient
         :durable => true,
         :exclusive => false
     })
+    # TODO this cache never gets cleaned. Make this cache clean once in a while
     unless @celery[:bound_queues].has_key?(queue_name)
       queue.bind(@celery[:request_exchange], :routing_key => queue_name)
       @celery[:bound_queues][queue_name] = @celery[:request_exchange]
