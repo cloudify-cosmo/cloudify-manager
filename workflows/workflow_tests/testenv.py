@@ -286,7 +286,7 @@ class CeleryWorkerProcess(object):
     def _build_includes(self):
 
         # mandatory REAL plugins for the tests framework
-        includes = ['plugin_installer.tasks', 'riemann_config_loader.tasks']
+        includes = ['plugin_installer.tasks']
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path\
