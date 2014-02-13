@@ -303,13 +303,13 @@ def build_celeryd_config(worker_config, node_id):
 
     user = worker_config['user']
     broker_url = get_broker_url(worker_config)
-    virtualenv_path = worker_config[VIRTUALENV_PATH_KEY]
 
     env = {}
     if 'env' in worker_config:
         env = worker_config['env']
 
-    env[VIRTUALENV_PATH_KEY] = virtualenv_path
+    env[VIRTUALENV_PATH_KEY] = worker_config[VIRTUALENV_PATH_KEY]
+    env[CELERY_WORK_DIR_PATH_KEY] = worker_config[CELERY_WORK_DIR_PATH_KEY]
 
     env_string = build_env_string(env)
 
