@@ -5,7 +5,7 @@ imports:
 
 blueprint:
     name: "two_nodes_one_host"
-    topology:
+    nodes:
         -   name: "host"
             type: "cloudify.types.host"
             interfaces:

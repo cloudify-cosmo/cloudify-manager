@@ -16,16 +16,12 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
-
-from plugins.test_events import set_reachable
-from plugins.test_events import set_unreachable
+from cloudify.manager import set_node_stopped
+from cloudify.utils import get_local_ip
 
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
-
-reachable = set_reachable
-unreachable = set_unreachable
 machines = {}
 
 
@@ -50,8 +46,7 @@ def start(ctx, **kwargs):
                            .format(ctx.node_id))
     machines[ctx.node_id] = RUNNING
     ctx['id'] = ctx.node_id
-
-    reachable(ctx.node_id)
+    ctx.set_started()
 
 
 @operation
@@ -62,6 +57,7 @@ def stop(ctx, **kwargs):
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
     machines[ctx.node_id] = NOT_RUNNING
+    set_node_stopped(ctx.node_id, get_local_ip())
 
 
 @operation
@@ -72,7 +68,7 @@ def terminate(ctx, **kwargs):
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
     del machines[ctx.node_id]
-    unreachable(ctx.node_id)
+
 
 
 @operation

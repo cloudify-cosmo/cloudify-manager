@@ -1,6 +1,5 @@
 # yaml files
 cloudify.types: cloudify/types/types.yaml
-cloudify.policies: cloudify/policies/policies.yaml
 
 # workflows
 cloudify.workflows.install: cloudify/workflows/install.radial
@@ -15,11 +14,6 @@ cloudify.workflows.depends_on_preconfigure: cloudify/workflows/depends_on_precon
 cloudify.workflows.depends_on_postconfigure: cloudify/workflows/depends_on_postconfigure.radial
 cloudify.workflows.depends_on_establish: cloudify/workflows/depends_on_establish.radial
 cloudify.workflows.depends_on_unlink: cloudify/workflows/depends_on_unlink.radial
-
-# policies
-cloudify.policies.start_detection: cloudify/policies/start_detection.clj
-cloudify.policies.failure_detection: cloudify/policies/failure_detection.clj
-cloudify.policies.performance: cloudify/policies/performance.clj
 
 # plugins
 app_module_installer: cloudify/plugins/app_module_installer.yaml

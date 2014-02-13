@@ -4,7 +4,7 @@ imports:
 
 blueprint:
     name: "single_node"
-    topology:
+    nodes:
         -   name: "single_node"
             type: "mock_type"
 

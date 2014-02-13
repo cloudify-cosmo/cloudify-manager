@@ -4,7 +4,7 @@ imports:
 
 blueprint:
     name: "single_unreachable_host"
-    topology:
+    nodes:
         -   name: "single_node"
             type: "mock_type"
 

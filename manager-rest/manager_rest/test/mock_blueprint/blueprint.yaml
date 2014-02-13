@@ -10,7 +10,7 @@ imports:
 # The blueprint contains two nodes, a vm and a web server hosted in it.
 blueprint:
     name: hello_world
-    topology:
+    nodes:
         -   name: vm
             type: cloudify.types.host
 

@@ -1,4 +1,4 @@
-define uninstalling_nodes
+define uninstall_deployment
     log message: 'uninstalling nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
         log message: 'processing node: ${node.id}'

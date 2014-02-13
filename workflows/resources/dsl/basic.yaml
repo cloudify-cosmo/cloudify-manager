@@ -4,7 +4,7 @@ imports:
 
 blueprint:
     name: "simple_web_server"
-    topology:
+    nodes:
         -   name: "webserver_host"
             type: "cloudify.types.host"
             interfaces:
