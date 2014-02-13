@@ -16,10 +16,10 @@ before_script:
    - "sudo chmod 777 /dev/shm" # for celery worker
 
 install:
-   - "mvn install -Pall -f travis-pom.xml -DskipTests"
-   - "rvm install jruby-1.7.3"
-   - "rvm use jruby-1.7.3"
-   - "gem install bundler --pre"
+   - "rvm install ruby-2.1.0"
+   - "rvm use ruby-2.1.0"
+   - "rvm --default use ruby-2.1.0"
+   - "gem install bundler"
    - "cd workflow-service; bundle install; cd .."
    - "sudo pip install virtualenv"
    - "sudo pip install flake8"
@@ -30,7 +30,6 @@ install:
    - "cd workflows && pip install --process-dependency-links . && cd .."   
 
 script:
-   - "mvn verify -f travis-pom.xml"
    - "cd workflow-service; rake; cd .."
    - "flake8 vagrant/"
    - "flake8 manager-rest/"

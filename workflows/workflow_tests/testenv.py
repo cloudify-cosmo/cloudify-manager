@@ -154,40 +154,22 @@ class ManagerRestProcess(object):
 
 class RuoteServiceProcess(object):
 
-    JRUBY_VERSION = '1.7.3'
-
     def __init__(self, port=8101):
         self._pid = None
         self._port = port
-        self._use_rvm = self._verify_ruby_environment()
         self._process = None
 
     def _get_installed_ruby_packages(self):
         pass
 
     def _verify_ruby_environment(self):
-        """ Verifies there's a valid JRuby environment.
-        RuntimeError is raised if not, otherwise returns a boolean
-        value which indicates whether RVM should be used for changing the
-         current ruby environment before starting the service.
+        """ Verifies there's a valid Ruby environment.
+        RuntimeError is raised if not
         """
-        command = ['ruby', '--version']
         try:
-            if self.JRUBY_VERSION in subprocess.check_output(command):
-                return False
+            subprocess.check_output(['ruby', '--version']).startswith('ruby')
         except subprocess.CalledProcessError:
-            pass
-
-        command = ['rvm', 'list']
-        jruby_version = "jruby-{0}".format(self.JRUBY_VERSION)
-        try:
-            if jruby_version in subprocess.check_output(command):
-                return True
-        except subprocess.CalledProcessError:
-            pass
-
-        raise RuntimeError("Invalid ruby environment [required -> JRuby {0}]"
-                           .format(self.JRUBY_VERSION))
+            raise RuntimeError("Failed finding ruby installation")
 
     def _verify_service_responsiveness(self, timeout=120):
         import urllib2
@@ -235,7 +217,7 @@ class RuoteServiceProcess(object):
         pattern = "\w*\s*(\d*).*"
         try:
             output = subprocess.check_output(
-                "ps aux | grep 'rackup' | grep -v grep", shell=True)
+                "ps aux | grep 'unicorn master' | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
@@ -247,7 +229,7 @@ class RuoteServiceProcess(object):
         startup_script_path = path.realpath(path.join(path.dirname(__file__),
                                                       '..'))
         script = path.join(startup_script_path, 'run_ruote_service.sh')
-        command = [script, str(self._use_rvm).lower(), str(self._port)]
+        command = [script, str(self._port)]
         env = os.environ.copy()
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
@@ -262,7 +244,7 @@ class RuoteServiceProcess(object):
             self._process.kill()
         if self._pid:
             logger.info("Shutting down Ruote service [pid=%s]", self._pid)
-            os.system("kill {0}".format(self._pid))
+            os.system("kill -9 {0}".format(self._pid))
             self._verify_service_ended()
 
 
