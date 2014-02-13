@@ -138,7 +138,10 @@ def _install_latest_pip(runner, node_id):
 def prepare_configuration(worker_config, ctx):
     ip = get_machine_ip(ctx)
     worker_config['host'] = ip
-    #root user has no "/home/" prepended to its home directory
+
+    # root user has no "/home/" prepended to its home directory
+    # we cannot use expanduser('~') here since this code may run on a different machine than the one the worker is
+    # being actually installed on
     worker_config['home'] = "/home/" + worker_config['user'] if worker_config['user'] != 'root' else '/root'
 
     if VIRTUALENV_PATH_KEY not in worker_config:
