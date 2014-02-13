@@ -26,7 +26,6 @@ import tempfile
 from os.path import expanduser
 from subprocess import check_output
 
-from cloudify.mocks import MockCloudifyContext
 import yaml
 
 
@@ -487,6 +486,7 @@ class VagrantLxcBoot:
             'ip': MANAGEMENT_NODE_ID
         }
 
+        from cloudify.mocks import MockCloudifyContext
         ctx = MockCloudifyContext(node_id="cloudify.management",
                                   capabilities=capabilities)
 
