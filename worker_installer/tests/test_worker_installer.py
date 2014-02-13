@@ -18,7 +18,8 @@ import unittest
 import time
 
 from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, \
-    id_generator, remote_worker_config, remote_cloudify_runtime, local_cloudify_runtime, get_local_worker_config
+    id_generator, remote_worker_config, get_local_worker_config, get_local_context, get_local_manager_context, \
+    get_remote_context, get_remote_manager_context
 
 
 __author__ = 'elip'
@@ -57,21 +58,13 @@ def _extract_registered_plugins(broker_url):
     return plugins
 
 
-def _test_install(runner, worker_config, cloudify_runtime, local=False, manager=False):
+def _test_install(ctx, worker_config, local=False):
 
-    if manager:
-        __cloudify_id = "cloudify.management"
-        # needed for the fabric runner which is dependency of the agent installer
-        runner.sudo("apt-get -y -q update")
-        runner.sudo("apt-get -y -q install python-dev")
-    else:
-        __cloudify_id = "cloudify.agent"
+    logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, ctx.node_id, local))
+    install(ctx, worker_config, local=local)
 
-    logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    install(worker_config, __cloudify_id, cloudify_runtime, local=local)
-
-    logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
-    start(worker_config, cloudify_runtime, __cloudify_id, local=local)
+    logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, ctx.node_id, local))
+    start(ctx, worker_config, local=local)
 
     # lets make sure it did
     logger.info("extracting plugins from newly installed worker")
@@ -82,8 +75,8 @@ def _test_install(runner, worker_config, cloudify_runtime, local=False, manager=
     logger.info("Detected plugins : {0}".format(plugins))
 
     # check built in agent plugins are registered
-    assert 'celery.{0}@plugin_installer'.format(__cloudify_id) in plugins
-    assert 'celery.{0}@kv_store'.format(__cloudify_id) in plugins
+    assert 'celery.{0}@plugin_installer'.format(ctx.node_id) in plugins
+    assert 'celery.{0}@kv_store'.format(ctx.node_id) in plugins
 
 
 class TestRemoteInstallerCase(unittest.TestCase):
@@ -104,10 +97,10 @@ class TestRemoteInstallerCase(unittest.TestCase):
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
     def test_install_worker(self):
-        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, manager=False)
+        _test_install(get_remote_context(), remote_worker_config, local=False)
 
     def test_install_management_worker(self):
-        _test_install(self.RUNNER, remote_worker_config, remote_cloudify_runtime, local=False, manager=True)
+        _test_install(get_remote_manager_context(), remote_worker_config, local=False)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
@@ -121,10 +114,10 @@ class TestLocalInstallerCase(unittest.TestCase):
         os.environ["MANAGEMENT_IP"] = "localhost"
 
     def test_install_worker(self):
-        _test_install(self.RUNNER, get_local_worker_config(), local_cloudify_runtime, local=True, manager=False)
+        _test_install(get_local_context(), get_local_worker_config(), local=True)
 
     def test_install_management_worker(self):
-        _test_install(self.RUNNER, get_local_worker_config(), local_cloudify_runtime, local=True, manager=True)
+        _test_install(get_local_manager_context(), get_local_worker_config(), local=True)
 
     def test_create_env_string(self):
         env = {
