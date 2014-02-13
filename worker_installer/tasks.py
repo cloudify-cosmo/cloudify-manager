@@ -148,10 +148,12 @@ def prepare_configuration(worker_config, ctx):
         worker_config["env"] = {}
 
     if "pid_file" not in worker_config:
-        worker_config["pid_file"] = "{0}/run/celery/{1}_worker.pid".format(worker_config[VIRTUALENV_PATH_KEY], ctx.node_name)
+        worker_config["pid_file"] = "{0}/run/celery/{1}_worker.pid".format(worker_config[VIRTUALENV_PATH_KEY],
+                                                                           ctx.node_id)
 
     if "log_file" not in worker_config:
-        worker_config["log_file"] = "{0}/log/celery/{1}_worker.log".format(worker_config[VIRTUALENV_PATH_KEY], ctx.node_name)
+        worker_config["log_file"] = "{0}/log/celery/{1}_worker.log".format(worker_config[VIRTUALENV_PATH_KEY],
+                                                                           ctx.node_id)
 
     if "install_vagrant" not in worker_config:
         worker_config["install_vagrant"] = False
