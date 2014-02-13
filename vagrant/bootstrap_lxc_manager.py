@@ -129,7 +129,8 @@ class WorkflowServiceProcess(object):
     def start(self, start_timeout=120):
         output_file = open('workflow-service.out', 'w')
         endtime = time.time() + start_timeout
-        command = ['unicorn', '-l', '0.0.0.0:{0}'.format(str(self.port))]
+        command = command = ["bash --login -i -c 'unicorn -l 0.0.0.0:{0}'"
+                             .format(str(self.port))]
         env = os.environ.copy()
         env['RACK_ENV'] = 'development'
 
@@ -140,6 +141,7 @@ class WorkflowServiceProcess(object):
                                          stdout=output_file,
                                          stderr=output_file,
                                          env=env,
+                                         shell=True,
                                          cwd=self.workflow_service_path)
         self.wait_for_service_started(endtime)
         self.wait_for_service_responsiveness(endtime)
