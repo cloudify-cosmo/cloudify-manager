@@ -25,17 +25,6 @@ require_relative '../utils/logs'
 require_relative '../utils/events'
 require_relative '../amqp/task_executor'
 
-class MockLogger
-  def initialize; end
-  def debug(message, *args)
-    message = "#{message}, #{args}\n"
-    #File.open('/home/dan/work/logs/out.log', 'a') { |f|
-    #  f.write()
-    #}
-    #puts message
-  end
-end
-
 class RuoteWorkflowEngine
 
   def initialize(opts={})
@@ -60,7 +49,7 @@ class RuoteWorkflowEngine
     end
 
     # create loggers
-    $logger = MockLogger.new
+    $logger = StubLogger.new
 
     # load built in workflows
     load_built_in_workflows

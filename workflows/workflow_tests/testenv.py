@@ -658,7 +658,7 @@ class TestEnvironment(object):
             self._file_server_process.stop()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
-            #shutil.rmtree(self._tempdir, ignore_errors=True)
+            shutil.rmtree(self._tempdir, ignore_errors=True)
 
     @staticmethod
     def create(scope=TestEnvironmentScope.PACKAGE):

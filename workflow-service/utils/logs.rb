@@ -40,3 +40,14 @@ def log(level, message, context={})
     $logger.debug("Error publishing log message: #{e.message}")
   end
 end
+
+class StubLogger
+  def initialize; end
+  def debug(message, *args)
+    #message = "#{message}, #{args}\n"
+    #File.open('/home/dan/work/logs/out.log', 'a') { |f|
+    #  f.write()
+    #}
+    #puts message
+  end
+end
