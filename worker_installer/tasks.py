@@ -229,7 +229,7 @@ def _install_celery(runner, worker_config, node_id):
         includes_list = BUILT_IN_AGENT_PLUGINS
 
     runner.put("INCLUDES={0}\n".format(",".join(includes_list)),
-               "{0}/celeryd-includes".format(worker_config[CELERY_WORK_DIR_PATH_KEY]), use_sudo=True)
+               "{0}/celeryd-includes".format(worker_config[CELERY_WORK_DIR_PATH_KEY]), use_sudo=False)
 
 
 def _is_management_node(node_id):
