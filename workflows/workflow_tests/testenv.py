@@ -305,9 +305,7 @@ class CeleryWorkerProcess(object):
         return includes
 
     def _copy_cosmo_plugins(self):
-        import riemann_config_loader
         import plugin_installer
-        self._copy_plugin(riemann_config_loader)
         self._copy_plugin(plugin_installer)
 
     def _copy_plugin(self, plugin):
