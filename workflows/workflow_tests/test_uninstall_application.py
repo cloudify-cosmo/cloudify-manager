@@ -66,10 +66,10 @@ class TestUninstallApplication(TestCase):
         #make node unreachable
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        from plugins.test_events import set_unreachable
         states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
-        set_unreachable(node_id)
+        from cloudify.manager import set_node_stopped
+        set_node_stopped(node_id, 'localhost')
         import time
         time.sleep(10)
         print('starting undeploy process')
