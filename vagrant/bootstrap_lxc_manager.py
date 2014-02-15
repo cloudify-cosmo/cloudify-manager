@@ -463,6 +463,7 @@ class VagrantLxcBoot:
         worker_config = {
             "user": getpass.getuser(),
             "broker": "amqp://",
+            "management": True,
             "install_vagrant": self.install_vagrant_lxc,
             "install_openstack": self.install_openstack_provisioner,
             "env": {
