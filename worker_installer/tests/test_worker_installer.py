@@ -59,13 +59,12 @@ def _extract_registered_plugins(broker_url):
 
 def _test_install(runner, worker_config, cloudify_runtime, local=False, manager=False):
 
+    __cloudify_id = "test_worker_installer"
     if manager:
-        __cloudify_id = "cloudify.management"
         # needed for the fabric runner which is dependency of the agent installer
         runner.sudo("apt-get -y -q update")
         runner.sudo("apt-get -y -q install python-dev")
-    else:
-        __cloudify_id = "cloudify.agent"
+        worker_config["management"] = True
 
     logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, __cloudify_id, local))
     install(worker_config, __cloudify_id, cloudify_runtime, local=local)
