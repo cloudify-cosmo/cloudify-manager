@@ -1,5 +1,6 @@
 # flake8: noqa
 
+import time
 import requests
 import copy
 import json
@@ -20,6 +21,8 @@ parser.add_argument('--key_path')
 parser.add_argument('--key_name')
 parser.add_argument('--host_name')
 parser.add_argument('--management_ip')
+parser.add_argument('--region')
+parser.add_argument('--image')
 args = parser.parse_args()
 
 ###################################
@@ -30,10 +33,10 @@ key_path = args.key_path
 key_name = args.key_name
 host_name = args.host_name
 management_ip = args.management_ip
+region = args.region
+image = int(args.image)
 
 flavor = 101
-image = 67074
-region = 'az-3.region-a.geo-1'
 
 hello_world_repo_url = 'https://github.com/CloudifySource/cloudify-hello-world.git'
 hello_world_repo_branch = 'develop'
@@ -125,6 +128,7 @@ def modify_blueprint():
 
     # make modifications
     blueprint_yaml['imports'][0] = 'hello_world_sanity.yaml'
+    blueprint_yaml['blueprint']['name'] = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config'] = {}
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['region'] = region
@@ -155,34 +159,49 @@ def assert_valid_deployment(before_state, after_state):
 
     delta = get_state_delta(before_state, after_state)
 
+    print 'Current manager state: {0}'.format(delta)
+
+    print 'Validating 1 blueprint'
     assert len(delta['blueprints']) == 1, 'Expected 1 blueprint: {0}'.format(delta)
 
+    print 'Validating blueprints get by id is valid'
     blueprint_from_list = delta['blueprints'].values()[0]
     blueprint_by_id = client._blueprints_api.getById(blueprint_from_list.id)
     assert yaml.dump(blueprint_from_list) == yaml.dump(blueprint_by_id)
 
+    print 'Validating 1 deployment'
     assert len(delta['deployments']) == 1, 'Expected 1 deployment: {0}'.format(delta)
 
+    print 'Validating deployments get by id is valid'
     deployment_from_list = delta['deployments'].values()[0]
     deployment_by_id = client._deployments_api.getById(deployment_from_list.id)
     # plan is good enough because it cotains generated ids
     assert deployment_from_list.plan == deployment_by_id.plan
 
+    print 'Validating 1 execution'
     executions = client._deployments_api.listExecutions(deployment_by_id.id)
     assert len(executions) == 1, 'Expected 1 execution: {0}'.format(executions)
 
+    print 'Validating executions get by id is valid'
     execution_from_list = executions[0]
     execution_by_id = client._executions_api.getById(execution_from_list.id)
-    assert yaml.dump(execution_from_list) == yaml.dump(execution_by_id)
+    assert execution_from_list.id == execution_by_id.id
+    assert execution_from_list.workflowId == execution_by_id.workflowId
+    assert execution_from_list.blueprintId == execution_by_id.blueprintId 
 
+    print 'Validating 1 deployment nodes (for 1 deployment)'
     assert len(delta['deployment_nodes']) == 1, 'Expected 1 deployment_nodes: {0}'.format(delta)
     
+    print 'Validating 1 node_state (for 1 deployment)'
     assert len(delta['node_state']) == 1, 'Expected 1 node_state: {0}'.format(delta)
     
+    print 'Validating 2 nodes'
     assert len(delta['nodes']) == 2, 'Expected 2 nodes: {0}'.format (delta)
     
+    print 'Validating 1 workflows (for 1 deployment)'
     assert len(delta['workflows']) == 1, 'Expected 1 workflows: {0}'.format(delta)
 
+    print 'Validating 2 nodes in node state for single deployment'
     nodes_state = delta['node_state'].values()[0]
     assert len(nodes_state) == 2, 'Expected 2 node_state: {0}'.format(nodes_state)
     
