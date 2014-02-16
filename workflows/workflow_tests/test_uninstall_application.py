@@ -15,10 +15,13 @@
 
 __author__ = 'eitany'
 
+import os
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
+from cloudify.manager import set_node_stopped
+from cloudify.constants import MANAGER_IP_KEY
 
 
 class TestUninstallApplication(TestCase):
@@ -70,8 +73,10 @@ class TestUninstallApplication(TestCase):
             testmock_get_state
         states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
-        from cloudify.manager import set_node_stopped
+
+        os.environ[MANAGER_IP_KEY] = 'localhost'
         set_node_stopped(node_id, 'localhost')
+
         import time
         time.sleep(10)
         print('starting undeploy process')
