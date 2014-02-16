@@ -28,6 +28,7 @@ from plugin_installer.tasks import get_plugin_simple_name, \
     extract_plugin_name, write_to_includes, extract_module_paths
 from plugin_installer.tests import get_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
+from plugin_installer.tests import id_generator
 
 
 logger = get_logger("PluginInstallerTestCase")
@@ -46,6 +47,11 @@ class PluginInstallerTestCase(unittest.TestCase):
                                 "mock-with-dependencies-plugin")
         }
     }
+
+    def create_temp_folder(self):
+        path_join = os.path.join(tempfile.gettempdir(), id_generator(3))
+        os.makedirs(path_join)
+        return path_join
 
     def setUp(self):
         python_home = dirname(dirname(sys.executable))
@@ -71,7 +77,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_install(self):
 
-        temp_folder = os.path.join(tempfile.gettempdir())
+        temp_folder = self.create_temp_folder()
 
         os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
 
@@ -83,7 +89,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_install_with_dependencies(self):
 
-        temp_folder = os.path.join(tempfile.gettempdir())
+        temp_folder = self.create_temp_folder()
 
         os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
 
@@ -104,7 +110,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_write_to_empty_includes(self):
 
-        temp_folder = os.path.join(tempfile.gettempdir())
+        temp_folder = self.create_temp_folder()
         try:
             write_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
                               .format(temp_folder))
@@ -117,7 +123,7 @@ class PluginInstallerTestCase(unittest.TestCase):
             os.remove("{0}/celeryd-includes".format(temp_folder))
 
     def test_write_to_existing_includes(self):
-        temp_folder = os.path.join(tempfile.gettempdir())
+        temp_folder = self.create_temp_folder()
         try:
             with open("{0}/celeryd-includes"
                       .format(temp_folder), mode='w') as f:
@@ -136,7 +142,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_extract_module_paths(self):
 
-        temp_folder = os.path.join(tempfile.gettempdir())
+        temp_folder = self.create_temp_folder()
 
         os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
 
