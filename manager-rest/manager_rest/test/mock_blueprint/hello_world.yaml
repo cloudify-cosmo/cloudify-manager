@@ -40,24 +40,9 @@ types:
             cloudify.interfaces.lifecycle:
                 -   create: openstack_host_provisioner.tasks.provision
                 -   start: openstack_host_provisioner.tasks.start
-        policies:
-            -   name: start_detection_policy
-                rules:
-                    -   type: state_equals
-                        properties:
-                            service: openstack machine status
-                            state: running
     web_server:
         derived_from: cloudify.types.web_server
         interfaces:
             cloudify.interfaces.lifecycle:
                 -   configure: python_webserver_installer.tasks.configure
                 -   start: python_webserver_installer.tasks.start
-        policies:
-            -   name: start_detection_policy
-                rules:
-                    -   type: state_equals
-                        properties:
-                            service: webserver status
-                            state: running
-
