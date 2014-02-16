@@ -12,15 +12,19 @@ define uninstall_deployment
         log message: 'node reachable state is: ${node_reachable}'
         # we only call uninstall on reachable nodes
         sequence if: '${node_reachable} == true'
-            event event: { "stage" => "Stop node" }
+            event event: { "stage" => "Stopping node" }
             log message: 'executing stop workflow for node: ${node.id}'
-            set 'v:stop': "$f:node.workflows.stop"
-            stop
-            unset 'v:stop'
+
+            event event: { "stage" => "wf: ${f:node.workflows.stop}" }
+
+            # 'stop' is a Ruote reserved word so therefore '_stop'
+            set 'v:_stop': "$f:node.workflows.stop"
+            _stop
+            unset 'v:_stop'
 
             execute_relationships_workflow workflow: 'unlink'
 
-            event event: { "stage" => "Delete node" }
+            event event: { "stage" => "Deleting node" }
             log message: 'executing delete workflow for node: ${node.id}'
             set 'v:delete': "$f:node.workflows.delete"
             delete
@@ -28,4 +32,3 @@ define uninstall_deployment
 
             state action: 'wait', node_id: '${node.id}', reachable: 'false'
 
-    #TODO when we support multi app deployment, remove relevant policies from riemann

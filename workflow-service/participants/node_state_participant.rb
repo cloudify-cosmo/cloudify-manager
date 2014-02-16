@@ -74,6 +74,9 @@ class NodeStateParticipant < Ruote::Participant
 
       reachable = node_state[REACHABLE]
 
+      require_relative '../utils/logs'
+      log(:info, "node state participant: #{node_state}")
+
       if wait_until_matches
         requested_reachable_state = workitem.params[REACHABLE]
         matches = requested_reachable_state.to_s.eql? reachable.to_s

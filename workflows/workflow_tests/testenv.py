@@ -725,6 +725,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.destroy(TestEnvironmentScope.CLASS)
 
     def setUp(self):
+        self.logger = logging.getLogger(self._testMethodName)
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):

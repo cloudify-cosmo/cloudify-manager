@@ -44,12 +44,14 @@ class TestUninstallApplication(TestCase):
 
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
-        print('starting deploy process')
+
+        self.logger.info('starting deploy process')
         deployment_id = deploy(dsl_path).id
-        print('deploy completed')
-        print('starting undeploy process')
+        self.logger.info('deploy completed')
+
+        self.logger.info('starting undeploy process')
         undeploy(deployment_id)
-        print('undeploy completed')
+        self.logger.info('undeploy completed')
 
         from plugins.cloudmock.tasks import get_machines
         result = self.send_task(get_machines)
