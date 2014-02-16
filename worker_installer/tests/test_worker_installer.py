@@ -18,8 +18,8 @@ import unittest
 import time
 
 from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, \
-    id_generator, get_remote_worker_config, get_local_worker_config, get_local_context, get_local_manager_context, \
-    get_remote_context, get_remote_manager_context
+    id_generator, get_remote_worker_config, get_local_worker_config, get_local_context, get_remote_context, \
+    get_local_management_worker_config, get_remote_management_worker_config
 
 
 __author__ = 'elip'
@@ -104,7 +104,7 @@ class TestRemoteInstallerCase(unittest.TestCase):
         _test_install(get_remote_context(), get_remote_worker_config(), local=False)
 
     def test_install_management_worker(self):
-        _test_install(get_remote_manager_context(), get_remote_worker_config(), local=False)
+        _test_install(get_remote_context(), get_remote_management_worker_config(), local=False)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
@@ -121,7 +121,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         _test_install(get_local_context(), get_local_worker_config(), local=True)
 
     def test_install_management_worker(self):
-        _test_install(get_local_manager_context(), get_local_worker_config(), local=True)
+        _test_install(get_local_context(), get_local_management_worker_config(), local=True)
 
     def test_create_env_string(self):
         env = {

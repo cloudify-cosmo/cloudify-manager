@@ -61,6 +61,20 @@ def get_logger(name):
     return logger
 
 
+def get_local_management_worker_config():
+    return {
+        "user": getpass.getuser(),
+        "management": True,
+        "broker": "amqp://",
+        "name": "test-worker-{0}".format(id_generator(3)),
+        "VIRTUALENV": "/home/{0}/celery-{1}".format(getpass.getuser(), id_generator(3)),
+        "env": {
+            "BROKER_URL": "amqp://guest:guest@localhost:5672//",
+            "MANAGEMENT_IP": "localhost"
+        }
+    }
+
+
 def get_local_worker_config():
     return {
         "user": getpass.getuser(),
@@ -87,14 +101,26 @@ def get_remote_worker_config():
     }
 
 
+def get_remote_management_worker_config():
+    return {
+        "user": "vagrant",
+        "port": 22,
+        "management": True,
+        "name": "test-worker-{0}".format(id_generator(3)),
+        "key": "~/.vagrant.d/insecure_private_key",
+        "env": {
+            "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
+            "MANAGEMENT_IP": VAGRANT_MACHINE_IP
+        }
+    }
+
 def get_local_context():
 
     capabilities = {
         'ip': '127.0.0.1'
     }
 
-    return MockCloudifyContext(node_id="cloudify.agent",
-                               capabilities=capabilities)
+    return MockCloudifyContext(capabilities=capabilities)
 
 
 def get_remote_context():
@@ -103,25 +129,4 @@ def get_remote_context():
         'ip': VAGRANT_MACHINE_IP
     }
 
-    return MockCloudifyContext(node_id="cloudify.agent",
-                               capabilities=capabilities)
-
-
-def get_local_manager_context():
-
-    capabilities = {
-        'ip': '127.0.0.1'
-    }
-
-    return MockCloudifyContext(node_id="cloudify.management",
-                               capabilities=capabilities)
-
-
-def get_remote_manager_context():
-
-    capabilities = {
-        'ip': VAGRANT_MACHINE_IP
-    }
-
-    return MockCloudifyContext(node_id="cloudify.management",
-                               capabilities=capabilities)
+    return MockCloudifyContext(capabilities=capabilities)
