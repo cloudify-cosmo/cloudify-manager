@@ -1,46 +1,47 @@
 define start_deployment_worker
 
-  log message: 'installing worker for deployment ${deployment_id}'
-  event event: { "stage" => "Installing management worker for deployment ${deployment_id}" }
-  execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.start", payload: {
-    properties: {
-      worker_config: {
-        "name": "${deployment_id}",
-      },
-      local: true
-    }
-  }
-
-  log message: 'starting worker for deployment ${deployment_id}'
-  event event: { "stage" => "Starting management worker for deployment ${deployment_id}" }
-  execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.start", payload: {
-    properties: {
-      worker_config: {
-        "name": "${deployment_id}"
-      },
-      local: true
-    }
-  }
-
-  log message: 'installing plugin for deployment ${deployment_id}'
-  event event: { "stage" => "Installing management worker plugins for deployment ${deployment_id}" }
-  iterator on: '$plan.management_plugins_to_install', to_v: 'plugin'
-      log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
-      execute_task target: 'celery.${deployment_id}', exec: "plugin_installer.tasks.install", payload: {
-          plugin: {
-              name: '${v:plugin.name}',
-              url: '${v:plugin.url}'
-          }
+  sequence if: '${plan.is_management_plugins_to_install} == true'
+      log message: 'installing worker for deployment ${deployment_id}'
+      event event: { "stage" => "Installing management worker for deployment ${deployment_id}" }
+      execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.start", payload: {
+        properties: {
+          worker_config: {
+            "name": "${deployment_id}",
+          },
+          local: true
+        }
       }
-      log message: 'successfully installed plugin: ${v:plugin.name} on worker: ${deployment_id}'
 
-  log message: 'restarting worker for deployment ${deployment_id}'
-  event event: { "stage" => "Restarting management worker for deployment ${deployment_id}" }
-  execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.restart", payload: {
-    properties: {
-      worker_config: {
-        "name": "${deployment_id}"
-      },
-      local: true
-    }
-  }
+      log message: 'starting worker for deployment ${deployment_id}'
+      event event: { "stage" => "Starting management worker for deployment ${deployment_id}" }
+      execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.start", payload: {
+        properties: {
+          worker_config: {
+            "name": "${deployment_id}"
+          },
+          local: true
+        }
+      }
+
+      log message: 'installing plugin for deployment ${deployment_id}'
+      event event: { "stage" => "Installing management worker plugins for deployment ${deployment_id}" }
+      iterator on: '$plan.management_plugins_to_install', to_v: 'plugin'
+          log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
+          execute_task target: 'celery.${deployment_id}', exec: "plugin_installer.tasks.install", payload: {
+              plugin: {
+                  name: '${v:plugin.name}',
+                  url: '${v:plugin.url}'
+              }
+          }
+          log message: 'successfully installed plugin: ${v:plugin.name} on worker: ${deployment_id}'
+
+      log message: 'restarting worker for deployment ${deployment_id}'
+      event event: { "stage" => "Restarting management worker for deployment ${deployment_id}" }
+      execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.restart", payload: {
+        properties: {
+          worker_config: {
+            "name": "${deployment_id}"
+          },
+          local: true
+        }
+      }
