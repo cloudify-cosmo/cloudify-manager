@@ -26,7 +26,7 @@ import os
 from celery.utils.log import get_task_logger
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
-    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
+    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, \
     BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, \
     VAGRANT_PROVISIONER_PLUGIN_PATH, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY
@@ -46,12 +46,6 @@ RIEMANN_CONFIGURER_URL = "https://github.com/CloudifySource/cosmo-plugin-riemann
 
 AGENT_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip" \
                       .format(AGENT_INSTALLER_VERSION)
-
-OPENSTACK_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
-    .format(OPENSTACK_PROVISIONER_VERSION)
-
-VAGRANT_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip" \
-    .format(VAGRANT_PROVISIONER_VERSION)
 
 
 logger = get_task_logger(__name__)
@@ -168,12 +162,6 @@ def prepare_configuration(worker_config, ctx):
         worker_config["log_file"] = "{0}/{1}_worker.log".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
                                                                 worker_config["name"])
 
-    if "install_vagrant" not in worker_config:
-        worker_config["install_vagrant"] = False
-
-    if "install_openstack" not in worker_config:
-        worker_config["install_openstack"] = True
-
     if MANAGER_IP_KEY not in worker_config["env"]:
         if MANAGER_IP_KEY not in os.environ:
             raise RuntimeError("{0} is not present in worker_config.env nor environment".format(MANAGER_IP_KEY))
@@ -217,14 +205,6 @@ def _install_celery(runner, worker_config):
             # install the agent installer
             install_celery_plugin(runner, worker_config, RIEMANN_CONFIGURER_URL)
 
-            if worker_config["install_vagrant"]:
-                # install the agent installer
-                install_celery_plugin(runner, worker_config, VAGRANT_PROVISIONER_URL)
-
-            if worker_config["install_openstack"]:
-                # install the agent installer
-                install_celery_plugin(runner, worker_config, OPENSTACK_PROVISIONER_URL)
-
 
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd "
@@ -240,7 +220,6 @@ def _install_celery(runner, worker_config):
     # expose celery work directory
     runner.sudo("sed -i '1 iexport {0}={1}' /etc/init.d/celeryd-{2}"
                 .format(CELERY_WORK_DIR_PATH_KEY, worker_config[CELERY_WORK_DIR_PATH_KEY], worker_config["name"]))
-
 
     # build initial includes
     if _is_management_node(worker_config):
