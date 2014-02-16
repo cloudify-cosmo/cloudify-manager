@@ -41,6 +41,7 @@ class PrepareOperationParticipant < Ruote::Participant
   TARGET = 'target'
   PLUGINS = 'plugins'
   AGENT_PLUGIN = 'agent_plugin'
+  MANAGER_PLUGIN = 'manager_plugin'
   HOST_ID = 'host_id'
   CLOUDIFY_MANAGEMENT = 'cloudify.management'
   PLUGIN_NAME = 'plugin_name'
@@ -110,6 +111,8 @@ class PrepareOperationParticipant < Ruote::Participant
       if node[PLUGINS][plugin_name][AGENT_PLUGIN].to_s.eql? 'true'
         raise 'node does not contain a host_id property' unless node.has_key? HOST_ID
         workitem.fields[TARGET] = node[HOST_ID]
+      elsif node[PLUGINS][plugin_name][MANAGER_PLUGIN].to_s.eql? 'true'
+        workitem.fields[TARGET] = workitem.fields['deployment_id']
       end
       workitem.fields[WORKER_ID] = "celery.#{workitem.fields[TARGET]}"
       workitem.fields[OPERATION_MAPPING] = operation_mapping

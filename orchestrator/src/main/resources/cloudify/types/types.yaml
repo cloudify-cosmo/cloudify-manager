@@ -173,3 +173,7 @@ plugins:
     # Worker plugin artifact - runs on Cloudify agent
     cloudify.plugins.agent_plugin:
         derived_from: "cloudify.plugins.plugin"
+
+    # Worker plugin artifact - runs on a dedicated worker for the deployment
+    cloudify.plugins.manager_plugin:
+        derived_from: "cloudify.plugins.plugin"
