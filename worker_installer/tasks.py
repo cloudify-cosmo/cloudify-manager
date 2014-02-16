@@ -58,6 +58,8 @@ def install(ctx, worker_config, local=False, **kwargs):
 
     prepare_configuration(worker_config, ctx)
 
+    ctx.logger.info("installing celery worker {0}".format(worker_config["name"]))
+
     host_string = key_filename = None
     if not local:
         host_string = '%(user)s@%(host)s:%(port)s' % worker_config
@@ -76,9 +78,9 @@ def install(ctx, worker_config, local=False, **kwargs):
 @operation
 def start(ctx, worker_config, local=False, **kwargs):
 
-    logger.info("starting celery worker")
-
     prepare_configuration(worker_config, ctx)
+
+    ctx.logger.info("starting celery worker {0}".format(worker_config["name"]))
 
     host_string = key_filename = None
     if not local:
@@ -98,6 +100,8 @@ def start(ctx, worker_config, local=False, **kwargs):
 def restart(ctx, worker_config, local=False, **kwargs):
 
     prepare_configuration(worker_config, ctx)
+
+    ctx.logger.info("restarting celery worker {0}".format(worker_config["name"]))
 
     host_string = key_filename = None
     if not local:
