@@ -7,7 +7,7 @@ define start_deployment_worker
       execute_task target: 'celery.cloudify.management', exec: "worker_installer.tasks.start", payload: {
         properties: {
           worker_config: {
-            name: '${deployment_id}',
+            name: '${deployment_id}'
           },
           local: true
         }
