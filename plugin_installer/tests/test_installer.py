@@ -102,7 +102,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         # check the dependency was installed
         from python_webserver_installer import tasks as t
-        t.get_ip
+        t.get_webserver_root
 
     def test_extract_plugin_name(self):
         name = extract_plugin_name(self.plugins['plugin']['url'])
