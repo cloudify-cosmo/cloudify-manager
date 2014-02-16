@@ -6,4 +6,4 @@ plugins:
     openstack_host_provisioner:
         derived_from: "cloudify.plugins.manager_plugin"
         properties:
-            url: "cloudify/plugins/vagrant-host-plugin.zip"
+            url: "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/develop.zip"
