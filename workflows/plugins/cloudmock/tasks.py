@@ -68,7 +68,6 @@ def terminate(ctx, **kwargs):
     del machines[ctx.node_id]
 
 
-
 @operation
 def get_machines(**kwargs):
     return machines
