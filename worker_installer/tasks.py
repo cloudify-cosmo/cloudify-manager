@@ -72,12 +72,12 @@ def install(ctx, worker_config, local=False, **kwargs):
 
     runner = create_runner(local, host_string, key_filename)
 
-    _install_latest_pip(runner, ctx.node_id)
+    _install_latest_pip(runner, worker_config["name"])
 
     logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
 
-    _create_virtualenv(runner, worker_config[VIRTUALENV_PATH_KEY], ctx.node_id)
-    _install_celery(runner, worker_config, ctx.node_id)
+    _create_virtualenv(runner, worker_config[VIRTUALENV_PATH_KEY], worker_config["name"])
+    _install_celery(runner, worker_config)
 
 
 @operation
@@ -94,7 +94,7 @@ def start(ctx, worker_config, local=False, **kwargs):
 
     runner = create_runner(local, host_string, key_filename)
 
-    runner.sudo("service celeryd start")
+    runner.sudo("service celeryd-{0} start".format(worker_config["name"]))
 
     logger.debug(runner.get(worker_config['log_file']))
 
@@ -124,8 +124,8 @@ def create_runner(local, host_string, key_filename):
     return runner
 
 
-def _install_latest_pip(runner, node_id):
-    logger.info("installing latest pip installation [node_id=%s]", node_id)
+def _install_latest_pip(runner, name):
+    logger.info("installing latest pip installation [name=%s]", name)
     runner.run("wget -N https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py")
 
     package_installer = "yum" if len(runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
@@ -144,11 +144,15 @@ def prepare_configuration(worker_config, ctx):
     # being actually installed on
     worker_config['home'] = "/home/" + worker_config['user'] if worker_config['user'] != 'root' else '/root'
 
+    if "name" not in worker_config:
+        worker_config["name"] = ctx.node_id
+
     if VIRTUALENV_PATH_KEY not in worker_config:
-        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery-env"
+        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery-{0}-env".format(worker_config["name"])
 
     if CELERY_WORK_DIR_PATH_KEY not in worker_config:
-        worker_config[CELERY_WORK_DIR_PATH_KEY] = worker_config['home'] + "/celery-work"
+        worker_config[CELERY_WORK_DIR_PATH_KEY] = worker_config['home'] + "/celery-{0}-work"\
+                                                                          .format(worker_config["name"])
 
     if "env" not in worker_config:
         worker_config["env"] = {}
@@ -158,11 +162,11 @@ def prepare_configuration(worker_config, ctx):
 
     if "pid_file" not in worker_config:
         worker_config["pid_file"] = "{0}/{1}_worker.pid".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
-                                                                ctx.node_id)
+                                                                worker_config["name"])
 
     if "log_file" not in worker_config:
         worker_config["log_file"] = "{0}/{1}_worker.log".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
-                                                                ctx.node_id)
+                                                                worker_config["name"])
 
     if "install_vagrant" not in worker_config:
         worker_config["install_vagrant"] = False
@@ -178,7 +182,7 @@ def prepare_configuration(worker_config, ctx):
 
 
 def restart_celery_worker(runner, worker_config):
-    runner.sudo('service celeryd restart')
+    runner.sudo("service celeryd-{0} restart".format(worker_config["name"]))
     _verify_no_celery_error(runner, worker_config)
 
 
@@ -194,7 +198,7 @@ def _verify_no_celery_error(runner, worker_config):
         raise RuntimeError('Celery worker failed to start:\n{0}'.format(output))
 
 
-def _install_celery(runner, worker_config, node_id):
+def _install_celery(runner, worker_config):
 
     # this will also install celery because of transitive dependencies
     install_celery_plugin(runner, worker_config, COSMO_CELERY_URL)
@@ -223,10 +227,15 @@ def _install_celery(runner, worker_config, node_id):
 
 
     # daemonize
-    runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd")
-    runner.sudo("chmod +x /etc/init.d/celeryd")
-    config_file = build_celeryd_config(worker_config, node_id)
-    runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
+    runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd "
+                "-O /etc/init.d/celeryd-{0}".format(worker_config["name"]))
+    runner.sudo("chmod +x /etc/init.d/celeryd-{0}".format(worker_config["name"]))
+    config_file = build_celeryd_config(worker_config)
+    runner.put(config_file, "/etc/default/celeryd-{0}".format(worker_config["name"]), use_sudo=True)
+
+    # append the path to config file to the init script (hack, but works for now)
+    runner.sudo("sed -i '1 i'$'CELERY_DEFAULTS=/etc/default/celeryd-{0}\n' /etc/init.d/celeryd-{0}"
+                .format(worker_config["name"]))
 
     # build initial includes
     if _is_management_node(worker_config):
@@ -287,10 +296,10 @@ def build_env_string(env):
     return string
 
 
-def _create_virtualenv(runner, env_path, __cloudify_id):
-    logger.debug("installing virtualenv [node_id=%s]", __cloudify_id)
+def _create_virtualenv(runner, env_path, name):
+    logger.debug("installing virtualenv [name=%s]", name)
     runner.sudo("pip install virtualenv")
-    logger.debug("creating virtualenv [node_id=%s]", __cloudify_id)
+    logger.debug("creating virtualenv [name=%s]", name)
     runner.run("virtualenv {0}".format(env_path))
     logger.info("upgrading pip installation within virtualenv")
     runner.run("{0}/bin/pip install --upgrade pip".format(env_path))
@@ -309,7 +318,7 @@ def get_broker_url(worker_config):
         "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
 
 
-def build_celeryd_config(worker_config, node_id):
+def build_celeryd_config(worker_config):
 
     user = worker_config['user']
     broker_url = get_broker_url(worker_config)
@@ -340,9 +349,9 @@ CELERYD_OPTS="\
 --loglevel=debug \
 --app=%(app)s \
 --include=$INCLUDES \
--Q %(node_id)s \
+-Q %(name)s \
 --broker=%(broker_url)s \
---hostname=%(node_id)s"
+--hostname=%(name)s"
 ''' % dict(celeryd_includes="{0}/celeryd-includes".format(worker_config[CELERY_WORK_DIR_PATH_KEY]),
            env=env_string,
            celeryd_multi=get_celeryd_multi(worker_config),
@@ -350,5 +359,5 @@ CELERYD_OPTS="\
            pid_file=worker_config['pid_file'],
            log_file=worker_config['log_file'],
            app=COSMO_APP_NAME,
-           node_id=node_id,
+           name=worker_config["name"],
            broker_url=broker_url)

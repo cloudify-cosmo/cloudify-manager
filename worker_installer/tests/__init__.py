@@ -72,15 +72,18 @@ def get_local_worker_config():
         }
     }
 
-remote_worker_config = {
-    "user": "vagrant",
-    "port": 22,
-    "key": "~/.vagrant.d/insecure_private_key",
-    "env": {
-        "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-        "MANAGEMENT_IP": VAGRANT_MACHINE_IP
+
+def get_remote_worker_config():
+    return {
+        "user": "vagrant",
+        "port": 22,
+        "name": "test-worker-{0}".format(id_generator(3)),
+        "key": "~/.vagrant.d/insecure_private_key",
+        "env": {
+            "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
+            "MANAGEMENT_IP": VAGRANT_MACHINE_IP
+        }
     }
-}
 
 
 def get_local_context():
