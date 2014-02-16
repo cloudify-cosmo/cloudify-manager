@@ -476,27 +476,22 @@ class VagrantLxcBoot:
         }
 
         from cloudify.constants import MANAGEMENT_NODE_ID
-        cloudify_runtime = {
-            MANAGEMENT_NODE_ID: {
-                "ip": MANAGEMENT_NODE_ID
-            }
+
+        capabilities = {
+            'ip': MANAGEMENT_NODE_ID
         }
 
-        __cloudify_id = MANAGEMENT_NODE_ID
+        from cloudify.mocks import MockCloudifyContext
+        ctx = MockCloudifyContext(node_id="cloudify.management",
+                                  capabilities=capabilities)
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
-        install_worker(worker_config=worker_config,
-                       __cloudify_id=__cloudify_id,
-                       cloudify_runtime=cloudify_runtime,
-                       local=True)
+        install_worker(ctx, worker_config=worker_config, local=True)
 
         # start the worker now for all plugins to be registered
         from worker_installer.tasks import start
-        start(worker_config=worker_config,
-              cloudify_runtime=cloudify_runtime,
-              __cloudify_id=__cloudify_id,
-              local=True)
+        start(ctx, worker_config=worker_config, local=True)
 
     def install_vagrant(self):
         vagrant_file_name = "vagrant_1.2.7_x86_64.deb"
