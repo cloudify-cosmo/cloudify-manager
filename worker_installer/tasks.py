@@ -237,13 +237,10 @@ def _install_celery(runner, worker_config):
     runner.sudo("sed -i '1 iCELERY_DEFAULTS=/etc/default/celeryd-{0}' /etc/init.d/celeryd-{0}"
                 .format(worker_config["name"]))
 
-    logger.debug("\n" + runner.get("/etc/init.d/celeryd-{0}".format(worker_config["name"])))
-
     # expose celery work directory
     runner.sudo("sed -i '1 iexport {0}={1}' /etc/init.d/celeryd-{2}"
                 .format(CELERY_WORK_DIR_PATH_KEY, worker_config[CELERY_WORK_DIR_PATH_KEY], worker_config["name"]))
 
-    logger.debug("\n" + runner.get("/etc/init.d/celeryd-{0}".format(worker_config["name"])))
 
     # build initial includes
     if _is_management_node(worker_config):
