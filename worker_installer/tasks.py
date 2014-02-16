@@ -27,9 +27,9 @@ from celery.utils.log import get_task_logger
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
-from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
-from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, \
-    VAGRANT_PROVISIONER_PLUGIN_PATH, MANAGER_IP_KEY, LOCAL_IP_KEY
+from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, \
+    BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, \
+    VAGRANT_PROVISIONER_PLUGIN_PATH, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -236,6 +236,10 @@ def _install_celery(runner, worker_config):
     # append the path to config file to the init script (hack, but works for now)
     runner.sudo("sed -i '1 i'$'CELERY_DEFAULTS=/etc/default/celeryd-{0}\n' /etc/init.d/celeryd-{0}"
                 .format(worker_config["name"]))
+
+    # expose celery work directory
+    runner.sudo("sed -i '1 i'$'export {0}={1}\n' /etc/init.d/celeryd"
+                .format(CELERY_WORK_DIR_PATH_KEY, worker_config[CELERY_WORK_DIR_PATH_KEY]))
 
     # build initial includes
     if _is_management_node(worker_config):
