@@ -16,8 +16,6 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
-from cloudify.manager import set_node_stopped
-from cloudify.utils import get_local_ip
 
 
 RUNNING = "running"
@@ -57,7 +55,7 @@ def stop(ctx, **kwargs):
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
     machines[ctx.node_id] = NOT_RUNNING
-    set_node_stopped(ctx.node_id, get_local_ip())
+    ctx.set_stopped()
 
 
 @operation
