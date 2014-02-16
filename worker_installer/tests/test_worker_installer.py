@@ -18,8 +18,8 @@ import unittest
 import time
 
 from worker_installer.tests import get_logger, get_remote_runner, get_local_runner, \
-    id_generator, remote_worker_config, get_local_worker_config, get_local_context, get_local_manager_context, \
-    get_remote_context, get_remote_manager_context
+    id_generator, get_remote_worker_config, get_local_worker_config, get_local_context, get_remote_context, \
+    get_local_management_worker_config, get_remote_management_worker_config
 
 
 __author__ = 'elip'
@@ -75,8 +75,8 @@ def _test_install(ctx, worker_config, local=False):
     logger.info("Detected plugins : {0}".format(plugins))
 
     # check built in agent plugins are registered
-    assert 'celery.{0}@plugin_installer'.format(ctx.node_id) in plugins
-    assert 'celery.{0}@kv_store'.format(ctx.node_id) in plugins
+    assert 'celery.{0}@plugin_installer'.format(worker_config["name"]) in plugins
+    assert 'celery.{0}@kv_store'.format(worker_config["name"]) in plugins
 
 
 class TestRemoteInstallerCase(unittest.TestCase):
@@ -97,10 +97,14 @@ class TestRemoteInstallerCase(unittest.TestCase):
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
     def test_install_worker(self):
-        _test_install(get_remote_context(), remote_worker_config, local=False)
+        _test_install(get_remote_context(), get_remote_worker_config(), local=False)
+
+    def test_install_multiple_workers(self):
+        _test_install(get_remote_context(), get_remote_worker_config(), local=False)
+        _test_install(get_remote_context(), get_remote_worker_config(), local=False)
 
     def test_install_management_worker(self):
-        _test_install(get_remote_manager_context(), remote_worker_config, local=False)
+        _test_install(get_remote_context(), get_remote_management_worker_config(), local=False)
 
 
 class TestLocalInstallerCase(unittest.TestCase):
@@ -117,7 +121,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         _test_install(get_local_context(), get_local_worker_config(), local=True)
 
     def test_install_management_worker(self):
-        _test_install(get_local_manager_context(), get_local_worker_config(), local=True)
+        _test_install(get_local_context(), get_local_management_worker_config(), local=True)
 
     def test_create_env_string(self):
         env = {
