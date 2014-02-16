@@ -226,8 +226,8 @@ def _install_celery(runner, worker_config, node_id):
     runner.put(config_file, "/etc/default/celeryd", use_sudo=True)
 
     # append the path to config file to the init script (hack, but works for now)
-    runner.sudo("sed -i '1 i'$'export {0}={1}\n' /etc/init.d/celeryd-{2}"
-                .format(CELERY_WORK_DIR_PATH_KEY, worker_config[CELERY_WORK_DIR_PATH_KEY], worker_config["name"]))
+    runner.sudo("sed -i '1 i'$'export {0}={1}\n' /etc/init.d/celeryd"
+                .format(CELERY_WORK_DIR_PATH_KEY, worker_config[CELERY_WORK_DIR_PATH_KEY]))
 
 
     # build initial includes
