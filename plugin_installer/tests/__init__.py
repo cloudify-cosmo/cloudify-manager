@@ -29,6 +29,6 @@ def get_logger(name):
     logger.level = logging.DEBUG
     return logger
 
+
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for x in range(size))
-

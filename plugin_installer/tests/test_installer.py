@@ -93,7 +93,6 @@ class PluginInstallerTestCase(unittest.TestCase):
 
         os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
 
-
         install_celery_plugin(plugin=self.plugins['plugin_with_dependencies'])
 
         # check the plugin was installed
