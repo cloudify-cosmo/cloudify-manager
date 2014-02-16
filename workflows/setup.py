@@ -35,7 +35,7 @@ COSMO_MANAGER_REST_CLIENT = "https://github.com/CloudifySource/" \
             COSMO_MANAGER_REST_CLIENT_VERSION)
 
 COSMO_CELERY_VERSION = '0.3'
-COSMO_CELERY_BRANCH = 'feature/CLOUDIFY-2425-riemann-multi-deployments'
+COSMO_CELERY_BRANCH = 'develop'
 COSMO_CELERY = "https://github.com/CloudifySource/" \
                "cosmo-celery-common/tarball/{" \
                "0}#egg=cosmo-celery-common-{1}" \

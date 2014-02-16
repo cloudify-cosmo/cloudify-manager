@@ -15,7 +15,6 @@
 
 from time import time
 from cloudify.decorators import operation
-from cloudify.manager import set_node_stopped
 
 
 state = []
@@ -37,7 +36,7 @@ def make_reachable(ctx, **kwargs):
 
 @operation
 def make_unreachable(ctx, **kwargs):
-    set_node_stopped(ctx.node_id, 'localhost')
+    ctx.set_stopped()
     global unreachable_call_order
     unreachable_call_order.append({
         'id': ctx.node_id,

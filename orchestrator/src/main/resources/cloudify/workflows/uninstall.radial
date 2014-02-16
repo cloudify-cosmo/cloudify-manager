@@ -15,8 +15,6 @@ define uninstall_deployment
             event event: { "stage" => "Stopping node" }
             log message: 'executing stop workflow for node: ${node.id}'
 
-            event event: { "stage" => "wf: ${f:node.workflows.stop}" }
-
             # 'stop' is a Ruote reserved word so therefore '_stop'
             set 'v:_stop': "$f:node.workflows.stop"
             _stop

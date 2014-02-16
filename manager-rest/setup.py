@@ -18,7 +18,7 @@ __author__ = 'dank'
 from setuptools import setup
 
 DSL_PARSER_VERSION = '0.3'
-DSL_PARSER_BRANCH = 'feature/CLOUDIFY-2425-riemann-multi-deployments'
+DSL_PARSER_BRANCH = 'develop'
 DSL_PARSER = 'https://github.com/CloudifySource/cosmo-plugin-dsl-parser/'\
              'tarball/{0}#egg=cosmo-plugin-dsl-parser-{1}'\
              .format(DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
