@@ -1,11 +1,4 @@
-define initialize_nodes
-
-    log message: 'Reloading policies'
-    event event: { "stage" => "Initializing monitoring policies" }
-    reload_riemann_config app_id: '${plan.name}',
-                          policies: '$plan.policies',
-                          rules: '$plan.rules',
-                          policies_events: '$plan.policies_events'
+define install_deployment
 
     log message: 'processing nodes: ${plan.nodes}'
     concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'

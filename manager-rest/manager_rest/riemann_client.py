@@ -57,7 +57,7 @@ class RiemannClient(object):
             for state in states:
                 host = state.host
                 node_reachable_state = {'reachable': False, 'host': host}
-                if 'reachable' in state.tags:
+                if 'started' in state.state:
                     node_reachable_state = {'reachable': True,
                                             'host': state.host}
                     break

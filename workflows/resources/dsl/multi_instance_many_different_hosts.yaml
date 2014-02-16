@@ -4,7 +4,7 @@ imports:
 
 blueprint:
     name: multi_instance_many_different_hosts
-    topology:
+    nodes:
         -   name: host1
             type: test_host
             instances:

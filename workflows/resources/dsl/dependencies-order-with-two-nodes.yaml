@@ -4,7 +4,7 @@ imports:
 
 blueprint:
     name: "mock_app"
-    topology:
+    nodes:
         -   name: "containing_node"
             type: "mock_type"
 

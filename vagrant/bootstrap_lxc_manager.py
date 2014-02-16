@@ -256,7 +256,6 @@ class VagrantLxcBoot:
 
     RIEMANN_PID = "RIEMANN_PID"
     RIEMANN_CONFIG = "RIEMANN_CONFIG"
-    RIEMANN_TEMPLATE = "RIEMANN_CONFIG_TEMPLATE"
     MANAGEMENT_IP = "MANAGEMENT_IP"
     BROKER_URL = "BROKER_URL"
     MANAGER_REST_PORT = "MANAGER_REST_PORT"
@@ -341,44 +340,20 @@ class VagrantLxcBoot:
     def install_riemann(self):
         self.wget("http://aphyr.com/riemann/riemann_0.2.2_all.deb")
         self.runner.sudo("dpkg -i riemann_0.2.2_all.deb")
-        (riemann_work_path, riemann_config_path,
-         riemann_template_path) = self._get_riemann_paths()
+        riemann_work_path, riemann_config_path = self._get_riemann_paths()
         if os.path.exists(riemann_work_path):
             self.runner.run("rm -rf {0}".format(riemann_work_path))
         os.makedirs(riemann_work_path)
         self.runner.run("cp {0} {1}".format("{0}/riemann.config"
                                             .format(self.config_dir),
                         riemann_config_path))
-        self.runner.run("cp {0} {1}".format("{0}/riemann.config.template"
-                                            .format(self.config_dir),
-                        riemann_template_path))
         riemann = RiemannProcess(riemann_config_path)
         riemann.start()
-        return {
-            self.RIEMANN_PID: riemann.pid,
-            self.RIEMANN_CONFIG: riemann_config_path,
-            self.RIEMANN_TEMPLATE: riemann_template_path
-        }
-
-    def get_riemann_info(self):
-        (riemann_work_path, riemann_config_path,
-         riemann_template_path) = self._get_riemann_paths()
-        riemann = RiemannProcess(riemann_config_path)
-        pid = riemann.find_existing_riemann_process()
-        if not pid:
-            raise RuntimeError("Riemann server is not running")
-        return {
-            self.RIEMANN_PID: pid,
-            self.RIEMANN_CONFIG: riemann_config_path,
-            self.RIEMANN_TEMPLATE: riemann_template_path
-        }
 
     def _get_riemann_paths(self):
         riemann_work_path = os.path.join(self.working_dir, 'riemann')
         riemann_config_path = os.path.join(riemann_work_path, 'riemann.config')
-        riemann_template_path = os.path.join(riemann_work_path,
-                                             'riemann.config.template')
-        return riemann_work_path, riemann_config_path, riemann_template_path
+        return riemann_work_path, riemann_config_path
 
     def install_java(self):
         self.apt_get("install -y openjdk-7-jdk")
@@ -450,7 +425,7 @@ class VagrantLxcBoot:
                                         'orchestrator')
         copy_resources(file_server_dir, orchestrator_dir)
 
-    def install_celery_worker(self, riemann_info):
+    def install_celery_worker(self):
 
         # download and install the worker_installer
         self.pip(WORKER_INSTALLER)
@@ -469,9 +444,6 @@ class VagrantLxcBoot:
                 self.MANAGEMENT_IP: self.management_ip,
                 self.BROKER_URL: "amqp://guest:guest@{0}:5672//"
                                  .format(self.management_ip),
-                self.RIEMANN_PID: riemann_info[self.RIEMANN_PID],
-                self.RIEMANN_CONFIG: riemann_info[self.RIEMANN_CONFIG],
-                self.RIEMANN_TEMPLATE: riemann_info[self.RIEMANN_TEMPLATE],
                 self.MANAGER_REST_PORT: "8100"
             }
         }
@@ -650,11 +622,11 @@ rm /root/guest_additions.sh
                 self.install_lxc_docker()
                 self.install_kernel()
                 self.install_vagrant()
-            riemann_info = self.install_riemann()
+            self.install_riemann()
             if self.install_logstash:
                 self._install_logstash()
             self.install_cosmo_manager()
-            self.install_celery_worker(riemann_info)
+            self.install_celery_worker()
         else:
             # just update the worker
             try:
@@ -663,7 +635,7 @@ rm /root/guest_additions.sh
                 print "Failed stopping celeryd service. maybe it was not " \
                       "running? : {0}".format(e.message)
             self.runner.sudo("rm -rf cosmo_celery_common-*")
-            self.install_celery_worker(self.get_riemann_info())
+            self.install_celery_worker()
 
 
 if __name__ == '__main__':
