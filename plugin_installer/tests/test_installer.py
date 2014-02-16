@@ -27,7 +27,7 @@ from plugin_installer.tasks import get_plugin_simple_name, \
     install_celery_plugin, uninstall_celery_plugin, \
     extract_plugin_name, write_to_includes, extract_module_paths
 from plugin_installer.tests import get_logger
-from cloudify.constants import VIRTUALENV_PATH_KEY
+from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
 
 
 logger = get_logger("PluginInstallerTestCase")
@@ -71,6 +71,10 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_install(self):
 
+        temp_folder = os.path.join(tempfile.gettempdir())
+
+        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
+
         install_celery_plugin(plugin=self.plugins['plugin'])
 
         # check the plugin was installed
@@ -78,6 +82,11 @@ class PluginInstallerTestCase(unittest.TestCase):
         print m.var
 
     def test_install_with_dependencies(self):
+
+        temp_folder = os.path.join(tempfile.gettempdir())
+
+        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
+
 
         install_celery_plugin(plugin=self.plugins['plugin_with_dependencies'])
 
@@ -126,6 +135,10 @@ class PluginInstallerTestCase(unittest.TestCase):
             os.remove("{0}/celeryd-includes".format(temp_folder))
 
     def test_extract_module_paths(self):
+
+        temp_folder = os.path.join(tempfile.gettempdir())
+
+        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
 
         install_celery_plugin(self.plugins['plugin'])
 
