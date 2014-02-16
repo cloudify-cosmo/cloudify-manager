@@ -21,7 +21,7 @@ define start_deployment_worker
   }
 
   log message: 'installing plugin for deployment ${deployment_id}'
-  iterator on: '$node.plugins_to_install', to_v: 'plugin'
+  iterator on: '$plan.management_plugins_to_install', to_v: 'plugin'
       log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
       execute_task target: 'celery.${deployment_id}', exec: "plugin_installer.tasks.install", payload: {
           plugin: {
