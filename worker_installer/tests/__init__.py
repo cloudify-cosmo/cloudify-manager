@@ -67,7 +67,6 @@ def get_local_management_worker_config():
         "management": True,
         "broker": "amqp://",
         "name": "test-worker-{0}".format(id_generator(3)),
-        "VIRTUALENV": "/home/{0}/celery-{1}".format(getpass.getuser(), id_generator(3)),
         "env": {
             "BROKER_URL": "amqp://guest:guest@localhost:5672//",
             "MANAGEMENT_IP": "localhost"
@@ -80,7 +79,6 @@ def get_local_worker_config():
         "user": getpass.getuser(),
         "broker": "amqp://",
         "name": "test-worker-{0}".format(id_generator(3)),
-        "VIRTUALENV": "/home/{0}/celery-{1}".format(getpass.getuser(), id_generator(3)),
         "env": {
             "BROKER_URL": "amqp://guest:guest@localhost:5672//",
             "MANAGEMENT_IP": "localhost"
