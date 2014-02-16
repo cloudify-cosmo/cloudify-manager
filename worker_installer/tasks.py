@@ -27,7 +27,7 @@ from celery.utils.log import get_task_logger
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
-from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, MANAGEMENT_NODE_ID, \
+from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, \
     BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, \
     VAGRANT_PROVISIONER_PLUGIN_PATH, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY
 
@@ -153,6 +153,9 @@ def prepare_configuration(worker_config, ctx):
     if "env" not in worker_config:
         worker_config["env"] = {}
 
+    if "management" not in worker_config:
+        worker_config["management"] = False
+
     if "pid_file" not in worker_config:
         worker_config["pid_file"] = "{0}/{1}_worker.pid".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
                                                                 ctx.node_id)
@@ -202,7 +205,7 @@ def _install_celery(runner, worker_config, node_id):
     # install the kv store
     install_celery_plugin(runner, worker_config, KV_STORE_URL)
 
-    if _is_management_node(node_id):
+    if _is_management_node(worker_config):
 
             # install the agent installer
             install_celery_plugin(runner, worker_config, AGENT_INSTALLER_URL)
@@ -231,7 +234,7 @@ def _install_celery(runner, worker_config, node_id):
 
 
     # build initial includes
-    if _is_management_node(node_id):
+    if _is_management_node(worker_config):
         includes_list = BUILT_IN_MANAGEMENT_PLUGINS
         if worker_config["install_openstack"]:
             includes_list.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
@@ -244,8 +247,8 @@ def _install_celery(runner, worker_config, node_id):
                "{0}/celeryd-includes".format(worker_config[CELERY_WORK_DIR_PATH_KEY]), use_sudo=False)
 
 
-def _is_management_node(node_id):
-    return node_id == MANAGEMENT_NODE_ID
+def _is_management_node(worker_config):
+    return worker_config["management"]
 
 
 def install_celery_plugin(runner, worker_config, plugin_url):
@@ -320,6 +323,7 @@ def build_celeryd_config(worker_config, node_id):
     if 'env' in worker_config:
         env = worker_config['env']
 
+    env["IS_MANAGEMENT_NODE"] = worker_config["management"]
     env[VIRTUALENV_PATH_KEY] = worker_config[VIRTUALENV_PATH_KEY]
     env[CELERY_WORK_DIR_PATH_KEY] = worker_config[CELERY_WORK_DIR_PATH_KEY]
 
