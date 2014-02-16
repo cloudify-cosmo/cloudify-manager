@@ -16,12 +16,14 @@
 
 import logging
 
+from cloudify.decorators import operation
+
+
 __author__ = 'elip'
 
 import os
 
 from celery.utils.log import get_task_logger
-from celery import task
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
@@ -58,10 +60,10 @@ logger.level = logging.DEBUG
 BROKER_URL = "BROKER_URL"
 
 
-@task
-def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwargs):
+@operation
+def install(ctx, worker_config, local=False, **kwargs):
 
-    prepare_configuration(worker_config, cloudify_runtime, __cloudify_id)
+    prepare_configuration(worker_config, ctx)
 
     host_string = key_filename = None
     if not local:
@@ -70,20 +72,20 @@ def install(worker_config, __cloudify_id, cloudify_runtime, local=False, **kwarg
 
     runner = create_runner(local, host_string, key_filename)
 
-    _install_latest_pip(runner, __cloudify_id)
+    _install_latest_pip(runner, ctx.node_id)
 
     logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
 
-    _create_virtualenv(runner, worker_config[VIRTUALENV_PATH_KEY], __cloudify_id)
-    _install_celery(runner, worker_config, __cloudify_id)
+    _create_virtualenv(runner, worker_config[VIRTUALENV_PATH_KEY], ctx.node_id)
+    _install_celery(runner, worker_config, ctx.node_id)
 
 
-@task
-def start(worker_config, cloudify_runtime, __cloudify_id, local=False, **kwargs):
+@operation
+def start(ctx, worker_config, local=False, **kwargs):
 
     logger.info("starting celery worker")
 
-    prepare_configuration(worker_config, cloudify_runtime, __cloudify_id)
+    prepare_configuration(worker_config, ctx)
 
     host_string = key_filename = None
     if not local:
@@ -99,10 +101,10 @@ def start(worker_config, cloudify_runtime, __cloudify_id, local=False, **kwargs)
     _verify_no_celery_error(runner, worker_config)
 
 
-@task
-def restart(worker_config, cloudify_runtime, __cloudify_id, local=False, **kwargs):
+@operation
+def restart(ctx, worker_config, local=False, **kwargs):
 
-    prepare_configuration(worker_config, cloudify_runtime, __cloudify_id)
+    prepare_configuration(worker_config, ctx)
 
     host_string = key_filename = None
     if not local:
@@ -133,10 +135,13 @@ def _install_latest_pip(runner, node_id):
     runner.sudo("python get-pip.py")
 
 
-def prepare_configuration(worker_config, cloudify_runtime, node_id):
-    ip = get_machine_ip(cloudify_runtime)
+def prepare_configuration(worker_config, ctx):
+    ip = get_machine_ip(ctx)
     worker_config['host'] = ip
-    #root user has no "/home/" prepended to its home directory
+
+    # root user has no "/home/" prepended to its home directory
+    # we cannot use expanduser('~') here since this code may run on a different machine than the one the worker is
+    # being actually installed on
     worker_config['home'] = "/home/" + worker_config['user'] if worker_config['user'] != 'root' else '/root'
 
     if VIRTUALENV_PATH_KEY not in worker_config:
@@ -149,10 +154,12 @@ def prepare_configuration(worker_config, cloudify_runtime, node_id):
         worker_config["env"] = {}
 
     if "pid_file" not in worker_config:
-        worker_config["pid_file"] = "{0}/{1}_worker.pid".format(worker_config[CELERY_WORK_DIR_PATH_KEY], node_id)
+        worker_config["pid_file"] = "{0}/{1}_worker.pid".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
+                                                                ctx.node_id)
 
     if "log_file" not in worker_config:
-        worker_config["log_file"] = "{0}/{1}_worker.log".format(worker_config[CELERY_WORK_DIR_PATH_KEY], node_id)
+        worker_config["log_file"] = "{0}/{1}_worker.log".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
+                                                                ctx.node_id)
 
     if "install_vagrant" not in worker_config:
         worker_config["install_vagrant"] = False
@@ -242,15 +249,15 @@ def install_celery_plugin(runner, worker_config, plugin_url):
     runner.run("{0} install --process-dependency-links {1}".format(get_pip(worker_config), plugin_url))
 
 
-def get_machine_ip(cloudify_runtime):
-    if not cloudify_runtime:
-        raise ValueError('cannot get machine ip - cloudify_runtime is not set')
+def get_machine_ip(ctx):
 
-    for value in cloudify_runtime.values():
-        if 'ip' in value:
-            return value['ip']
+    if not ctx:
+        raise ValueError('cannot get machine ip - ctx is not set')
 
-    raise ValueError('cannot get machine ip - cloudify_runtime format error')
+    if 'ip' in ctx.capabilities:
+        return ctx.capabilities['ip']
+    else:
+        raise ValueError('cannot get machine ip - ctx.capabilities format error')
 
 
 def get_pip(worker_config):
