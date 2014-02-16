@@ -6,7 +6,7 @@ imports:
 
 blueprint:
     name: "simple_web_server"
-    topology:
+    nodes:
         -   name: "host"
             type: "test_host_type"
             interfaces:

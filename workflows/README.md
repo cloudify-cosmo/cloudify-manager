@@ -6,7 +6,7 @@ Cosmo Workflows
 The purpose of this project is to test cosmo workflows (ruote) started by cosmo's `orchestrator` component.
 The tests are written in python and the test environment starts a celery worker and a riemann server before running the tests.
 
-For a test example see: `tests/workflow/test_workflow.py`
+For a test example see: `workflow_tests/test_workflow.py`
 
 
 ## Requirements

@@ -252,7 +252,6 @@ class CeleryWorkerProcess(object):
     _process = None
 
     def __init__(self, tempdir, plugins_tempdir, cosmo_path,
-                 riemann_config_path, riemann_template_path, riemann_pid,
                  manager_rest_port):
         self._celery_pid_file = path.join(tempdir, "celery.pid")
         self._cosmo_path = cosmo_path
@@ -260,15 +259,12 @@ class CeleryWorkerProcess(object):
         self._tempdir = tempdir
         self._plugins_tempdir = plugins_tempdir
         self._cosmo_plugins = self._app_path
-        self._riemann_config_path = riemann_config_path
-        self._riemann_template_path = riemann_template_path
-        self._riemann_pid = riemann_pid
         self._manager_rest_port = manager_rest_port
 
     def _build_includes(self):
 
         # mandatory REAL plugins for the tests framework
-        includes = ['plugin_installer.tasks', 'riemann_config_loader.tasks']
+        includes = ['plugin_installer.tasks']
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path\
@@ -287,9 +283,7 @@ class CeleryWorkerProcess(object):
         return includes
 
     def _copy_cosmo_plugins(self):
-        import riemann_config_loader
         import plugin_installer
-        self._copy_plugin(riemann_config_loader)
         self._copy_plugin(plugin_installer)
 
     def _copy_plugin(self, plugin):
@@ -340,9 +334,6 @@ class CeleryWorkerProcess(object):
 
         environment = os.environ.copy()
         environment['TEMP_DIR'] = self._plugins_tempdir
-        environment['RIEMANN_PID'] = str(self._riemann_pid)
-        environment['RIEMANN_CONFIG'] = self._riemann_config_path
-        environment['RIEMANN_CONFIG_TEMPLATE'] = self._riemann_template_path
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
         environment['MANAGEMENT_IP'] = 'localhost'
         environment['AGENT_IP'] = 'localhost'
@@ -580,10 +571,7 @@ class TestEnvironment(object):
 
             # riemann
             riemann_config_path = path.join(self._tempdir, "riemann.config")
-            riemann_template_path = path.join(self._tempdir,
-                                              "riemann.config.template")
-            self._generate_riemann_config(riemann_config_path,
-                                          riemann_template_path)
+            self._generate_riemann_config(riemann_config_path)
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
@@ -593,8 +581,6 @@ class TestEnvironment(object):
             plugins_path = path.dirname(path.realpath(plugins.__file__))
             self._celery_worker_process = CeleryWorkerProcess(
                 self._tempdir, self._plugins_tempdir, plugins_path,
-                riemann_config_path, riemann_template_path,
-                self._riemann_process.pid,
                 manager_rest_port)
             self._celery_worker_process.start()
             self.storage_file_path = STORAGE_FILE_PATH
@@ -705,12 +691,9 @@ class TestEnvironment(object):
             TestEnvironment._instance._manager_rest_process.reset_data()
 
     @classmethod
-    def _generate_riemann_config(cls, riemann_config_path,
-                                 riemann_template_path):
+    def _generate_riemann_config(cls, riemann_config_path):
         source_path = get_resource('riemann/riemann.config')
         shutil.copy(source_path, riemann_config_path)
-        source_path = get_resource('riemann/riemann.config.template')
-        shutil.copy(source_path, riemann_template_path)
 
 
 class TestCase(unittest.TestCase):
@@ -727,6 +710,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.destroy(TestEnvironmentScope.CLASS)
 
     def setUp(self):
+        self.logger = logging.getLogger(self._testMethodName)
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):

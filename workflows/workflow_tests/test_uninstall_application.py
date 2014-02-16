@@ -15,10 +15,13 @@
 
 __author__ = 'eitany'
 
+import os
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
+from cloudify.manager import set_node_stopped
+from cloudify.constants import MANAGER_IP_KEY
 
 
 class TestUninstallApplication(TestCase):
@@ -44,12 +47,14 @@ class TestUninstallApplication(TestCase):
 
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
-        print('starting deploy process')
+
+        self.logger.info('starting deploy process')
         deployment_id = deploy(dsl_path).id
-        print('deploy completed')
-        print('starting undeploy process')
+        self.logger.info('deploy completed')
+
+        self.logger.info('starting undeploy process')
         undeploy(deployment_id)
-        print('undeploy completed')
+        self.logger.info('undeploy completed')
 
         from plugins.cloudmock.tasks import get_machines
         result = self.send_task(get_machines)
@@ -66,10 +71,12 @@ class TestUninstallApplication(TestCase):
         #make node unreachable
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        from plugins.test_events import set_unreachable
         states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
-        set_unreachable(node_id)
+
+        os.environ[MANAGER_IP_KEY] = 'localhost'
+        set_node_stopped(node_id, 'localhost')
+
         import time
         time.sleep(10)
         print('starting undeploy process')

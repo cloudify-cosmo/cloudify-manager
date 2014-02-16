@@ -14,11 +14,7 @@
 #    * limitations under the License.
 
 from time import time
-
 from cloudify.decorators import operation
-
-from plugins.test_events import set_reachable as reachable
-from plugins.test_events import set_unreachable as unreachable
 
 
 state = []
@@ -29,7 +25,7 @@ mock_operation_invocation = []
 
 @operation
 def make_reachable(ctx, **kwargs):
-    reachable(ctx.node_id)
+    ctx.set_started()
     global state
     state.append({
         'id': ctx.node_id,
@@ -40,7 +36,7 @@ def make_reachable(ctx, **kwargs):
 
 @operation
 def make_unreachable(ctx, **kwargs):
-    unreachable(ctx.node_id)
+    ctx.set_stopped()
     global unreachable_call_order
     unreachable_call_order.append({
         'id': ctx.node_id,

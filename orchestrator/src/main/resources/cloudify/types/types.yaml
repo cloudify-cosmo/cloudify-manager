@@ -5,7 +5,6 @@ imports:
     - 'celery_worker_installer'
     - 'celery_plugin_installer'
     - 'kv_store'
-    - 'cloudify.policies'
 
 ##################################################################################
 # Base type definitions
@@ -37,12 +36,6 @@ types:
             delete:
                 ref: cloudify.workflows.node.delete
 
-        policies:
-            -   name: start_detection_policy
-                rules:
-                    -   type: state_equals
-                        properties:
-                            state: running
 
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
