@@ -4,12 +4,12 @@ Workflow Service
 Provides a REST api on top of `Ruote` for launching and monitoring Cloudify Cosmo workflows using the `Sinatra` framework.
 
 ## Requirements
-* JRuby 1.7.3 (Jython requirement).
+* Ruby 2.1.0 (We test it on this version, it might also work on older ruby versions)
 
 ## Usage
 
 ### Installation
-* Install JRuby.
+* Make sure Ruby 2.1.0 is installed.
 * Make sure `bundler` is installed (gem install bundler).
 * Run:
 

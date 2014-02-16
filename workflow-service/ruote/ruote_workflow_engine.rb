@@ -14,26 +14,16 @@
 #  * limitations under the License.
 #
 
-require 'java'
 require 'ruote'
 require 'json'
 require 'thread'
 require 'pathname'
 
-require_relative '../../orchestrator/target/cosmo.jar'
 require_relative '../participants/all'
 require_relative '../data/workflow_state'
 require_relative '../utils/logs'
 require_relative '../utils/events'
-
-java_import org.cloudifysource.cosmo.tasks.EventHandler
-java_import org.springframework.context.annotation.AnnotationConfigApplicationContext
-java_import org.cloudifysource.cosmo.orchestrator.workflow.config.RuoteServiceDependenciesConfig
-java_import org.cloudifysource.cosmo.logging.LoggerFactory
-java_import org.apache.log4j.Logger
-java_import org.apache.log4j.Level
-java_import org.cloudifysource.cosmo.logger.CosmoDeploymentsFileAppender
-
+require_relative '../amqp/task_executor'
 
 class RuoteWorkflowEngine
 
@@ -53,14 +43,13 @@ class RuoteWorkflowEngine
     # in tests this will not work since Riemann is supposed to be running.
     test = opts[:test]
     if test.nil? or test.eql?(false)
-      @context = create_service_dependencies
       $ruote_properties = {
-        'executor' => @context.get_bean('taskExecutor'),
+        'executor' => TaskExecutor.new,
       }
     end
 
     # create loggers
-    $logger = LoggerFactory.get_logger('org.cloudifysource.cosmo.orchestrator.workflow.RuoteRuntime')
+    $logger = StubLogger.new
 
     # load built in workflows
     load_built_in_workflows
@@ -68,16 +57,6 @@ class RuoteWorkflowEngine
 
   def close
     @dashboard.shutdown
-    if @context
-      @context.close
-    end
-  end
-
-  def create_service_dependencies
-    context = AnnotationConfigApplicationContext.new
-    context.register RuoteServiceDependenciesConfig.java_class
-    context.refresh
-    context
   end
 
   def launch(radial, fields={}, tags={})
