@@ -20,6 +20,8 @@ import random
 import string
 import tempfile
 
+from cloudify.mocks import MockCloudifyContext
+
 from worker_installer.tasks import FabricRetryingRunner
 
 
@@ -77,19 +79,45 @@ remote_worker_config = {
     "env": {
         "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
         "MANAGEMENT_IP": VAGRANT_MACHINE_IP
-
-    },
-}
-
-
-local_cloudify_runtime = {
-    "cloudify.management": {
-        "ip": "127.0.0.1"
     }
 }
 
-remote_cloudify_runtime = {
-    "cloudify.management": {
-        "ip": VAGRANT_MACHINE_IP
+
+def get_local_context():
+
+    capabilities = {
+        'ip': '127.0.0.1'
     }
-}
+
+    return MockCloudifyContext(node_id="cloudify.agent",
+                               capabilities=capabilities)
+
+
+def get_remote_context():
+
+    capabilities = {
+        'ip': VAGRANT_MACHINE_IP
+    }
+
+    return MockCloudifyContext(node_id="cloudify.agent",
+                               capabilities=capabilities)
+
+
+def get_local_manager_context():
+
+    capabilities = {
+        'ip': '127.0.0.1'
+    }
+
+    return MockCloudifyContext(node_id="cloudify.management",
+                               capabilities=capabilities)
+
+
+def get_remote_manager_context():
+
+    capabilities = {
+        'ip': VAGRANT_MACHINE_IP
+    }
+
+    return MockCloudifyContext(node_id="cloudify.management",
+                               capabilities=capabilities)

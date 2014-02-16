@@ -17,9 +17,12 @@
 import os
 import shutil
 import tempfile
+
 import vagrant
+
 from worker_installer.tests import get_logger
 from worker_installer.tests import VAGRANT_MACHINE_IP
+
 
 __author__ = 'elip'
 
@@ -37,7 +40,7 @@ def launch_vagrant(vm_id, ran_id):
         Vagrant.configure("2") do |config|
             config.vm.box = "precise64"
             config.vm.network :private_network, ip: '{0}'
-            config.vm.provision :shell, :inline => "sudo ufw disable"
+            config.vm.provision :shell, :inline => "sudo ufw disable && sudo apt-get -y -q update && sudo apt-get -y -q install python-dev"
         end
 
         """.format(VAGRANT_MACHINE_IP)
