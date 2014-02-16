@@ -1,6 +1,5 @@
 define start_deployment_worker
 
-  event event: { "stage" => "In start_deployment_worker. plan is ${plan}" }
   sequence if: '${plan.is_management_plugins_to_install} == true'
       log message: 'installing worker for deployment ${deployment_id}'
       event event: { "stage" => "Installing management worker for deployment ${deployment_id}" }
