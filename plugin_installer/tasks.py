@@ -24,7 +24,7 @@ import _ast
 from os import path
 
 from celery.utils.log import get_task_logger
-from cloudify.constants import VIRTUALENV_PATH_KEY
+from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
 from cloudify.utils import get_cosmo_properties
 from cloudify.decorators import operation
 
@@ -161,7 +161,7 @@ def write_to_includes(module_paths, includes_path=None):
 
     if not includes_path:
         includes_path = "{0}/celeryd-includes"\
-                        .format(os.environ[VIRTUALENV_PATH_KEY])
+                        .format(os.environ[CELERY_WORK_DIR_PATH_KEY])
 
     if os.path.exists(includes_path):
         with open(includes_path, mode='r') as f:

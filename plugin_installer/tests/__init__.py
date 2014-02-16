@@ -15,6 +15,8 @@
 # ***************************************************************************/
 
 import logging
+import random
+import string
 
 __author__ = 'elip'
 
@@ -26,3 +28,7 @@ def get_logger(name):
     logger = logging.getLogger(name)
     logger.level = logging.DEBUG
     return logger
+
+
+def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for x in range(size))
