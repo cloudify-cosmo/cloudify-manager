@@ -28,7 +28,7 @@ from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, \
-    BUILT_IN_MANAGEMENT_PLUGINS, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY
+    BUILT_IN_MANAGEMENT_PLUGINS, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY, MANAGER_REST_PORT_KEY
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -303,10 +303,25 @@ def get_broker_url(worker_config):
         "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
 
 
+def get_manager_rest_port(worker_config):
+    """
+    Gets the broker URL from either os.environ or worker_config[env].
+    Raises a RuntimeError if neither exist.
+    """
+    if MANAGER_REST_PORT_KEY in os.environ:
+        return os.environ[MANAGER_REST_PORT_KEY]
+    elif "env" in worker_config and MANAGER_REST_PORT_KEY in worker_config["env"]:
+        return worker_config["env"][MANAGER_REST_PORT_KEY]
+    raise RuntimeError(
+        "Manager rest port cannot be set - {0} doesn't exist in os.environ nor worker_config.env"
+        .format(BROKER_URL))
+
+
 def build_celeryd_config(worker_config):
 
     user = worker_config['user']
     broker_url = get_broker_url(worker_config)
+    manager_rest_port = get_manager_rest_port(worker_config)
 
     env = {}
     if 'env' in worker_config:
@@ -315,6 +330,8 @@ def build_celeryd_config(worker_config):
     env[VIRTUALENV_PATH_KEY] = worker_config[VIRTUALENV_PATH_KEY]
     env[CELERY_WORK_DIR_PATH_KEY] = worker_config[CELERY_WORK_DIR_PATH_KEY]
     env["IS_MANAGEMENT_NODE"] = worker_config["management"]
+    env[BROKER_URL] = broker_url
+    env[MANAGER_REST_PORT_KEY] = manager_rest_port
 
     env_string = build_env_string(env)
 
