@@ -1,7 +1,7 @@
 define host_start
     execute_operation operation: 'cloudify.interfaces.lifecycle.start'
     sequence if: '${node.properties.install_agent} == true'
-        event event: { "stage" => "Waiting for node to be reachable" }
+        event event: { "stage" => "Verifying host has started" }
         state action: 'wait', node_id: '${node.id}', reachable: 'true'
         log message: 'installing agent on host: ${node.id}'
         event event: { "stage" => "Installing worker" }
