@@ -50,3 +50,11 @@ define start_deployment_worker
           local: true
         }
       }
+
+      execute_task target: '${deployment_id}', exec: "kv_store.tasks.put", payload: {
+        properties: {
+          key: "agent plugins installed",
+          value: true
+        }
+      }
+
