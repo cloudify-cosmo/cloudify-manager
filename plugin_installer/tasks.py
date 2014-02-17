@@ -34,7 +34,7 @@ logger.level = logging.DEBUG
 
 
 @operation
-def install(plugin, __cloudify_id, **kwargs):
+def install(ctx, plugin, **kwargs):
     """
     Installs plugin as celery task according to the provided plugins details.
     plugin parameter is expected to be in the following format:
@@ -42,7 +42,7 @@ def install(plugin, __cloudify_id, **kwargs):
     The plugin url should be a URL pointing to either a zip or tar.gz file.
     """
 
-    logger.debug("installing plugin [%s] in host [%s]", plugin, __cloudify_id)
+    ctx.logger.debug("installing plugin [%s] ", plugin)
 
     management_ip = get_cosmo_properties()["management_ip"]
     if management_ip:
