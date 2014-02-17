@@ -137,6 +137,14 @@ def prepare_configuration(worker_config, ctx):
     ip = get_machine_ip(ctx)
     worker_config['host'] = ip
 
+    if not ctx.node_id and "user" not in worker_config:
+        # we are starting a worker dedicated for a deployment (not specific node)
+        # use the same user we used when bootstrapping
+        if "MANAGEMENT_USER" in os.environ:
+            worker_config["user"] = os.environ["MANAGEMENT_USER"]
+        else:
+            raise RuntimeError("Cannot determine user")
+
     # root user has no "/home/" prepended to its home directory
     # we cannot use expanduser('~') here since this code may run on a different machine than the one the worker is
     # being actually installed on
@@ -332,6 +340,10 @@ def build_celeryd_config(worker_config):
     env["IS_MANAGEMENT_NODE"] = worker_config["management"]
     env[BROKER_URL] = broker_url
     env[MANAGER_REST_PORT_KEY] = manager_rest_port
+
+    # if this is the management worker, we know the user it uses
+    if _is_management_node(worker_config):
+        env["MANAGEMENT_USER"] = worker_config["user"]
 
     env_string = build_env_string(env)
 
