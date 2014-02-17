@@ -14,11 +14,34 @@
 #  * limitations under the License.
 #
 
-require_relative 'execute_task_participant'
-require_relative 'prepare_plan_participant'
-require_relative 'logger_participant'
-require_relative 'prepare_operation_participant'
-require_relative 'event_participant'
-require_relative 'collect_params_participant'
-require_relative 'node_state_participant'
-require_relative 'plan_participant'
+require 'singleton'
+
+NODES_MAP = 'nodes_map'
+EXECUTION_ID = 'execution_id'
+
+class PlanHolder
+
+  include Singleton
+
+  def initialize
+    # map from execution_id => plan
+    @plans = {}
+  end
+
+  def plans
+    @plans
+  end
+
+  def self.put(execution_id, plan)
+    PlanHolder.instance.plans[execution_id] = plan
+  end
+
+  def self.get(execution_id)
+    PlanHolder.instance.plans[execution_id]
+  end
+
+  def self.get_node(execution_id, node_id)
+    PlanHolder.instance.plans[execution_id][NODES_MAP][node_id]
+  end
+
+end

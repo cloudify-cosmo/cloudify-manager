@@ -15,6 +15,7 @@
 #
 
 require_relative 'exception_logger'
+require_relative 'plan_holder'
 
 class PrepareOperationParticipant < Ruote::Participant
 
@@ -48,7 +49,6 @@ class PrepareOperationParticipant < Ruote::Participant
 
   def on_workitem
     begin
-      raise "#{PLAN} field not set" unless workitem.fields.has_key? PLAN
       raise "#{NODE} field not set" unless workitem.fields.has_key? NODE
       raise "#{OPERATION} parameter not set" unless workitem.params.has_key? OPERATION
 
@@ -64,7 +64,11 @@ class PrepareOperationParticipant < Ruote::Participant
         raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
 
         source_node = workitem.fields[NODE]
-        target_node = workitem.fields[PLAN][NODES].find {|node| node[NODE_ID] == target_id }
+        unless workitem.fields.has_key? PlanHolder::EXECUTION_ID
+          raise 'execution_id field not set'
+        end
+        execution_id = workitem.fields[PlanHolder::EXECUTION_ID]
+        target_node = PlanHolder.get_node(execution_id, target_id)
         workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
 
         raise "Node missing with id #{target_id}" if target_node.nil?

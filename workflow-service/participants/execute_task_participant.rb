@@ -189,7 +189,11 @@ class ExecuteTaskParticipant < Ruote::Participant
         related_node_properties = target_properties.clone
       end
 
-      node_in_context = workitem.fields[PLAN][PrepareOperationParticipant::NODES].find {|node| node[PrepareOperationParticipant::NODE_ID] == node_id }
+      unless workitem.fields.has_key? PlanHolder::EXECUTION_ID
+        raise 'execution_id field not set'
+      end
+      execution_id = workitem.fields[PlanHolder::EXECUTION_ID]
+      node_in_context = PlanHolder.get_node(execution_id, node_id)
       node_name = node_in_context['name']
 
       node_properties.delete(CLOUDIFY_RUNTIME)
@@ -246,8 +250,8 @@ class ExecuteTaskParticipant < Ruote::Participant
       node = workitem.fields[NODE]
       event['node_id'] = node['id']
     end
-    if workitem.fields.has_key? PLAN
-      plan = workitem.fields[PLAN]
+    plan = PlanHolder.get(workitem[PlanHolder::EXECUTION_ID])
+    unless plan.nil?
       event['app_id'] = plan['name']
     end
 

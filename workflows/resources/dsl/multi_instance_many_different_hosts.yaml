@@ -8,20 +8,20 @@ blueprint:
         -   name: host1
             type: test_host
             instances:
-                deploy: 15
-#        -   name: host2
-#            type: test_host
-#            instances:
-#                deploy: 2
-#        -   name: host3
-#            type: test_host
-#            instances:
-#                deploy: 2
+                deploy: 33
+        -   name: host2
+            type: test_host
+            instances:
+                deploy: 33
+        -   name: host3
+            type: test_host
+            instances:
+                deploy: 33
 
 types:
     test_host:
         derived_from: cloudify.types.host
-#        interfaces:
-#            cloudify.interfaces.lifecycle:
-#                - create: cloudmock.tasks.provision
-#                - start: cloudmock.tasks.start
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: cloudmock.tasks.provision
+                - start: cloudmock.tasks.start

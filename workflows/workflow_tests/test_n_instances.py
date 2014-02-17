@@ -41,16 +41,16 @@ class TestMultiInstanceApplication(TestCase):
 
     def _test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
-        deploy(dsl_path)
+        deploy(dsl_path, timeout=800)
 
         from plugins.cloudmock.tasks import get_machines
-        result = get_machines.apply_async()
+        result = self.send_task(get_machines)
         machines = set(result.get(timeout=10))
-        self.assertEquals(999, len(machines))
+        self.assertEquals(99, len(machines))
 
-        self.assertEquals(333, filter(lambda ma: ma.startswith('host1'),
-                                      machines))
-        self.assertEquals(333, filter(lambda ma: ma.startswith('host2'),
-                                      machines))
-        self.assertEquals(333, filter(lambda ma: ma.startswith('host3'),
-                                      machines))
+        self.assertEquals(33, len(filter(lambda ma: ma.startswith('host1'),
+                                         machines)))
+        self.assertEquals(33, len(filter(lambda ma: ma.startswith('host2'),
+                                         machines)))
+        self.assertEquals(33, len(filter(lambda ma: ma.startswith('host3'),
+                                         machines)))

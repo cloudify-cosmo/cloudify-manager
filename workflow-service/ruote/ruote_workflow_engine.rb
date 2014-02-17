@@ -39,6 +39,7 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'log', LoggerParticipant
     @dashboard.register_participant 'event', EventParticipant
     @dashboard.register_participant 'collect_params', CollectParamsParticipant
+    @dashboard.register_participant 'plan_helper', PlanParticipant
 
     # in tests this will not work since Riemann is supposed to be running.
     test = opts[:test]
