@@ -1,14 +1,17 @@
 define host_start
     execute_operation operation: 'cloudify.interfaces.lifecycle.start'
     sequence if: '${node.properties.install_agent} == true'
+        event event: { "stage" => "Verifying host has started" }
         state action: 'wait', node_id: '${node.id}', reachable: 'true'
         log message: 'installing agent on host: ${node.id}'
+        event event: { "stage" => "Installing worker" }
         execute_operation operation: 'cloudify.interfaces.worker_installer.install'
         execute_operation operation: 'cloudify.interfaces.worker_installer.start'
         event event: { "stage" => "Installing plugins" }
         log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
         iterator on: '$node.plugins_to_install', to_v: 'plugin'
             log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
+            event event: { "stage" => "Installing plugin ${v:plugin.name}" }
             execute_operation operation: 'cloudify.interfaces.plugin_installer.install', params: {
                 plugin: {
                     name: '${v:plugin.name}',
