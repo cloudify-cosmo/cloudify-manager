@@ -30,10 +30,12 @@ define start_deployment_worker
       iterator on: '$plan.management_plugins_to_install', to_v: 'plugin'
           log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
           execute_task target: '${deployment_id}', exec: "plugin_installer.tasks.install", payload: {
+            properties: {
               plugin: {
                   name: '${v:plugin.name}',
                   url: '${v:plugin.url}'
               }
+            }
           }
           log message: 'successfully installed plugin: ${v:plugin.name} on worker: ${deployment_id}'
 
