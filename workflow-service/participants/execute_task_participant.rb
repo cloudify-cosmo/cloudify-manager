@@ -27,7 +27,6 @@ require_relative '../utils/events'
 class ExecuteTaskParticipant < Ruote::Participant
 
   @full_task_name = nil
-  @task_arguments = nil
 
   EXECUTOR = 'executor'
   TARGET = 'target'
@@ -36,7 +35,6 @@ class ExecuteTaskParticipant < Ruote::Participant
 
   PARAMS = 'params'
   PAYLOAD = 'payload'
-  ARGUMENT_NAMES = 'argument_names'
   NODE = 'node'
   PLAN = 'plan'
   NODE_ID = '__cloudify_id'
@@ -59,14 +57,12 @@ class ExecuteTaskParticipant < Ruote::Participant
   RELATIONSHIP_NODE = 'relationship_other_node'
 
   VERIFY_PLUGIN_TASK_NAME = 'plugin_installer.tasks.verify_plugin'
-  GET_ARGUMENTS_TASK_NAME = 'plugin_installer.tasks.get_arguments'
   RESTART_CELERY_WORKER_TASK_NAME = 'worker_installer.tasks.restart'
   GET_KV_STORE_TASK_NAME = 'kv_store.tasks.get'
   PUT_KV_STORE_TASK_NAME = 'kv_store.tasks.put'
 
   TASK_TO_FILTER = Set.new [VERIFY_PLUGIN_TASK_NAME,
                             RESTART_CELERY_WORKER_TASK_NAME,
-                            GET_ARGUMENTS_TASK_NAME,
                             GET_KV_STORE_TASK_NAME,
                             PUT_KV_STORE_TASK_NAME]
 
@@ -86,15 +82,13 @@ class ExecuteTaskParticipant < Ruote::Participant
       @target = workitem.params[TARGET]
       @task_id = SecureRandom.uuid
       payload = to_map(workitem.params[PAYLOAD])
-      argument_names = workitem.params[ARGUMENT_NAMES]
 
       log_task(:debug,
-               "Received task execution request [target=#{@target}, name=#{@full_task_name}, payload=#{payload}, argument_names=#{argument_names}]", {
-              :payload => payload,
-              :argument_names => argument_names
-          })
+               "Received task execution request [target=#{@target}, name=#{@full_task_name}, payload=#{payload}", {
+              :payload => payload
+      })
 
-      if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && @full_task_name != VERIFY_PLUGIN_TASK_NAME && @full_task_name != GET_ARGUMENTS_TASK_NAME
+      if workitem.fields.has_key?(RUOTE_RELATIONSHIP_NODE_ID) && @full_task_name != VERIFY_PLUGIN_TASK_NAME
         final_properties = Hash.new
       else
         final_properties = payload[PROPERTIES] || Hash.new
@@ -105,8 +99,6 @@ class ExecuteTaskParticipant < Ruote::Participant
       add_cloudify_context_to_properties(final_properties, payload)
 
       properties = to_map(final_properties)
-
-      @task_arguments = extract_task_arguments(properties, argument_names)
 
       log_task(:debug,
                "Executing task [taskId=#{@task_id}, target=#{@target}, name=#{@full_task_name}, properties=#{properties}]", {
@@ -269,19 +261,6 @@ class ExecuteTaskParticipant < Ruote::Participant
     event['plugin'] = get_plugin_name_from_task(@full_task_name)
     event['task_name'] = get_short_name_from_task_name(@full_task_name)
 
-  end
-
-  def extract_task_arguments(properties, argument_names)
-    props = {}
-    unless argument_names.nil?
-      args = argument_names.gsub('[','').gsub(']','').gsub("'",'')
-      args = args.split(',')
-      for name in args
-        name = name.gsub(' ','')
-        props[name] = properties[name]
-      end
-    end
-    props
   end
 
   def onTaskEvent(task_id, event_type, event)
