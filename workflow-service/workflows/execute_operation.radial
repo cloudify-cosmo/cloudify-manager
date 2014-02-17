@@ -45,18 +45,11 @@ define execute_operation
 
         log message: 'fetching plugin: ${plugin_name} and operation: ${operation} argument names from target: ${target}'
 
-        execute_task target: '${target}', exec: 'plugin_installer.tasks.get_arguments', payload: {
-            properties: {
-                plugin_name: "${plugin_name}",
-                operation: "${operation_mapping}"
-            }
-        }, to_f: 'argument_names', timeout: '30s', on_timeout: 'redo'
-
         execute_task target: '${target}', exec: '${operation}', payload: {
             properties: '$operation_properties',
             params: '$v:params',
             relationship_properties: '$relationship_other_node.properties'
-        }, argument_names: '${argument_names}', to_f: '${v:to_f}'
+        }, to_f: '${v:to_f}'
 
     sequence if: '${operation} == no_op'
         log message: 'skipping ${v:operation} operation as it is not defined and is will be considered a no-op'
