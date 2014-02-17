@@ -250,7 +250,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       node = workitem.fields[NODE]
       event['node_id'] = node['id']
     end
-    plan = PlanHolder.get(workitem[PlanHolder::EXECUTION_ID])
+    plan = PlanHolder.get(workitem[EXECUTION_ID])
     unless plan.nil?
       event['app_id'] = plan['name']
     end

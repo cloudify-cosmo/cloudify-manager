@@ -23,10 +23,10 @@ class PlanParticipant < Ruote::Participant
   def on_workitem
     begin
 
-      unless workitem.fields.has_key? PlanHolder::EXECUTION_ID
+      unless workitem.fields.has_key? EXECUTION_ID
         raise 'execution_id field not set'
       end
-      execution_id = workitem.fields[PlanHolder::EXECUTION_ID]
+      execution_id = workitem.fields[EXECUTION_ID]
 
       do_what = workitem.params['do']
 
@@ -39,7 +39,7 @@ class PlanParticipant < Ruote::Participant
         plan[PrepareOperationParticipant::NODES].each do |node|
           nodes_map[node[PrepareOperationParticipant::NODE_ID]] = node
         end
-        plan[PlanHolder::NODES_MAP] = nodes_map
+        plan[NODES_MAP] = nodes_map
         PlanHolder.put(execution_id, plan)
       elsif do_what == 'put_plan_on_workitem'
         plan = PlanHolder.get(execution_id)
