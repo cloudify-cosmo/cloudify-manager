@@ -31,13 +31,12 @@ python setup.py install
 ## Running The Tests
 
 ```
-nosetests tests
+nosetests workflow_tests
 ```
 
 
 ## Plugins
 
-Plugins used by tests should be stored in `tests/cosmo` (folder per plugin).
-On test environment creation, celery application directory is set to `tests/cosmo` which makes all the plugins within the directory available in celery.
+Plugins used by tests should be stored in `plugins` (folder per plugin).
 
 If a plugin needs to write files to disk, these should be written to a temporary directory available from `os.environ["TEMP_DIR"]`.

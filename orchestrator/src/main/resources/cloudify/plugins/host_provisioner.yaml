@@ -4,6 +4,6 @@ imports:
 
 plugins:
     cloudify.plugins.host_provisioner:
-        derived_from: "cloudify.plugins.remote_plugin"
+        derived_from: "cloudify.plugins.manager_plugin"
         properties:
             url: "cloudify/plugins/host-provisioner.zip"
