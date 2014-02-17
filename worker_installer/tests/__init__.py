@@ -69,7 +69,8 @@ def get_local_management_worker_config():
         "name": "test-worker-{0}".format(id_generator(3)),
         "env": {
             "BROKER_URL": "amqp://guest:guest@localhost:5672//",
-            "MANAGEMENT_IP": "localhost"
+            "MANAGEMENT_IP": "localhost",
+            "MANAGER_REST_PORT": 8100
         }
     }
 
@@ -81,7 +82,8 @@ def get_local_worker_config():
         "name": "test-worker-{0}".format(id_generator(3)),
         "env": {
             "BROKER_URL": "amqp://guest:guest@localhost:5672//",
-            "MANAGEMENT_IP": "localhost"
+            "MANAGEMENT_IP": "localhost",
+            "MANAGER_REST_PORT": 8100
         }
     }
 
@@ -94,7 +96,8 @@ def get_remote_worker_config():
         "key": "~/.vagrant.d/insecure_private_key",
         "env": {
             "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-            "MANAGEMENT_IP": VAGRANT_MACHINE_IP
+            "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
+            "MANAGER_REST_PORT": 8100
         }
     }
 
@@ -108,7 +111,8 @@ def get_remote_management_worker_config():
         "key": "~/.vagrant.d/insecure_private_key",
         "env": {
             "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-            "MANAGEMENT_IP": VAGRANT_MACHINE_IP
+            "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
+            "MANAGER_REST_PORT": 8100
         }
     }
 

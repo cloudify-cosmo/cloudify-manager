@@ -314,7 +314,7 @@ def get_manager_rest_port(worker_config):
         return worker_config["env"][MANAGER_REST_PORT_KEY]
     raise RuntimeError(
         "Manager rest port cannot be set - {0} doesn't exist in os.environ nor worker_config.env"
-        .format(BROKER_URL))
+        .format(MANAGER_REST_PORT_KEY))
 
 
 def build_celeryd_config(worker_config):
