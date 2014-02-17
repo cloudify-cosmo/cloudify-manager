@@ -122,10 +122,12 @@ class RuoteWorkflowEngine
       when 'terminated'
         new_state = :terminated
         send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
+        clear_plan_if_exists(workitem)
       when 'error_intercepted'
         new_state = :failed
         error = context['error']
         send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{error}", workitem, error)
+        clear_plan_if_exists(workitem)
       else
         # ignore..
     end
@@ -136,6 +138,12 @@ class RuoteWorkflowEngine
   end
 
   private
+
+  def clear_plan_if_exists(workitem)
+    if workitem.fields.has_key?(EXECUTION_ID)
+      PlanHolder.delete(workitem[EXECUTION_ID])
+    end
+  end
 
   def send_event(event_type, message, workitem, error=nil)
     event = {

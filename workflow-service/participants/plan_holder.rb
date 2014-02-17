@@ -40,8 +40,14 @@ class PlanHolder
     PlanHolder.instance.plans[execution_id]
   end
 
+  def self.delete(execution_id)
+    PlanHolder.instance.plans.delete(execution_id)
+  end
+
   def self.get_node(execution_id, node_id)
     PlanHolder.instance.plans[execution_id][NODES_MAP][node_id]
   end
+
+
 
 end
