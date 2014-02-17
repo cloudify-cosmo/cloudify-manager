@@ -26,10 +26,9 @@ import os
 from celery.utils.log import get_task_logger
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
-    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION, OPENSTACK_PROVISIONER_VERSION, VAGRANT_PROVISIONER_VERSION
+    RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, BUILT_IN_AGENT_PLUGINS, \
-    BUILT_IN_MANAGEMENT_PLUGINS, OPENSTACK_PROVISIONER_PLUGIN_PATH, \
-    VAGRANT_PROVISIONER_PLUGIN_PATH, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY
+    BUILT_IN_MANAGEMENT_PLUGINS, MANAGER_IP_KEY, LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY, MANAGER_REST_PORT_KEY
 
 
 COSMO_CELERY_URL = "https://github.com/CloudifySource/cosmo-celery-common/archive/{0}.zip"\
@@ -47,12 +46,6 @@ RIEMANN_CONFIGURER_URL = "https://github.com/CloudifySource/cosmo-plugin-riemann
 AGENT_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/{0}.zip" \
                       .format(AGENT_INSTALLER_VERSION)
 
-OPENSTACK_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-openstack-provisioner/archive/{0}.zip" \
-    .format(OPENSTACK_PROVISIONER_VERSION)
-
-VAGRANT_PROVISIONER_URL = "https://github.com/CloudifySource/cosmo-plugin-vagrant-provisioner/archive/{0}.zip" \
-    .format(VAGRANT_PROVISIONER_VERSION)
-
 
 logger = get_task_logger(__name__)
 logger.level = logging.DEBUG
@@ -65,6 +58,8 @@ def install(ctx, worker_config, local=False, **kwargs):
 
     prepare_configuration(worker_config, ctx)
 
+    ctx.logger.info("installing celery worker {0}".format(worker_config["name"]))
+
     host_string = key_filename = None
     if not local:
         host_string = '%(user)s@%(host)s:%(port)s' % worker_config
@@ -72,7 +67,7 @@ def install(ctx, worker_config, local=False, **kwargs):
 
     runner = create_runner(local, host_string, key_filename)
 
-    _install_latest_pip(runner, worker_config["name"])
+    _install_latest_pip(runner, worker_config)
 
     logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
 
@@ -83,9 +78,9 @@ def install(ctx, worker_config, local=False, **kwargs):
 @operation
 def start(ctx, worker_config, local=False, **kwargs):
 
-    logger.info("starting celery worker")
-
     prepare_configuration(worker_config, ctx)
+
+    ctx.logger.info("starting celery worker {0}".format(worker_config["name"]))
 
     host_string = key_filename = None
     if not local:
@@ -106,6 +101,8 @@ def restart(ctx, worker_config, local=False, **kwargs):
 
     prepare_configuration(worker_config, ctx)
 
+    ctx.logger.info("restarting celery worker {0}".format(worker_config["name"]))
+
     host_string = key_filename = None
     if not local:
         host_string = '%(user)s@%(host)s:%(port)s' % worker_config
@@ -124,20 +121,29 @@ def create_runner(local, host_string, key_filename):
     return runner
 
 
-def _install_latest_pip(runner, name):
-    logger.info("installing latest pip installation [name=%s]", name)
-    runner.run("wget -N https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py")
+def _install_latest_pip(runner, worker_config):
+    logger.info("installing latest pip installation [name=%s]", worker_config["name"])
+    runner.run("wget https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py -O {0}/get-pip.py"
+               .format(worker_config['home']))
 
     package_installer = "yum" if len(runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
     logger.debug("installing setuptools using {0}".format(package_installer))
     runner.sudo("{0} -y install python-setuptools".format(package_installer))
 
-    runner.sudo("python get-pip.py")
+    runner.sudo("python {0}/get-pip.py".format(worker_config['home']))
 
 
 def prepare_configuration(worker_config, ctx):
     ip = get_machine_ip(ctx)
     worker_config['host'] = ip
+
+    if not ctx.node_id and "user" not in worker_config:
+        # we are starting a worker dedicated for a deployment (not specific node)
+        # use the same user we used when bootstrapping
+        if "MANAGEMENT_USER" in os.environ:
+            worker_config["user"] = os.environ["MANAGEMENT_USER"]
+        else:
+            raise RuntimeError("Cannot determine user")
 
     # root user has no "/home/" prepended to its home directory
     # we cannot use expanduser('~') here since this code may run on a different machine than the one the worker is
@@ -148,10 +154,11 @@ def prepare_configuration(worker_config, ctx):
         worker_config["name"] = ctx.node_id
 
     if VIRTUALENV_PATH_KEY not in worker_config:
-        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery-{0}-env".format(worker_config["name"])
+        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/{0}__worker/env"\
+                                                                     .format(worker_config["name"])
 
     if CELERY_WORK_DIR_PATH_KEY not in worker_config:
-        worker_config[CELERY_WORK_DIR_PATH_KEY] = worker_config['home'] + "/celery-{0}-work"\
+        worker_config[CELERY_WORK_DIR_PATH_KEY] = worker_config['home'] + "/{0}__worker/work"\
                                                                           .format(worker_config["name"])
 
     if "env" not in worker_config:
@@ -167,12 +174,6 @@ def prepare_configuration(worker_config, ctx):
     if "log_file" not in worker_config:
         worker_config["log_file"] = "{0}/{1}_worker.log".format(worker_config[CELERY_WORK_DIR_PATH_KEY],
                                                                 worker_config["name"])
-
-    if "install_vagrant" not in worker_config:
-        worker_config["install_vagrant"] = False
-
-    if "install_openstack" not in worker_config:
-        worker_config["install_openstack"] = True
 
     if MANAGER_IP_KEY not in worker_config["env"]:
         if MANAGER_IP_KEY not in os.environ:
@@ -217,14 +218,6 @@ def _install_celery(runner, worker_config):
             # install the agent installer
             install_celery_plugin(runner, worker_config, RIEMANN_CONFIGURER_URL)
 
-            if worker_config["install_vagrant"]:
-                # install the agent installer
-                install_celery_plugin(runner, worker_config, VAGRANT_PROVISIONER_URL)
-
-            if worker_config["install_openstack"]:
-                # install the agent installer
-                install_celery_plugin(runner, worker_config, OPENSTACK_PROVISIONER_URL)
-
 
     # daemonize
     runner.sudo("wget -N https://raw.github.com/celery/celery/3.0/extra/generic-init.d/celeryd "
@@ -241,14 +234,9 @@ def _install_celery(runner, worker_config):
     runner.sudo("sed -i '1 iexport {0}={1}' /etc/init.d/celeryd-{2}"
                 .format(CELERY_WORK_DIR_PATH_KEY, worker_config[CELERY_WORK_DIR_PATH_KEY], worker_config["name"]))
 
-
     # build initial includes
     if _is_management_node(worker_config):
         includes_list = BUILT_IN_MANAGEMENT_PLUGINS
-        if worker_config["install_openstack"]:
-            includes_list.append(OPENSTACK_PROVISIONER_PLUGIN_PATH)
-        if worker_config["install_vagrant"]:
-            includes_list.append(VAGRANT_PROVISIONER_PLUGIN_PATH)
     else:
         includes_list = BUILT_IN_AGENT_PLUGINS
 
@@ -274,7 +262,7 @@ def get_machine_ip(ctx):
     if 'ip' in ctx.capabilities:
         return ctx.capabilities['ip']
     else:
-        raise ValueError('cannot get machine ip - ctx.capabilities format error')
+        return None
 
 
 def get_pip(worker_config):
@@ -323,10 +311,25 @@ def get_broker_url(worker_config):
         "Broker URL cannot be set - {0} doesn't exist in os.environ nor worker_config.env".format(BROKER_URL))
 
 
+def get_manager_rest_port(worker_config):
+    """
+    Gets the broker URL from either os.environ or worker_config[env].
+    Raises a RuntimeError if neither exist.
+    """
+    if MANAGER_REST_PORT_KEY in os.environ:
+        return os.environ[MANAGER_REST_PORT_KEY]
+    elif "env" in worker_config and MANAGER_REST_PORT_KEY in worker_config["env"]:
+        return worker_config["env"][MANAGER_REST_PORT_KEY]
+    raise RuntimeError(
+        "Manager rest port cannot be set - {0} doesn't exist in os.environ nor worker_config.env"
+        .format(MANAGER_REST_PORT_KEY))
+
+
 def build_celeryd_config(worker_config):
 
     user = worker_config['user']
     broker_url = get_broker_url(worker_config)
+    manager_rest_port = get_manager_rest_port(worker_config)
 
     env = {}
     if 'env' in worker_config:
@@ -335,6 +338,12 @@ def build_celeryd_config(worker_config):
     env[VIRTUALENV_PATH_KEY] = worker_config[VIRTUALENV_PATH_KEY]
     env[CELERY_WORK_DIR_PATH_KEY] = worker_config[CELERY_WORK_DIR_PATH_KEY]
     env["IS_MANAGEMENT_NODE"] = worker_config["management"]
+    env[BROKER_URL] = broker_url
+    env[MANAGER_REST_PORT_KEY] = manager_rest_port
+
+    # if this is the management worker, we know the user it uses
+    if _is_management_node(worker_config):
+        env["MANAGEMENT_USER"] = worker_config["user"]
 
     env_string = build_env_string(env)
 
