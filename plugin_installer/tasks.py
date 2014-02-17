@@ -16,12 +16,8 @@
 
 import logging
 import os
-from os.path import dirname
 import subprocess
 import shlex
-import ast
-import _ast
-from os import path
 
 from celery.utils.log import get_task_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
@@ -91,49 +87,6 @@ Registered plugin operation are:
 {2}""".format(plugin_name, operation, registered_operations))
     else:
         return False
-
-
-@operation
-def get_arguments(plugin_name, operation, **kwargs):
-    """
-    Gets the arguments of an installed plugin operation
-    """
-    operation_split = operation.split('.')
-    module_name = '.'.join(operation_split[:-1])
-    method_name = operation.split(".")[-1]
-    cosmo_dir = dirname(dirname(os.path.abspath(__file__)))
-    plugin_dir = os.path.join(cosmo_dir, plugin_name)
-    py_path = _extract_py_path(plugin_dir, module_name,
-                               method_name, plugin_name)
-    parsed_tasks_file = ast.parse(open(py_path, 'r').read())
-    method_description = filter(lambda item: type(item) ==
-                                _ast.FunctionDef and item.name == method_name,
-                                parsed_tasks_file.body)
-    if not method_description:
-        raise RuntimeError("unable to locate operation {0} "
-                           "inside plugin file {1} [plugin name={2}]"
-                           .format(method_name, py_path, plugin_name))
-    return map(lambda arg: arg.id, method_description[0].args.args)
-
-
-def _extract_py_path(plugin_dir, module_name, method_name, plugin_name):
-    module_path = module_name.replace('.', '/')
-    path1 = path.join(plugin_dir, module_path + '.py')
-    if path.isfile(path1):
-        return path1
-    if module_path != '':
-        module_path += '/'
-    path2 = path.join(plugin_dir, module_path + '__init__.py')
-    if path.isfile(path2):
-        return path2
-    raise RuntimeError('Unable to locate module containing operation {0}. '
-                       '{1} for plugin {2} tried '
-                       '{3} and {4}'
-                       .format(module_name,
-                               method_name,
-                               plugin_name,
-                               path1,
-                               path2))
 
 
 def get_python():
