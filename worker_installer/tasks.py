@@ -67,7 +67,7 @@ def install(ctx, worker_config, local=False, **kwargs):
 
     runner = create_runner(local, host_string, key_filename)
 
-    _install_latest_pip(runner, worker_config["name"])
+    _install_latest_pip(runner, worker_config)
 
     logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
 
@@ -121,15 +121,16 @@ def create_runner(local, host_string, key_filename):
     return runner
 
 
-def _install_latest_pip(runner, name):
-    logger.info("installing latest pip installation [name=%s]", name)
-    runner.run("wget -N https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py")
+def _install_latest_pip(runner, worker_config):
+    logger.info("installing latest pip installation [name=%s]", worker_config["name"])
+    runner.run("wget https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py -O {0}/get-pip.py"
+               .format(worker_config['home']))
 
     package_installer = "yum" if len(runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
     logger.debug("installing setuptools using {0}".format(package_installer))
     runner.sudo("{0} -y install python-setuptools".format(package_installer))
 
-    runner.sudo("python get-pip.py")
+    runner.sudo("python {0}/get-pip.py".format(worker_config['home']))
 
 
 def prepare_configuration(worker_config, ctx):
@@ -252,7 +253,7 @@ def get_machine_ip(ctx):
     if 'ip' in ctx.capabilities:
         return ctx.capabilities['ip']
     else:
-        raise ValueError('cannot get machine ip - ctx.capabilities format error')
+        return None
 
 
 def get_pip(worker_config):
