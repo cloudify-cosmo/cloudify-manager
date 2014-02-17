@@ -1,10 +1,10 @@
 define install_deployment
 
+    start_deployment_worker
+
     set 'v:plan': '$f:plan'
     plan_helper do: 'modify_and_save_plan'
     unset 'f:plan'
-
-    start_deployment_worker
 
     log message: 'processing nodes: ${v:plan.nodes}'
     concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
