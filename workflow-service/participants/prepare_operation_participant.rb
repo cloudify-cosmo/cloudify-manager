@@ -64,10 +64,10 @@ class PrepareOperationParticipant < Ruote::Participant
         raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
 
         source_node = workitem.fields[NODE]
-        unless workitem.fields.has_key? PlanHolder::EXECUTION_ID
+        unless workitem.fields.has_key? EXECUTION_ID
           raise 'execution_id field not set'
         end
-        execution_id = workitem.fields[PlanHolder::EXECUTION_ID]
+        execution_id = workitem.fields[EXECUTION_ID]
         target_node = PlanHolder.get_node(execution_id, target_id)
         workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
 
