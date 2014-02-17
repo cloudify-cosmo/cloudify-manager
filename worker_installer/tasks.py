@@ -146,10 +146,11 @@ def prepare_configuration(worker_config, ctx):
         worker_config["name"] = ctx.node_id
 
     if VIRTUALENV_PATH_KEY not in worker_config:
-        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/celery-{0}-env".format(worker_config["name"])
+        worker_config[VIRTUALENV_PATH_KEY] = worker_config['home'] + "/{0}__worker/env"\
+                                                                     .format(worker_config["name"])
 
     if CELERY_WORK_DIR_PATH_KEY not in worker_config:
-        worker_config[CELERY_WORK_DIR_PATH_KEY] = worker_config['home'] + "/celery-{0}-work"\
+        worker_config[CELERY_WORK_DIR_PATH_KEY] = worker_config['home'] + "/{0}__worker/work"\
                                                                           .format(worker_config["name"])
 
     if "env" not in worker_config:
