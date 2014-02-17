@@ -16,12 +16,8 @@
 
 import logging
 import os
-from os.path import dirname
 import subprocess
 import shlex
-import ast
-import _ast
-from os import path
 
 from celery.utils.log import get_task_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
