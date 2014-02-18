@@ -39,6 +39,7 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'log', LoggerParticipant
     @dashboard.register_participant 'event', EventParticipant
     @dashboard.register_participant 'collect_params', CollectParamsParticipant
+    @dashboard.register_participant 'plan_helper', PlanParticipant
 
     # in tests this will not work since Riemann is supposed to be running.
     test = opts[:test]
@@ -84,6 +85,7 @@ class RuoteWorkflowEngine
     begin
       @mutex.lock
       verify_workflow_exists(wfid)
+
       return @states[wfid]
     ensure
       @mutex.unlock
@@ -124,7 +126,7 @@ class RuoteWorkflowEngine
       end
       return
 
-    # Handle parent workflows (only parent as wfid on context)
+      # Handle parent workflows (only parent as wfid on context)
     elsif context.has_key?('wfid')
       workitem = Ruote::Workitem.new(context['workitem'] || {})
       workflow_id = workitem.fields['workflow_id'] || nil
@@ -156,6 +158,12 @@ class RuoteWorkflowEngine
   end
 
   private
+
+  def clear_plan_if_exists(workitem)
+    if workitem.fields.has_key?(EXECUTION_ID)
+      PlanHolder.delete(workitem[EXECUTION_ID])
+    end
+  end
 
   def send_event(event_type, message, workitem, error=nil)
     event = {
@@ -204,7 +212,7 @@ class RuoteWorkflowEngine
       wf_state.state = state
       if state.eql?(:launched)
         wf_state.launched = DateTime.now
-      elsif state.eql?(:failed) and not error.nil?
+      elsif state.eql?(:failed)
         wf_state.error = error
       end
       wf_state

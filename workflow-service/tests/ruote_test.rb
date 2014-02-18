@@ -17,7 +17,7 @@
 require 'test/unit'
 require 'json'
 require 'time'
-require '../ruote/ruote_workflow_engine'
+require_relative '../ruote/ruote_workflow_engine'
 require 'tmpdir'
 require 'fileutils'
 

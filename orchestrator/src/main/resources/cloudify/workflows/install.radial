@@ -2,8 +2,12 @@ define install_deployment
 
     start_deployment_worker
 
-    log message: 'processing nodes: ${plan.nodes}'
-    concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'mix'
+    set 'v:plan': '$f:plan'
+    plan_helper do: 'modify_and_save_plan'
+    unset 'f:plan'
+
+    log message: 'processing nodes: ${v:plan.nodes}'
+    concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
         log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
@@ -30,10 +34,8 @@ define install_deployment
         log message: 'executing start workflow for node: ${node.id}'
         set 'v:start': "$f:node.workflows.start"
         start
-
         unset 'v:start'
 
         state node_id: '${node.id}', reachable: 'true'
 
         execute_relationships_workflow workflow: 'establish'
-
