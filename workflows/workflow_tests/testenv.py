@@ -31,6 +31,8 @@ import threading
 import re
 import pika
 import json
+from functools import wraps
+from multiprocessing import Process
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 from celery import Celery
@@ -746,7 +748,11 @@ def deploy_application(dsl_path, timeout=240):
     client = CosmoManagerRestClient('localhost')
     blueprint_id = client.publish_blueprint(dsl_path).id
     deployment = client.create_deployment(blueprint_id)
-    client.execute_deployment(deployment.id, 'install', timeout=timeout)
+    _, error = client.execute_deployment(deployment.id,
+                                         'install',
+                                         timeout=timeout)
+    if error is not None:
+        raise RuntimeError('Workflow execution failed: {0}'.format(error))
     return deployment
 
 
@@ -806,3 +812,17 @@ def is_node_reachable(node_id):
 class TimeoutException(Exception):
     def __init__(self, *args):
         Exception.__init__(self, args)
+
+
+def timeout(seconds=60):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            process = Process(None, func, None, args, kwargs)
+            process.start()
+            process.join(seconds)
+            if process.is_alive():
+                process.terminate()
+                raise TimeoutException(
+                    'test timeout exceeded [timeout={0}'.format(seconds))
+        return wraps(func)(wrapper)
+    return decorator

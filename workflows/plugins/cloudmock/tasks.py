@@ -21,6 +21,7 @@ from cloudify.decorators import operation
 RUNNING = "running"
 NOT_RUNNING = "not_running"
 machines = {}
+raise_exception_on_start = False
 
 
 @operation
@@ -44,6 +45,9 @@ def start(ctx, **kwargs):
                            .format(ctx.node_id))
     machines[ctx.node_id] = RUNNING
     ctx['id'] = ctx.node_id
+    global raise_exception_on_start
+    if raise_exception_on_start:
+        raise RuntimeError('Exception raised from CloudMock.start()!')
     ctx.set_started()
 
 
@@ -71,3 +75,9 @@ def terminate(ctx, **kwargs):
 @operation
 def get_machines(**kwargs):
     return machines
+
+
+@operation
+def set_raise_exception_on_start(**kwargs):
+    global raise_exception_on_start
+    raise_exception_on_start = True
