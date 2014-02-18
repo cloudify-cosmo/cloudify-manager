@@ -147,6 +147,7 @@ class RuoteWorkflowEngine
           send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
           new_state = :terminated
         end
+        clear_plan_if_exists(workitem)
       end
 
       unless new_state.nil?
