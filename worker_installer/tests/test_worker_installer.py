@@ -55,27 +55,6 @@ def _extract_registered_plugins(broker_url):
     return plugins
 
 
-def _test_install(ctx, worker_config, local=False):
-
-    logger.info("installing worker {0} with id {1}. local={2}".format(worker_config, ctx.node_id, local))
-    install(ctx, worker_config, local=local)
-
-    logger.info("starting worker {0} with id {1}. local={2}".format(worker_config, ctx.node_id, local))
-    start(ctx, worker_config, local=local)
-
-    # lets make sure it did
-    logger.info("extracting plugins from newly installed worker")
-    plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
-    if not plugins:
-        raise AssertionError("No plugins were detected on the installed worker")
-
-    logger.info("Detected plugins : {0}".format(plugins))
-
-    # check built in agent plugins are registered
-    assert 'celery.{0}@plugin_installer'.format(worker_config["name"]) in plugins
-    assert 'celery.{0}@kv_store'.format(worker_config["name"]) in plugins
-
-
 class TestRemoteInstallerCase(unittest.TestCase):
 
     VM_ID = "TestRemoteInstallerCase"
