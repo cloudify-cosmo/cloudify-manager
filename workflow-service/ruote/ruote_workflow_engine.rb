@@ -84,7 +84,6 @@ class RuoteWorkflowEngine
     begin
       @mutex.lock
       verify_workflow_exists(wfid)
-
       return @states[wfid]
     ensure
       @mutex.unlock
@@ -101,36 +100,58 @@ class RuoteWorkflowEngine
   end
 
   def on_msg(context)
-    new_state = nil
-    error = nil
+    action = context['action']
 
-    # If wfid is not present in context it means this is a sub-workflow message
-    # we don't handle such messages at this point - perhaps later when we want to
-    # visualize workflow progress etc.. this might be relevant.
-    unless context.has_key?('wfid')
-      return
-    end
-
-    workitem = Ruote::Workitem.new(context['workitem'] || {})
-    workflow_id = workitem.fields['workflow_id'] || nil
-
-    case context['action']
-      when 'launch'
-        new_state = :launched
-        send_event(:workflow_started, "Starting '#{workflow_id}' workflow execution", workitem)
-      when 'terminated'
-        new_state = :terminated
-        send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
-      when 'error_intercepted'
+    # handle error interception (both parent and sub workflows)
+    if action == 'error_intercepted'
+      wfid = context['fei']['wfid']
+      wf_state = get_workflow_state(wfid)
+      if wf_state.state != :failed
+        @dashboard.cancel(wfid)
         new_state = :failed
-        error = context['error']
-        send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{error}", workitem, error)
-      else
-        # ignore..
-    end
-    unless new_state.nil?
-      wf_state = update_workflow_state(context['wfid'], new_state, nil, error)
-      log_workflow_state(wf_state)
+        wf_state = update_workflow_state(wfid, new_state, nil, context['error'])
+        log_workflow_state(wf_state)
+      end
+      return
+
+    elsif action == 'cancel'
+      wfid = context['fei']['wfid']
+      wf_state = get_workflow_state(wfid)
+      if not [:cancelled, :failed].include? wf_state.state
+        new_state = :cancelled
+        wf_state = update_workflow_state(wfid, new_state)
+        log_workflow_state(wf_state)
+      end
+      return
+
+    # Handle parent workflows (only parent as wfid on context)
+    elsif context.has_key?('wfid')
+      workitem = Ruote::Workitem.new(context['workitem'] || {})
+      workflow_id = workitem.fields['workflow_id'] || nil
+
+      new_state = nil
+
+      if action == 'launch'
+        send_event(:workflow_started, "Starting '#{workflow_id}' workflow execution", workitem)
+        new_state = :launched
+      elsif action == 'terminated'
+        wf_state = get_workflow_state(workitem.wfid)
+        if wf_state.state == :failed
+          send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{wf_state.error}", workitem)
+        elsif wf_state.state == :cancelled
+          send_event(:workflow_cancelled, "'#{workflow_id}' workflow execution failed: #{wf_state.error}", workitem)
+          new_state = :terminated
+        else
+          send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
+          new_state = :terminated
+        end
+      end
+
+      unless new_state.nil?
+        wf_state = update_workflow_state(context['wfid'], new_state)
+        log_workflow_state(wf_state)
+      end
+
     end
   end
 
@@ -183,7 +204,7 @@ class RuoteWorkflowEngine
       wf_state.state = state
       if state.eql?(:launched)
         wf_state.launched = DateTime.now
-      elsif state.eql?(:failed)
+      elsif state.eql?(:failed) and not error.nil?
         wf_state.error = error
       end
       wf_state

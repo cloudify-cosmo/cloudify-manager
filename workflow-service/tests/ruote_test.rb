@@ -86,17 +86,26 @@ define wf
   # mechanism for monitoring workflows activity since its also relevant for
   # sub-workflows.
   def test_sub_workflow
-    radial = %/
+    radial = %(
 define wf
   echo 'parent workflow echo'
-  sub_wf
+  sub_wf on_error: 'handler'
+
   define sub_wf
+    log
     echo 'this is a sub workflow echo'
     sleep for: '2s'
-/
+
+  define handler
+    echo 'handler invoked'
+    echo '${__error__}'
+    log message: 'hello!'
+    echo 'handler invoked and set'
+
+)
     wf = @ruote.launch(radial)
     assert_equal :pending, wf.state
-    wait_for_workflow_state(wf.id, :terminated, 10)
+    wait_for_workflow_state(wf.id, :terminated, 5)
   end
 
   def test_get_workflows
