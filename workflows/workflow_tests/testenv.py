@@ -43,7 +43,8 @@ STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
                               datefmt='%H:%M:%S')
 ch.setFormatter(formatter)
 

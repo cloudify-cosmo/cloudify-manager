@@ -43,7 +43,8 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = self.send_task(testmock_get_state)\
+            .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('containing_node' in states[0]['id'])
         self.assertTrue('contained_in_node' in states[1]['id'])
@@ -71,7 +72,8 @@ class BasicWorkflowsTest(TestCase):
         from plugins.worker_installer.tasks import \
             RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
 
-        from plugins.worker_installer.tasks import get_current_worker_state as \
+        from plugins.worker_installer.tasks \
+            import get_current_worker_state as \
             test_get_current_worker_state
         result = self.send_task(test_get_current_worker_state)
         state = result.get(timeout=10)
@@ -80,7 +82,9 @@ class BasicWorkflowsTest(TestCase):
         undeploy(deployment_id)
         result = self.send_task(test_get_current_worker_state)
         state = result.get(timeout=10)
-        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED, STOPPED, UNINSTALLED])
+        self.assertEquals(state,
+                          [INSTALLED, STARTED,
+                           RESTARTED, STOPPED, UNINSTALLED])
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")

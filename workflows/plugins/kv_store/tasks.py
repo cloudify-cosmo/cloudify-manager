@@ -17,6 +17,7 @@ __author__ = 'idanmo'
 
 from cloudify.decorators import operation
 
+
 @operation
 def put(key, value, db_file=None, **kwargs):
     pass

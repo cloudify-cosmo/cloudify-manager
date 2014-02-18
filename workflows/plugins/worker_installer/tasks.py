@@ -46,7 +46,8 @@ def start(ctx, worker_config, local=False, **kwargs):
     global workers_state
 
     ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
-    # adding a consumer that handles tasks from a queue called worker_config["name"]
+    # adding a consumer that handles tasks from a
+    # queue called worker_config["name"]
     app.control.add_consumer(worker_config["name"], reply=True)
     ctx.logger.info("Workers state before change is {0}".format(workers_state))
     workers_state[worker_config["name"]].append(STARTED)
