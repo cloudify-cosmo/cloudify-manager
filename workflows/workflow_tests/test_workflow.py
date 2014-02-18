@@ -15,9 +15,6 @@
 
 __author__ = 'idanmo'
 
-from cosmo_manager_rest_client.cosmo_manager_rest_client import \
-    CosmoManagerRestCallError
-
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
@@ -74,9 +71,9 @@ class BasicWorkflowsTest(TestCase):
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
-    def test_non_existing_opberation_exception(self):
+    def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
-        self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
+        self.assertRaises(RuntimeError, deploy, dsl_path)
 
     def test_inject_properties_to_operation(self):
         dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
