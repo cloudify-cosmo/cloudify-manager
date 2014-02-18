@@ -18,6 +18,8 @@ __author__ = 'idanmo'
 from cosmo_manager_rest_client.cosmo_manager_rest_client import \
     CosmoManagerRestCallError
 
+from testenv import undeploy_application as undeploy
+
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
@@ -62,7 +64,25 @@ class BasicWorkflowsTest(TestCase):
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
-    def test_non_existing_opberation_exception(self):
+    def test_dsl_with_manager_plugin(self):
+        dsl_path = resource("dsl/with_manager_plugin.yaml")
+        deployment_id = deploy(dsl_path).id
+
+        from plugins.worker_installer.tasks import \
+            RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
+
+        from plugins.worker_installer.tasks import get_current_worker_state as \
+            test_get_current_worker_state
+        result = self.send_task(test_get_current_worker_state)
+        state = result.get(timeout=10)
+        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED])
+
+        undeploy(deployment_id)
+        result = self.send_task(test_get_current_worker_state)
+        state = result.get(timeout=10)
+        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED, STOPPED, UNINSTALLED])
+
+    def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
 
