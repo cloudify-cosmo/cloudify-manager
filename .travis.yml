@@ -17,7 +17,7 @@ install:
     - sudo ln -Tsf /{run,dev}/shm
 
     # command to install dependencies
-    - python setup.py install
+    - pip install --process-dependency-links .
 
     # command to install test dependencies
     - pip install -r test-requirements.txt
