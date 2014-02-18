@@ -16,7 +16,7 @@
 
 ENV['RACK_ENV'] = 'test'
 
-require '../app'
+require_relative '../app'
 require 'test/unit'
 require 'rack/test'
 require 'json'
