@@ -8,15 +8,15 @@ blueprint:
         -   name: host1
             type: test_host
             instances:
-                deploy: 33
+                deploy: 5
         -   name: host2
             type: test_host
             instances:
-                deploy: 33
+                deploy: 5
         -   name: host3
             type: test_host
             instances:
-                deploy: 33
+                deploy: 5
 
 types:
     test_host:
