@@ -1,0 +1,25 @@
+define remove_deployment_worker
+
+    sequence if: '${plan.is_management_plugins_to_install} == true'
+
+      log message: 'stopping worker for deployment ${deployment_id}'
+      event event: { "stage" => "Stopping management worker" }
+      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.stop", payload: {
+        properties: {
+          worker_config: {
+            name: '${deployment_id}'
+          },
+          local: true
+        }
+      }
+
+      log message: 'uninstalling worker for deployment ${deployment_id}'
+      event event: { "stage" => "Uninstalling management worker" }
+      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.uninstall", payload: {
+        properties: {
+          worker_config: {
+            name: '${deployment_id}'
+          },
+          local: true
+        }
+      }
