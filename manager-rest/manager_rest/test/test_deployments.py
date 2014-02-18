@@ -145,7 +145,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._post_test_deployment()
 
-        resource_path = '/deployments/{0}/nodes'.format(deployment_id)
+        resource_path = '/deployments/{0}/nodes?reachable=False'\
+                        .format(deployment_id)
         nodes = self.get(resource_path).json
         self.assertEquals(deployment_id, nodes['deploymentId'])
         self.assertEquals(2, len(nodes['nodes']))

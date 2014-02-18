@@ -87,6 +87,16 @@ def abort_workflow_service_operation(workflow_service_error):
                           workflow_service_error.json))
 
 
+def verify_and_convert_bool(attribute_name, str_bool):
+    if str_bool.lower() == 'true':
+        return True
+    if str_bool.lower() == 'false':
+        return False
+    abort(400,
+          message='400: {0} must be <true/false>, got {1}'
+                  .format(attribute_name, str_bool))
+
+
 def setup_resources(api):
     api = swagger.docs(api,
                        apiVersion='0.1',
@@ -345,8 +355,8 @@ class DeploymentsIdNodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=bool,
-                                       default=False, location='args')
+        self._args_parser.add_argument('reachable', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNodes,
@@ -368,7 +378,8 @@ class DeploymentsIdNodes(Resource):
         Returns an object containing nodes associated with this deployment.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = args['reachable']
+        get_reachable_state = verify_and_convert_bool(
+            'reachable', args['reachable'])
         verify_deployment_exists(deployment_id)
 
         deployment = blueprints_manager().get_deployment(deployment_id)
@@ -468,10 +479,10 @@ class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=bool,
-                                       default=False, location='args')
-        self._args_parser.add_argument('runtime', type=bool,
-                                       default=True, location='args')
+        self._args_parser.add_argument('reachable', type=str,
+                                       default='false', location='args')
+        self._args_parser.add_argument('runtime', type=str,
+                                       default='true', location='args')
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -507,8 +518,10 @@ class NodesId(Resource):
         Gets node runtime or reachable state.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = args['reachable']
-        get_runtime_state = args['runtime']
+        get_reachable_state = verify_and_convert_bool(
+            'reachable', args['reachable'])
+        get_runtime_state = verify_and_convert_bool(
+            'runtime', args['runtime'])
 
         reachable_state = None
         if get_reachable_state:
