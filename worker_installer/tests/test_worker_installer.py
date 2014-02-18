@@ -17,10 +17,10 @@ import getpass
 import unittest
 import time
 
-from tests import VAGRANT_MACHINE_IP, get_remote_worker_config, get_local_management_worker_config
 from worker_installer.tests import get_remote_runner, get_local_runner, \
     id_generator, get_local_worker_config, get_local_context, get_remote_context, \
-    get_remote_management_worker_config
+    get_remote_management_worker_config, VAGRANT_MACHINE_IP, \
+    get_remote_worker_config, get_local_management_worker_config
 
 
 __author__ = 'elip'
