@@ -748,7 +748,9 @@ def deploy_application(dsl_path, timeout=240):
     client = CosmoManagerRestClient('localhost')
     blueprint_id = client.publish_blueprint(dsl_path).id
     deployment = client.create_deployment(blueprint_id)
-    _, error = client.execute_deployment(deployment.id, 'install', timeout=timeout)
+    _, error = client.execute_deployment(deployment.id,
+                                         'install',
+                                         timeout=timeout)
     if error is not None:
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
     return deployment
