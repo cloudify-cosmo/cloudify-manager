@@ -30,3 +30,4 @@ define uninstall_deployment
 
             state action: 'wait', node_id: '${node.id}', reachable: 'false'
 
+    remove_deployment_worker
