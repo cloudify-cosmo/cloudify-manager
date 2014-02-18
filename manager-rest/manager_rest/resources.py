@@ -687,6 +687,14 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 
 class Events(Resource):
 
+    def _query_events(self):
+        """
+        Returns events for the provided ElasticSearch query
+        """
+        verify_json_content_type()
+        return _query_elastic_search(index='cloudify_events',
+                                     body=request.json)
+
     @swagger.operation(
         nickname='events',
         notes='Returns a list of events for the provided ElasticSearch query. '
@@ -703,6 +711,22 @@ class Events(Resource):
         """
         Returns events for the provided ElasticSearch query
         """
-        verify_json_content_type()
-        return _query_elastic_search(index='cloudify_events',
-                                     body=request.json)
+        return self._query_events()
+
+    @swagger.operation(
+        nickname='events',
+        notes='Returns a list of events for the provided ElasticSearch query. '
+              'The response format is as ElasticSearch response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    def post(self):
+        """
+        Returns events for the provided ElasticSearch query
+        """
+        return self._query_events()
