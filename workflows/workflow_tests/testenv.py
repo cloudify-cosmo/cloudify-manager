@@ -64,7 +64,6 @@ RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
 celery = Celery(broker='amqp://',
                 backend='amqp://')
 
-# set the client celery to send tasks to the worker queue.
 celery.conf.update(
     CELERY_TASK_SERIALIZER="json"
 )
