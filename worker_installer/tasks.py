@@ -83,15 +83,40 @@ def uninstall(ctx, worker_config, local=False, **kwargs):
 
     runner = create_runner(local, host_string, key_filename)
 
-    service_file_path = "/etc/init.d/celeryd-{0}".format(worker_config["name"])
-    defaults_file_path = "/etc/default/celeryd-{0}".format(worker_config["name"])
-    if runner.exists(service_file_path):
-        runner.sudo("rm {0}".format(service_file_path))
-        runner.sudo("rm {0}".format(defaults_file_path))
-        runner.sudo("rm -rf {0}".format(worker_config[CELERY_WORK_DIR_PATH_KEY]))
-        runner.sudo("rm -rf {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
-    else:
-        ctx.logger.info("could not find any worker files. nothing to do")
+    files_to_delete = [
+        "/etc/init.d/celeryd-{0}".format(worker_config["name"]),
+        "/etc/default/celeryd-{0}".format(worker_config["name"]),
+    ]
+    folders_to_delete = [
+        worker_config[VIRTUALENV_PATH_KEY],
+        worker_config[CELERY_WORK_DIR_PATH_KEY]
+    ]
+    delete_files_if_exist(ctx, worker_config, runner, files_to_delete)
+    delete_folders_if_exist(ctx, worker_config, runner, folders_to_delete)
+
+
+def delete_files_if_exist(ctx, worker_config, runner, files):
+    missing_files = []
+    for file_to_delete in files:
+        if runner.exists(file_to_delete):
+            runner.sudo("rm {0}".format(file_to_delete))
+        else:
+            missing_files.append(file_to_delete)
+    if missing_files:
+        ctx.logger.debug("Could not find files {0} while trying to uninstall worker {1}"
+                         .format(missing_files, worker_config["name"]))
+
+
+def delete_folders_if_exist(ctx, worker_config, runner, folders):
+    missing_folders = []
+    for folder_to_delete in folders:
+        if runner.exists(folder_to_delete):
+            runner.sudo("rm -rf {0}".format(folder_to_delete))
+        else:
+            missing_folders.append(folder_to_delete)
+    if missing_folders:
+        ctx.logger.debug("Could not find folders {0} while trying to uninstall worker {1}"
+                         .format(missing_folders, worker_config["name"]))
 
 
 @operation
@@ -113,7 +138,8 @@ def stop(ctx, worker_config, local=False, **kwargs):
     if runner.exists(service_file_path):
         runner.sudo("service celeryd-{0} stop".format(worker_config["name"]))
     else:
-        ctx.logger.info("could not find any worker files. nothing to do")
+        ctx.logger.debug("Could not find any workers with name {0}. nothing to do."
+                         .format(worker_config["name"]))
 
 
 @operation

@@ -246,6 +246,30 @@ class TestLocalInstallerCase(unittest.TestCase):
         self.assertTrue('celery.{0}@kv_store'.format(worker_config["name"]) in plugins)
         self.assertTrue('celery.{0}@worker_installer'.format(worker_config["name"]) in plugins)
 
+    def test_remove_worker(self):
+
+        ctx = get_local_context()
+        worker_config = get_local_worker_config()
+
+        # install first worker
+        install(ctx, worker_config, local=True)
+        start(ctx, worker_config, local=True)
+
+        stop(ctx, worker_config, local=True)
+        uninstall(ctx, worker_config, local=True)
+
+        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"])
+
+        # make sure the worker has stopped
+        self.assertTrue(len(plugins) == 0)
+
+        # make sure files are deleted
+        service_file_path = "/etc/init.d/celeryd-{0}".format(worker_config["name"])
+        defaults_file_path = "/etc/default/celeryd-{0}".format(worker_config["name"])
+
+        self.assertFalse(self.RUNNER.exists(service_file_path))
+        self.assertFalse(self.RUNNER.exists(defaults_file_path))
+
     def test_create_env_string(self):
         env = {
             "TEST_KEY1": "TEST_VALUE1",
