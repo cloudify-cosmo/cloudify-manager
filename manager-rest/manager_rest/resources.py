@@ -30,7 +30,8 @@ import uuid
 import chunked
 import elasticsearch
 
-from blueprints_manager import DslParseException
+from blueprints_manager import DslParseException, \
+    BlueprintAlreadyExistsException
 from workflow_client import WorkflowServiceError
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
@@ -71,6 +72,13 @@ def verify_deployment_exists(deployment_id):
     if blueprints_manager().get_deployment(deployment_id) is None:
         abort(404,
               message='404: deployment {0} not found'.format(deployment_id))
+
+
+def verify_deployment_does_not_exist(deployment_id):
+    if blueprints_manager().get_deployment(deployment_id) is not None:
+        abort(400,
+              message='400: deployment {0} already exists'
+                      .format(deployment_id))
 
 
 def verify_execution_exists(execution_id):
@@ -280,6 +288,9 @@ class Blueprints(Resource):
             return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
+        except BlueprintAlreadyExistsException, ex:
+            abort(400, message='400: Blueprint - {0} already exists'
+                               .format(ex.blueprint_id))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:
@@ -438,9 +449,15 @@ class Deployments(Resource):
         request_json = request.json
         if 'blueprintId' not in request_json:
             abort(400, message='400: Missing blueprintId in json request body')
+        if 'deploymentId' not in request_json:
+            abort(400, message='400: Missing deploymentId in json request '
+                               'body')
         blueprint_id = request.json['blueprintId']
         verify_blueprint_exists(blueprint_id)
-        return blueprints_manager().create_deployment(blueprint_id), 201
+        deployment_id = request.json['deploymentId']
+        verify_deployment_does_not_exist(deployment_id)
+        return blueprints_manager().create_deployment(blueprint_id,
+                                                      deployment_id), 201
 
 
 class DeploymentsId(Resource):

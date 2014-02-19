@@ -63,6 +63,8 @@ class BlueprintsManager(object):
         except Exception, ex:
             raise DslParseException(*ex.args)
         new_blueprint = BlueprintState().init(plan=json.loads(plan))
+        if self.get_blueprint(new_blueprint.id) is not None:
+            raise BlueprintAlreadyExistsException(new_blueprint.id)
         storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -115,11 +117,10 @@ class BlueprintsManager(object):
             execution.error = response['error']
         return execution
 
-    def create_deployment(self, blueprint_id):
+    def create_deployment(self, blueprint_id, deployment_id):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
-        deployment_id = str(uuid.uuid4())
 
         new_deployment = Deployment().init(
             deployment_id=deployment_id, plan=json.loads(
@@ -140,3 +141,9 @@ def reset():
 
 def instance():
     return _instance
+
+
+class BlueprintAlreadyExistsException(Exception):
+    def __init__(self, blueprint_id, *args):
+        Exception.__init__(self, args)
+        self.blueprint_id = blueprint_id
