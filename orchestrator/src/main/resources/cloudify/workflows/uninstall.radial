@@ -35,4 +35,5 @@ define uninstall_deployment
 
             state action: 'wait', node_id: '${node.id}', reachable: 'false'
 
+    event event: { "stage" => "Removing deployment worker" }
     remove_deployment_worker
