@@ -101,6 +101,15 @@ class RuoteWorkflowEngine
     end
   end
 
+  def get_workflows_with_ruote_state
+    {
+        # duplicate workflows inner state as we are changing it
+        :workflows => JSON.parse(get_workflows.to_json),
+        :leftovers => @dashboard.leftovers,
+        :processes => @dashboard.processes
+    }
+  end
+
   def on_msg(context)
     action = context['action']
 
