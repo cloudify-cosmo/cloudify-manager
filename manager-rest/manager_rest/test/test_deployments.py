@@ -31,7 +31,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         deployment_response = self.post(
             '/deployments',
             {'blueprintId': blueprint_id,
-            'deploymentId': self.DEPLOYMENT_ID}).json
+             'deploymentId': self.DEPLOYMENT_ID}).json
         return (blueprint_id, deployment_response['id'], blueprint_response,
                 deployment_response)
 

@@ -113,4 +113,23 @@ define wf
     assert_equal 2, @ruote.get_workflows.size
   end
 
+  def test_my_stuff
+    radial = %(
+define wf
+
+  define sub_wf
+    echo 'sleeping 5'
+    sleep 1000
+    log
+    echo 'slept 5'
+
+  sub_wf, timeout: '10s', on_timeout: 'redo'
+)
+    @ruote.launch(radial)
+
+    sleep(3)
+
+    print @ruote.get_workflows.to_json
+  end
+
 end
