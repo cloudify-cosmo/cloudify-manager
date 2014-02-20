@@ -15,7 +15,6 @@
 
 __author__ = 'ran'
 
-import os
 from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
 import manager_rest.exceptions

@@ -15,7 +15,6 @@
 
 __author__ = 'dan'
 
-from datetime import datetime
 from flask.ext.restful import fields
 from flask_restful_swagger import swagger
 
