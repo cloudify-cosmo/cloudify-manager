@@ -95,8 +95,6 @@ class RuoteWorkflowEngine
   def get_workflows
     begin
       @mutex.lock
-      puts "processes: #{@dashboard.processes}"
-      puts "leftovers: #{@dashboard.leftovers}"
       @states.values
     ensure
       @mutex.unlock
