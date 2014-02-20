@@ -86,7 +86,7 @@ class BlueprintsManager(object):
         workflow = deployment.plan['workflows'][workflow_id]
         plan = deployment.plan
 
-        execution_id = str(uuid.uuid4())
+        execution_id = '{0}-{1}'.format(workflow_id, str(uuid.uuid4()))
         response = workflow_client().execute_workflow(
             workflow_id,
             workflow, plan,
