@@ -73,8 +73,9 @@ def get_manager_state():
     for deployment in client.list_deployments():
         deployments[deployment.id] = deployment
     nodes = {}
-    for node in client.list_nodes()['nodes']:
-        nodes[node['id']] = node
+    for deployment_id in deployments.keys():
+        for node in client.list_deployment_nodes(deployment_id)['nodes']:
+            nodes[node['id']] = node
     workflows = {}
     deployment_nodes = {}
     node_state = {}                                                    

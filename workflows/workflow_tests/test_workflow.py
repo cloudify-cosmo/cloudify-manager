@@ -62,7 +62,7 @@ class BasicWorkflowsTest(TestCase):
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
-    def test_non_existing_opberation_exception(self):
+    def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
 

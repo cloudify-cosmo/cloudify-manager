@@ -33,35 +33,9 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual(1, len(response.json['runtimeInfo']))
         self.assertEqual('value', response.json['runtimeInfo']['key'])
 
-    def test_put_update_node(self):
-        self.put('/nodes/1234', {'key': 'value'})
-        response = self.put('/nodes/1234', {'key': 'value2', 'aaa': 'bbb'})
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('1234', response.json['id'])
-        self.assertEqual(2, len(response.json['runtimeInfo']))
-        self.assertEqual('value2', response.json['runtimeInfo']['key'])
-        self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
-        response = self.put('/nodes/1234', {})
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('1234', response.json['id'])
-        self.assertEqual(0, len(response.json['runtimeInfo']))
-
-    def test_get_nodes(self):
-        response = self.get('/nodes')
-        self.assertEqual(200, response.status_code)
-        self.assertEqual(0, len(response.json['nodes']))
-        self.put('/nodes/1', {'key': 'value'})
-        self.put('/nodes/2', {'key': 'value'})
-        response = self.get('/nodes')
-        ids = map(lambda x: x['id'], response.json['nodes'])
-        self.assertEqual(200, response.status_code)
-        self.assertEqual(2, len(ids))
-        self.assertTrue('1' in ids)
-        self.assertTrue('2' in ids)
-
     def test_patch_node(self):
-        self.put('/nodes/1234', {'key': 'value'})
-        update = {'key': ['new_value', 'value'], 'new_key': ['value']}
+        self.patch('/nodes/1234', {'key': 'value'})
+        update = {'key': 'new_value', 'new_key': 'value'}
         response = self.patch('/nodes/1234', update)
         self.assertEqual(200, response.status_code)
         self.assertEqual(2, len(response.json['runtimeInfo']))
@@ -73,21 +47,29 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('new_value', response.json['runtimeInfo']['key'])
         self.assertEqual('value', response.json['runtimeInfo']['new_key'])
 
-    def test_patch_node_conflict(self):
-        response = self.patch('/nodes/1234', {'key': ['new_value',
-                                                      'old_value']})
-        self.assertEqual(500, response.status_code)
+    def test_patch_node_merge(self):
         self.put('/nodes/1234', {'key': 'value'})
-        response = self.patch('/nodes/1234', {'key': ['new_value',
-                                                      'old_value']})
-        self.assertEqual(500, response.status_code)
+        response = self.patch('/nodes/1234', {'aaa': 'bbb'})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('1234', response.json['id'])
+        self.assertEqual(2, len(response.json['runtimeInfo']))
+        self.assertEqual('value', response.json['runtimeInfo']['key'])
+        self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
+
+    def test_patch_node_conflict(self):
+        import manager_rest.storage_manager as sm
+        import manager_rest.exceptions
+        prev_update_node_func = sm.instance().update_node
+        try:
+            def conflict_update_node_func(node_id, node):
+                raise manager_rest.exceptions.ConflictError()
+            sm.instance().update_node = conflict_update_node_func
+            self.put('/nodes/1234', {'key': 'value'})
+            response = self.patch('/nodes/1234', {'key': 'new_value'})
+            self.assertEqual(409, response.status_code)
+        finally:
+            sm.instance().update_node = prev_update_node_func
 
     def test_invalid_input(self):
         response = self.patch('/nodes/1234', [])
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'key': None})
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'key': 'value'})
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'key': ['1', '2', '3']})
         self.assertEqual(400, response.status_code)
