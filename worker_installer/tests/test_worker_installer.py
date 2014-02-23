@@ -32,7 +32,7 @@ from celery import Celery
 from worker_installer.tasks import install, start, build_env_string, uninstall, stop
 
 
-def _extract_registered_plugins(broker_url):
+def _extract_registered_plugins(broker_url, worker_name):
 
     c = Celery(broker=broker_url, backend=broker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
@@ -47,10 +47,10 @@ def _extract_registered_plugins(broker_url):
         return set()
 
     plugins = set()
-    for node, node_tasks in tasks.items():
+    for node_tasks in tasks.get("celery.{0}".format(worker_name)):
         for task in node_tasks:
             plugin_name = task.split('.')[0]
-            full_plugin_name = '{0}@{1}'.format(node, plugin_name)
+            full_plugin_name = '{0}@{1}'.format(worker_name, plugin_name)
             plugins.add(full_plugin_name)
     return plugins
 
@@ -131,7 +131,7 @@ class TestRemoteInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=False)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
+        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
             raise AssertionError("No plugins were detected on the installed worker")
 
@@ -235,7 +235,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=True)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
+        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
             raise AssertionError("No plugins were detected on the installed worker")
 
