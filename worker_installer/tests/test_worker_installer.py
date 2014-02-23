@@ -36,6 +36,7 @@ def _extract_registered_plugins(broker_url, worker_name):
 
     c = Celery(broker=broker_url, backend=broker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
+    print "tasks : {0}".format(tasks)
 
     # retry a few times
     attempt = 0
