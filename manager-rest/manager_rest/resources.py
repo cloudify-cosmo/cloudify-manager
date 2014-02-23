@@ -74,6 +74,13 @@ def verify_deployment_exists(deployment_id):
               message='404: deployment {0} not found'.format(deployment_id))
 
 
+def verify_blueprint_does_not_exist(blueprint_id):
+    if blueprints_manager().get_blueprint(blueprint_id) is not None:
+        abort(400,
+              message='400: blueprint {0} already exists'
+                      .format(blueprint_id))
+
+
 def verify_deployment_does_not_exist(deployment_id):
     if blueprints_manager().get_deployment(deployment_id) is not None:
         abort(400,
@@ -135,50 +142,8 @@ def setup_resources(api):
     api.add_resource(Events, '/events')
 
 
-class Blueprints(Resource):
-
-    @swagger.operation(
-        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
-        nickname="list",
-        notes="Returns a list a submitted blueprints."
-    )
-    def get(self):
-        """
-        Returns a list of submitted blueprints.
-        """
-        return [marshal(blueprint,
-                        responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager().blueprints_list()]
-
-    @swagger.operation(
-        responseClass=responses.BlueprintState,
-        nickname="upload",
-        notes="Submitted blueprint should be a tar "
-              "gzipped directory containing the blueprint.",
-        parameters=[{'name': 'application_file_name',
-                     'description': 'File name of yaml '
-                                    'containing the "main" blueprint.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'query',
-                     'defaultValue': 'blueprint.yaml'},
-                    {
-                        'name': 'body',
-                        'description': 'Binary form of the tar '
-                                       'gzipped blueprint directory',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': 'binary',
-                        'paramType': 'body',
-                    }],
-        consumes=[
-            "application/octet-stream"
-        ]
-
-    )
-    @marshal_with(responses.BlueprintState.resource_fields)
-    def post(self):
+class BlueprintsUpload(object):
+    def do_request(self, blueprint_id=None):
         """
         Submit a new blueprint.
         """
@@ -194,7 +159,8 @@ class Blueprints(Resource):
         self._process_plugins(file_server_root, application_dir)
 
         return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir), 201
+                                                  application_dir,
+                                                  blueprint_id), 201
 
     def _process_plugins(self, file_server_root, application_dir):
         blueprint_directory = path.join(file_server_root, application_dir)
@@ -266,7 +232,8 @@ class Blueprints(Resource):
             shutil.rmtree(tempdir)
 
     def _prepare_and_submit_blueprint(self, file_server_root,
-                                      application_dir):
+                                      application_dir,
+                                      blueprint_id=None):
         application_file = self._extract_application_file(file_server_root,
                                                           application_dir)
 
@@ -279,7 +246,7 @@ class Blueprints(Resource):
         # add to blueprints manager (will also dsl_parse it)
         try:
             blueprint = blueprints_manager().publish_blueprint(
-                dsl_path, alias_mapping, resources_base)
+                dsl_path, alias_mapping, resources_base, blueprint_id)
 
             #moving the app directory in the file server to be under a
             # directory named after the blueprint's app name field
@@ -311,6 +278,53 @@ class Blueprints(Resource):
                            'application directory is missing blueprint.yaml')
 
 
+class Blueprints(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        nickname="list",
+        notes="Returns a list a submitted blueprints."
+    )
+    def get(self):
+        """
+        Returns a list of submitted blueprints.
+        """
+        return [marshal(blueprint,
+                        responses.BlueprintState.resource_fields) for
+                blueprint in blueprints_manager().blueprints_list()]
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar "
+              "gzipped directory containing the blueprint.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                    }],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def post(self):
+        return BlueprintsUpload().do_request()
+
+
 class BlueprintsId(Resource):
 
     @swagger.operation(
@@ -325,6 +339,38 @@ class BlueprintsId(Resource):
         """
         verify_blueprint_exists(blueprint_id)
         return blueprints_manager().get_blueprint(blueprint_id)
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar "
+              "gzipped directory containing the blueprint.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                        }],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def put(self, blueprint_id):
+        verify_blueprint_does_not_exist(blueprint_id)
+        return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
 
 
 class BlueprintsIdValidate(Resource):
@@ -426,39 +472,6 @@ class Deployments(Resource):
         return [marshal(deployment, responses.Deployment.resource_fields) for
                 deployment in blueprints_manager().deployments_list()]
 
-    @swagger.operation(
-        responseClass=responses.Deployment,
-        nickname="createDeployment",
-        notes="Created a new deployment of the given blueprint.",
-        parameters=[{'name': 'body',
-                     'description': 'Deployment blue print',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': requests_schema.DeploymentRequest.__name__,
-                     'paramType': 'body'}],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @marshal_with(responses.Deployment.resource_fields)
-    def post(self):
-        """
-        Creates a new deployment
-        """
-        verify_json_content_type()
-        request_json = request.json
-        if 'blueprintId' not in request_json:
-            abort(400, message='400: Missing blueprintId in json request body')
-        if 'deploymentId' not in request_json:
-            abort(400, message='400: Missing deploymentId in json request '
-                               'body')
-        blueprint_id = request.json['blueprintId']
-        verify_blueprint_exists(blueprint_id)
-        deployment_id = request.json['deploymentId']
-        verify_deployment_does_not_exist(deployment_id)
-        return blueprints_manager().create_deployment(blueprint_id,
-                                                      deployment_id), 201
-
 
 class DeploymentsId(Resource):
 
@@ -474,6 +487,35 @@ class DeploymentsId(Resource):
         """
         verify_deployment_exists(deployment_id)
         return blueprints_manager().get_deployment(deployment_id)
+
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="createDeployment",
+        notes="Created a new deployment of the given blueprint.",
+        parameters=[{'name': 'body',
+                     'description': 'Deployment blue print',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.DeploymentRequest.__name__,
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    def put(self, deployment_id):
+        """
+        Creates a new deployment
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'blueprintId' not in request_json:
+            abort(400, message='400: Missing blueprintId in json request body')
+        blueprint_id = request.json['blueprintId']
+        verify_blueprint_exists(blueprint_id)
+        verify_deployment_does_not_exist(deployment_id)
+        return blueprints_manager().create_deployment(blueprint_id,
+                                                      deployment_id), 201
 
 
 class Nodes(Resource):

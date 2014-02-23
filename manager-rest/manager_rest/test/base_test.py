@@ -60,6 +60,13 @@ class BaseServerTestCase(unittest.TestCase):
             result.json = json.loads(result.data)
             return result
 
+    def put_file(self, resource_path, file_path, query_params=None):
+        with open(file_path) as f:
+            result = self.app.put(
+                self._build_url(resource_path, query_params), data=f.read())
+            result.json = json.loads(result.data)
+            return result
+
     def put(self, resource_path, data):
         result = self.app.put(urllib.quote(resource_path),
                               content_type='application/json',
