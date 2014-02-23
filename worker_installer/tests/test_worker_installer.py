@@ -81,7 +81,7 @@ class TestRemoteInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=False)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
+        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
             raise AssertionError("No plugins were detected on the installed worker")
 
@@ -110,7 +110,7 @@ class TestRemoteInstallerCase(unittest.TestCase):
 
         # lets make sure it did
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
+        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
             raise AssertionError("No plugins were detected on the installed worker")
 
@@ -154,7 +154,7 @@ class TestRemoteInstallerCase(unittest.TestCase):
         stop(ctx, worker_config, local=False)
         uninstall(ctx, worker_config, local=False)
 
-        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"])
+        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"], worker_config["name"])
 
         # make sure the worker has stopped
         self.assertTrue(len(plugins) == 0)
@@ -216,7 +216,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=True)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'])
+        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
             raise AssertionError("No plugins were detected on the installed worker")
 
@@ -258,7 +258,7 @@ class TestLocalInstallerCase(unittest.TestCase):
         stop(ctx, worker_config, local=True)
         uninstall(ctx, worker_config, local=True)
 
-        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"])
+        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"], worker_config["name"])
 
         # make sure the worker has stopped
         self.assertTrue(len(plugins) == 0)
