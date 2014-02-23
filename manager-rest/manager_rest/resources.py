@@ -144,9 +144,6 @@ def setup_resources(api):
 
 class BlueprintsUpload(object):
     def do_request(self, blueprint_id=None):
-        """
-        Submit a new blueprint.
-        """
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -322,6 +319,9 @@ class Blueprints(Resource):
     )
     @marshal_with(responses.BlueprintState.resource_fields)
     def post(self):
+        """
+        Submit a new blueprint.
+        """
         return BlueprintsUpload().do_request()
 
 
@@ -369,6 +369,9 @@ class BlueprintsId(Resource):
     )
     @marshal_with(responses.BlueprintState.resource_fields)
     def put(self, blueprint_id):
+        """
+        Submit a new blueprint with a blueprint_id.
+        """
         verify_blueprint_does_not_exist(blueprint_id)
         return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
 
