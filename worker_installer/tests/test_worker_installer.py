@@ -50,7 +50,9 @@ def _extract_registered_plugins(broker_url, worker_name):
     plugins = set()
     worker_name = "celery.{0}".format(worker_name)
     if worker_name in tasks:
-        for node_tasks in tasks.get(worker_name):
+        worker_tasks = tasks.get(worker_name)
+        print "worker tasks are : {0}".format(worker_tasks)
+        for node_tasks in worker_tasks:
             for task in node_tasks:
                 plugin_name = task.split('.')[0]
                 full_plugin_name = '{0}@{1}'.format(worker_name, plugin_name)
