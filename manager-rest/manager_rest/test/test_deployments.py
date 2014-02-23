@@ -22,12 +22,16 @@ from test_blueprints import post_blueprint_args
 
 class DeploymentsTestCase(BaseServerTestCase):
 
+    DEPLOYMENT_ID = 'deployment'
+
     def _post_test_deployment(self):
         blueprint_response = self.post_file(*post_blueprint_args()).json
         blueprint_id = blueprint_response['id']
         #Execute post deployment
-        deployment_response = self.post('/deployments',
-                                        {'blueprintId': blueprint_id}).json
+        deployment_response = self.post(
+            '/deployments',
+            {'blueprintId': blueprint_id,
+             'deploymentId': self.DEPLOYMENT_ID}).json
         return (blueprint_id, deployment_response['id'], blueprint_response,
                 deployment_response)
 
@@ -41,7 +45,7 @@ class DeploymentsTestCase(BaseServerTestCase):
          blueprint_response,
          deployment_response) = self._post_test_deployment()
 
-        self.assertIsNotNone(deployment_id)
+        self.assertEquals(deployment_id, self.DEPLOYMENT_ID)
         self.assertEquals(blueprint_id, deployment_response['blueprintId'])
         self.assertIsNotNone(deployment_response['createdAt'])
         self.assertIsNotNone(deployment_response['updatedAt'])
@@ -49,6 +53,19 @@ class DeploymentsTestCase(BaseServerTestCase):
         typed_deployment_plan = deployment_response['plan']
         self.assertEquals(typed_blueprint_plan['name'],
                           typed_deployment_plan['name'])
+
+    def test_deployment_already_exists(self):
+        (blueprint_id,
+         deployment_id,
+         blueprint_response,
+         deployment_response) = self._post_test_deployment()
+        deployment_response = self.post(
+            '/deployments',
+            {'blueprintId': blueprint_id,
+             'deploymentId': self.DEPLOYMENT_ID})
+        self.assertTrue('already exists' in
+                        deployment_response.json['message'])
+        self.assertEqual(400, deployment_response.status_code)
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -145,9 +162,10 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._post_test_deployment()
 
-        resource_path = '/deployments/{0}/nodes?reachable=False'\
+        resource_path = '/deployments/{0}/nodes'\
                         .format(deployment_id)
-        nodes = self.get(resource_path).json
+        nodes = self.get(resource_path,
+                         query_params={'reachable': 'False'}).json
         self.assertEquals(deployment_id, nodes['deploymentId'])
         self.assertEquals(2, len(nodes['nodes']))
 

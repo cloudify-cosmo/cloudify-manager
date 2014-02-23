@@ -181,10 +181,10 @@ class ExecuteTaskParticipant < Ruote::Participant
         related_node_properties = target_properties.clone
       end
 
-      unless workitem.fields.has_key? PlanHolder::EXECUTION_ID
+      unless workitem.fields.has_key? EXECUTION_ID
         raise 'execution_id field not set'
       end
-      execution_id = workitem.fields[PlanHolder::EXECUTION_ID]
+      execution_id = workitem.fields[EXECUTION_ID]
       node_in_context = PlanHolder.get_node(execution_id, node_id)
       node_name = node_in_context['name']
 

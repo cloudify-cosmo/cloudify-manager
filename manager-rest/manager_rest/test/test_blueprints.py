@@ -62,6 +62,13 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
 
+    def test_post_blueprint_already_exists(self):
+        self.post_file(*post_blueprint_args())
+        post_blueprints_response = self.post_file(*post_blueprint_args())
+        self.assertTrue('already exists' in
+                        post_blueprints_response.json['message'])
+        self.assertEqual(400, post_blueprints_response.status_code)
+
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.post_file(
             *post_blueprint_args(convention=True)).json
