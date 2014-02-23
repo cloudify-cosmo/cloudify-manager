@@ -47,13 +47,18 @@ STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s',
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
                               datefmt='%H:%M:%S')
 ch.setFormatter(formatter)
-root.addHandler(ch)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# clear all other handlers
+for handler in root.handlers:
+    root.removeHandler(handler)
+
+root.addHandler(ch)
+logger = logging.getLogger("TESTENV")
+logger.setLevel(logging.DEBUG)
 
 RABBITMQ_POLLING_KEY = 'RABBITMQ_POLLING'
 
@@ -63,7 +68,6 @@ RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
 celery = Celery(broker='amqp://',
                 backend='amqp://')
 
-# set the client celery to send tasks to the worker queue.
 celery.conf.update(
     CELERY_TASK_SERIALIZER="json"
 )
@@ -267,8 +271,7 @@ class CeleryWorkerProcess(object):
 
     def _build_includes(self):
 
-        # mandatory REAL plugins for the tests framework
-        includes = ['plugin_installer.tasks']
+        includes = []
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path\
@@ -285,10 +288,6 @@ class CeleryWorkerProcess(object):
                                .format(plugin_dir_name))
 
         return includes
-
-    def _copy_cosmo_plugins(self):
-        import plugin_installer
-        self._copy_plugin(plugin_installer)
 
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
@@ -313,8 +312,6 @@ class CeleryWorkerProcess(object):
     def start(self):
         logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
         shutil.copytree(self._cosmo_path, self._app_path)
-        logger.info("Copying cosmo plugins")
-        self._copy_cosmo_plugins()
         celery_log_file = path.join(self._tempdir, "celery.log")
         python_path = sys.executable
         logger.info("Building includes list for celery worker")

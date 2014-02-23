@@ -15,6 +15,7 @@
 
 __author__ = 'idanmo'
 
+from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
@@ -39,7 +40,8 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = self.send_task(testmock_get_state)\
+            .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('containing_node' in states[0]['id'])
         self.assertTrue('contained_in_node' in states[1]['id'])
@@ -70,6 +72,27 @@ class BasicWorkflowsTest(TestCase):
         self.assertEquals('value1', node_runtime_props['property1'])
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
+
+    def test_dsl_with_manager_plugin(self):
+        dsl_path = resource("dsl/with_manager_plugin.yaml")
+        deployment_id = deploy(dsl_path).id
+
+        from plugins.worker_installer.tasks import \
+            RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
+
+        from plugins.worker_installer.tasks \
+            import get_current_worker_state as \
+            test_get_current_worker_state
+        result = self.send_task(test_get_current_worker_state)
+        state = result.get(timeout=10)
+        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED])
+
+        undeploy(deployment_id)
+        result = self.send_task(test_get_current_worker_state)
+        state = result.get(timeout=10)
+        self.assertEquals(state,
+                          [INSTALLED, STARTED,
+                           RESTARTED, STOPPED, UNINSTALLED])
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
