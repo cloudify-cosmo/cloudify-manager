@@ -14,8 +14,6 @@
 #    * limitations under the License.
 # *******************************************************************************/
 
-import logging
-
 from cloudify.decorators import operation
 
 
@@ -23,7 +21,6 @@ __author__ = 'elip'
 
 import os
 
-from celery.utils.log import get_task_logger
 from cosmo_fabric.runner import FabricRetryingRunner
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION, KV_STORE_VERSION, \
     RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
@@ -47,9 +44,6 @@ AGENT_INSTALLER_URL = "https://github.com/CloudifySource/cosmo-plugin-agent-inst
                       .format(AGENT_INSTALLER_VERSION)
 
 
-logger = get_task_logger(__name__)
-logger.level = logging.DEBUG
-
 BROKER_URL = "BROKER_URL"
 
 
@@ -69,10 +63,83 @@ def install(ctx, worker_config, local=False, **kwargs):
 
     _install_latest_pip(runner, worker_config)
 
-    logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
+    ctx.logger.info("installing worker. virtualenv = {0}".format(worker_config[VIRTUALENV_PATH_KEY]))
 
     _create_virtualenv(runner, worker_config[VIRTUALENV_PATH_KEY], worker_config["name"])
     _install_celery(runner, worker_config)
+
+
+@operation
+def uninstall(ctx, worker_config, local=False, **kwargs):
+
+    prepare_configuration(worker_config, ctx)
+
+    ctx.logger.info("uninstalling celery worker {0}".format(worker_config["name"]))
+
+    host_string = key_filename = None
+    if not local:
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
+
+    runner = create_runner(local, host_string, key_filename)
+
+    files_to_delete = [
+        "/etc/init.d/celeryd-{0}".format(worker_config["name"]),
+        "/etc/default/celeryd-{0}".format(worker_config["name"]),
+    ]
+    folders_to_delete = [
+        worker_config[VIRTUALENV_PATH_KEY],
+        worker_config[CELERY_WORK_DIR_PATH_KEY]
+    ]
+    delete_files_if_exist(ctx, worker_config, runner, files_to_delete)
+    delete_folders_if_exist(ctx, worker_config, runner, folders_to_delete)
+
+
+def delete_files_if_exist(ctx, worker_config, runner, files):
+    missing_files = []
+    for file_to_delete in files:
+        if runner.exists(file_to_delete):
+            runner.sudo("rm {0}".format(file_to_delete))
+        else:
+            missing_files.append(file_to_delete)
+    if missing_files:
+        ctx.logger.debug("Could not find files {0} while trying to uninstall worker {1}"
+                         .format(missing_files, worker_config["name"]))
+
+
+def delete_folders_if_exist(ctx, worker_config, runner, folders):
+    missing_folders = []
+    for folder_to_delete in folders:
+        if runner.exists(folder_to_delete):
+            runner.sudo("rm -rf {0}".format(folder_to_delete))
+        else:
+            missing_folders.append(folder_to_delete)
+    if missing_folders:
+        ctx.logger.debug("Could not find folders {0} while trying to uninstall worker {1}"
+                         .format(missing_folders, worker_config["name"]))
+
+
+@operation
+def stop(ctx, worker_config, local=False, **kwargs):
+
+    prepare_configuration(worker_config, ctx)
+
+    ctx.logger.info("stopping celery worker {0}".format(worker_config["name"]))
+
+    host_string = key_filename = None
+    if not local:
+        host_string = '%(user)s@%(host)s:%(port)s' % worker_config
+        key_filename = worker_config['key']
+
+    runner = create_runner(local, host_string, key_filename)
+
+    service_file_path = "/etc/init.d/celeryd-{0}".format(worker_config["name"])
+
+    if runner.exists(service_file_path):
+        runner.sudo("service celeryd-{0} stop".format(worker_config["name"]))
+    else:
+        ctx.logger.debug("Could not find any workers with name {0}. nothing to do."
+                         .format(worker_config["name"]))
 
 
 @operation
@@ -91,7 +158,7 @@ def start(ctx, worker_config, local=False, **kwargs):
 
     runner.sudo("service celeryd-{0} start".format(worker_config["name"]))
 
-    logger.debug(runner.get(worker_config['log_file']))
+    ctx.logger.debug(runner.get(worker_config['log_file']))
 
     _verify_no_celery_error(runner, worker_config)
 
@@ -122,12 +189,10 @@ def create_runner(local, host_string, key_filename):
 
 
 def _install_latest_pip(runner, worker_config):
-    logger.info("installing latest pip installation [name=%s]", worker_config["name"])
     runner.run("wget https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py -O {0}/get-pip.py"
                .format(worker_config['home']))
 
     package_installer = "yum" if len(runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
-    logger.debug("installing setuptools using {0}".format(package_installer))
     runner.sudo("{0} -y install python-setuptools".format(package_installer))
 
     runner.sudo("python {0}/get-pip.py".format(worker_config['home']))
@@ -290,11 +355,8 @@ def build_env_string(env):
 
 
 def _create_virtualenv(runner, env_path, name):
-    logger.debug("installing virtualenv [name=%s]", name)
     runner.sudo("pip install virtualenv")
-    logger.debug("creating virtualenv [name=%s]", name)
     runner.run("virtualenv {0}".format(env_path))
-    logger.info("upgrading pip installation within virtualenv")
     runner.run("{0}/bin/pip install --upgrade pip".format(env_path))
 
 
