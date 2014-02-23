@@ -68,6 +68,9 @@ def stop(ctx, worker_config, local=False, **kwargs):
     global workers_state
 
     ctx.logger.info("Stopping worker {0}".format(worker_config["name"]))
+    if worker_config["name"] not in workers_state:
+        ctx.logger.debug("No worker. nothing to do.")
+        return
     app.control.cancel_consumer(worker_config["name"], reply=True)
     workers_state[worker_config["name"]].append(STOPPED)
 
@@ -78,6 +81,9 @@ def uninstall(ctx, worker_config, local=False, **kwargs):
     global workers_state
 
     ctx.logger.info("Uninstalling worker {0}".format(worker_config["name"]))
+    if worker_config["name"] not in workers_state:
+        ctx.logger.debug("No worker. nothing to do.")
+        return
     workers_state[worker_config["name"]].append(UNINSTALLED)
 
 
