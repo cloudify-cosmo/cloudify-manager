@@ -749,12 +749,15 @@ def get_resource(resource):
     return resource_path
 
 
-def deploy_application(dsl_path, timeout=240, deployment_id='deployment'):
+def deploy_application(dsl_path, timeout=240,
+                       blueprint_id=None,
+                       deployment_id='deployment'):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
     client = CosmoManagerRestClient('localhost')
-    blueprint_id = client.publish_blueprint(dsl_path).id
+    blueprint_id = client.publish_blueprint(dsl_path,
+                                            blueprint_id).id
 
     deployment = client.create_deployment(blueprint_id, deployment_id)
     _, error = client.execute_deployment(deployment.id,

@@ -26,7 +26,10 @@ class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
-        deploy(dsl_path)
+        blueprint_id = 'my_new_blueprint'
+        deployment = deploy(dsl_path, blueprint_id=blueprint_id)
+
+        self.assertEqual(blueprint_id, deployment.blueprintId)
 
         from plugins.cloudmock.tasks import get_machines
         result = self.send_task(get_machines)
@@ -36,7 +39,9 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deploy(dsl_path)
+        deployment = deploy(dsl_path)
+
+        self.assertEquals('mock_app', deployment.blueprintId)
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
