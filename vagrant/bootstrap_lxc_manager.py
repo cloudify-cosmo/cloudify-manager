@@ -581,10 +581,10 @@ rm /root/guest_additions.sh
             raise RuntimeError("logstash configuration file [{0}] "
                                "does not exist".format(logstash_config_path))
         # Starts logstash with Kibana listening on port 8080
-        command = "java -jar {0} agent -f {1} -- web --port {2}".format(
-            logstash_jar_path,
-            logstash_config_path,
-            logstash_web_port).split(' ')
+        command = "java -Xmx1024m -Xms256m -jar {0} agent -f {1}" \
+                  " -- web --port {2}".format(logstash_jar_path,
+                                              logstash_config_path,
+                                              logstash_web_port).split(' ')
         timeout_seconds = 60
         print("Starting logstash with web port set to: {0} "
               "[timeout={1} seconds]".format(logstash_web_port,
