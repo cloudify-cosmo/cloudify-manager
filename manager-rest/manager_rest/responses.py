@@ -44,7 +44,10 @@ class BlueprintState(SerializableObjectBase):
 
     def init(self, *args, **kwargs):
         self.plan = kwargs['plan']
-        self.id = self.plan['name']
+        if 'blueprint_id' in kwargs and kwargs['blueprint_id'] is not None:
+            self.id = kwargs['blueprint_id']
+        else:
+            self.id = self.plan['name']
         now = str(datetime.now())
         self.created_at = now
         self.updated_at = now

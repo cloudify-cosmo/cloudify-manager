@@ -24,14 +24,13 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
 
-    def _post_test_deployment(self):
+    def _put_test_deployment(self):
         blueprint_response = self.post_file(*post_blueprint_args()).json
         blueprint_id = blueprint_response['id']
         #Execute post deployment
-        deployment_response = self.post(
-            '/deployments',
-            {'blueprintId': blueprint_id,
-             'deploymentId': self.DEPLOYMENT_ID}).json
+        deployment_response = self.put(
+            '/deployments/{0}'.format(self.DEPLOYMENT_ID),
+            {'blueprintId': blueprint_id}).json
         return (blueprint_id, deployment_response['id'], blueprint_response,
                 deployment_response)
 
@@ -39,11 +38,11 @@ class DeploymentsTestCase(BaseServerTestCase):
         result = self.get('/deployments')
         self.assertEquals(0, len(result.json))
 
-    def test_post(self):
+    def test_put(self):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         self.assertEquals(deployment_id, self.DEPLOYMENT_ID)
         self.assertEquals(blueprint_id, deployment_response['blueprintId'])
@@ -58,18 +57,17 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._post_test_deployment()
-        deployment_response = self.post(
-            '/deployments',
-            {'blueprintId': blueprint_id,
-             'deploymentId': self.DEPLOYMENT_ID})
+         deployment_response) = self._put_test_deployment()
+        deployment_response = self.put(
+            '/deployments/{0}'.format(self.DEPLOYMENT_ID),
+            {'blueprintId': blueprint_id})
         self.assertTrue('already exists' in
                         deployment_response.json['message'])
         self.assertEqual(400, deployment_response.status_code)
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         single_deployment = self.get('/deployments/{0}'
                                      .format(deployment_id)).json
@@ -87,7 +85,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         get_deployments_response = self.get('/deployments').json
         self.assertEquals(1, len(get_deployments_response))
@@ -106,14 +104,14 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_blueprints_id_executions_empty(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
         get_executions = self.get('/deployments/{0}/executions'
                                   .format(deployment_response['id'])).json
         self.assertEquals(len(get_executions), 0)
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -129,7 +127,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -145,7 +143,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         resource_path = '/deployments/{0}/workflows'.format(deployment_id)
         workflows = self.get(resource_path).json
@@ -160,7 +158,7 @@ class DeploymentsTestCase(BaseServerTestCase):
     def test_get_nodes_of_deployment(self):
 
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         resource_path = '/deployments/{0}/nodes'\
                         .format(deployment_id)
@@ -195,7 +193,7 @@ class DeploymentsTestCase(BaseServerTestCase):
             })
 
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._post_test_deployment()
+         deployment_response) = self._put_test_deployment()
 
         for node in json.loads(deployment_response['plan'])['nodes']:
             node_id = node['id']
