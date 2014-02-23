@@ -48,9 +48,9 @@ def _extract_registered_plugins(broker_url, worker_name):
         return set()
 
     plugins = set()
-    worker_name = "celery.{0}".format(worker_name)
+    full_worker_name = "celery.{0}".format(worker_name)
     if worker_name in tasks:
-        worker_tasks = tasks.get(worker_name)
+        worker_tasks = tasks.get(full_worker_name)
         print "worker tasks are : {0}".format(worker_tasks)
         for node_tasks in worker_tasks:
             for task in node_tasks:
@@ -93,8 +93,8 @@ class TestRemoteInstallerCase(unittest.TestCase):
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('celery.{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('celery.{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
 
     def test_install_multiple_workers(self):
 
@@ -122,10 +122,10 @@ class TestRemoteInstallerCase(unittest.TestCase):
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('celery.{0}@plugin_installer'.format(name1) in plugins)
-        self.assertTrue('celery.{0}@kv_store'.format(name1) in plugins)
-        self.assertTrue('celery.{0}@plugin_installer'.format(name2) in plugins)
-        self.assertTrue('celery.{0}@kv_store'.format(name2) in plugins)
+        self.assertTrue('{0}@plugin_installer'.format(name1) in plugins)
+        self.assertTrue('{0}@kv_store'.format(name1) in plugins)
+        self.assertTrue('{0}@plugin_installer'.format(name2) in plugins)
+        self.assertTrue('{0}@kv_store'.format(name2) in plugins)
 
     def test_install_management_worker(self):
 
@@ -143,9 +143,9 @@ class TestRemoteInstallerCase(unittest.TestCase):
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('celery.{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('celery.{0}@kv_store'.format(worker_config["name"]) in plugins)
-        self.assertTrue('celery.{0}@worker_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@worker_installer'.format(worker_config["name"]) in plugins)
 
     def test_remove_worker(self):
 
@@ -228,8 +228,8 @@ class TestLocalInstallerCase(unittest.TestCase):
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('celery.{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('celery.{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
 
     def test_install_management_worker(self):
 
@@ -247,9 +247,9 @@ class TestLocalInstallerCase(unittest.TestCase):
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('celery.{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('celery.{0}@kv_store'.format(worker_config["name"]) in plugins)
-        self.assertTrue('celery.{0}@worker_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue('{0}@worker_installer'.format(worker_config["name"]) in plugins)
 
     def test_remove_worker(self):
 
