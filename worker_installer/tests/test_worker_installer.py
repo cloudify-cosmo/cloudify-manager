@@ -36,7 +36,6 @@ def _extract_registered_plugins(broker_url, worker_name):
 
     c = Celery(broker=broker_url, backend=broker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
-    print "tasks : {0}".format(tasks)
 
     # retry a few times
     attempt = 0
@@ -51,12 +50,10 @@ def _extract_registered_plugins(broker_url, worker_name):
     full_worker_name = "celery.{0}".format(worker_name)
     if worker_name in tasks:
         worker_tasks = tasks.get(full_worker_name)
-        print "worker tasks are : {0}".format(worker_tasks)
-        for node_tasks in worker_tasks:
-            for task in node_tasks:
-                plugin_name = task.split('.')[0]
-                full_plugin_name = '{0}@{1}'.format(worker_name, plugin_name)
-                plugins.add(full_plugin_name)
+        for worker_task in worker_tasks:
+            plugin_name = worker_task.split('.')[0]
+            full_plugin_name = '{0}@{1}'.format(worker_name, plugin_name)
+            plugins.add(full_plugin_name)
     return plugins
 
 
