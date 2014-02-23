@@ -26,7 +26,6 @@ install:
    - "virtualenv ~/env"
    - "source ~/env/bin/activate"
    - "pip install nose"
-   - pip install --process-dependency-links https://github.com/CloudifySource/cosmo-manager-rest-client/archive/feature/CLOUDIFY-2525-deployment-id.zip
    - "cd manager-rest && pip install --process-dependency-links . && cd .."
    - "cd workflows && pip install --process-dependency-links . && cd .."   
 
