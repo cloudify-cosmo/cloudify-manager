@@ -37,6 +37,8 @@ from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
+import requests
+
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
@@ -473,6 +475,12 @@ class RiemannProcess(object):
         return None
 
 
+class RuoteServiceClient(object):
+
+    def get_workflows_states(self):
+        return requests.get('http://localhost:8101/workflows').json()
+
+
 class TestEnvironmentScope(object):
     CLASS = "CLASS"
     MODULE = "MODULE"
@@ -710,6 +718,9 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
+        self.logger.setLevel(logging.INFO)
+        self.logger.info('Current workflows state:\n{0}'
+                         .format(get_workflows_state()))
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
@@ -804,6 +815,11 @@ def is_node_reachable(node_id):
     state = client.get_node_state(node_id, get_reachable_state=True,
                                   get_runtime_state=False)
     return state['reachable'] is True
+
+
+def get_workflows_state():
+    state = RuoteServiceClient().get_workflows_states()
+    return state
 
 
 class TimeoutException(Exception):
