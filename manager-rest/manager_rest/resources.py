@@ -60,7 +60,7 @@ def riemann_client():
     return riemann_client.instance()
 
 
-def ExceptionsHandled(func):
+def exceptions_handled(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -419,7 +419,7 @@ class ExecutionsId(Resource):
         notes="Returns the execution state by its id."
     )
     @marshal_with(responses.Execution.resource_fields)
-    @ExceptionsHandled
+    @exceptions_handled
     def get(self, execution_id):
         """
         Returns the execution state by its id.
@@ -607,7 +607,7 @@ class NodesId(Resource):
                      'paramType': 'query'}]
     )
     @marshal_with(responses.DeploymentNode.resource_fields)
-    @ExceptionsHandled
+    @exceptions_handled
     def get(self, node_id):
         """
         Gets node runtime or reachable state.
@@ -655,7 +655,7 @@ class NodesId(Resource):
                      'paramType': 'path'}]
     )
     @marshal_with(responses.DeploymentNode.resource_fields)
-    @ExceptionsHandled
+    @exceptions_handled
     def put(self, node_id):
         """
         Puts node runtime state.
@@ -696,7 +696,7 @@ class NodesId(Resource):
         consumes=["application/json"]
     )
     @marshal_with(responses.DeploymentNode.resource_fields)
-    @ExceptionsHandled
+    @exceptions_handled
     def patch(self, node_id):
         """
         Updates node runtime state.
@@ -747,7 +747,7 @@ class DeploymentsIdExecutions(Resource):
         ]
     )
     @marshal_with(responses.Execution.resource_fields)
-    @ExceptionsHandled
+    @exceptions_handled
     def post(self, deployment_id):
         """
         Execute a workflow
