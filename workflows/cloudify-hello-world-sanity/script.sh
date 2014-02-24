@@ -19,6 +19,6 @@ python sanity.py \
 #     --key_path='~/.ssh/cloudify-agents-kp.pem' \
 #     --key_name=cloudify-agents-kp \
 #     --host_name=dank_hello_world_vm \
-#     --management_ip='cosmo.gsdev.info' \
+#     --management_ip=15.185.158.169 \
 #     --region='az-2.region-a.geo-1' \
 #     --image=67074

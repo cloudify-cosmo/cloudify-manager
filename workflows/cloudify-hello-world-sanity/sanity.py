@@ -1,5 +1,6 @@
 # flake8: noqa
 
+import uuid
 import time
 import requests
 import copy
@@ -128,7 +129,8 @@ def modify_blueprint():
 
     # make modifications
     blueprint_yaml['imports'][0] = 'hello_world_sanity.yaml'
-    blueprint_yaml['blueprint']['name'] = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
+    blueprint_name = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
+    blueprint_yaml['blueprint']['name'] = blueprint_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config'] = {}
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['region'] = region
@@ -142,13 +144,17 @@ def modify_blueprint():
     sanity_blueprint.write_text(yaml.dump(blueprint_yaml))
     sanity_hello_world.write_text(yaml.dump(hello_yaml))
 
-def upload_create_deployment_and_execute():
+    return blueprint_name
+
+def upload_create_deployment_and_execute(blueprint_name):
     before_state = get_manager_state()
 
+    deployment_id = str(uuid.uuid4())
+
     cfy.use(management_ip).wait()
-    cfy.blueprints.upload(sanity_blueprint, a='sanity_blueprint').wait()
-    cfy.deployments.create('sanity_blueprint', a='sanity_deployment').wait()
-    cfy.deployments.execute.install('sanity_deployment').wait()
+    cfy.blueprints.upload(sanity_blueprint, b=blueprint_name).wait()
+    cfy.deployments.create(b=blueprint_name, d=deployment_id).wait()
+    cfy.deployments.execute.install(d=deployment_id, v=True).wait()
 
     after_state = get_manager_state()
 
@@ -231,6 +237,6 @@ def assert_valid_deployment(before_state, after_state):
 ##################################
 
 clone_hello_world()
-modify_blueprint()
-before, after = upload_create_deployment_and_execute()
+blueprint_name = modify_blueprint()
+before, after = upload_create_deployment_and_execute(blueprint_name)
 assert_valid_deployment(before, after)
