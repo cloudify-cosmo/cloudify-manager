@@ -16,27 +16,27 @@
 
 __author__ = 'dan'
 
-
-import config
 import os
-import responses
-import requests_schema
 import tarfile
 import zipfile
 import urllib
 import tempfile
 import shutil
 import uuid
-import chunked
-import elasticsearch
+from os import path
 
-from blueprints_manager import DslParseException, \
-    BlueprintAlreadyExistsException
-from workflow_client import WorkflowServiceError
+import elasticsearch
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
-from os import path
+
+import config
+import responses
+import requests_schema
+import chunked
+from blueprints_manager import DslParseException, \
+    BlueprintAlreadyExistsException
+from workflow_client import WorkflowServiceError
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -153,7 +153,6 @@ class BlueprintsUpload(object):
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
-        self._process_plugins(file_server_root, application_dir)
 
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
@@ -170,7 +169,7 @@ class BlueprintsUpload(object):
 
         for plugin_dir in plugins:
             final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(file_server_root, final_zip_name)
+            target_zip_path = path.join(file_server_root, application_dir, 'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
     def _zip_dir(self, dir_to_zip, target_zip_path):
@@ -245,10 +244,14 @@ class BlueprintsUpload(object):
             blueprint = blueprints_manager().publish_blueprint(
                 dsl_path, alias_mapping, resources_base, blueprint_id)
 
-            #moving the app directory in the file server to be under a
+            # moving the app directory in the file server to be under a
             # directory named after the blueprint's app name field
+            new_application_dir = os.path.join(file_server_root, blueprint.id)
             shutil.move(os.path.join(file_server_root, application_dir),
-                        os.path.join(file_server_root, blueprint.id))
+                        new_application_dir)
+
+            # put plugins under the blueprint directory
+            self._process_plugins(file_server_root, new_application_dir)
             return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
