@@ -694,7 +694,7 @@ class NodesId(Resource):
                 node = storage_manager().get_node(node_id)
                 node_state = node.runtime_info if node else {}
                 if 'ip' not in node_state:
-                    update = {'ip': [state['host']]}
+                    update = {'ip': state['host']}
                     node = models.DeploymentNode(id=node_id,
                                                  runtime_info=update)
                     storage_manager().update_node(node_id, node)
