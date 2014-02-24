@@ -17,7 +17,7 @@ __author__ = 'ran'
 
 import os
 import json
-from manager_rest.models import BlueprintState, Deployment, Execution, \
+from models import BlueprintState, Deployment, Execution, \
     DeploymentNode
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
