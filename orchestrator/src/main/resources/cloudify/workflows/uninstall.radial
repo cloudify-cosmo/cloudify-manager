@@ -1,6 +1,11 @@
 define uninstall_deployment
-    log message: 'uninstalling nodes: ${plan.nodes}'
-    concurrent_iterator on: '$plan.nodes', to_f: 'node', merge_type: 'ignore'
+
+    set 'v:plan': '$f:plan'
+    plan_helper do: 'modify_and_save_plan'
+    unset 'f:plan'
+
+    log message: 'uninstalling nodes: ${v:plan.nodes}'
+    concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
         log message: 'processing node: ${node.id}'
         # wait for all dependents to be uninstalled first
         iterator on: '$f:node.dependents', to_v: 'dependent'
@@ -30,3 +35,4 @@ define uninstall_deployment
 
             state action: 'wait', node_id: '${node.id}', reachable: 'false'
 
+    remove_deployment_worker

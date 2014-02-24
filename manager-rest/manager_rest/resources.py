@@ -32,7 +32,8 @@ import chunked
 import elasticsearch
 
 from functools import wraps
-from blueprints_manager import DslParseException
+from blueprints_manager import DslParseException, \
+    BlueprintAlreadyExistsException
 from workflow_client import WorkflowServiceError
 from manager_rest.exceptions import ConflictError
 from flask import request
@@ -88,6 +89,20 @@ def verify_deployment_exists(deployment_id):
               message='404: deployment {0} not found'.format(deployment_id))
 
 
+def verify_blueprint_does_not_exist(blueprint_id):
+    if blueprints_manager().get_blueprint(blueprint_id) is not None:
+        abort(400,
+              message='400: blueprint {0} already exists'
+                      .format(blueprint_id))
+
+
+def verify_deployment_does_not_exist(deployment_id):
+    if blueprints_manager().get_deployment(deployment_id) is not None:
+        abort(400,
+              message='400: deployment {0} already exists'
+                      .format(deployment_id))
+
+
 def verify_execution_exists(execution_id):
     if blueprints_manager().get_execution(execution_id) is None:
         abort(404,
@@ -105,6 +120,16 @@ def abort_workflow_service_operation(workflow_service_error):
 def abort_conflict(conflict_error):
     abort(409,
           message='409: Conflict occurred - {0}'.format(str(conflict_error)))
+
+
+def verify_and_convert_bool(attribute_name, str_bool):
+    if str_bool.lower() == 'true':
+        return True
+    if str_bool.lower() == 'false':
+        return False
+    abort(400,
+          message='400: {0} must be <true/false>, got {1}'
+                  .format(attribute_name, str_bool))
 
 
 def setup_resources(api):
@@ -135,54 +160,8 @@ def setup_resources(api):
     api.add_resource(Events, '/events')
 
 
-class Blueprints(Resource):
-
-    @swagger.operation(
-        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
-        nickname="list",
-        notes="Returns a list a submitted blueprints."
-    )
-    def get(self):
-        """
-        Returns a list of submitted blueprints.
-        """
-        return [marshal(responses.BlueprintState(**blueprint.to_dict()),
-                        responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager().blueprints_list()]
-
-    @swagger.operation(
-        responseClass=responses.BlueprintState,
-        nickname="upload",
-        notes="Submitted blueprint should be a tar "
-              "gzipped directory containing the blueprint.",
-        parameters=[{'name': 'application_file_name',
-                     'description': 'File name of yaml '
-                                    'containing the "main" blueprint.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'query',
-                     'defaultValue': 'blueprint.yaml'},
-                    {
-                        'name': 'body',
-                        'description': 'Binary form of the tar '
-                                       'gzipped blueprint directory',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': 'binary',
-                        'paramType': 'body',
-                    }],
-        consumes=[
-            "application/octet-stream"
-        ]
-
-    )
-    @marshal_with(responses.BlueprintState.resource_fields)
-    @ExceptionsHandled
-    def post(self):
-        """
-        Submit a new blueprint.
-        """
+class BlueprintsUpload(object):
+    def do_request(self, blueprint_id=None):
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -194,9 +173,9 @@ class Blueprints(Resource):
                 os.remove(archive_target_path)
         self._process_plugins(file_server_root, application_dir)
 
-        blueprint = self._prepare_and_submit_blueprint(file_server_root,
-                                                       application_dir)
-        return responses.BlueprintState(**blueprint.to_dict()), 201
+        return self._prepare_and_submit_blueprint(file_server_root,
+                                                  application_dir,
+                                                  blueprint_id), 201
 
     def _process_plugins(self, file_server_root, application_dir):
         blueprint_directory = path.join(file_server_root, application_dir)
@@ -268,7 +247,8 @@ class Blueprints(Resource):
             shutil.rmtree(tempdir)
 
     def _prepare_and_submit_blueprint(self, file_server_root,
-                                      application_dir):
+                                      application_dir,
+                                      blueprint_id=None):
         application_file = self._extract_application_file(file_server_root,
                                                           application_dir)
 
@@ -281,7 +261,7 @@ class Blueprints(Resource):
         # add to blueprints manager (will also dsl_parse it)
         try:
             blueprint = blueprints_manager().publish_blueprint(
-                dsl_path, alias_mapping, resources_base)
+                dsl_path, alias_mapping, resources_base, blueprint_id)
 
             #moving the app directory in the file server to be under a
             # directory named after the blueprint's app name field
@@ -290,6 +270,9 @@ class Blueprints(Resource):
             return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
+        except BlueprintAlreadyExistsException, ex:
+            abort(400, message='400: Blueprint - {0} already exists'
+                .format(ex.blueprint_id))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:
@@ -310,6 +293,120 @@ class Blueprints(Resource):
                            'application directory is missing blueprint.yaml')
 
 
+class Blueprints(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        nickname="list",
+        notes="Returns a list a submitted blueprints."
+    )
+    def get(self):
+        """
+        Returns a list of submitted blueprints.
+        """
+        return [marshal(responses.BlueprintState(**blueprint.to_dict()),
+                        responses.BlueprintState.resource_fields) for
+                blueprint in blueprints_manager().blueprints_list()]
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar "
+              "gzipped directory containing the blueprint.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                    }],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    @ExceptionsHandled
+    def post(self):
+        """
+        Submit a new blueprint.
+        """
+        file_server_root = config.instance().file_server_root
+        archive_target_path = tempfile.mktemp(dir=file_server_root)
+        try:
+            self._save_file_locally(archive_target_path)
+            application_dir = self._extract_file_to_file_server(
+                file_server_root, archive_target_path)
+        finally:
+            if os.path.exists(archive_target_path):
+                os.remove(archive_target_path)
+        self._process_plugins(file_server_root, application_dir)
+
+        blueprint = self._prepare_and_submit_blueprint(file_server_root,
+                                                       application_dir)
+        return responses.BlueprintState(**blueprint.to_dict()), 201
+
+
+class Blueprints(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        nickname="list",
+        notes="Returns a list a submitted blueprints."
+    )
+    def get(self):
+        """
+        Returns a list of submitted blueprints.
+        """
+        return [marshal(blueprint,
+                        responses.BlueprintState.resource_fields) for
+                blueprint in blueprints_manager().blueprints_list()]
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar "
+              "gzipped directory containing the blueprint.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                    }],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def post(self):
+        """
+        Submit a new blueprint.
+        """
+        return BlueprintsUpload().do_request()
+
+
 class BlueprintsId(Resource):
 
     @swagger.operation(
@@ -325,6 +422,41 @@ class BlueprintsId(Resource):
         verify_blueprint_exists(blueprint_id)
         blueprint = blueprints_manager().get_blueprint(blueprint_id)
         return responses.BlueprintState(**blueprint.to_dict())
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be a tar "
+              "gzipped directory containing the blueprint.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body',
+                        }],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def put(self, blueprint_id):
+        """
+        Submit a new blueprint with a blueprint_id.
+        """
+        verify_blueprint_does_not_exist(blueprint_id)
+        return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
 
 
 class BlueprintsIdValidate(Resource):
@@ -365,8 +497,8 @@ class DeploymentsIdNodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=bool,
-                                       default=False, location='args')
+        self._args_parser.add_argument('reachable', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNodes,
@@ -388,7 +520,8 @@ class DeploymentsIdNodes(Resource):
         Returns an object containing nodes associated with this deployment.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = args['reachable']
+        get_reachable_state = verify_and_convert_bool(
+            'reachable', args['reachable'])
         verify_deployment_exists(deployment_id)
 
         deployment = blueprints_manager().get_deployment(deployment_id)
@@ -440,7 +573,6 @@ class Deployments(Resource):
         ]
     )
     @marshal_with(responses.Deployment.resource_fields)
-    @ExceptionsHandled
     def post(self):
         """
         Creates a new deployment
@@ -471,15 +603,44 @@ class DeploymentsId(Resource):
         deployment = blueprints_manager().get_deployment(deployment_id)
         return responses.Deployment(**deployment.to_dict())
 
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="createDeployment",
+        notes="Created a new deployment of the given blueprint.",
+        parameters=[{'name': 'body',
+                     'description': 'Deployment blue print',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.DeploymentRequest.__name__,
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    def put(self, deployment_id):
+        """
+        Creates a new deployment
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'blueprintId' not in request_json:
+            abort(400, message='400: Missing blueprintId in json request body')
+        blueprint_id = request.json['blueprintId']
+        verify_blueprint_exists(blueprint_id)
+        verify_deployment_does_not_exist(deployment_id)
+        return blueprints_manager().create_deployment(blueprint_id,
+                                                      deployment_id), 201
+
 
 class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=bool,
-                                       default=False, location='args')
-        self._args_parser.add_argument('runtime', type=bool,
-                                       default=True, location='args')
+        self._args_parser.add_argument('reachable', type=str,
+                                       default='false', location='args')
+        self._args_parser.add_argument('runtime', type=str,
+                                       default='true', location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -516,8 +677,10 @@ class NodesId(Resource):
         Gets node runtime or reachable state.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = args['reachable']
-        get_runtime_state = args['runtime']
+        get_reachable_state = verify_and_convert_bool(
+            'reachable', args['reachable'])
+        get_runtime_state = verify_and_convert_bool(
+            'runtime', args['runtime'])
 
         reachable_state = None
         if get_reachable_state:
@@ -701,6 +864,14 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 
 class Events(Resource):
 
+    def _query_events(self):
+        """
+        Returns events for the provided ElasticSearch query
+        """
+        verify_json_content_type()
+        return _query_elastic_search(index='cloudify_events',
+                                     body=request.json)
+
     @swagger.operation(
         nickname='events',
         notes='Returns a list of events for the provided ElasticSearch query. '
@@ -717,6 +888,22 @@ class Events(Resource):
         """
         Returns events for the provided ElasticSearch query
         """
-        verify_json_content_type()
-        return _query_elastic_search(index='cloudify_events',
-                                     body=request.json)
+        return self._query_events()
+
+    @swagger.operation(
+        nickname='events',
+        notes='Returns a list of events for the provided ElasticSearch query. '
+              'The response format is as ElasticSearch response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    def post(self):
+        """
+        Returns events for the provided ElasticSearch query
+        """
+        return self._query_events()

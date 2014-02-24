@@ -56,16 +56,23 @@ class BlueprintsManager(object):
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url,
-                          resources_base_url):
+                          resources_base_url, blueprint_id=None):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
         except Exception, ex:
             raise DslParseException(*ex.args)
+
         now = str(datetime.now())
-        new_blueprint = models.BlueprintState(plan=json.loads(plan),
+        parsed_plan = json.loads(plan)
+        if not blueprint_id:
+            blueprint_id = parsed_plan['name']
+        new_blueprint = models.BlueprintState(plan=parsed_plan,
+                                              id=blueprint_id,
                                               created_at=now, updated_at=now)
+        if self.get_blueprint(new_blueprint.id) is not None:
+            raise BlueprintAlreadyExistsException(new_blueprint.id)
         storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -87,7 +94,7 @@ class BlueprintsManager(object):
         workflow = deployment.plan['workflows'][workflow_id]
         plan = deployment.plan
 
-        execution_id = str(uuid.uuid4())
+        execution_id = '{0}-{1}'.format(workflow_id, str(uuid.uuid4()))
         response = workflow_client().execute_workflow(
             workflow_id,
             workflow, plan,
@@ -119,11 +126,10 @@ class BlueprintsManager(object):
             execution.error = response['error']
         return execution
 
-    def create_deployment(self, blueprint_id):
+    def create_deployment(self, blueprint_id, deployment_id):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
-        deployment_id = str(uuid.uuid4())
 
         now = str(datetime.now())
         new_deployment = models.Deployment(
@@ -145,3 +151,9 @@ def reset():
 
 def instance():
     return _instance
+
+
+class BlueprintAlreadyExistsException(Exception):
+    def __init__(self, blueprint_id, *args):
+        Exception.__init__(self, args)
+        self.blueprint_id = blueprint_id

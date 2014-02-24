@@ -23,7 +23,7 @@ import tarfile
 import requests
 
 
-def post_blueprint_args(convention=False):
+def post_blueprint_args(convention=False, blueprint_id=None):
     def make_tarfile(output_filename, source_dir):
         with tarfile.open(output_filename, "w:gz") as tar:
             tar.add(source_dir, arcname=os.path.basename(source_dir))
@@ -35,8 +35,13 @@ def post_blueprint_args(convention=False):
         make_tarfile(tar_path, source_dir)
         return tar_path
 
+    if blueprint_id is not None:
+        resource_path = '/blueprints/{0}'.format(blueprint_id)
+    else:
+        resource_path = '/blueprints'
+
     result = [
-        '/blueprints',
+        resource_path,
         tar_mock_blueprint(),
     ]
 
@@ -61,6 +66,19 @@ class BlueprintsTestCase(BaseServerTestCase):
         get_blueprints_response = self.get('/blueprints').json
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
+
+    def test_post_blueprint_already_exists(self):
+        self.post_file(*post_blueprint_args())
+        post_blueprints_response = self.post_file(*post_blueprint_args())
+        self.assertTrue('already exists' in
+                        post_blueprints_response.json['message'])
+        self.assertEqual(400, post_blueprints_response.status_code)
+
+    def test_put_blueprint(self):
+        blueprint_id = 'new_blueprint_id'
+        put_blueprints_response = self.put_file(
+            *post_blueprint_args(blueprint_id=blueprint_id)).json
+        self.assertEqual(blueprint_id, put_blueprints_response['id'])
 
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.post_file(

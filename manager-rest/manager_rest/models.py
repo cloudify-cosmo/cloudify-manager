@@ -34,7 +34,7 @@ class BlueprintState(SerializableObject):
 
     def __init__(self, *args, **kwargs):
         self.plan = kwargs['plan']
-        self.id = self.plan['name']
+        self.id = kwargs['id']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 

@@ -15,19 +15,21 @@
 
 __author__ = 'idanmo'
 
-from cosmo_manager_rest_client.cosmo_manager_rest_client import \
-    CosmoManagerRestCallError
-
+from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
+from workflow_tests.testenv import timeout
 
 
 class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
-        deploy(dsl_path)
+        blueprint_id = 'my_new_blueprint'
+        deployment = deploy(dsl_path, blueprint_id=blueprint_id)
+
+        self.assertEqual(blueprint_id, deployment.blueprintId)
 
         from plugins.cloudmock.tasks import get_machines
         result = self.send_task(get_machines)
@@ -37,14 +39,28 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deploy(dsl_path)
+        deployment = deploy(dsl_path)
+
+        self.assertEquals('mock_app', deployment.blueprintId)
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = self.send_task(testmock_get_state)\
+            .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('containing_node' in states[0]['id'])
         self.assertTrue('contained_in_node' in states[1]['id'])
+
+    @timeout(seconds=60)
+    def test_execute_operation_failure(self):
+        from plugins.cloudmock.tasks import set_raise_exception_on_start
+        self.send_task(set_raise_exception_on_start)
+        dsl_path = resource("dsl/basic.yaml")
+        try:
+            deploy(dsl_path)
+            self.fail('expected exception')
+        except Exception:
+            pass
 
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
@@ -62,9 +78,30 @@ class BasicWorkflowsTest(TestCase):
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
+    def test_dsl_with_manager_plugin(self):
+        dsl_path = resource("dsl/with_manager_plugin.yaml")
+        deployment_id = deploy(dsl_path).id
+
+        from plugins.worker_installer.tasks import \
+            RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
+
+        from plugins.worker_installer.tasks \
+            import get_current_worker_state as \
+            test_get_current_worker_state
+        result = self.send_task(test_get_current_worker_state)
+        state = result.get(timeout=10)
+        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED])
+
+        undeploy(deployment_id)
+        result = self.send_task(test_get_current_worker_state)
+        state = result.get(timeout=10)
+        self.assertEquals(state,
+                          [INSTALLED, STARTED,
+                           RESTARTED, STOPPED, UNINSTALLED])
+
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
-        self.assertRaises(CosmoManagerRestCallError, deploy, dsl_path)
+        self.assertRaises(RuntimeError, deploy, dsl_path)
 
     def test_inject_properties_to_operation(self):
         dsl_path = resource("dsl/hardcoded-operation-properties.yaml")

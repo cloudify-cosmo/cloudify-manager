@@ -31,10 +31,14 @@ import threading
 import re
 import pika
 import json
+from functools import wraps
+from multiprocessing import Process
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
+import requests
+
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
@@ -43,13 +47,18 @@ STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s',
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
                               datefmt='%H:%M:%S')
 ch.setFormatter(formatter)
-root.addHandler(ch)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# clear all other handlers
+for handler in root.handlers:
+    root.removeHandler(handler)
+
+root.addHandler(ch)
+logger = logging.getLogger("TESTENV")
+logger.setLevel(logging.DEBUG)
 
 RABBITMQ_POLLING_KEY = 'RABBITMQ_POLLING'
 
@@ -59,7 +68,6 @@ RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
 celery = Celery(broker='amqp://',
                 backend='amqp://')
 
-# set the client celery to send tasks to the worker queue.
 celery.conf.update(
     CELERY_TASK_SERIALIZER="json"
 )
@@ -263,8 +271,7 @@ class CeleryWorkerProcess(object):
 
     def _build_includes(self):
 
-        # mandatory REAL plugins for the tests framework
-        includes = ['plugin_installer.tasks']
+        includes = []
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path\
@@ -281,10 +288,6 @@ class CeleryWorkerProcess(object):
                                .format(plugin_dir_name))
 
         return includes
-
-    def _copy_cosmo_plugins(self):
-        import plugin_installer
-        self._copy_plugin(plugin_installer)
 
     def _copy_plugin(self, plugin):
         installed_plugin_path = path.dirname(plugin.__file__)
@@ -309,8 +312,6 @@ class CeleryWorkerProcess(object):
     def start(self):
         logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
         shutil.copytree(self._cosmo_path, self._app_path)
-        logger.info("Copying cosmo plugins")
-        self._copy_cosmo_plugins()
         celery_log_file = path.join(self._tempdir, "celery.log")
         python_path = sys.executable
         logger.info("Building includes list for celery worker")
@@ -472,6 +473,12 @@ class RiemannProcess(object):
         except CalledProcessError:
             pass
         return None
+
+
+class RuoteServiceClient(object):
+
+    def get_workflows_states(self):
+        return requests.get('http://localhost:8101/workflows').json()
 
 
 class TestEnvironmentScope(object):
@@ -711,6 +718,9 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
+        self.logger.setLevel(logging.INFO)
+        self.logger.info('Current workflows state:\n{0}'
+                         .format(get_workflows_state()))
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
@@ -739,14 +749,23 @@ def get_resource(resource):
     return resource_path
 
 
-def deploy_application(dsl_path, timeout=240):
+def deploy_application(dsl_path, timeout=240,
+                       blueprint_id=None,
+                       deployment_id='deployment'):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
     client = CosmoManagerRestClient('localhost')
-    blueprint_id = client.publish_blueprint(dsl_path).id
-    deployment = client.create_deployment(blueprint_id)
-    client.execute_deployment(deployment.id, 'install', timeout=timeout)
+    blueprint_id = client.publish_blueprint(dsl_path,
+                                            blueprint_id).id
+
+    deployment = client.create_deployment(blueprint_id, deployment_id)
+    _, error = client.execute_deployment(deployment.id,
+                                         'install',
+                                         timeout=timeout)
+    if error is not None:
+        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+
     return deployment
 
 
@@ -797,6 +816,25 @@ def is_node_reachable(node_id):
     return state['reachable'] is True
 
 
+def get_workflows_state():
+    state = RuoteServiceClient().get_workflows_states()
+    return state
+
+
 class TimeoutException(Exception):
     def __init__(self, *args):
         Exception.__init__(self, args)
+
+
+def timeout(seconds=60):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            process = Process(None, func, None, args, kwargs)
+            process.start()
+            process.join(seconds)
+            if process.is_alive():
+                process.terminate()
+                raise TimeoutException(
+                    'test timeout exceeded [timeout={0}'.format(seconds))
+        return wraps(func)(wrapper)
+    return decorator

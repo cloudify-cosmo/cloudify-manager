@@ -47,38 +47,51 @@ class BaseServerTestCase(unittest.TestCase):
         return test_config
 
     def post(self, resource_path, data):
-        result = self.app.post(resource_path, content_type='application/json',
+        result = self.app.post(urllib.quote(resource_path),
+                               content_type='application/json',
                                data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
     def post_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            query_string = ''
-            if query_params and len(query_params) > 0:
-                query_string += '&' + urllib.urlencode(query_params)
-            url = '{0}?{1}'.format(resource_path, query_string)
-            result = self.app.post(url, data=f.read())
+            result = self.app.post(
+                self._build_url(resource_path, query_params), data=f.read())
+            result.json = json.loads(result.data)
+            return result
+
+    def put_file(self, resource_path, file_path, query_params=None):
+        with open(file_path) as f:
+            result = self.app.put(
+                self._build_url(resource_path, query_params), data=f.read())
             result.json = json.loads(result.data)
             return result
 
     def put(self, resource_path, data):
-        result = self.app.put(resource_path, content_type='application/json',
+        result = self.app.put(urllib.quote(resource_path),
+                              content_type='application/json',
                               data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
     def patch(self, resource_path, data):
-        result = self.app.patch(resource_path, content_type='application/json',
+        result = self.app.patch(urllib.quote(resource_path),
+                                content_type='application/json',
                                 data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
-    def get(self, resource_path):
-        result = self.app.get(resource_path)
+    def get(self, resource_path, query_params=None):
+        result = self.app.get(self._build_url(resource_path, query_params))
         result.json = json.loads(result.data)
         return result
 
     def head(self, resource_path):
-        result = self.app.head(resource_path)
+        result = self.app.head(urllib.quote(resource_path))
         return result
+
+    def _build_url(self, resource_path, query_params):
+        query_string = ''
+        if query_params and len(query_params) > 0:
+            query_string += '&' + urllib.urlencode(query_params)
+        return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
