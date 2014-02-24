@@ -220,6 +220,7 @@ def assert_valid_deployment(before_state, after_state):
             assert 'ips' in value['runtimeInfo'], 'Missing ips in runtimeInfo: {0}'.format(nodes_state)
             private_ip = value['runtimeInfo']['ip']
             ips = value['runtimeInfo']['ips']
+            ips = flatten_ips(ips)
             print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
             assert value['reachable'] is True, 'vm node should be reachable: {0}'.format(nodes_state)
@@ -232,6 +233,23 @@ def assert_valid_deployment(before_state, after_state):
     web_server_page_response = requests.get('http://{0}:8080'.format(public_ip))
     fail_message = 'Expected to find {0} in web server response: {1}'.format(webserver_node_id, web_server_page_response)
     assert webserver_node_id in web_server_page_response.text, fail_message
+
+
+def flatten_ips(ips):
+    flattened_ips = []
+    for element in ips:
+        if not isinstance(element, list):
+            flattened_ips.append(element)
+        else:
+            for subelement in element:
+                if not isinstance(subelement, list):
+                    flattened_ips.append(subelement)
+                else:
+                    for ip in subelement:
+                        flattened_ips.append(ip)
+    return flattened_ips
+
+
 
 ##################################
 ## Steps

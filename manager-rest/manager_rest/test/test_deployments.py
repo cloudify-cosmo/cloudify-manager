@@ -220,13 +220,13 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(deployment_id, nodes['deploymentId'])
         self.assertEquals(7, len(nodes['nodes']))
 
-        def assert_node_value(starts_with, reachable):
-            self.assertTrue(any(map(
-                lambda n: n['id'].startswith(starts_with) and
-                n['reachable'] == reachable,
-                nodes['nodes'])),
-                'Failed finding node with prefix {0}'
-                .format(starts_with))
+    def assert_node_value(starts_with, reachable):
+        self.assertTrue(any(map(
+            lambda n: n['id'].startswith(starts_with) and
+            n['reachable'] == reachable,
+            nodes['nodes'])),
+            'Failed finding node with prefix {0}'
+            .format(starts_with))
         assert_node_value('mezzanine_db', False)
         assert_node_value('postgres_host', True)
         assert_node_value('postgres_server', True)
