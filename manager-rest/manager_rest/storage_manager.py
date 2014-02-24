@@ -20,6 +20,7 @@ import sys
 from os import path
 
 storage_manager_module_name = 'file_storage_manager'
+#storage_manager_module_name = 'es_storage_manager'
 
 _instance = None
 
