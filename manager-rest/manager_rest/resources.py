@@ -494,34 +494,6 @@ class Deployments(Resource):
                         responses.Deployment.resource_fields) for
                 deployment in blueprints_manager().deployments_list()]
 
-    @swagger.operation(
-        responseClass=responses.Deployment,
-        nickname="createDeployment",
-        notes="Created a new deployment of the given blueprint.",
-        parameters=[{'name': 'body',
-                     'description': 'Deployment blue print',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': requests_schema.DeploymentRequest.__name__,
-                     'paramType': 'body'}],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @marshal_with(responses.Deployment.resource_fields)
-    def post(self):
-        """
-        Creates a new deployment
-        """
-        verify_json_content_type()
-        request_json = request.json
-        if 'blueprintId' not in request_json:
-            abort(400, message='400: Missing blueprintId in json request body')
-        blueprint_id = request.json['blueprintId']
-        verify_blueprint_exists(blueprint_id)
-        deployment = blueprints_manager().create_deployment(blueprint_id)
-        return responses.Deployment(**deployment.to_dict()), 201
-
 
 class DeploymentsId(Resource):
 
