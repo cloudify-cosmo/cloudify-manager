@@ -35,7 +35,7 @@ from functools import wraps
 from blueprints_manager import DslParseException, \
     BlueprintAlreadyExistsException
 from workflow_client import WorkflowServiceError
-from manager_rest.exceptions import ConflictError
+from exceptions import ConflictError
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
