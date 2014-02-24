@@ -57,7 +57,7 @@ class NodesTest(BaseServerTestCase):
 
     def test_patch_node_conflict(self):
         import manager_rest.storage_manager as sm
-        import manager_exceptions
+        from manager_rest import manager_exceptions
         prev_update_node_func = sm.instance().update_node
         try:
             def conflict_update_node_func(node_id, node):
