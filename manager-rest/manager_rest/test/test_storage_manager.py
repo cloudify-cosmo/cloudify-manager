@@ -16,17 +16,18 @@
 __author__ = 'ran'
 
 from datetime import datetime
-from manager_rest import storage_manager, responses
+from manager_rest import storage_manager, models
 import base_test
-import manager_rest.serialization as ser
 
 
 class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_blueprint(self):
-        blueprint = responses.BlueprintState()
-        blueprint.id = 'blueprint-id'
-        blueprint.created_at = str(datetime.now())
+        now = str(datetime.now())
+        blueprint = models.BlueprintState(id='blueprint-id',
+                                          created_at=now,
+                                          updated_at=now,
+                                          plan={'name': 'my-bp'})
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
         blueprint_from_list = storage_manager.instance().blueprints_list()[0]
         blueprint_restored = \
@@ -34,79 +35,26 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(blueprint.__dict__, blueprint_from_list.__dict__)
         self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
 
-    def test_persistent_object_json_encode_decode(self):
-        #testing to_json and from_json of a single recursive persistent object
+    def test_model_serialization(self):
+        dep = models.Deployment(id='dep-id',
+                                created_at='some-time1',
+                                updated_at='some-time2',
+                                blueprint_id='bp-id',
+                                plan={'field': 'value'})
 
-        workflows = responses.Workflows()
-        workflows.blueprint_id = 'blueprint-id'
-        workflow1 = responses.Workflow().init(workflow_id='workflow1',
-                                              created_at='just-now')
-        workflow2 = responses.Workflow().init(workflow_id='workflow2',
-                                              created_at='just-now-too')
-        workflows.workflows = [workflow1, workflow2]
-        workflows_json = workflows.to_json()
-        workflows_restored = workflows.from_json(workflows_json)
+        serialized_dep = dep.to_dict()
+        self.assertEquals(6, len(serialized_dep))
+        self.assertEquals(dep.id, serialized_dep['id'])
+        self.assertEquals(dep.created_at, serialized_dep['created_at'])
+        self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
+        self.assertEquals(dep.blueprint_id, serialized_dep['blueprint_id'])
+        self.assertEquals(dep.plan, serialized_dep['plan'])
+        self.assertEquals(dep.permalink, serialized_dep['permalink'])
 
-        self.assertEquals(workflows.blueprint_id,
-                          workflows_restored.blueprint_id)
-        self.assertEquals(workflows.deployment_id,
-                          workflows_restored.deployment_id)
-        self.assertEquals(2, len(workflows_restored.workflows))
-        self.assertEquals(workflows.workflows[0].created_at,
-                          workflows_restored.workflows[0].created_at)
-        self.assertEquals(workflows.workflows[0].name,
-                          workflows_restored.workflows[0].name)
-        self.assertEquals(workflows.workflows[1].created_at,
-                          workflows_restored.workflows[1].created_at)
-        self.assertEquals(workflows.workflows[1].name,
-                          workflows_restored.workflows[1].name)
-        self.assertTrue(hasattr(workflows_restored, 'resource_fields'))
-        self.assertTrue(hasattr(workflows_restored.workflows[0],
-                                'resource_fields'))
-        self.assertTrue(hasattr(workflows_restored.workflows[1],
-                                'resource_fields'))
-
-    def test_serialization_deserialization(self):
-        #similar to test_persistent_object_json_encode_decode, but checks
-        # the static serialization and deserialization functions on a list
-        # of multiple persistent objects
-
-        workflows = responses.Workflows()
-        workflows.blueprint_id = 'blueprint-id'
-        workflow1 = responses.Workflow().init(workflow_id='workflow1',
-                                              created_at='just-now')
-        workflow2 = responses.Workflow().init(workflow_id='workflow2',
-                                              created_at='just-now-too')
-        workflows.workflows = [workflow1, workflow2]
-
-        blueprint = responses.BlueprintState()
-        blueprint.id = 'blueprint-id'
-        blueprint.created_at = str(datetime.now())
-
-        persistent_objects = [workflows, blueprint]
-        serialized_data = ser.serialize_object(persistent_objects)
-        restored_objects = ser.deserialize_object(serialized_data)
-
-        self.assertEquals(2, len(restored_objects))
-        blueprint_restored = restored_objects[1]
-        workflows_restored = restored_objects[0]
-
-        self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
-        self.assertEquals(workflows.blueprint_id,
-                          workflows_restored.blueprint_id)
-        self.assertEquals(workflows.deployment_id,
-                          workflows_restored.deployment_id)
-        self.assertEquals(2, len(workflows_restored.workflows))
-        self.assertEquals(workflows.workflows[0].created_at,
-                          workflows_restored.workflows[0].created_at)
-        self.assertEquals(workflows.workflows[0].name,
-                          workflows_restored.workflows[0].name)
-        self.assertEquals(workflows.workflows[1].created_at,
-                          workflows_restored.workflows[1].created_at)
-        self.assertEquals(workflows.workflows[1].name,
-                          workflows_restored.workflows[1].name)
-        self.assertTrue(hasattr(workflows_restored, 'resource_fields'))
-        self.assertTrue(hasattr(workflows_restored.workflows[0],
-                                'resource_fields'))
-        self.assertTrue(hasattr(workflows_restored.workflows[1],
-                                'resource_fields'))
+        deserialized_dep = models.Deployment(**serialized_dep)
+        self.assertEquals(dep.id, deserialized_dep.id)
+        self.assertEquals(dep.created_at, deserialized_dep.created_at)
+        self.assertEquals(dep.updated_at, deserialized_dep.updated_at)
+        self.assertEquals(dep.blueprint_id, deserialized_dep.blueprint_id)
+        self.assertEquals(dep.plan, deserialized_dep.plan)
+        self.assertEquals(dep.permalink, deserialized_dep.permalink)

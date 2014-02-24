@@ -60,7 +60,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         result = self.get('/blueprints')
         self.assertEquals(0, len(result.json))
 
-    def test_post_and_then_get(self):
+    def test_post_and_then_search(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
         self.assertEquals('hello_world', post_blueprints_response['id'])
         get_blueprints_response = self.get('/blueprints').json

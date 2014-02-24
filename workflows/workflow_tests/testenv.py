@@ -794,12 +794,6 @@ def get_deployment_workflows(deployment_id):
     return client.list_workflows(deployment_id)
 
 
-def get_nodes():
-    client = CosmoManagerRestClient('localhost')
-    nodes = client.list_nodes()['nodes']
-    return nodes
-
-
 def get_deployment_nodes(deployment_id, get_reachable_state=False):
     client = CosmoManagerRestClient('localhost')
     deployment_nodes = client.list_deployment_nodes(
