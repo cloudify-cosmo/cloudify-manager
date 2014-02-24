@@ -17,7 +17,7 @@ __author__ = 'ran'
 
 from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
-import manager_rest.exceptions
+import manager_exceptions
 from manager_rest.models import BlueprintState, Deployment, Execution, \
     DeploymentNode
 
@@ -60,7 +60,7 @@ class ESStorageManager(object):
                                        doc_type=doc_type, id=doc_id,
                                        body=value)
         except elasticsearch.exceptions.ConflictError:
-            raise manager_rest.exceptions.ConflictError(
+            raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
     def nodes_list(self):
@@ -130,7 +130,7 @@ class ESStorageManager(object):
                                            version=doc['_version'])
                 return merged_rt_info
             except elasticsearch.exceptions.ConflictError:
-                raise manager_rest.exceptions.ConflictError(
+                raise manager_exceptions.ConflictError(
                     'Node update conflict: mismatching versions')
 
 

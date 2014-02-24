@@ -17,7 +17,6 @@ __author__ = 'idanmo'
 
 from base_test import BaseServerTestCase
 
-
 class NodesTest(BaseServerTestCase):
 
     def test_get_node(self):
@@ -58,11 +57,11 @@ class NodesTest(BaseServerTestCase):
 
     def test_patch_node_conflict(self):
         import manager_rest.storage_manager as sm
-        import manager_rest.exceptions
+        import manager_exceptions
         prev_update_node_func = sm.instance().update_node
         try:
             def conflict_update_node_func(node_id, node):
-                raise manager_rest.exceptions.ConflictError()
+                raise manager_exceptions.ConflictError()
             sm.instance().update_node = conflict_update_node_func
             self.put('/nodes/1234', {'key': 'value'})
             response = self.patch('/nodes/1234', {'key': 'new_value'})
