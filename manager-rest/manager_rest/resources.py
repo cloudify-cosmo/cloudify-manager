@@ -272,7 +272,7 @@ class BlueprintsUpload(object):
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
         except BlueprintAlreadyExistsException, ex:
             abort(400, message='400: Blueprint - {0} already exists'
-                .format(ex.blueprint_id))
+                               .format(ex.blueprint_id))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:
@@ -291,70 +291,6 @@ class BlueprintsUpload(object):
                 return application_file
         abort(400, message='Missing application_file_name query parameter or '
                            'application directory is missing blueprint.yaml')
-
-
-class Blueprints(Resource):
-
-    @swagger.operation(
-        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
-        nickname="list",
-        notes="Returns a list a submitted blueprints."
-    )
-    def get(self):
-        """
-        Returns a list of submitted blueprints.
-        """
-        return [marshal(responses.BlueprintState(**blueprint.to_dict()),
-                        responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager().blueprints_list()]
-
-    @swagger.operation(
-        responseClass=responses.BlueprintState,
-        nickname="upload",
-        notes="Submitted blueprint should be a tar "
-              "gzipped directory containing the blueprint.",
-        parameters=[{'name': 'application_file_name',
-                     'description': 'File name of yaml '
-                                    'containing the "main" blueprint.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'query',
-                     'defaultValue': 'blueprint.yaml'},
-                    {
-                        'name': 'body',
-                        'description': 'Binary form of the tar '
-                                       'gzipped blueprint directory',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': 'binary',
-                        'paramType': 'body',
-                    }],
-        consumes=[
-            "application/octet-stream"
-        ]
-
-    )
-    @marshal_with(responses.BlueprintState.resource_fields)
-    @ExceptionsHandled
-    def post(self):
-        """
-        Submit a new blueprint.
-        """
-        file_server_root = config.instance().file_server_root
-        archive_target_path = tempfile.mktemp(dir=file_server_root)
-        try:
-            self._save_file_locally(archive_target_path)
-            application_dir = self._extract_file_to_file_server(
-                file_server_root, archive_target_path)
-        finally:
-            if os.path.exists(archive_target_path):
-                os.remove(archive_target_path)
-        self._process_plugins(file_server_root, application_dir)
-
-        blueprint = self._prepare_and_submit_blueprint(file_server_root,
-                                                       application_dir)
-        return responses.BlueprintState(**blueprint.to_dict()), 201
 
 
 class Blueprints(Resource):
