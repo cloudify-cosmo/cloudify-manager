@@ -17,6 +17,7 @@ __author__ = 'idanmo'
 
 from base_test import BaseServerTestCase
 
+
 class NodesTest(BaseServerTestCase):
 
     def test_get_node(self):
