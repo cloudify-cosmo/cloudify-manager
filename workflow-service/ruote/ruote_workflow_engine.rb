@@ -114,56 +114,59 @@ class RuoteWorkflowEngine
     action = context['action']
 
     # handle error interception (both parent and sub workflows)
-    if action == 'error_intercepted'
-      wfid = context['fei']['wfid']
-      wf_state = get_workflow_state(wfid)
-      if wf_state.state != :failed
-        @dashboard.cancel(wfid)
-        new_state = :failed
-        wf_state = update_workflow_state(wfid, new_state, nil, context['error'])
-        log_workflow_state(wf_state)
-      end
-      return
-
-    elsif action == 'cancel'
-      wfid = context['fei']['wfid']
-      wf_state = get_workflow_state(wfid)
-      if not [:cancelled, :failed].include? wf_state.state
-        new_state = :cancelled
-        wf_state = update_workflow_state(wfid, new_state)
-        log_workflow_state(wf_state)
-      end
-      return
+    begin
+      if action == 'error_intercepted' and context.has_key?('fei') and not context['fei'].nil?
+        wfid = context['fei']['wfid']
+        wf_state = get_workflow_state(wfid)
+        if wf_state.state != :failed
+          @dashboard.cancel(wfid)
+          new_state = :failed
+          wf_state = update_workflow_state(wfid, new_state, nil, context['error'])
+          log_workflow_state(wf_state)
+        end
+      elsif action == 'cancel'
+        wfid = context['fei']['wfid']
+        wf_state = get_workflow_state(wfid)
+        if not [:cancelled, :failed].include? wf_state.state
+          new_state = :cancelled
+          wf_state = update_workflow_state(wfid, new_state)
+          log_workflow_state(wf_state)
+        end
+        return
 
       # Handle parent workflows (only parent as wfid on context)
-    elsif context.has_key?('wfid')
-      workitem = Ruote::Workitem.new(context['workitem'] || {})
-      workflow_id = workitem.fields['workflow_id'] || nil
+      elsif context.has_key?('wfid') and context.has_key?('workitem')
 
-      new_state = nil
+        workitem = Ruote::Workitem.new(context['workitem'] || {})
+        workflow_id = workitem.fields['workflow_id'] || nil
 
-      if action == 'launch'
-        send_event(:workflow_started, "Starting '#{workflow_id}' workflow execution", workitem)
-        new_state = :launched
-      elsif action == 'terminated'
-        wf_state = get_workflow_state(workitem.wfid)
-        if wf_state.state == :failed
-          send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{wf_state.error}", workitem)
-        elsif wf_state.state == :cancelled
-          send_event(:workflow_cancelled, "'#{workflow_id}' workflow execution failed: #{wf_state.error}", workitem)
-          new_state = :terminated
-        else
-          send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
-          new_state = :terminated
+        new_state = nil
+
+        if action == 'launch'
+          send_event(:workflow_started, "Starting '#{workflow_id}' workflow execution", workitem)
+          new_state = :launched
+        elsif action == 'terminated'
+          wf_state = get_workflow_state(workitem.wfid)
+          if wf_state.state == :failed
+            send_event(:workflow_failed, "'#{workflow_id}' workflow execution failed: #{wf_state.error}", workitem)
+          elsif wf_state.state == :cancelled
+            send_event(:workflow_cancelled, "'#{workflow_id}' workflow execution failed: #{wf_state.error}", workitem)
+            new_state = :terminated
+          else
+            send_event(:workflow_succeeded, "'#{workflow_id}' workflow execution succeeded", workitem)
+            new_state = :terminated
+          end
+          clear_plan_if_exists(workitem)
         end
-        clear_plan_if_exists(workitem)
-      end
 
-      unless new_state.nil?
-        wf_state = update_workflow_state(context['wfid'], new_state)
-        log_workflow_state(wf_state)
-      end
+        unless new_state.nil?
+          wf_state = update_workflow_state(context['wfid'], new_state)
+          log_workflow_state(wf_state)
+        end
 
+      end
+    rescue => exception
+      log(:error, "Exception caught in route message handler: #{exception}: #{exception.backtrace}")
     end
   end
 
