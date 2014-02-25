@@ -25,7 +25,6 @@ import sys
 import tempfile
 from os.path import expanduser
 from subprocess import check_output
-from cloudify.context import ContextCapabilities
 
 import yaml
 
@@ -447,6 +446,7 @@ class VagrantLxcBoot:
             }
         }
 
+        from cloudify.context import ContextCapabilities
         from cloudify.constants import MANAGEMENT_NODE_ID
 
         capabilities = {
