@@ -25,6 +25,7 @@ import sys
 import tempfile
 from os.path import expanduser
 from subprocess import check_output
+from cloudify.context import ContextCapabilities
 
 import yaml
 
@@ -452,9 +453,11 @@ class VagrantLxcBoot:
             'ip': MANAGEMENT_NODE_ID
         }
 
+        cap = ContextCapabilities(capabilities)
+
         from cloudify.mocks import MockCloudifyContext
         ctx = MockCloudifyContext(node_id="cloudify.management",
-                                  capabilities=capabilities)
+                                  capabilities=cap)
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
