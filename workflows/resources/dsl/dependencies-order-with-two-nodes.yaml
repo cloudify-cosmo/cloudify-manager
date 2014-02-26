@@ -5,14 +5,14 @@ imports:
 blueprint:
     name: "mock_app"
     nodes:
-        -   name: "containing_node"
+        -   name: "host_node"
             type: "mock_type"
 
-        -   name: "contained_in_node"
+        -   name: "db_node"
             type: "mock_type"
             relationships:
                 - type: "cloudify.relationships.contained_in"
-                  target: "containing_node"
+                  target: "host_node"
 
 types:
     mock_type:
@@ -24,7 +24,7 @@ types:
                 - "make_unreachable": testmockoperations.tasks.make_unreachable
                 - "set_property": testmockoperations.tasks.set_property
         workflows:
-            create:
+            start:
                 radial: |
                     define mock_init
                         execute_operation operation: 'set_property', params: {
@@ -32,3 +32,4 @@ types:
                             value: 'value1'
                         }
                         execute_operation operation: 'make_reachable'
+                        state action: 'set', node_id: '${node.id}', value: 'started'

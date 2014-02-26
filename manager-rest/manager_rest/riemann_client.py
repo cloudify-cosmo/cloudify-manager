@@ -50,6 +50,9 @@ class RiemannClient(object):
         for raw_result in raw_results:
             raw_result_node_id = raw_result.service
             node_result[raw_result_node_id].append(raw_result)
+            with open("/tmp/idan.txt", "a") as f:
+                aaa = "@@@@@@@@ service={0}, state={1}\n".format(raw_result.service, raw_result.state)
+                f.write(aaa)
 
         node_reachable_states = {}
         for node_id, states in node_result.iteritems():

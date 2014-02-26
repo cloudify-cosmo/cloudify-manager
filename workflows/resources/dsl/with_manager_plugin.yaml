@@ -19,6 +19,8 @@ blueprint:
                     - start: cloudmock.tasks.start
                     - stop: cloudmock.tasks.stop
                     - delete: cloudmock.tasks.terminate
+                cloudify.interfaces.host:
+                    - get_state: cloudmock.tasks.get_state
                 cloudify.interfaces.test_lifecycle:
                     - create: test_management_plugin.tasks.start
 

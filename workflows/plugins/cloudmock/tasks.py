@@ -53,7 +53,6 @@ def start(ctx, **kwargs):
 
 @operation
 def get_state(ctx, **kwargs):
-    ctx.set_started()
     if machines[ctx.node_id] == RUNNING:
         return True
     return False
@@ -67,7 +66,6 @@ def stop(ctx, **kwargs):
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
     machines[ctx.node_id] = NOT_RUNNING
-    ctx.set_stopped()
 
 
 @operation

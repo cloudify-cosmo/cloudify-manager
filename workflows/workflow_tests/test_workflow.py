@@ -71,7 +71,7 @@ class BasicWorkflowsTest(TestCase):
         states = self.send_task(testmock_get_state).get(timeout=10)
         node_runtime_props = None
         for k, v in states[1]['capabilities'].iteritems():
-            if 'containing_node' in k:
+            if 'host_node' in k:
                 node_runtime_props = v
                 break
         self.assertEquals('value1', node_runtime_props['property1'])

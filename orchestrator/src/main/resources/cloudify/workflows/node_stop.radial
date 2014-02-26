@@ -1,2 +1,3 @@
 define node_stop
     execute_operation operation: 'cloudify.interfaces.lifecycle.stop'
+    state action: 'set', node_id: '${node.id}', value: 'stopped'

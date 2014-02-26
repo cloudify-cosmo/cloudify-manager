@@ -22,7 +22,7 @@ gem 'sinatra', '~> 1.4.4'
 gem 'ruote', '~> 2.3.0.2'
 gem 'rest-client', '~> 1.6.7'
 gem 'bunny', '~> 1.1.2'
-gem "riemann-client", "~> 0.2.2"
+gem 'riemann-client', '~> 0.2.2'
 
 group :test do
   gem 'rack-test', '~> 0.6.2'
