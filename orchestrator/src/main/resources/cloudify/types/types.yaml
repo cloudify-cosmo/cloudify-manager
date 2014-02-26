@@ -50,11 +50,18 @@ types:
             cloudify.interfaces.kv_store:
                 - put: kv_store.tasks.put
                 - get: kv_store.tasks.get
+            cloudify.interfaces.host:
+                - get_state
         properties:
             - install_agent: false
         workflows:
             start:
-                ref: "cloudify.workflows.host.start"
+                ref: cloudify.workflows.host.start
+            start_detection:
+                radial: |
+                    define host_start_detection
+                        execute_operation operation: 'cloudify.interfaces.detection.get_state', to_f: 'is_started'
+                        event event: { "stage" => "value is: ${is_started}" }
 
     # A storage volume in a topology
     cloudify.types.volume:

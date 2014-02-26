@@ -20,6 +20,7 @@ from cloudify.decorators import operation
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
+DELETED = "deleted"
 machines = {}
 raise_exception_on_start = False
 
@@ -48,7 +49,14 @@ def start(ctx, **kwargs):
     global raise_exception_on_start
     if raise_exception_on_start:
         raise RuntimeError('Exception raised from CloudMock.start()!')
+
+
+@operation
+def get_state(ctx, **kwargs):
     ctx.set_started()
+    if machines[ctx.node_id] == RUNNING:
+        return True
+    return False
 
 
 @operation
@@ -69,7 +77,7 @@ def terminate(ctx, **kwargs):
     if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
-    del machines[ctx.node_id]
+    machines[ctx.node_id] = DELETED
 
 
 @operation

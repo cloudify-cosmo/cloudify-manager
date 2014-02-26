@@ -89,12 +89,26 @@ define wf
     radial = %/
 define wf
   echo 'parent workflow echo'
-  sub_wf
+  do_that
+
+
+  define do_that
+    set 'v:yoyo': '$f:idan'
+    yoyo
+    echo '${result}'
+
   define sub_wf
     echo 'this is a sub workflow echo'
-    sleep for: '2s'
+    sleep for: '1s'
+    log message: 'yikes'
+    set 'f:result': '$hello'
 /
-    wf = @ruote.launch(radial)
+    aaa = %/
+define my_wf
+  sub_wf
+/
+    fields = { "idan" => aaa }
+    wf = @ruote.launch(radial, fields)
     assert_equal :pending, wf.state
     wait_for_workflow_state(wf.id, :terminated, 10)
   end
@@ -111,6 +125,82 @@ define wf
     assert_equal wf.id, wf_state.id
     @ruote.launch(radial)
     assert_equal 2, @ruote.get_workflows.size
+  end
+
+
+  def test_radial
+    radial1 = %(define host_start
+    execute_operation operation: 'cloudify.interfaces.lifecycle.start'
+
+    execute_operation operation: 'cloudify.interfaces.detection.get_state', to_f: 'is_started'
+    event event: { "stage" => "is_started = ${f:is_started}" }
+
+    sequence if: '${node.properties.install_agent} == true'
+        event event: { "stage" => "Verifying host has started" }
+        state action: 'wait', node_id: '${node.id}', reachable: 'true'
+        log message: 'installing agent on host: ${node.id}'
+        event event: { "stage" => "Installing worker" }
+        execute_operation operation: 'cloudify.interfaces.worker_installer.install'
+        execute_operation operation: 'cloudify.interfaces.worker_installer.start'
+        event event: { "stage" => "Installing plugins" }
+        log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
+        iterator on: '$node.plugins_to_install', to_v: 'plugin'
+            log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
+            event event: { "stage" => "Installing plugin ${v:plugin.name}" }
+            execute_operation operation: 'cloudify.interfaces.plugin_installer.install', params: {
+                plugin: {
+                    name: '${v:plugin.name}',
+                    url: '${v:plugin.url}'
+                 }
+            }
+            log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
+        log message: 'restarting worker on host: ${node.id}'
+        execute_operation operation: 'cloudify.interfaces.worker_installer.restart'
+        execute_operation operation: 'cloudify.interfaces.kv_store.put', params: {
+            key: "agent plugins installed",
+            value: true
+        }
+)
+
+    radial2 = %(#{}
+define host_start
+    execute_operation operation: 'cloudify.interfaces.lifecycle.start'
+
+    execute_operation operation: 'cloudify.interfaces.detection.get_state', to_f: 'is_started'
+    event event: { "stage" => "is_started = ${f:is_started}" }
+
+    sequence if: '${node.properties.install_agent} == true'
+        event event: { "stage" => "Verifying host has started" }
+        state action: 'wait', node_id: '${node.id}', reachable: 'true'
+        log message: 'installing agent on host: ${node.id}'
+        event event: { "stage" => "Installing worker" }
+        execute_operation operation: 'cloudify.interfaces.worker_installer.install'
+        execute_operation operation: 'cloudify.interfaces.worker_installer.start'
+        event event: { "stage" => "Installing plugins" }
+        log message: 'installing plugins on host: ${node.id} - plugins: ${node.plugins_to_install}'
+        iterator on: '$node.plugins_to_install', to_v: 'plugin'
+            log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
+            event event: { "stage" => "Installing plugin ${v:plugin.name}" }
+            execute_operation operation: 'cloudify.interfaces.plugin_installer.install', params: {
+                plugin: {
+                    name: '${v:plugin.name}',
+                    url: '${v:plugin.url}'
+                 }
+            }
+            log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
+        log message: 'restarting worker on host: ${node.id}'
+        execute_operation operation: 'cloudify.interfaces.worker_installer.restart'
+        execute_operation operation: 'cloudify.interfaces.kv_store.put', params: {
+            key: "agent plugins installed",
+            value: true
+        }
+)
+
+    result1 = Ruote::RadialReader.read(radial1)
+    result2 = Ruote::RadialReader.read(radial2)
+    puts result1 == result2
+
+
   end
 
 end

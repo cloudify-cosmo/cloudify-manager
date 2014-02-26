@@ -37,7 +37,10 @@ class EventParticipant < Ruote::Participant
       raise 'event not set' unless workitem.params.has_key? EVENT
       event = workitem.params[EVENT]
 
-      EventParticipant.log_event(event, workitem)
+      event(:workflow_stage, {
+          :workitem => workitem,
+          :message => event['stage']
+      })
 
       reply(workitem)
 
@@ -45,13 +48,6 @@ class EventParticipant < Ruote::Participant
       log_exception(workitem, e, 'event')
       flunk(workitem, e)
     end
-  end
-
-  def self.log_event(event, workitem)
-    event(:workflow_stage, {
-        :workitem => workitem,
-        :message => event['stage']
-    })
   end
 
 end
