@@ -55,6 +55,10 @@ types:
         workflows:
             start:
                 ref: "cloudify.workflows.host.start"
+                
+    # A Linux container with or without docker
+    cloudify.types.container:
+        dervied_from: cloudify.types.host
 
     # A storage volume in a topology
     cloudify.types.volume:
