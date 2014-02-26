@@ -78,6 +78,16 @@ class BasicWorkflowsTest(TestCase):
         # length should be 2 because of auto injected ip property
         self.assertEquals(2, len(node_runtime_props))
 
+    def test_dsl_with_agent_plugin(self):
+        dsl_path = resource("dsl/with_plugin.yaml")
+        deploy(dsl_path)
+
+        from plugins.plugin_installer.tasks import get_installed_plugins as \
+            test_get_installed_plugins
+        result = self.send_task(test_get_installed_plugins)
+        installed_plugins = result.get(timeout=10)
+        self.assertTrue("test_plugin" in installed_plugins)
+
     def test_dsl_with_manager_plugin(self):
         dsl_path = resource("dsl/with_manager_plugin.yaml")
         deployment_id = deploy(dsl_path).id
