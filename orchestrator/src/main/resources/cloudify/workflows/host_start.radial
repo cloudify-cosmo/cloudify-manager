@@ -13,11 +13,7 @@ define host_start
             log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
             event event: { "stage" => "Installing plugin ${v:plugin.name}" }
             execute_operation operation: 'cloudify.interfaces.plugin_installer.install', params: {
-                plugin: {
-                    name: '${v:plugin.name}',
-                    url: '${v:plugin.url}'
-                    folder: '${v:plugin.folder}'
-                 }
+                plugin: '$v:plugin'
             }
             log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
         log message: 'restarting worker on host: ${node.id}'
