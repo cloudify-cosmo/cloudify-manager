@@ -76,7 +76,10 @@ class BasicWorkflowsTest(TestCase):
                 break
         self.assertEquals('value1', node_runtime_props['property1'])
         # length should be 2 because of auto injected ip property
-        self.assertEquals(2, len(node_runtime_props))
+        self.assertEquals(1,
+                          len(node_runtime_props),
+                          msg='Expected 2 but contains: {0}'.format(
+                              node_runtime_props))
 
     def test_dsl_with_manager_plugin(self):
         dsl_path = resource("dsl/with_manager_plugin.yaml")
