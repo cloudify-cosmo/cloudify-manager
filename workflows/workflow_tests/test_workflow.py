@@ -54,7 +54,7 @@ class BasicWorkflowsTest(TestCase):
     @timeout(seconds=60)
     def test_execute_operation_failure(self):
         from plugins.cloudmock.tasks import set_raise_exception_on_start
-        self.send_task(set_raise_exception_on_start)
+        self.send_task(set_raise_exception_on_start).get(timeout=10)
         dsl_path = resource("dsl/basic.yaml")
         try:
             deploy(dsl_path)
