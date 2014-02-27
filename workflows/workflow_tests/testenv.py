@@ -68,9 +68,8 @@ RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
 
 RABBITMQ_VERBOSE_MESSAGES_KEY = 'RABBITMQ_VERBOSE_MESSAGES'
 
-RABBITMQ_VERBOSE_MESSAGES_ENABLED = \
-    RABBITMQ_VERBOSE_MESSAGES_KEY not in os.environ or os.environ[
-        RABBITMQ_VERBOSE_MESSAGES_KEY].lower() != 'false'
+RABBITMQ_VERBOSE_MESSAGES_ENABLED = os.environ.get(
+    RABBITMQ_VERBOSE_MESSAGES_KEY, 'false').lower() == 'true'
 
 celery = Celery(broker='amqp://',
                 backend='amqp://')

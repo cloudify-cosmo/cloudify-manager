@@ -128,7 +128,7 @@ class NodeStateParticipant < Ruote::Participant
     node_id = workitem.params[NODE_ID]
     value = workitem.params['value']
 
-    log(:info, "Setting node: #{node_id} as '#{value}'", {
+    log(:debug, "Setting node: #{node_id} as '#{value}'", {
         :workitem => workitem
     })
 
