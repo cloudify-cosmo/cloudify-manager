@@ -50,11 +50,13 @@ types:
             cloudify.interfaces.kv_store:
                 - put: kv_store.tasks.put
                 - get: kv_store.tasks.get
+            cloudify.interfaces.host:
+                - get_state
         properties:
             - install_agent: false
         workflows:
             start:
-                ref: "cloudify.workflows.host.start"
+                ref: cloudify.workflows.host.start
                 
     # A Linux container with or without docker
     cloudify.types.container:

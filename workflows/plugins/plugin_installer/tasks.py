@@ -30,10 +30,7 @@ def install(ctx, plugin, **kwargs):
 def verify_plugin(ctx, worker_id, plugin_name, operation, throw_on_failure,
                   **kwargs):
     full_operation_name = "{0}.{1}".format(plugin_name, operation)
-    ctx.logger.info("full operation name is : {0}".format(full_operation_name))
     is_non_existing = full_operation_name in NON_EXISTING_OPERATIONS
-    ctx.logger.info("is not existing : {0}".format(is_non_existing))
-    ctx.logger.info("throw on failure : {0}".format(throw_on_failure))
     if throw_on_failure and is_non_existing:
         raise RuntimeError("")
     return not is_non_existing
