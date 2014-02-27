@@ -5,19 +5,21 @@ imports:
 blueprint:
     name: "mock_app"
     nodes:
-        -   name: "containing_node"
+        -   name: "host_node"
             type: "mock_type"
 
-        -   name: "contained_in_node"
+        -   name: "db_node"
             type: "mock_type"
             relationships:
                 - type: "cloudify.relationships.contained_in"
-                  target: "containing_node"
+                  target: "host_node"
 
 types:
     mock_type:
         derived_from: "cloudify.types.base"
         interfaces:
+            cloudify.interfaces.lifecycle:
+                - start: testmockoperations.tasks.make_reachable
             mock_interface:
                 - "touch": testmockoperations.tasks.touch
                 - "make_reachable": testmockoperations.tasks.make_reachable
@@ -26,9 +28,8 @@ types:
         workflows:
             create:
                 radial: |
-                    define mock_init
+                    define mock_create
                         execute_operation operation: 'set_property', params: {
                             property_name: 'property1',
                             value: 'value1'
                         }
-                        execute_operation operation: 'make_reachable'

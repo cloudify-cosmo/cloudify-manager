@@ -13,6 +13,8 @@ types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
+            cloudify.interfaces.lifecycle:
+                - stop: testmockoperations.tasks.make_unreachable
             mock_interface:
                 - mock_operation:
                       mapping: 'testmockoperations.tasks.mock_operation'
@@ -26,11 +28,8 @@ types:
                 radial: |
                     define mock_create
                         execute_operation operation: 'make_reachable'
+                        state action: 'set', node_id: '${node.id}', value: 'started'
             start:
                 radial: |
                     define mock_start
                         execute_operation operation: 'mock_operation'
-            delete:
-                radial: |
-                    define mock_delete
-                        execute_operation operation: 'make_unreachable'

@@ -279,12 +279,16 @@ class ExecuteTaskParticipant < Ruote::Participant
 
         when TASK_SUCCEEDED
 
+          task_result = fix_task_result(enriched_event[EVENT_RESULT])
           if workitem.params.has_key? RESULT_WORKITEM_FIELD
-            result_field = workitem.params[RESULT_WORKITEM_FIELD]
-            workitem.fields[result_field] = fix_task_result(enriched_event[EVENT_RESULT]) unless result_field.empty?
+            result_field = workitem.params[RESULT_WORKITEM_FIELD].to_s
+            if not result_field.empty?
+              workitem.fields[result_field] = task_result
+            end
           end
           unless TASK_TO_FILTER.include? @full_task_name
-            send_task_event(:task_succeeded)
+            task_result = nil unless not task_result.downcase.eql? 'none'
+            send_task_event(:task_succeeded, task_result)
           end
           reply(workitem)
 
@@ -316,8 +320,8 @@ class ExecuteTaskParticipant < Ruote::Participant
       end
 
       begin
-          final_result = JSON.parse(final_result)
-      rescue => e
+        final_result = JSON.parse(final_result)
+      rescue
         # ignore, not valid JSON, probably a string
       end
 

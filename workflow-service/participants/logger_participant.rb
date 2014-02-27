@@ -15,18 +15,26 @@
 #
 
 require_relative 'exception_logger'
+require_relative '../utils/logs'
 
 
 class LoggerParticipant < Ruote::Participant
 
   MESSAGE = 'message'
 
+  def do_not_thread
+    true
+  end
+
   def on_workitem
     begin
       raise 'message not set' unless workitem.params.has_key? MESSAGE
       message = workitem.params[MESSAGE]
+
+      log(:debug, message, { :workitem => workitem })
       $logger.debug('ruote-workflow: {}', message)
-      reply
+      reply(workitem)
+
     rescue => e
       log_exception(workitem, e, 'logger')
       flunk(workitem, e)
