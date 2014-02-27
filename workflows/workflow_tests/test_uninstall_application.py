@@ -15,13 +15,11 @@
 
 __author__ = 'eitany'
 
-import os
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
 from testenv import set_node_stopped
-from cloudify.constants import MANAGER_IP_KEY
 
 
 class TestUninstallApplication(TestCase):
