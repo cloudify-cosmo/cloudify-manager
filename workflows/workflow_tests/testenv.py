@@ -31,6 +31,7 @@ import threading
 import re
 import pika
 import json
+import bernhard
 from functools import wraps
 from multiprocessing import Process
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
@@ -64,6 +65,12 @@ RABBITMQ_POLLING_KEY = 'RABBITMQ_POLLING'
 
 RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
     or os.environ[RABBITMQ_POLLING_KEY].lower() != 'false'
+
+RABBITMQ_VERBOSE_MESSAGES_KEY = 'RABBITMQ_VERBOSE_MESSAGES'
+
+RABBITMQ_VERBOSE_MESSAGES_ENABLED = \
+    RABBITMQ_VERBOSE_MESSAGES_KEY not in os.environ or os.environ[
+        RABBITMQ_VERBOSE_MESSAGES_KEY].lower() != 'false'
 
 celery = Celery(broker='amqp://',
                 backend='amqp://')
@@ -518,8 +525,16 @@ def start_events_and_logs_polling():
     def callback(ch, method, properties, body):
         try:
             output = json.loads(body)
-            output = json.dumps(output, indent=4)
-            logger.info("\n{0}".format(output))
+            if RABBITMQ_VERBOSE_MESSAGES_ENABLED:
+                output = '\n{0}'.format(json.dumps(output, indent=4))
+            else:
+                if 'context' in output and 'node_id' in output['context']:
+                    output = '[{0}] {1}'.format(
+                        output['context']['node_id'],
+                        output['message']['text'])
+                else:
+                    output = output['message']['text']
+            logger.info(output)
         except Exception as e:
             logger.info(
                 "event/log format error - output: {0} [message={1}]".format(
@@ -838,3 +853,27 @@ def timeout(seconds=60):
                     'test timeout exceeded [timeout={0}'.format(seconds))
         return wraps(func)(wrapper)
     return decorator
+
+
+def set_node_stopped(node_id):
+    """
+    Set node state to stopped for the provided node id.
+
+    This will first query Riemann for getting current event fields and then
+    send an updated event with the new state.
+
+    This is for being compliant with workflow generated events sent to Riemann.
+    """
+    client = bernhard.Client()
+    results = client.query('service = "{0}"'.format(node_id))
+    if len(results) != 1:
+        raise RuntimeError(
+            'Received several results from Riemann for node id [{0}]'
+            .format(node_id))
+    event = {
+        'host': results[0].host,
+        'service': node_id,
+        'ttl': sys.maxint,
+        'state': 'stopped'
+    }
+    client.send(event)

@@ -48,8 +48,8 @@ class BasicWorkflowsTest(TestCase):
         states = self.send_task(testmock_get_state)\
             .get(timeout=10)
         self.assertEquals(2, len(states))
-        self.assertTrue('containing_node' in states[0]['id'])
-        self.assertTrue('contained_in_node' in states[1]['id'])
+        self.assertTrue('host_node' in states[0]['id'])
+        self.assertTrue('db_node' in states[1]['id'])
 
     @timeout(seconds=60)
     def test_execute_operation_failure(self):

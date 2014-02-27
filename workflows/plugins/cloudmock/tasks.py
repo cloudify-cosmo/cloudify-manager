@@ -20,7 +20,6 @@ from cloudify.decorators import operation
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
-DELETED = "deleted"
 machines = {}
 raise_exception_on_start = False
 
@@ -75,7 +74,7 @@ def terminate(ctx, **kwargs):
     if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
-    machines[ctx.node_id] = DELETED
+    del machines[ctx.node_id]
 
 
 @operation

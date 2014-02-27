@@ -55,7 +55,8 @@ setup(
         "cosmo-celery-common",
         "pika==0.9.13",
         "cosmo-plugin-plugin-installer",
-        "cosmo-manager-rest-client"
+        "cosmo-manager-rest-client",
+        "bernhard==0.1.0"
     ],
     test_requires=[
         "nose"

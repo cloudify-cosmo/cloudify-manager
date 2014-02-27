@@ -20,7 +20,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
-from cloudify.manager import set_node_stopped
+from testenv import set_node_stopped
 from cloudify.constants import MANAGER_IP_KEY
 
 
@@ -64,24 +64,23 @@ class TestUninstallApplication(TestCase):
 
     def test_uninstall_not_calling_unreachable_nodes(self):
         dsl_path = resource("dsl/single_node_no_host.yaml")
-        print('starting deploy process')
+        self.logger.info('starting deploy process')
         deployment_id = deploy(dsl_path).id
-        print('deploy completed')
-        print('making node unreachable from test')
+        self.logger.info('deploy completed')
+        self.logger.info('making node unreachable from test')
         #make node unreachable
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
         states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
 
-        os.environ[MANAGER_IP_KEY] = 'localhost'
-        set_node_stopped(node_id, 'localhost')
+        set_node_stopped(node_id)
 
         import time
         time.sleep(10)
-        print('starting undeploy process')
+        self.logger.info('starting undeploy process')
         undeploy(deployment_id)
-        print('undeploy completed')
+        self.logger.info('undeploy completed')
         #Checking that uninstall wasn't called on unreachable node
         from plugins.testmockoperations.tasks import is_unreachable_called
         result = self.send_task(is_unreachable_called, [node_id])
