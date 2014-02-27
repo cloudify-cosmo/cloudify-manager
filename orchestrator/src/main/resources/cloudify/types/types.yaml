@@ -143,6 +143,8 @@ relationships:
 
     cloudify.relationships.connected_to:
         derived_from: "cloudify.relationships.depends_on"
+        properties:
+            - connection_type: all_to_all
 
     cloudify.relationships.contained_in:
         derived_from: "cloudify.relationships.depends_on"
