@@ -141,4 +141,3 @@ class TestUninstallDeployment(TestCase):
         machines = result.get(timeout=10)
 
         self.assertEquals(0, len(machines))
-

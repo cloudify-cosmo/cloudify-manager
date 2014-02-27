@@ -95,4 +95,3 @@ def set_raise_exception_on_start(**kwargs):
 def set_raise_exception_on_stop(**kwargs):
     global raise_exception_on_stop
     raise_exception_on_stop = True
-
