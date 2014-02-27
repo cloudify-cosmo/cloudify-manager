@@ -22,8 +22,7 @@ parser.add_argument('--key_path')
 parser.add_argument('--key_name')
 parser.add_argument('--host_name')
 parser.add_argument('--management_ip')
-parser.add_argument('--region')
-parser.add_argument('--image')
+parser.add_argument('--image_name')
 args = parser.parse_args()
 
 ###################################
@@ -34,10 +33,9 @@ key_path = args.key_path
 key_name = args.key_name
 host_name = args.host_name
 management_ip = args.management_ip
-region = args.region
-image = int(args.image)
+image_name = args.image_name
 
-flavor = 101
+flavor_name = 'standard.xsmall'
 
 hello_world_repo_url = 'https://github.com/CloudifySource/cloudify-hello-world.git'
 hello_world_repo_branch = 'develop'
@@ -114,6 +112,7 @@ def get_state_delta(before, after):
         del after['nodes'][node_id]
     return after
 
+
 ##################################
 ## Step functions
 ##################################
@@ -122,6 +121,7 @@ def clone_hello_world():
         git.clone(hello_world_repo_url).wait()
     with blueprint_repo_dir:
         git.checkout(hello_world_repo_branch).wait()
+
 
 def modify_blueprint():
     # load original yamls    
@@ -133,19 +133,18 @@ def modify_blueprint():
     blueprint_name = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
     blueprint_yaml['blueprint']['name'] = blueprint_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config'] = {}
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['region'] = region
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance'] = {}
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['name'] = host_name
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['image'] = image
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['key_name'] = key_name
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['flavor'] = flavor
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server'] = {}
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['name'] = host_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['image_name'] = image_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['flavor_name'] = flavor_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['key_name'] = key_name
 
     # store new yamls
     sanity_blueprint.write_text(yaml.dump(blueprint_yaml))
     sanity_hello_world.write_text(yaml.dump(hello_yaml))
 
     return blueprint_name
+
 
 def upload_create_deployment_and_execute(blueprint_name):
     before_state = get_manager_state()
