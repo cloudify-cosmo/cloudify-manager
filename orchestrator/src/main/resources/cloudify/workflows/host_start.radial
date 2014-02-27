@@ -4,8 +4,6 @@ define host_start
     state action: 'set', node_id: '${node.id}', value: 'started'
 
     sequence if: '${node.properties.install_agent} == true'
-        event event: { "stage" => "Verifying host has started" }
-        state action: 'wait', node_id: '${node.id}', reachable: 'true'
         log message: 'installing agent on host: ${node.id}'
         event event: { "stage" => "Installing worker" }
         execute_operation operation: 'cloudify.interfaces.worker_installer.install'
