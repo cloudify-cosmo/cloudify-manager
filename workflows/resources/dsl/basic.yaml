@@ -15,10 +15,3 @@ blueprint:
                     - delete: cloudmock.tasks.terminate
                 cloudify.interfaces.host:
                     - get_state: cloudmock.tasks.get_state
-
-workflows:
-    mock_workflow:
-        radial: |
-            define mock_workflow
-                execute_operation operation: 'make_mock_operation'
-
