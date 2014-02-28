@@ -86,39 +86,15 @@ define wf
   # mechanism for monitoring workflows activity since its also relevant for
   # sub-workflows.
   def test_sub_workflow
-    radial = %&
+    radial = %/
 define wf
   echo 'parent workflow echo'
-  concurrent_iterator on: '$f:numbers', to_f: 'number', merge_type: 'ignore'
-    sequence
-      echo '${number}'
-      set 'v:sub_wf': '$f:idan'
-      set 'v:hello': 'hello world!'
-      sub_wf on_error: 'handler'
-      echo '### START ###'
-      echo '${v:x}', if: '${v:x} != ""'
-      echo '### END ###'
-  define handler
-    echo '@@@ HANDLER-START @@@'
-    echo '${v:hello}'
-    echo '${__error__}'
-    #set 'v:/x': '$__error__'
-    echo '@@@ HANDLER-END @@@'
-  define moyal
-    echo '-> moyal'
-    log
-&
-    wf = %/
-define sub_wf
-  moyal
-  echo 'this is a sub workflow echo'
-  sleep for: '2s'
+  sub_wf
+  define sub_wf
+    echo 'this is a sub workflow echo'
+    sleep for: '2s'
 /
-    fields = {
-        'numbers' => [1],
-        'idan' => wf
-    }
-    wf = @ruote.launch(radial, fields )
+    wf = @ruote.launch(radial)
     assert_equal :pending, wf.state
     wait_for_workflow_state(wf.id, :terminated, 10)
   end
