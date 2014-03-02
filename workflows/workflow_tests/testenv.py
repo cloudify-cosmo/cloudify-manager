@@ -681,8 +681,8 @@ class TestEnvironment(object):
             self._riemann_process.start()
 
             # elasticsearch
-            # self._elasticsearch_process = ElasticSearchProcess()
-            # self._elasticsearch_process.start()
+            self._elasticsearch_process = ElasticSearchProcess()
+            self._elasticsearch_process.start()
 
             manager_rest_port = '8100'
 
