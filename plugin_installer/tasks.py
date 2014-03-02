@@ -189,7 +189,7 @@ def extract_plugin_name(plugin_url):
                                              download_dir=None)
             req_set.unpack_url(link=pip.index.Link(plugin_url),
                                location=plugin_dir,
-                               download_cache=None,
+                               download_dir=None,
                                only_download=False)
         os.chdir(plugin_dir)
         plugin_name = run_command('{0} {1} {2}'.format(
