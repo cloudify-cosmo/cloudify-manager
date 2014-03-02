@@ -29,7 +29,6 @@ from os.path import expanduser
 from subprocess import check_output
 
 
-
 __author__ = 'elip'
 
 FNULL = open(os.devnull, 'w')
