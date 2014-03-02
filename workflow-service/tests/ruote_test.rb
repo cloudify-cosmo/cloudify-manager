@@ -40,25 +40,32 @@ define wf
     assert_equal :pending, wf.state
   end
 
+  class TestLogger
+    attr_reader :messages
+    def initialize;
+      @messages = []
+    end
+    def debug(_, *args)
+      @messages.push(args[0])
+    end
+  end
+
   def test_workflow_cancellation
-    var_value_before_sleep = 'my_var_value_before_sleep'
-    var_value_after_sleep = 'my_var_value_after_sleep'
+    test_logger = TestLogger.new
+    $logger = test_logger
+    stage_before_sleep = 'before_sleep'
+    state_after_sleep = 'after_sleep'
     radial = %(
 define wf
-  set 'v://my_var': '#{var_value_before_sleep}'
-  set 'v://my_var': '#{var_value_after_sleep}'
+  log message: '#{stage_before_sleep}'
+  sleep '3s'
+  log message: '#{state_after_sleep}'
 )
     wf = @ruote.launch(radial)
-
     sleep(1)
-
     @ruote.cancel_workflow(wf.id)
     wait_for_workflow_state(wf.id, :terminated, 5)
-    dashboard = @ruote.instance_variable_get('@dashboard')
-
-    variables = dashboard.instance_variable_get('@variables')
-
-    assert_equal var_value_before_sleep, variables['my_var']
+    assert_equal stage_before_sleep, test_logger.messages[-1]
   end
 
   def test_workflow_execution_with_tags

@@ -72,7 +72,9 @@ class RuoteWorkflowEngine
   end
 
   def cancel_workflow(wfid)
-    #raise 'not implemented'
+    wf = get_workflow_state(wfid)
+    @dashboard.cancel(wf.id)
+    wf
   end
 
   def pause_workflow(wfid)
