@@ -38,12 +38,13 @@ from manager_rest import models
 from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import chunked
+from manager_rest import app
 
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.blueprints_manager import (DslParseException,
                                              BlueprintAlreadyExistsException)
-from manager_rest.riemann_client import RiemannClient
+from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -54,21 +55,6 @@ def blueprints_manager():
     return blueprints_manager.instance()
 
 
-def get_riemann_client():
-    """
-    Get the current riemann_client or create one if none exists for the current app context
-    """
-    if not hasattr(g, '_riemann_client'):
-        g._riemann_client = RiemannClient()
-    return g._riemann_client
-
-# @app.teardown_appcontext
-# def teardown_riemann(exception):
-#     """
-#     Disconnect Riemann at the end of the request
-#     """
-#     if hasattr(g, '_riemann_client'):
-#         g._riemann_client.teardown()
 
 
 def storage_manager():

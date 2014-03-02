@@ -16,7 +16,10 @@
 
 __author__ = 'idanmo'
 
-from collections import defaultdict
+from flask import g
+from manager_rest import app
+
+
 import bernhard
 
 
@@ -27,6 +30,7 @@ class RiemannClient(object):
 
     def __init__(self):
         self._client = bernhard.Client(host='localhost')
+        print "connected!"
 
     def get_node_state(self, node_id):
         """
@@ -69,9 +73,21 @@ class RiemannClient(object):
 
     def teardown(self):
         self._client.disconnect()
+        print "disconnected!"
 
-_instance = RiemannClient()
+# What we need to access the client in Flask
+def get_riemann_client():
+    """
+    Get the current riemann_client or create one if none exists for the current app context
+    """
+    if not 'riemann_client' in g:
+        g.riemann_client = RiemannClient()
+    return g.riemann_client
 
-
-def instance():
-    return _instance
+@app.teardown_appcontext
+def teardown_riemann(exception):
+    """
+    Disconnect Riemann at the end of the request
+    """
+    if 'riemann_client' in g:
+        g.riemann_client.teardown()
