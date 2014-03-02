@@ -49,3 +49,9 @@ def copy_resources(file_server_root,
     shutil.copy(alias_mapping_resource, path.join(file_server_root,
                                                   'cloudify'
                                                   '/alias-mappings.yaml'))
+
+
+def maybe_register_teardown(app, f):
+    if f not in app.teardown_appcontext_funcs:
+        app.teardown_appcontext_funcs.append(f)
+
