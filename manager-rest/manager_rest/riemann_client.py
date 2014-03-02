@@ -13,11 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+
 __author__ = 'idanmo'
 
-
+from collections import defaultdict
 import bernhard
-from StringIO import StringIO
 
 
 class RiemannClient(object):
@@ -38,15 +38,14 @@ class RiemannClient(object):
         """
         Get nodes reachable state.
         """
-        node_result = {}
-        query = StringIO()
-        or_query = ' or '
-        for node_id in node_ids:
-            node_result[node_id] = []
-            query.write('service = "{0}"{1}'.format(node_id, or_query))
-        query.truncate(len(query.getvalue()) - len(or_query))
+        node_result = defaultdict(list)
 
-        raw_results = self._client.query(query.getvalue())
+        or_query = ' or '
+
+        # construct quest with or separator
+        query = or_query.join('service = "{}"'.format(node_id) for node_id in node_ids)
+
+        raw_results = self._client.query(query)
         for raw_result in raw_results:
             raw_result_node_id = raw_result.service
             node_result[raw_result_node_id].append(raw_result)
@@ -64,6 +63,9 @@ class RiemannClient(object):
             node_reachable_states[node_id] = node_reachable_state
 
         return node_reachable_states
+
+    def teardown(self):
+        self._client.disconnect()
 
 _instance = RiemannClient()
 
