@@ -18,3 +18,7 @@ __author__ = 'ran'
 
 class ConflictError(Exception):
     pass
+
+
+class NotFoundError(Exception):
+    pass
