@@ -38,12 +38,15 @@ class RiemannClient(object):
         """
         Get nodes reachable state.
         """
-        node_result = defaultdict(list)
+        node_result = {}
 
         or_query = ' or '
 
         # construct quest with or separator
-        query = or_query.join('service = "{}"'.format(node_id) for node_id in node_ids)
+        query = or_query.join('service = "{0}"'.format(node_id) for node_id in node_ids)
+
+        for node_id in node_ids:
+            node_result[node_id] = []
 
         raw_results = self._client.query(query)
         for raw_result in raw_results:
