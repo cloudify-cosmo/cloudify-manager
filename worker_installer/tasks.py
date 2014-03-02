@@ -199,6 +199,7 @@ def _install_latest_pip(runner, worker_config):
 
 
 def prepare_configuration(worker_config, ctx):
+    ip = None
     if ctx.node_id is not None:
         ip = get_machine_ip(ctx)
         worker_config['host'] = ip
