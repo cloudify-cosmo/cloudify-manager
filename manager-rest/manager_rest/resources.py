@@ -29,20 +29,21 @@ from functools import wraps
 
 import elasticsearch
 
-from flask import request
+from flask import request, g
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
-from . import config
-from . import models
-from . import responses
-from . import requests_schema
-from . import chunked
+from manager_rest import config
+from manager_rest import models
+from manager_rest import responses
+from manager_rest import requests_schema
+from manager_rest import chunked
 
-from .workflow_client import WorkflowServiceError
-from .manager_exceptions import ConflictError
-from .blueprints_manager import (DslParseException,
-                                 BlueprintAlreadyExistsException)
+from manager_rest.workflow_client import WorkflowServiceError
+from manager_rest.manager_exceptions import ConflictError
+from manager_rest.blueprints_manager import (DslParseException,
+                                             BlueprintAlreadyExistsException)
+from manager_rest.riemann_client import RiemannClient
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -53,14 +54,26 @@ def blueprints_manager():
     return blueprints_manager.instance()
 
 
+def get_riemann_client():
+    """
+    Get the current riemann_client or create one if none exists for the current app context
+    """
+    if not hasattr(g, '_riemann_client'):
+        g._riemann_client = RiemannClient()
+    return g._riemann_client
+
+# @app.teardown_appcontext
+# def teardown_riemann(exception):
+#     """
+#     Disconnect Riemann at the end of the request
+#     """
+#     if hasattr(g, '_riemann_client'):
+#         g._riemann_client.teardown()
+
+
 def storage_manager():
     import storage_manager
     return storage_manager.instance()
-
-
-def riemann_client():
-    import riemann_client
-    return riemann_client.instance()
 
 
 def exceptions_handled(func):
@@ -469,7 +482,7 @@ class DeploymentsIdNodes(Resource):
 
         reachable_states = {}
         if get_reachable_state:
-            reachable_states = riemann_client().get_nodes_state(node_ids)
+            reachable_states = get_riemann_client().get_nodes_state(node_ids)
 
         nodes = []
         for node_id in node_ids:
@@ -595,7 +608,7 @@ class NodesId(Resource):
 
         reachable_state = None
         if get_reachable_state:
-            state = riemann_client().get_node_state(node_id)
+            state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
 
         runtime_state = None

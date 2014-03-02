@@ -23,10 +23,10 @@ import yaml
 from flask import Flask
 from flask.ext.restful import Api
 
-import config
-import resources
-import blueprints_manager
-import storage_manager
+from manager_rest import config
+from manager_rest import resources
+from manager_rest import blueprints_manager
+from manager_rest import storage_manager
 
 
 app = None
