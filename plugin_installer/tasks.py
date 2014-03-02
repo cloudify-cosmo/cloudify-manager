@@ -40,7 +40,8 @@ def install(ctx, plugin, **kwargs):
     plugin parameter is expected to be in the following format:
             { name: "...", url: "..." } OR { name: "...", folder: "..." }
     The plugin url should be a URL pointing to either a zip or tar.gz file.
-    The plugin folder should be a a folder name inside the blueprint 'plugins' directory containing the plugin.
+    The plugin folder should be a a folder name inside the blueprint
+    'plugins' directory containing the plugin.
     """
 
     if "folder" in plugin:
