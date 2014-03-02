@@ -47,8 +47,9 @@ def deserialize_object(obj):
         if TYPE_FIELD_NAME in obj:
             #nested object
             obj_type = obj[TYPE_FIELD_NAME]
-            obj_class_name = obj_type.split('.')[-1]
-            obj_module_name = obj_type[:len(obj_type)-len(obj_class_name)-1]
+            obj_module_name, obj_class_name = obj_type.rsplit('.', 1)  # only take last component
+            # obj_module_name = obj_type[:len(obj_type)-len(obj_class_name)-1]
+
             if '.' in obj_module_name:
                 module = __import__(obj_module_name,
                                     fromlist=obj_module_name.split('.')[-1])
