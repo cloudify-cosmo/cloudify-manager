@@ -12,33 +12,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
 
-require_relative 'exception_logger'
-require_relative '../utils/logs'
+__author__ = 'ran'
 
 
-class LoggerParticipant < Ruote::Participant
-
-  MESSAGE = 'message'
-
-  def do_not_thread
-    true
-  end
-
-  def on_workitem
-    begin
-      raise 'message not set' unless workitem.params.has_key? MESSAGE
-      message = workitem.params[MESSAGE]
-
-      log(:debug, message, { :workitem => workitem })
-      $logger.debug('ruote-workflow: {}', message)
-      reply(workitem)
-
-    rescue => e
-      log_exception(workitem, e, 'logger')
-      flunk(workitem, e)
-    end
-  end
-
-end
+class ConflictError(Exception):
+    pass

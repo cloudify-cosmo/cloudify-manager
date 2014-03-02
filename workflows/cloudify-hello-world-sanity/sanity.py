@@ -1,5 +1,6 @@
 # flake8: noqa
 
+import uuid
 import time
 import requests
 import copy
@@ -21,8 +22,7 @@ parser.add_argument('--key_path')
 parser.add_argument('--key_name')
 parser.add_argument('--host_name')
 parser.add_argument('--management_ip')
-parser.add_argument('--region')
-parser.add_argument('--image')
+parser.add_argument('--image_name')
 args = parser.parse_args()
 
 ###################################
@@ -33,10 +33,9 @@ key_path = args.key_path
 key_name = args.key_name
 host_name = args.host_name
 management_ip = args.management_ip
-region = args.region
-image = int(args.image)
+image_name = args.image_name
 
-flavor = 101
+flavor_name = 'standard.xsmall'
 
 hello_world_repo_url = 'https://github.com/CloudifySource/cloudify-hello-world.git'
 hello_world_repo_branch = 'develop'
@@ -73,8 +72,9 @@ def get_manager_state():
     for deployment in client.list_deployments():
         deployments[deployment.id] = deployment
     nodes = {}
-    for node in client.list_nodes()['nodes']:
-        nodes[node['id']] = node
+    for deployment_id in deployments.keys():
+        for node in client.list_deployment_nodes(deployment_id).nodes:
+            nodes[node.id] = node
     workflows = {}
     deployment_nodes = {}
     node_state = {}                                                    
@@ -112,6 +112,7 @@ def get_state_delta(before, after):
         del after['nodes'][node_id]
     return after
 
+
 ##################################
 ## Step functions
 ##################################
@@ -121,6 +122,7 @@ def clone_hello_world():
     with blueprint_repo_dir:
         git.checkout(hello_world_repo_branch).wait()
 
+
 def modify_blueprint():
     # load original yamls    
     blueprint_yaml = yaml.load(original_blueprint.text())
@@ -128,27 +130,31 @@ def modify_blueprint():
 
     # make modifications
     blueprint_yaml['imports'][0] = 'hello_world_sanity.yaml'
-    blueprint_yaml['blueprint']['name'] = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
+    blueprint_name = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
+    blueprint_yaml['blueprint']['name'] = blueprint_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config'] = {}
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['region'] = region
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance'] = {}
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['name'] = host_name
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['image'] = image
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['key_name'] = key_name
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['nova_config']['instance']['flavor'] = flavor
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server'] = {}
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['name'] = host_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['image_name'] = image_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['flavor_name'] = flavor_name
+    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['key_name'] = key_name
 
     # store new yamls
     sanity_blueprint.write_text(yaml.dump(blueprint_yaml))
     sanity_hello_world.write_text(yaml.dump(hello_yaml))
 
-def upload_create_deployment_and_execute():
+    return blueprint_name
+
+
+def upload_create_deployment_and_execute(blueprint_name):
     before_state = get_manager_state()
 
+    deployment_id = str(uuid.uuid4())
+
     cfy.use(management_ip).wait()
-    cfy.blueprints.upload(sanity_blueprint, a='sanity_blueprint').wait()
-    cfy.deployments.create('sanity_blueprint', a='sanity_deployment').wait()
-    cfy.deployments.execute.install('sanity_deployment').wait()
+    cfy.blueprints.upload(sanity_blueprint, b=blueprint_name).wait()
+    cfy.deployments.create(b=blueprint_name, d=deployment_id).wait()
+    cfy.deployments.execute.install(d=deployment_id, v=True).wait()
 
     after_state = get_manager_state()
 
@@ -213,6 +219,7 @@ def assert_valid_deployment(before_state, after_state):
             assert 'ips' in value['runtimeInfo'], 'Missing ips in runtimeInfo: {0}'.format(nodes_state)
             private_ip = value['runtimeInfo']['ip']
             ips = value['runtimeInfo']['ips']
+            ips = flatten_ips(ips)
             print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
             assert value['reachable'] is True, 'vm node should be reachable: {0}'.format(nodes_state)
@@ -226,11 +233,28 @@ def assert_valid_deployment(before_state, after_state):
     fail_message = 'Expected to find {0} in web server response: {1}'.format(webserver_node_id, web_server_page_response)
     assert webserver_node_id in web_server_page_response.text, fail_message
 
+
+def flatten_ips(ips):
+    flattened_ips = []
+    for element in ips:
+        if not isinstance(element, list):
+            flattened_ips.append(element)
+        else:
+            for subelement in element:
+                if not isinstance(subelement, list):
+                    flattened_ips.append(subelement)
+                else:
+                    for ip in subelement:
+                        flattened_ips.append(ip)
+    return flattened_ips
+
+
+
 ##################################
 ## Steps
 ##################################
 
 clone_hello_world()
-modify_blueprint()
-before, after = upload_create_deployment_and_execute()
+blueprint_name = modify_blueprint()
+before, after = upload_create_deployment_and_execute(blueprint_name)
 assert_valid_deployment(before, after)

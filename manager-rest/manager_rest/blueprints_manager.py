@@ -16,10 +16,11 @@
 __author__ = 'dan'
 
 from dsl_parser import tasks
+from datetime import datetime
 import json
 import uuid
-from responses import BlueprintState, Execution, BlueprintValidationStatus, \
-    Deployment
+import models
+import responses
 from workflow_client import workflow_client
 
 
@@ -62,8 +63,14 @@ class BlueprintsManager(object):
                                    resources_base_url)
         except Exception, ex:
             raise DslParseException(*ex.args)
-        new_blueprint = BlueprintState().init(plan=json.loads(plan),
-                                              blueprint_id=blueprint_id)
+
+        now = str(datetime.now())
+        parsed_plan = json.loads(plan)
+        if not blueprint_id:
+            blueprint_id = parsed_plan['name']
+        new_blueprint = models.BlueprintState(plan=parsed_plan,
+                                              id=blueprint_id,
+                                              created_at=now, updated_at=now)
         if self.get_blueprint(new_blueprint.id) is not None:
             raise BlueprintAlreadyExistsException(new_blueprint.id)
         storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
@@ -79,15 +86,15 @@ class BlueprintsManager(object):
         plan = blueprint.plan
         response = workflow_client().validate_workflows(plan)
         # TODO raise error if error
-        return BlueprintValidationStatus().init(blueprint_id=blueprint_id,
-                                                status=response['status'])
+        return responses.BlueprintValidationStatus(
+            blueprint_id=blueprint_id, status=response['status'])
 
     def execute_workflow(self, deployment_id, workflow_id):
         deployment = self.get_deployment(deployment_id)
         workflow = deployment.plan['workflows'][workflow_id]
         plan = deployment.plan
 
-        execution_id = '{0}-{1}'.format(workflow_id, str(uuid.uuid4()))
+        execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(
             workflow_id,
             workflow, plan,
@@ -96,14 +103,15 @@ class BlueprintsManager(object):
             execution_id=execution_id)
         # TODO raise error if there is error in response
 
-        new_execution = Execution().init(
+        new_execution = models.Execution(
             id=execution_id,
-            state=response['state'],
+            status=response['state'],
             internal_workflow_id=response['id'],
-            created_at=response['created'],
+            created_at=str(response['created']),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
-            deployment_id=deployment_id)
+            deployment_id=deployment_id,
+            error='None')
 
         storage_manager().put_execution(new_execution.id, new_execution)
 
@@ -123,9 +131,10 @@ class BlueprintsManager(object):
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
 
-        new_deployment = Deployment().init(
-            deployment_id=deployment_id, plan=json.loads(
-                deployment_json_plan), blueprint_id=blueprint_id)
+        now = str(datetime.now())
+        new_deployment = models.Deployment(
+            id=deployment_id, plan=json.loads(deployment_json_plan),
+            blueprint_id=blueprint_id, created_at=now, updated_at=now)
 
         storage_manager().put_deployment(deployment_id, new_deployment)
 

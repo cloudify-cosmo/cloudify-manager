@@ -19,7 +19,8 @@ require 'rest_client'
 require 'json'
 require 'uri'
 require 'set'
-
+require 'riemann/client'
+require_relative '../utils/logs'
 
 ######
 # Participant getting/waiting to/for node reachable state.
@@ -35,7 +36,12 @@ class NodeStateParticipant < Ruote::Participant
   NODE = 'node'
   ACTION = 'action'
   WAIT = 'wait'
-  VALID_ACTIONS = [WAIT, 'get'].to_set
+  SET = 'set'
+  VALID_ACTIONS = [WAIT, 'get', SET].to_set
+
+  def do_not_thread
+    false
+  end
 
   def on_workitem
     begin
@@ -48,6 +54,13 @@ class NodeStateParticipant < Ruote::Participant
 
       action = workitem.params[ACTION] || WAIT
       raise "invalid action: #{action} - available actions: #{VALID_ACTIONS}" unless VALID_ACTIONS.include? action
+
+      if action.eql? SET
+        set_node_state
+        return
+      end
+
+
       wait_until_matches = false
       if action.eql? WAIT
         wait_until_matches = true
@@ -59,12 +72,9 @@ class NodeStateParticipant < Ruote::Participant
       current_node = workitem.fields[PreparePlanParticipant::NODE] || nil
       result_field = workitem.params[MATCHES_FIELD_PARAM_NAME] || nil
 
-      $logger.debug('Node state participant called [context={}, action={}, node_id={}, value={}, result_field={}]',
-                    current_node['id'] || nil,
-                    action,
-                    node_id,
-                    workitem.params[REACHABLE],
-                    result_field)
+      log(:debug, "Node state participant called [context=#{current_node['id'] || nil}, action=#{action}, node_id=#{node_id}, value=#{workitem.params[REACHABLE]}, result_field=#{result_field}]", {
+          :workitem => workitem
+      })
 
       # TODO runtime-model: handle HTTP status codes and connection errors
 
@@ -95,9 +105,15 @@ class NodeStateParticipant < Ruote::Participant
         end
 
       elsif not result_field.nil?
-        $logger.debug('Node reachable state is set as \'{}\' workitem field [state={}]', result_field, reachable)
+        log(:debug, "Node reachable state is set as '#{result_field}' workitem field [state=#{reachable}]", {
+            :workitem => workitem
+        })
         workitem.fields[result_field] = reachable
       end
+
+      log(:debug, "Wait for node state result [action=#{action}, node_id=#{node_id}, matches=#{matches}, requested_value=#{requested_reachable_state}, result_field=#{result_field}", {
+          :workitem => workitem
+      })
 
       reply
 
@@ -107,9 +123,22 @@ class NodeStateParticipant < Ruote::Participant
     end
   end
 
-  def do_not_thread
-    false
-  end
+  def set_node_state
+    raise "Required parameter 'value' for set action is missing" unless workitem.params.has_key? 'value'
+    node_id = workitem.params[NODE_ID]
+    value = workitem.params['value']
 
+    log(:debug, "Setting node: #{node_id} as '#{value}'", {
+        :workitem => workitem
+    })
+
+    client = Riemann::Client.new
+    client << {
+        service: node_id,
+        state: value,
+        ttl: 9223372036854775807
+    }
+    reply
+  end
 
 end

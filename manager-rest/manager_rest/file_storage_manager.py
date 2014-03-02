@@ -17,7 +17,8 @@ __author__ = 'ran'
 
 import os
 import json
-import serialization
+from models import BlueprintState, Deployment, Execution, \
+    DeploymentNode
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
@@ -51,52 +52,70 @@ class FileStorageManager(object):
             self._init_file()
         with open(self._storage_path, 'r') as f:
             data = json.load(f)
-            return serialization.deserialize_object(data)
+            deserialized_data = dict()
+            deserialized_data[NODES] = \
+                {key: DeploymentNode(**val) for key, val in data[NODES]
+                    .iteritems()}
+            deserialized_data[BLUEPRINTS] = \
+                {key: BlueprintState(**val) for key, val in data[BLUEPRINTS]
+                    .iteritems()}
+            deserialized_data[DEPLOYMENTS] = \
+                {key: Deployment(**val) for key, val in data[DEPLOYMENTS]
+                    .iteritems()}
+            deserialized_data[EXECUTIONS] = \
+                {key: Execution(**val) for key, val in data[EXECUTIONS]
+                    .iteritems()}
+            return deserialized_data
 
     def _dump_data(self, data):
         with open(self._storage_path, 'w') as f:
-            data = serialization.serialize_object(data)
-            json.dump(data, f)
+            serialized_data = dict()
+            serialized_data[NODES] = {key: val.to_dict() for key, val in
+                                      data[NODES].iteritems()}
+            serialized_data[BLUEPRINTS] =\
+                {key: val.to_dict() for key, val in data[BLUEPRINTS]
+                    .iteritems()}
+            serialized_data[DEPLOYMENTS] =\
+                {key: val.to_dict() for key, val in data[DEPLOYMENTS]
+                    .iteritems()}
+            serialized_data[EXECUTIONS] =\
+                {key: val.to_dict() for key, val in data[EXECUTIONS]
+                    .iteritems()}
+            json.dump(serialized_data, f)
 
-    def get_nodes(self):
+    def nodes_list(self):
         data = self._load_data()
-        return map(lambda x: {'id': x}, data[NODES].keys())
+        return data[NODES].values()
 
     def get_node(self, node_id):
         data = self._load_data()
         if node_id in data[NODES]:
             return data[NODES][node_id]
-        return {}
+        return None
 
-    def put_node(self, node_id, runtime_info):
+    def put_node(self, node_id, node):
         data = self._load_data()
-        data[NODES][node_id] = runtime_info
+        if str(node_id) in data[NODES]:
+            raise RuntimeError('Node {0} already exists'.format(
+                node_id))
+        data[NODES][str(node_id)] = node
         self._dump_data(data)
-        return runtime_info
 
-    def update_node(self, node_id, updated_properties):
+    def update_node(self, node_id, node):
         data = self._load_data()
-        runtime_info = data[NODES][node_id].copy() if node_id \
-            in data[NODES] else {}
-        for key, value in updated_properties.iteritems():
-            if len(value) == 1:
-                if key in runtime_info:
-                    raise RuntimeError("Node update conflict - key: '{0}'"
-                                       " is not expected to exist"
-                                       .format(key))
-            elif len(value) == 2:
-                if key not in runtime_info:
-                    raise RuntimeError("Node update conflict - key: '{0}'"
-                                       " is expected to exist".format(key))
-                if runtime_info[key] != value[1]:
-                    raise RuntimeError(
-                        "Node update conflict - key: '{0}' value is "
-                        "expected to be '{1}' but is '{2}'"
-                        .format(key, value[1], runtime_info[key]))
-            runtime_info[key] = value[0]
-        data[NODES][node_id] = runtime_info
+        if node_id not in data[NODES]:
+            self.put_node(node_id, node)
+            return
+
+        prev_rt_info = DeploymentNode(**data[NODES][node_id].to_dict())\
+            .runtime_info
+        merged_rt_info = dict(prev_rt_info.items() +
+                              node.runtime_info.items())
+        #TODO: merge reachable field?
+        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info)
+        data[NODES][node_id] = node
         self._dump_data(data)
-        return runtime_info
+        return merged_rt_info
 
     def blueprints_list(self):
         data = self._load_data()

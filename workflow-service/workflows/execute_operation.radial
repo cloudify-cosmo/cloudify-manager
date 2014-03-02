@@ -29,8 +29,6 @@ define execute_operation
                 break if: '${plugins_installed} == True'
                 wait for: '5s'
 
-
-
         sequence if: '${verified} != True'
             log message: 'second attempt verification of plugin: ${plugin_name} and operation: ${operation} is
             installed on target: ${target}'

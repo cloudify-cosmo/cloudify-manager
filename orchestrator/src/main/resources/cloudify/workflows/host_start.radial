@@ -1,5 +1,8 @@
 define host_start
     execute_operation operation: 'cloudify.interfaces.lifecycle.start'
+    wait_for_host_to_start
+    state action: 'set', node_id: '${node.id}', value: 'started'
+
     sequence if: '${node.properties.install_agent} == true'
         event event: { "stage" => "Verifying host has started" }
         state action: 'wait', node_id: '${node.id}', reachable: 'true'
@@ -22,4 +25,10 @@ define host_start
             key: "agent plugins installed",
             value: true
         }
+
+    define wait_for_host_to_start
+        repeat
+            execute_operation operation: 'cloudify.interfaces.host.get_state', to_f: 'host_state'
+            break if: '${host_state} == True'
+            wait for: '5s'
 
