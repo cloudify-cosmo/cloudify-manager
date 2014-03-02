@@ -27,7 +27,8 @@ INSTALLED_PLUGINS = []
 def install(ctx, plugin, **kwargs):
 
     global INSTALLED_PLUGINS
-    ctx.logger.info("in plugin_installer.install --> installing plugin {0}".format(plugin))
+    ctx.logger.info("in plugin_installer.install --> "
+                    "installing plugin {0}".format(plugin))
     INSTALLED_PLUGINS.append(plugin['name'])
 
 
