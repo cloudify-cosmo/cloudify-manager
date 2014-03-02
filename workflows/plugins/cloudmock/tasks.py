@@ -22,6 +22,7 @@ RUNNING = "running"
 NOT_RUNNING = "not_running"
 machines = {}
 raise_exception_on_start = False
+raise_exception_on_stop = False
 
 
 @operation
@@ -64,6 +65,8 @@ def stop(ctx, **kwargs):
     if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
+    if raise_exception_on_stop:
+        raise RuntimeError('Exception raised from CloudMock.stop()!')
     machines[ctx.node_id] = NOT_RUNNING
 
 
@@ -86,3 +89,9 @@ def get_machines(**kwargs):
 def set_raise_exception_on_start(**kwargs):
     global raise_exception_on_start
     raise_exception_on_start = True
+
+
+@operation
+def set_raise_exception_on_stop(**kwargs):
+    global raise_exception_on_stop
+    raise_exception_on_stop = True
