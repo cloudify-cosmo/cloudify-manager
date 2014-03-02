@@ -119,17 +119,17 @@ def get_remote_management_worker_config():
 
 def get_local_context():
 
-    capabilities = {
+    runtime_properties = {
         'ip': '127.0.0.1'
     }
 
-    return MockCloudifyContext(capabilities=capabilities)
+    return MockCloudifyContext(runtime_properties=runtime_properties)
 
 
 def get_remote_context():
 
-    capabilities = {
+    runtime_properties = {
         'ip': VAGRANT_MACHINE_IP
     }
 
-    return MockCloudifyContext(capabilities=capabilities)
+    return MockCloudifyContext(runtime_properties=runtime_properties)

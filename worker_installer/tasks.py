@@ -314,20 +314,24 @@ def _is_management_node(worker_config):
 
 
 def install_celery_plugin(runner, worker_config, plugin_url):
-
-    # this will install the package and the dependencies into the python installation
-    runner.run("{0} install --process-dependency-links {1}".format(get_pip(worker_config), plugin_url))
+    """
+    This will install the package and the dependencies
+    into the python installation
+    """
+    runner.run("{0} install --process-dependency-links {1}".format(
+        get_pip(worker_config), plugin_url))
 
 
 def get_machine_ip(ctx):
-
     if not ctx:
         raise ValueError('cannot get machine ip - ctx is not set')
 
-    if 'ip' in ctx.capabilities:
-        return ctx.capabilities['ip']
-    else:
-        return None
+    if 'ip' not in ctx:
+        raise ValueError(
+            'ip property is not set for node: {0}. This is mandatory'
+            ' for installing agent via ssh.'.format(ctx.node_id))
+
+    return ctx['ip']
 
 
 def get_pip(worker_config):
