@@ -20,6 +20,7 @@ from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
+from workflow_tests.testenv import run_search as search
 
 
 class BasicWorkflowsTest(TestCase):
@@ -121,6 +122,25 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual('mockpropvalue2', invocation['kwargs']['mockprop2'])
         self.assertTrue('__cloudify_context' in invocation['kwargs'])
         self.assertEqual(states[0]['id'], invocation['id'])
+
+    def test_search(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = 'my_new_blueprint'
+        deployment = deploy(dsl_path, blueprint_id=blueprint_id)
+
+        self.assertEqual(blueprint_id, deployment.blueprintId)
+
+        from plugins.cloudmock.tasks import get_machines
+        result = self.send_task(get_machines)
+        machines = result.get(timeout=10)
+
+        self.assertEquals(1, len(machines))
+        result = search('')
+        hits = map(lambda x: x['_source'], result['hits']['hits'])
+
+        #expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
+        self.assertEquals(4, len(hits))
+
 
     # TODO runtime-model: can be enabled if storage will be cleared
     # after each test (currently impossible since storage is in-memory)

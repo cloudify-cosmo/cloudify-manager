@@ -24,8 +24,11 @@ import time
 import sys
 import tempfile
 import yaml
+import es_schema_creator
 from os.path import expanduser
 from subprocess import check_output
+
+import yaml
 
 
 __author__ = 'elip'
@@ -445,15 +448,18 @@ class VagrantLxcBoot:
             }
         }
 
+        from cloudify.context import ContextCapabilities
         from cloudify.constants import MANAGEMENT_NODE_ID
 
-        runtime_properties = {
+        capabilities = {
             'ip': MANAGEMENT_NODE_ID
         }
 
+        cap = ContextCapabilities(capabilities)
+
         from cloudify.mocks import MockCloudifyContext
         ctx = MockCloudifyContext(node_id="cloudify.management",
-                                  runtime_properties=runtime_properties)
+                                  capabilities=cap)
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
@@ -607,6 +613,9 @@ rm /root/guest_additions.sh
                                "of {0} seconds".format(timeout_seconds))
         print("Logstash has been successfully started")
 
+    def _run_elasticsearch_schema_creator(self):
+        es_schema_creator.create_schema(es_schema_creator.STORAGE_INDEX_URL)
+
     def bootstrap(self):
         os.chdir(self.working_dir)
         self.set_management_ip()
@@ -622,6 +631,7 @@ rm /root/guest_additions.sh
             self.install_riemann()
             if self.install_logstash:
                 self._install_logstash()
+                self._run_elasticsearch_schema_creator()
             self.install_cosmo_manager()
             self.install_celery_worker()
         else:

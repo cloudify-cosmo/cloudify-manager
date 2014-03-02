@@ -60,6 +60,10 @@ class BlueprintsTestCase(BaseServerTestCase):
         result = self.get('/blueprints')
         self.assertEquals(0, len(result.json))
 
+    def test_get_nonexistent_blueprint(self):
+        get_blueprint_response = self.get('/blueprints/15').json
+        self.assertTrue('404' in get_blueprint_response['message'])
+
     def test_post_and_then_search(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
         self.assertEquals('hello_world', post_blueprints_response['id'])
@@ -72,7 +76,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         post_blueprints_response = self.post_file(*post_blueprint_args())
         self.assertTrue('already exists' in
                         post_blueprints_response.json['message'])
-        self.assertEqual(400, post_blueprints_response.status_code)
+        self.assertEqual(409, post_blueprints_response.status_code)
 
     def test_put_blueprint(self):
         blueprint_id = 'new_blueprint_id'
