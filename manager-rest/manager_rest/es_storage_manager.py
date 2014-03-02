@@ -21,11 +21,13 @@ import manager_exceptions
 from manager_rest.models import BlueprintState, Deployment, Execution, \
     DeploymentNode
 
-STORAGE_INDEX_NAME = 'data'
+STORAGE_INDEX_NAME = 'cloudify_storage'
 NODE_TYPE = 'node'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
 EXECUTION_TYPE = 'execution'
+
+DEFAULT_SEARCH_SIZE = 500
 
 
 class ESStorageManager(object):
@@ -35,7 +37,8 @@ class ESStorageManager(object):
 
     def _list_docs(self, doc_type, model_class):
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
-                                                   doc_type=doc_type)
+                                                   doc_type=doc_type,
+                                                   size=DEFAULT_SEARCH_SIZE)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
         return map(lambda doc: model_class(**doc), docs)
 
@@ -117,18 +120,14 @@ class ESStorageManager(object):
             self.put_node(node_id, node)
             return node.runtime_info
         else:
-            prev_rt_info = DeploymentNode(**doc['_source']).runtime_info
-            merged_rt_info = dict(prev_rt_info.items() +
-                                  node.runtime_info.items())
-            #TODO: merge reachable field?
-            node = DeploymentNode(id=node_id, runtime_info=merged_rt_info)
+            update_doc = {'doc': node.to_dict()}
             try:
                 self._get_es_conn().update(index=STORAGE_INDEX_NAME,
                                            doc_type=NODE_TYPE,
                                            id=str(node_id),
-                                           body=node.to_dict(),
+                                           body=update_doc,
                                            version=doc['_version'])
-                return merged_rt_info
+                return self.get_node(node_id).runtime_info
             except elasticsearch.exceptions.ConflictError:
                 raise manager_exceptions.ConflictError(
                     'Node update conflict: mismatching versions')

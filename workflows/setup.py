@@ -55,7 +55,8 @@ setup(
         "cosmo-celery-common",
         "pika==0.9.13",
         "cosmo-plugin-plugin-installer",
-        "cosmo-manager-rest-client"
+        "cosmo-manager-rest-client",
+        'elasticsearch==1.0.0'
     ],
     test_requires=[
         "nose"

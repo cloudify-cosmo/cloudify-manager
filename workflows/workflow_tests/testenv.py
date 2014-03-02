@@ -20,6 +20,7 @@ __author__ = 'idanmo'
 import yaml
 import shutil
 import tempfile
+import shlex
 from os import path
 import subprocess
 import logging
@@ -38,11 +39,12 @@ from cosmo_manager_rest_client.cosmo_manager_rest_client \
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
 import requests
+import elasticsearch
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
-STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
+STORAGE_INDEX_NAME = 'cloudify_storage'
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -79,14 +81,12 @@ class ManagerRestProcess(object):
                  port,
                  file_server_dir,
                  file_server_base_uri,
-                 workflow_service_base_uri,
-                 storage_file_path):
+                 workflow_service_base_uri):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
-        self.storage_file_path = storage_file_path
         self.client = CosmoManagerRestClient('localhost')
 
     def start(self, timeout=10):
@@ -146,8 +146,8 @@ class ManagerRestProcess(object):
             self.process.terminate()
 
     def reset_data(self):
-        if os.path.isfile(self.storage_file_path):
-            os.remove(self.storage_file_path)
+        elasticsearch.Elasticsearch().delete_by_query(
+            index=STORAGE_INDEX_NAME, q='*')
 
     def locate_manager_rest_dir(self):
         # start with current location
@@ -475,6 +475,88 @@ class RiemannProcess(object):
         return None
 
 
+class ElasticSearchProcess(object):
+    """
+    Manages an ElasticSearch server process lifecycle.
+    """
+
+    def __init__(self):
+        self._pid = None
+        self._process = None
+
+    def _verify_service_responsiveness(self, timeout=120):
+        import urllib2
+        service_url = "http://localhost:9200"
+        up = False
+        deadline = time.time() + timeout
+        res = None
+        while time.time() < deadline:
+            try:
+                res = urllib2.urlopen(service_url)
+                up = res.code == 200
+                break
+            except BaseException:
+                pass
+            time.sleep(1)
+        if not up:
+            raise RuntimeError("Elasticsearch service is not responding @ {"
+                               "0} (response: {1})".format(service_url, res))
+
+    def _verify_service_started(self, timeout=30):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            self._pid = self._get_service_pid()
+            if self._pid is not None:
+                break
+            time.sleep(1)
+        if self._pid is None:
+            raise RuntimeError("Failed to start elasticsearch service within "
+                               "a {0} seconds timeout".format(timeout))
+
+    def _verify_service_ended(self, timeout=10):
+        pid = self._pid
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            pid = self._get_service_pid()
+            if pid is None:
+                break
+            time.sleep(1)
+        if pid is not None:
+            raise RuntimeError("Failed to stop elasticsearch service within "
+                               "a {0} seconds timeout".format(timeout))
+
+    def _get_service_pid(self):
+        from subprocess import CalledProcessError
+        pattern = "\w*\s*(\d*).*"
+        try:
+            output = subprocess.check_output(
+                "ps -ef | grep elasticsearch | grep -v grep", shell=True)
+            match = re.match(pattern, output)
+            if match:
+                return int(match.group(1))
+        except CalledProcessError:
+            pass
+        return None
+
+    def start(self):
+        command = 'elasticsearch'
+        logger.info(
+            "Starting elasticsearchservice with command {0}".format(command))
+        self._process = subprocess.Popen(shlex.split(command))
+        self._verify_service_started(timeout=30)
+        self._verify_service_responsiveness()
+        logger.info("Elasticsearch service started [pid=%s]", self._pid)
+
+    def close(self):
+        if self._process:
+            self._process.kill()
+        if self._pid:
+            logger.info("Shutting down elasticsearch service [pid=%s]",
+                        self._pid)
+            os.system("kill {0}".format(self._pid))
+            self._verify_service_ended()
+
+
 class RuoteServiceClient(object):
 
     def get_workflows_states(self):
@@ -542,6 +624,7 @@ class TestEnvironment(object):
     """
     Creates the cosmo test environment:
         - Riemann server.
+        - Elasticsearch server.
         - Celery worker.
         - Ruote service.
         - Prepares celery app dir with plugins from cosmo module and official
@@ -550,6 +633,7 @@ class TestEnvironment(object):
     _instance = None
     _celery_worker_process = None
     _riemann_process = None
+    _elasticsearch_process = None
     _manager_rest_process = None
     _tempdir = None
     _plugins_tempdir = None
@@ -582,6 +666,10 @@ class TestEnvironment(object):
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
+            # elasticsearch
+            # self._elasticsearch_process = ElasticSearchProcess()
+            # self._elasticsearch_process.start()
+
             manager_rest_port = '8100'
 
             # celery
@@ -590,7 +678,6 @@ class TestEnvironment(object):
                 self._tempdir, self._plugins_tempdir, plugins_path,
                 manager_rest_port)
             self._celery_worker_process.start()
-            self.storage_file_path = STORAGE_FILE_PATH
 
             # workaround to update path
             manager_rest_path = \
@@ -622,8 +709,7 @@ class TestEnvironment(object):
                 manager_rest_port,
                 fileserver_dir,
                 file_server_base_uri,
-                worker_service_base_uri,
-                self.storage_file_path)
+                worker_service_base_uri)
             self._manager_rest_process.start()
 
             # ruote service
@@ -641,6 +727,8 @@ class TestEnvironment(object):
                     .format(self._scope))
         if self._riemann_process:
             self._riemann_process.close()
+        if self._elasticsearch_process:
+            self._elasticsearch_process.close()
         if self._celery_worker_process:
             self._celery_worker_process.close()
         if self._manager_rest_process:
@@ -747,6 +835,11 @@ def get_resource(resource):
         raise RuntimeError("Resource '{0}' not found in: {1}"
                            .format(resource, resource_path))
     return resource_path
+
+
+def run_search(query):
+    client = CosmoManagerRestClient('localhost')
+    return client.run_search(query)
 
 
 def deploy_application(dsl_path, timeout=240,

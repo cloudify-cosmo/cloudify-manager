@@ -158,6 +158,7 @@ def setup_resources(api):
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
     api.add_resource(Events, '/events')
+    api.add_resource(Search, '/search')
 
 
 class BlueprintsUpload(object):
@@ -815,3 +816,27 @@ class Events(Resource):
         Returns events for the provided ElasticSearch query
         """
         return self._query_events()
+
+
+class Search(Resource):
+
+    @swagger.operation(
+        nickname='search',
+        notes='Returns results from the storage for the provided '
+              'ElasticSearch query. The response format is as ElasticSearch '
+              'response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    def post(self):
+        """
+        Returns results for the provided ElasticSearch query
+        """
+        verify_json_content_type()
+        return _query_elastic_search(index='cloudify_storage',
+                                     body=request.json)
