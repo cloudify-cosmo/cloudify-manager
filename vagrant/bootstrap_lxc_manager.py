@@ -23,6 +23,7 @@ import datetime
 import time
 import sys
 import tempfile
+import es_schema_creator
 from os.path import expanduser
 from subprocess import check_output
 
@@ -611,6 +612,9 @@ rm /root/guest_additions.sh
                                "of {0} seconds".format(timeout_seconds))
         print("Logstash has been successfully started")
 
+    def _run_elasticsearch_schema_creator(self):
+        es_schema_creator.create_schema(es_schema_creator.STORAGE_INDEX_URL)
+
     def bootstrap(self):
         os.chdir(self.working_dir)
         self.set_management_ip()
@@ -626,6 +630,7 @@ rm /root/guest_additions.sh
             self.install_riemann()
             if self.install_logstash:
                 self._install_logstash()
+                self._run_elasticsearch_schema_creator()
             self.install_cosmo_manager()
             self.install_celery_worker()
         else:

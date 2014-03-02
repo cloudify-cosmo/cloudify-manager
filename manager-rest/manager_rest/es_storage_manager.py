@@ -17,7 +17,7 @@ __author__ = 'ran'
 
 from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
-import manager_exceptions
+import manager_rest.manager_exceptions
 from manager_rest.models import BlueprintState, Deployment, Execution, \
     DeploymentNode
 
@@ -42,20 +42,18 @@ class ESStorageManager(object):
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
         return map(lambda doc: model_class(**doc), docs)
 
-    def _get_doc(self, doc_type, doc_id, default_value=None):
+    def _get_doc(self, doc_type, doc_id):
         try:
             return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
                                            doc_type=doc_type,
                                            id=doc_id)
         except elasticsearch.exceptions.NotFoundError:
-            return default_value
+            raise manager_rest.manager_exceptions.NotFoundError(
+                '{0} {1} not found'.format(doc_type, doc_id))
 
-    def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
-                                 default_value=None):
-        doc = self._get_doc(doc_type, doc_id, default_value)
-        if doc != default_value:
-            return model_class(**doc['_source'])
-        return default_value
+    def _get_doc_and_deserialize(self, doc_type, doc_id, model_class):
+        doc = self._get_doc(doc_type, doc_id)
+        return model_class(**doc['_source'])
 
     def _put_doc_if_not_exists(self, doc_type, doc_id, value):
         try:
@@ -63,7 +61,7 @@ class ESStorageManager(object):
                                        doc_type=doc_type, id=doc_id,
                                        body=value)
         except elasticsearch.exceptions.ConflictError:
-            raise manager_exceptions.ConflictError(
+            raise manager_rest.manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
     def nodes_list(self):
@@ -115,22 +113,23 @@ class ESStorageManager(object):
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), node.to_dict())
 
     def update_node(self, node_id, node):
-        doc = self._get_doc(NODE_TYPE, node_id)
-        if doc is None:
+        try:
+            doc = self._get_doc(NODE_TYPE, node_id)
+        except manager_rest.manager_exceptions.NotFoundError:
             self.put_node(node_id, node)
             return node.runtime_info
-        else:
-            update_doc = {'doc': node.to_dict()}
-            try:
-                self._get_es_conn().update(index=STORAGE_INDEX_NAME,
-                                           doc_type=NODE_TYPE,
-                                           id=str(node_id),
-                                           body=update_doc,
-                                           version=doc['_version'])
-                return self.get_node(node_id).runtime_info
-            except elasticsearch.exceptions.ConflictError:
-                raise manager_exceptions.ConflictError(
-                    'Node update conflict: mismatching versions')
+
+        update_doc = {'doc': node.to_dict()}
+        try:
+            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
+                                       doc_type=NODE_TYPE,
+                                       id=str(node_id),
+                                       body=update_doc,
+                                       version=doc['_version'])
+            return self.get_node(node_id).runtime_info
+        except elasticsearch.exceptions.ConflictError:
+            raise manager_rest.manager_exceptions.ConflictError(
+                'Node update conflict: mismatching versions')
 
 
 def create():
