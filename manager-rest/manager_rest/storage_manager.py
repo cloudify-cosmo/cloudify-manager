@@ -19,6 +19,10 @@ import imp
 import sys
 from os import path
 
+from flask import g, current_app
+
+from manager_rest.util import maybe_register_teardown
+
 storage_manager_module_name = 'file_storage_manager'
 #storage_manager_module_name = 'es_storage_manager'
 
@@ -34,6 +38,7 @@ def _create_instance():
 
 
 def reset():
+    # print "resetting storage"
     global _instance
     _instance = _create_instance()
 
@@ -43,3 +48,22 @@ def instance():
     if _instance is None:
         _instance = _create_instance()
     return _instance
+
+
+
+def teardown_storage_manager(exception):
+    # print "tearing down storage manager!"
+    pass
+
+
+def get_storage_manager():
+    if 'storage_manager' not in g:
+        g.storage_manager = _create_instance()  # TODO: make sure the import happens only once!
+        maybe_register_teardown(current_app, teardown_storage_manager)
+
+    return g.storage_manager
+
+
+def get_storage_manager():
+    return instance()
+
