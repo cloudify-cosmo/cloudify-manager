@@ -23,10 +23,11 @@ import datetime
 import time
 import sys
 import tempfile
+import yaml
 from os.path import expanduser
 from subprocess import check_output
+from cloudify.constants import MANAGEMENT_NODE_ID
 
-import yaml
 
 
 __author__ = 'elip'
@@ -40,7 +41,7 @@ FABRIC_RUNNER = "https://github.com/CloudifySource/" \
                 "cosmo-fabric-runner/archive/{0}.zip"\
                 .format(FABRIC_RUNNER_VERSION)
 
-WORKER_INSTALLER_VERSION = 'develop'
+WORKER_INSTALLER_VERSION = 'feature/CLOUDIFY-2528-uninstall-continue-on-failure'
 
 WORKER_INSTALLER = "https://github.com/CloudifySource/" \
                    "cosmo-plugin-agent-installer/archive/{0}.zip" \
@@ -446,18 +447,13 @@ class VagrantLxcBoot:
             }
         }
 
-        from cloudify.context import ContextCapabilities
-        from cloudify.constants import MANAGEMENT_NODE_ID
-
-        capabilities = {
+        runtime_properties = {
             'ip': MANAGEMENT_NODE_ID
         }
 
-        cap = ContextCapabilities(capabilities)
-
         from cloudify.mocks import MockCloudifyContext
         ctx = MockCloudifyContext(node_id="cloudify.management",
-                                  capabilities=cap)
+                                  runtime_properties=runtime_properties)
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
