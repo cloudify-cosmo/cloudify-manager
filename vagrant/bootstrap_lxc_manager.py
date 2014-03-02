@@ -23,11 +23,10 @@ import datetime
 import time
 import sys
 import tempfile
+import yaml
 import es_schema_creator
 from os.path import expanduser
 from subprocess import check_output
-
-import yaml
 
 
 __author__ = 'elip'

@@ -20,9 +20,10 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
 from testenv import set_node_stopped
+from plugins.cloudmock import tasks as cloudmock
 
 
-class TestUninstallApplication(TestCase):
+class TestUninstallDeployment(TestCase):
 
     def test_uninstall_application_single_node_no_host(self):
         from testenv import logger
@@ -124,3 +125,19 @@ class TestUninstallApplication(TestCase):
             .startswith('containing_node'))
         self.assertTrue(configurer_state[1]['related_id']
             .startswith('contained_in_node1'))
+
+    def test_failed_uninstall_task(self):
+        dsl_path = resource("dsl/basic.yaml")
+        self.logger.info('** install **')
+        deployment_id = deploy(dsl_path).id
+
+        self.send_task(cloudmock.set_raise_exception_on_stop).get(timeout=10)
+
+        self.logger.info('** uninstall **')
+        undeploy(deployment_id)
+
+        from plugins.cloudmock.tasks import get_machines
+        result = self.send_task(get_machines)
+        machines = result.get(timeout=10)
+
+        self.assertEquals(0, len(machines))

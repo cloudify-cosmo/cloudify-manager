@@ -36,6 +36,4 @@ define install_deployment
         start
         unset 'v:start'
 
-        state node_id: '${node.id}', reachable: 'true'
-
         execute_relationships_workflow workflow: 'establish'

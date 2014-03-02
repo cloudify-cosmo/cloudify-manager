@@ -901,7 +901,11 @@ def undeploy_application(deployment_id, timeout=240):
     path.
     """
     client = CosmoManagerRestClient('localhost')
-    client.execute_deployment(deployment_id, 'uninstall', timeout=timeout)
+    _, error = client.execute_deployment(deployment_id,
+                                         'uninstall',
+                                         timeout=timeout)
+    if error is not None:
+        raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
 def validate_dsl(blueprint_id, timeout=240):

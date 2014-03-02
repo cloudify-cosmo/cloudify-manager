@@ -22,17 +22,24 @@ define uninstall_deployment
 
             # 'stop' is a Ruote reserved word so therefore '_stop'
             set 'v:_stop': "$f:node.workflows.stop"
-            _stop
+            _stop on_error: 'handle_stop_error'
             unset 'v:_stop'
 
-            execute_relationships_workflow workflow: 'unlink'
+            execute_relationships_workflow workflow: 'unlink', on_error: 'pass'
 
             event event: { "stage" => "Deleting node" }
             log message: 'executing delete workflow for node: ${node.id}'
             set 'v:delete': "$f:node.workflows.delete"
-            delete
+            delete on_error: 'handle_delete_error'
             unset 'v:delete'
 
             state action: 'wait', node_id: '${node.id}', reachable: 'false'
 
     remove_deployment_worker
+
+    define handle_stop_error
+        event event: { "stage" => "Error occurred when stopping node - ignoring..." }
+        state action: 'set', node_id: '${node.id}', value: 'stopped'
+
+    define handle_delete_error
+        event event: { "stage" => "Error occurred when deleting node - ignoring..." }
