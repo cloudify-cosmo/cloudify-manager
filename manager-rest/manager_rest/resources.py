@@ -17,29 +17,32 @@
 __author__ = 'dan'
 
 
-import config
 import os
-import models
-import responses
-import requests_schema
+from os import path
 import tarfile
 import zipfile
 import urllib
 import tempfile
 import shutil
 import uuid
-import chunked
+from functools import wraps
+
 import elasticsearch
 
-from functools import wraps
-from blueprints_manager import DslParseException, \
-    BlueprintAlreadyExistsException
-from workflow_client import WorkflowServiceError
-from manager_exceptions import ConflictError
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
-from os import path
+
+from . import config
+from . import models
+from . import responses
+from . import requests_schema
+from . import chunked
+
+from .workflow_client import WorkflowServiceError
+from .manager_exceptions import ConflictError
+from .blueprints_manager import (DslParseException,
+                                 BlueprintAlreadyExistsException)
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
