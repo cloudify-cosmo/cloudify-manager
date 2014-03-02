@@ -40,7 +40,7 @@ FABRIC_RUNNER = "https://github.com/CloudifySource/" \
                 "cosmo-fabric-runner/archive/{0}.zip"\
                 .format(FABRIC_RUNNER_VERSION)
 
-WORKER_INSTALLER_VERSION = 'develop'
+WORKER_INSTALLER_VERSION = 'feature/CLOUDIFY-2545-blueprint-plugins'
 
 WORKER_INSTALLER = "https://github.com/CloudifySource/" \
                    "cosmo-plugin-agent-installer/archive/{0}.zip" \
