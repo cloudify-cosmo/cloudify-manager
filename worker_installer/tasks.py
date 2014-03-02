@@ -50,7 +50,7 @@ BROKER_URL = "BROKER_URL"
 @operation
 def install(ctx, worker_config, local=False, **kwargs):
 
-    prepare_configuration(worker_config, ctx)
+    prepare_configuration(worker_config, ctx, local)
 
     ctx.logger.info("installing celery worker {0}".format(worker_config["name"]))
 
@@ -198,9 +198,9 @@ def _install_latest_pip(runner, worker_config):
     runner.sudo("python {0}/get-pip.py".format(worker_config['home']))
 
 
-def prepare_configuration(worker_config, ctx):
+def prepare_configuration(worker_config, ctx, local=False):
     ip = None
-    if ctx.node_id is not None:
+    if ctx.node_id is not None and not local:
         ip = get_machine_ip(ctx)
         worker_config['host'] = ip
 
