@@ -187,7 +187,8 @@ class BlueprintsUpload(object):
 
         for plugin_dir in plugins:
             final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(file_server_root, application_dir, 'plugins', final_zip_name)
+            target_zip_path = path.join(file_server_root, application_dir,
+                                        'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
     def _zip_dir(self, dir_to_zip, target_zip_path):
