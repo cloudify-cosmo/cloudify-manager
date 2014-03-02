@@ -20,6 +20,8 @@ import sys
 import os
 import yaml
 
+from flask import Flask
+from flask_restful import Api
 
 from manager_rest import config
 from manager_rest import blueprints_manager
@@ -48,7 +50,7 @@ def reset_state(configuration=None):
     # this doesn't really do anything
     # blueprints_manager.reset()
     storage_manager.reset()
-    app = setup_app
+    app = setup_app()
 
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
