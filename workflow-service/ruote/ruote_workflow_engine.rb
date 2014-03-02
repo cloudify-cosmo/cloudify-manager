@@ -72,7 +72,7 @@ class RuoteWorkflowEngine
   end
 
   def cancel_workflow(wfid)
-    raise 'not implemented'
+    #raise 'not implemented'
   end
 
   def pause_workflow(wfid)

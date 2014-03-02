@@ -40,6 +40,27 @@ define wf
     assert_equal :pending, wf.state
   end
 
+  def test_workflow_cancellation
+    var_value_before_sleep = 'my_var_value_before_sleep'
+    var_value_after_sleep = 'my_var_value_after_sleep'
+    radial = %(
+define wf
+  set 'v://my_var': '#{var_value_before_sleep}'
+  set 'v://my_var': '#{var_value_after_sleep}'
+)
+    wf = @ruote.launch(radial)
+
+    sleep(1)
+
+    @ruote.cancel_workflow(wf.id)
+    wait_for_workflow_state(wf.id, :terminated, 5)
+    dashboard = @ruote.instance_variable_get('@dashboard')
+
+    variables = dashboard.instance_variable_get('@variables')
+
+    assert_equal var_value_before_sleep, variables['my_var']
+  end
+
   def test_workflow_execution_with_tags
     radial = %/
 define wf
