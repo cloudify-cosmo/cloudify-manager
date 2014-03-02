@@ -18,6 +18,11 @@ import logging
 import os
 import subprocess
 import shlex
+import tempfile
+import shutil
+from os import path
+
+import pip
 
 from celery.utils.log import get_task_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
@@ -173,21 +178,30 @@ def extract_module_paths(plugin_name):
 
 
 def extract_plugin_name(plugin_url):
-
-    before = set(run_command("{0} freeze".format(get_pip())).splitlines())
-
-    run_command("{0} install --no-deps {1}".format(get_pip(), plugin_url))
-
-    after = set(run_command("{0} freeze".format(get_pip())).splitlines())
-
-    diff = after.difference(before)
-
-    if len(diff) != 1:
-        raise RuntimeError("Cannot extract plugin name for plugin {0}. "
-                           "Newly installed libs are : {1}"
-                           .format(plugin_url, diff))
-
-    return diff.pop().split("==")[0]
+    previous_cwd = os.getcwd()
+    fetch_plugin_from_pip_by_url = not os.path.isdir(plugin_url)
+    plugin_dir = plugin_url
+    try:
+        if fetch_plugin_from_pip_by_url:
+            plugin_dir = tempfile.mkdtemp()
+            req_set = pip.req.RequirementSet(build_dir=None,
+                                             src_dir=None,
+                                             download_dir=None)
+            req_set.unpack_url(link=pip.index.Link(plugin_url),
+                               location=plugin_dir,
+                               download_dir=None,
+                               only_download=False)
+        os.chdir(plugin_dir)
+        plugin_name = run_command('{0} {1} {2}'.format(
+            get_python(),
+            path.join(path.dirname(__file__), 'extract_package_name.py'),
+            plugin_dir))
+        run_command('{0} install --no-deps {1}'.format(get_pip(), plugin_dir))
+        return plugin_name
+    finally:
+        os.chdir(previous_cwd)
+        if fetch_plugin_from_pip_by_url:
+            shutil.rmtree(plugin_dir)
 
 
 def uninstall_celery_plugin(plugin_name):

@@ -87,6 +87,19 @@ class PluginInstallerTestCase(unittest.TestCase):
         from mock_for_test import module as m
         print m.var
 
+    def test_install_twice(self):
+
+        temp_folder = self.create_temp_folder()
+
+        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
+
+        install_celery_plugin(plugin=self.plugins['plugin'])
+        install_celery_plugin(plugin=self.plugins['plugin'])
+
+        # check the plugin was installed
+        from mock_for_test import module as m
+        print m.var
+
     def test_install_with_dependencies(self):
 
         temp_folder = self.create_temp_folder()
