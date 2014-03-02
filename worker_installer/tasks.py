@@ -199,8 +199,9 @@ def _install_latest_pip(runner, worker_config):
 
 
 def prepare_configuration(worker_config, ctx):
-    ip = get_machine_ip(ctx)
-    worker_config['host'] = ip
+    if ctx.node_id is not None:
+        ip = get_machine_ip(ctx)
+        worker_config['host'] = ip
 
     if not ctx.node_id and "user" not in worker_config:
         # we are starting a worker dedicated for a deployment (not specific node)
