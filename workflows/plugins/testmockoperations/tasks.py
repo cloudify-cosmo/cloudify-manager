@@ -25,18 +25,19 @@ mock_operation_invocation = []
 
 @operation
 def make_reachable(ctx, **kwargs):
-    ctx.set_started()
     global state
-    state.append({
+    state_info = {
         'id': ctx.node_id,
         'time': time(),
         'capabilities': ctx.capabilities.get_all()
-    })
+    }
+    ctx.logger.info('Appending to state [node_id={0}, state={1}]'
+                    .format(ctx.node_id, state_info))
+    state.append(state_info)
 
 
 @operation
 def make_unreachable(ctx, **kwargs):
-    ctx.set_stopped()
     global unreachable_call_order
     unreachable_call_order.append({
         'id': ctx.node_id,
@@ -46,6 +47,8 @@ def make_unreachable(ctx, **kwargs):
 
 @operation
 def set_property(property_name, value, ctx, **kwargs):
+    ctx.logger.info('Setting property [{0}={1}] for node: {2}'
+                    .format(property_name, value, ctx.node_id))
     ctx[property_name] = value
 
 

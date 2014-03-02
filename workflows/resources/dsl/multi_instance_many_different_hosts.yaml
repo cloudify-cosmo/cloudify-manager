@@ -25,3 +25,5 @@ types:
             cloudify.interfaces.lifecycle:
                 - create: cloudmock.tasks.provision
                 - start: cloudmock.tasks.start
+            cloudify.interfaces.host:
+                - get_state: cloudmock.tasks.get_state

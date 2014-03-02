@@ -565,22 +565,6 @@ class NodesId(Resource):
         if get_reachable_state:
             state = riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
-            # this is a temporary workaround for having a reachable
-            # host ip injected to its runtime states.
-            # it will be later removed once all plugins publish
-            # such properties on their own.
-            if 'host' in state:
-                try:
-                    node = storage_manager().get_node(node_id)
-                    node_state = node.runtime_info
-                except manager_rest.manager_exceptions.NotFoundError:
-                    node_state = {}
-
-                if 'ip' not in node_state:
-                    update = {'ip': state['host']}
-                    node = models.DeploymentNode(id=node_id,
-                                                 runtime_info=update)
-                    storage_manager().update_node(node_id, node)
 
         runtime_state = None
         if get_runtime_state:
