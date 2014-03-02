@@ -37,6 +37,7 @@ class FileStorageManager(object):
         self._storage_path = storage_path
         if os.path.isfile(storage_path):
             os.remove(storage_path)
+            # print "deleting storage path!"
 
     def _init_file(self):
         data = {
