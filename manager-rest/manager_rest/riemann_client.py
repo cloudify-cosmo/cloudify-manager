@@ -12,12 +12,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from manager_rest.util import maybe_register_teardown
 
 
 __author__ = 'idanmo'
 
-from flask import g
-from manager_rest import app
+from flask import g, current_app
+
 
 
 import bernhard
@@ -30,7 +31,7 @@ class RiemannClient(object):
 
     def __init__(self):
         self._client = bernhard.Client(host='localhost')
-        print "connected!"
+        # print "connected!"
 
     def get_node_state(self, node_id):
         """
@@ -73,21 +74,24 @@ class RiemannClient(object):
 
     def teardown(self):
         self._client.disconnect()
-        print "disconnected!"
+        # print "disconnected!"
 
 # What we need to access the client in Flask
-def get_riemann_client():
-    """
-    Get the current riemann_client or create one if none exists for the current app context
-    """
-    if not 'riemann_client' in g:
-        g.riemann_client = RiemannClient()
-    return g.riemann_client
-
-@app.teardown_appcontext
 def teardown_riemann(exception):
     """
     Disconnect Riemann at the end of the request
     """
     if 'riemann_client' in g:
         g.riemann_client.teardown()
+
+
+def get_riemann_client():
+    """
+    Get the current riemann_client or create one if none exists for the current app context
+    """
+    if not 'riemann_client' in g:
+        g.riemann_client = RiemannClient()
+        maybe_register_teardown(current_app, teardown_riemann)
+
+    return g.riemann_client
+
