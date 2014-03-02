@@ -15,37 +15,32 @@
 
 __author__ = 'dan'
 
-import sys
 import logging
+import sys
 import os
 import yaml
 
-from flask import Flask
 from flask.ext.restful import Api
 
 from manager_rest import config
-from manager_rest import resources
 from manager_rest import blueprints_manager
 from manager_rest import storage_manager
+from manager_rest import app
+from manager_rest import resources
 
 
-app = None
+def setup_app():
+    app.logger.setLevel(logging.DEBUG)
+    app.logger.addHandler(logging.StreamHandler(sys.stdout))
+
+    api = Api(app)
+    resources.setup_resources(api)
 
 
 def reset_state(configuration=None):
     config.reset(configuration)
     blueprints_manager.reset()
     storage_manager.reset()
-
-
-def setup_app():
-    global app
-    app = Flask(__name__)
-    app.logger.setLevel(logging.DEBUG)
-    app.logger.addHandler(logging.StreamHandler(sys.stdout))
-
-    api = Api(app)
-    resources.setup_resources(api)
 
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
