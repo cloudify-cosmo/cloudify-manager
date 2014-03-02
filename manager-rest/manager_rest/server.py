@@ -24,7 +24,7 @@ from flask import Flask
 from flask_restful import Api
 
 from manager_rest import config
-from manager_rest import blueprints_manager
+# from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
 

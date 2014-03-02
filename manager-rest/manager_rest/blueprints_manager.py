@@ -30,7 +30,6 @@ from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 
 
-
 class DslParseException(Exception):
     pass
 
@@ -157,15 +156,14 @@ def teardown_blueprints_manager(exception):
     #print "tearing down blueprints manager!"
     pass
 
+
 # What we need to access this manager in Flask
 def get_blueprints_manager():
     """
-    Get the current blueprints manager or create one if none exists for the current app context
+    Get the current blueprints manager
+    or create one if none exists for the current app context
     """
     if not 'blueprints_manager' in g:
         g.blueprints_manager = BlueprintsManager()
         maybe_register_teardown(current_app, teardown_blueprints_manager)
     return g.blueprints_manager
-
-
-

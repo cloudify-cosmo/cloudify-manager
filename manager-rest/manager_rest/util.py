@@ -52,6 +52,8 @@ def copy_resources(file_server_root,
 
 
 def maybe_register_teardown(app, f):
+    """
+    A way to add a cleanup hook on a given appcontext - but only do it once
+    """
     if f not in app.teardown_appcontext_funcs:
         app.teardown_appcontext_funcs.append(f)
-

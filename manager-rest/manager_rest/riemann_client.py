@@ -19,8 +19,6 @@ __author__ = 'idanmo'
 
 from flask import g, current_app
 
-
-
 import bernhard
 
 
@@ -48,7 +46,8 @@ class RiemannClient(object):
         or_query = ' or '
 
         # construct quest with or separator
-        query = or_query.join('service = "{0}"'.format(node_id) for node_id in node_ids)
+        query = or_query.join('service = "{0}"'.format(node_id)
+                              for node_id in node_ids)
 
         for node_id in node_ids:
             node_result[node_id] = []
@@ -76,6 +75,7 @@ class RiemannClient(object):
         self._client.disconnect()
         # print "disconnected!"
 
+
 # What we need to access the client in Flask
 def teardown_riemann(exception):
     """
@@ -87,11 +87,11 @@ def teardown_riemann(exception):
 
 def get_riemann_client():
     """
-    Get the current riemann_client or create one if none exists for the current app context
+    Get the current riemann_client
+    or create one if none exists for the current app context
     """
     if not 'riemann_client' in g:
         g.riemann_client = RiemannClient()
         maybe_register_teardown(current_app, teardown_riemann)
 
     return g.riemann_client
-

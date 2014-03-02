@@ -529,7 +529,7 @@ class DeploymentsId(Resource):
         verify_blueprint_exists(blueprint_id)
         verify_deployment_does_not_exist(deployment_id)
         return get_blueprints_manager().create_deployment(blueprint_id,
-                                                      deployment_id), 201
+                                                          deployment_id), 201
 
 
 class NodesId(Resource):
@@ -710,7 +710,7 @@ class DeploymentsIdExecutions(Resource):
             abort(400, message='400: Missing workflowId in json request body')
         workflow_id = request.json['workflowId']
         execution = get_blueprints_manager().execute_workflow(deployment_id,
-                                                          workflow_id)
+                                                              workflow_id)
         return responses.Execution(**execution.to_dict()), 201
 
 

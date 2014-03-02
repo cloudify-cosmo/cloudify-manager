@@ -50,7 +50,6 @@ def instance():
     return _instance
 
 
-
 def teardown_storage_manager(exception):
     # print "tearing down storage manager!"
     pass
@@ -58,12 +57,10 @@ def teardown_storage_manager(exception):
 
 def get_storage_manager():
     if 'storage_manager' not in g:
-        g.storage_manager = _create_instance()  # TODO: make sure the import happens only once!
+        #g.storage_manager = _create_instance()  # TODO: import only once!
+
+        # need to persist same instance across requests...
+        g.storage_manager = instance()
         maybe_register_teardown(current_app, teardown_storage_manager)
 
     return g.storage_manager
-
-
-def get_storage_manager():
-    return instance()
-

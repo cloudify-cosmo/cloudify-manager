@@ -17,9 +17,11 @@ __author__ = 'ran'
 
 from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
-import manager_exceptions
-from manager_rest.models import BlueprintState, Deployment, Execution, \
-    DeploymentNode
+from manager_rest import manager_exceptions
+from manager_rest.models import (BlueprintState,
+                                 Deployment,
+                                 Execution,
+                                 DeploymentNode)
 
 STORAGE_INDEX_NAME = 'data'
 NODE_TYPE = 'node'
