@@ -43,8 +43,6 @@ def install(ctx, plugin, **kwargs):
     The plugin folder should be a a folder name inside the blueprint 'plugins' directory containing the plugin.
     """
 
-    ctx.logger.debug("installing plugin [%s] ", plugin)
-
     if "folder" in plugin:
 
         # convert the folder into a url inside the file server
@@ -54,6 +52,8 @@ def install(ctx, plugin, **kwargs):
             plugin["url"] = "http://{0}:53229/{1}/{2}.zip"\
                 .format(management_ip, ctx.blueprint_id, plugin['folder'])
 
+    ctx.logger.info("Installing plugin from URL --> {0}"
+                    .format(plugin['url']))
     install_celery_plugin(plugin)
 
 
