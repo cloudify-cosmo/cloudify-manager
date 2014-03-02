@@ -27,8 +27,6 @@ define uninstall_deployment
 
             execute_relationships_workflow workflow: 'unlink', on_error: 'pass'
 
-            set 'uninstall_error': 'false'
-
             event event: { "stage" => "Deleting node" }
             log message: 'executing delete workflow for node: ${node.id}'
             set 'v:delete': "$f:node.workflows.delete"

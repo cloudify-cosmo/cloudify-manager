@@ -39,7 +39,8 @@ FABRIC_RUNNER = "https://github.com/CloudifySource/" \
                 "cosmo-fabric-runner/archive/{0}.zip"\
                 .format(FABRIC_RUNNER_VERSION)
 
-WORKER_INSTALLER_VERSION = 'feature/CLOUDIFY-2528-uninstall-continue-on-failure'
+WORKER_INSTALLER_VERSION =\
+    'feature/CLOUDIFY-2528-uninstall-continue-on-failure'
 
 WORKER_INSTALLER = "https://github.com/CloudifySource/" \
                    "cosmo-plugin-agent-installer/archive/{0}.zip" \
