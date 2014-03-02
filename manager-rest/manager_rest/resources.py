@@ -29,7 +29,7 @@ from functools import wraps
 
 import elasticsearch
 
-from flask import request, g
+from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
@@ -38,28 +38,17 @@ from manager_rest import models
 from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import chunked
-from manager_rest import app
 
+from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.blueprints_manager import (DslParseException,
-                                             BlueprintAlreadyExistsException)
+                                             BlueprintAlreadyExistsException,
+                                             get_blueprints_manager)
 from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
-
-
-def blueprints_manager():
-    import blueprints_manager
-    return blueprints_manager.instance()
-
-
-
-
-def storage_manager():
-    import storage_manager
-    return storage_manager.instance()
 
 
 def exceptions_handled(func):
@@ -80,33 +69,33 @@ def verify_json_content_type():
 
 
 def verify_blueprint_exists(blueprint_id):
-    if blueprints_manager().get_blueprint(blueprint_id) is None:
+    if get_blueprints_manager().get_blueprint(blueprint_id) is None:
         abort(404,
               message='404: blueprint {0} not found'.format(blueprint_id))
 
 
 def verify_deployment_exists(deployment_id):
-    if blueprints_manager().get_deployment(deployment_id) is None:
+    if get_blueprints_manager().get_deployment(deployment_id) is None:
         abort(404,
               message='404: deployment {0} not found'.format(deployment_id))
 
 
 def verify_blueprint_does_not_exist(blueprint_id):
-    if blueprints_manager().get_blueprint(blueprint_id) is not None:
+    if get_blueprints_manager().get_blueprint(blueprint_id) is not None:
         abort(400,
               message='400: blueprint {0} already exists'
                       .format(blueprint_id))
 
 
 def verify_deployment_does_not_exist(deployment_id):
-    if blueprints_manager().get_deployment(deployment_id) is not None:
+    if get_blueprints_manager().get_deployment(deployment_id) is not None:
         abort(400,
               message='400: deployment {0} already exists'
                       .format(deployment_id))
 
 
 def verify_execution_exists(execution_id):
-    if blueprints_manager().get_execution(execution_id) is None:
+    if get_blueprints_manager().get_execution(execution_id) is None:
         abort(404,
               message='404: execution_id {0} not found'.format(execution_id))
 
@@ -262,7 +251,7 @@ class BlueprintsUpload(object):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            blueprint = blueprints_manager().publish_blueprint(
+            blueprint = get_blueprints_manager().publish_blueprint(
                 dsl_path, alias_mapping, resources_base, blueprint_id)
 
             #moving the app directory in the file server to be under a
@@ -308,7 +297,7 @@ class Blueprints(Resource):
         """
         return [marshal(blueprint,
                         responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager().blueprints_list()]
+                blueprint in get_blueprints_manager().blueprints_list()]
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -358,7 +347,7 @@ class BlueprintsId(Resource):
         Returns a blueprint by its id.
         """
         verify_blueprint_exists(blueprint_id)
-        blueprint = blueprints_manager().get_blueprint(blueprint_id)
+        blueprint = get_blueprints_manager().get_blueprint(blueprint_id)
         return responses.BlueprintState(**blueprint.to_dict())
 
     @swagger.operation(
@@ -410,7 +399,7 @@ class BlueprintsIdValidate(Resource):
         Validates a given blueprint.
         """
         verify_blueprint_exists(blueprint_id)
-        return blueprints_manager().validate_blueprint(blueprint_id)
+        return get_blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class ExecutionsId(Resource):
@@ -427,7 +416,7 @@ class ExecutionsId(Resource):
         Returns the execution state by its id.
         """
         verify_execution_exists(execution_id)
-        execution = blueprints_manager().get_workflow_state(execution_id)
+        execution = get_blueprints_manager().get_workflow_state(execution_id)
         return responses.Execution(**execution.to_dict())
 
 
@@ -462,7 +451,7 @@ class DeploymentsIdNodes(Resource):
             'reachable', args['reachable'])
         verify_deployment_exists(deployment_id)
 
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
@@ -494,7 +483,7 @@ class Deployments(Resource):
         """
         return [marshal(responses.Deployment(**deployment.to_dict()),
                         responses.Deployment.resource_fields) for
-                deployment in blueprints_manager().deployments_list()]
+                deployment in get_blueprints_manager().deployments_list()]
 
 
 class DeploymentsId(Resource):
@@ -510,7 +499,7 @@ class DeploymentsId(Resource):
         Returns a deployment by its id.
         """
         verify_deployment_exists(deployment_id)
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         return responses.Deployment(**deployment.to_dict())
 
     @swagger.operation(
@@ -539,7 +528,7 @@ class DeploymentsId(Resource):
         blueprint_id = request.json['blueprintId']
         verify_blueprint_exists(blueprint_id)
         verify_deployment_does_not_exist(deployment_id)
-        return blueprints_manager().create_deployment(blueprint_id,
+        return get_blueprints_manager().create_deployment(blueprint_id,
                                                       deployment_id), 201
 
 
@@ -599,7 +588,7 @@ class NodesId(Resource):
 
         runtime_state = None
         if get_runtime_state:
-            node = storage_manager().get_node(node_id)
+            node = get_storage_manager().get_node(node_id)
             runtime_state = node.runtime_info if node else {}
         return responses.DeploymentNode(id=node_id, reachable=reachable_state,
                                         runtime_info=runtime_state)
@@ -629,7 +618,7 @@ class NodesId(Resource):
                                .format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        storage_manager().put_node(node_id, node)
+        get_storage_manager().put_node(node_id, node)
         return responses.DeploymentNode(
             id=node_id,
             runtime_info=node.runtime_info)
@@ -669,7 +658,7 @@ class NodesId(Resource):
                                ' map type but is {0}'
                                .format(request.json.__class__.__name__))
         node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        runtime_info = storage_manager().update_node(node_id, node)
+        runtime_info = get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
             id=node_id,
             runtime_info=runtime_info)
@@ -690,7 +679,7 @@ class DeploymentsIdExecutions(Resource):
         verify_deployment_exists(deployment_id)
         return [marshal(responses.Execution(**execution.to_dict()),
                         responses.Execution.resource_fields) for
-                execution in storage_manager().get_deployment_executions(
+                execution in get_storage_manager().get_deployment_executions(
                     deployment_id)]
 
     @swagger.operation(
@@ -720,7 +709,7 @@ class DeploymentsIdExecutions(Resource):
         if 'workflowId' not in request_json:
             abort(400, message='400: Missing workflowId in json request body')
         workflow_id = request.json['workflowId']
-        execution = blueprints_manager().execute_workflow(deployment_id,
+        execution = get_blueprints_manager().execute_workflow(deployment_id,
                                                           workflow_id)
         return responses.Execution(**execution.to_dict()), 201
 
@@ -738,7 +727,7 @@ class DeploymentsIdWorkflows(Resource):
         Returns a list of workflows related to the provided deployment.
         """
         verify_deployment_exists(deployment_id)
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
         workflows = [responses.Workflow(name=wf_name) for wf_name in
                      deployment_workflows.keys()]
