@@ -446,18 +446,15 @@ class VagrantLxcBoot:
             }
         }
 
-        from cloudify.context import ContextCapabilities
         from cloudify.constants import MANAGEMENT_NODE_ID
 
-        capabilities = {
+        runtime_properties = {
             'ip': MANAGEMENT_NODE_ID
         }
 
-        cap = ContextCapabilities(capabilities)
-
         from cloudify.mocks import MockCloudifyContext
         ctx = MockCloudifyContext(node_id="cloudify.management",
-                                  capabilities=cap)
+                                  runtime_properties=runtime_properties)
 
         # # install the worker locally
         from worker_installer.tasks import install as install_worker
