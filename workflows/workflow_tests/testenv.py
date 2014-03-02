@@ -152,8 +152,9 @@ class ManagerRestProcess(object):
             self.process.terminate()
 
     def reset_data(self):
-        elasticsearch.Elasticsearch().delete_by_query(
-            index=STORAGE_INDEX_NAME, q='*')
+        #empties the storage index
+        es = elasticsearch.Elasticsearch()
+        es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
 
     def locate_manager_rest_dir(self):
         # start with current location
@@ -552,6 +553,7 @@ class ElasticSearchProcess(object):
         self._verify_service_started(timeout=30)
         self._verify_service_responsiveness()
         logger.info("Elasticsearch service started [pid=%s]", self._pid)
+        self._create_schema()
 
     def close(self):
         if self._process:
@@ -561,6 +563,23 @@ class ElasticSearchProcess(object):
                         self._pid)
             os.system("kill {0}".format(self._pid))
             self._verify_service_ended()
+
+    def _create_schema(self):
+        vagrant_dir = self._locate_vagrant_dir()
+        creator_script_path = path.join(vagrant_dir, "es_schema_creator.py")
+        subprocess.Popen(
+            shlex.split('python {0}'.format(creator_script_path)))
+        logger.info("Elasticsearch schema created successfully")
+
+    def _locate_vagrant_dir(self):
+        # start with current location
+        vagrant_location = path.abspath(__file__)
+        # get to cosmo-manager
+        for i in range(3):
+            vagrant_location = path.dirname(vagrant_location)
+        # build way into manager_rest
+        return path.join(vagrant_location,
+                         'vagrant')
 
 
 class RuoteServiceClient(object):
