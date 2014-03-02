@@ -30,7 +30,7 @@ import shutil
 import uuid
 import chunked
 import elasticsearch
-import manager_rest.manager_exceptions
+import manager_exceptions
 
 from functools import wraps
 from blueprints_manager import DslParseException
@@ -64,9 +64,9 @@ def exceptions_handled(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except manager_rest.manager_exceptions.ConflictError, e:
+        except manager_exceptions.ConflictError, e:
             abort_conflict(e)
-        except manager_rest.manager_exceptions.NotFoundError, e:
+        except manager_exceptions.NotFoundError, e:
             abort_not_found(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
@@ -571,7 +571,7 @@ class NodesId(Resource):
             try:
                 node = storage_manager().get_node(node_id)
                 runtime_state = node.runtime_info
-            except manager_rest.manager_exceptions.NotFoundError:
+            except manager_exceptions.NotFoundError:
                 runtime_state = {}
 
         return responses.DeploymentNode(id=node_id, reachable=reachable_state,

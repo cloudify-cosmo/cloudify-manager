@@ -17,8 +17,8 @@ __author__ = 'ran'
 
 from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
-import manager_rest.manager_exceptions
-from manager_rest.models import BlueprintState, Deployment, Execution, \
+import manager_exceptions
+from models import BlueprintState, Deployment, Execution, \
     DeploymentNode
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
@@ -48,7 +48,7 @@ class ESStorageManager(object):
                                            doc_type=doc_type,
                                            id=doc_id)
         except elasticsearch.exceptions.NotFoundError:
-            raise manager_rest.manager_exceptions.NotFoundError(
+            raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
 
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class):
@@ -61,7 +61,7 @@ class ESStorageManager(object):
                                        doc_type=doc_type, id=doc_id,
                                        body=value)
         except elasticsearch.exceptions.ConflictError:
-            raise manager_rest.manager_exceptions.ConflictError(
+            raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
     def nodes_list(self):
@@ -115,7 +115,7 @@ class ESStorageManager(object):
     def update_node(self, node_id, node):
         try:
             doc = self._get_doc(NODE_TYPE, node_id)
-        except manager_rest.manager_exceptions.NotFoundError:
+        except manager_exceptions.NotFoundError:
             self.put_node(node_id, node)
             return node.runtime_info
 
@@ -128,7 +128,7 @@ class ESStorageManager(object):
                                        version=doc['_version'])
             return self.get_node(node_id).runtime_info
         except elasticsearch.exceptions.ConflictError:
-            raise manager_rest.manager_exceptions.ConflictError(
+            raise manager_exceptions.ConflictError(
                 'Node update conflict: mismatching versions')
 
 
