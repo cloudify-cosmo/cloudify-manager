@@ -11,6 +11,7 @@ before_script:
    - "sudo dpkg -i elasticsearch-1.0.0.deb"
    - "export PATH=$PATH:/usr/share/elasticsearch/bin"   
    - "sudo chmod 777 /usr/share/elasticsearch/bin"   
+   - "elasticsearch"
    - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
    - "sudo dpkg -i riemann_0.2.2_all.deb"
    - "sudo touch /var/log/riemann/riemann.log"
