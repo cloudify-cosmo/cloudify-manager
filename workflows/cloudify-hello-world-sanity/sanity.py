@@ -214,8 +214,8 @@ def assert_valid_deployment(before_state, after_state):
     public_ip = None
     webserver_node_id = None
     for key, value in nodes_state.items():
-        assert 'ip' in value['runtimeInfo'], 'Missing ip in runtimeInfo: {0}'.format(nodes_state)
         if key.startswith('vm'):
+            assert 'ip' in value['runtimeInfo'], 'Missing ip in runtimeInfo: {0}'.format(nodes_state)
             assert 'networks' in value['runtimeInfo'], 'Missing networks in runtimeInfo: {0}'.format(nodes_state)
             private_ip = value['runtimeInfo']['ip']
             networks = value['runtimeInfo']['networks']
