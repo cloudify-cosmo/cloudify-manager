@@ -20,27 +20,35 @@ import sys
 import os
 import yaml
 
-from flask.ext.restful import Api
 
 from manager_rest import config
 from manager_rest import blueprints_manager
 from manager_rest import storage_manager
-from manager_rest import app
 from manager_rest import resources
 
 
+# app factory
 def setup_app():
+    app = Flask(__name__)
+
     app.logger.setLevel(logging.DEBUG)
     app.logger.addHandler(logging.StreamHandler(sys.stdout))
 
     api = Api(app)
+
     resources.setup_resources(api)
+
+    return app
 
 
 def reset_state(configuration=None):
+    global app
+    # print "resetting state in server"
     config.reset(configuration)
-    blueprints_manager.reset()
+    # this doesn't really do anything
+    # blueprints_manager.reset()
     storage_manager.reset()
+    app = setup_app
 
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
@@ -54,4 +62,5 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'workflow_service_base_uri' in yaml_conf:
         obj_conf.workflow_service_base_uri = \
             yaml_conf['workflow_service_base_uri']
-    setup_app()
+
+app = setup_app()
