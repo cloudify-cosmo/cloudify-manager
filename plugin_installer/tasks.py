@@ -23,7 +23,6 @@ import shutil
 from os import path
 
 import pip
-import pip.index
 
 from celery.utils.log import get_task_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
@@ -185,10 +184,13 @@ def extract_plugin_name(plugin_url):
     try:
         if fetch_plugin_from_pip_by_url:
             plugin_dir = tempfile.mkdtemp()
-            pip.download.unpack_url(link=pip.index.Link(plugin_url),
-                                    location=plugin_dir,
-                                    download_cache=None,
-                                    only_download=False)
+            req_set = pip.req.RequirementSet(build_dir=None,
+                                             src_dir=None,
+                                             download_dir=None)
+            req_set.unpack_url(link=pip.index.Link(plugin_url),
+                               location=plugin_dir,
+                               download_cache=None,
+                               only_download=False)
         os.chdir(plugin_dir)
         plugin_name = run_command('{0} {1} {2}'.format(
             get_python(),
