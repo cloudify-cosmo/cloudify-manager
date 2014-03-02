@@ -26,8 +26,6 @@ import tempfile
 import yaml
 from os.path import expanduser
 from subprocess import check_output
-from cloudify.constants import MANAGEMENT_NODE_ID
-
 
 
 __author__ = 'elip'
@@ -446,6 +444,8 @@ class VagrantLxcBoot:
                 self.MANAGER_REST_PORT: "8100"
             }
         }
+
+        from cloudify.constants import MANAGEMENT_NODE_ID
 
         runtime_properties = {
             'ip': MANAGEMENT_NODE_ID
