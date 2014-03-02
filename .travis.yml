@@ -12,6 +12,7 @@ before_script:
    - "export PATH=$PATH:/usr/share/elasticsearch/bin"      
    - 'sudo mkdir -p /usr/share/elasticsearch/data'
    - "sudo chmod 777 /usr/share/elasticsearch/data"
+   - "elasticsearch"
    - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
    - "sudo dpkg -i riemann_0.2.2_all.deb"
    - "sudo touch /var/log/riemann/riemann.log"
