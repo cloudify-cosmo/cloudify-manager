@@ -29,6 +29,8 @@ types:
                 - start: nova_plugin.server.start
                 - stop: nova_plugin.server.stop
                 - delete: nova_plugin.server.delete
+            cloudify.interfaces.host:
+                - get_state: nova_plugin.server.get_state
 
     cloudify.openstack.subnet:
         derived_from: cloudify.types.base
