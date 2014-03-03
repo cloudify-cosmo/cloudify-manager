@@ -25,7 +25,7 @@ class TestDeploymentNodes(TestCase):
 
     def test_get_deployment_nodes(self):
         dsl_path = resource("dsl/deployment-nodes-three-nodes.yaml")
-        deployment = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         nodes = get_deployment_nodes(deployment_id,
                                      get_reachable_state=True)

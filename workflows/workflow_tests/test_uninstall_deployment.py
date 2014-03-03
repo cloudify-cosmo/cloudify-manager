@@ -29,7 +29,8 @@ class TestUninstallDeployment(TestCase):
         from testenv import logger
         dsl_path = resource("dsl/single_node_no_host.yaml")
         logger.info('starting deploy process')
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path).id
+        deployment_id = deployment.id
         logger.info('deploy completed')
         logger.info('starting undeploy process')
         undeploy(deployment_id)
@@ -48,7 +49,8 @@ class TestUninstallDeployment(TestCase):
         dsl_path = resource("dsl/basic.yaml")
 
         self.logger.info('starting deploy process')
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path).id
+        deployment_id = deployment.id
         self.logger.info('deploy completed')
 
         self.logger.info('starting undeploy process')
@@ -64,7 +66,8 @@ class TestUninstallDeployment(TestCase):
     def test_uninstall_not_calling_unreachable_nodes(self):
         dsl_path = resource("dsl/single_node_no_host.yaml")
         self.logger.info('starting deploy process')
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path).id
+        deployment_id = deployment.id
         self.logger.info('deploy completed')
         self.logger.info('making node unreachable from test')
         #make node unreachable
@@ -89,7 +92,8 @@ class TestUninstallDeployment(TestCase):
         dsl_path = resource(
             "dsl/uninstall_dependencies-order-with-three-nodes.yaml")
         print('starting deploy process')
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path).id
+        deployment_id = deployment.id
         print('deploy completed')
         print('starting undeploy process')
         undeploy(deployment_id)
@@ -129,7 +133,8 @@ class TestUninstallDeployment(TestCase):
     def test_failed_uninstall_task(self):
         dsl_path = resource("dsl/basic.yaml")
         self.logger.info('** install **')
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path).id
+        deployment_id = deployment.id
 
         self.send_task(cloudmock.set_raise_exception_on_stop).get(timeout=10)
 
