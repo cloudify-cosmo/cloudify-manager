@@ -436,7 +436,7 @@ class ExecutionsId(Resource):
                                .format(action, valid_actions))
 
         if action == 'cancel':
-            return blueprints_manager().cancel_workflow(execution_id)
+            return blueprints_manager().cancel_workflow(execution_id), 201
 
 
 class DeploymentsIdNodes(Resource):
