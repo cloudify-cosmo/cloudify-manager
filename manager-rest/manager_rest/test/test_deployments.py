@@ -63,7 +63,7 @@ class DeploymentsTestCase(BaseServerTestCase):
             {'blueprintId': blueprint_id})
         self.assertTrue('already exists' in
                         deployment_response.json['message'])
-        self.assertEqual(400, deployment_response.status_code)
+        self.assertEqual(409, deployment_response.status_code)
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,

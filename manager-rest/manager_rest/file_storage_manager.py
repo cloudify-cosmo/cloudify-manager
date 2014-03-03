@@ -21,6 +21,7 @@ from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
                                  DeploymentNode)
+from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
@@ -39,7 +40,6 @@ class FileStorageManager(object):
         self._storage_path = storage_path
         if os.path.isfile(storage_path):
             os.remove(storage_path)
-            # print "deleting storage path!"
 
     def _init_file(self):
         data = {
@@ -94,13 +94,14 @@ class FileStorageManager(object):
         data = self._load_data()
         if node_id in data[NODES]:
             return data[NODES][node_id]
-        return None
+        raise manager_exceptions.NotFoundError(
+            "Node {0} not found".format(node_id))
 
     def put_node(self, node_id, node):
         data = self._load_data()
         if str(node_id) in data[NODES]:
-            raise RuntimeError('Node {0} already exists'.format(
-                node_id))
+            raise manager_exceptions.ConflictError(
+                'Node {0} already exists'.format(node_id))
         data[NODES][str(node_id)] = node
         self._dump_data(data)
 
@@ -139,37 +140,46 @@ class FileStorageManager(object):
 
     def get_blueprint(self, blueprint_id):
         data = self._load_data()
-        return data[BLUEPRINTS].get(blueprint_id, None)
+        if blueprint_id in data[BLUEPRINTS]:
+            return data[BLUEPRINTS][blueprint_id]
+        raise manager_exceptions.NotFoundError(
+            "Blueprint {0} not found".format(blueprint_id))
 
     def get_deployment(self, deployment_id):
         data = self._load_data()
-        return data[DEPLOYMENTS].get(deployment_id, None)
+        if deployment_id in data[DEPLOYMENTS]:
+            return data[DEPLOYMENTS][deployment_id]
+        raise manager_exceptions.NotFoundError(
+            "Deployment {0} not found".format(deployment_id))
 
     def get_execution(self, execution_id):
         data = self._load_data()
-        return data[EXECUTIONS].get(execution_id, None)
+        if execution_id in data[EXECUTIONS]:
+            return data[EXECUTIONS][execution_id]
+        raise manager_exceptions.NotFoundError(
+            "Execution {0} not found".format(execution_id))
 
     def put_blueprint(self, blueprint_id, blueprint):
         data = self._load_data()
         if str(blueprint_id) in data[BLUEPRINTS]:
-            raise RuntimeError('Blueprint {0} already exists'.format(
-                blueprint_id))
+            raise manager_exceptions.ConflictError(
+                'Blueprint {0} already exists'.format(blueprint_id))
         data[BLUEPRINTS][str(blueprint_id)] = blueprint
         self._dump_data(data)
 
     def put_deployment(self, deployment_id, deployment):
         data = self._load_data()
         if str(deployment_id) in data[DEPLOYMENTS]:
-            raise RuntimeError('Deployment {0} already exists'.format(
-                deployment_id))
+            raise manager_exceptions.ConflictError(
+                'Deployment {0} already exists'.format(deployment_id))
         data[DEPLOYMENTS][str(deployment_id)] = deployment
         self._dump_data(data)
 
     def put_execution(self, execution_id, execution):
         data = self._load_data()
         if str(execution_id) in data[EXECUTIONS]:
-            raise RuntimeError('Execution {0} already exists'.format(
-                execution_id))
+            raise manager_exceptions.ConflictError(
+                'Execution {0} already exists'.format(execution_id))
         data[EXECUTIONS][str(execution_id)] = execution
         self._dump_data(data)
 

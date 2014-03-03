@@ -23,8 +23,8 @@ from flask import g, current_app
 
 from manager_rest.util import maybe_register_teardown
 
-storage_manager_module_name = 'file_storage_manager'
-#storage_manager_module_name = 'es_storage_manager'
+#storage_manager_module_name = 'file_storage_manager'
+storage_manager_module_name = 'es_storage_manager'
 
 _instance = None
 
@@ -38,7 +38,6 @@ def _create_instance():
 
 
 def reset():
-    # print "resetting storage"
     global _instance
     _instance = _create_instance()
 

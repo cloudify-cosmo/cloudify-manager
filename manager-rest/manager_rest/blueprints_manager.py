@@ -82,8 +82,6 @@ class BlueprintsManager(object):
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
                                               created_at=now, updated_at=now)
-        if self.get_blueprint(new_blueprint.id) is not None:
-            raise BlueprintAlreadyExistsException(new_blueprint.id)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 

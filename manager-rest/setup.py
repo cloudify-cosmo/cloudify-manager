@@ -42,7 +42,7 @@ setup(
         'bernhard',
         'gunicorn==18.0',
         'PyYAML==3.10',
-        'elasticsearch==0.4.4'
+        'elasticsearch==1.0.0'
     ],
     tests_require=['nose'],
     dependency_links=[DSL_PARSER]
