@@ -54,6 +54,7 @@ types:
                 - get_state
         properties:
             - install_agent: false
+            - worker_config: {}
         workflows:
             start:
                 ref: cloudify.workflows.host.start
