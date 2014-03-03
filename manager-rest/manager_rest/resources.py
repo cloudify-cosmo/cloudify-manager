@@ -389,7 +389,7 @@ class ExecutionsId(Resource):
     @swagger.operation(
         responseClass=responses.Execution,
         nickname="getById",
-        notes="Returns the execution state by its id."
+        notes="Returns the execution state by its id.",
     )
     @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
@@ -399,6 +399,44 @@ class ExecutionsId(Resource):
         """
         execution = blueprints_manager().get_workflow_state(execution_id)
         return responses.Execution(**execution.to_dict())
+
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="modify_state",
+        notes="Modifies a running execution state (currently, only cancel"
+              " is supported)",
+        parameters=[{'name': 'body',
+                 'description': 'json with an action key. Legal values for '
+                                'action are: [cancel]',
+                 'required': True,
+                 'allowMultiple': False,
+                 'dataType': requests_schema.ModifyExecutionRequest.__name__,
+                 'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    @exceptions_handled
+    def post(self, execution_id):
+        """
+        Modify a running execution state.
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'action' not in request_json:
+            abort(400, message='400: Missing action in json request body')
+        action = request.json['action']
+
+        valid_actions = ['cancel']
+
+        if action not in valid_actions:
+            abort(400, message='400: Invalid action: {0}, '
+                               'Valid action values are: {1}'
+                               .format(action, valid_actions))
+
+        if action == 'cancel':
+            return blueprints_manager().cancel_workflow(execution_id)
 
 
 class DeploymentsIdNodes(Resource):

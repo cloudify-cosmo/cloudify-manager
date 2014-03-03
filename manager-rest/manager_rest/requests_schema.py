@@ -34,3 +34,10 @@ class DeploymentRequest(object):
     resource_fields = {
         'blueprintId': fields.String,
     }
+
+@swagger.model
+class ModifyExecutionRequest(object):
+
+    resource_fields = {
+        'action': fields.String
+    }

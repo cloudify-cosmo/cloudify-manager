@@ -82,6 +82,16 @@ class WorkflowClient(object):
             raise WorkflowServiceError(response.status_code, response.json())
         return response.json()
 
+    def cancel_workflow(self, workflow_id):
+        response = requests.post('{0}/workflows/{1}'.format(
+            self.workflow_service_base_uri, workflow_id
+        ), json.dumps({
+            'action': 'cancel'
+        }))
+        if response.status_code != 201:
+            raise WorkflowServiceError(response.status_code, response.json())
+        return response.json()
+
 
 def workflow_client():
     if config.instance().test_mode:
