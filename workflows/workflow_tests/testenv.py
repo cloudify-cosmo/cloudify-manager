@@ -568,7 +568,7 @@ class ElasticSearchProcess(object):
         vagrant_dir = self._locate_vagrant_dir()
         creator_script_path = path.join(vagrant_dir, "es_schema_creator.py")
         subprocess.Popen(
-            shlex.split('python {0}'.format(creator_script_path)))
+            shlex.split('{0} {1}'.format(sys.executable, creator_script_path)))
         logger.info("Elasticsearch schema created successfully")
 
     def _locate_vagrant_dir(self):
