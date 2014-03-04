@@ -127,6 +127,10 @@ class RuoteWorkflowEngine
           log_workflow_state(wf_state)
         end
       elsif action == 'cancel'
+        flavour = context['flavour'] || nil
+        if flavour == 'timeout'
+          return
+        end
         wfid = context['fei']['wfid']
         wf_state = get_workflow_state(wfid)
         if not [:cancelled, :failed].include? wf_state.state

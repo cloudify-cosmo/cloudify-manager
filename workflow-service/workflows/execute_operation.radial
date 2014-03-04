@@ -4,7 +4,7 @@ define execute_operation
                       run_on_node: "${v:run_on_node}"
 
     sequence if: '${operation} != no_op'
-        log message: 'initial check whether plugin: ${plugin_name} is installed on target: ${target} and contains
+        log message: 'check whether plugin: ${plugin_name} is installed on target: ${target} and contains
         operation: ${operation}'
 
         execute_task target: '${target}', exec: 'plugin_installer.tasks.verify_plugin', payload: {
@@ -12,36 +12,9 @@ define execute_operation
                 worker_id: "${worker_id}",
                 plugin_name: "${plugin_name}",
                 operation: "${operation_mapping}",
-                throw_on_failure: false
+                throw_on_failure: true
             }
-        }, to_f: 'verified', timeout: '30s', on_timeout: 'redo'
-
-        sequence if: '${worker_id} != celery.cloudify.management and ${verified} != True'
-            repeat
-                log message: 'waiting for plugin installation completion on host node ${target}'
-                execute_task target: '${target}', exec: 'kv_store.tasks.get', payload: {
-                    properties: {
-                        key: "agent plugins installed"
-                    }
-                }, to_f: 'plugins_installed', timeout: '30s', on_timeout: 'redo'
-                log message: 'plugin installation completion state on host node ${target} is ${plugins_installed}'
-
-                break if: '${plugins_installed} == True'
-                wait for: '5s'
-
-        sequence if: '${verified} != True'
-            log message: 'second attempt verification of plugin: ${plugin_name} and operation: ${operation} is
-            installed on target: ${target}'
-            execute_task target: '${target}', exec: 'plugin_installer.tasks.verify_plugin', payload: {
-                properties: {
-                    worker_id: "${worker_id}",
-                    plugin_name: "${plugin_name}",
-                    operation: "${operation_mapping}",
-                    throw_on_failure: true
-                }
-            }, timeout: '30s', on_timeout: 'redo'
-
-        log message: 'fetching plugin: ${plugin_name} and operation: ${operation} argument names from target: ${target}'
+        }, to_f: 'verified'
 
         execute_task target: '${target}', exec: '${operation}', payload: {
             properties: '$operation_properties',
