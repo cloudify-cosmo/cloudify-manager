@@ -635,12 +635,10 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
+        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
+                                     state_version=0)
         get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(
-            id=node_id,
-            runtime_info=node.runtime_info,
-            state_version=1)
+        return responses.DeploymentNode(**node.to_dict())
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
