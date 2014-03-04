@@ -55,8 +55,7 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual(400, response.status_code)
 
     def test_patch_node(self):
-        self.patch('/nodes/1234', {'runtime_info': {'key': 'value'},
-                                   'state_version': 0})
+        self.put('/nodes/1234', {'key': 'value'})
         update = {'runtime_info': {'key': 'new_value', 'new_key': 'value'},
                   'state_version': 2}
         response = self.patch('/nodes/1234', update)
@@ -96,6 +95,8 @@ class NodesTest(BaseServerTestCase):
         finally:
             sm.instance().update_node = prev_update_node_func
 
-    def test_invalid_input(self):
-        response = self.patch('/nodes/1234', [])
-        self.assertEqual(400, response.status_code)
+    def test_patch_before_put(self):
+        response = self.patch('/nodes/1234',
+                              {'runtime_info': {'key': 'value'},
+                               'state_version': 0})
+        self.assertEqual(404, response.status_code)

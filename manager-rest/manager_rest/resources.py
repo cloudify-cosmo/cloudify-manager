@@ -605,7 +605,6 @@ class NodesId(Resource):
                 state_version = node.state_version
             except manager_exceptions.NotFoundError:
                 runtime_state = {}
-                state_version = 0
 
         return responses.DeploymentNode(id=node_id, reachable=reachable_state,
                                         runtime_info=runtime_state,
@@ -635,9 +634,9 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
-                                     state_version=0)
+        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
         get_storage_manager().put_node(node_id, node)
+        node.state_version = 1
         return responses.DeploymentNode(**node.to_dict())
 
     @swagger.operation(

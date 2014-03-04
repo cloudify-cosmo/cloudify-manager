@@ -154,6 +154,11 @@ class BlueprintsManager(object):
 
         self.sm.put_deployment(deployment_id, new_deployment)
 
+        for plan_node in new_deployment.plan['nodes']:
+            node_id = plan_node['id']
+            node = models.DeploymentNode(id=node_id)
+            self.sm.put_node(node_id, node)
+
         return new_deployment
 
 

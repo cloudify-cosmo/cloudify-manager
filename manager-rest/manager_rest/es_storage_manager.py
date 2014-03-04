@@ -127,10 +127,15 @@ class ESStorageManager(object):
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
 
     def update_node(self, node_id, node):
+        try:
+            self._get_doc(NODE_TYPE, node_id)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Node {0} not found".format(node_id))
+
         update_doc_data = node.to_dict()
         del(update_doc_data['state_version'])
-        update_doc = {'doc': update_doc_data,
-                      'doc_as_upsert': True}
+        update_doc = {'doc': update_doc_data}
 
         try:
             self._get_es_conn().update(index=STORAGE_INDEX_NAME,
