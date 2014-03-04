@@ -10,7 +10,7 @@ class TestValidateDSL(TestCase):
 
     def test_ok_dsl(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deployment = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
         validate(deployment.blueprintId)
 
     def test_invalid_dsl(self):

@@ -125,6 +125,39 @@ class DeploymentsTestCase(BaseServerTestCase):
                           deployment_response['id'])
         self.assertIsNotNone(get_execution['createdAt'])
 
+        return execution
+
+    def test_cancel_execution_by_id(self):
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+        cancel_response = self.post(resource_path, {
+            'action': 'cancel'
+        }).json
+        self.assertEquals(execution, cancel_response)
+
+    def test_cancel_non_existent_execution(self):
+        resource_path = '/executions/do_not_exist'
+        cancel_response = self.post(resource_path, {
+            'action': 'cancel'
+        })
+        self.assertEquals(cancel_response.status_code, 404)
+
+    def test_cancel_bad_action(self):
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+        cancel_response = self.post(resource_path, {
+            'action': 'not_really_cancel'
+        })
+        self.assertEquals(cancel_response.status_code, 400)
+
+    def test_cancel_no_action(self):
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+        cancel_response = self.post(resource_path, {
+            'not_action': 'some_value'
+        })
+        self.assertEquals(cancel_response.status_code, 400)
+
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()

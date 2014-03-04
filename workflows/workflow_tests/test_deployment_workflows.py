@@ -25,7 +25,7 @@ class TestDeploymentWorkflows(TestCase):
 
     def test_deployment_workflows(self):
         dsl_path = resource("dsl/basic.yaml")
-        deployment = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         blueprint_id = deployment.blueprintId
         workflows = get_deployment_workflows(deployment_id)

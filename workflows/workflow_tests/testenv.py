@@ -877,7 +877,8 @@ def run_search(query):
 
 def deploy_application(dsl_path, timeout=240,
                        blueprint_id=None,
-                       deployment_id='deployment'):
+                       deployment_id='deployment',
+                       wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
@@ -886,13 +887,16 @@ def deploy_application(dsl_path, timeout=240,
                                             blueprint_id).id
 
     deployment = client.create_deployment(blueprint_id, deployment_id)
-    _, error = client.execute_deployment(deployment.id,
-                                         'install',
-                                         timeout=timeout)
+    execution_id, error = client.execute_deployment(
+        deployment.id,
+        'install',
+        timeout=timeout,
+        wait_for_execution=wait_for_execution)
+
     if error is not None:
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
-    return deployment
+    return deployment, execution_id
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -908,6 +912,14 @@ def undeploy_application(deployment_id, timeout=240):
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
+def cancel_execution(execution_id):
+    """
+    Cancels an execution by its id
+    """
+    client = CosmoManagerRestClient('localhost')
+    return client.cancel_execution(execution_id)
+
+
 def validate_dsl(blueprint_id, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
@@ -917,6 +929,14 @@ def validate_dsl(blueprint_id, timeout=240):
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
                            .format(blueprint_id, response.status))
+
+
+def get_execution(execution_id):
+    """
+    Returns the exeuction status
+    """
+    client = CosmoManagerRestClient('localhost')
+    return client._executions_api.getById(execution_id)
 
 
 def get_deployment_workflows(deployment_id):
