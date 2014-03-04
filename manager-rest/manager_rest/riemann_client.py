@@ -12,12 +12,14 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from manager_rest.util import maybe_register_teardown
+
 
 __author__ = 'idanmo'
 
+from flask import g, current_app
 
 import bernhard
-from StringIO import StringIO
 
 
 class RiemannClient(object):
@@ -27,6 +29,7 @@ class RiemannClient(object):
 
     def __init__(self):
         self._client = bernhard.Client(host='localhost')
+        # print "connected!"
 
     def get_node_state(self, node_id):
         """
@@ -39,14 +42,17 @@ class RiemannClient(object):
         Get nodes reachable state.
         """
         node_result = {}
-        query = StringIO()
+
         or_query = ' or '
+
+        # construct quest with or separator
+        query = or_query.join('service = "{0}"'.format(node_id)
+                              for node_id in node_ids)
+
         for node_id in node_ids:
             node_result[node_id] = []
-            query.write('service = "{0}"{1}'.format(node_id, or_query))
-        query.truncate(len(query.getvalue()) - len(or_query))
 
-        raw_results = self._client.query(query.getvalue())
+        raw_results = self._client.query(query)
         for raw_result in raw_results:
             raw_result_node_id = raw_result.service
             node_result[raw_result_node_id].append(raw_result)
@@ -65,8 +71,27 @@ class RiemannClient(object):
 
         return node_reachable_states
 
-_instance = RiemannClient()
+    def teardown(self):
+        self._client.disconnect()
+        # print "disconnected!"
 
 
-def instance():
-    return _instance
+# What we need to access the client in Flask
+def teardown_riemann(exception):
+    """
+    Disconnect Riemann at the end of the request
+    """
+    if 'riemann_client' in g:
+        g.riemann_client.teardown()
+
+
+def get_riemann_client():
+    """
+    Get the current riemann_client
+    or create one if none exists for the current app context
+    """
+    if not 'riemann_client' in g:
+        g.riemann_client = RiemannClient()
+        maybe_register_teardown(current_app, teardown_riemann)
+
+    return g.riemann_client

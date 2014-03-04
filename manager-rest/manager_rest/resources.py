@@ -17,46 +17,37 @@
 __author__ = 'dan'
 
 
-import config
 import os
-import models
-import responses
-import requests_schema
+from os import path
 import tarfile
 import zipfile
 import urllib
 import tempfile
 import shutil
 import uuid
-import chunked
-import elasticsearch
-import manager_exceptions
-
 from functools import wraps
-from blueprints_manager import DslParseException
-from workflow_client import WorkflowServiceError
+
+import elasticsearch
+
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
-from os import path
+
+from manager_rest import config
+from manager_rest import models
+from manager_rest import responses
+from manager_rest import requests_schema
+from manager_rest import chunked
+from manager_rest import manager_exceptions
+
+from manager_rest.storage_manager import get_storage_manager
+from manager_rest.workflow_client import WorkflowServiceError
+from manager_rest.blueprints_manager import (DslParseException,
+                                             get_blueprints_manager)
+from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
-
-
-def blueprints_manager():
-    import blueprints_manager
-    return blueprints_manager.instance()
-
-
-def storage_manager():
-    import storage_manager
-    return storage_manager.instance()
-
-
-def riemann_client():
-    import riemann_client
-    return riemann_client.instance()
 
 
 def exceptions_handled(func):
@@ -235,7 +226,7 @@ class BlueprintsUpload(object):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            blueprint = blueprints_manager().publish_blueprint(
+            blueprint = get_blueprints_manager().publish_blueprint(
                 dsl_path, alias_mapping, resources_base, blueprint_id)
 
             #moving the app directory in the file server to be under a
@@ -278,7 +269,7 @@ class Blueprints(Resource):
         """
         return [marshal(blueprint,
                         responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager().blueprints_list()]
+                blueprint in get_blueprints_manager().blueprints_list()]
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -329,7 +320,7 @@ class BlueprintsId(Resource):
         """
         Returns a blueprint by its id.
         """
-        blueprint = blueprints_manager().get_blueprint(blueprint_id)
+        blueprint = get_blueprints_manager().get_blueprint(blueprint_id)
         return responses.BlueprintState(**blueprint.to_dict())
 
     @swagger.operation(
@@ -381,7 +372,7 @@ class BlueprintsIdValidate(Resource):
         """
         Validates a given blueprint.
         """
-        return blueprints_manager().validate_blueprint(blueprint_id)
+        return get_blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class ExecutionsId(Resource):
@@ -397,7 +388,7 @@ class ExecutionsId(Resource):
         """
         Returns the execution state by its id.
         """
-        execution = blueprints_manager().get_workflow_state(execution_id)
+        execution = get_blueprints_manager().get_workflow_state(execution_id)
         return responses.Execution(**execution.to_dict())
 
 
@@ -432,13 +423,13 @@ class DeploymentsIdNodes(Resource):
         get_reachable_state = verify_and_convert_bool(
             'reachable', args['reachable'])
 
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
         reachable_states = {}
         if get_reachable_state:
-            reachable_states = riemann_client().get_nodes_state(node_ids)
+            reachable_states = get_riemann_client().get_nodes_state(node_ids)
 
         nodes = []
         for node_id in node_ids:
@@ -465,7 +456,7 @@ class Deployments(Resource):
         """
         return [marshal(responses.Deployment(**deployment.to_dict()),
                         responses.Deployment.resource_fields) for
-                deployment in blueprints_manager().deployments_list()]
+                deployment in get_blueprints_manager().deployments_list()]
 
 
 class DeploymentsId(Resource):
@@ -481,7 +472,7 @@ class DeploymentsId(Resource):
         """
         Returns a deployment by its id.
         """
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         return responses.Deployment(**deployment.to_dict())
 
     @swagger.operation(
@@ -509,8 +500,8 @@ class DeploymentsId(Resource):
         if 'blueprintId' not in request_json:
             abort(400, message='400: Missing blueprintId in json request body')
         blueprint_id = request.json['blueprintId']
-        return blueprints_manager().create_deployment(blueprint_id,
-                                                      deployment_id), 201
+        return get_blueprints_manager().create_deployment(blueprint_id,
+                                                          deployment_id), 201
 
 
 class NodesId(Resource):
@@ -564,14 +555,14 @@ class NodesId(Resource):
 
         reachable_state = None
         if get_reachable_state:
-            state = riemann_client().get_node_state(node_id)
+            state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
 
         runtime_state = None
         state_version = None
         if get_runtime_state:
             try:
-                node = storage_manager().get_node(node_id)
+                node = get_storage_manager().get_node(node_id)
                 runtime_state = node.runtime_info
                 state_version = node.state_version
             except manager_exceptions.NotFoundError:
@@ -607,7 +598,7 @@ class NodesId(Resource):
                                .format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        storage_manager().put_node(node_id, node)
+        get_storage_manager().put_node(node_id, node)
         return responses.DeploymentNode(
             id=node_id,
             runtime_info=node.runtime_info,
@@ -671,9 +662,9 @@ class NodesId(Resource):
         node = models.DeploymentNode(
             id=node_id, runtime_info=request.json['runtime_info'],
             state_version=request.json['state_version'])
-        storage_manager().update_node(node_id, node)
+        get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
-            **storage_manager().get_node(node_id).to_dict())
+            **get_storage_manager().get_node(node_id).to_dict())
 
 
 class DeploymentsIdExecutions(Resource):
@@ -691,7 +682,7 @@ class DeploymentsIdExecutions(Resource):
         """
         return [marshal(responses.Execution(**execution.to_dict()),
                         responses.Execution.resource_fields) for
-                execution in storage_manager().get_deployment_executions(
+                execution in get_storage_manager().get_deployment_executions(
                     deployment_id)]
 
     @swagger.operation(
@@ -720,8 +711,8 @@ class DeploymentsIdExecutions(Resource):
         if 'workflowId' not in request_json:
             abort(400, message='400: Missing workflowId in json request body')
         workflow_id = request.json['workflowId']
-        execution = blueprints_manager().execute_workflow(deployment_id,
-                                                          workflow_id)
+        execution = get_blueprints_manager().execute_workflow(deployment_id,
+                                                              workflow_id)
         return responses.Execution(**execution.to_dict()), 201
 
 
@@ -738,7 +729,7 @@ class DeploymentsIdWorkflows(Resource):
         """
         Returns a list of workflows related to the provided deployment.
         """
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
         workflows = [responses.Workflow(name=wf_name) for wf_name in
                      deployment_workflows.keys()]

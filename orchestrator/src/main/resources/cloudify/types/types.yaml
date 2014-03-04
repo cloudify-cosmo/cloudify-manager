@@ -54,6 +54,7 @@ types:
                 - get_state
         properties:
             - install_agent: false
+            - worker_config: {}
         workflows:
             start:
                 ref: cloudify.workflows.host.start
@@ -72,6 +73,10 @@ types:
 
     # An isolated virtual layer 2 domain or a logical / virtual switch
     cloudify.types.network:
+        derived_from: cloudify.types.base
+    
+    # An isolated virtual layer 3 subnet with IP range
+    cloudify.types.subnet:
         derived_from: cloudify.types.base
 
     # A network router
