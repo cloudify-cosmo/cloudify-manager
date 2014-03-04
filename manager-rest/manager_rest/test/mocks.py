@@ -39,3 +39,6 @@ class MockWorkflowClient(object):
         return {
             'state': 'terminated'
         }
+
+    def cancel_workflow(self, workflow_id):
+        return self.execute_workflow(None, None, None)

@@ -68,6 +68,51 @@ define wf
     wait_for_workflow_state(res[:id], :terminated)
   end
 
+  def test_terminate
+    radial = %/
+define wf
+  echo 'this is nice'
+  sleep '100s'
+/
+    post '/workflows', { :radial => radial }.to_json
+    res = parsed_response
+    wait_for_workflow_state(res[:id], :launched)
+    post "/workflows/#{res[:id]}", { :action => 'cancel' }.to_json
+    assert_response_status 201
+    wait_for_workflow_state(res[:id], :terminated)
+  end
+
+  def test_terminate_no_action
+    radial = %/
+define wf
+  echo 'this is nice'
+  sleep '100s'
+/
+    post '/workflows', { :radial => radial }.to_json
+    res = parsed_response
+    wait_for_workflow_state(res[:id], :launched)
+    post "/workflows/#{res[:id]}", {}.to_json
+    assert_response_status 400
+  end
+
+  def test_terminate_invalid_action
+    radial = %/
+define wf
+  echo 'this is nice'
+  sleep '100s'
+/
+    post '/workflows', { :radial => radial }.to_json
+    res = parsed_response
+    wait_for_workflow_state(res[:id], :launched)
+    post "/workflows/#{res[:id]}", { :action => 'bad_action' }.to_json
+    assert_response_status 400
+  end
+
+  def test_terminate_wf_not_exists
+    post '/workflows/does-not-exist', { :action => 'cancel' }.to_json
+    assert_response_status 400
+  end
+
   def test_launch_tags
     radial = %/
 define wf

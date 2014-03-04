@@ -135,6 +135,13 @@ class BlueprintsManager(object):
             execution.error = response['error']
         return execution
 
+    def cancel_workflow(self, execution_id):
+        execution = self.get_execution(execution_id)
+        workflow_client().cancel_workflow(
+            execution.internal_workflow_id
+        )
+        return execution
+
     def create_deployment(self, blueprint_id, deployment_id):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan

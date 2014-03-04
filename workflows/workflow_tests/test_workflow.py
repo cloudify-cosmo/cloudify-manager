@@ -28,7 +28,7 @@ class BasicWorkflowsTest(TestCase):
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
-        deployment = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
 
@@ -40,7 +40,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deployment = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
 
         self.assertEquals('mock_app', deployment.blueprintId)
 
@@ -84,7 +84,8 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dsl_with_manager_plugin(self):
         dsl_path = resource("dsl/with_manager_plugin.yaml")
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path)
+        deployment_id = deployment.id
 
         from plugins.worker_installer.tasks import \
             RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
@@ -126,7 +127,7 @@ class BasicWorkflowsTest(TestCase):
     def test_search(self):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
-        deployment = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
 
