@@ -14,7 +14,7 @@ define execute_operation
                 operation: "${operation_mapping}",
                 throw_on_failure: true
             }
-        }, to_f: 'verified'
+        }
 
         execute_task target: '${target}', exec: '${operation}', payload: {
             properties: '$operation_properties',
