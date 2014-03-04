@@ -67,7 +67,16 @@ class ESStorageManager(object):
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
     def nodes_list(self):
-        return self._list_docs(NODE_TYPE, DeploymentNode)
+        search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
+                                                   doc_type=NODE_TYPE,
+                                                   size=DEFAULT_SEARCH_SIZE)
+        docs_with_versions = \
+            map(lambda hit: (hit['_source'], hit['_version']),
+                search_result['hits']['hits'])
+        return map(
+            lambda doc_with_version: DeploymentNode(
+                state_version=doc_with_version[1], **doc_with_version[0]),
+            docs_with_versions)
 
     def blueprints_list(self):
         return self._list_docs(BLUEPRINT_TYPE, BlueprintState)
@@ -84,8 +93,9 @@ class ESStorageManager(object):
                 execution.deployment_id == deployment_id]
 
     def get_node(self, node_id):
-        return self._get_doc_and_deserialize(NODE_TYPE, node_id,
-                                             DeploymentNode)
+        doc = self._get_doc(NODE_TYPE, node_id)
+        node = DeploymentNode(state_version=doc['_version'], **doc['_source'])
+        return node
 
     def get_blueprint(self, blueprint_id):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,
@@ -112,23 +122,22 @@ class ESStorageManager(object):
                                     execution.to_dict())
 
     def put_node(self, node_id, node):
-        self._put_doc_if_not_exists(NODE_TYPE, str(node_id), node.to_dict())
+        doc_data = node.to_dict()
+        del(doc_data['state_version'])
+        self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
 
     def update_node(self, node_id, node):
-        try:
-            doc = self._get_doc(NODE_TYPE, node_id)
-        except manager_exceptions.NotFoundError:
-            self.put_node(node_id, node)
-            return node.runtime_info
+        update_doc_data = node.to_dict()
+        del(update_doc_data['state_version'])
+        update_doc = {'doc': update_doc_data,
+                      'doc_as_upsert': True}
 
-        update_doc = {'doc': node.to_dict()}
         try:
             self._get_es_conn().update(index=STORAGE_INDEX_NAME,
                                        doc_type=NODE_TYPE,
                                        id=str(node_id),
                                        body=update_doc,
-                                       version=doc['_version'])
-            return self.get_node(node_id).runtime_info
+                                       version=node.state_version)
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 'Node update conflict: mismatching versions')

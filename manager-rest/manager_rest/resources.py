@@ -471,7 +471,8 @@ class DeploymentsIdNodes(Resource):
 
         nodes = []
         for node_id in node_ids:
-            node_result = responses.DeploymentNode(id=node_id)
+            node_result = responses.DeploymentNode(id=node_id,
+                                                   state_version=None)
             if get_reachable_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
@@ -596,15 +597,19 @@ class NodesId(Resource):
             reachable_state = state['reachable']
 
         runtime_state = None
+        state_version = None
         if get_runtime_state:
             try:
                 node = get_storage_manager().get_node(node_id)
                 runtime_state = node.runtime_info
+                state_version = node.state_version
             except manager_exceptions.NotFoundError:
                 runtime_state = {}
+                state_version = 0
 
         return responses.DeploymentNode(id=node_id, reachable=reachable_state,
-                                        runtime_info=runtime_state)
+                                        runtime_info=runtime_state,
+                                        state_version=state_version)
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -630,21 +635,19 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
+        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
+                                     state_version=0)
         get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(
-            id=node_id,
-            runtime_info=node.runtime_info)
+        return responses.DeploymentNode(**node.to_dict())
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="putNodeState",
-        notes="Update node runtime state with the provided dictionary "
-              "of keys and values. Each value in the dictionary should be a "
-              "list where the first item is the new value and the second "
-              "is the old value (for having some kind of optimistic locking). "
-              "New keys should have a single element list with the new value "
-              "only.",
+        nickname="patchNodeState",
+        notes="Update node runtime state. Expecting the request body to "
+              "be a dictionary containing both 'runtime_info' - which is the"
+              "updated keys/values information (possibly partial update), "
+              "and 'state_version', which is used for optimistic locking "
+              "during the update",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -652,7 +655,8 @@ class NodesId(Resource):
                      'dataType': 'string',
                      'paramType': 'path'},
                     {'name': 'body',
-                     'description': 'Node state updated keys/values',
+                     'description': 'Node state updated keys/values and '
+                                    'state version',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': 'string',
@@ -666,15 +670,37 @@ class NodesId(Resource):
         Updates node runtime state.
         """
         verify_json_content_type()
-        if request.json.__class__ is not dict:
-            abort(400, message='request body is expected to be of key/value'
-                               ' map type but is {0}'
-                               .format(request.json.__class__.__name__))
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        runtime_info = get_storage_manager().update_node(node_id, node)
+        if request.json.__class__ is not dict or len(request.json) > 2 \
+            or 'runtime_info' not in request.json \
+            or 'state_version' not in request.json \
+            or request.json['runtime_info'].__class__ is not dict \
+                or request.json['state_version'].__class__ is not int:
+
+            if request.json.__class__ is not dict or len(request.json) > 2:
+                message = 'request body is expected to be a map containing ' \
+                          'only "runtime_info" and "state_version" fields'
+            elif 'runtime_info' not in request.json:
+                message = 'request body must be a map containing a ' \
+                          '"runtime_info" field'
+            elif 'state_version' not in request.json:
+                message = 'request body must be a map containing a ' \
+                          '"state_version" field'
+            elif request.json['runtime_info'].__class__ is not dict:
+                message = "request body's 'runtime_info' field must be a " \
+                          "map but is of type {0}".format(
+                              request.json['runtime_info'].__class__)
+            else:
+                message = "request body's 'state_version' field must be an " \
+                          "int but is of type {0}".format(
+                              request.json['state_version'].__class__)
+            abort(400, message=message)
+
+        node = models.DeploymentNode(
+            id=node_id, runtime_info=request.json['runtime_info'],
+            state_version=request.json['state_version'])
+        get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
-            id=node_id,
-            runtime_info=runtime_info)
+            **get_storage_manager().get_node(node_id).to_dict())
 
 
 class DeploymentsIdExecutions(Resource):
