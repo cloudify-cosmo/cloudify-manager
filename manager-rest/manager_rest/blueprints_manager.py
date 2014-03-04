@@ -12,46 +12,57 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from manager_rest.util import maybe_register_teardown
 
 __author__ = 'dan'
 
-from dsl_parser import tasks
+
 from datetime import datetime
 import json
 import uuid
-import models
-import responses
-from workflow_client import workflow_client
 
+from dsl_parser import tasks
+from flask import g, current_app
 
-def storage_manager():
-    import storage_manager
-    return storage_manager.instance()
+from manager_rest import models
+from manager_rest import responses
+from manager_rest.workflow_client import workflow_client
+from manager_rest.storage_manager import get_storage_manager
 
 
 class DslParseException(Exception):
     pass
 
 
+class BlueprintAlreadyExistsException(Exception):
+    def __init__(self, blueprint_id, *args):
+        Exception.__init__(self, args)
+        self.blueprint_id = blueprint_id
+
+
 class BlueprintsManager(object):
 
+    @property
+    def sm(self):
+        return get_storage_manager()
+
     def blueprints_list(self):
-        return storage_manager().blueprints_list()
+        return self.sm.blueprints_list()
 
     def deployments_list(self):
-        return storage_manager().deployments_list()
+        return self.sm.deployments_list()
 
     def executions_list(self):
-        return storage_manager().executions_list()
+        return self.sm.executions_list()
 
     def get_blueprint(self, blueprint_id):
-        return storage_manager().get_blueprint(blueprint_id)
+        return self.sm.get_blueprint(blueprint_id)
 
     def get_deployment(self, deployment_id):
-        return storage_manager().get_deployment(deployment_id)
+        return self.sm.get_deployment(deployment_id)
 
     def get_execution(self, execution_id):
-        return storage_manager().get_execution(execution_id)
+        return self.sm.get_execution(execution_id)
 
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
@@ -71,7 +82,7 @@ class BlueprintsManager(object):
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
                                               created_at=now, updated_at=now)
-        storage_manager().put_blueprint(new_blueprint.id, new_blueprint)
+        self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
     # currently validation is split to 2 phases: the first
@@ -111,7 +122,7 @@ class BlueprintsManager(object):
             deployment_id=deployment_id,
             error='None')
 
-        storage_manager().put_execution(new_execution.id, new_execution)
+        self.sm.put_execution(new_execution.id, new_execution)
 
         return new_execution
 
@@ -141,18 +152,23 @@ class BlueprintsManager(object):
             id=deployment_id, plan=json.loads(deployment_json_plan),
             blueprint_id=blueprint_id, created_at=now, updated_at=now)
 
-        storage_manager().put_deployment(deployment_id, new_deployment)
+        self.sm.put_deployment(deployment_id, new_deployment)
 
         return new_deployment
 
 
-_instance = BlueprintsManager()
+def teardown_blueprints_manager(exception):
+    #print "tearing down blueprints manager!"
+    pass
 
 
-def reset():
-    global _instance
-    _instance = BlueprintsManager()
-
-
-def instance():
-    return _instance
+# What we need to access this manager in Flask
+def get_blueprints_manager():
+    """
+    Get the current blueprints manager
+    or create one if none exists for the current app context
+    """
+    if not 'blueprints_manager' in g:
+        g.blueprints_manager = BlueprintsManager()
+        maybe_register_teardown(current_app, teardown_blueprints_manager)
+    return g.blueprints_manager

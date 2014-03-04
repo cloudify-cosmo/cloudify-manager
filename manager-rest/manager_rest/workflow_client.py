@@ -17,8 +17,9 @@ __author__ = 'dan'
 
 import requests
 import json
-import config
 import time
+
+from manager_rest import config
 
 
 class WorkflowServiceError(Exception):
