@@ -129,6 +129,7 @@ class DeploymentNode(object):
     resource_fields = {
         'id': fields.String,
         'runtimeInfo': fields.Raw(attribute='runtime_info'),
+        'stateVersion': fields.Raw(attribute='state_version'),
         'reachable': fields.Boolean
     }
 
@@ -137,6 +138,7 @@ class DeploymentNode(object):
         self.runtime_info = \
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        self.state_version = kwargs['state_version']
 
 
 @swagger.model

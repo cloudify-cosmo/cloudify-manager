@@ -117,7 +117,6 @@ class FileStorageManager(object):
         node = DeploymentNode(id=node_id, runtime_info=merged_rt_info)
         data[NODES][node_id] = node
         self._dump_data(data)
-        return merged_rt_info
 
     def blueprints_list(self):
         data = self._load_data()

@@ -70,3 +70,5 @@ class DeploymentNode(SerializableObject):
         self.runtime_info = \
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        self.state_version = kwargs['state_version'] if 'state_version' in \
+                                                        kwargs else None
