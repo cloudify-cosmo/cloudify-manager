@@ -1,7 +1,6 @@
 define host_start
     execute_operation operation: 'cloudify.interfaces.lifecycle.start'
     wait_for_host_to_start
-    state action: 'set', node_id: '${node.id}', value: 'started'
 
     sequence if: '${node.properties.install_agent} == true'
         log message: 'installing agent on host: ${node.id}'
@@ -22,10 +21,8 @@ define host_start
             log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
         log message: 'restarting worker on host: ${node.id}'
         execute_operation operation: 'cloudify.interfaces.worker_installer.restart'
-        execute_operation operation: 'cloudify.interfaces.kv_store.put', params: {
-            key: "agent plugins installed",
-            value: true
-        }
+
+    state action: 'set', node_id: '${node.id}', value: 'started'
 
     define wait_for_host_to_start
         repeat
