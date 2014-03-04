@@ -42,9 +42,7 @@ from manager_rest import manager_exceptions
 
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
-from manager_rest.manager_exceptions import ConflictError
 from manager_rest.blueprints_manager import (DslParseException,
-                                             BlueprintAlreadyExistsException,
                                              get_blueprints_manager)
 from manager_rest.riemann_client import get_riemann_client
 
@@ -502,7 +500,7 @@ class DeploymentsId(Resource):
             abort(400, message='400: Missing blueprintId in json request body')
         blueprint_id = request.json['blueprintId']
         return get_blueprints_manager().create_deployment(blueprint_id,
-                                                      deployment_id), 201
+                                                          deployment_id), 201
 
 
 class NodesId(Resource):
