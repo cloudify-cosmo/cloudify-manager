@@ -1,20 +1,8 @@
-#######
-# Types and implementation details.
-#
-# Virtual machine is started using Cloudify's built-in OpenStack plugin.
-# Python simple HTTP server is started using Cloudify's Python web server plugin
-# which can be found here: https://github.com/CloudifySource/cosmo-plugin-python-webserver
-#
-
-# cloudify.types contains Cloudify's built-in types, relationships, workflows etc...
-# openstack_host_provisioner contains Cloudify's built-in OpenStack plugin definition.
 
 imports:
     - cloudify.types
-    - openstack_host_provisioner
+    - cloudify.openstack
 
-# Python web server plugin definition with a specification to run in an agent vm.
-# Plugin will be downloaded and installed from the provided url.
 plugins:
     python_webserver_installer:
         derived_from: cloudify.plugins.agent_plugin
@@ -38,8 +26,7 @@ types:
                         key_name: cloudify_agents_idan
         interfaces:
             cloudify.interfaces.lifecycle:
-                -   create: openstack_host_provisioner.tasks.provision
-                -   start: openstack_host_provisioner.tasks.start
+                -   start: nova_plugin.server.start
     web_server:
         derived_from: cloudify.types.web_server
         interfaces:
