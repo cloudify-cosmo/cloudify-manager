@@ -75,7 +75,7 @@ types:
     cloudify.types.network:
         derived_from: cloudify.types.base
     
-    # An isolates virtual layer 3 subnet with IP range
+    # An isolated virtual layer 3 subnet with IP range
     cloudify.types.subnet:
         derived_from: cloudify.types.base
 
