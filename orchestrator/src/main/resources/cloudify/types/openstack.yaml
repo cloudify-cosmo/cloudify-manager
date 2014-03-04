@@ -33,7 +33,7 @@ types:
                 - get_state: nova_plugin.server.get_state
 
     cloudify.openstack.subnet:
-        derived_from: cloudify.types.base
+        derived_from: cloudify.types.subnet
         properties:
             - subnet
             - neutron_config: {}
