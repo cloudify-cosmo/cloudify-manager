@@ -104,6 +104,7 @@ class FileStorageManager(object):
                 'Node {0} already exists'.format(node_id))
         data[NODES][str(node_id)] = node
         self._dump_data(data)
+        return 1
 
     def update_node(self, node_id, node):
         data = self._load_data()

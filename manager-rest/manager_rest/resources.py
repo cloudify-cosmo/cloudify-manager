@@ -635,8 +635,7 @@ class NodesId(Resource):
                                .format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        get_storage_manager().put_node(node_id, node)
-        node.state_version = 1
+        node.state_version = get_storage_manager().put_node(node_id, node)
         return responses.DeploymentNode(**node.to_dict())
 
     @swagger.operation(

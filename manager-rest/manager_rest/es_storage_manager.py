@@ -125,6 +125,7 @@ class ESStorageManager(object):
         doc_data = node.to_dict()
         del(doc_data['state_version'])
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
+        return 1
 
     def update_node(self, node_id, node):
         try:
