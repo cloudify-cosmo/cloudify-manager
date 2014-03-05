@@ -125,12 +125,12 @@ class ESStorageManager(object):
         doc_data = node.to_dict()
         del(doc_data['state_version'])
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
+        return 1
 
     def update_node(self, node_id, node):
         update_doc_data = node.to_dict()
         del(update_doc_data['state_version'])
-        update_doc = {'doc': update_doc_data,
-                      'doc_as_upsert': True}
+        update_doc = {'doc': update_doc_data}
 
         try:
             self._get_es_conn().update(index=STORAGE_INDEX_NAME,
@@ -138,6 +138,9 @@ class ESStorageManager(object):
                                        id=str(node_id),
                                        body=update_doc,
                                        version=node.state_version)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Node {0} not found".format(node_id))
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 'Node update conflict: mismatching versions')

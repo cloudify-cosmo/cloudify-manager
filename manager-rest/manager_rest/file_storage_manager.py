@@ -104,12 +104,13 @@ class FileStorageManager(object):
                 'Node {0} already exists'.format(node_id))
         data[NODES][str(node_id)] = node
         self._dump_data(data)
+        return 1
 
     def update_node(self, node_id, node):
         data = self._load_data()
         if node_id not in data[NODES]:
-            self.put_node(node_id, node)
-            return
+            raise manager_exceptions.NotFoundError(
+                "Node {0} not found".format(node_id))
 
         prev_rt_info = DeploymentNode(**data[NODES][node_id].to_dict())\
             .runtime_info
