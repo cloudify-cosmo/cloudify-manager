@@ -636,7 +636,7 @@ class NodesId(Resource):
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json)
         node.state_version = get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(**node.to_dict())
+        return responses.DeploymentNode(**node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -686,11 +686,11 @@ class NodesId(Resource):
             elif request.json['runtime_info'].__class__ is not dict:
                 message = "request body's 'runtime_info' field must be a " \
                           "map but is of type {0}".format(
-                              request.json['runtime_info'].__class__)
+                              request.json['runtime_info'].__class__.__name__)
             else:
                 message = "request body's 'state_version' field must be an " \
                           "int but is of type {0}".format(
-                              request.json['state_version'].__class__)
+                              request.json['state_version'].__class__.__name__)
             abort(400, message=message)
 
         node = models.DeploymentNode(

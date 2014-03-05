@@ -28,7 +28,7 @@ class NodesTest(BaseServerTestCase):
 
     def test_put_new_node(self):
         response = self.put('/nodes/1234', {'key': 'value'})
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(201, response.status_code)
         self.assertEqual('1234', response.json['id'])
         self.assertEqual(1, len(response.json['runtimeInfo']))
         self.assertEqual('value', response.json['runtimeInfo']['key'])
