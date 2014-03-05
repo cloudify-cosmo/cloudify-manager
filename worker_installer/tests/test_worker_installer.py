@@ -1,35 +1,35 @@
-#/*******************************************************************************
-# * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-# *
-# * Licensed under the Apache License, Version 2.0 (the "License");
-# * you may not use this file except in compliance with the License.
-# * You may obtain a copy of the License at
-# *
-# *       http://www.apache.org/licenses/LICENSE-2.0
-# *
-# * Unless required by applicable law or agreed to in writing, software
-# * distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-# *******************************************************************************/
-import getpass
-import unittest
-import time
-
-from worker_installer.tests import get_remote_runner, get_local_runner, \
-    id_generator, get_local_worker_config, get_local_context, get_remote_context, \
-    get_remote_management_worker_config, VAGRANT_MACHINE_IP, \
-    get_remote_worker_config, get_local_management_worker_config
+#########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 
 __author__ = 'elip'
 
+import getpass
+import unittest
+import time
 import os
 
-from celery import Celery
+from worker_installer.tests import get_remote_runner, get_local_runner, \
+    id_generator, get_local_worker_config, get_local_context, \
+    get_remote_context, \
+    get_remote_management_worker_config, VAGRANT_MACHINE_IP, \
+    get_remote_worker_config, get_local_management_worker_config
 
-from worker_installer.tasks import install, start, build_env_string, uninstall, stop
+from celery import Celery
+from worker_installer.tasks import install, start, \
+    build_env_string, uninstall, stop
 
 
 def _extract_registered_plugins(broker_url, worker_name):
@@ -83,15 +83,19 @@ class TestRemoteInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=False)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
-            raise AssertionError("No plugins were detected on the installed worker")
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
 
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
 
     def test_install_multiple_workers(self):
 
@@ -112,9 +116,11 @@ class TestRemoteInstallerCase(unittest.TestCase):
 
         # lets make sure it did
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
-            raise AssertionError("No plugins were detected on the installed worker")
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
 
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
@@ -133,16 +139,21 @@ class TestRemoteInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=False)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
-            raise AssertionError("No plugins were detected on the installed worker")
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
 
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
-        self.assertTrue('{0}@worker_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@worker_installer'.format(worker_config["name"]) in plugins)
 
     def test_remove_worker(self):
 
@@ -156,14 +167,17 @@ class TestRemoteInstallerCase(unittest.TestCase):
         stop(ctx, worker_config, local=False)
         uninstall(ctx, worker_config, local=False)
 
-        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config["env"]["BROKER_URL"], worker_config["name"])
 
         # make sure the worker has stopped
         self.assertTrue(len(plugins) == 0)
 
         # make sure files are deleted
-        service_file_path = "/etc/init.d/celeryd-{0}".format(worker_config["name"])
-        defaults_file_path = "/etc/default/celeryd-{0}".format(worker_config["name"])
+        service_file_path = "/etc/init.d/celeryd-{0}".format(
+            worker_config["name"])
+        defaults_file_path = "/etc/default/celeryd-{0}".format(
+            worker_config["name"])
 
         self.assertFalse(self.RUNNER.exists(service_file_path))
         self.assertFalse(self.RUNNER.exists(defaults_file_path))
@@ -218,15 +232,19 @@ class TestLocalInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=True)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
-            raise AssertionError("No plugins were detected on the installed worker")
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
 
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
 
     def test_install_management_worker(self):
 
@@ -237,16 +255,21 @@ class TestLocalInstallerCase(unittest.TestCase):
         start(ctx, worker_config, local=True)
 
         ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(worker_config['env']['BROKER_URL'], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
         if not plugins:
-            raise AssertionError("No plugins were detected on the installed worker")
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
 
         ctx.logger.info("Detected plugins : {0}".format(plugins))
 
         # check built in agent plugins are registered
-        self.assertTrue('{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue('{0}@kv_store'.format(worker_config["name"]) in plugins)
-        self.assertTrue('{0}@worker_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@worker_installer'.format(worker_config["name"]) in plugins)
 
     def test_remove_worker(self):
 
@@ -260,14 +283,17 @@ class TestLocalInstallerCase(unittest.TestCase):
         stop(ctx, worker_config, local=True)
         uninstall(ctx, worker_config, local=True)
 
-        plugins = _extract_registered_plugins(worker_config["env"]["BROKER_URL"], worker_config["name"])
+        plugins = _extract_registered_plugins(
+            worker_config["env"]["BROKER_URL"], worker_config["name"])
 
         # make sure the worker has stopped
         self.assertTrue(len(plugins) == 0)
 
         # make sure files are deleted
-        service_file_path = "/etc/init.d/celeryd-{0}".format(worker_config["name"])
-        defaults_file_path = "/etc/default/celeryd-{0}".format(worker_config["name"])
+        service_file_path = "/etc/init.d/celeryd-{0}".format(
+            worker_config["name"])
+        defaults_file_path = "/etc/default/celeryd-{0}".format(
+            worker_config["name"])
 
         self.assertFalse(self.RUNNER.exists(service_file_path))
         self.assertFalse(self.RUNNER.exists(defaults_file_path))
@@ -278,7 +304,8 @@ class TestLocalInstallerCase(unittest.TestCase):
             "TEST_KEY2": "TEST_VALUE2"
         }
 
-        expected_string = "export TEST_KEY2=\"TEST_VALUE2\"\nexport TEST_KEY1=\"TEST_VALUE1\"\n"
+        expected_string = "export TEST_KEY2=\"TEST_VALUE2\"\nexport " \
+                          "TEST_KEY1=\"TEST_VALUE1\"\n"
 
         assert expected_string == build_env_string(env)
 
