@@ -3,3 +3,4 @@
 out
 outfds
 **/.bundle/
+*COMMIT_MSG
