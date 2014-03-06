@@ -703,21 +703,52 @@ class NodesId(Resource):
 
 class DeploymentsIdExecutions(Resource):
 
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('statuses', type=str,
+                                       default='false', location='args')
+
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
         notes="Returns a list of executions related to the provided"
-              " deployment."
+              " deployment.",
+        parameters=[{'name': 'statuses',
+                     'description': 'Specifies whether to return reachable '
+                                    'state for the nodes.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
     )
     @exceptions_handled
     def get(self, deployment_id):
         """
         Returns a list of executions related to the provided deployment.
         """
-        return [marshal(responses.Execution(**execution.to_dict()),
-                        responses.Execution.resource_fields) for
-                execution in get_storage_manager().get_deployment_executions(
-                    deployment_id)]
+        args = self._args_parser.parse_args()
+        get_executions_statuses = verify_and_convert_bool(
+            'statuses', args['statuses'])
+
+        executions = [responses.Execution(**execution.to_dict()) for
+                      execution in
+                      get_storage_manager().get_deployment_executions(
+                          deployment_id)]
+
+        if get_executions_statuses:
+            for execution in executions:
+                execution.status, execution.error =\
+                    get_blueprints_manager()\
+                    .get_workflow_state_by_internal_workflow_id(
+                        execution.internal_workflow_id)
+        else:
+            #setting None values to dynamic fields
+            for execution in executions:
+                execution.status, execution.error = None, None
+
+        return [marshal(execution, responses.Execution.resource_fields) for
+                execution in executions]
 
     @swagger.operation(
         responseClass=responses.Execution,
