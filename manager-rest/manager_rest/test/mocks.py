@@ -27,6 +27,7 @@ class MockWorkflowClient(object):
             'type': 'workflow_state',
             'id': 'yokimura-yoshomati',
             'state': 'pending',
+            'error': None,
             'created': datetime.now()
         }
 
@@ -37,7 +38,8 @@ class MockWorkflowClient(object):
 
     def get_workflow_status(self, workflow_id):
         return {
-            'state': 'terminated'
+            'state': 'terminated',
+            'error': None
         }
 
     def cancel_workflow(self, workflow_id):

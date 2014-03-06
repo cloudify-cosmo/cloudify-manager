@@ -134,6 +134,7 @@ class FileStorageManager(object):
         return data[EXECUTIONS].values()
 
     def get_deployment_executions(self, deployment_id):
+        #TODO: make this using a specific search
         executions = self.executions_list()
         return [execution for execution in executions if execution
                 .deployment_id == deployment_id]

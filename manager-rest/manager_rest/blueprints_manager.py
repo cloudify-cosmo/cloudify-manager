@@ -128,12 +128,16 @@ class BlueprintsManager(object):
 
     def get_workflow_state(self, execution_id):
         execution = self.get_execution(execution_id)
-        response = workflow_client().get_workflow_status(
+        state, error = self.get_workflow_state_by_internal_workflow_id(
             execution.internal_workflow_id)
-        execution.status = response['state']
+        execution.status = state
         if execution.status == 'failed':
-            execution.error = response['error']
+            execution.error = error
         return execution
+
+    def get_workflow_state_by_internal_workflow_id(self, internal_wf_id):
+        response = workflow_client().get_workflow_status(internal_wf_id)
+        return response['state'], response['error']
 
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)
