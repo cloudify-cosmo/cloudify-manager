@@ -1,4 +1,4 @@
-#!/bin/bash --login
+#!/bin/bash
 
 ############
 # This script is used for running the ruote service.
