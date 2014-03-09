@@ -592,9 +592,11 @@ class NodesId(Resource):
             'runtime', args['runtime'])
 
         reachable_state = None
+        state = None
         if get_reachable_state:
             state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
+            state = state['state']
 
         runtime_state = None
         state_version = None
@@ -606,7 +608,9 @@ class NodesId(Resource):
             except manager_exceptions.NotFoundError:
                 runtime_state = {}
 
-        return responses.DeploymentNode(id=node_id, reachable=reachable_state,
+        return responses.DeploymentNode(id=node_id,
+                                        state=state,
+                                        reachable=reachable_state,
                                         runtime_info=runtime_state,
                                         state_version=state_version)
 

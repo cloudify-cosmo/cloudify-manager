@@ -2,7 +2,7 @@ define state
     repeat
         sequence if: '${v:to_f} is not set'
             set 'v:to_f': 'state_result'
-        wait_for_node_state action: '$v:action', node_id: '$v:node_id', reachable: '$v:reachable', to_f: '$v:to_f', value: '$v:value'
+        wait_for_node_state action: '$v:action', node_id: '$v:node_id', value: '$v:value', to_f: '$v:to_f'
         log message: 'wait for node ${v:node_id} state action ${v:action} result is: ${v:to_f} = ${${v:to_f}}'
         break if: '${v:action} != wait'
         break if: '${${v:to_f}} == true'

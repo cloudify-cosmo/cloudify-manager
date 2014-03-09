@@ -130,7 +130,8 @@ class DeploymentNode(object):
         'id': fields.String,
         'runtimeInfo': fields.Raw(attribute='runtime_info'),
         'stateVersion': fields.Raw(attribute='state_version'),
-        'reachable': fields.Boolean
+        'reachable': fields.Boolean,
+        'state': fields.String
     }
 
     def __init__(self, *args, **kwargs):
@@ -139,6 +140,7 @@ class DeploymentNode(object):
             kwargs['runtime_info'] if 'runtime_info' in kwargs else None
         self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
         self.state_version = kwargs['state_version']
+        self.state = kwargs['state'] if 'state' in kwargs else None
 
 
 @swagger.model
