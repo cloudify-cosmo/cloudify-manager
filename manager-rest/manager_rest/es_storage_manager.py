@@ -44,18 +44,37 @@ class ESStorageManager(object):
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
         return map(lambda doc: model_class(**doc), docs)
 
-    def _get_doc(self, doc_type, doc_id):
+    def _get_doc(self, doc_type, doc_id, fields=None):
         try:
-            return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
-                                           doc_type=doc_type,
-                                           id=doc_id)
+            if fields:
+                return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
+                                               doc_type=doc_type,
+                                               id=doc_id,
+                                               fields=[f for f in fields])
+            else:
+                return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
+                                               doc_type=doc_type,
+                                               id=doc_id)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
 
-    def _get_doc_and_deserialize(self, doc_type, doc_id, model_class):
-        doc = self._get_doc(doc_type, doc_id)
-        return model_class(**doc['_source'])
+    def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
+                                 fields=None):
+        doc = self._get_doc(doc_type, doc_id, fields)
+        if not fields:
+            return model_class(**doc['_source'])
+        else:
+            if 'fields' not in doc or len(fields) != len(doc['fields']):
+                missing_fields = [field for field in fields if field not
+                                  in doc['fields']]
+                raise RuntimeError('Some or all fields specified for query '
+                                   'were missing: {0}'.format(missing_fields))
+            fields_data = {k: v[0] for k, v in doc['fields'].iteritems()}
+            for field in model_class.fields:
+                if field not in fields_data:
+                    fields_data[field] = None
+            return model_class(**fields_data)
 
     def _put_doc_if_not_exists(self, doc_type, doc_id, value):
         try:
@@ -98,9 +117,9 @@ class ESStorageManager(object):
         node = DeploymentNode(state_version=doc['_version'], **doc['_source'])
         return node
 
-    def get_blueprint(self, blueprint_id):
+    def get_blueprint(self, blueprint_id, fields=None):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,
-                                             BlueprintState)
+                                             BlueprintState, fields)
 
     def get_deployment(self, deployment_id):
         return self._get_doc_and_deserialize(DEPLOYMENT_TYPE, deployment_id,

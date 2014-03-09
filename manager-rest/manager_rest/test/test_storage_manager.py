@@ -27,7 +27,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
-                                          plan={'name': 'my-bp'})
+                                          plan={'name': 'my-bp'},
+                                          source='bp-source')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
         blueprint_from_list = storage_manager.instance().blueprints_list()[0]
         blueprint_restored = \
@@ -58,3 +59,21 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(dep.blueprint_id, deserialized_dep.blueprint_id)
         self.assertEquals(dep.plan, deserialized_dep.plan)
         self.assertEquals(dep.permalink, deserialized_dep.permalink)
+
+    def test_fields_query(self):
+        now = str(datetime.now())
+        blueprint = models.BlueprintState(id='blueprint-id',
+                                          created_at=now,
+                                          updated_at=now,
+                                          plan={'name': 'my-bp'},
+                                          source='bp-source')
+        storage_manager.instance().put_blueprint('blueprint-id', blueprint)
+
+        blueprint_restored = \
+            storage_manager.instance().get_blueprint('blueprint-id',
+                                                     {'id', 'created_at'})
+        self.assertEquals('blueprint-id', blueprint_restored.id)
+        self.assertEquals(now, blueprint_restored.created_at)
+        self.assertEquals(None, blueprint_restored.updated_at)
+        self.assertEquals(None, blueprint_restored.source)
+        self.assertEquals(None, blueprint_restored.plan)
