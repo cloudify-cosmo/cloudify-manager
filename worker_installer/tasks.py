@@ -203,9 +203,8 @@ def _install_latest_pip(runner, worker_config):
         "wget https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py -O "
         "{0}/get-pip.py".format(worker_config['home']))
 
-    package_installer = "yum" if len(
-        runner.run("whereis yum")[4:].strip()) > 0 else "apt-get"
-    runner.sudo("{0} -y install python-setuptools".format(package_installer))
+    runner.sudo("sudo apt-get update -y")
+    runner.sudo("sudo apt-get -y install python-setuptools")
 
     runner.sudo("python {0}/get-pip.py".format(worker_config['home']))
 
