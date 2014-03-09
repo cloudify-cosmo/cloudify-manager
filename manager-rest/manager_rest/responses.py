@@ -25,13 +25,15 @@ class BlueprintState(object):
     resource_fields = {
         'id': fields.String,
         'plan': fields.Raw,
+        'source': fields.Raw,
         'createdAt': fields.String(attribute='created_at'),
-        'updatedAt': fields.String(attribute='updated_at'),
+        'updatedAt': fields.String(attribute='updated_at')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
+        self.source = kwargs['source']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 
@@ -44,7 +46,7 @@ class BlueprintValidationStatus(object):
         'status': fields.String
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.blueprint_id = kwargs['blueprint_id']
         self.status = kwargs['status']
 
@@ -61,7 +63,7 @@ class Deployment(object):
         'plan': fields.Raw,
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.permalink = kwargs['permalink']
         self.created_at = kwargs['created_at']
@@ -78,9 +80,9 @@ class Workflow(object):
         'createdAt': fields.String(attribute='created_at')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.name = kwargs['name']
-        self.created_at = kwargs.get('created_at', None)
+        self.created_at = kwargs['created_at']
 
 
 @swagger.model
@@ -93,7 +95,7 @@ class Workflows(object):
         'deploymentId': fields.String(attribute='deployment_id')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.workflows = kwargs['workflows']
         self.blueprint_id = kwargs['blueprint_id']
         self.deployment_id = kwargs['deployment_id']
@@ -112,7 +114,7 @@ class Execution(object):
         'createdAt': fields.String(attribute='created_at')
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
@@ -133,11 +135,10 @@ class DeploymentNode(object):
         'reachable': fields.Boolean
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = \
-            kwargs['runtime_info'] if 'runtime_info' in kwargs else None
-        self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        self.runtime_info = kwargs['runtime_info']
+        self.reachable = kwargs['reachable']
         self.state_version = kwargs['state_version']
 
 
@@ -151,6 +152,6 @@ class DeploymentNodes(object):
             fields.Nested(DeploymentNode.resource_fields))
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.deployment_id = kwargs['deployment_id']
         self.nodes = kwargs['nodes']
