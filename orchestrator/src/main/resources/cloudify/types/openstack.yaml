@@ -92,3 +92,16 @@ types:
                   - create: neutron_plugin.floatingip.create
                   - delete: neutron_plugin.floatingip.delete
 
+relationships:
+    cloudify.openstack.relationships.port_connected_to_security_group:
+        derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship.lifecycle:
+                - establish: neutron_plugin.port.connect_security_group
+
+    clouidfy.openstack.relationships.subnet_connected_to_router:
+        derived_from: cloudify.relationships.connected_to
+        target_interfaces:
+            cloudify.interfaces.relationship.lifecycle:
+                - establish: neutron_plugin.router.connect_subnet
+                - unlink: neutron_plugin.router.disconnect_subnet
