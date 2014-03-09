@@ -65,9 +65,11 @@ class ESStorageManager(object):
         if not fields:
             return model_class(**doc['_source'])
         else:
-            if 'fields' not in doc:
-                raise RuntimeError('Illegal fields specified for query: {0}'
-                                   .format(fields))
+            if 'fields' not in doc or len(fields) != len(doc['fields']):
+                missing_fields = [field for field in fields if field not
+                                  in doc['fields']]
+                raise RuntimeError('Some or all fields specified for query '
+                                   'were missing: {0}'.format(missing_fields))
             fields_data = {k: v[0] for k, v in doc['fields'].iteritems()}
             for field in model_class.fields:
                 if field not in fields_data:

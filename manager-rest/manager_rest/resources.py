@@ -313,7 +313,7 @@ class BlueprintsSource(Resource):
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
-        nickname="getById",
+        nickname="getBlueprintSource",
         notes="Returns a blueprint's source by the blueprint's id."
     )
     @marshal_with(responses.BlueprintState.resource_fields)
