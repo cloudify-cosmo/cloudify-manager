@@ -99,7 +99,7 @@ relationships:
             cloudify.interfaces.relationship.lifecycle:
                 - establish: neutron_plugin.port.connect_security_group
 
-    clouidfy.openstack.relationships.subnet_connected_to_router:
+    cloudify.openstack.relationships.subnet_connected_to_router:
         derived_from: cloudify.relationships.connected_to
         target_interfaces:
             cloudify.interfaces.relationship.lifecycle:
