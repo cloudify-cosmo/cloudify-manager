@@ -106,6 +106,38 @@
                     ]
                 }
             ]
+        },
+        {
+            "path": "/states",
+            "description": "Workflow operations",
+            "operations": [
+                {
+                    "method": "POST",
+                    "summary": "Gets multiple workflows' states",
+                    "nickname": "getWorkflowsStates",
+                    "responseClass": "List[WorkflowState"],
+                    "parameters": [
+                        {
+                            "name": "workflows_ids",
+                            "description": "the ids of the workflows whose states should be retrieved",
+                            "required": "true",
+                            "allowMultiple": "false",
+                            "dataType": "string",
+                            "paramType": "body"
+                        }
+                    ],
+                    "responseMessages": [
+                        {
+                            "code": 200,
+                            "message": "Workflows states for the provided workflows ids returned"
+                        },
+                        {
+                            "code": 400,
+                            "message": "'workflows_ids' parameter is missing in request body, or one or more of the provided workflows ids doesn't exist"
+                        }
+                    ]
+                }
+            ]
         }
     ],
     "models": {
