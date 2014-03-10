@@ -134,11 +134,11 @@ class ManagerRestProcess(object):
             logger.info('Testing connection to manager rest service. '
                         '(Attempt: {0}/{1})'.format(attempt, timeout))
             attempt += 1
-            self.reset_data()
             started = self.started()
         if not started:
             raise RuntimeError('Failed opening connection to manager rest '
                                'service')
+        self.reset_data()
 
     def started(self):
         try:
