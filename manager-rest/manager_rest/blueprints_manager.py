@@ -136,12 +136,16 @@ class BlueprintsManager(object):
     def get_workflow_state(self, execution_id):
         execution = self.get_execution(execution_id)
 
-        state_response = self.get_workflows_states_by_internal_workflows_ids(
-            [execution.internal_workflow_id])[0]
+        response = self.get_workflows_states_by_internal_workflows_ids(
+            [execution.internal_workflow_id])
 
-        execution.status = state_response['state']
-        if execution.status == 'failed':
-            execution.error = state_response['error']
+        if len(response) > 0:
+            execution.status = response[0]['state']
+            if execution.status == 'failed':
+                execution.error = response[0]['error']
+        else:
+            #workflow not found in workflow-service, return unknown values
+            execution.status, execution.error = None, None
         return execution
 
     def get_workflows_states_by_internal_workflows_ids(self,

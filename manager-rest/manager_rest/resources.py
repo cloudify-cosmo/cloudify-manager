@@ -768,11 +768,19 @@ class DeploymentsIdExecutions(Resource):
                     [execution.internal_workflow_id for execution
                      in executions])
 
-            for index, execution in enumerate(executions):
-                execution.status = statuses_response[index]['state']
-                execution.error = statuses_response[index]['error']
+            status_by_id = {status['id']: status for status in
+                            statuses_response}
+            for execution in executions:
+                if execution.internal_workflow_id in status_by_id:
+                    status = status_by_id[execution.internal_workflow_id]
+                    execution.status = status['state']
+                    execution.error = status['error']
+                else:
+                    #execution not found in workflow service, return unknown
+                    # values
+                    execution.status, execution.error = None, None
         else:
-            #setting None values to dynamic fields
+            #setting None values to dynamic fields which weren't requested
             for execution in executions:
                 execution.status, execution.error = None, None
 

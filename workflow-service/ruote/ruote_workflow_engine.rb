@@ -83,7 +83,11 @@ class RuoteWorkflowEngine
 
   def get_workflow_state(wfid)
     begin
-      return get_workflows_states([wfid])[0]
+      @mutex.lock
+      verify_workflow_exists(wfid)
+      return @states[wfid]
+    ensure
+      @mutex.unlock
     end
   end
 
@@ -92,9 +96,13 @@ class RuoteWorkflowEngine
   def get_workflows_states(workflows_ids)
     begin
       @mutex.lock
-      workflows_ids.each { |wfid| verify_workflow_exists(wfid) }
-
-      return workflows_ids.map { |wfid| @states[wfid] }
+      result = []
+      for wfid in workflows_ids do
+        if @states.has_key?(wfid)
+          result.push(@states[wfid])
+        end
+      end
+      return result
     ensure
       @mutex.unlock
     end
