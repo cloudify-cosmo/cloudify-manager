@@ -117,7 +117,9 @@ class FileStorageManager(object):
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_info.items())
         #TODO: merge reachable field?
-        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info)
+        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
+                              reachable=None,
+                              state_version=node.state_version+1)
         data[NODES][node_id] = node
         self._dump_data(data)
 
@@ -138,10 +140,15 @@ class FileStorageManager(object):
         return [execution for execution in executions if execution
                 .deployment_id == deployment_id]
 
-    def get_blueprint(self, blueprint_id):
+    def get_blueprint(self, blueprint_id, fields=None):
         data = self._load_data()
         if blueprint_id in data[BLUEPRINTS]:
-            return data[BLUEPRINTS][blueprint_id]
+            bp = data[BLUEPRINTS][blueprint_id]
+            if fields:
+                for field in BlueprintState.fields:
+                    if field not in fields:
+                        setattr(bp, field, None)
+            return bp
         raise manager_exceptions.NotFoundError(
             "Blueprint {0} not found".format(blueprint_id))
 

@@ -20,8 +20,10 @@ __author__ = 'dan'
 from datetime import datetime
 import json
 import uuid
+import contextlib
 
 from dsl_parser import tasks
+from urllib2 import urlopen
 from flask import g, current_app
 
 from manager_rest import models
@@ -55,8 +57,8 @@ class BlueprintsManager(object):
     def executions_list(self):
         return self.sm.executions_list()
 
-    def get_blueprint(self, blueprint_id):
-        return self.sm.get_blueprint(blueprint_id)
+    def get_blueprint(self, blueprint_id, fields=None):
+        return self.sm.get_blueprint(blueprint_id, fields)
 
     def get_deployment(self, deployment_id):
         return self.sm.get_deployment(deployment_id)
@@ -72,6 +74,9 @@ class BlueprintsManager(object):
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
+
+            with contextlib.closing(urlopen(dsl_location)) as f:
+                source = f.read()
         except Exception, ex:
             raise DslParseException(*ex.args)
 
@@ -79,9 +84,11 @@ class BlueprintsManager(object):
         parsed_plan = json.loads(plan)
         if not blueprint_id:
             blueprint_id = parsed_plan['name']
+
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
-                                              created_at=now, updated_at=now)
+                                              created_at=now, updated_at=now,
+                                              source=source)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -128,16 +135,22 @@ class BlueprintsManager(object):
 
     def get_workflow_state(self, execution_id):
         execution = self.get_execution(execution_id)
-        state, error = self.get_workflow_state_by_internal_workflow_id(
-            execution.internal_workflow_id)
-        execution.status = state
-        if execution.status == 'failed':
-            execution.error = error
+
+        response = self.get_workflows_states_by_internal_workflows_ids(
+            [execution.internal_workflow_id])
+
+        if len(response) > 0:
+            execution.status = response[0]['state']
+            if execution.status == 'failed':
+                execution.error = response[0]['error']
+        else:
+            #workflow not found in workflow-service, return unknown values
+            execution.status, execution.error = None, None
         return execution
 
-    def get_workflow_state_by_internal_workflow_id(self, internal_wf_id):
-        response = workflow_client().get_workflow_status(internal_wf_id)
-        return response['state'], response['error']
+    def get_workflows_states_by_internal_workflows_ids(self,
+                                                       internal_wfs_ids):
+        return workflow_client().get_workflows_statuses(internal_wfs_ids)
 
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)
@@ -160,7 +173,9 @@ class BlueprintsManager(object):
 
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
-            node = models.DeploymentNode(id=node_id)
+            node = models.DeploymentNode(id=node_id, reachable=None,
+                                         runtime_info=None,
+                                         state_version=None)
             self.sm.put_node(node_id, node)
 
         return new_deployment

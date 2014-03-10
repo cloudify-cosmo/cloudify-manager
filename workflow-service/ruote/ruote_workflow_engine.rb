@@ -81,14 +81,28 @@ class RuoteWorkflowEngine
     raise 'not implemented'
   end
 
-  # Ruote only keeps state for running workflows, that means that workflows which were just launched
-  # but not yet started and terminated workflows won't have states kept in Ruote.
   def get_workflow_state(wfid)
     begin
       @mutex.lock
       verify_workflow_exists(wfid)
-
       return @states[wfid]
+    ensure
+      @mutex.unlock
+    end
+  end
+
+  # Ruote only keeps state for running workflows, that means that workflows which were just launched
+  # but not yet started and terminated workflows won't have states kept in Ruote.
+  def get_workflows_states(workflows_ids)
+    begin
+      @mutex.lock
+      result = []
+      for wfid in workflows_ids do
+        if @states.has_key?(wfid)
+          result.push(@states[wfid])
+        end
+      end
+      return result
     ensure
       @mutex.unlock
     end

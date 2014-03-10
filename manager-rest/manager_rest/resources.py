@@ -106,6 +106,8 @@ def setup_resources(api):
                      '/blueprints')
     api.add_resource(BlueprintsId,
                      '/blueprints/<string:blueprint_id>')
+    api.add_resource(BlueprintsSource,
+                     '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
                      '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(ExecutionsId,
@@ -307,6 +309,25 @@ class Blueprints(Resource):
         return BlueprintsUpload().do_request()
 
 
+class BlueprintsSource(Resource):
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="getBlueprintSource",
+        notes="Returns a blueprint's source by the blueprint's id."
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    @exceptions_handled
+    def get(self, blueprint_id):
+        """
+        Returns a blueprint by its id.
+        """
+        fields = {'id', 'source'}
+        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
+                                                           fields)
+        return responses.BlueprintState(**blueprint.to_dict())
+
+
 class BlueprintsId(Resource):
 
     @swagger.operation(
@@ -320,7 +341,9 @@ class BlueprintsId(Resource):
         """
         Returns a blueprint by its id.
         """
-        blueprint = get_blueprints_manager().get_blueprint(blueprint_id)
+        fields = {'id', 'plan', 'created_at', 'updated_at'}
+        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
+                                                           fields)
         return responses.BlueprintState(**blueprint.to_dict())
 
     @swagger.operation(
@@ -472,7 +495,9 @@ class DeploymentsIdNodes(Resource):
         nodes = []
         for node_id in node_ids:
             node_result = responses.DeploymentNode(id=node_id,
-                                                   state_version=None)
+                                                   state_version=None,
+                                                   reachable=None,
+                                                   runtime_info=None)
             if get_reachable_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
@@ -638,7 +663,8 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
+        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
+                                     reachable=None, state_version=None)
         node.state_version = get_storage_manager().put_node(node_id, node)
         return responses.DeploymentNode(**node.to_dict()), 201
 
@@ -699,7 +725,7 @@ class NodesId(Resource):
 
         node = models.DeploymentNode(
             id=node_id, runtime_info=request.json['runtime_info'],
-            state_version=request.json['state_version'])
+            state_version=request.json['state_version'], reachable=None)
         get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
             **get_storage_manager().get_node(node_id).to_dict())
@@ -741,13 +767,24 @@ class DeploymentsIdExecutions(Resource):
                           deployment_id)]
 
         if get_executions_statuses:
+            statuses_response = get_blueprints_manager()\
+                .get_workflows_states_by_internal_workflows_ids(
+                    [execution.internal_workflow_id for execution
+                     in executions])
+
+            status_by_id = {status['id']: status for status in
+                            statuses_response}
             for execution in executions:
-                execution.status, execution.error =\
-                    get_blueprints_manager()\
-                    .get_workflow_state_by_internal_workflow_id(
-                        execution.internal_workflow_id)
+                if execution.internal_workflow_id in status_by_id:
+                    status = status_by_id[execution.internal_workflow_id]
+                    execution.status = status['state']
+                    execution.error = status['error']
+                else:
+                    #execution not found in workflow service, return unknown
+                    # values
+                    execution.status, execution.error = None, None
         else:
-            #setting None values to dynamic fields
+            #setting None values to dynamic fields which weren't requested
             for execution in executions:
                 execution.status, execution.error = None, None
 
@@ -800,7 +837,8 @@ class DeploymentsIdWorkflows(Resource):
         """
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
-        workflows = [responses.Workflow(name=wf_name) for wf_name in
+        workflows = [responses.Workflow(name=wf_name, created_at=None) for
+                     wf_name in
                      deployment_workflows.keys()]
 
         return {
