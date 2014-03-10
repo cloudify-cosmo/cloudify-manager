@@ -763,11 +763,14 @@ class DeploymentsIdExecutions(Resource):
                           deployment_id)]
 
         if get_executions_statuses:
-            for execution in executions:
-                execution.status, execution.error =\
-                    get_blueprints_manager()\
-                    .get_workflow_state_by_internal_workflow_id(
-                        execution.internal_workflow_id)
+            statuses_response = get_blueprints_manager()\
+                .get_workflows_states_by_internal_workflows_ids(
+                    [execution.internal_workflow_id for execution
+                     in executions])
+
+            for index, execution in enumerate(executions):
+                execution.status = statuses_response[index]['state']
+                execution.error = statuses_response[index]['error']
         else:
             #setting None values to dynamic fields
             for execution in executions:
