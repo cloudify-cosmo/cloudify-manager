@@ -203,9 +203,9 @@ def _install_latest_pip(runner, worker_config):
         "wget https://raw2.github.com/pypa/pip/1.5/contrib/get-pip.py -O "
         "{0}/get-pip.py".format(worker_config['home']))
 
-    runner.sudo("sudo apt-get update -y")
-    runner.sudo("sudo apt-get install -f)
-    runner.sudo("sudo apt-get -y install python-setuptools")
+    runner.sudo("apt-get update -y")
+    runner.sudo("apt-get install -f)
+    runner.sudo("apt-get -y install python-setuptools")
 
     runner.sudo("python {0}/get-pip.py".format(worker_config['home']))
 
