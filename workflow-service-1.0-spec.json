@@ -115,7 +115,7 @@
                     "method": "POST",
                     "summary": "Gets multiple workflows' states",
                     "nickname": "getWorkflowsStates",
-                    "responseClass": "List[WorkflowState"],
+                    "responseClass": "List[WorkflowState]",
                     "parameters": [
                         {
                             "name": "workflows_ids",
