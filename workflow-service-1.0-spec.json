@@ -113,7 +113,7 @@
             "operations": [
                 {
                     "method": "POST",
-                    "summary": "Gets multiple workflows' states",
+                    "summary": "Gets multiple workflows' states (only returns states for existing workflows, does not raise exception on nonexistent ones)",
                     "nickname": "getWorkflowsStates",
                     "responseClass": "List[WorkflowState]",
                     "parameters": [
@@ -129,11 +129,11 @@
                     "responseMessages": [
                         {
                             "code": 200,
-                            "message": "Workflows states for the provided workflows ids returned"
+                            "message": "Workflows states for the provided workflows ids returned (if exist)"
                         },
                         {
                             "code": 400,
-                            "message": "'workflows_ids' parameter is missing in request body, or one or more of the provided workflows ids doesn't exist"
+                            "message": "'workflows_ids' parameter is missing in request body"
                         }
                     ]
                 }
