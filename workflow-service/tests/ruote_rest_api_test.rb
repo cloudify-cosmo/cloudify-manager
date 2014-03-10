@@ -151,6 +151,46 @@ define wf
     end
   end
 
+  def test_get_workflows_states
+    radial1 = %/
+define wf1
+  echo 'hello1!'
+/
+    post '/workflows', { :radial => radial1 }.to_json
+    assert_equal 201, last_response.status
+    wfid1 = parsed_response[:id]
+    radial2 = %/
+  define wf2
+    echo 'hello2!'
+  /
+    post '/workflows', { :radial => radial2 }.to_json
+    assert_equal 201, last_response.status
+    wfid2 = parsed_response[:id]
+    post "/states", { :workflows_ids => [wfid1, wfid2]}.to_json    
+    assert_equal wfid1, parsed_response[0][:id]
+    assert_equal wfid2, parsed_response[1][:id]
+    assert_include %w(pending launched terminated), parsed_response[0][:state]
+    assert_include %w(pending launched terminated), parsed_response[1][:state]
+  end
+
+  def test_get_workflows_states_nonexistent_workflow
+    radial = %/
+define wf
+  echo 'hello!'
+/
+    post '/workflows', { :radial => radial }.to_json
+    assert_equal 201, last_response.status
+    wfid = parsed_response[:id]
+
+    #querying for one existing id and one nonexistent id
+    begin
+      post "/states", { :workflows_ids => [wfid, 'woohoo']}.to_json
+      assert_fail_assertion 'expected exception'
+    rescue
+      assert_response_status 400
+    end
+  end
+
   def test_get_workflow_state
     radial = %/
 define wf
@@ -162,7 +202,7 @@ define wf
     get "/workflows/#{wfid}"
     assert_equal wfid, parsed_response[:id]
     assert_include %w(pending launched terminated), parsed_response[:state]
-  end
+  end  
 
   def test_workflow_not_exists
     wfid = 'woohoo'

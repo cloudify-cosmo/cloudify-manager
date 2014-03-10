@@ -42,5 +42,14 @@ class MockWorkflowClient(object):
             'error': None
         }
 
+    def get_workflows_statuses(self, workflows_ids):
+        return [
+            {
+                'state': 'terminated',
+                'error': None
+            }
+            for _ in workflows_ids
+        ]
+
     def cancel_workflow(self, workflow_id):
         return self.execute_workflow(None, None, None)

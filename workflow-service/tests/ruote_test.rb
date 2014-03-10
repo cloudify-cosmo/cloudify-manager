@@ -77,6 +77,33 @@ define wf
     assert_equal :pending, wf.state
   end
 
+  def test_workflows_states
+    radial1 = %/
+define wf1
+  echo 'waiting for 3 seconds...'
+  wait for: '3s'
+  echo 'done!'
+/
+    radial2 = %/
+define wf2
+  echo 'waiting for 3 seconds...'
+  wait for: '3s'
+  echo 'done!'
+/
+    wf1 = @ruote.launch(radial1)
+    assert_equal :pending, wf1.state
+    wf2 = @ruote.launch(radial2)
+    assert_equal :pending, wf2.state
+
+    workflows = @ruote.get_workflows_states([wf1.id, wf2.id])
+    assert_equal workflows[0].state, :pending
+    assert_equal workflows[1].state, :pending
+    sleep 5
+    workflows = @ruote.get_workflows_states([wf1.id, wf2.id])
+    assert_equal workflows[0].state, :terminated
+    assert_equal workflows[1].state, :terminated
+  end
+
   def test_workflow_state
     radial = %/
 define wf
