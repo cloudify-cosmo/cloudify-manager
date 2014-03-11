@@ -574,6 +574,8 @@ class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('state', type=str,
+                                       default='false', location='args')
         self._args_parser.add_argument('reachable', type=str,
                                        default='false', location='args')
         self._args_parser.add_argument('runtime', type=str,
@@ -618,11 +620,14 @@ class NodesId(Resource):
             'reachable', args['reachable'])
         get_runtime_state = verify_and_convert_bool(
             'runtime', args['runtime'])
+        get_state = verify_and_convert_bool('state', args['state'])
 
         reachable_state = None
-        if get_reachable_state:
+        state = None
+        if get_reachable_state or get_state:
             state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
+            state = state['state']
 
         runtime_state = None
         state_version = None
@@ -634,7 +639,9 @@ class NodesId(Resource):
             except manager_exceptions.NotFoundError:
                 runtime_state = {}
 
-        return responses.DeploymentNode(id=node_id, reachable=reachable_state,
+        return responses.DeploymentNode(id=node_id,
+                                        state=state,
+                                        reachable=reachable_state,
                                         runtime_info=runtime_state,
                                         state_version=state_version)
 

@@ -1,3 +1,2 @@
 define node_start
     execute_operation operation: 'cloudify.interfaces.lifecycle.start'
-    state action: 'set', node_id: '${node.id}', value: 'started'
