@@ -39,6 +39,5 @@ script:
    - "flake8 vagrant/"
    - "flake8 manager-rest/"
    - "flake8 workflows/"
-   - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"
-   - "nosetests workflows/workflow_tests/test_workflow:BasicWorkflowsTest.test_inject_properties_to_operation"
-   #- "nosetests workflows/workflow_tests --nologcapture --nocapture -v"
+   - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"   
+   - "nosetests workflows/workflow_tests --nologcapture --nocapture -v"
