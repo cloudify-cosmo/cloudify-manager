@@ -61,6 +61,9 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
         obj_conf.file_server_root = yaml_conf['file_server_root']
     if 'file_server_base_uri' in yaml_conf:
         obj_conf.file_server_base_uri = yaml_conf['file_server_base_uri']
+    if 'file_server_blueprints_folder' in yaml_conf:
+        obj_conf.file_server_blueprints_folder = \
+            yaml_conf['file_server_blueprints_folder']
     if 'workflow_service_base_uri' in yaml_conf:
         obj_conf.workflow_service_base_uri = \
             yaml_conf['workflow_service_base_uri']

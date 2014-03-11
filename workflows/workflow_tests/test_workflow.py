@@ -130,6 +130,27 @@ class BasicWorkflowsTest(TestCase):
         self.assertTrue('__cloudify_context' in invocation['kwargs'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
+    def test_plugin_get_resource(self):
+        dsl_path = resource("dsl/get_resource_in_plugin.yaml")
+        deploy(dsl_path)
+        from plugins.testmockoperations.tasks import \
+            get_resource_operation_invocations as testmock_get_invocations
+        invocations = self.send_task(testmock_get_invocations).get(
+            timeout=10)
+        self.assertEquals(1, len(invocations))
+        invocation = invocations[0]
+        with open(resource("dsl/basic.yaml")) as f:
+            basic_data = f.read()
+
+        #checking the resources are the correct data
+        self.assertEquals(basic_data, invocation['res1_data'])
+        self.assertEquals(basic_data, invocation['res2_data'])
+
+        #checking the custom filepath provided is indeed where the second
+        # resource was saved
+        self.assertEquals(invocation['custom_filepath'],
+                          invocation['res2_path'])
+
     def test_search(self):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'

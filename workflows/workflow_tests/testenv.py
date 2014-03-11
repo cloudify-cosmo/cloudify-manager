@@ -46,6 +46,8 @@ import elasticsearch
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
+FILE_SERVER_PORT = 53229
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -87,12 +89,14 @@ class ManagerRestProcess(object):
                  port,
                  file_server_dir,
                  file_server_base_uri,
-                 workflow_service_base_uri):
+                 workflow_service_base_uri,
+                 file_server_blueprints_folder):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
+        self.file_server_blueprints_folder = file_server_blueprints_folder
         self.client = CosmoManagerRestClient('localhost')
 
     def start(self, timeout=10):
@@ -101,7 +105,8 @@ class ManagerRestProcess(object):
         configuration = {
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
-            'workflow_service_base_uri': self.workflow_service_base_uri
+            'workflow_service_base_uri': self.workflow_service_base_uri,
+            'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
         config_path = tempfile.mktemp()
@@ -338,6 +343,9 @@ class CeleryWorkerProcess(object):
         environment['TEMP_DIR'] = self._plugins_tempdir
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
         environment['MANAGEMENT_IP'] = 'localhost'
+        environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
+            'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
+                                              FILE_SERVER_BLUEPRINTS_FOLDER)
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
 
@@ -758,7 +766,8 @@ class TestEnvironment(object):
                 manager_rest_port,
                 fileserver_dir,
                 file_server_base_uri,
-                worker_service_base_uri)
+                worker_service_base_uri,
+                FILE_SERVER_BLUEPRINTS_FOLDER)
             self._manager_rest_process.start()
 
             # ruote service

@@ -234,7 +234,10 @@ class BlueprintsUpload(object):
             #moving the app directory in the file server to be under a
             # directory named after the blueprint's app name field
             shutil.move(os.path.join(file_server_root, application_dir),
-                        os.path.join(file_server_root, blueprint.id))
+                        os.path.join(
+                            file_server_root,
+                            config.instance().file_server_blueprints_folder,
+                            blueprint.id))
             return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
