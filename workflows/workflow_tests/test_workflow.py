@@ -22,6 +22,7 @@ from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
 from workflow_tests.testenv import run_search as search
+from workflow_tests.testenv import get_blueprint
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
@@ -147,6 +148,16 @@ class BasicWorkflowsTest(TestCase):
         #expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
         self.assertEquals(4, len(hits))
 
+    def test_get_blueprint(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = 'my_new_blueprint'
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+
+        self.assertEqual(blueprint_id, deployment.blueprintId)
+        blueprint = get_blueprint(blueprint_id)
+        self.assertEqual(blueprint_id, blueprint.id)
+        self.assertTrue(len(blueprint.plan) > 0)
+        self.assertEqual('None', blueprint.source)
     def test_node_state_uninitialized(self):
         dsl_path = resource('dsl/node_states.yaml')
         _id = uuid.uuid1()

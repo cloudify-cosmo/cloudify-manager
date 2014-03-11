@@ -50,7 +50,7 @@ class ESStorageManager(object):
                 return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
                                                doc_type=doc_type,
                                                id=doc_id,
-                                               fields=[f for f in fields])
+                                               _source=[f for f in fields])
             else:
                 return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
                                                doc_type=doc_type,
@@ -65,12 +65,12 @@ class ESStorageManager(object):
         if not fields:
             return model_class(**doc['_source'])
         else:
-            if 'fields' not in doc or len(fields) != len(doc['fields']):
+            if len(fields) != len(doc['_source']):
                 missing_fields = [field for field in fields if field not
-                                  in doc['fields']]
+                                  in doc['_source']]
                 raise RuntimeError('Some or all fields specified for query '
                                    'were missing: {0}'.format(missing_fields))
-            fields_data = {k: v[0] for k, v in doc['fields'].iteritems()}
+            fields_data = doc['_source']
             for field in model_class.fields:
                 if field not in fields_data:
                     fields_data[field] = None
