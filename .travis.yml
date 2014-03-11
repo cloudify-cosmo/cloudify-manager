@@ -39,5 +39,5 @@ script:
    - "flake8 vagrant/"
    - "flake8 manager-rest/"
    - "flake8 workflows/"
-   - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"   
+   - "nosetests manager-rest/manager_rest/test --nologcapture --nocapture"
    - "nosetests workflows/workflow_tests --nologcapture --nocapture -v"
