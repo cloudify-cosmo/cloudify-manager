@@ -153,10 +153,8 @@ class ManagerRestProcess(object):
 
     def reset_data(self):
         #empties the storage index
-        #es = elasticsearch.Elasticsearch()
-        response = requests.delete("http://localhost:9200/cloudify_storage")
-        #response.raise_for_status()
-        #es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
+        es = elasticsearch.Elasticsearch()
+        es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
 
     def locate_manager_rest_dir(self):
         # start with current location
