@@ -498,6 +498,7 @@ class DeploymentsIdNodes(Resource):
         nodes = []
         for node_id in node_ids:
             node_result = responses.DeploymentNode(id=node_id,
+                                                   state=None,
                                                    state_version=None,
                                                    reachable=None,
                                                    runtime_info=None)
@@ -672,7 +673,7 @@ class NodesId(Resource):
         node = models.DeploymentNode(id=node_id, runtime_info=request.json,
                                      reachable=None, state_version=None)
         node.state_version = get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(**node.to_dict()), 201
+        return responses.DeploymentNode(state=None, **node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -733,7 +734,7 @@ class NodesId(Resource):
             id=node_id, runtime_info=request.json['runtime_info'],
             state_version=request.json['state_version'], reachable=None)
         get_storage_manager().update_node(node_id, node)
-        return responses.DeploymentNode(
+        return responses.DeploymentNode(state=None,
             **get_storage_manager().get_node(node_id).to_dict())
 
 
