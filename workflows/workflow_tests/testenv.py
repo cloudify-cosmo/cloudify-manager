@@ -565,8 +565,8 @@ class ElasticSearchProcess(object):
         es_index = IndicesClient(es)
         if es_index.exists(STORAGE_INDEX_NAME):
             logger.info(
-                "ElasticSearch index '{0}' already  exists and will be deleted".format(
-                    STORAGE_INDEX_NAME))
+                "ElasticSearch index '{0}' already  exists and "
+                "will be deleted".format(STORAGE_INDEX_NAME))
             es_index.delete(STORAGE_INDEX_NAME)
 
     def reset_data(self):
@@ -577,7 +577,8 @@ class ElasticSearchProcess(object):
             es = elasticsearch.Elasticsearch()
             es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
         except Exception as e:
-            logger.warn('ElasticSearch reset data failed: {0}'.format(e.message))
+            logger.warn(
+                'ElasticSearch reset data failed: {0}'.format(e.message))
 
     def _create_schema(self):
         vagrant_dir = self._locate_vagrant_dir()

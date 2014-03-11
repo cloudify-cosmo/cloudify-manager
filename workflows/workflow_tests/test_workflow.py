@@ -158,6 +158,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(blueprint_id, blueprint.id)
         self.assertTrue(len(blueprint.plan) > 0)
         self.assertEqual('None', blueprint.source)
+
     def test_node_state_uninitialized(self):
         dsl_path = resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
