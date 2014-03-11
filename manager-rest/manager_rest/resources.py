@@ -734,7 +734,8 @@ class NodesId(Resource):
             id=node_id, runtime_info=request.json['runtime_info'],
             state_version=request.json['state_version'], reachable=None)
         get_storage_manager().update_node(node_id, node)
-        return responses.DeploymentNode(state=None,
+        return responses.DeploymentNode(
+            state=None,
             **get_storage_manager().get_node(node_id).to_dict())
 
 
