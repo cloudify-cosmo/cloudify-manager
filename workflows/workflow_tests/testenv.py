@@ -153,8 +153,10 @@ class ManagerRestProcess(object):
 
     def reset_data(self):
         #empties the storage index
-        es = elasticsearch.Elasticsearch()
-        es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
+        #es = elasticsearch.Elasticsearch()
+        response = requests.delete("http://localhost:9200/cloudify_storage")
+        response.raise_for_status()
+        #es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
 
     def locate_manager_rest_dir(self):
         # start with current location
@@ -964,11 +966,19 @@ def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
     return state['runtimeInfo']
 
 
-def is_node_reachable(node_id):
+def get_node_instance(node_id):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id, get_reachable_state=True,
-                                  get_runtime_state=False)
-    return state['reachable'] is True
+    node_instance = client.get_node_state(node_id,
+                                          get_state=True,
+                                          get_runtime_properties=True)
+    return node_instance
+
+
+def is_node_started(node_id):
+    client = CosmoManagerRestClient('localhost')
+    state = client.get_node_state(node_id, get_state=True,
+                                  get_runtime_properties=False)
+    return state['state'] == 'started'
 
 
 def get_workflows_state():

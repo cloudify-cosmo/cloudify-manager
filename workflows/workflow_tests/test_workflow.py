@@ -15,12 +15,17 @@
 
 __author__ = 'idanmo'
 
+import uuid
 from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
 from workflow_tests.testenv import run_search as search
+from testenv import get_node_instance
+from testenv import get_deployment_nodes
+from cosmo_manager_rest_client.cosmo_manager_rest_client \
+    import CosmoManagerRestClient
 
 
 class BasicWorkflowsTest(TestCase):
@@ -142,20 +147,38 @@ class BasicWorkflowsTest(TestCase):
         #expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
         self.assertEquals(4, len(hits))
 
+    def test_node_state_uninitialized(self):
+        dsl_path = resource('dsl/node_states.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        client = CosmoManagerRestClient('localhost')
+        client.publish_blueprint(dsl_path, blueprint_id)
+        client.create_deployment(blueprint_id, deployment_id)
+        deployment_nodes = get_deployment_nodes(deployment_id)
+        self.assertEqual(1, len(deployment_nodes.nodes))
+        node_id = deployment_nodes.nodes[0].id
+        node_instance = get_node_instance(node_id)
+        self.assertEqual('uninitialized', node_instance['state'])
 
-    # TODO runtime-model: can be enabled if storage will be cleared
-    # after each test (currently impossible since storage is in-memory)
-    # def test_set_note_state_in_plugin(self):
-    #     dsl_path = resource("dsl/basic.yaml")
-    #     deploy(dsl_path)
-    #     from testenv import get_deployment_nodes
-    #     nodes = get_deployment_nodes()
-    #     self.assertEqual(1, len(nodes))
-    #
-    #     from testenv import logger
-    #     logger.info("nodes: {0}".format(nodes))
-    #
-    #     node_id = nodes[0]['id']
-    #     from testenv import get_node_state
-    #     node_state = get_node_state(node_id)
-    #     self.assertEqual(node_id, node_state['id'])
+    def test_node_states(self):
+        dsl_path = resource('dsl/node_states.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        deployment, _ = deploy(dsl_path,
+                               blueprint_id=blueprint_id,
+                               deployment_id=deployment_id)
+
+        from plugins.testmockoperations.tasks import get_node_states
+        node_states = self.send_task(get_node_states).get(timeout=10)
+
+        self.assertEquals(node_states, [
+            'creating', 'configuring', 'starting'
+        ])
+
+        deployment_nodes = get_deployment_nodes(deployment_id)
+        self.assertEqual(1, len(deployment_nodes.nodes))
+        node_id = deployment_nodes.nodes[0].id
+        node_instance = get_node_instance(node_id)
+        self.assertEqual('started', node_instance['state'])
