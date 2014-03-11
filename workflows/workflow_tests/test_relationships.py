@@ -36,13 +36,6 @@ class TestRelationships(TestCase):
         self.verify_assertions(hook='post-init',
                                runs_on_source=False)
 
-    def test_in_source_init_location_source(self):
-        dsl_path = resource(
-            "dsl/relationship-interface-in-source-init-location-source.yaml")
-        deploy(dsl_path)
-        self.verify_assertions(hook='after-touch-before-reachable-init',
-                               runs_on_source=True)
-
     def verify_assertions(self, hook, runs_on_source):
 
         if runs_on_source:
@@ -78,6 +71,15 @@ class TestRelationships(TestCase):
             self.assertEquals(
                 'target_property_value',
                 state['related_properties']['target_property_key'])
+            self.assertEquals(
+                'source_runtime_property_value',
+                state['runtime_properties']['source_runtime_property_key']
+            )
+            self.assertEquals(
+                'target_runtime_property_value',
+                state['related_runtime_properties']
+                     ['target_runtime_property_key']
+            )
         else:
             self.assertEquals('source_property_value',
                               state['related_properties']
@@ -85,15 +87,22 @@ class TestRelationships(TestCase):
             self.assertEquals(
                 'target_property_value',
                 state['properties']['target_property_key'])
+            self.assertEquals(
+                'source_runtime_property_value',
+                state['related_runtime_properties']
+                     ['source_runtime_property_key']
+            )
+            self.assertEquals(
+                'target_runtime_property_value',
+                state['runtime_properties']
+                     ['target_runtime_property_key']
+            )
 
         if hook == 'pre-init':
             self.assertTrue(node_id not in
                             state['capabilities'])
         elif hook == 'post-init':
             self.assertTrue(is_node_reachable(node_id))
-        elif hook == 'after-touch-before-reachable-init':
-            self.assertTrue(node_id not in
-                            state['capabilities'])
         else:
             self.fail('unhandled state')
 
@@ -109,11 +118,9 @@ class TestRelationships(TestCase):
 
         reachable_timestamp = state['time']
         if hook == 'pre-init':
+            self.assertLess(touched_timestamp, connector_timestamp)
             self.assertGreater(reachable_timestamp, connector_timestamp)
         elif hook == 'post-init':
             self.assertLess(reachable_timestamp, connector_timestamp)
-        elif hook == 'after-touch-before-reachable-init':
-            self.assertLess(touched_timestamp, connector_timestamp)
-            self.assertGreater(reachable_timestamp, connector_timestamp)
         else:
             self.fail('unhandled state')
