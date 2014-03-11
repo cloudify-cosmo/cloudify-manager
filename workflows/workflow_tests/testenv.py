@@ -138,7 +138,6 @@ class ManagerRestProcess(object):
         if not started:
             raise RuntimeError('Failed opening connection to manager rest '
                                'service')
-        self.reset_data()
 
     def started(self):
         try:
@@ -150,11 +149,6 @@ class ManagerRestProcess(object):
     def close(self):
         if not self.process is None:
             self.process.terminate()
-
-    def reset_data(self):
-        #empties the storage index
-        es = elasticsearch.Elasticsearch()
-        es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
 
     def locate_manager_rest_dir(self):
         # start with current location
@@ -553,6 +547,7 @@ class ElasticSearchProcess(object):
         self._verify_service_started(timeout=30)
         self._verify_service_responsiveness()
         logger.info("Elasticsearch service started [pid=%s]", self._pid)
+        self._remove_index_if_exists()
         self._create_schema()
 
     def close(self):
@@ -563,6 +558,26 @@ class ElasticSearchProcess(object):
                         self._pid)
             os.system("kill {0}".format(self._pid))
             self._verify_service_ended()
+
+    def _remove_index_if_exists(self):
+        es = elasticsearch.Elasticsearch()
+        from elasticsearch.client import IndicesClient
+        es_index = IndicesClient(es)
+        if es_index.exists(STORAGE_INDEX_NAME):
+            logger.info(
+                "ElasticSearch index '{0}' already  exists and will be deleted".format(
+                    STORAGE_INDEX_NAME))
+            es_index.delete(STORAGE_INDEX_NAME)
+
+    def reset_data(self):
+        """
+        Empties the storage index.
+        """
+        try:
+            es = elasticsearch.Elasticsearch()
+            es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
+        except Exception as e:
+            logger.warn('ElasticSearch reset data failed: {0}'.format(e.message))
 
     def _create_schema(self):
         vagrant_dir = self._locate_vagrant_dir()
@@ -814,9 +829,8 @@ class TestEnvironment(object):
 
     @staticmethod
     def reset_rest_manager_data():
-        if TestEnvironment._instance and \
-           TestEnvironment._instance._manager_rest_process:
-            TestEnvironment._instance._manager_rest_process.reset_data()
+        if TestEnvironment._elasticsearch_process:
+            TestEnvironment._elasticsearch_process.reset_data()
 
     @classmethod
     def _generate_riemann_config(cls, riemann_config_path):
