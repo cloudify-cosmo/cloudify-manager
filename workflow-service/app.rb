@@ -76,6 +76,23 @@ class RuoteServiceApp < Sinatra::Base
     end
   end
 
+  post '/states', :provides => :json do
+      content_type :json
+      begin
+        req = self.parse_request_body(request)
+        if req.has_key?(:workflows_ids)
+          workflows_states = $ruote_service.get_workflows_states(req[:workflows_ids])
+          JSON.pretty_generate workflows_states
+        else
+          error_response "'workflows_ids' is missing in request body", 400
+        end
+      rescue WorkflowDoesntExistError => e
+        error_response e.message, 400
+      rescue Exception => e
+        error_response e.message
+      end
+  end
+
   get '/workflows/:id', :provides => :json do
     content_type :json
     begin

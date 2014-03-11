@@ -763,13 +763,24 @@ class DeploymentsIdExecutions(Resource):
                           deployment_id)]
 
         if get_executions_statuses:
+            statuses_response = get_blueprints_manager()\
+                .get_workflows_states_by_internal_workflows_ids(
+                    [execution.internal_workflow_id for execution
+                     in executions])
+
+            status_by_id = {status['id']: status for status in
+                            statuses_response}
             for execution in executions:
-                execution.status, execution.error =\
-                    get_blueprints_manager()\
-                    .get_workflow_state_by_internal_workflow_id(
-                        execution.internal_workflow_id)
+                if execution.internal_workflow_id in status_by_id:
+                    status = status_by_id[execution.internal_workflow_id]
+                    execution.status = status['state']
+                    execution.error = status['error']
+                else:
+                    #execution not found in workflow service, return unknown
+                    # values
+                    execution.status, execution.error = None, None
         else:
-            #setting None values to dynamic fields
+            #setting None values to dynamic fields which weren't requested
             for execution in executions:
                 execution.status, execution.error = None, None
 
