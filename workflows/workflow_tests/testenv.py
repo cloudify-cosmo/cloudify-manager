@@ -828,9 +828,10 @@ class TestEnvironment(object):
             TestEnvironment._instance._celery_worker_process.restart()
 
     @staticmethod
-    def reset_rest_manager_data():
-        if TestEnvironment._elasticsearch_process:
-            TestEnvironment._elasticsearch_process.reset_data()
+    def reset_elasticsearch_data():
+        if TestEnvironment._instance and \
+                TestEnvironment._instance._elasticsearch_process:
+            TestEnvironment._instance._elasticsearch_process.reset_data()
 
     @classmethod
     def _generate_riemann_config(cls, riemann_config_path):
@@ -860,7 +861,7 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         TestEnvironment.restart_celery_worker()
-        TestEnvironment.reset_rest_manager_data()
+        TestEnvironment.reset_elasticsearch_data()
 
     def send_task(self, task, args=None):
         task_name = task.name.replace("plugins.", "")
