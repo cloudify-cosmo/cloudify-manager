@@ -939,6 +939,11 @@ def get_execution(execution_id):
     return client._executions_api.getById(execution_id)
 
 
+def get_blueprint(blueprint_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.get_blueprint(blueprint_id)
+
+
 def get_deployment_workflows(deployment_id):
     client = CosmoManagerRestClient('localhost')
     return client.list_workflows(deployment_id)
