@@ -15,12 +15,16 @@
 
 from time import time
 from cloudify.decorators import operation
+import tempfile
+import os
+import shutil
 
 
 state = []
 touched_time = None
 unreachable_call_order = []
 mock_operation_invocation = []
+get_resource_operation_invocation = []
 
 
 @operation
@@ -87,6 +91,43 @@ def mock_operation(ctx, mockprop, **kwargs):
         'mockprop': mockprop,
         'kwargs': kwargs
     })
+
+
+@operation
+def get_resource_operation(ctx, resource_path, **kwargs):
+    #trying to retrieve a resource
+    res1 = ctx.get_resource(resource_path)
+    if not res1:
+        raise RuntimeError('Failed to get resource {0}'.format(resource_path))
+    with open(res1, 'r') as f:
+        res1_data = f.read()
+    os.remove(res1)
+
+    #trying to retrieve a resource to a specific location
+    tempdir = tempfile.mkdtemp()
+    try:
+        filepath = os.path.join(tempdir, 'temp-resource-file')
+        res2 = ctx.get_resource(resource_path, filepath)
+        if not res2:
+            raise RuntimeError('Failed to get resource {0} into {1}'.format(
+                resource_path, filepath))
+        with open(res2, 'r') as f:
+            res2_data = f.read()
+    finally:
+        shutil.rmtree(tempdir)
+
+    global get_resource_operation_invocation
+    get_resource_operation_invocation.append({
+        'res1_data': res1_data,
+        'res2_data': res2_data,
+        'custom_filepath': filepath,
+        'res2_path': res2
+    })
+
+
+@operation
+def get_resource_operation_invocations(**kwargs):
+    return get_resource_operation_invocation
 
 
 @operation

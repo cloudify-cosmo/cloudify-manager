@@ -22,6 +22,9 @@ import tempfile
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
 
+FILE_SERVER_PORT = 53229
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+
 
 class BaseServerTestCase(unittest.TestCase):
 
@@ -44,7 +47,10 @@ class BaseServerTestCase(unittest.TestCase):
         test_config = Config()
         test_config.test_mode = True
         test_config.file_server_root = self.tmpdir
-        test_config.file_server_base_uri = 'http://localhost:53229'
+        test_config.file_server_base_uri = 'http://localhost:{0}'.format(
+            FILE_SERVER_PORT)
+        test_config.file_server_blueprints_folder = \
+            FILE_SERVER_BLUEPRINTS_FOLDER
         return test_config
 
     def post(self, resource_path, data):
