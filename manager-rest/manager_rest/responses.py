@@ -141,7 +141,7 @@ class DeploymentNode(object):
         self.runtime_info = kwargs['runtime_info']
         self.reachable = kwargs['reachable']
         self.state_version = kwargs['state_version']
-        self.state = kwargs['state'] if 'state' in kwargs else None
+        self.state = kwargs['state']
 
 
 @swagger.model
