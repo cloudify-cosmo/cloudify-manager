@@ -62,6 +62,7 @@ types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create: neutron_plugin.router.create
+                - delete: neutron_plugin.router.delete
 
     cloudify.openstack.port:
         derived_from: cloudify.types.base
