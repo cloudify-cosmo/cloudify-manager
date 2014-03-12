@@ -135,6 +135,11 @@ class FileStorageManager(object):
         data = self._load_data()
         return data[EXECUTIONS].values()
 
+    def get_blueprint_deployments(self, blueprint_id):
+        deployments = self.deployments_list()
+        return [deployment for deployment in deployments
+                if deployment.blueprint_id == blueprint_id]
+
     def get_deployment_executions(self, deployment_id):
         executions = self.executions_list()
         return [execution for execution in executions if execution
@@ -189,6 +194,16 @@ class FileStorageManager(object):
                 'Execution {0} already exists'.format(execution_id))
         data[EXECUTIONS][str(execution_id)] = execution
         self._dump_data(data)
+
+    def delete_blueprint(self, blueprint_id):
+        data = self._load_data()
+        if blueprint_id in data[BLUEPRINTS]:
+            bp = data[BLUEPRINTS][blueprint_id]
+            del(data[BLUEPRINTS][blueprint_id])
+            self._dump_data(data)
+            return bp
+        raise manager_exceptions.NotFoundError(
+            "Blueprint {0} not found".format(blueprint_id))
 
 
 def create():

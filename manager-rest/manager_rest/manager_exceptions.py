@@ -22,3 +22,7 @@ class ConflictError(Exception):
 
 class NotFoundError(Exception):
     pass
+
+
+class DependentExistsError(Exception):
+    pass

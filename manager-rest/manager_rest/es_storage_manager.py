@@ -71,10 +71,8 @@ class ESStorageManager(object):
                 raise RuntimeError('Some or all fields specified for query '
                                    'were missing: {0}'.format(missing_fields))
             fields_data = doc['_source']
-            for field in model_class.fields:
-                if field not in fields_data:
-                    fields_data[field] = None
-            return model_class(**fields_data)
+            return self._fill_missing_fields_and_deserialize(fields_data,
+                                                             model_class)
 
     def _put_doc_if_not_exists(self, doc_type, doc_id, value):
         try:
@@ -84,6 +82,26 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
+
+    def _delete_doc(self, doc_type, doc_id, model_class, id_field='id'):
+        try:
+            res = self._get_es_conn().delete(STORAGE_INDEX_NAME, doc_type,
+                                             doc_id)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "{0} {1} not found".format(doc_type, doc_id))
+
+        fields_data = {
+            id_field: res['_id']
+        }
+        return self._fill_missing_fields_and_deserialize(fields_data,
+                                                         model_class)
+
+    def _fill_missing_fields_and_deserialize(self, fields_data, model_class):
+        for field in model_class.fields:
+            if field not in fields_data:
+                fields_data[field] = None
+        return model_class(**fields_data)
 
     def nodes_list(self):
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
@@ -105,6 +123,12 @@ class ESStorageManager(object):
 
     def executions_list(self):
         return self._list_docs(EXECUTION_TYPE, Execution)
+
+    def get_blueprint_deployments(self, blueprint_id):
+        #TODO: make this using a specific search
+        deployments = self.deployments_list()
+        return [deployment for deployment in deployments if
+                deployment.blueprint_id == blueprint_id]
 
     def get_deployment_executions(self, deployment_id):
         #TODO: make this using a specific search
@@ -146,6 +170,10 @@ class ESStorageManager(object):
         del(doc_data['state_version'])
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
         return 1
+
+    def delete_blueprint(self, blueprint_id):
+        return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
+                                BlueprintState)
 
     def update_node(self, node_id, node):
         update_doc_data = node.to_dict()

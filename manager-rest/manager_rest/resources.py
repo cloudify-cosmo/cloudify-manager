@@ -59,6 +59,8 @@ def exceptions_handled(func):
             abort_conflict(e)
         except manager_exceptions.NotFoundError, e:
             abort_not_found(e)
+        except manager_exceptions.DependentExistsError, e:
+            abort_dependent_exists(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
     return wrapper
@@ -73,13 +75,20 @@ def abort_workflow_service_operation(workflow_service_error):
 
 
 def abort_conflict(conflict_error):
-    abort(409,
-          message='409: Conflict occurred - {0}'.format(str(conflict_error)))
+    abort_error(409, conflict_error)
 
 
 def abort_not_found(not_exists_error):
-    abort(404,
-          message='404: {0}'.format(str(not_exists_error)))
+    abort_error(404, not_exists_error)
+
+
+def abort_dependent_exists(depedent_exists_error):
+    abort_error(404, depedent_exists_error)
+
+
+def abort_error(status_code, error):
+    abort(status_code,
+          message='{0}: {1}'.format(status_code, str(error)))
 
 
 def verify_json_content_type():
@@ -383,6 +392,29 @@ class BlueprintsId(Resource):
         Submit a new blueprint with a blueprint_id.
         """
         return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="deleteById",
+        notes="deletes a blueprint by its id."
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    @exceptions_handled
+    def delete(self, blueprint_id):
+        #Note: The current delete semantics are such that if a deployment
+        # for the blueprint exists, the deletion operation will fail.
+        # However, there is no handling of possible concurrency issue with
+        # regard to that matter at the moment.
+        blueprint = get_blueprints_manager().delete_blueprint(blueprint_id)
+
+        #Delete blueprint resources from file server
+        blueprint_folder = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_blueprints_folder,
+            blueprint.id)
+        shutil.rmtree(blueprint_folder)
+
+        return responses.BlueprintState(**blueprint.to_dict()), 200
 
 
 class BlueprintsIdValidate(Resource):
