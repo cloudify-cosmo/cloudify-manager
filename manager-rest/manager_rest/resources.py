@@ -491,7 +491,6 @@ class DeploymentsIdNodes(Resource):
         get_state = verify_and_convert_bool(
             'state', args['state'])
 
-
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
