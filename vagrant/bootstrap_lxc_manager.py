@@ -583,6 +583,34 @@ rm /root/guest_additions.sh
                   'assigned to this machine')
             sys.exit(1)
 
+    def _install_elasticsearch(self):
+        self.wget("https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.tar.gz")
+        self.extract_tar_gz("elasticsearch-1.0.1.tar.gz")
+        command = "elasticsearch-1.0.1/bin/elasticsearch"
+
+        timeout_seconds = 60
+        print("Starting elasticsearch with web port set to: {0} "
+              "[timeout={1} seconds]".format(9200,
+                                             timeout_seconds))
+        self._process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
+        timeout = datetime.datetime.now() + datetime.timedelta(
+            seconds=timeout_seconds)
+        timeout_exceeded = False
+        pattern = ".*9200.*LISTEN"
+        # Wait until elasticsearch web port is in listening state
+        while not timeout_exceeded:
+            output = check_output(["netstat", "-nl"]).replace('\n', '')
+            match = re.match(pattern, output)
+            if match:
+                break
+            timeout_exceeded = datetime.datetime.now() > timeout
+            time.sleep(1)
+        if timeout_exceeded:
+            raise RuntimeError("Failed to start elasticsearch within a timeout "
+                               "of {0} seconds".format(timeout_seconds))
+        print("Elasticsearch has been successfully started")
+
     def _install_logstash(self):
         logstash_jar_name = "logstash-1.3.3-flatjar.jar"
         self.wget("https://download.elasticsearch.org/logstash/logstash/{0}"
@@ -638,6 +666,7 @@ rm /root/guest_additions.sh
                 self.install_vagrant()
             self.install_riemann()
             if self.install_logstash:
+                self._install_elasticsearch()
                 self._install_logstash()
                 self._run_elasticsearch_schema_creator()
             self.install_cosmo_manager()
