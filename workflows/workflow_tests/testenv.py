@@ -979,10 +979,10 @@ def get_deployment_executions(deployment_id, with_statuses=False):
     return client.list_deployment_executions(deployment_id, with_statuses)
 
 
-def get_deployment_nodes(deployment_id, get_reachable_state=False):
+def get_deployment_nodes(deployment_id, get_state=False):
     client = CosmoManagerRestClient('localhost')
     deployment_nodes = client.list_deployment_nodes(
-        deployment_id, get_reachable_state)
+        deployment_id, get_state)
     return deployment_nodes
 
 

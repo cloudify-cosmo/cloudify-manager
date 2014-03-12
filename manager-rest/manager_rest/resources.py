@@ -462,15 +462,17 @@ class DeploymentsIdNodes(Resource):
         self._args_parser = reqparse.RequestParser()
         self._args_parser.add_argument('reachable', type=str,
                                        default='false', location='args')
+        self._args_parser.add_argument('state', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNodes,
         nickname="list",
         notes="Returns an object containing nodes associated with "
               "this deployment.",
-        parameters=[{'name': 'reachable',
-                     'description': 'Specifies whether to return reachable '
-                                    'state for the nodes.',
+        parameters=[{'name': 'state',
+                     'description': 'Specifies whether to return state '
+                                    'for the nodes.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -486,13 +488,16 @@ class DeploymentsIdNodes(Resource):
         args = self._args_parser.parse_args()
         get_reachable_state = verify_and_convert_bool(
             'reachable', args['reachable'])
+        get_state = verify_and_convert_bool(
+            'state', args['state'])
+
 
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
         reachable_states = {}
-        if get_reachable_state:
+        if get_reachable_state or get_state:
             reachable_states = get_riemann_client().get_nodes_state(node_ids)
 
         nodes = []
@@ -502,9 +507,10 @@ class DeploymentsIdNodes(Resource):
                                                    state_version=None,
                                                    reachable=None,
                                                    runtime_info=None)
-            if get_reachable_state:
+            if get_reachable_state or get_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
+                node_result.state = state['state']
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -585,7 +591,7 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.DeploymentNode,
         nickname="getNodeState",
-        notes="Returns node runtime/reachable state "
+        notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
@@ -593,9 +599,8 @@ class NodesId(Resource):
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'reachable',
-                     'description': 'Specifies whether to return reachable '
-                                    'state.',
+                    {'name': 'state',
+                     'description': 'Specifies whether to return state.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -603,7 +608,7 @@ class NodesId(Resource):
                      'paramType': 'query'},
                     {'name': 'runtime',
                      'description': 'Specifies whether to return runtime '
-                                    'information.',
+                                    'properties.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
