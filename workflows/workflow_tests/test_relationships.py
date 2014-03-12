@@ -69,8 +69,8 @@ class TestRelationships(TestCase):
         self.assertTrue(node_id.startswith(node_id_id_prefix))
         self.assertTrue(related_id.startswith(related_id_prefix))
 
-        from testenv import is_node_reachable
-        self.assertTrue(is_node_reachable(related_id))
+        from testenv import is_node_started
+        self.assertTrue(is_node_started(related_id))
 
         if runs_on_source:
             self.assertEquals('source_property_value',
@@ -90,7 +90,7 @@ class TestRelationships(TestCase):
             self.assertTrue(node_id not in
                             state['capabilities'])
         elif hook == 'post-init':
-            self.assertTrue(is_node_reachable(node_id))
+            self.assertTrue(is_node_started(node_id))
         elif hook == 'after-touch-before-reachable-init':
             self.assertTrue(node_id not in
                             state['capabilities'])

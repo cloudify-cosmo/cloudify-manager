@@ -494,15 +494,17 @@ class DeploymentsIdNodes(Resource):
         self._args_parser = reqparse.RequestParser()
         self._args_parser.add_argument('reachable', type=str,
                                        default='false', location='args')
+        self._args_parser.add_argument('state', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNodes,
         nickname="list",
         notes="Returns an object containing nodes associated with "
               "this deployment.",
-        parameters=[{'name': 'reachable',
-                     'description': 'Specifies whether to return reachable '
-                                    'state for the nodes.',
+        parameters=[{'name': 'state',
+                     'description': 'Specifies whether to return state '
+                                    'for the nodes.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -518,24 +520,28 @@ class DeploymentsIdNodes(Resource):
         args = self._args_parser.parse_args()
         get_reachable_state = verify_and_convert_bool(
             'reachable', args['reachable'])
+        get_state = verify_and_convert_bool(
+            'state', args['state'])
 
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
         reachable_states = {}
-        if get_reachable_state:
+        if get_reachable_state or get_state:
             reachable_states = get_riemann_client().get_nodes_state(node_ids)
 
         nodes = []
         for node_id in node_ids:
             node_result = responses.DeploymentNode(id=node_id,
+                                                   state=None,
                                                    state_version=None,
                                                    reachable=None,
                                                    runtime_info=None)
-            if get_reachable_state:
+            if get_reachable_state or get_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
+                node_result.state = state['state']
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -606,6 +612,8 @@ class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('state', type=str,
+                                       default='false', location='args')
         self._args_parser.add_argument('reachable', type=str,
                                        default='false', location='args')
         self._args_parser.add_argument('runtime', type=str,
@@ -614,7 +622,7 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.DeploymentNode,
         nickname="getNodeState",
-        notes="Returns node runtime/reachable state "
+        notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
@@ -622,9 +630,8 @@ class NodesId(Resource):
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'reachable',
-                     'description': 'Specifies whether to return reachable '
-                                    'state.',
+                    {'name': 'state',
+                     'description': 'Specifies whether to return state.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -632,7 +639,7 @@ class NodesId(Resource):
                      'paramType': 'query'},
                     {'name': 'runtime',
                      'description': 'Specifies whether to return runtime '
-                                    'information.',
+                                    'properties.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -650,11 +657,14 @@ class NodesId(Resource):
             'reachable', args['reachable'])
         get_runtime_state = verify_and_convert_bool(
             'runtime', args['runtime'])
+        get_state = verify_and_convert_bool('state', args['state'])
 
         reachable_state = None
-        if get_reachable_state:
+        state = None
+        if get_reachable_state or get_state:
             state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
+            state = state['state']
 
         runtime_state = None
         state_version = None
@@ -666,7 +676,9 @@ class NodesId(Resource):
             except manager_exceptions.NotFoundError:
                 runtime_state = {}
 
-        return responses.DeploymentNode(id=node_id, reachable=reachable_state,
+        return responses.DeploymentNode(id=node_id,
+                                        state=state,
+                                        reachable=reachable_state,
                                         runtime_info=runtime_state,
                                         state_version=state_version)
 
@@ -697,7 +709,7 @@ class NodesId(Resource):
         node = models.DeploymentNode(id=node_id, runtime_info=request.json,
                                      reachable=None, state_version=None)
         node.state_version = get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(**node.to_dict()), 201
+        return responses.DeploymentNode(state=None, **node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -759,6 +771,7 @@ class NodesId(Resource):
             state_version=request.json['state_version'], reachable=None)
         get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
+            state=None,
             **get_storage_manager().get_node(node_id).to_dict())
 
 

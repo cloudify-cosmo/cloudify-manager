@@ -82,13 +82,13 @@ def get_manager_state():
         workflows[deployment_id] = client.list_workflows(deployment_id)
         deployment_nodes[deployment_id] = client.list_deployment_nodes(
             deployment_id,
-            get_reachable_state=True)
+            get_state=True)
         node_state[deployment_id] = {}
         for node in deployment_nodes[deployment_id].nodes:
                 node_state[deployment_id][node.id] = client.get_node_state(
                     node.id,
-                    get_reachable_state=True,
-                    get_runtime_state=True)
+                    get_state=True,
+                    get_runtime_properties=True)
 
     return {
         'blueprints': blueprints,
@@ -222,7 +222,7 @@ def assert_valid_deployment(before_state, after_state):
             ips = flatten_ips(networks)
             print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
-            assert value['reachable'] is True, 'vm node should be reachable: {0}'.format(nodes_state)
+            assert value['state'] is 'started', 'vm node should be started: {0}'.format(nodes_state)
         else:
             webserver_node_id = key
 

@@ -18,12 +18,14 @@ from cloudify.decorators import operation
 import tempfile
 import os
 import shutil
+from cloudify.manager import get_manager_rest_client
 
 
 state = []
 touched_time = None
 unreachable_call_order = []
 mock_operation_invocation = []
+node_states = []
 get_resource_operation_invocation = []
 
 
@@ -133,3 +135,19 @@ def get_resource_operation_invocations(**kwargs):
 @operation
 def get_mock_operation_invocations(**kwargs):
     return mock_operation_invocation
+
+
+@operation
+def append_node_state(ctx, **kwargs):
+    client = get_manager_rest_client()
+    node_state = client.get_node_state(ctx.node_id,
+                                       get_state=True,
+                                       get_runtime_properties=False)
+    global node_states
+    node_states.append(node_state['state'])
+
+
+@operation
+def get_node_states(**kwargs):
+    global node_states
+    return node_states

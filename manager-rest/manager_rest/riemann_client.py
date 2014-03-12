@@ -59,13 +59,16 @@ class RiemannClient(object):
 
         node_reachable_states = {}
         for node_id, states in node_result.iteritems():
-            node_reachable_state = {'reachable': False}
+            node_reachable_state = {
+                'reachable': False,
+                'state': 'uninitialized'
+            }
             for state in states:
                 host = state.host
-                node_reachable_state = {'reachable': False, 'host': host}
+                node_reachable_state['host'] = host
+                node_reachable_state['state'] = state.state
                 if 'started' in state.state:
-                    node_reachable_state = {'reachable': True,
-                                            'host': state.host}
+                    node_reachable_state['reachable'] = True
                     break
             node_reachable_states[node_id] = node_reachable_state
 

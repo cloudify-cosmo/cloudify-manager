@@ -10,36 +10,42 @@ define uninstall_deployment
         # wait for all dependents to be uninstalled first
         iterator on: '$f:node.dependents', to_v: 'dependent'
             log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
-            state action: 'wait', node_id: '${v:dependent}', reachable: 'false'
+            state action: 'wait', node_id: '${v:dependent}', value: 'deleted'
         unset 'v:dependent'
 
-        state action: 'get', node_id: '${node.id}', to_f: 'node_reachable'
-        log message: 'node reachable state is: ${node_reachable}'
-        # we only call uninstall on reachable nodes
-        sequence if: '${node_reachable} == true'
+        state action: 'get', node_id: '${node.id}', to_f: 'node_state'
+        log message: 'node state is: ${node_state}'
+
+        state action: 'set', node_id: '${node.id}', value: 'stopping'
+
+        # we only call stop on started nodes
+        sequence if: '${node_state} == started'
             event event: { "stage" => "Stopping node" }
             log message: 'executing stop workflow for node: ${node.id}'
-
             # 'stop' is a Ruote reserved word so therefore '_stop'
             set 'v:_stop': "$f:node.workflows.stop"
             _stop on_error: 'handle_stop_error'
             unset 'v:_stop'
 
-            execute_relationships_workflow workflow: 'unlink', on_error: 'pass'
+        state action: 'set', node_id: '${node.id}', value: 'stopped'
+        execute_relationships_workflow workflow: 'unlink', on_error: 'pass'
 
+        state action: 'set', node_id: '${node.id}', value: 'deleting'
+
+        # we only call delete on started nodes
+        sequence if: '${node_state} == started'
             event event: { "stage" => "Deleting node" }
             log message: 'executing delete workflow for node: ${node.id}'
             set 'v:delete': "$f:node.workflows.delete"
             delete on_error: 'handle_delete_error'
             unset 'v:delete'
 
-            state action: 'wait', node_id: '${node.id}', reachable: 'false'
+        state action: 'set', node_id: '${node.id}', value: 'deleted'
 
     remove_deployment_worker
 
     define handle_stop_error
         event event: { "stage" => "Error occurred when stopping node - ignoring..." }
-        state action: 'set', node_id: '${node.id}', value: 'stopped'
 
     define handle_delete_error
         event event: { "stage" => "Error occurred when deleting node - ignoring..." }
