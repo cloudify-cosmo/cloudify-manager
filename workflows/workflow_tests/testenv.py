@@ -573,9 +573,16 @@ class ElasticSearchProcess(object):
         es_index = IndicesClient(es)
         if es_index.exists(STORAGE_INDEX_NAME):
             logger.info(
-                "ElasticSearch index '{0}' already  exists and "
+                "Elasticsearch index '{0}' already  exists and "
                 "will be deleted".format(STORAGE_INDEX_NAME))
             es_index.delete(STORAGE_INDEX_NAME)
+            logger.info("Verifying Elasticsearch index was deleted...")
+            deadline = time.time() + 30
+            while es_index.exists(STORAGE_INDEX_NAME):
+                if time.time() > deadline:
+                    raise RuntimeError(
+                        'Elasticsearch index was not deleted after 30 seconds')
+                time.sleep(1)
 
     def reset_data(self):
         """
@@ -584,15 +591,24 @@ class ElasticSearchProcess(object):
         try:
             es = elasticsearch.Elasticsearch()
             es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
+            deadline = time.time() + 30
+            while es.count(index=STORAGE_INDEX_NAME, q='*')['count'] != 0:
+                if time.time() > deadline:
+                    raise RuntimeError(
+                        'Elasticsearch data was not deleted after 30 seconds')
+                time.sleep(1)
         except Exception as e:
             logger.warn(
-                'ElasticSearch reset data failed: {0}'.format(e.message))
+                'Elasticsearch reset data failed: {0}'.format(e.message))
 
     def _create_schema(self):
         vagrant_dir = self._locate_vagrant_dir()
         creator_script_path = path.join(vagrant_dir, "es_schema_creator.py")
-        subprocess.Popen(
-            shlex.split('{0} {1}'.format(sys.executable, creator_script_path)))
+        cmd = '{0} {1}'.format(sys.executable, creator_script_path)
+        status = os.system(cmd)
+        if status != 0:
+            raise RuntimeError(
+                'Elasticsearch create schema exited with {0}'.format(status))
         logger.info("Elasticsearch schema created successfully")
 
     def _locate_vagrant_dir(self):
