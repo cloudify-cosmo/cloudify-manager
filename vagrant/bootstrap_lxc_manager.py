@@ -584,7 +584,8 @@ rm /root/guest_additions.sh
             sys.exit(1)
 
     def _install_elasticsearch(self):
-        self.wget("https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.tar.gz")
+        self.wget("https://download.elasticsearch.org/elasticsearch/"
+                  "elasticsearch/elasticsearch-1.0.1.tar.gz")
         self.extract_tar_gz("elasticsearch-1.0.1.tar.gz")
         command = "elasticsearch-1.0.1/bin/elasticsearch"
 
@@ -607,8 +608,8 @@ rm /root/guest_additions.sh
             timeout_exceeded = datetime.datetime.now() > timeout
             time.sleep(1)
         if timeout_exceeded:
-            raise RuntimeError("Failed to start elasticsearch within a timeout "
-                               "of {0} seconds".format(timeout_seconds))
+            raise RuntimeError("Failed to start elasticsearch within a timeout"
+                               " of {0} seconds".format(timeout_seconds))
         print("Elasticsearch has been successfully started")
 
     def _install_logstash(self):
