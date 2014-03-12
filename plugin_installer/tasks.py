@@ -50,7 +50,7 @@ def install(ctx, plugin, **kwargs):
 
         management_ip = get_cosmo_properties()["management_ip"]
         if management_ip:
-            plugin["url"] = "http://{0}:53229/{1}/{2}.zip"\
+            plugin["url"] = "http://{0}:53229/blueprints/{1}/plugins/{2}.zip"\
                 .format(management_ip, ctx.blueprint_id, plugin['folder'])
 
     ctx.logger.info("Installing plugin from URL --> {0}"
