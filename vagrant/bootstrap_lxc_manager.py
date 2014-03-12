@@ -35,6 +35,9 @@ FNULL = open(os.devnull, 'w')
 
 USER_HOME = expanduser('~')
 
+FILE_SERVER_PORT = 53229
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+
 FABRIC_RUNNER_VERSION = 'develop'
 FABRIC_RUNNER = "https://github.com/CloudifySource/" \
                 "cosmo-fabric-runner/archive/{0}.zip"\
@@ -192,12 +195,14 @@ class ManagerRestProcess(object):
                  file_server_dir,
                  file_server_base_uri,
                  workflow_service_base_uri,
+                 file_server_blueprints_folder,
                  port=8100):
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.port = port
         self.manager_rest_path = manager_rest_path
         self.workflow_service_base_uri = workflow_service_base_uri
+        self.file_server_blueprints_folder = file_server_blueprints_folder
 
     def start(self, start_timeout=60):
         output_file = open('manager-rest.out', 'w')
@@ -206,7 +211,8 @@ class ManagerRestProcess(object):
         configuration = {
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
-            'workflow_service_base_uri': self.workflow_service_base_uri
+            'workflow_service_base_uri': self.workflow_service_base_uri,
+            'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
         config_path = tempfile.mktemp()
@@ -257,6 +263,8 @@ class VagrantLxcBoot:
     RIEMANN_PID = "RIEMANN_PID"
     RIEMANN_CONFIG = "RIEMANN_CONFIG"
     MANAGEMENT_IP = "MANAGEMENT_IP"
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = \
+        "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL"
     BROKER_URL = "BROKER_URL"
     MANAGER_REST_PORT = "MANAGER_REST_PORT"
 
@@ -395,14 +403,15 @@ class VagrantLxcBoot:
         workflow_service.start()
 
         file_server_dir = tempfile.mkdtemp()
-        file_server_base_uri = 'http://localhost:53229'
+        file_server_base_uri = 'http://localhost:{0}'.format(FILE_SERVER_PORT)
 
         self.start_file_server(file_server_dir)
 
         manager_rest = ManagerRestProcess(manager_rest_path,
                                           file_server_dir,
                                           file_server_base_uri,
-                                          workflow_service_base_uri)
+                                          workflow_service_base_uri,
+                                          FILE_SERVER_BLUEPRINTS_FOLDER)
         manager_rest.start()
 
     def start_file_server(self, file_server_dir, timeout=10):
@@ -442,7 +451,11 @@ class VagrantLxcBoot:
                 self.MANAGEMENT_IP: self.management_ip,
                 self.BROKER_URL: "amqp://guest:guest@{0}:5672//"
                                  .format(self.management_ip),
-                self.MANAGER_REST_PORT: "8100"
+                self.MANAGER_REST_PORT: "8100",
+                self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL:
+                "http://{0}:{1}/{2}".format(self.management_ip,
+                                            FILE_SERVER_PORT,
+                                            FILE_SERVER_BLUEPRINTS_FOLDER),
             }
         }
 

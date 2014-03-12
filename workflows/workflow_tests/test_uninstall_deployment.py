@@ -20,6 +20,7 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
 from testenv import set_node_stopped
+from testenv import get_node_instance
 from plugins.cloudmock import tasks as cloudmock
 
 
@@ -44,6 +45,9 @@ class TestUninstallDeployment(TestCase):
 
         result = self.send_task(is_unreachable_called, [node_id])
         self.assertTrue(result.get(timeout=10))
+
+        node_instance = get_node_instance(node_id)
+        self.assertEqual('deleted', node_instance['state'])
 
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
