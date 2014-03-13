@@ -27,7 +27,7 @@ define start_deployment_worker
       event event: { "stage" => "Installing management worker plugins" }
       iterator on: '$plan.management_plugins_to_install', to_v: 'plugin'
           log message: 'installing plugin: ${v:plugin.name} on host: ${node.id}'
-          event event: { "stage" => "Installing management plugin ${v:plugin}" }
+          event event: { "stage" => "Installing management plugin ${v:plugin.name}" }
           execute_task target: '${deployment_id}', exec: "plugin_installer.tasks.install", payload: {
             properties: {
               plugin: '$v:plugin'
