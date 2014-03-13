@@ -16,7 +16,7 @@
 __author__ = 'elip'
 
 PLUGIN_INSTALLER_VERSION = 'develop'
-COSMO_CELERY_COMMON_VERSION = 'feature/CLOUDIFY-2600-openstack-relationship-types'
+COSMO_CELERY_COMMON_VERSION = 'develop'
 KV_STORE_VERSION = 'develop'
 RIEMANN_CONFIGURER_VERSION = 'develop'
-AGENT_INSTALLER_VERSION = 'feature/CLOUDIFY-2600-openstack-relationship-types'
+AGENT_INSTALLER_VERSION = 'develop'
