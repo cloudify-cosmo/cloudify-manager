@@ -39,18 +39,23 @@ def install(ctx, plugin, **kwargs):
     """
     Installs plugin as celery task according to the provided plugins details.
     plugin parameter is expected to be in the following format:
-            { name: "...", url: "..." }
+            { name: "...", url: "..." } OR { name: "...", folder: "..." }
     The plugin url should be a URL pointing to either a zip or tar.gz file.
+    The plugin folder should be a a folder name inside the blueprint
+    'plugins' directory containing the plugin.
     """
 
-    ctx.logger.debug("installing plugin [%s] ", plugin)
+    if "folder" in plugin:
 
-    management_ip = get_cosmo_properties()["management_ip"]
-    if management_ip:
-        plugin["url"] = plugin['url'] \
-            .replace("#{plugin_repository}",
-                     "http://{0}:{1}".format(management_ip, "53229"))
+        # convert the folder into a url inside the file server
 
+        management_ip = get_cosmo_properties()["management_ip"]
+        if management_ip:
+            plugin["url"] = "http://{0}:53229/blueprints/{1}/plugins/{2}.zip"\
+                .format(management_ip, ctx.blueprint_id, plugin['folder'])
+
+    ctx.logger.info("Installing plugin from URL --> {0}"
+                    .format(plugin['url']))
     install_celery_plugin(plugin)
 
 
@@ -140,10 +145,6 @@ def install_celery_plugin(plugin):
     ``plugin['url']`` url to zipped version of the python project.
 
             - needed for pip installation.
-
-    ``plugin['name']`` is the full name of the plugin.
-
-            - needed for logging.
     """
 
     plugin_url = plugin["url"]
