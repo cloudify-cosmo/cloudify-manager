@@ -23,6 +23,8 @@ parser.add_argument('--key_name')
 parser.add_argument('--host_name')
 parser.add_argument('--management_ip')
 parser.add_argument('--image_name')
+parser.add_argument('--security_group')
+parser.add_argument('--management_network_name')
 args = parser.parse_args()
 
 ###################################
@@ -34,6 +36,8 @@ key_name = args.key_name
 host_name = args.host_name
 management_ip = args.management_ip
 image_name = args.image_name
+security_group = args.security_group
+management_network_name = args.management_network_name
 
 flavor_name = 'standard.xsmall'
 
@@ -133,7 +137,12 @@ def modify_blueprint():
     blueprint_name = '{0}_{1}'.format(blueprint_yaml['blueprint']['name'], time.time())
     blueprint_yaml['blueprint']['name'] = blueprint_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
+
+    #hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['management_network_name'] = management_network_name
+
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server'] = {}
+    #hello_yaml['type_implementations']['vm_openstack_host_impl'][
+    #    'properties']['server']['security_groups'] = [security_group]
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['name'] = host_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['image_name'] = image_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['flavor_name'] = flavor_name
@@ -173,6 +182,9 @@ def assert_valid_deployment(before_state, after_state):
     print 'Validating blueprints get by id is valid'
     blueprint_from_list = delta['blueprints'].values()[0]
     blueprint_by_id = client._blueprints_api.getById(blueprint_from_list.id)
+    # field is expected not to return from getById call, so before comparing
+    #  need to disable this field
+    blueprint_from_list.source = 'None'
     assert yaml.dump(blueprint_from_list) == yaml.dump(blueprint_by_id)
 
     print 'Validating 1 deployment'
@@ -222,7 +234,8 @@ def assert_valid_deployment(before_state, after_state):
             ips = flatten_ips(networks)
             print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
-            assert value['state'] is 'started', 'vm node should be started: {0}'.format(nodes_state)
+            assert value['state'] == 'started', 'vm node should be started: {'
+            '0}'.format(nodes_state)
         else:
             webserver_node_id = key
 
