@@ -16,9 +16,7 @@
 
 __author__ = 'dan'
 
-
 import os
-from os import path
 import tarfile
 import zipfile
 import urllib
@@ -26,9 +24,9 @@ import tempfile
 import shutil
 import uuid
 from functools import wraps
+from os import path
 
 import elasticsearch
-
 from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
@@ -39,7 +37,6 @@ from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import manager_exceptions
-
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
@@ -139,15 +136,14 @@ class BlueprintsUpload(object):
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
-        self._process_plugins(file_server_root, application_dir)
 
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
                                                   blueprint_id), 201
 
-    def _process_plugins(self, file_server_root, application_dir):
-        blueprint_directory = path.join(file_server_root, application_dir)
-        plugins_directory = path.join(blueprint_directory, 'plugins')
+    def _process_plugins(self, file_server_root, blueprint_id):
+        plugins_directory = path.join(file_server_root,
+                                      "blueprints", blueprint_id, "plugins")
         if not path.isdir(plugins_directory):
             return
         plugins = [path.join(plugins_directory, directory)
@@ -156,7 +152,9 @@ class BlueprintsUpload(object):
 
         for plugin_dir in plugins:
             final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(file_server_root, final_zip_name)
+            target_zip_path = path.join(file_server_root,
+                                        "blueprints", blueprint_id,
+                                        'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
     def _zip_dir(self, dir_to_zip, target_zip_path):
@@ -231,15 +229,17 @@ class BlueprintsUpload(object):
             blueprint = get_blueprints_manager().publish_blueprint(
                 dsl_path, alias_mapping, resources_base, blueprint_id)
 
-            #moving the app directory in the file server to be under a
-            # directory named after the blueprint's app name field
+            # moving the app directory in the file server to be under a
+            # directory named after the blueprint id
             shutil.move(os.path.join(file_server_root, application_dir),
                         os.path.join(
                             file_server_root,
                             config.instance().file_server_blueprints_folder,
                             blueprint.id))
+            self._process_plugins(file_server_root, blueprint.id)
             return blueprint
         except DslParseException, ex:
+            shutil.rmtree(os.path.join(file_server_root, application_dir))
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
 
     def _extract_application_file(self, file_server_root, application_dir):

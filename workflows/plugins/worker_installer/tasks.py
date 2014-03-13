@@ -29,8 +29,15 @@ workers_state = {}
 current_worker_name = None
 
 
+def fix_worker(ctx, worker_config):
+    if worker_config["name"] == "${node_id}":
+        worker_config["name"] = ctx.node_id
+
+
 @operation
 def install(ctx, worker_config, local=False, **kwargs):
+
+    fix_worker(ctx, worker_config)
 
     global current_worker_name
     global workers_state
@@ -42,6 +49,8 @@ def install(ctx, worker_config, local=False, **kwargs):
 
 @operation
 def start(ctx, worker_config, local=False, **kwargs):
+
+    fix_worker(ctx, worker_config)
 
     global workers_state
 
@@ -56,6 +65,8 @@ def start(ctx, worker_config, local=False, **kwargs):
 @operation
 def restart(ctx, worker_config, local=False, **kwargs):
 
+    fix_worker(ctx, worker_config)
+
     global workers_state
 
     ctx.logger.info("Restarting worker {0}".format(worker_config["name"]))
@@ -64,6 +75,8 @@ def restart(ctx, worker_config, local=False, **kwargs):
 
 @operation
 def stop(ctx, worker_config, local=False, **kwargs):
+
+    fix_worker(ctx, worker_config)
 
     global workers_state
 
@@ -77,6 +90,8 @@ def stop(ctx, worker_config, local=False, **kwargs):
 
 @operation
 def uninstall(ctx, worker_config, local=False, **kwargs):
+
+    fix_worker(ctx, worker_config)
 
     global workers_state
 
