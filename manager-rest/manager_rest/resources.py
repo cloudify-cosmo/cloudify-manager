@@ -142,7 +142,8 @@ class BlueprintsUpload(object):
                                                   blueprint_id), 201
 
     def _process_plugins(self, file_server_root, blueprint_id):
-        plugins_directory = path.join(file_server_root, "blueprints", blueprint_id, "plugins")
+        plugins_directory = path.join(file_server_root,
+                                      "blueprints", blueprint_id, "plugins")
         if not path.isdir(plugins_directory):
             return
         plugins = [path.join(plugins_directory, directory)
@@ -151,7 +152,8 @@ class BlueprintsUpload(object):
 
         for plugin_dir in plugins:
             final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(file_server_root, "blueprints", blueprint_id,
+            target_zip_path = path.join(file_server_root,
+                                        "blueprints", blueprint_id,
                                         'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
