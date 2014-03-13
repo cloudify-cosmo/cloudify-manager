@@ -138,11 +138,11 @@ def modify_blueprint():
     blueprint_yaml['blueprint']['name'] = blueprint_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['worker_config']['key'] = key_path
 
-    hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['management_network_name'] = management_network_name
+    #hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['management_network_name'] = management_network_name
 
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server'] = {}
-    hello_yaml['type_implementations']['vm_openstack_host_impl'][
-        'properties']['server']['security_groups'] = [security_group]
+    #hello_yaml['type_implementations']['vm_openstack_host_impl'][
+    #    'properties']['server']['security_groups'] = [security_group]
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['name'] = host_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['image_name'] = image_name
     hello_yaml['type_implementations']['vm_openstack_host_impl']['properties']['server']['flavor_name'] = flavor_name
