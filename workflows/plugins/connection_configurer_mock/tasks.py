@@ -39,7 +39,9 @@ def append_to_state(ctx):
         'related_id': ctx.related.node_id,
         'time': time(),
         'properties': ctx.properties,
+        'runtime_properties': ctx.runtime_properties,
         'related_properties': ctx.related.properties,
+        'related_runtime_properties': ctx.related.runtime_properties,
         'capabilities': ctx.capabilities.get_all()
     })
 

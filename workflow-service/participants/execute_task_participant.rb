@@ -161,6 +161,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     node_id = nil
     node_name = nil
     node_properties = nil
+    cloudify_runtime = nil
 
     if workitem.fields.has_key? RUOTE_RELATIONSHIP_NODE_ID
       source_id = workitem.fields[NODE]['id']
@@ -188,6 +189,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       node_in_context = PlanHolder.get_node(execution_id, node_id)
       node_name = node_in_context['name']
 
+      cloudify_runtime = node_properties[CLOUDIFY_RUNTIME]
       node_properties.delete(CLOUDIFY_RUNTIME)
       related_node_properties.delete(CLOUDIFY_RUNTIME)
 
@@ -201,6 +203,7 @@ class ExecuteTaskParticipant < Ruote::Participant
       if payload.has_key? PROPERTIES
         node_properties = payload[PROPERTIES].clone
         node_properties.delete(NODE_ID)
+        cloudify_runtime = node_properties[CLOUDIFY_RUNTIME]
         node_properties.delete(CLOUDIFY_RUNTIME)
       end
     end
@@ -217,8 +220,8 @@ class ExecuteTaskParticipant < Ruote::Participant
     context[:deployment_id] = workitem.fields['deployment_id'] || nil
     context[:execution_id] = workitem.fields['execution_id'] || nil
     context[:workflow_id] = workitem.fields['workflow_id'] || nil
-    if props.has_key? CLOUDIFY_RUNTIME
-      context[:capabilities] = props[CLOUDIFY_RUNTIME]
+    unless cloudify_runtime.nil?
+      context[:capabilities] = cloudify_runtime
     end
     props['__cloudify_context'] = context
   end
