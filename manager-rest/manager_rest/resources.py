@@ -237,6 +237,7 @@ class BlueprintsUpload(object):
             self._process_plugins(file_server_root, blueprint.id)
             return blueprint
         except DslParseException, ex:
+            shutil.rmtree(os.path.join(file_server_root, application_dir))
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
 
     def _extract_application_file(self, file_server_root, application_dir):
