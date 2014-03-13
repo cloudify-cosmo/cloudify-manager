@@ -395,10 +395,14 @@ class CeleryWorkerProcess(object):
         Celery's child process will have a different PID.
         """
         process_ids = self._get_celery_process_ids()
-        celery.control.broadcast('pool_shrink', arguments={'N': 0})
-        celery.control.broadcast('pool_grow', arguments={'N': 1})
+        for pid in process_ids:
+            # kill celery child process
+            if pid != str(self._process.pid):
+                logger.info("Killing celery worker [pid={0}]".format(pid))
+                os.system('kill -9 {0}'.format(pid))
         timeout = time.time() + 30
-        while self._get_celery_process_ids() == process_ids:
+        # wait until celery master creates a new child
+        while len(self._get_celery_process_ids()) != 2:
             time.sleep(1)
             if time.time() > timeout:
                 raise RuntimeError(
