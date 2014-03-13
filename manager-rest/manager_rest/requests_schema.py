@@ -16,7 +16,6 @@
 __author__ = 'dan'
 
 from flask.ext.restful import fields
-
 from flask_restful_swagger import swagger
 
 
@@ -33,4 +32,12 @@ class DeploymentRequest(object):
 
     resource_fields = {
         'blueprintId': fields.String,
+    }
+
+
+@swagger.model
+class ModifyExecutionRequest(object):
+
+    resource_fields = {
+        'action': fields.String
     }

@@ -1,0 +1,94 @@
+##################################################################################
+# Cloudify OpenStack built in types and plugins definitions.
+##################################################################################
+
+imports:
+    - cloudify.types
+
+plugins:
+    nova_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/CloudifySource/cloudify-openstack-plugin/archive/develop.zip
+    neutron_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/CloudifySource/cloudify-openstack-plugin/archive/develop.zip
+
+
+types:
+    cloudify.openstack.server:
+        derived_from: cloudify.types.host
+        properties:
+            - server
+            - management_network_name: ''
+            - nova_config: {}
+            - neutron_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - start: nova_plugin.server.start
+                - stop: nova_plugin.server.stop
+                - delete: nova_plugin.server.delete
+            cloudify.interfaces.host:
+                - get_state: nova_plugin.server.get_state
+
+    cloudify.openstack.subnet:
+        derived_from: cloudify.types.subnet
+        properties:
+            - subnet
+            - neutron_config: {}
+        interfaces:
+             cloudify.interfaces.lifecycle:
+                  - create: neutron_plugin.subnet.create
+                  # deleted together with network
+
+    cloudfiy.openstack.security_group:
+        derived_from: cloudify.types.base
+        properties:
+            - security_group
+            - neutron_config: {}
+            - rules: []
+            - disable_egress: false
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: neutron_plugin.security_group.create
+                - delete: neutron_plugin.security_group.delete
+
+    cloudify.openstack.router:
+        derived_from: cloudify.types.router
+        properties:
+            - router
+            - neutron_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: neutron_plugin.router.create
+
+    cloudify.openstack.port:
+        derived_from: cloudify.types.base
+        properties:
+            - port
+            - neutron_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: neutron_plugin.port.create
+
+    cloudify.openstack.network:
+        derived_from: cloudify.types.network
+        properties:
+            - network
+            - neutron_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: neutron_plugin.network.create
+                - delete: neutron_plugin.network.delete
+
+    cloudify.openstack.floatingip:
+        derived_from: cloudify.types.base
+        properties:
+            - floatingip
+            - neutron_config: {}
+        interfaces:
+             cloudify.interfaces.lifecycle:
+                  - create: neutron_plugin.floatingip.create
+                  - delete: neutron_plugin.floatingip.delete
+

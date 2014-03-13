@@ -27,6 +27,7 @@ class MockWorkflowClient(object):
             'type': 'workflow_state',
             'id': 'yokimura-yoshomati',
             'state': 'pending',
+            'error': None,
             'created': datetime.now()
         }
 
@@ -37,5 +38,20 @@ class MockWorkflowClient(object):
 
     def get_workflow_status(self, workflow_id):
         return {
-            'state': 'terminated'
+            'id': workflow_id,
+            'state': 'terminated',
+            'error': None
         }
+
+    def get_workflows_statuses(self, workflows_ids):
+        return [
+            {
+                'id': wfid,
+                'state': 'terminated',
+                'error': None
+            }
+            for wfid in workflows_ids
+        ]
+
+    def cancel_workflow(self, workflow_id):
+        return self.execute_workflow(None, None, None)

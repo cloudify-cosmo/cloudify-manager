@@ -68,6 +68,51 @@ define wf
     wait_for_workflow_state(res[:id], :terminated)
   end
 
+  def test_terminate
+    radial = %/
+define wf
+  echo 'this is nice'
+  sleep '100s'
+/
+    post '/workflows', { :radial => radial }.to_json
+    res = parsed_response
+    wait_for_workflow_state(res[:id], :launched)
+    post "/workflows/#{res[:id]}", { :action => 'cancel' }.to_json
+    assert_response_status 201
+    wait_for_workflow_state(res[:id], :terminated)
+  end
+
+  def test_terminate_no_action
+    radial = %/
+define wf
+  echo 'this is nice'
+  sleep '100s'
+/
+    post '/workflows', { :radial => radial }.to_json
+    res = parsed_response
+    wait_for_workflow_state(res[:id], :launched)
+    post "/workflows/#{res[:id]}", {}.to_json
+    assert_response_status 400
+  end
+
+  def test_terminate_invalid_action
+    radial = %/
+define wf
+  echo 'this is nice'
+  sleep '100s'
+/
+    post '/workflows', { :radial => radial }.to_json
+    res = parsed_response
+    wait_for_workflow_state(res[:id], :launched)
+    post "/workflows/#{res[:id]}", { :action => 'bad_action' }.to_json
+    assert_response_status 400
+  end
+
+  def test_terminate_wf_not_exists
+    post '/workflows/does-not-exist', { :action => 'cancel' }.to_json
+    assert_response_status 400
+  end
+
   def test_launch_tags
     radial = %/
 define wf
@@ -106,6 +151,46 @@ define wf
     end
   end
 
+  def test_get_workflows_states
+    radial1 = %/
+define wf1
+  echo 'hello1!'
+/
+    post '/workflows', { :radial => radial1 }.to_json
+    assert_equal 201, last_response.status
+    wfid1 = parsed_response[:id]
+    radial2 = %/
+  define wf2
+    echo 'hello2!'
+  /
+    post '/workflows', { :radial => radial2 }.to_json
+    assert_equal 201, last_response.status
+    wfid2 = parsed_response[:id]
+    post "/states", { :workflows_ids => [wfid1, wfid2]}.to_json    
+    assert_equal 200, last_response.status
+    assert_equal wfid1, parsed_response[0][:id]
+    assert_equal wfid2, parsed_response[1][:id]
+    assert_include %w(pending launched terminated), parsed_response[0][:state]
+    assert_include %w(pending launched terminated), parsed_response[1][:state]
+  end
+
+  def test_get_workflows_states_nonexistent_workflow
+    radial = %/
+define wf
+  echo 'hello!'
+/
+    post '/workflows', { :radial => radial }.to_json
+    assert_equal 201, last_response.status
+    wfid = parsed_response[:id]
+
+    #querying for one existing id and one nonexistent id, expecting to get just one back
+    post "/states", { :workflows_ids => [wfid, 'woohoo']}.to_json    
+    assert_equal 200, last_response.status
+    assert_equal 1, parsed_response.length
+    assert_equal wfid, parsed_response[0][:id]
+    assert_include %w(pending launched terminated), parsed_response[0][:state]
+  end
+
   def test_get_workflow_state
     radial = %/
 define wf
@@ -117,7 +202,7 @@ define wf
     get "/workflows/#{wfid}"
     assert_equal wfid, parsed_response[:id]
     assert_include %w(pending launched terminated), parsed_response[:state]
-  end
+  end  
 
   def test_workflow_not_exists
     wfid = 'woohoo'

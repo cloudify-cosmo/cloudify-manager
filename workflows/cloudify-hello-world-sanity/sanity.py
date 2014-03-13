@@ -82,13 +82,13 @@ def get_manager_state():
         workflows[deployment_id] = client.list_workflows(deployment_id)
         deployment_nodes[deployment_id] = client.list_deployment_nodes(
             deployment_id,
-            get_reachable_state=True)
+            get_state=True)
         node_state[deployment_id] = {}
         for node in deployment_nodes[deployment_id].nodes:
                 node_state[deployment_id][node.id] = client.get_node_state(
                     node.id,
-                    get_reachable_state=True,
-                    get_runtime_state=True)
+                    get_state=True,
+                    get_runtime_properties=True)
 
     return {
         'blueprints': blueprints,
@@ -214,15 +214,15 @@ def assert_valid_deployment(before_state, after_state):
     public_ip = None
     webserver_node_id = None
     for key, value in nodes_state.items():
-        assert 'ip' in value['runtimeInfo'], 'Missing ip in runtimeInfo: {0}'.format(nodes_state)
         if key.startswith('vm'):
-            assert 'ips' in value['runtimeInfo'], 'Missing ips in runtimeInfo: {0}'.format(nodes_state)
+            assert 'ip' in value['runtimeInfo'], 'Missing ip in runtimeInfo: {0}'.format(nodes_state)
+            assert 'networks' in value['runtimeInfo'], 'Missing networks in runtimeInfo: {0}'.format(nodes_state)
             private_ip = value['runtimeInfo']['ip']
-            ips = value['runtimeInfo']['ips']
-            ips = flatten_ips(ips)
+            networks = value['runtimeInfo']['networks']
+            ips = flatten_ips(networks)
             print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
-            assert value['reachable'] is True, 'vm node should be reachable: {0}'.format(nodes_state)
+            assert value['state'] is 'started', 'vm node should be started: {0}'.format(nodes_state)
         else:
             webserver_node_id = key
 
@@ -234,18 +234,14 @@ def assert_valid_deployment(before_state, after_state):
     assert webserver_node_id in web_server_page_response.text, fail_message
 
 
-def flatten_ips(ips):
+def flatten_ips(networks):
     flattened_ips = []
-    for element in ips:
-        if not isinstance(element, list):
-            flattened_ips.append(element)
+    for k, v in networks.iteritems():
+        if not isinstance(v, list):
+            flattened_ips.append(v)
         else:
-            for subelement in element:
-                if not isinstance(subelement, list):
-                    flattened_ips.append(subelement)
-                else:
-                    for ip in subelement:
-                        flattened_ips.append(ip)
+            for ip in v:
+                flattened_ips.append(ip)
     return flattened_ips
 
 

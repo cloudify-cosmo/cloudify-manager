@@ -8,34 +8,41 @@ define install_deployment
 
     log message: 'processing nodes: ${v:plan.nodes}'
     concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
+
+        state action: 'set', node_id: '${node.id}', value: 'initializing'
+
         log message: 'processing node: ${f:node}'
         iterator on: '$f:node.relationships', to_v: 'relationship'
             log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
-            state action: 'wait', node_id: '${v:relationship.target_id}', reachable: 'true'
+            state action: 'wait', node_id: '${v:relationship.target_id}', value: 'started'
         unset 'v:relationship'
 
+        state action: 'set', node_id: '${node.id}', value: 'creating'
         event event: { "stage" => "Creating node" }
         log message: 'executing create workflow for node: ${node.id}'
         set 'v:create': "$f:node.workflows.create"
         create
         unset 'v:create'
+        state action: 'set', node_id: '${node.id}', value: 'created'
 
         execute_relationships_workflow workflow: 'preconfigure'
 
+        state action: 'set', node_id: '${node.id}', value: 'configuring'
         event event: { "stage" => "Configuring node" }
         log message: 'executing configure workflow for node: ${node.id}'
         set 'v:configure': "$f:node.workflows.configure"
         configure
         unset 'v:configure'
+        state action: 'set', node_id: '${node.id}', value: 'configured'
 
         execute_relationships_workflow workflow: 'postconfigure'
 
+        state action: 'set', node_id: '${node.id}', value: 'starting'
         event event: { "stage" => "Starting node" }
         log message: 'executing start workflow for node: ${node.id}'
         set 'v:start': "$f:node.workflows.start"
         start
         unset 'v:start'
-
-        state node_id: '${node.id}', reachable: 'true'
+        state action: 'set', node_id: '${node.id}', value: 'started'
 
         execute_relationships_workflow workflow: 'establish'

@@ -15,11 +15,18 @@
 
 __author__ = 'idanmo'
 
+import uuid
 from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
+from workflow_tests.testenv import run_search as search
+from workflow_tests.testenv import get_blueprint
+from testenv import get_node_instance
+from testenv import get_deployment_nodes
+from cosmo_manager_rest_client.cosmo_manager_rest_client \
+    import CosmoManagerRestClient
 
 
 class BasicWorkflowsTest(TestCase):
@@ -27,7 +34,7 @@ class BasicWorkflowsTest(TestCase):
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
-        deployment = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
 
@@ -39,7 +46,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deployment = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
 
         self.assertEquals('mock_app', deployment.blueprintId)
 
@@ -54,7 +61,7 @@ class BasicWorkflowsTest(TestCase):
     @timeout(seconds=60)
     def test_execute_operation_failure(self):
         from plugins.cloudmock.tasks import set_raise_exception_on_start
-        self.send_task(set_raise_exception_on_start)
+        self.send_task(set_raise_exception_on_start).get(timeout=10)
         dsl_path = resource("dsl/basic.yaml")
         try:
             deploy(dsl_path)
@@ -93,7 +100,8 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dsl_with_manager_plugin(self):
         dsl_path = resource("dsl/with_manager_plugin.yaml")
-        deployment_id = deploy(dsl_path).id
+        deployment, _ = deploy(dsl_path)
+        deployment_id = deployment.id
 
         from plugins.worker_installer.tasks import \
             RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
@@ -132,19 +140,88 @@ class BasicWorkflowsTest(TestCase):
         self.assertTrue('__cloudify_context' in invocation['kwargs'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
-    # TODO runtime-model: can be enabled if storage will be cleared
-    # after each test (currently impossible since storage is in-memory)
-    # def test_set_note_state_in_plugin(self):
-    #     dsl_path = resource("dsl/basic.yaml")
-    #     deploy(dsl_path)
-    #     from testenv import get_deployment_nodes
-    #     nodes = get_deployment_nodes()
-    #     self.assertEqual(1, len(nodes))
-    #
-    #     from testenv import logger
-    #     logger.info("nodes: {0}".format(nodes))
-    #
-    #     node_id = nodes[0]['id']
-    #     from testenv import get_node_state
-    #     node_state = get_node_state(node_id)
-    #     self.assertEqual(node_id, node_state['id'])
+    def test_plugin_get_resource(self):
+        dsl_path = resource("dsl/get_resource_in_plugin.yaml")
+        deploy(dsl_path)
+        from plugins.testmockoperations.tasks import \
+            get_resource_operation_invocations as testmock_get_invocations
+        invocations = self.send_task(testmock_get_invocations).get(
+            timeout=10)
+        self.assertEquals(1, len(invocations))
+        invocation = invocations[0]
+        with open(resource("dsl/basic.yaml")) as f:
+            basic_data = f.read()
+
+        #checking the resources are the correct data
+        self.assertEquals(basic_data, invocation['res1_data'])
+        self.assertEquals(basic_data, invocation['res2_data'])
+
+        #checking the custom filepath provided is indeed where the second
+        # resource was saved
+        self.assertEquals(invocation['custom_filepath'],
+                          invocation['res2_path'])
+
+    def test_search(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = 'my_new_blueprint'
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+
+        self.assertEqual(blueprint_id, deployment.blueprintId)
+
+        from plugins.cloudmock.tasks import get_machines
+        result = self.send_task(get_machines)
+        machines = result.get(timeout=10)
+
+        self.assertEquals(1, len(machines))
+        result = search('')
+        hits = map(lambda x: x['_source'], result['hits']['hits'])
+
+        #expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
+        self.assertEquals(4, len(hits))
+
+    def test_get_blueprint(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = 'my_new_blueprint'
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+
+        self.assertEqual(blueprint_id, deployment.blueprintId)
+        blueprint = get_blueprint(blueprint_id)
+        self.assertEqual(blueprint_id, blueprint.id)
+        self.assertTrue(len(blueprint.plan) > 0)
+        self.assertEqual('None', blueprint.source)
+
+    def test_node_state_uninitialized(self):
+        dsl_path = resource('dsl/node_states.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        client = CosmoManagerRestClient('localhost')
+        client.publish_blueprint(dsl_path, blueprint_id)
+        client.create_deployment(blueprint_id, deployment_id)
+        deployment_nodes = get_deployment_nodes(deployment_id)
+        self.assertEqual(1, len(deployment_nodes.nodes))
+        node_id = deployment_nodes.nodes[0].id
+        node_instance = get_node_instance(node_id)
+        self.assertEqual('uninitialized', node_instance['state'])
+
+    def test_node_states(self):
+        dsl_path = resource('dsl/node_states.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        deployment, _ = deploy(dsl_path,
+                               blueprint_id=blueprint_id,
+                               deployment_id=deployment_id)
+
+        from plugins.testmockoperations.tasks import get_node_states
+        node_states = self.send_task(get_node_states).get(timeout=10)
+
+        self.assertEquals(node_states, [
+            'creating', 'configuring', 'starting'
+        ])
+
+        deployment_nodes = get_deployment_nodes(deployment_id)
+        self.assertEqual(1, len(deployment_nodes.nodes))
+        node_id = deployment_nodes.nodes[0].id
+        node_instance = get_node_instance(node_id)
+        self.assertEqual('started', node_instance['state'])

@@ -56,7 +56,8 @@ setup(
         "pika==0.9.13",
         "cosmo-plugin-plugin-installer",
         "cosmo-manager-rest-client",
-        "bernhard==0.1.0"
+        "bernhard==0.1.0",
+        'elasticsearch==1.0.0'
     ],
     test_requires=[
         "nose"

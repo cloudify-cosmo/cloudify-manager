@@ -23,7 +23,7 @@ require 'riemann/client'
 require_relative '../utils/logs'
 
 ######
-# Participant getting/waiting to/for node reachable state.
+# Participant getting/waiting to/for node state.
 # If there's a node in context, by default node runtime state will be read from storage and injected
 # to the node in context (usually relevant when there are relationships between nodes).
 #
@@ -32,12 +32,13 @@ class NodeStateParticipant < Ruote::Participant
   NODE_ID = 'node_id'
   MATCHES_FIELD_PARAM_NAME = 'to_f'
   MANAGER_REST_BASE_URI = 'MANAGER_REST_BASE_URI'
-  REACHABLE = 'reachable'
+  VALUE = 'value'
   NODE = 'node'
   ACTION = 'action'
   WAIT = 'wait'
   SET = 'set'
-  VALID_ACTIONS = [WAIT, 'get', SET].to_set
+  GET = 'get'
+  VALID_ACTIONS = [WAIT, GET, SET].to_set
 
   def do_not_thread
     false
@@ -64,7 +65,7 @@ class NodeStateParticipant < Ruote::Participant
       wait_until_matches = false
       if action.eql? WAIT
         wait_until_matches = true
-        raise "#{REACHABLE} parameter is not defined for node state participant" unless (workitem.params[REACHABLE] || '').length > 0
+        raise "#{VALUE} parameter is not defined for node state participant" unless (workitem.params[VALUE] || '').length > 0
       end
 
       base_uri = ENV[MANAGER_REST_BASE_URI]
@@ -72,7 +73,7 @@ class NodeStateParticipant < Ruote::Participant
       current_node = workitem.fields[PreparePlanParticipant::NODE] || nil
       result_field = workitem.params[MATCHES_FIELD_PARAM_NAME] || nil
 
-      log(:debug, "Node state participant called [context=#{current_node['id'] || nil}, action=#{action}, node_id=#{node_id}, value=#{workitem.params[REACHABLE]}, result_field=#{result_field}]", {
+      log(:debug, "Node state participant called [context=#{current_node['id'] || nil}, action=#{action}, node_id=#{node_id}, value=#{workitem.params[VALUE]}, result_field=#{result_field}]", {
           :workitem => workitem
       })
 
@@ -82,18 +83,18 @@ class NodeStateParticipant < Ruote::Participant
       response = RestClient.get(url)
       node_state = JSON.parse(response.to_str)
 
-      reachable = node_state[REACHABLE]
+      actual_state = node_state['state']
 
       if wait_until_matches
-        requested_reachable_state = workitem.params[REACHABLE]
-        matches = requested_reachable_state.to_s.eql? reachable.to_s
+        requested_state = workitem.params[VALUE]
+        matches = requested_state.to_s.eql? actual_state.to_s
         unless result_field.nil?
           workitem.fields[result_field] = matches
         end
 
         if matches
           # if there's a node in context, inject the requested node's runtime state
-          if requested_reachable_state and not current_node.nil?
+          if requested_state and not current_node.nil?
             if node_state.has_key? 'runtimeInfo'
               current_node = workitem.fields[PreparePlanParticipant::NODE]
               properties = current_node[PreparePlanParticipant::PROPERTIES]
@@ -101,17 +102,17 @@ class NodeStateParticipant < Ruote::Participant
             end
           end
         elsif result_field.nil?
-          raise "node reachable state does not match [requested=#{requested_reachable_state}, actual=#{reachable}"
+          raise "node state does not match [requested=#{requested_state}, actual=#{actual_state}"
         end
 
       elsif not result_field.nil?
-        log(:debug, "Node reachable state is set as '#{result_field}' workitem field [state=#{reachable}]", {
+        log(:debug, "Node state is set as '#{result_field}' workitem field [state=#{actual_state}]", {
             :workitem => workitem
         })
-        workitem.fields[result_field] = reachable
+        workitem.fields[result_field] = actual_state
       end
 
-      log(:debug, "Wait for node state result [action=#{action}, node_id=#{node_id}, matches=#{matches}, requested_value=#{requested_reachable_state}, result_field=#{result_field}", {
+      log(:debug, "Wait for node state result [action=#{action}, node_id=#{node_id}, matches=#{matches}, requested_value=#{requested_state}, result_field=#{result_field}", {
           :workitem => workitem
       })
 

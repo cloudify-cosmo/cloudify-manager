@@ -31,33 +31,20 @@ from flask import request
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
-import models
-import config
-import responses
-import requests_schema
-import chunked
-from blueprints_manager import DslParseException, \
-    BlueprintAlreadyExistsException
-from workflow_client import WorkflowServiceError
-from manager_exceptions import ConflictError
+from manager_rest import config
+from manager_rest import models
+from manager_rest import responses
+from manager_rest import requests_schema
+from manager_rest import chunked
+from manager_rest import manager_exceptions
+from manager_rest.storage_manager import get_storage_manager
+from manager_rest.workflow_client import WorkflowServiceError
+from manager_rest.blueprints_manager import (DslParseException,
+                                             get_blueprints_manager)
+from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
-
-
-def blueprints_manager():
-    import blueprints_manager
-    return blueprints_manager.instance()
-
-
-def storage_manager():
-    import storage_manager
-    return storage_manager.instance()
-
-
-def riemann_client():
-    import riemann_client
-    return riemann_client.instance()
 
 
 def exceptions_handled(func):
@@ -65,48 +52,13 @@ def exceptions_handled(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ConflictError, e:
+        except manager_exceptions.ConflictError, e:
             abort_conflict(e)
+        except manager_exceptions.NotFoundError, e:
+            abort_not_found(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
     return wrapper
-
-
-def verify_json_content_type():
-    if request.content_type != 'application/json':
-        abort(415, message='415: Content type must be application/json')
-
-
-def verify_blueprint_exists(blueprint_id):
-    if blueprints_manager().get_blueprint(blueprint_id) is None:
-        abort(404,
-              message='404: blueprint {0} not found'.format(blueprint_id))
-
-
-def verify_deployment_exists(deployment_id):
-    if blueprints_manager().get_deployment(deployment_id) is None:
-        abort(404,
-              message='404: deployment {0} not found'.format(deployment_id))
-
-
-def verify_blueprint_does_not_exist(blueprint_id):
-    if blueprints_manager().get_blueprint(blueprint_id) is not None:
-        abort(400,
-              message='400: blueprint {0} already exists'
-                      .format(blueprint_id))
-
-
-def verify_deployment_does_not_exist(deployment_id):
-    if blueprints_manager().get_deployment(deployment_id) is not None:
-        abort(400,
-              message='400: deployment {0} already exists'
-                      .format(deployment_id))
-
-
-def verify_execution_exists(execution_id):
-    if blueprints_manager().get_execution(execution_id) is None:
-        abort(404,
-              message='404: execution_id {0} not found'.format(execution_id))
 
 
 def abort_workflow_service_operation(workflow_service_error):
@@ -120,6 +72,16 @@ def abort_workflow_service_operation(workflow_service_error):
 def abort_conflict(conflict_error):
     abort(409,
           message='409: Conflict occurred - {0}'.format(str(conflict_error)))
+
+
+def abort_not_found(not_exists_error):
+    abort(404,
+          message='404: {0}'.format(str(not_exists_error)))
+
+
+def verify_json_content_type():
+    if request.content_type != 'application/json':
+        abort(415, message='415: Content type must be application/json')
 
 
 def verify_and_convert_bool(attribute_name, str_bool):
@@ -141,6 +103,8 @@ def setup_resources(api):
                      '/blueprints')
     api.add_resource(BlueprintsId,
                      '/blueprints/<string:blueprint_id>')
+    api.add_resource(BlueprintsSource,
+                     '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
                      '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(ExecutionsId,
@@ -158,6 +122,7 @@ def setup_resources(api):
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
     api.add_resource(Events, '/events')
+    api.add_resource(Search, '/search')
 
 
 class BlueprintsUpload(object):
@@ -176,9 +141,8 @@ class BlueprintsUpload(object):
                                                   application_dir,
                                                   blueprint_id), 201
 
-    def _process_plugins(self, file_server_root, application_dir):
-        blueprint_directory = path.join(file_server_root, application_dir)
-        plugins_directory = path.join(blueprint_directory, 'plugins')
+    def _process_plugins(self, file_server_root, blueprint_id):
+        plugins_directory = path.join(file_server_root, "blueprints", blueprint_id, "plugins")
         if not path.isdir(plugins_directory):
             return
         plugins = [path.join(plugins_directory, directory)
@@ -187,7 +151,7 @@ class BlueprintsUpload(object):
 
         for plugin_dir in plugins:
             final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(file_server_root, application_dir,
+            target_zip_path = path.join(file_server_root, "blueprints", blueprint_id,
                                         'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
@@ -260,23 +224,20 @@ class BlueprintsUpload(object):
 
         # add to blueprints manager (will also dsl_parse it)
         try:
-            blueprint = blueprints_manager().publish_blueprint(
+            blueprint = get_blueprints_manager().publish_blueprint(
                 dsl_path, alias_mapping, resources_base, blueprint_id)
 
             # moving the app directory in the file server to be under a
-            # directory named after the blueprint's app name field
-            new_application_dir = os.path.join(file_server_root, blueprint.id)
+            # directory named after the blueprint id
             shutil.move(os.path.join(file_server_root, application_dir),
-                        new_application_dir)
-
-            # put plugins under the blueprint directory
-            self._process_plugins(file_server_root, new_application_dir)
+                        os.path.join(
+                            file_server_root,
+                            config.instance().file_server_blueprints_folder,
+                            blueprint.id))
+            self._process_plugins(file_server_root, blueprint.id)
             return blueprint
         except DslParseException, ex:
             abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
-        except BlueprintAlreadyExistsException, ex:
-            abort(400, message='400: Blueprint - {0} already exists'
-                               .format(ex.blueprint_id))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:
@@ -310,7 +271,7 @@ class Blueprints(Resource):
         """
         return [marshal(blueprint,
                         responses.BlueprintState.resource_fields) for
-                blueprint in blueprints_manager().blueprints_list()]
+                blueprint in get_blueprints_manager().blueprints_list()]
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -340,11 +301,31 @@ class Blueprints(Resource):
 
     )
     @marshal_with(responses.BlueprintState.resource_fields)
+    @exceptions_handled
     def post(self):
         """
         Submit a new blueprint.
         """
         return BlueprintsUpload().do_request()
+
+
+class BlueprintsSource(Resource):
+
+    @swagger.operation(
+        responseClass=responses.BlueprintState,
+        nickname="getBlueprintSource",
+        notes="Returns a blueprint's source by the blueprint's id."
+    )
+    @marshal_with(responses.BlueprintState.resource_fields)
+    @exceptions_handled
+    def get(self, blueprint_id):
+        """
+        Returns a blueprint by its id.
+        """
+        fields = {'id', 'source'}
+        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
+                                                           fields)
+        return responses.BlueprintState(**blueprint.to_dict())
 
 
 class BlueprintsId(Resource):
@@ -355,12 +336,14 @@ class BlueprintsId(Resource):
         notes="Returns a blueprint by its id."
     )
     @marshal_with(responses.BlueprintState.resource_fields)
+    @exceptions_handled
     def get(self, blueprint_id):
         """
         Returns a blueprint by its id.
         """
-        verify_blueprint_exists(blueprint_id)
-        blueprint = blueprints_manager().get_blueprint(blueprint_id)
+        fields = {'id', 'plan', 'created_at', 'updated_at'}
+        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
+                                                           fields)
         return responses.BlueprintState(**blueprint.to_dict())
 
     @swagger.operation(
@@ -391,11 +374,11 @@ class BlueprintsId(Resource):
 
     )
     @marshal_with(responses.BlueprintState.resource_fields)
+    @exceptions_handled
     def put(self, blueprint_id):
         """
         Submit a new blueprint with a blueprint_id.
         """
-        verify_blueprint_does_not_exist(blueprint_id)
         return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
 
 
@@ -407,12 +390,12 @@ class BlueprintsIdValidate(Resource):
         notes="Validates a given blueprint."
     )
     @marshal_with(responses.BlueprintValidationStatus.resource_fields)
+    @exceptions_handled
     def get(self, blueprint_id):
         """
         Validates a given blueprint.
         """
-        verify_blueprint_exists(blueprint_id)
-        return blueprints_manager().validate_blueprint(blueprint_id)
+        return get_blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class ExecutionsId(Resource):
@@ -420,7 +403,7 @@ class ExecutionsId(Resource):
     @swagger.operation(
         responseClass=responses.Execution,
         nickname="getById",
-        notes="Returns the execution state by its id."
+        notes="Returns the execution state by its id.",
     )
     @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
@@ -428,9 +411,46 @@ class ExecutionsId(Resource):
         """
         Returns the execution state by its id.
         """
-        verify_execution_exists(execution_id)
-        execution = blueprints_manager().get_workflow_state(execution_id)
+        execution = get_blueprints_manager().get_workflow_state(execution_id)
         return responses.Execution(**execution.to_dict())
+
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="modify_state",
+        notes="Modifies a running execution state (currently, only cancel"
+              " is supported)",
+        parameters=[{'name': 'body',
+                 'description': 'json with an action key. Legal values for '
+                                'action are: [cancel]',
+                 'required': True,
+                 'allowMultiple': False,
+                 'dataType': requests_schema.ModifyExecutionRequest.__name__,
+                 'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    @exceptions_handled
+    def post(self, execution_id):
+        """
+        Modify a running execution state.
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'action' not in request_json:
+            abort(400, message='400: Missing action in json request body')
+        action = request.json['action']
+
+        valid_actions = ['cancel']
+
+        if action not in valid_actions:
+            abort(400, message='400: Invalid action: {0}, '
+                               'Valid action values are: {1}'
+                               .format(action, valid_actions))
+
+        if action == 'cancel':
+            return get_blueprints_manager().cancel_workflow(execution_id), 201
 
 
 class DeploymentsIdNodes(Resource):
@@ -439,15 +459,17 @@ class DeploymentsIdNodes(Resource):
         self._args_parser = reqparse.RequestParser()
         self._args_parser.add_argument('reachable', type=str,
                                        default='false', location='args')
+        self._args_parser.add_argument('state', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNodes,
         nickname="list",
         notes="Returns an object containing nodes associated with "
               "this deployment.",
-        parameters=[{'name': 'reachable',
-                     'description': 'Specifies whether to return reachable '
-                                    'state for the nodes.',
+        parameters=[{'name': 'state',
+                     'description': 'Specifies whether to return state '
+                                    'for the nodes.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -455,6 +477,7 @@ class DeploymentsIdNodes(Resource):
                      'paramType': 'query'}]
     )
     @marshal_with(responses.DeploymentNodes.resource_fields)
+    @exceptions_handled
     def get(self, deployment_id):
         """
         Returns an object containing nodes associated with this deployment.
@@ -462,22 +485,28 @@ class DeploymentsIdNodes(Resource):
         args = self._args_parser.parse_args()
         get_reachable_state = verify_and_convert_bool(
             'reachable', args['reachable'])
-        verify_deployment_exists(deployment_id)
+        get_state = verify_and_convert_bool(
+            'state', args['state'])
 
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
         reachable_states = {}
-        if get_reachable_state:
-            reachable_states = riemann_client().get_nodes_state(node_ids)
+        if get_reachable_state or get_state:
+            reachable_states = get_riemann_client().get_nodes_state(node_ids)
 
         nodes = []
         for node_id in node_ids:
-            node_result = responses.DeploymentNode(id=node_id)
-            if get_reachable_state:
+            node_result = responses.DeploymentNode(id=node_id,
+                                                   state=None,
+                                                   state_version=None,
+                                                   reachable=None,
+                                                   runtime_info=None)
+            if get_reachable_state or get_state:
                 state = reachable_states[node_id]
                 node_result.reachable = state['reachable']
+                node_result.state = state['state']
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -496,7 +525,7 @@ class Deployments(Resource):
         """
         return [marshal(responses.Deployment(**deployment.to_dict()),
                         responses.Deployment.resource_fields) for
-                deployment in blueprints_manager().deployments_list()]
+                deployment in get_blueprints_manager().deployments_list()]
 
 
 class DeploymentsId(Resource):
@@ -507,12 +536,12 @@ class DeploymentsId(Resource):
         notes="Returns a deployment by its id."
     )
     @marshal_with(responses.Deployment.resource_fields)
+    @exceptions_handled
     def get(self, deployment_id):
         """
         Returns a deployment by its id.
         """
-        verify_deployment_exists(deployment_id)
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         return responses.Deployment(**deployment.to_dict())
 
     @swagger.operation(
@@ -530,6 +559,7 @@ class DeploymentsId(Resource):
         ]
     )
     @marshal_with(responses.Deployment.resource_fields)
+    @exceptions_handled
     def put(self, deployment_id):
         """
         Creates a new deployment
@@ -539,16 +569,16 @@ class DeploymentsId(Resource):
         if 'blueprintId' not in request_json:
             abort(400, message='400: Missing blueprintId in json request body')
         blueprint_id = request.json['blueprintId']
-        verify_blueprint_exists(blueprint_id)
-        verify_deployment_does_not_exist(deployment_id)
-        return blueprints_manager().create_deployment(blueprint_id,
-                                                      deployment_id), 201
+        return get_blueprints_manager().create_deployment(blueprint_id,
+                                                          deployment_id), 201
 
 
 class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('state', type=str,
+                                       default='false', location='args')
         self._args_parser.add_argument('reachable', type=str,
                                        default='false', location='args')
         self._args_parser.add_argument('runtime', type=str,
@@ -557,7 +587,7 @@ class NodesId(Resource):
     @swagger.operation(
         responseClass=responses.DeploymentNode,
         nickname="getNodeState",
-        notes="Returns node runtime/reachable state "
+        notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
@@ -565,9 +595,8 @@ class NodesId(Resource):
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'reachable',
-                     'description': 'Specifies whether to return reachable '
-                                    'state.',
+                    {'name': 'state',
+                     'description': 'Specifies whether to return state.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -575,7 +604,7 @@ class NodesId(Resource):
                      'paramType': 'query'},
                     {'name': 'runtime',
                      'description': 'Specifies whether to return runtime '
-                                    'information.',
+                                    'properties.',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -593,18 +622,30 @@ class NodesId(Resource):
             'reachable', args['reachable'])
         get_runtime_state = verify_and_convert_bool(
             'runtime', args['runtime'])
+        get_state = verify_and_convert_bool('state', args['state'])
 
         reachable_state = None
-        if get_reachable_state:
-            state = riemann_client().get_node_state(node_id)
+        state = None
+        if get_reachable_state or get_state:
+            state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
+            state = state['state']
 
         runtime_state = None
+        state_version = None
         if get_runtime_state:
-            node = storage_manager().get_node(node_id)
-            runtime_state = node.runtime_info if node else {}
-        return responses.DeploymentNode(id=node_id, reachable=reachable_state,
-                                        runtime_info=runtime_state)
+            try:
+                node = get_storage_manager().get_node(node_id)
+                runtime_state = node.runtime_info
+                state_version = node.state_version
+            except manager_exceptions.NotFoundError:
+                runtime_state = {}
+
+        return responses.DeploymentNode(id=node_id,
+                                        state=state,
+                                        reachable=reachable_state,
+                                        runtime_info=runtime_state,
+                                        state_version=state_version)
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -630,21 +671,19 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(
-            id=node_id,
-            runtime_info=node.runtime_info)
+        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
+                                     reachable=None, state_version=None)
+        node.state_version = get_storage_manager().put_node(node_id, node)
+        return responses.DeploymentNode(state=None, **node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="putNodeState",
-        notes="Update node runtime state with the provided dictionary "
-              "of keys and values. Each value in the dictionary should be a "
-              "list where the first item is the new value and the second "
-              "is the old value (for having some kind of optimistic locking). "
-              "New keys should have a single element list with the new value "
-              "only.",
+        nickname="patchNodeState",
+        notes="Update node runtime state. Expecting the request body to "
+              "be a dictionary containing both 'runtime_info' - which is the"
+              "updated keys/values information (possibly partial update), "
+              "and 'state_version', which is used for optimistic locking "
+              "during the update",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -652,7 +691,8 @@ class NodesId(Resource):
                      'dataType': 'string',
                      'paramType': 'path'},
                     {'name': 'body',
-                     'description': 'Node state updated keys/values',
+                     'description': 'Node state updated keys/values and '
+                                    'state version',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': 'string',
@@ -666,34 +706,99 @@ class NodesId(Resource):
         Updates node runtime state.
         """
         verify_json_content_type()
-        if request.json.__class__ is not dict:
-            abort(400, message='request body is expected to be of key/value'
-                               ' map type but is {0}'
-                               .format(request.json.__class__.__name__))
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json)
-        runtime_info = storage_manager().update_node(node_id, node)
+        if request.json.__class__ is not dict or len(request.json) > 2 \
+            or 'runtime_info' not in request.json \
+            or 'state_version' not in request.json \
+            or request.json['runtime_info'].__class__ is not dict \
+                or request.json['state_version'].__class__ is not int:
+
+            if request.json.__class__ is not dict or len(request.json) > 2:
+                message = 'request body is expected to be a map containing ' \
+                          'only "runtime_info" and "state_version" fields'
+            elif 'runtime_info' not in request.json:
+                message = 'request body must be a map containing a ' \
+                          '"runtime_info" field'
+            elif 'state_version' not in request.json:
+                message = 'request body must be a map containing a ' \
+                          '"state_version" field'
+            elif request.json['runtime_info'].__class__ is not dict:
+                message = "request body's 'runtime_info' field must be a " \
+                          "map but is of type {0}".format(
+                              request.json['runtime_info'].__class__.__name__)
+            else:
+                message = "request body's 'state_version' field must be an " \
+                          "int but is of type {0}".format(
+                              request.json['state_version'].__class__.__name__)
+            abort(400, message=message)
+
+        node = models.DeploymentNode(
+            id=node_id, runtime_info=request.json['runtime_info'],
+            state_version=request.json['state_version'], reachable=None)
+        get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
-            id=node_id,
-            runtime_info=runtime_info)
+            state=None,
+            **get_storage_manager().get_node(node_id).to_dict())
 
 
 class DeploymentsIdExecutions(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('statuses', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
         notes="Returns a list of executions related to the provided"
-              " deployment."
+              " deployment.",
+        parameters=[{'name': 'statuses',
+                     'description': 'Specifies whether to return reachable '
+                                    'state for the nodes.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
     )
+    @exceptions_handled
     def get(self, deployment_id):
         """
         Returns a list of executions related to the provided deployment.
         """
-        verify_deployment_exists(deployment_id)
-        return [marshal(responses.Execution(**execution.to_dict()),
-                        responses.Execution.resource_fields) for
-                execution in storage_manager().get_deployment_executions(
-                    deployment_id)]
+        args = self._args_parser.parse_args()
+        get_executions_statuses = verify_and_convert_bool(
+            'statuses', args['statuses'])
+
+        executions = [responses.Execution(**execution.to_dict()) for
+                      execution in
+                      get_storage_manager().get_deployment_executions(
+                          deployment_id)]
+
+        if get_executions_statuses:
+            statuses_response = get_blueprints_manager()\
+                .get_workflows_states_by_internal_workflows_ids(
+                    [execution.internal_workflow_id for execution
+                     in executions])
+
+            status_by_id = {status['id']: status for status in
+                            statuses_response}
+            for execution in executions:
+                if execution.internal_workflow_id in status_by_id:
+                    status = status_by_id[execution.internal_workflow_id]
+                    execution.status = status['state']
+                    execution.error = status['error']
+                else:
+                    #execution not found in workflow service, return unknown
+                    # values
+                    execution.status, execution.error = None, None
+        else:
+            #setting None values to dynamic fields which weren't requested
+            for execution in executions:
+                execution.status, execution.error = None, None
+
+        return [marshal(execution, responses.Execution.resource_fields) for
+                execution in executions]
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -717,13 +822,12 @@ class DeploymentsIdExecutions(Resource):
         Execute a workflow
         """
         verify_json_content_type()
-        verify_deployment_exists(deployment_id)
         request_json = request.json
         if 'workflowId' not in request_json:
             abort(400, message='400: Missing workflowId in json request body')
         workflow_id = request.json['workflowId']
-        execution = blueprints_manager().execute_workflow(deployment_id,
-                                                          workflow_id)
+        execution = get_blueprints_manager().execute_workflow(deployment_id,
+                                                              workflow_id)
         return responses.Execution(**execution.to_dict()), 201
 
 
@@ -735,14 +839,15 @@ class DeploymentsIdWorkflows(Resource):
         notes="Returns a list of workflows related to the provided deployment."
     )
     @marshal_with(responses.Workflows.resource_fields)
+    @exceptions_handled
     def get(self, deployment_id):
         """
         Returns a list of workflows related to the provided deployment.
         """
-        verify_deployment_exists(deployment_id)
-        deployment = blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
-        workflows = [responses.Workflow(name=wf_name) for wf_name in
+        workflows = [responses.Workflow(name=wf_name, created_at=None) for
+                     wf_name in
                      deployment_workflows.keys()]
 
         return {
@@ -807,3 +912,27 @@ class Events(Resource):
         Returns events for the provided ElasticSearch query
         """
         return self._query_events()
+
+
+class Search(Resource):
+
+    @swagger.operation(
+        nickname='search',
+        notes='Returns results from the storage for the provided '
+              'ElasticSearch query. The response format is as ElasticSearch '
+              'response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    def post(self):
+        """
+        Returns results for the provided ElasticSearch query
+        """
+        verify_json_content_type()
+        return _query_elastic_search(index='cloudify_storage',
+                                     body=request.json)

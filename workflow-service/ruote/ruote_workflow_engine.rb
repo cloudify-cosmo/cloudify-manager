@@ -72,21 +72,37 @@ class RuoteWorkflowEngine
   end
 
   def cancel_workflow(wfid)
-    raise 'not implemented'
+    wf = get_workflow_state(wfid)
+    @dashboard.cancel(wf.id)
+    wf
   end
 
   def pause_workflow(wfid)
     raise 'not implemented'
   end
 
-  # Ruote only keeps state for running workflows, that means that workflows which were just launched
-  # but not yet started and terminated workflows won't have states kept in Ruote.
   def get_workflow_state(wfid)
     begin
       @mutex.lock
       verify_workflow_exists(wfid)
-
       return @states[wfid]
+    ensure
+      @mutex.unlock
+    end
+  end
+
+  # Ruote only keeps state for running workflows, that means that workflows which were just launched
+  # but not yet started and terminated workflows won't have states kept in Ruote.
+  def get_workflows_states(workflows_ids)
+    begin
+      @mutex.lock
+      result = []
+      for wfid in workflows_ids do
+        if @states.has_key?(wfid)
+          result.push(@states[wfid])
+        end
+      end
+      return result
     ensure
       @mutex.unlock
     end
@@ -125,6 +141,10 @@ class RuoteWorkflowEngine
           log_workflow_state(wf_state)
         end
       elsif action == 'cancel'
+        flavour = context['flavour'] || nil
+        if flavour == 'timeout'
+          return
+        end
         wfid = context['fei']['wfid']
         wf_state = get_workflow_state(wfid)
         if not [:cancelled, :failed].include? wf_state.state

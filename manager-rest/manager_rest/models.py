@@ -21,10 +21,11 @@ import json
 class SerializableObject(object):
 
     def to_dict(self):
-        attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)
-                           if not attr.startswith("__"))
-        return {attr: value for attr, value in
-                attr_and_values if not callable(value)}
+        # attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)
+        #                    if not attr.startswith("__"))
+        # return {attr: value for attr, value in
+        #         attr_and_values if not callable(value)}
+        return {field: getattr(self, field) for field in self.fields}
 
     def to_json(self):
         return json.dumps(self.to_dict())
@@ -32,16 +33,22 @@ class SerializableObject(object):
 
 class BlueprintState(SerializableObject):
 
-    def __init__(self, *args, **kwargs):
+    fields = {'plan', 'id', 'source', 'created_at', 'updated_at'}
+
+    def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
+        self.source = kwargs['source']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 
 
 class Deployment(SerializableObject):
 
-    def __init__(self, *args, **kwargs):
+    fields = {'id', 'created_at', 'updated_at', 'blueprint_id', 'plan',
+              'permalink'}
+
+    def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
@@ -52,7 +59,10 @@ class Deployment(SerializableObject):
 
 class Execution(SerializableObject):
 
-    def __init__(self, *args, **kwargs):
+    fields = {'id', 'status', 'deployment_id', 'internal_workflow_id',
+              'workflow_id', 'blueprint_id', 'created_at', 'error'}
+
+    def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
@@ -65,8 +75,10 @@ class Execution(SerializableObject):
 
 class DeploymentNode(SerializableObject):
 
-    def __init__(self, *args, **kwargs):
+    fields = {'id', 'runtime_info', 'reachable', 'state_version'}
+
+    def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = \
-            kwargs['runtime_info'] if 'runtime_info' in kwargs else None
-        self.reachable = kwargs['reachable'] if 'reachable' in kwargs else None
+        self.runtime_info = kwargs['runtime_info']
+        self.reachable = kwargs['reachable']
+        self.state_version = kwargs['state_version']

@@ -17,8 +17,9 @@ __author__ = 'dan'
 
 import requests
 import json
-import config
 import time
+
+from manager_rest import config
 
 
 class WorkflowServiceError(Exception):
@@ -76,9 +77,28 @@ class WorkflowClient(object):
             return {'status': 'invalid'}
 
     def get_workflow_status(self, workflow_id):
-        response = requests.get('{0}/workflows/{1}'.format(
-            self.workflow_service_base_uri, workflow_id))
+        response = requests.get(
+            '{0}/workflows/{1}'.format(self.workflow_service_base_uri,
+                                       workflow_id))
         if response.status_code != 200:
+            raise WorkflowServiceError(response.status_code, response.json())
+        return response.json()
+
+    def get_workflows_statuses(self, workflows_ids):
+        response = requests.post(
+            '{0}/states'.format(self.workflow_service_base_uri),
+            json.dumps({'workflows_ids': workflows_ids}))
+        if response.status_code != 200:
+            raise WorkflowServiceError(response.status_code, response.json())
+        return response.json()
+
+    def cancel_workflow(self, workflow_id):
+        response = requests.post('{0}/workflows/{1}'.format(
+            self.workflow_service_base_uri, workflow_id
+        ), json.dumps({
+            'action': 'cancel'
+        }))
+        if response.status_code != 201:
             raise WorkflowServiceError(response.status_code, response.json())
         return response.json()
 

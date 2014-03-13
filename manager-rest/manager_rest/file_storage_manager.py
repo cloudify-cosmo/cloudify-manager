@@ -17,8 +17,11 @@ __author__ = 'ran'
 
 import os
 import json
-from models import BlueprintState, Deployment, Execution, \
-    DeploymentNode
+from manager_rest.models import (BlueprintState,
+                                 Deployment,
+                                 Execution,
+                                 DeploymentNode)
+from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
@@ -91,31 +94,34 @@ class FileStorageManager(object):
         data = self._load_data()
         if node_id in data[NODES]:
             return data[NODES][node_id]
-        return None
+        raise manager_exceptions.NotFoundError(
+            "Node {0} not found".format(node_id))
 
     def put_node(self, node_id, node):
         data = self._load_data()
         if str(node_id) in data[NODES]:
-            raise RuntimeError('Node {0} already exists'.format(
-                node_id))
+            raise manager_exceptions.ConflictError(
+                'Node {0} already exists'.format(node_id))
         data[NODES][str(node_id)] = node
         self._dump_data(data)
+        return 1
 
     def update_node(self, node_id, node):
         data = self._load_data()
         if node_id not in data[NODES]:
-            self.put_node(node_id, node)
-            return
+            raise manager_exceptions.NotFoundError(
+                "Node {0} not found".format(node_id))
 
         prev_rt_info = DeploymentNode(**data[NODES][node_id].to_dict())\
             .runtime_info
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_info.items())
         #TODO: merge reachable field?
-        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info)
+        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
+                              reachable=None,
+                              state_version=node.state_version+1)
         data[NODES][node_id] = node
         self._dump_data(data)
-        return merged_rt_info
 
     def blueprints_list(self):
         data = self._load_data()
@@ -134,39 +140,53 @@ class FileStorageManager(object):
         return [execution for execution in executions if execution
                 .deployment_id == deployment_id]
 
-    def get_blueprint(self, blueprint_id):
+    def get_blueprint(self, blueprint_id, fields=None):
         data = self._load_data()
-        return data[BLUEPRINTS].get(blueprint_id, None)
+        if blueprint_id in data[BLUEPRINTS]:
+            bp = data[BLUEPRINTS][blueprint_id]
+            if fields:
+                for field in BlueprintState.fields:
+                    if field not in fields:
+                        setattr(bp, field, None)
+            return bp
+        raise manager_exceptions.NotFoundError(
+            "Blueprint {0} not found".format(blueprint_id))
 
     def get_deployment(self, deployment_id):
         data = self._load_data()
-        return data[DEPLOYMENTS].get(deployment_id, None)
+        if deployment_id in data[DEPLOYMENTS]:
+            return data[DEPLOYMENTS][deployment_id]
+        raise manager_exceptions.NotFoundError(
+            "Deployment {0} not found".format(deployment_id))
 
     def get_execution(self, execution_id):
         data = self._load_data()
-        return data[EXECUTIONS].get(execution_id, None)
+        if execution_id in data[EXECUTIONS]:
+            return data[EXECUTIONS][execution_id]
+        raise manager_exceptions.NotFoundError(
+            "Execution {0} not found".format(execution_id))
 
     def put_blueprint(self, blueprint_id, blueprint):
         data = self._load_data()
         if str(blueprint_id) in data[BLUEPRINTS]:
-            raise RuntimeError('Blueprint {0} already exists'.format(
-                blueprint_id))
+            raise manager_exceptions.ConflictError(
+                'Blueprint {0} already exists'.format(blueprint_id))
         data[BLUEPRINTS][str(blueprint_id)] = blueprint
         self._dump_data(data)
 
     def put_deployment(self, deployment_id, deployment):
         data = self._load_data()
         if str(deployment_id) in data[DEPLOYMENTS]:
-            raise RuntimeError('Deployment {0} already exists'.format(
-                deployment_id))
+            raise manager_exceptions.ConflictError(
+                'Deployment {0} already exists'.format(deployment_id))
         data[DEPLOYMENTS][str(deployment_id)] = deployment
         self._dump_data(data)
 
     def put_execution(self, execution_id, execution):
         data = self._load_data()
         if str(execution_id) in data[EXECUTIONS]:
-            raise RuntimeError('Execution {0} already exists'.format(
-                execution_id))
+            raise manager_exceptions.ConflictError(
+                'Execution {0} already exists'.format(execution_id))
         data[EXECUTIONS][str(execution_id)] = execution
         self._dump_data(data)
 

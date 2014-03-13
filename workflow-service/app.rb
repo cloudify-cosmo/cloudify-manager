@@ -76,11 +76,55 @@ class RuoteServiceApp < Sinatra::Base
     end
   end
 
+  post '/states', :provides => :json do
+      content_type :json
+      begin
+        req = self.parse_request_body(request)
+        if req.has_key?(:workflows_ids)
+          workflows_states = $ruote_service.get_workflows_states(req[:workflows_ids])
+          JSON.pretty_generate workflows_states
+        else
+          error_response "'workflows_ids' is missing in request body", 400
+        end
+      rescue WorkflowDoesntExistError => e
+        error_response e.message, 400
+      rescue Exception => e
+        error_response e.message
+      end
+  end
+
   get '/workflows/:id', :provides => :json do
     content_type :json
     begin
       wfid = params[:id]
       JSON.pretty_generate $ruote_service.get_workflow_state(wfid)
+    rescue WorkflowDoesntExistError => e
+      error_response e.message, 400
+    rescue Exception => e
+      error_response e.message
+    end
+  end
+
+  post '/workflows/:id', :provides => :json do
+    content_type :json
+    begin
+      req = self.parse_request_body(request)
+      validation_message = nil
+
+      unless req.has_key?(:action)
+        validation_message = 'action key is missing in request body'
+      end
+
+      unless ['cancel'].include? req[:action]
+        validation_message = 'valid `action` values are: [cancel]'
+      end
+
+      if validation_message.nil?
+        status 201
+        JSON.pretty_generate $ruote_service.cancel_workflow(params[:id])
+      else
+        error_response validation_message, 400
+      end
     rescue WorkflowDoesntExistError => e
       error_response e.message, 400
     rescue Exception => e

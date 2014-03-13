@@ -20,6 +20,7 @@ __author__ = 'idanmo'
 import yaml
 import shutil
 import tempfile
+import shlex
 from os import path
 import subprocess
 import logging
@@ -39,11 +40,14 @@ from cosmo_manager_rest_client.cosmo_manager_rest_client \
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
 import requests
+import elasticsearch
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
 
-STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
+STORAGE_INDEX_NAME = 'cloudify_storage'
+FILE_SERVER_PORT = 53229
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -86,13 +90,13 @@ class ManagerRestProcess(object):
                  file_server_dir,
                  file_server_base_uri,
                  workflow_service_base_uri,
-                 storage_file_path):
+                 file_server_blueprints_folder):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
-        self.storage_file_path = storage_file_path
+        self.file_server_blueprints_folder = file_server_blueprints_folder
         self.client = CosmoManagerRestClient('localhost')
 
     def start(self, timeout=10):
@@ -101,7 +105,8 @@ class ManagerRestProcess(object):
         configuration = {
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
-            'workflow_service_base_uri': self.workflow_service_base_uri
+            'workflow_service_base_uri': self.workflow_service_base_uri,
+            'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
         config_path = tempfile.mktemp()
@@ -134,7 +139,6 @@ class ManagerRestProcess(object):
             logger.info('Testing connection to manager rest service. '
                         '(Attempt: {0}/{1})'.format(attempt, timeout))
             attempt += 1
-            self.reset_data()
             started = self.started()
         if not started:
             raise RuntimeError('Failed opening connection to manager rest '
@@ -150,10 +154,6 @@ class ManagerRestProcess(object):
     def close(self):
         if not self.process is None:
             self.process.terminate()
-
-    def reset_data(self):
-        if os.path.isfile(self.storage_file_path):
-            os.remove(self.storage_file_path)
 
     def locate_manager_rest_dir(self):
         # start with current location
@@ -343,6 +343,9 @@ class CeleryWorkerProcess(object):
         environment['TEMP_DIR'] = self._plugins_tempdir
         environment['MANAGER_REST_PORT'] = self._manager_rest_port
         environment['MANAGEMENT_IP'] = 'localhost'
+        environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
+            'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
+                                              FILE_SERVER_BLUEPRINTS_FOLDER)
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
 
@@ -481,6 +484,144 @@ class RiemannProcess(object):
         return None
 
 
+class ElasticSearchProcess(object):
+    """
+    Manages an ElasticSearch server process lifecycle.
+    """
+
+    def __init__(self):
+        self._pid = None
+        self._process = None
+
+    def _verify_service_responsiveness(self, timeout=120):
+        import urllib2
+        service_url = "http://localhost:9200"
+        up = False
+        deadline = time.time() + timeout
+        res = None
+        while time.time() < deadline:
+            try:
+                res = urllib2.urlopen(service_url)
+                up = res.code == 200
+                break
+            except BaseException:
+                pass
+            time.sleep(1)
+        if not up:
+            raise RuntimeError("Elasticsearch service is not responding @ {"
+                               "0} (response: {1})".format(service_url, res))
+
+    def _verify_service_started(self, timeout=30):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            self._pid = self._get_service_pid()
+            if self._pid is not None:
+                break
+            time.sleep(1)
+        if self._pid is None:
+            raise RuntimeError("Failed to start elasticsearch service within "
+                               "a {0} seconds timeout".format(timeout))
+
+    def _verify_service_ended(self, timeout=10):
+        pid = self._pid
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            pid = self._get_service_pid()
+            if pid is None:
+                break
+            time.sleep(1)
+        if pid is not None:
+            raise RuntimeError("Failed to stop elasticsearch service within "
+                               "a {0} seconds timeout".format(timeout))
+
+    def _get_service_pid(self):
+        from subprocess import CalledProcessError
+        pattern = "\w*\s*(\d*).*"
+        try:
+            output = subprocess.check_output(
+                "ps -ef | grep elasticsearch | grep -v grep", shell=True)
+            match = re.match(pattern, output)
+            if match:
+                return int(match.group(1))
+        except CalledProcessError:
+            pass
+        return None
+
+    def start(self):
+        command = 'elasticsearch'
+        logger.info(
+            "Starting elasticsearchservice with command {0}".format(command))
+        self._process = subprocess.Popen(shlex.split(command))
+        self._verify_service_started(timeout=30)
+        self._verify_service_responsiveness()
+        logger.info("Elasticsearch service started [pid=%s]", self._pid)
+        self._remove_index_if_exists()
+        self._create_schema()
+
+    def close(self):
+        if self._process:
+            self._process.kill()
+        if self._pid:
+            logger.info("Shutting down elasticsearch service [pid=%s]",
+                        self._pid)
+            os.system("kill {0}".format(self._pid))
+            self._verify_service_ended()
+
+    def _remove_index_if_exists(self):
+        es = elasticsearch.Elasticsearch()
+        from elasticsearch.client import IndicesClient
+        es_index = IndicesClient(es)
+        if es_index.exists(STORAGE_INDEX_NAME):
+            logger.info(
+                "Elasticsearch index '{0}' already  exists and "
+                "will be deleted".format(STORAGE_INDEX_NAME))
+            es_index.delete(STORAGE_INDEX_NAME)
+            logger.info("Verifying Elasticsearch index was deleted...")
+            deadline = time.time() + 30
+            while es_index.exists(STORAGE_INDEX_NAME):
+                if time.time() > deadline:
+                    raise RuntimeError(
+                        'Elasticsearch index was not deleted after 30 seconds')
+                time.sleep(1)
+
+    def reset_data(self):
+        """
+        Empties the storage index.
+        """
+        try:
+            es = elasticsearch.Elasticsearch()
+            es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
+            deadline = time.time() + 30
+            while es.count(index=STORAGE_INDEX_NAME, q='*')['count'] != 0:
+                if time.time() > deadline:
+                    raise RuntimeError(
+                        'Elasticsearch data was not deleted after 30 seconds')
+                time.sleep(1)
+        except Exception as e:
+            logger.warn(
+                'Elasticsearch reset data failed: {0}'.format(e.message))
+
+    def _create_schema(self):
+        vagrant_dir = self._locate_vagrant_dir()
+        creator_script_path = path.join(vagrant_dir, "es_schema_creator.py")
+        cmd = '{0} {1}'.format(sys.executable, creator_script_path)
+        status = os.system(cmd)
+        if status != 0:
+            raise RuntimeError(
+                'Elasticsearch create schema exited with {0}'.format(status))
+        logger.info("Elasticsearch schema created successfully")
+
+    def _locate_vagrant_dir(self):
+        # start with current location
+        vagrant_location = path.abspath(__file__)
+        # get to cosmo-manager
+        for i in range(3):
+            vagrant_location = path.dirname(vagrant_location)
+        # build way into manager_rest
+        return path.join(vagrant_location,
+                         'vagrant')
+
+
 class RuoteServiceClient(object):
 
     def get_workflows_states(self):
@@ -556,6 +697,7 @@ class TestEnvironment(object):
     """
     Creates the cosmo test environment:
         - Riemann server.
+        - Elasticsearch server.
         - Celery worker.
         - Ruote service.
         - Prepares celery app dir with plugins from cosmo module and official
@@ -564,6 +706,7 @@ class TestEnvironment(object):
     _instance = None
     _celery_worker_process = None
     _riemann_process = None
+    _elasticsearch_process = None
     _manager_rest_process = None
     _tempdir = None
     _plugins_tempdir = None
@@ -596,6 +739,10 @@ class TestEnvironment(object):
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
+            # elasticsearch
+            self._elasticsearch_process = ElasticSearchProcess()
+            self._elasticsearch_process.start()
+
             manager_rest_port = '8100'
 
             # celery
@@ -604,7 +751,6 @@ class TestEnvironment(object):
                 self._tempdir, self._plugins_tempdir, plugins_path,
                 manager_rest_port)
             self._celery_worker_process.start()
-            self.storage_file_path = STORAGE_FILE_PATH
 
             # workaround to update path
             manager_rest_path = \
@@ -637,7 +783,7 @@ class TestEnvironment(object):
                 fileserver_dir,
                 file_server_base_uri,
                 worker_service_base_uri,
-                self.storage_file_path)
+                FILE_SERVER_BLUEPRINTS_FOLDER)
             self._manager_rest_process.start()
 
             # ruote service
@@ -655,6 +801,8 @@ class TestEnvironment(object):
                     .format(self._scope))
         if self._riemann_process:
             self._riemann_process.close()
+        if self._elasticsearch_process:
+            self._elasticsearch_process.close()
         if self._celery_worker_process:
             self._celery_worker_process.close()
         if self._manager_rest_process:
@@ -706,10 +854,10 @@ class TestEnvironment(object):
             TestEnvironment._instance._celery_worker_process.restart()
 
     @staticmethod
-    def reset_rest_manager_data():
+    def reset_elasticsearch_data():
         if TestEnvironment._instance and \
-           TestEnvironment._instance._manager_rest_process:
-            TestEnvironment._instance._manager_rest_process.reset_data()
+                TestEnvironment._instance._elasticsearch_process:
+            TestEnvironment._instance._elasticsearch_process.reset_data()
 
     @classmethod
     def _generate_riemann_config(cls, riemann_config_path):
@@ -739,7 +887,7 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         TestEnvironment.restart_celery_worker()
-        TestEnvironment.reset_rest_manager_data()
+        TestEnvironment.reset_elasticsearch_data()
 
     def send_task(self, task, args=None):
         task_name = task.name.replace("plugins.", "")
@@ -763,9 +911,15 @@ def get_resource(resource):
     return resource_path
 
 
+def run_search(query):
+    client = CosmoManagerRestClient('localhost')
+    return client.run_search(query)
+
+
 def deploy_application(dsl_path, timeout=240,
                        blueprint_id=None,
-                       deployment_id='deployment'):
+                       deployment_id='deployment',
+                       wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
@@ -774,13 +928,16 @@ def deploy_application(dsl_path, timeout=240,
                                             blueprint_id).id
 
     deployment = client.create_deployment(blueprint_id, deployment_id)
-    _, error = client.execute_deployment(deployment.id,
-                                         'install',
-                                         timeout=timeout)
+    execution_id, error = client.execute_deployment(
+        deployment.id,
+        'install',
+        timeout=timeout,
+        wait_for_execution=wait_for_execution)
+
     if error is not None:
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
-    return deployment
+    return deployment, execution_id
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -789,7 +946,19 @@ def undeploy_application(deployment_id, timeout=240):
     path.
     """
     client = CosmoManagerRestClient('localhost')
-    client.execute_deployment(deployment_id, 'uninstall', timeout=timeout)
+    _, error = client.execute_deployment(deployment_id,
+                                         'uninstall',
+                                         timeout=timeout)
+    if error is not None:
+        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+
+
+def cancel_execution(execution_id):
+    """
+    Cancels an execution by its id
+    """
+    client = CosmoManagerRestClient('localhost')
+    return client.cancel_execution(execution_id)
 
 
 def validate_dsl(blueprint_id, timeout=240):
@@ -803,15 +972,33 @@ def validate_dsl(blueprint_id, timeout=240):
                            .format(blueprint_id, response.status))
 
 
+def get_execution(execution_id):
+    """
+    Returns the exeuction status
+    """
+    client = CosmoManagerRestClient('localhost')
+    return client._executions_api.getById(execution_id)
+
+
+def get_blueprint(blueprint_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.get_blueprint(blueprint_id)
+
+
 def get_deployment_workflows(deployment_id):
     client = CosmoManagerRestClient('localhost')
     return client.list_workflows(deployment_id)
 
 
-def get_deployment_nodes(deployment_id, get_reachable_state=False):
+def get_deployment_executions(deployment_id, with_statuses=False):
+    client = CosmoManagerRestClient('localhost')
+    return client.list_deployment_executions(deployment_id, with_statuses)
+
+
+def get_deployment_nodes(deployment_id, get_state=False):
     client = CosmoManagerRestClient('localhost')
     deployment_nodes = client.list_deployment_nodes(
-        deployment_id, get_reachable_state)
+        deployment_id, get_state)
     return deployment_nodes
 
 
@@ -823,11 +1010,19 @@ def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
     return state['runtimeInfo']
 
 
-def is_node_reachable(node_id):
+def get_node_instance(node_id):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id, get_reachable_state=True,
-                                  get_runtime_state=False)
-    return state['reachable'] is True
+    node_instance = client.get_node_state(node_id,
+                                          get_state=True,
+                                          get_runtime_properties=True)
+    return node_instance
+
+
+def is_node_started(node_id):
+    client = CosmoManagerRestClient('localhost')
+    state = client.get_node_state(node_id, get_state=True,
+                                  get_runtime_properties=False)
+    return state['state'] == 'started'
 
 
 def get_workflows_state():
