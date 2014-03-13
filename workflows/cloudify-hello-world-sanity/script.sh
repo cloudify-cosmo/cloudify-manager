@@ -3,8 +3,8 @@ cloudify_agents_kp=$2
 host_name=$3
 management_ip=$4
 image_name=$5
-security_group=$6
-management_network_name=$7
+#security_group=$6
+#management_network_name=$7
 
 pip install .
 
@@ -12,10 +12,10 @@ python sanity.py \
     --key_path=$key_path \
     --key_name=$key_name \
     --host_name=$host_name \
-    --management_ip=$management_ip \
     --image_name=$image_name \
-    --security_group=$security_group \
-    --management_network_name=$management_network_name
+    --management_ip=$management_ip
+#    --security_group=$security_group \
+#    --management_network_name=$management_network_name
 
 # python sanity.py \
 #     --key_path='~/.ssh/cloudify-agents-kp.pem' \
