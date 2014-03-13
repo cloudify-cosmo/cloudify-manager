@@ -617,20 +617,17 @@ rm /root/guest_additions.sh
         self.wget("https://download.elasticsearch.org/logstash/logstash/{0}"
                   .format(logstash_jar_name))
         logstash_jar_path = os.path.join(self.working_dir, logstash_jar_name)
-        logstash_web_port = 8080
         logstash_config_path = os.path.join(self.config_dir, 'logstash.conf')
         if not os.path.exists(logstash_config_path):
             raise RuntimeError("logstash configuration file [{0}] "
                                "does not exist".format(logstash_config_path))
         # Starts logstash with Kibana listening on port 8080
-        command = "java -Xmx1024m -Xms256m -jar {0} agent -f {1}" \
-                  " -- web --port {2}".format(logstash_jar_path,
-                                              logstash_config_path,
-                                              logstash_web_port).split(' ')
+        command = "java -Xmx1024m -Xms256m -jar {0} agent -f {1}".format(
+            logstash_jar_path,
+            logstash_config_path).split(' ')
         timeout_seconds = 60
-        print("Starting logstash with web port set to: {0} "
-              "[timeout={1} seconds]".format(logstash_web_port,
-                                             timeout_seconds))
+        print("Starting logstash [timeout={0} seconds]".format(
+            timeout_seconds))
         self._process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
         timeout = datetime.datetime.now() + datetime.timedelta(
