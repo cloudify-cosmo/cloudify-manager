@@ -97,6 +97,32 @@ class TestRemoteInstallerCase(unittest.TestCase):
         self.assertTrue(
             '{0}@kv_store'.format(worker_config["name"]) in plugins)
 
+    def test_install_same_worker_twice(self):
+
+        ctx = get_remote_context()
+        worker_config = get_remote_worker_config()
+
+        install(ctx, worker_config, local=False)
+        start(ctx, worker_config, local=False)
+
+        install(ctx, worker_config, local=False)
+        start(ctx, worker_config, local=False)
+
+        ctx.logger.info("extracting plugins from newly installed worker")
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
+        if not plugins:
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
+
+        ctx.logger.info("Detected plugins : {0}".format(plugins))
+
+        # check built in agent plugins are registered
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+
     def test_install_multiple_workers(self):
 
         ctx = get_remote_context()
@@ -230,6 +256,32 @@ class TestLocalInstallerCase(unittest.TestCase):
 
         install(ctx, worker_config, local=True)
         start(ctx, worker_config, local=True)
+
+        ctx.logger.info("extracting plugins from newly installed worker")
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
+        if not plugins:
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
+
+        ctx.logger.info("Detected plugins : {0}".format(plugins))
+
+        # check built in agent plugins are registered
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+
+    def test_install_same_worker_twice(self):
+
+        ctx = get_local_context()
+        worker_config = get_local_worker_config()
+
+        install(ctx, worker_config, local=False)
+        start(ctx, worker_config, local=False)
+
+        install(ctx, worker_config, local=False)
+        start(ctx, worker_config, local=False)
 
         ctx.logger.info("extracting plugins from newly installed worker")
         plugins = _extract_registered_plugins(

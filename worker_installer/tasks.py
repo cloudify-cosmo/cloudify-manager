@@ -16,13 +16,15 @@
 __author__ = 'elip'
 
 import os
+
 from cloudify.decorators import operation
 from cosmo_fabric.runner import FabricRetryingRunner
-from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION,\
-    KV_STORE_VERSION, RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, \
     BUILT_IN_AGENT_PLUGINS, BUILT_IN_MANAGEMENT_PLUGINS, MANAGER_IP_KEY, \
     LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY, MANAGER_REST_PORT_KEY
+
+from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION,\
+    KV_STORE_VERSION, RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
 
 
 COSMO_CELERY_URL = \
@@ -62,6 +64,9 @@ def install(ctx, worker_config, local=False, **kwargs):
         key_filename = worker_config['key']
 
     runner = create_runner(local, host_string, key_filename)
+
+    if worker_exists(runner, worker_config):
+        return
 
     _install_latest_pip(runner, worker_config)
 
@@ -188,6 +193,10 @@ def restart(ctx, worker_config, local=False, **kwargs):
     runner = create_runner(local, host_string, key_filename)
 
     restart_celery_worker(runner, worker_config)
+
+
+def worker_exists(runner, worker_config):
+    return runner.exists(worker_config[CELERY_WORK_DIR_PATH_KEY])
 
 
 def create_runner(local, host_string, key_filename):
