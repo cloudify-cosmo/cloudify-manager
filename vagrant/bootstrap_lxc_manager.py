@@ -633,7 +633,7 @@ rm /root/guest_additions.sh
         timeout = datetime.datetime.now() + datetime.timedelta(
             seconds=timeout_seconds)
         timeout_exceeded = False
-        pattern = ".*8080.*LISTEN"
+        pattern = ".*9999.*LISTEN"
         # Wait until logstash web port is in listening state
         while not timeout_exceeded:
             output = check_output(["netstat", "-nl"]).replace('\n', '')
