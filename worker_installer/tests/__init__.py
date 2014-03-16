@@ -101,6 +101,7 @@ def get_local_worker_config():
 def get_remote_worker_config():
     return {
         "user": "vagrant",
+        "host": VAGRANT_MACHINE_IP,
         "port": 22,
         "name": "test-worker-{0}".format(id_generator(3)),
         "key": "~/.vagrant.d/insecure_private_key",
@@ -119,6 +120,7 @@ def get_remote_worker_config():
 def get_remote_management_worker_config():
     return {
         "user": "vagrant",
+        "host": VAGRANT_MACHINE_IP,
         "port": 22,
         "management": True,
         "name": "test-worker-{0}".format(id_generator(3)),
