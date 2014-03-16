@@ -152,9 +152,5 @@ class BlueprintsTestCase(BaseServerTestCase):
 
     def test_zipped_plugin(self):
         self.post_file(*post_blueprint_args())
-        from manager_rest.file_server import PORT as FILE_SERVER_PORT
-        response = requests.get(
-            'http://localhost:{0}/blueprints'
-            '/hello_world/plugins/stub-installer.zip'
-            .format(FILE_SERVER_PORT))
-        self.assertEquals(response.status_code, 200)
+        self.check_if_resource_on_fileserver('hello_world',
+                                             'plugins/stub-installer.zip')
