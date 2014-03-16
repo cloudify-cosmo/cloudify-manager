@@ -25,6 +25,8 @@ import tempfile
 from cloudify.mocks import MockCloudifyContext
 from worker_installer.tasks import FabricRetryingRunner
 
+FILE_SERVER_PORT = 53229
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 VAGRANT_MACHINE_IP = "10.0.0.5"
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
@@ -70,7 +72,11 @@ def get_local_management_worker_config():
         "env": {
             "BROKER_URL": "amqp://guest:guest@localhost:5672//",
             "MANAGEMENT_IP": "localhost",
-            "MANAGER_REST_PORT": 8100
+            "MANAGER_REST_PORT": 8100,
+            "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                            FILE_SERVER_PORT,
+                                            FILE_SERVER_BLUEPRINTS_FOLDER)
         }
     }
 
@@ -83,7 +89,11 @@ def get_local_worker_config():
         "env": {
             "BROKER_URL": "amqp://guest:guest@localhost:5672//",
             "MANAGEMENT_IP": "localhost",
-            "MANAGER_REST_PORT": 8100
+            "MANAGER_REST_PORT": 8100,
+            "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                            FILE_SERVER_PORT,
+                                            FILE_SERVER_BLUEPRINTS_FOLDER)
         }
     }
 
@@ -97,7 +107,11 @@ def get_remote_worker_config():
         "env": {
             "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
             "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-            "MANAGER_REST_PORT": 8100
+            "MANAGER_REST_PORT": 8100,
+            "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                            FILE_SERVER_PORT,
+                                            FILE_SERVER_BLUEPRINTS_FOLDER)
         }
     }
 
@@ -112,7 +126,11 @@ def get_remote_management_worker_config():
         "env": {
             "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
             "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-            "MANAGER_REST_PORT": 8100
+            "MANAGER_REST_PORT": 8100,
+            "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                            FILE_SERVER_PORT,
+                                            FILE_SERVER_BLUEPRINTS_FOLDER)
         }
     }
 
