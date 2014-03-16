@@ -22,7 +22,7 @@ import base_test
 
 class StorageManagerTests(base_test.BaseServerTestCase):
 
-    def test_store_load_blueprint(self):
+    def test_store_load_delete_blueprint(self):
         now = str(datetime.now())
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
@@ -33,8 +33,58 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint_from_list = storage_manager.instance().blueprints_list()[0]
         blueprint_restored = \
             storage_manager.instance().get_blueprint('blueprint-id')
+        bp_from_delete = storage_manager.instance().delete_blueprint(
+            'blueprint-id')
         self.assertEquals(blueprint.__dict__, blueprint_from_list.__dict__)
         self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
+        #in bp returned from delete operation only 'id' is guaranteed to
+        # return
+        self.assertEquals(blueprint.id, bp_from_delete.id)
+        self.assertEquals(0,
+                          len(storage_manager.instance().blueprints_list()))
+
+    def test_get_blueprint_deployments(self):
+        now = str(datetime.now())
+        blueprint = models.BlueprintState(id='blueprint-id',
+                                          created_at=now,
+                                          updated_at=now,
+                                          plan={'name': 'my-bp'},
+                                          source='bp-source')
+        storage_manager.instance().put_blueprint('blueprint-id', blueprint)
+
+        deployment1 = models.Deployment(id='dep-1',
+                                        created_at=now,
+                                        updated_at=now,
+                                        blueprint_id='blueprint-id',
+                                        plan={'name': 'my-bp'},
+                                        permalink=None)
+        storage_manager.instance().put_deployment('dep-1', deployment1)
+
+        deployment2 = models.Deployment(id='dep-2',
+                                        created_at=now,
+                                        updated_at=now,
+                                        blueprint_id='blueprint-id',
+                                        plan={'name': 'my-bp'},
+                                        permalink=None)
+        storage_manager.instance().put_deployment('dep-2', deployment2)
+
+        deployment3 = models.Deployment(id='dep-3',
+                                        created_at=now,
+                                        updated_at=now,
+                                        blueprint_id='another-blueprint-id',
+                                        plan={'name': 'my-bp'},
+                                        permalink=None)
+        storage_manager.instance().put_deployment('dep-3', deployment3)
+
+        blueprint_deployments = storage_manager.instance()\
+            .get_blueprint_deployments(
+                'blueprint-id')
+
+        self.assertEquals(2, len(blueprint_deployments))
+        self.assertEquals(deployment1.__dict__,
+                          blueprint_deployments[0].__dict__)
+        self.assertEquals(deployment2.__dict__,
+                          blueprint_deployments[1].__dict__)
 
     def test_model_serialization(self):
         dep = models.Deployment(id='dep-id',

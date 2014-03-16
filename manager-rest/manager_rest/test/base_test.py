@@ -18,6 +18,7 @@ __author__ = 'dan'
 import unittest
 import json
 import urllib
+import urllib2
 import tempfile
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
@@ -96,6 +97,21 @@ class BaseServerTestCase(unittest.TestCase):
     def head(self, resource_path):
         result = self.app.head(urllib.quote(resource_path))
         return result
+
+    def delete(self, resource_path):
+        result = self.app.delete(urllib.quote(resource_path))
+        result.json = json.loads(result.data)
+        return result
+
+    def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
+        url = 'http://localhost:{0}/{1}/{2}/{3}'.format(
+            FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER,
+            blueprint_id, resource_path)
+        try:
+            urllib2.urlopen(url)
+            return True
+        except urllib2.HTTPError:
+            return False
 
     def _build_url(self, resource_path, query_params):
         query_string = ''

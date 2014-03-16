@@ -28,6 +28,7 @@ from flask import g, current_app
 
 from manager_rest import models
 from manager_rest import responses
+from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 
@@ -91,6 +92,19 @@ class BlueprintsManager(object):
                                               source=source)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
+
+    def delete_blueprint(self, blueprint_id):
+        blueprint_deployments = get_storage_manager()\
+            .get_blueprint_deployments(blueprint_id)
+
+        if len(blueprint_deployments) > 0:
+            raise manager_exceptions.DependentExistsError(
+                "Deleting blueprint {0} not allowed - There exist "
+                "deployments for this blueprint; Deployments ids: {0}"
+                .format(','.join([dep.id for dep
+                                  in blueprint_deployments])))
+
+        return get_storage_manager().delete_blueprint(blueprint_id)
 
     # currently validation is split to 2 phases: the first
     # part is during submission (dsl parsing)
