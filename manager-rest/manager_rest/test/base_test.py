@@ -17,7 +17,8 @@ __author__ = 'dan'
 
 import unittest
 import json
-import urllib, urllib2
+import urllib
+import urllib2
 import tempfile
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
