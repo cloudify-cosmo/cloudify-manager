@@ -6,6 +6,7 @@ import requests
 import copy
 import json
 import yaml
+import re
 import sys
 import os
 import argparse
@@ -245,6 +246,20 @@ def assert_valid_deployment(before_state, after_state):
     web_server_page_response = requests.get('http://{0}:8080'.format(public_ip))
     fail_message = 'Expected to find {0} in web server response: {1}'.format(webserver_node_id, web_server_page_response)
     assert webserver_node_id in web_server_page_response.text, fail_message
+
+    match = re.match('<img src="[^"]*"', web_server_page_response.text)
+    if not match:
+        fail_message = \
+            'Expected to find an img tag with src attribute in web server ' \
+            'response: {1}'.format(web_server_page_response)
+        assert False, fail_message
+    img_src = match.group(0)[10:-1]
+    img_url = 'http://{0}:8080/'.format(img_src)
+    img_response = requests.get(img_url)
+    assert img_response.status_code == 200, 'Failed to get image from web ' \
+                                            'server at {0}'.format(img_url)
+
+
 
 
 def flatten_ips(networks):
