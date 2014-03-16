@@ -25,6 +25,7 @@ from worker_installer.tests import get_remote_runner, get_local_runner, \
     id_generator, get_local_worker_config, get_local_context, \
     get_remote_context, \
     get_remote_management_worker_config, VAGRANT_MACHINE_IP, \
+    FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER, \
     get_remote_worker_config, get_local_management_worker_config
 
 from celery import Celery
@@ -78,6 +79,32 @@ class TestRemoteInstallerCase(unittest.TestCase):
 
         ctx = get_remote_context()
         worker_config = get_remote_worker_config()
+
+        install(ctx, worker_config, local=False)
+        start(ctx, worker_config, local=False)
+
+        ctx.logger.info("extracting plugins from newly installed worker")
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
+        if not plugins:
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
+
+        ctx.logger.info("Detected plugins : {0}".format(plugins))
+
+        # check built in agent plugins are registered
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+
+    def test_install_same_worker_twice(self):
+
+        ctx = get_remote_context()
+        worker_config = get_remote_worker_config()
+
+        install(ctx, worker_config, local=False)
+        start(ctx, worker_config, local=False)
 
         install(ctx, worker_config, local=False)
         start(ctx, worker_config, local=False)
@@ -194,7 +221,11 @@ class TestRemoteInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         uninstall(get_remote_context(), worker_config, True)
@@ -209,7 +240,11 @@ class TestRemoteInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         stop(get_remote_context(), worker_config, True)
@@ -229,6 +264,32 @@ class TestLocalInstallerCase(unittest.TestCase):
 
         ctx = get_local_context()
         worker_config = get_local_worker_config()
+
+        install(ctx, worker_config, local=True)
+        start(ctx, worker_config, local=True)
+
+        ctx.logger.info("extracting plugins from newly installed worker")
+        plugins = _extract_registered_plugins(
+            worker_config['env']['BROKER_URL'], worker_config["name"])
+        if not plugins:
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
+
+        ctx.logger.info("Detected plugins : {0}".format(plugins))
+
+        # check built in agent plugins are registered
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
+        self.assertTrue(
+            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+
+    def test_install_same_worker_twice(self):
+
+        ctx = get_local_context()
+        worker_config = get_local_worker_config()
+
+        install(ctx, worker_config, local=True)
+        start(ctx, worker_config, local=True)
 
         install(ctx, worker_config, local=True)
         start(ctx, worker_config, local=True)
@@ -325,7 +386,11 @@ class TestLocalInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         uninstall(get_remote_context(), worker_config, True)
@@ -338,7 +403,11 @@ class TestLocalInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         stop(get_remote_context(), worker_config, True)

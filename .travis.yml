@@ -22,9 +22,11 @@ install:
     # command to install test dependencies
     - pip install -r test-requirements.txt
 
+    - sudo pip install flake8
+
 
 
 script:
-
+    - flake8 .
     - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
 
