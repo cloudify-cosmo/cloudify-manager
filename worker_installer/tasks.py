@@ -66,6 +66,8 @@ def install(ctx, worker_config, local=False, **kwargs):
     runner = create_runner(local, host_string, key_filename)
 
     if worker_exists(runner, worker_config):
+        ctx.logger.info("Worker for deployment {0} is already installed. nothing to do."
+                        .format(ctx.deployment_id))
         return
 
     _install_latest_pip(runner, worker_config)
