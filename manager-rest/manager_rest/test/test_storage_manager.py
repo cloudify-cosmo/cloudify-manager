@@ -68,6 +68,14 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         permalink=None)
         storage_manager.instance().put_deployment('dep-2', deployment2)
 
+        deployment3 = models.Deployment(id='dep-3',
+                                        created_at=now,
+                                        updated_at=now,
+                                        blueprint_id='another-blueprint-id',
+                                        plan={'name': 'my-bp'},
+                                        permalink=None)
+        storage_manager.instance().put_deployment('dep-3', deployment3)
+
         blueprint_deployments = storage_manager.instance()\
             .get_blueprint_deployments(
                 'blueprint-id')

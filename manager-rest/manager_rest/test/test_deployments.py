@@ -53,6 +53,16 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(typed_blueprint_plan['name'],
                           typed_deployment_plan['name'])
 
+    def test_delete_blueprint_which_has_deployments(self):
+        (blueprint_id,
+         deployment_id,
+         blueprint_response,
+         deployment_response) = self._put_test_deployment()
+        resp = self.delete('/blueprints/{0}'.format(blueprint_id))
+        self.assertEqual(400, resp.status_code)
+        self.assertTrue('There exist deployments for this blueprint' in resp
+            .json['message'])
+
     def test_deployment_already_exists(self):
         (blueprint_id,
          deployment_id,

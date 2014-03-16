@@ -115,6 +115,34 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(dsl_string, get_blueprint_source_response['source'])
         self.assertEquals(None, get_blueprint_source_response['plan'])
 
+    def test_delete_blueprint(self):
+        post_blueprints_response = self.post_file(*post_blueprint_args()).json
+
+        #testing if resources are on fileserver
+        self.assertTrue(
+            self.check_if_resource_on_fileserver(
+                post_blueprints_response['id'], 'blueprint.yaml'))
+
+        #deleting the blueprint that was just uploaded
+        delete_blueprint_response = self.delete(
+            '/blueprints/{0}'.format(post_blueprints_response['id'])).json
+        self.assertEquals(post_blueprints_response['id'],
+                          delete_blueprint_response['id'])
+
+        #verifying deletion of blueprint
+        resp = self.get('/blueprints/{0}'.format(post_blueprints_response[
+                        'id']))
+        self.assertEquals(404, resp.status_code)
+
+        #verifying deletion of fileserver resources
+        self.assertFalse(
+            self.check_if_resource_on_fileserver(
+                post_blueprints_response['id'], 'blueprint.yaml'))
+
+        #trying to delete a nonexistent blueprint
+        resp = self.delete('/blueprints/nonexistent-blueprint')
+        self.assertEquals(404, resp.status_code)
+
     def test_get_blueprints_id_validate(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
         resource_path = '/blueprints/{0}/validate'.format(

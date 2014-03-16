@@ -82,8 +82,8 @@ def abort_not_found(not_exists_error):
     abort_error(404, not_exists_error)
 
 
-def abort_dependent_exists(depedent_exists_error):
-    abort_error(404, depedent_exists_error)
+def abort_dependent_exists(dependent_exists_error):
+    abort_error(400, dependent_exists_error)
 
 
 def abort_error(status_code, error):

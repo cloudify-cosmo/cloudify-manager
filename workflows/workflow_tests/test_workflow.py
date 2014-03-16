@@ -23,10 +23,12 @@ from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
 from workflow_tests.testenv import run_search as search
 from workflow_tests.testenv import get_blueprint
+from workflow_tests.testenv import delete_blueprint
+from workflow_tests.testenv import publish_blueprint
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient
+    import CosmoManagerRestClient, CosmoManagerRestCallError
 
 
 class BasicWorkflowsTest(TestCase):
@@ -179,6 +181,30 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(blueprint_id, blueprint.id)
         self.assertTrue(len(blueprint.plan) > 0)
         self.assertEqual('None', blueprint.source)
+
+    def test_delete_blueprint(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = publish_blueprint(dsl_path)
+        #verifying blueprint exists
+        temp = get_blueprint(blueprint_id)
+        self.assertEqual(blueprint_id, temp.id)
+        #deleting blueprint
+        deleted_bp_id = delete_blueprint(blueprint_id).id
+        self.assertEqual(blueprint_id, deleted_bp_id)
+        #verifying blueprint does no longer exist
+        try:
+            get_blueprint(blueprint_id)
+            self.fail("Got blueprint {0} successfully even though it "
+                      "wasn't expected to exist".format(blueprint_id))
+        except CosmoManagerRestCallError:
+            pass
+        #trying to delete a nonexistent blueprint
+        try:
+            delete_blueprint(blueprint_id)
+            self.fail("Deleted blueprint {0} successfully even though it "
+                      "wasn't expected to exist".format(blueprint_id))
+        except CosmoManagerRestCallError:
+            pass
 
     def test_node_state_uninitialized(self):
         dsl_path = resource('dsl/node_states.yaml')

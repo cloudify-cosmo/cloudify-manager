@@ -916,6 +916,13 @@ def run_search(query):
     return client.run_search(query)
 
 
+def publish_blueprint(dsl_path, blueprint_id=None):
+    client = CosmoManagerRestClient('localhost')
+    blueprint_id = client.publish_blueprint(dsl_path,
+                                            blueprint_id).id
+    return blueprint_id
+
+
 def deploy_application(dsl_path, timeout=240,
                        blueprint_id=None,
                        deployment_id='deployment',
@@ -983,6 +990,11 @@ def get_execution(execution_id):
 def get_blueprint(blueprint_id):
     client = CosmoManagerRestClient('localhost')
     return client.get_blueprint(blueprint_id)
+
+
+def delete_blueprint(blueprint_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.delete_blueprint(blueprint_id)
 
 
 def get_deployment_workflows(deployment_id):

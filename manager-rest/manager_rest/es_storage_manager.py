@@ -37,10 +37,11 @@ class ESStorageManager(object):
     def _get_es_conn(self):
         return Elasticsearch()
 
-    def _list_docs(self, doc_type, model_class):
+    def _list_docs(self, doc_type, model_class, query=None):
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
                                                    doc_type=doc_type,
-                                                   size=DEFAULT_SEARCH_SIZE)
+                                                   size=DEFAULT_SEARCH_SIZE,
+                                                   body=query)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
         return map(lambda doc: model_class(**doc), docs)
 
@@ -103,6 +104,27 @@ class ESStorageManager(object):
                 fields_data[field] = None
         return model_class(**fields_data)
 
+    @staticmethod
+    def _build_field_value_filter(key, val):
+        #This method is used to create a search filter to receive only
+        # results where a specific key holds a specific value.
+        # Filters are faster than queries as they are cached and don't
+        # influence the score.
+        # Since a filter must go along with a query, it's wrapped in a
+        # simple 'constant_score' query in this case (similar to match_all
+        # query in some ways)
+        return {
+            'query': {
+                'constant_score': {
+                    'filter': {
+                        'term': {
+                            key: val
+                        }
+                    }
+                }
+            }
+        }
+
     def nodes_list(self):
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
                                                    doc_type=NODE_TYPE,
@@ -125,16 +147,14 @@ class ESStorageManager(object):
         return self._list_docs(EXECUTION_TYPE, Execution)
 
     def get_blueprint_deployments(self, blueprint_id):
-        #TODO: make this using a specific search
-        deployments = self.deployments_list()
-        return [deployment for deployment in deployments if
-                deployment.blueprint_id == blueprint_id]
+        return self._list_docs(DEPLOYMENT_TYPE, Deployment,
+                               self._build_field_value_filter(
+                                   'blueprint_id', blueprint_id))
 
     def get_deployment_executions(self, deployment_id):
-        #TODO: make this using a specific search
-        executions = self.executions_list()
-        return [execution for execution in executions if
-                execution.deployment_id == deployment_id]
+        return self._list_docs(EXECUTION_TYPE, Execution,
+                               self._build_field_value_filter(
+                                   'deployment_id', deployment_id))
 
     def get_node(self, node_id):
         doc = self._get_doc(NODE_TYPE, node_id)
