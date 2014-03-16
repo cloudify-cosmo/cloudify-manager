@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from os.path import dirname
 
 __author__ = 'elip'
 
@@ -67,7 +68,8 @@ def install(ctx, worker_config, local=False, **kwargs):
     runner = create_runner(local, host_string, key_filename)
 
     if worker_exists(runner, worker_config):
-        ctx.logger.info("Worker for deployment {0} is already installed. nothing to do."
+        ctx.logger.info("Worker for deployment {0} "
+                        "is already installed. nothing to do."
                         .format(ctx.deployment_id))
         return
 
@@ -102,8 +104,7 @@ def uninstall(ctx, worker_config, local=False, **kwargs):
         "/etc/default/celeryd-{0}".format(worker_config["name"]),
     ]
     folders_to_delete = [
-        worker_config[VIRTUALENV_PATH_KEY],
-        worker_config[CELERY_WORK_DIR_PATH_KEY]
+        dirname(worker_config[VIRTUALENV_PATH_KEY])
     ]
     delete_files_if_exist(ctx, worker_config, runner, files_to_delete)
     delete_folders_if_exist(ctx, worker_config, runner, folders_to_delete)
