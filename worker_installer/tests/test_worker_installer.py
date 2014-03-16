@@ -277,11 +277,11 @@ class TestLocalInstallerCase(unittest.TestCase):
         ctx = get_local_context()
         worker_config = get_local_worker_config()
 
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        install(ctx, worker_config, local=True)
+        start(ctx, worker_config, local=True)
 
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        install(ctx, worker_config, local=True)
+        start(ctx, worker_config, local=True)
 
         ctx.logger.info("extracting plugins from newly installed worker")
         plugins = _extract_registered_plugins(
