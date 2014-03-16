@@ -20,7 +20,6 @@ from base_test import BaseServerTestCase
 import tempfile
 import os
 import tarfile
-import requests
 
 
 def post_blueprint_args(convention=False, blueprint_id=None):
