@@ -25,6 +25,7 @@ from worker_installer.tests import get_remote_runner, get_local_runner, \
     id_generator, get_local_worker_config, get_local_context, \
     get_remote_context, \
     get_remote_management_worker_config, VAGRANT_MACHINE_IP, \
+    FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER, \
     get_remote_worker_config, get_local_management_worker_config
 
 from celery import Celery
@@ -192,7 +193,11 @@ class TestRemoteInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         uninstall(get_remote_context(), worker_config, True)
@@ -207,7 +212,11 @@ class TestRemoteInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         stop(get_remote_context(), worker_config, True)
@@ -323,7 +332,11 @@ class TestLocalInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         uninstall(get_remote_context(), worker_config, True)
@@ -336,7 +349,11 @@ class TestLocalInstallerCase(unittest.TestCase):
             "env": {
                 "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
                 "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100
+                "MANAGER_REST_PORT": 8100,
+                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
+                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
+                                                FILE_SERVER_PORT,
+                                                FILE_SERVER_BLUEPRINTS_FOLDER)
             }
         }
         stop(get_remote_context(), worker_config, True)
