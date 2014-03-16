@@ -205,7 +205,8 @@ class TestRemoteInstallerCase(unittest.TestCase):
             worker_config["name"])
         defaults_file_path = "/etc/default/celeryd-{0}".format(
             worker_config["name"])
-        worker_home = "{0}/{1}__worker".format(worker_config['home'], worker_config['name'])
+        worker_home = "{0}/{1}__worker"\
+            .format(worker_config['home'], worker_config['name'])
 
         self.assertFalse(self.RUNNER.exists(service_file_path))
         self.assertFalse(self.RUNNER.exists(defaults_file_path))
