@@ -106,3 +106,11 @@ relationships:
             cloudify.interfaces.relationship_lifecycle:
                 - establish: neutron_plugin.router.connect_subnet
                 - unlink: neutron_plugin.router.disconnect_subnet
+                
+    cloudify.openstack.server_connected_to_port:
+        derived_from: cloudify.realtionships.connected_to
+        
+    cloudify.openstack.floating_ip_connected_to_port:
+        derived_from: cloudify.relationships.connected_to
+        
+    
