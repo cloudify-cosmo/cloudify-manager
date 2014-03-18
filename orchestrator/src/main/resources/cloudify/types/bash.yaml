@@ -1,0 +1,31 @@
+types:
+
+    # A web server configured with bash scripts
+    cloudify.types.bash.web_server:
+        derived_from: cloudify.types.web_server
+        properties:
+            - scripts
+
+    # An app server configured with bash scripts
+    cloudify.types.bash.app_server:
+        derived_from: cloudify.types.app_server
+        properties:
+            - scripts
+
+    # A db server configured with bash scripts
+    cloudify.types.bash.db_server:
+        derived_from: cloudify.types.db_server
+        properties:
+            - scripts
+
+    # A message bug server configured with bash scripts
+    cloudify.types.bash.message_bus_server:
+        derived_from: cloudify.types.message_bus_server
+        properties:
+            - scripts
+
+    # An app module configured with bash scripts
+    cloudify.types.bash.app_module:
+        derived_from: cloudify.types.app_module
+        properties:
+            - scripts
