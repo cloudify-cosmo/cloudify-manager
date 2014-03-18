@@ -40,6 +40,19 @@ DEPLOYMENT_SCHEMA = {
     }
 }
 
+SETTINGS = {
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "default": {
+                    "tokenizer": "whitespace"
+                }
+            }
+        }
+    }
+}
+
+
 # DEPLOYMENT_SCHEMA = {
 #     'deployment': {
 #         'properties': {
@@ -144,7 +157,7 @@ def create_schema(storage_index_url):
         response.raise_for_status()
 
     #create index
-    response = requests.post(storage_index_url, data={})
+    response = requests.post(storage_index_url, data=json.dumps(SETTINGS))
     response.raise_for_status()
 
     #set mappings

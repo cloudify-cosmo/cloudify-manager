@@ -6,6 +6,8 @@ import requests
 import copy
 import json
 import yaml
+import re
+import shutil
 import sys
 import os
 import argparse
@@ -121,8 +123,9 @@ def get_state_delta(before, after):
 ## Step functions
 ##################################
 def clone_hello_world():
-    if not blueprint_repo_dir.isdir():
-        git.clone(hello_world_repo_url).wait()
+    if blueprint_repo_dir.isdir():
+        shutil.rmtree(blueprint_repo_dir)
+    git.clone(hello_world_repo_url).wait()
     with blueprint_repo_dir:
         git.checkout(hello_world_repo_branch).wait()
 
@@ -234,8 +237,8 @@ def assert_valid_deployment(before_state, after_state):
             ips = flatten_ips(networks)
             print 'host ips are: ', ips
             public_ip = filter(lambda ip: ip != private_ip, ips)[0]
-            assert value['state'] == 'started', 'vm node should be started: {'
-            '0}'.format(nodes_state)
+            assert value['state'] == 'started', 'vm node should be started: '
+            '{0}'.format(nodes_state)
         else:
             webserver_node_id = key
 
@@ -245,6 +248,20 @@ def assert_valid_deployment(before_state, after_state):
     web_server_page_response = requests.get('http://{0}:8080'.format(public_ip))
     fail_message = 'Expected to find {0} in web server response: {1}'.format(webserver_node_id, web_server_page_response)
     assert webserver_node_id in web_server_page_response.text, fail_message
+
+    img_tag = "<img src='"
+    fail_message = \
+        'Expected to find an img tag with src attribute in web server ' \
+        'response: {0}'.format(web_server_page_response)
+    assert img_tag in web_server_page_response.text, fail_message
+
+    src_start = web_server_page_response.text.index(img_tag) + len(img_tag)
+    src_end = src_start + web_server_page_response.text[src_start:].index("'")
+    img_src = web_server_page_response.text[src_start:src_end]
+    img_url = 'http://{0}:8080/{1}'.format(public_ip, img_src)
+    img_response = requests.get(img_url)
+    assert img_response.status_code == 200, 'Failed to get image from web ' \
+                                            'server at {0}'.format(img_url)
 
 
 def flatten_ips(networks):
