@@ -45,7 +45,7 @@ types:
         properties:
             - scripts
 
-    # A message bug server configured with bash scripts
+    # A message bus server configured with bash scripts
     cloudify.types.bash.message_bus_server:
         derived_from: cloudify.types.message_bus_server
         interfaces:
