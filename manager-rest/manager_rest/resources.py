@@ -788,8 +788,9 @@ class DeploymentsIdExecutions(Resource):
         notes="Returns a list of executions related to the provided"
               " deployment.",
         parameters=[{'name': 'statuses',
-                     'description': 'Specifies whether to return reachable '
-                                    'state for the nodes.',
+                     'description': 'Specifies whether to return '
+                                    'current statuses and errors data for '
+                                    "the deployment's executions",
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
