@@ -18,6 +18,7 @@ __author__ = 'dan'
 import logging
 import sys
 import functools
+import traceback
 import os
 import yaml
 
@@ -100,9 +101,8 @@ app = setup_app()
 
 @app.errorhandler(500)
 def internal_error(e):
-    response = jsonify(
-        {"message": "Internal error occurred in manager REST server: {0}"
-            .format(str(e))})
-
+    response = jsonify({"message": "Internal error occurred in manager REST "
+                                   "server.\n{0}".format(
+                                   traceback.format_exc())})
     response.status_code = 500
     return response
