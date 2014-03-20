@@ -123,8 +123,8 @@ class BlueprintsManager(object):
         deployment = self.get_deployment(deployment_id)
 
         if workflow_id not in deployment.plan['workflows']:
-            raise manager_exceptions.NotFoundError(
-                'Workflow {0} not found in deployment {1}'.format(
+            raise manager_exceptions.NonexistentWorkflow(
+                'Workflow {0} does not exist in deployment {1}'.format(
                     workflow_id, deployment_id))
         workflow = deployment.plan['workflows'][workflow_id]
         plan = deployment.plan

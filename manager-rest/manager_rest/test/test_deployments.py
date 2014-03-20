@@ -204,7 +204,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         response = self.post(resource_path, {
             'workflowId': 'nonexisting-workflow-id'
         })
-        self.assertEqual(404, response.status_code)
+        self.assertEqual(400, response.status_code)
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
