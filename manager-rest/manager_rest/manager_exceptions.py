@@ -28,5 +28,5 @@ class DependentExistsError(Exception):
     pass
 
 
-class NonexistentWorkflow(Exception):
+class NonexistentWorkflowError(Exception):
     pass

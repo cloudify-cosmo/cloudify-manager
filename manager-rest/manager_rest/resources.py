@@ -58,7 +58,7 @@ def exceptions_handled(func):
             abort_not_found(e)
         except manager_exceptions.DependentExistsError, e:
             abort_dependent_exists(e)
-        except manager_exceptions.NonexistentWorkflow, e:
+        except manager_exceptions.NonexistentWorkflowError, e:
             abort_nonexistent_workflow(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
