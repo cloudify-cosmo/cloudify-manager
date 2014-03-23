@@ -23,6 +23,7 @@ import tempfile
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
 
+STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
@@ -33,7 +34,8 @@ class BaseServerTestCase(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.file_server = FileServer(self.tmpdir)
         self.file_server.start()
-        storage_manager.storage_manager_module_name = 'file_storage_manager'
+        storage_manager.storage_manager_module_name = \
+            STORAGE_MANAGER_MODULE_NAME
         server.reset_state(self.create_configuration())
         util.copy_resources(config.instance().file_server_root)
         server.setup_app()

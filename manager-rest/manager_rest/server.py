@@ -17,10 +17,12 @@ __author__ = 'dan'
 
 import logging
 import sys
+import functools
+import traceback
 import os
 import yaml
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_restful import Api
 
 from manager_rest import config
@@ -36,10 +38,36 @@ def setup_app():
     app.logger.setLevel(logging.DEBUG)
     app.logger.addHandler(logging.StreamHandler(sys.stdout))
 
+    #saving flask's original error handlers
+    flask_handle_exception = app.handle_exception
+    flask_handle_user_exception = app.handle_user_exception
+
     api = Api(app)
 
-    resources.setup_resources(api)
+    #saving flask-restful's error handlers
+    flask_restful_handle_exception = app.handle_exception
+    flask_restful_handle_user_exception = app.handle_user_exception
 
+    #setting it so that <500 codes use flask-restful's error handlers,
+    #while 500+ codes use original flask's error handlers (for which we
+    # register an error handler on somewhere else in this module)
+    def handle_exception(flask_method, flask_restful_method, e):
+        code = getattr(e, 'code', 500)
+        if code >= 500:
+            return flask_method(e)
+        else:
+            return flask_restful_method(e)
+
+    app.handle_exception = functools.partial(
+        handle_exception,
+        flask_handle_exception,
+        flask_restful_handle_exception)
+    app.handle_user_exception = functools.partial(
+        handle_exception,
+        flask_handle_user_exception,
+        flask_restful_handle_user_exception)
+
+    resources.setup_resources(api)
     return app
 
 
@@ -69,3 +97,14 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
             yaml_conf['workflow_service_base_uri']
 
 app = setup_app()
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    response = jsonify(
+        {"message":
+         "Internal error occurred in manager REST server - {0}: {1}"
+            .format(type(e).__name__, str(e)),
+         "traceback": traceback.format_tb(sys.exc_info()[2])})
+    response.status_code = 500
+    return response

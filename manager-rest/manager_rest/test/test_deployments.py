@@ -196,6 +196,16 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(None, get_execution[0]['error'])
         self.assertEquals(execution, get_execution[0])
 
+    def test_executing_nonexisting_workflow(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        response = self.post(resource_path, {
+            'workflowId': 'nonexisting-workflow-id'
+        })
+        self.assertEqual(400, response.status_code)
+
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()

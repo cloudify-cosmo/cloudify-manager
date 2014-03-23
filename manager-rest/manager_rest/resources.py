@@ -58,6 +58,8 @@ def exceptions_handled(func):
             abort_not_found(e)
         except manager_exceptions.DependentExistsError, e:
             abort_dependent_exists(e)
+        except manager_exceptions.NonexistentWorkflowError, e:
+            abort_nonexistent_workflow(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
     return wrapper
@@ -81,6 +83,10 @@ def abort_not_found(not_exists_error):
 
 def abort_dependent_exists(dependent_exists_error):
     abort_error(400, dependent_exists_error)
+
+
+def abort_nonexistent_workflow(nonexistent_workflow_error):
+    abort_error(400, nonexistent_workflow_error)
 
 
 def abort_error(status_code, error):
@@ -786,8 +792,9 @@ class DeploymentsIdExecutions(Resource):
         notes="Returns a list of executions related to the provided"
               " deployment.",
         parameters=[{'name': 'statuses',
-                     'description': 'Specifies whether to return reachable '
-                                    'state for the nodes.',
+                     'description': 'Specifies whether to return '
+                                    'current statuses and errors data for '
+                                    "the deployment's executions",
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
