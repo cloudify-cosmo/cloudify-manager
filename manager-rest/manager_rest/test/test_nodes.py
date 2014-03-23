@@ -20,11 +20,18 @@ from base_test import BaseServerTestCase
 
 class NodesTest(BaseServerTestCase):
 
+    def test_get_nonexisting_node(self):
+        response = self.get('/nodes/1234')
+        self.assertEqual(404, response.status_code)
+
     def test_get_node(self):
-        response = self.get('/nodes/1234').json
-        self.assertEqual('1234', response['id'])
-        self.assertTrue('runtimeInfo' in response)
-        self.assertEqual(0, len(response['runtimeInfo']))
+        self.put('/nodes/1234', {'key': 'value'})
+        response = self.get('/nodes/1234')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('1234', response.json['id'])
+        self.assertTrue('runtimeInfo' in response.json)
+        self.assertEqual(1, len(response.json['runtimeInfo']))
+        self.assertEqual('value', response.json['runtimeInfo']['key'])
 
     def test_put_new_node(self):
         response = self.put('/nodes/1234', {'key': 'value'})

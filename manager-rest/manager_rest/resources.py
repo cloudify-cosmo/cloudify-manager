@@ -655,31 +655,29 @@ class NodesId(Resource):
         args = self._args_parser.parse_args()
         get_reachable_state = verify_and_convert_bool(
             'reachable', args['reachable'])
-        get_runtime_state = verify_and_convert_bool(
+        get_runtime_info = verify_and_convert_bool(
             'runtime', args['runtime'])
         get_state = verify_and_convert_bool('state', args['state'])
 
         reachable_state = None
         state = None
+        runtime_info = None
+        state_version = None
+
+        if get_runtime_info:
+            node = get_storage_manager().get_node(node_id)
+            runtime_info = node.runtime_info
+            state_version = node.state_version
+
         if get_reachable_state or get_state:
             state = get_riemann_client().get_node_state(node_id)
             reachable_state = state['reachable']
             state = state['state']
 
-        runtime_state = None
-        state_version = None
-        if get_runtime_state:
-            try:
-                node = get_storage_manager().get_node(node_id)
-                runtime_state = node.runtime_info
-                state_version = node.state_version
-            except manager_exceptions.NotFoundError:
-                runtime_state = {}
-
         return responses.DeploymentNode(id=node_id,
                                         state=state,
                                         reachable=reachable_state,
-                                        runtime_info=runtime_state,
+                                        runtime_info=runtime_info,
                                         state_version=state_version)
 
     @swagger.operation(
