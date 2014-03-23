@@ -26,3 +26,7 @@ class NotFoundError(Exception):
 
 class DependentExistsError(Exception):
     pass
+
+
+class NonexistentWorkflowError(Exception):
+    pass
