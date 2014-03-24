@@ -158,6 +158,7 @@ class DeploymentNodes(object):
         self.deployment_id = kwargs['deployment_id']
         self.nodes = kwargs['nodes']
 
+
 @swagger.model
 class Status(object):
 
