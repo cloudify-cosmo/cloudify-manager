@@ -157,3 +157,14 @@ class DeploymentNodes(object):
     def __init__(self, **kwargs):
         self.deployment_id = kwargs['deployment_id']
         self.nodes = kwargs['nodes']
+
+
+@swagger.model
+class Status(object):
+
+    resource_fields = {
+        'status': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.status = kwargs['status']

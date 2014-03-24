@@ -113,7 +113,6 @@ def setup_resources(api):
     api = swagger.docs(api,
                        apiVersion='0.1',
                        basePath='http://localhost:8100')
-
     api.add_resource(Blueprints,
                      '/blueprints')
     api.add_resource(BlueprintsId,
@@ -138,6 +137,7 @@ def setup_resources(api):
                      '/nodes/<string:node_id>')
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
+    api.add_resource(Status, '/status')
 
 
 class BlueprintsUpload(object):
@@ -976,3 +976,19 @@ class Search(Resource):
         verify_json_content_type()
         return _query_elastic_search(index='cloudify_storage',
                                      body=request.json)
+
+
+class Status(Resource):
+
+    @swagger.operation(
+        responseClass=responses.Status,
+        nickname="status",
+        notes="Returns an alive message from the rest service."
+    )
+    @marshal_with(responses.Status.resource_fields)
+    @exceptions_handled
+    def get(self):
+        """
+        Returns an alive status (mainly used for pinging reasons).
+        """
+        return responses.Status(status='running')
