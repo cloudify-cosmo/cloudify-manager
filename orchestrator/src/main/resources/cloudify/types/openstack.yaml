@@ -9,11 +9,11 @@ plugins:
     nova_plugin:
         derived_from: cloudify.plugins.manager_plugin
         properties:
-            url: https://github.com/CloudifySource/cloudify-openstack-plugin/archive/feature/CFY-121-server-floating-ip.zip
+            url: https://github.com/CloudifySource/cloudify-openstack-plugin/archive/develop.zip
     neutron_plugin:
         derived_from: cloudify.plugins.manager_plugin
         properties:
-            url: https://github.com/CloudifySource/cloudify-openstack-plugin/archive/feature/CFY-121-server-floating-ip.zip
+            url: https://github.com/CloudifySource/cloudify-openstack-plugin/archive/develop.zip
 
 
 types:
