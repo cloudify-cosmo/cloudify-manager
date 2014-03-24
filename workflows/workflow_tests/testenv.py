@@ -579,14 +579,19 @@ class ElasticSearchProcess(object):
             logger.info(
                 "Elasticsearch index '{0}' already  exists and "
                 "will be deleted".format(STORAGE_INDEX_NAME))
-            es_index.delete(STORAGE_INDEX_NAME)
-            logger.info("Verifying Elasticsearch index was deleted...")
-            deadline = time.time() + 30
-            while es_index.exists(STORAGE_INDEX_NAME):
-                if time.time() > deadline:
-                    raise RuntimeError(
-                        'Elasticsearch index was not deleted after 30 seconds')
-                time.sleep(1)
+            try:
+                es_index.delete(STORAGE_INDEX_NAME)
+                logger.info("Verifying Elasticsearch index was deleted...")
+                deadline = time.time() + 30
+                while es_index.exists(STORAGE_INDEX_NAME):
+                    if time.time() > deadline:
+                        raise RuntimeError(
+                            'Elasticsearch index was not deleted after '
+                            '30 seconds')
+                    time.sleep(1)
+            except BaseException as e:
+                logger.warn('Ignoring caught exception on Elasticsearch delete'
+                            ' index - {0}: {1}'.format(e.__class__, e.message))
 
     def reset_data(self):
         """
