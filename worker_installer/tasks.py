@@ -479,7 +479,8 @@ def build_celeryd_config(worker_config):
     env[MANAGER_REST_PORT_KEY] = manager_rest_port
     env[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = \
         manager_file_server_blueprints_root_url
-    env[MANAGER_FILE_SERVER_URL_KEY] = manager_file_server_blueprints_root_url.replace("/blueprints", "")
+    env[MANAGER_FILE_SERVER_URL_KEY] = manager_file_server_blueprints_root_url\
+        .replace("/blueprints", "")
 
     # if this is the management worker, we know the user it uses
     if _is_management_node(worker_config):
