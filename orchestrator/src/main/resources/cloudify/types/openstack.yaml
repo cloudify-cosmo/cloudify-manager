@@ -113,3 +113,9 @@ relationships:
             cloudify.interfaces.relationship_lifecycle:
                 - establish: nova_plugin.server.connect_floatingip
                 - unlink: nova_plugin.server.disconnect_floatingip
+
+    cloudify.openstack.server_connected_to_port:
+        derived_from: cloudify.realtionships.connected_to
+        
+    cloudify.openstack.floating_ip_connected_to_port:
+        derived_from: cloudify.relationships.connected_to
