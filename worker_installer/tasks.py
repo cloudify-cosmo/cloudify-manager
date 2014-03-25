@@ -23,7 +23,7 @@ from cosmo_fabric.runner import FabricRetryingRunner
 from cloudify.constants import COSMO_APP_NAME, VIRTUALENV_PATH_KEY, \
     BUILT_IN_AGENT_PLUGINS, BUILT_IN_MANAGEMENT_PLUGINS, MANAGER_IP_KEY, \
     LOCAL_IP_KEY, CELERY_WORK_DIR_PATH_KEY, MANAGER_REST_PORT_KEY, \
-    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY, MANAGER_FILE_SERVER_URL_KEY
 
 from versions import PLUGIN_INSTALLER_VERSION, COSMO_CELERY_COMMON_VERSION,\
     KV_STORE_VERSION, RIEMANN_CONFIGURER_VERSION, AGENT_INSTALLER_VERSION
@@ -479,6 +479,8 @@ def build_celeryd_config(worker_config):
     env[MANAGER_REST_PORT_KEY] = manager_rest_port
     env[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = \
         manager_file_server_blueprints_root_url
+    env[MANAGER_FILE_SERVER_URL_KEY] = manager_file_server_blueprints_root_url\
+        .replace("/blueprints", "")
 
     # if this is the management worker, we know the user it uses
     if _is_management_node(worker_config):
