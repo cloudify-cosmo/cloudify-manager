@@ -346,6 +346,9 @@ class CeleryWorkerProcess(object):
         environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
             'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
                                               FILE_SERVER_BLUEPRINTS_FOLDER)
+        environment['MANAGER_FILE_SERVER_URL'] = 'http://localhost:{0}'\
+                                                 .format(FILE_SERVER_PORT)
+
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
 
