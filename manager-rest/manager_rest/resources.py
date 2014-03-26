@@ -886,8 +886,8 @@ class DeploymentsIdExecutions(Resource):
         if statuses:
             statuses_response = get_blueprints_manager() \
                 .get_workflows_states_by_internal_workflows_ids(
-                [execution.internal_workflow_id for execution
-                 in executions])
+                    [execution.internal_workflow_id for execution
+                     in executions])
 
             status_by_id = {status['id']: status for status in
                             statuses_response}
