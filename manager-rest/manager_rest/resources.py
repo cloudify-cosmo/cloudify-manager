@@ -786,6 +786,10 @@ class DeploymentsIdExecutions(Resource):
         self._args_parser.add_argument('statuses', type=str,
                                        default='false', location='args')
 
+        self._post_args_parser = reqparse.RequestParser()
+        self._post_args_parser.add_argument('force', type=str,
+                                            default='false', location='args')
+
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
@@ -810,16 +814,80 @@ class DeploymentsIdExecutions(Resource):
         get_executions_statuses = verify_and_convert_bool(
             'statuses', args['statuses'])
 
+        executions = self._get_executions(deployment_id,
+                                          get_executions_statuses)
+
+        return [marshal(execution, responses.Execution.resource_fields) for
+                execution in executions]
+
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="execute",
+        notes="Executes the provided workflow under the given deployment "
+              "context.",
+        parameters=[{'name': 'body',
+                     'description': 'Workflow execution request',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.ExecutionRequest.__name__,
+                     'paramType': 'body'},
+                    {'name': 'force',
+                     'description': 'Specifies whether to force workflow '
+                                    'execution even if there is an ongoing '
+                                    'workflow executing for the same '
+                                    'deployment',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    @exceptions_handled
+    def post(self, deployment_id):
+        """
+        Execute a workflow
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'workflowId' not in request_json:
+            abort(400, message='400: Missing workflowId in json request body')
+
+        args = self._post_args_parser.parse_args()
+        force = verify_and_convert_bool('force', args['force'])
+
+        # validate no execution is currently in progress
+        if not force:
+            executions = self._get_executions(deployment_id,
+                                              statuses=True)
+            running = [e.id for e in executions
+                       if e.status not in ['failed', 'terminated']]
+            if len(running) > 0:
+                abort_error(400, 'The following executions are currently '
+                                 'running for this deployment: {0}. To '
+                                 'execute this workflow anyway, '
+                                 'pass "force=true" as a query parameter to'
+                                 ' this request'.format(running))
+
+        workflow_id = request.json['workflowId']
+        execution = get_blueprints_manager().execute_workflow(deployment_id,
+                                                              workflow_id)
+        return responses.Execution(**execution.to_dict()), 201
+
+    def _get_executions(self, deployment_id, statuses=False):
         executions = [responses.Execution(**execution.to_dict()) for
                       execution in
                       get_storage_manager().get_deployment_executions(
                           deployment_id)]
 
-        if get_executions_statuses:
-            statuses_response = get_blueprints_manager()\
+        if statuses:
+            statuses_response = get_blueprints_manager() \
                 .get_workflows_states_by_internal_workflows_ids(
-                    [execution.internal_workflow_id for execution
-                     in executions])
+                [execution.internal_workflow_id for execution
+                 in executions])
 
             status_by_id = {status['id']: status for status in
                             statuses_response}
@@ -836,39 +904,7 @@ class DeploymentsIdExecutions(Resource):
             #setting None values to dynamic fields which weren't requested
             for execution in executions:
                 execution.status, execution.error = None, None
-
-        return [marshal(execution, responses.Execution.resource_fields) for
-                execution in executions]
-
-    @swagger.operation(
-        responseClass=responses.Execution,
-        nickname="execute",
-        notes="Executes the provided workflow under the given deployment "
-              "context.",
-        parameters=[{'name': 'body',
-                     'description': 'Workflow execution request',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': requests_schema.ExecutionRequest.__name__,
-                     'paramType': 'body'}],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @marshal_with(responses.Execution.resource_fields)
-    @exceptions_handled
-    def post(self, deployment_id):
-        """
-        Execute a workflow
-        """
-        verify_json_content_type()
-        request_json = request.json
-        if 'workflowId' not in request_json:
-            abort(400, message='400: Missing workflowId in json request body')
-        workflow_id = request.json['workflowId']
-        execution = get_blueprints_manager().execute_workflow(deployment_id,
-                                                              workflow_id)
-        return responses.Execution(**execution.to_dict()), 201
+        return executions
 
 
 class DeploymentsIdWorkflows(Resource):

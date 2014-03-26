@@ -16,6 +16,7 @@
 __author__ = 'dan'
 
 
+import mocks
 from base_test import BaseServerTestCase
 from test_blueprints import post_blueprint_args
 
@@ -240,62 +241,38 @@ class DeploymentsTestCase(BaseServerTestCase):
         assert_node_exists('vm')
         assert_node_exists('http_web_server')
 
-    # rename and run manually after starting a riemann server
-    def _test_get_nodes_of_deployment_with_reachable(self):
-
-        import bernhard
-        import json
-        client = bernhard.Client()
-
-        def send(n_id, reachable):
-            tags = ['name={0}'.format(n_id)]
-            if reachable:
-                tags.append('reachable')
-            client.send({
-                'host': 'host',
-                'service': n_id,
-                'tags': tags
-            })
+    def test_execute_more_than_one_workflow_fails(self):
+        previous_method = mocks.get_workflow_status
 
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        self.post(resource_path, {
+            'workflowId': 'install'
+        })
+        try:
+            mocks.get_workflow_status = lambda wfid: 'running'
+            response = self.post(resource_path, {
+                'workflowId': 'install'
+            })
+            self.assertEqual(response.status_code, 400)
+        finally:
+            mocks.get_workflow_status = previous_method
 
-        for node in json.loads(deployment_response['plan'])['nodes']:
-            node_id = node['id']
-            if 'mezzanine_db' in node_id:
-                send(node_id, False)
-            elif 'postgres_host' in node_id:
-                send(node_id, False)
-                send(node_id, True)
-            elif 'postgres_server' in node_id:
-                send(node_id, True)
-            if 'mezzanine_app' in node_id:
-                send(node_id, False)
-            elif 'nginx' in node_id:
-                send(node_id, False)
-                send(node_id, True)
-            elif 'unicorn' in node_id:
-                send(node_id, True)
-            elif 'webserver_host' in node_id:
-                send(node_id, False)
+    def test_execute_more_than_one_workflow_succeeds_with_force(self):
+        previous_method = mocks.get_workflow_status
 
-        resource_path = '/deployments/{0}/nodes?reachable=true'\
-                        .format(deployment_id)
-        nodes = self.get(resource_path).json
-        self.assertEquals(deployment_id, nodes['deploymentId'])
-        self.assertEquals(7, len(nodes['nodes']))
-
-        def assert_node_value(starts_with, reachable):
-            self.assertTrue(any(map(
-                lambda n: n['id'].startswith(starts_with) and
-                n['reachable'] == reachable,
-                nodes['nodes'])),
-                'Failed finding node with prefix {0}'
-                .format(starts_with))
-        assert_node_value('mezzanine_db', False)
-        assert_node_value('postgres_host', True)
-        assert_node_value('postgres_server', True)
-        assert_node_value('mezzanine_app', False)
-        assert_node_value('nginx', True)
-        assert_node_value('unicorn', True)
-        assert_node_value('webserver_host', False)
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        self.post(resource_path, {
+            'workflowId': 'install'
+        })
+        try:
+            mocks.get_workflow_status = lambda wfid: 'running'
+            response = self.post(resource_path, {
+                'workflowId': 'install'
+            }, query_params={'force': 'true'})
+            self.assertEqual(response.status_code, 201)
+        finally:
+            mocks.get_workflow_status = previous_method
