@@ -154,11 +154,11 @@ class BasicWorkflowsTest(TestCase):
         with open(resource("dsl/basic.yaml")) as f:
             basic_data = f.read()
 
-        #checking the resources are the correct data
+        # checking the resources are the correct data
         self.assertEquals(basic_data, invocation['res1_data'])
         self.assertEquals(basic_data, invocation['res2_data'])
 
-        #checking the custom filepath provided is indeed where the second
+        # checking the custom filepath provided is indeed where the second
         # resource was saved
         self.assertEquals(invocation['custom_filepath'],
                           invocation['res2_path'])
@@ -178,7 +178,7 @@ class BasicWorkflowsTest(TestCase):
         result = search('')
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        #expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
+        # expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
         self.assertEquals(4, len(hits))
 
     def test_get_blueprint(self):
@@ -195,20 +195,20 @@ class BasicWorkflowsTest(TestCase):
     def test_delete_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = publish_blueprint(dsl_path)
-        #verifying blueprint exists
+        # verifying blueprint exists
         temp = get_blueprint(blueprint_id)
         self.assertEqual(blueprint_id, temp.id)
-        #deleting blueprint
+        # deleting blueprint
         deleted_bp_id = delete_blueprint(blueprint_id).id
         self.assertEqual(blueprint_id, deleted_bp_id)
-        #verifying blueprint does no longer exist
+        # verifying blueprint does no longer exist
         try:
             get_blueprint(blueprint_id)
             self.fail("Got blueprint {0} successfully even though it "
                       "wasn't expected to exist".format(blueprint_id))
         except CosmoManagerRestCallError:
             pass
-        #trying to delete a nonexistent blueprint
+        # trying to delete a nonexistent blueprint
         try:
             delete_blueprint(blueprint_id)
             self.fail("Deleted blueprint {0} successfully even though it "

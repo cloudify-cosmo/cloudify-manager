@@ -152,7 +152,7 @@ class ManagerRestProcess(object):
             return False
 
     def close(self):
-        if not self.process is None:
+        if self.process is not None:
             self.process.terminate()
 
     def locate_manager_rest_dir(self):

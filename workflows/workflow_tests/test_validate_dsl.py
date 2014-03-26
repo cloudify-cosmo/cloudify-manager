@@ -14,7 +14,7 @@ class TestValidateDSL(TestCase):
         validate(deployment.blueprintId)
 
     def test_invalid_dsl(self):
-        #note: this actually tests the validation part of the "deploy" command
+        # note: this actually tests the validation part of the "deploy" command
         dsl_path = resource("dsl/invalid-dsl.yaml")
 
         with self.assertRaises(Exception) as cm:

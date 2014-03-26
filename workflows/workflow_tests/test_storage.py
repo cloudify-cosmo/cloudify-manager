@@ -37,7 +37,7 @@ class TestStorage(TestCase):
         self.assertEquals('1', result['id'])
         self.assertEquals({}, result['runtimeInfo'])
 
-        #making another call with a bad state_version
+        # making another call with a bad state_version
         self.assertRaises(
             CosmoManagerRestCallError, client.update_node_state,
             node_id, {}, state_version)

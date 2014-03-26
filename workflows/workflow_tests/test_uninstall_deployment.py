@@ -74,7 +74,7 @@ class TestUninstallDeployment(TestCase):
         deployment_id = deployment.id
         self.logger.info('deploy completed')
         self.logger.info('making node unreachable from test')
-        #make node unreachable
+        # make node unreachable
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
         states = self.send_task(testmock_get_state).get(timeout=10)
@@ -87,7 +87,7 @@ class TestUninstallDeployment(TestCase):
         self.logger.info('starting undeploy process')
         undeploy(deployment_id)
         self.logger.info('undeploy completed')
-        #Checking that uninstall wasn't called on unreachable node
+        # Checking that uninstall wasn't called on unreachable node
         from plugins.testmockoperations.tasks import is_unreachable_called
         result = self.send_task(is_unreachable_called, [node_id])
         self.assertFalse(result.get(timeout=10))
@@ -102,7 +102,7 @@ class TestUninstallDeployment(TestCase):
         print('starting undeploy process')
         undeploy(deployment_id)
         print('undeploy completed')
-        #Checking that uninstall wasn't called on the contained node
+        # Checking that uninstall wasn't called on the contained node
         from plugins.testmockoperations.tasks import \
             get_unreachable_call_order \
             as testmock_get_unreachable_call_order
@@ -125,14 +125,14 @@ class TestUninstallDeployment(TestCase):
             as config_get_state
         configurer_state = self.send_task(config_get_state).get(timeout=10)
         self.assertEquals(2, len(configurer_state))
-        self.assertTrue(configurer_state[0]['id']
-            .startswith('contained_in_node2'))
-        self.assertTrue(configurer_state[0]['related_id']
-            .startswith('contained_in_node1'))
-        self.assertTrue(configurer_state[1]['id']
-            .startswith('containing_node'))
-        self.assertTrue(configurer_state[1]['related_id']
-            .startswith('contained_in_node1'))
+        self.assertTrue(
+            configurer_state[0]['id'].startswith('contained_in_node2'))
+        self.assertTrue(
+            configurer_state[0]['related_id'].startswith('contained_in_node1'))
+        self.assertTrue(
+            configurer_state[1]['id'].startswith('containing_node'))
+        self.assertTrue(
+            configurer_state[1]['related_id'].startswith('contained_in_node1'))
 
     def test_failed_uninstall_task(self):
         dsl_path = resource("dsl/basic.yaml")
