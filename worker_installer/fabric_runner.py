@@ -21,13 +21,9 @@ import os
 import time
 from functools import wraps
 from StringIO import StringIO
-from fabric.api import run, put, get
+from fabric.api import run, put, get, local
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
-from subprocess import check_output
-from subprocess import CalledProcessError
-from subprocess import STDOUT
-
 
 
 def retry(timeout=60):
@@ -62,10 +58,8 @@ class FabricRunner(object):
         out = StringIO()
         if self.local:
             try:
-                return check_output(command.split(' '), stderr=STDOUT)
-            except CalledProcessError as e:
-                raise FabricRunnerException(command, e.returncode, e.output)
-            except OSError as e:
+                return local(command, capture=True)
+            except SystemExit as e:
                 raise FabricRunnerException(command, -1, str(e))
 
         with settings(host_string=self.host_string,

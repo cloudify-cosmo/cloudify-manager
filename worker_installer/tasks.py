@@ -60,8 +60,8 @@ def install(ctx, runner, worker_config, **kwargs):
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(AGENT_PACKAGE_URL))
 
-    runner.run('wget -O {0}/agent.tar {1}'.format(worker_config['base_dir'],
-                                                  AGENT_PACKAGE_URL))
+    runner.run('wget -N -O {0}/agent.tar {1}'.format(worker_config['base_dir'],
+                                                     AGENT_PACKAGE_URL))
 
     runner.run(
         'tar -xvf {0}/agent.tar --strip=4 -C {0} ./opt/agent-Ubuntu/'
@@ -175,7 +175,11 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
     init_template = env.get_template(CELERY_INIT_PATH)
     init_template_values = {'worker_modifier': worker_config['name']}
     init = init_template.render(init_template_values)
+    ctx.logger.info('Writing celery worker config file to: {0}'.format(
+        worker_config['config_file']))
     runner.put(worker_config['config_file'], config, use_sudo=True)
+    ctx.logger.info('Writing celery init.d file to: {0}'.format(
+        worker_config['init_file']))
     runner.put(worker_config['init_file'], init, use_sudo=True)
 
 
