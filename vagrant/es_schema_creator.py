@@ -150,17 +150,17 @@ SETTINGS = {
 
 
 def create_schema(storage_index_url):
-    #delete index if already exist
+    # delete index if already exist
     response = requests.head(storage_index_url)
     if response.status_code == 200:
         response = requests.delete(storage_index_url)
         response.raise_for_status()
 
-    #create index
+    # create index
     response = requests.post(storage_index_url, data=json.dumps(SETTINGS))
     response.raise_for_status()
 
-    #set mappings
+    # set mappings
     response = requests.put("{0}/blueprint/_mapping".format(
         storage_index_url), json.dumps(BLUEPRINT_SCHEMA))
     response.raise_for_status()
