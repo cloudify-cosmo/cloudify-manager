@@ -98,7 +98,7 @@ def mock_operation(ctx, mockprop, **kwargs):
 @operation
 def get_resource_operation(ctx, resource_path, **kwargs):
     #trying to retrieve a resource
-    res1 = ctx.get_resource(resource_path)
+    res1 = ctx.download_resource(resource_path)
     if not res1:
         raise RuntimeError('Failed to get resource {0}'.format(resource_path))
     with open(res1, 'r') as f:
@@ -109,7 +109,7 @@ def get_resource_operation(ctx, resource_path, **kwargs):
     tempdir = tempfile.mkdtemp()
     try:
         filepath = os.path.join(tempdir, 'temp-resource-file')
-        res2 = ctx.get_resource(resource_path, filepath)
+        res2 = ctx.download_resource(resource_path, filepath)
         if not res2:
             raise RuntimeError('Failed to get resource {0} into {1}'.format(
                 resource_path, filepath))
