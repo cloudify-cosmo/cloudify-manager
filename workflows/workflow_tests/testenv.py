@@ -986,7 +986,6 @@ def execute_install(deployment_id,
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
-
 def cancel_execution(execution_id):
     """
     Cancels an execution by its id

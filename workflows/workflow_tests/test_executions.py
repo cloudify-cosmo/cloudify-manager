@@ -18,6 +18,9 @@ __author__ = 'dan'
 
 import time
 
+from cosmo_manager_rest_client.cosmo_manager_rest_client import \
+    CosmoManagerRestCallError
+
 from workflow_tests.testenv import (TestCase,
                                     get_resource as resource,
                                     deploy_application as deploy,
@@ -58,14 +61,20 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/sleep_workflow.yaml")
         deployment, execution_id = deploy(dsl_path,
                                           wait_for_execution=False)
+        time.sleep(1)
         try:
             execute_install(deployment.id,
                             force=False,
                             wait_for_execution=False)
             self.fail('Expected error')
-        except Exception, e:
-            print e
+        except CosmoManagerRestCallError:
             pass
 
     def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        self.fail()
+        dsl_path = resource("dsl/sleep_workflow.yaml")
+        deployment, execution_id = deploy(dsl_path,
+                                          wait_for_execution=False)
+        time.sleep(1)
+        execute_install(deployment.id,
+                        force=True,
+                        wait_for_execution=False)
