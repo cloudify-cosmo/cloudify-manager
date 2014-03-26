@@ -196,7 +196,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         ctx = get_local_context()
         install(ctx)
         start(ctx)
-        self.assert_installed_plugins(ctx.deployment_id)
+        self.assert_installed_plugins(ctx)
 
     def test_install_same_worker_twice(self):
         ctx = get_local_context()
@@ -206,7 +206,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         install(ctx)
         start(ctx)
 
-        self.assert_installed_plugins(ctx.deployment_id)
+        self.assert_installed_plugins(ctx)
 
     def test_remove_worker(self):
         ctx = get_local_context()

@@ -20,7 +20,6 @@ __author__ = 'idanmo'
 import os
 import time
 import tempfile
-import shutil
 from functools import wraps
 from StringIO import StringIO
 from fabric.api import run, put, get, local
@@ -97,7 +96,6 @@ class FabricRunner(object):
                     f.write(content)
                 self.run('sudo cp {0} {1}'.format(temp_file, file_path))
                 self.run('sudo rm {0}'.format(temp_file))
-                #self.run("sudo echo '{0}' > {1}".format(content, file_path))
             else:
                 # no sudo needed. just use python for this
                 if not os.path.exists(directory):
