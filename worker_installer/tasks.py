@@ -55,14 +55,16 @@ def install(ctx, runner, worker_config, **kwargs):
     ctx.logger.info(
         'Installing celery worker [worker_config={0}]'.format(worker_config))
 
+    runner.run('mkdir -p {0}'.format(worker_config['base_dir']))
+
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(AGENT_PACKAGE_URL))
 
-    runner.run('wget -O ~/agent.tar {0}'.format(AGENT_PACKAGE_URL))
+    runner.run('wget -O {0}/agent.tar {1}'.format(worker_config['base_dir'],
+                                                  AGENT_PACKAGE_URL))
 
-    runner.run('mkdir -p {0}'.format(worker_config['base_dir']))
     runner.run(
-        'tar -xvf ~/agent.tar --strip=4 -C {0} ./opt/agent-Ubuntu/'
+        'tar -xvf {0}/agent.tar --strip=4 -C {0} ./opt/agent-Ubuntu/'
         'cloudify.management__worker/'.format(worker_config['base_dir']))
 
     create_celery_configuration(
