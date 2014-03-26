@@ -37,7 +37,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             'blueprint-id')
         self.assertEquals(blueprint.__dict__, blueprint_from_list.__dict__)
         self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
-        #in bp returned from delete operation only 'id' is guaranteed to
+        # in bp returned from delete operation only 'id' is guaranteed to
         # return
         self.assertEquals(blueprint.id, bp_from_delete.id)
         self.assertEquals(0,

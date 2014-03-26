@@ -1,4 +1,4 @@
- #########
+#########
 # Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,7 +116,7 @@ class FileStorageManager(object):
             .runtime_info
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_info.items())
-        #TODO: merge reachable field?
+        # TODO: merge reachable field?
         node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
                               reachable=None,
                               state_version=node.state_version+1)

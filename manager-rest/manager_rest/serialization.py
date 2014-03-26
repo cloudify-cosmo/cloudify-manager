@@ -45,7 +45,7 @@ def deserialize_object(obj):
 
     if isinstance(obj, dict):
         if TYPE_FIELD_NAME in obj:
-            #nested object
+            # nested object
             obj_type = obj[TYPE_FIELD_NAME]
             obj_module_name, obj_class_name = obj_type.rsplit('.', 1)
             # obj_module_name = obj_type[:len(obj_type)-len(obj_class_name)-1]

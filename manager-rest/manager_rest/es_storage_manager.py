@@ -106,7 +106,7 @@ class ESStorageManager(object):
 
     @staticmethod
     def _build_field_value_filter(key, val):
-        #This method is used to create a search filter to receive only
+        # This method is used to create a search filter to receive only
         # results where a specific key holds a specific value.
         # Filters are faster than queries as they are cached and don't
         # influence the score.

@@ -28,7 +28,7 @@ class DeploymentsTestCase(BaseServerTestCase):
     def _put_test_deployment(self):
         blueprint_response = self.post_file(*post_blueprint_args()).json
         blueprint_id = blueprint_response['id']
-        #Execute post deployment
+        # Execute post deployment
         deployment_response = self.put(
             '/deployments/{0}'.format(self.DEPLOYMENT_ID),
             {'blueprintId': blueprint_id}).json
@@ -61,8 +61,8 @@ class DeploymentsTestCase(BaseServerTestCase):
          deployment_response) = self._put_test_deployment()
         resp = self.delete('/blueprints/{0}'.format(blueprint_id))
         self.assertEqual(400, resp.status_code)
-        self.assertTrue('There exist deployments for this blueprint' in resp
-            .json['message'])
+        self.assertTrue('There exist deployments for this blueprint' in
+                        resp.json['message'])
 
     def test_deployment_already_exists(self):
         (blueprint_id,
@@ -183,13 +183,13 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertIsNotNone(execution['createdAt'])
         get_execution = self.get(resource_path).json
         self.assertEquals(1, len(get_execution))
-        #since we're not asking to retrieve execution statuses, status and
+        # since we're not asking to retrieve execution statuses, status and
         # error fields should be None in response's executions
         execution['status'] = None
         execution['error'] = None
         self.assertEquals(execution, get_execution[0])
 
-        #testing retrieval of updated execution status
+        # testing retrieval of updated execution status
         get_execution = self.get(resource_path, {'statuses': True}).json
         self.assertEquals(1, len(get_execution))
         execution['status'] = 'terminated'  # setting expected status

@@ -41,7 +41,7 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('value', response.json['runtimeInfo']['key'])
 
     def test_bad_patch_node(self):
-        #just a bunch of bad calls to patch node
+        # just a bunch of bad calls to patch node
         response = self.patch('/nodes/1234', 'not a dictionary')
         self.assertEqual(400, response.status_code)
         response = self.patch('/nodes/1234', {'a dict': 'without runtime_info'

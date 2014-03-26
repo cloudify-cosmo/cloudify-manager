@@ -163,7 +163,7 @@ class BlueprintsManager(object):
             if execution.status == 'failed':
                 execution.error = response[0]['error']
         else:
-            #workflow not found in workflow-service, return unknown values
+            # workflow not found in workflow-service, return unknown values
             execution.status, execution.error = None, None
         return execution
 
@@ -201,7 +201,7 @@ class BlueprintsManager(object):
 
 
 def teardown_blueprints_manager(exception):
-    #print "tearing down blueprints manager!"
+    # print "tearing down blueprints manager!"
     pass
 
 
@@ -211,7 +211,7 @@ def get_blueprints_manager():
     Get the current blueprints manager
     or create one if none exists for the current app context
     """
-    if not 'blueprints_manager' in g:
+    if 'blueprints_manager' not in g:
         g.blueprints_manager = BlueprintsManager()
         maybe_register_teardown(current_app, teardown_blueprints_manager)
     return g.blueprints_manager

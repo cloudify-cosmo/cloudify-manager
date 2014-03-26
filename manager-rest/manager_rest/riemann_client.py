@@ -93,7 +93,7 @@ def get_riemann_client():
     Get the current riemann_client
     or create one if none exists for the current app context
     """
-    if not 'riemann_client' in g:
+    if 'riemann_client' not in g:
         g.riemann_client = RiemannClient()
         maybe_register_teardown(current_app, teardown_riemann)
 

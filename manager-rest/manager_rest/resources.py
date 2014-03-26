@@ -211,8 +211,8 @@ class BlueprintsUpload(object):
                 abort(400,
                       message='400: archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
-            #generating temporary unique name for app dir, to allow multiple
-            #uploads of apps with the same name (as it appears in the file
+            # generating temporary unique name for app dir, to allow multiple
+            # uploads of apps with the same name (as it appears in the file
             # system, not the app name field inside the blueprint.
             # the latter is guaranteed to be unique).
             generated_app_dir_name = '{0}-{1}'.format(
@@ -312,7 +312,7 @@ class Blueprints(Resource):
                         'allowMultiple': False,
                         'dataType': 'binary',
                         'paramType': 'body',
-                    }],
+        }],
         consumes=[
             "application/octet-stream"
         ]
@@ -407,13 +407,13 @@ class BlueprintsId(Resource):
     @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
     def delete(self, blueprint_id):
-        #Note: The current delete semantics are such that if a deployment
+        # Note: The current delete semantics are such that if a deployment
         # for the blueprint exists, the deletion operation will fail.
         # However, there is no handling of possible concurrency issue with
         # regard to that matter at the moment.
         blueprint = get_blueprints_manager().delete_blueprint(blueprint_id)
 
-        #Delete blueprint resources from file server
+        # Delete blueprint resources from file server
         blueprint_folder = os.path.join(
             config.instance().file_server_root,
             config.instance().file_server_blueprints_folder,
@@ -461,12 +461,13 @@ class ExecutionsId(Resource):
         notes="Modifies a running execution state (currently, only cancel"
               " is supported)",
         parameters=[{'name': 'body',
-                 'description': 'json with an action key. Legal values for '
-                                'action are: [cancel]',
-                 'required': True,
-                 'allowMultiple': False,
-                 'dataType': requests_schema.ModifyExecutionRequest.__name__,
-                 'paramType': 'body'}],
+                     'description': 'json with an action key. '
+                                    'Legal values for action are: [cancel]',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType':
+                         requests_schema.ModifyExecutionRequest.__name__,
+                     'paramType': 'body'}],
         consumes=[
             "application/json"
         ]
@@ -897,11 +898,11 @@ class DeploymentsIdExecutions(Resource):
                     execution.status = status['state']
                     execution.error = status['error']
                 else:
-                    #execution not found in workflow service, return unknown
+                    # execution not found in workflow service, return unknown
                     # values
                     execution.status, execution.error = None, None
         else:
-            #setting None values to dynamic fields which weren't requested
+            # setting None values to dynamic fields which weren't requested
             for execution in executions:
                 execution.status, execution.error = None, None
         return executions

@@ -38,18 +38,18 @@ def setup_app():
     app.logger.setLevel(logging.DEBUG)
     app.logger.addHandler(logging.StreamHandler(sys.stdout))
 
-    #saving flask's original error handlers
+    # saving flask's original error handlers
     flask_handle_exception = app.handle_exception
     flask_handle_user_exception = app.handle_user_exception
 
     api = Api(app)
 
-    #saving flask-restful's error handlers
+    # saving flask-restful's error handlers
     flask_restful_handle_exception = app.handle_exception
     flask_restful_handle_user_exception = app.handle_user_exception
 
-    #setting it so that <500 codes use flask-restful's error handlers,
-    #while 500+ codes use original flask's error handlers (for which we
+    # setting it so that <500 codes use flask-restful's error handlers,
+    # while 500+ codes use original flask's error handlers (for which we
     # register an error handler on somewhere else in this module)
     def handle_exception(flask_method, flask_restful_method, e):
         code = getattr(e, 'code', 500)

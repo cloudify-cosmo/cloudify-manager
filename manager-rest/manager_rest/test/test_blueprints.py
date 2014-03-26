@@ -93,7 +93,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
-        #setting 'source' field to be None as expected
+        # setting 'source' field to be None as expected
         post_blueprints_response['source'] = None
         self.assertEquals(post_blueprints_response,
                           get_blueprint_by_id_response)
@@ -117,28 +117,28 @@ class BlueprintsTestCase(BaseServerTestCase):
     def test_delete_blueprint(self):
         post_blueprints_response = self.post_file(*post_blueprint_args()).json
 
-        #testing if resources are on fileserver
+        # testing if resources are on fileserver
         self.assertTrue(
             self.check_if_resource_on_fileserver(
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
-        #deleting the blueprint that was just uploaded
+        # deleting the blueprint that was just uploaded
         delete_blueprint_response = self.delete(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         self.assertEquals(post_blueprints_response['id'],
                           delete_blueprint_response['id'])
 
-        #verifying deletion of blueprint
+        # verifying deletion of blueprint
         resp = self.get('/blueprints/{0}'.format(post_blueprints_response[
                         'id']))
         self.assertEquals(404, resp.status_code)
 
-        #verifying deletion of fileserver resources
+        # verifying deletion of fileserver resources
         self.assertFalse(
             self.check_if_resource_on_fileserver(
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
-        #trying to delete a nonexistent blueprint
+        # trying to delete a nonexistent blueprint
         resp = self.delete('/blueprints/nonexistent-blueprint')
         self.assertEquals(404, resp.status_code)
 
