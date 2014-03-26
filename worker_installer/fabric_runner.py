@@ -90,8 +90,7 @@ class FabricRunner(object):
                 # use echo for now
                 if not os.path.exists(directory):
                     self.run("sudo mkdir -p {0}".format(directory))
-                self.run("echo '{0}'".format(content) +
-                         " | sudo tee -a {0}".format(file_path))
+                self.run("sudo echo '{0}' > {1}".format(content, file_path))
             else:
                 # no sudo needed. just use python for this
                 if not os.path.exists(directory):
