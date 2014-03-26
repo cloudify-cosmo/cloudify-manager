@@ -46,7 +46,6 @@ def get_logger(name):
 def get_local_context():
     deployment_id = 'deployment-{0}'.format(str(uuid.uuid4())[:5])
     return MockCloudifyContext(
-        node_id='node_id',
         deployment_id=deployment_id,
         properties={
             'worker_config': {}
