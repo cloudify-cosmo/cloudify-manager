@@ -21,9 +21,13 @@ import os
 import time
 from functools import wraps
 from StringIO import StringIO
-from fabric.api import run, put, local, get
+from fabric.api import run, put, get
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
+from subprocess import check_output
+from subprocess import CalledProcessError
+from subprocess import STDOUT
+
 
 
 def retry(timeout=60):
@@ -58,9 +62,6 @@ class FabricRunner(object):
         out = StringIO()
         if self.local:
             try:
-                from subprocess import check_output
-                from subprocess import CalledProcessError
-                from subprocess import STDOUT
                 return check_output(command.split(' '), stderr=STDOUT)
             except CalledProcessError as e:
                 raise FabricRunnerException(command, e.returncode, e.output)
@@ -85,18 +86,18 @@ class FabricRunner(object):
             return exists(file_path)
 
     def put(self, file_path, content, use_sudo=False):
+        directory = "/".join(file_path.split("/")[:-1])
         if self.local:
             if os.path.exists(file_path):
                 raise IOError('Cannot put file, file already '
                               'exists: {0}'.format(file_path))
-            directory = "/".join(file_path.split("/")[:-1])
             if use_sudo:
                 # we need to write a string to a file locally with sudo
                 # use echo for now
                 if not os.path.exists(directory):
-                    local("sudo mkdir -p {0}".format(directory))
-                local("echo '{0}'".format(content) +
-                      " | sudo tee -a {0}".format(file_path))
+                    self.run("sudo mkdir -p {0}".format(directory))
+                self.run("echo '{0}'".format(content) +
+                         " | sudo tee -a {0}".format(file_path))
             else:
                 # no sudo needed. just use python for this
                 if not os.path.exists(directory):
@@ -110,7 +111,6 @@ class FabricRunner(object):
                 if exists(file_path):
                     raise IOError('Cannot put file, file already '
                                   'exists: {0}'.format(file_path))
-                directory = "/".join(file_path.split("/")[:-1])
                 sudo_prefix = 'sudo ' if use_sudo else ''
                 run('{0}mkdir -p {1}'.format(sudo_prefix, directory))
                 put(StringIO(content), file_path, use_sudo=use_sudo)
