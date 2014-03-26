@@ -18,6 +18,10 @@ __author__ = 'dan'
 from datetime import datetime
 
 
+def get_workflow_status(wfid):
+    return 'terminated'
+
+
 class MockWorkflowClient(object):
 
     def execute_workflow(self, name, workflow, plan,
@@ -47,7 +51,7 @@ class MockWorkflowClient(object):
         return [
             {
                 'id': wfid,
-                'state': 'terminated',
+                'state': get_workflow_status(wfid),
                 'error': None
             }
             for wfid in workflows_ids

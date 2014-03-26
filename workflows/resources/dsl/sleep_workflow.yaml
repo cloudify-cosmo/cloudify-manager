@@ -13,5 +13,5 @@ types:
         workflows:
             create:
                 radial: |
-                    define cancel_workflow_workflow
+                    define sleep_workflow_workflow
                         sleep '100s'

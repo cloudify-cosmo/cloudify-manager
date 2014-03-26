@@ -18,18 +18,22 @@ __author__ = 'dan'
 
 import time
 
-from workflow_tests.testenv import TestCase
-from workflow_tests.testenv import get_resource as resource
-from workflow_tests.testenv import deploy_application as deploy
-from workflow_tests.testenv import get_execution
-from workflow_tests.testenv import cancel_execution
-from workflow_tests.testenv import get_deployment_executions
+from cosmo_manager_rest_client.cosmo_manager_rest_client import \
+    CosmoManagerRestCallError
+
+from workflow_tests.testenv import (TestCase,
+                                    get_resource as resource,
+                                    deploy_application as deploy,
+                                    get_execution,
+                                    cancel_execution,
+                                    execute_install,
+                                    get_deployment_executions)
 
 
 class BasicWorkflowsTest(TestCase):
 
     def test_cancel_execution(self):
-        dsl_path = resource("dsl/cancel_workflow.yaml")
+        dsl_path = resource("dsl/sleep_workflow.yaml")
         _, execution_id = deploy(dsl_path,
                                  wait_for_execution=False)
         cancel_execution(execution_id)
@@ -52,3 +56,25 @@ class BasicWorkflowsTest(TestCase):
         self.assertEquals(execution_id, deployments_executions[0].id)
         self.assertEquals('terminated', deployments_executions[0].status)
         self.assertEquals('None', deployments_executions[0].error)
+
+    def test_execute_more_than_one_workflow_fails(self):
+        dsl_path = resource("dsl/sleep_workflow.yaml")
+        deployment, execution_id = deploy(dsl_path,
+                                          wait_for_execution=False)
+        time.sleep(1)
+        try:
+            execute_install(deployment.id,
+                            force=False,
+                            wait_for_execution=False)
+            self.fail('Expected error')
+        except CosmoManagerRestCallError:
+            pass
+
+    def test_execute_more_than_one_workflow_succeeds_with_force(self):
+        dsl_path = resource("dsl/sleep_workflow.yaml")
+        deployment, execution_id = deploy(dsl_path,
+                                          wait_for_execution=False)
+        time.sleep(1)
+        execute_install(deployment.id,
+                        force=True,
+                        wait_for_execution=False)

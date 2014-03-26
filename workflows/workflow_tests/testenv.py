@@ -972,6 +972,20 @@ def undeploy_application(deployment_id, timeout=240):
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
+def execute_install(deployment_id,
+                    timeout=240,
+                    force=False,
+                    wait_for_execution=True):
+    client = CosmoManagerRestClient('localhost')
+    _, error = client.execute_deployment(deployment_id,
+                                         'install',
+                                         timeout=timeout,
+                                         force=force,
+                                         wait_for_execution=wait_for_execution)
+    if error is not None:
+        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+
+
 def cancel_execution(execution_id):
     """
     Cancels an execution by its id

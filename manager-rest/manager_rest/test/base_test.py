@@ -56,8 +56,9 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_BLUEPRINTS_FOLDER
         return test_config
 
-    def post(self, resource_path, data):
-        result = self.app.post(urllib.quote(resource_path),
+    def post(self, resource_path, data, query_params=None):
+        url = self._build_url(resource_path, query_params)
+        result = self.app.post(url,
                                content_type='application/json',
                                data=json.dumps(data))
         result.json = json.loads(result.data)
