@@ -17,11 +17,6 @@ __author__ = 'elip'
 
 from setuptools import setup
 
-FABRIC_RUNNER_VERSION = '0.3'
-FABRIC_RUNNER_BRANCH = 'develop'
-FABRIC_RUNNER = \
-    "https://github.com/CloudifySource/cosmo-fabric-runner/tarball/{0}"\
-    .format(FABRIC_RUNNER_BRANCH)
 
 COSMO_CELERY_VERSION = '0.3'
 COSMO_CELERY_BRANCH = 'develop'
@@ -37,17 +32,16 @@ setup(
     author_email='elip@gigaspaces.com',
     packages=['worker_installer'],
     license='LICENSE',
-    description='Plugin for starting a new cosmo agent on a remote host',
+    description='Plugin for installing a Cloudify agent on a machine',
     install_requires=[
-        "cosmo-fabric-runner",
-        "cosmo-celery-common"
+        'cosmo-celery-common',
+        'fabric',
+        'jinja2'
     ],
     tests_require=[
         "nose",
         "python-vagrant"
     ],
-    dependency_links=["{0}#egg=cosmo-fabric-runner-{1}".format(
-        FABRIC_RUNNER, FABRIC_RUNNER_VERSION),
-        "{0}#egg=cosmo-celery-common-{1}".format(COSMO_CELERY,
-                                                 COSMO_CELERY_VERSION)]
+    dependency_links=["{0}#egg=cosmo-celery-common-{1}".format(
+        COSMO_CELERY, COSMO_CELERY_VERSION)]
 )
