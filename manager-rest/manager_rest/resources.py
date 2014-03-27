@@ -138,6 +138,7 @@ def setup_resources(api):
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
+    api.add_resource(ProviderContext, '/provider/context')
 
 
 class BlueprintsUpload(object):
@@ -1029,3 +1030,32 @@ class Status(Resource):
         Returns an alive status (mainly used for pinging reasons).
         """
         return responses.Status(status='running')
+
+
+class ProviderContext(Resource):
+
+    @swagger.operation(
+        responseClass=responses.ProviderContext,
+        nickname="get_context",
+        notes="TODO"
+    )
+    @marshal_with(responses.ProviderContext.resource_fields)
+    @exceptions_handled
+    def get(self):
+        """
+        TODO
+        """
+        return responses.ProviderContext(context={})
+
+    @swagger.operation(
+        responseClass=responses.ProviderContextPostStatus,
+        nickname='post_context',
+        notes="TODO"
+    )
+    @marshal_with(responses.ProviderContextPostStatus.resource_fields)
+    @exceptions_handled
+    def post(self):
+        """
+        TODO
+        """
+        return responses.ProviderContextPostStatus(status='ok'), 201
