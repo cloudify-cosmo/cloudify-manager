@@ -24,7 +24,7 @@ from os import path
 from worker_installer.fabric_runner import FabricRunner
 from worker_installer.tests import \
     id_generator, get_local_context, \
-    get_remote_context, VAGRANT_MACHINE_IP
+    get_remote_context, VAGRANT_MACHINE_IP, MANAGER_IP
 
 from celery import Celery
 from worker_installer.tasks import install, start, uninstall, stop
@@ -99,7 +99,7 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
     def setUpClass(cls):
         os.environ['MANAGEMENT_USER'] = 'vagrant'
         os.environ['MANAGER_REST_PORT'] = '8100'
-        os.environ['MANAGEMENT_IP'] = '192.168.10.212'
+        os.environ['MANAGEMENT_IP'] = MANAGER_IP
         os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
         manager.get_resource = get_resource
         # from vagrant_helper import launch_vagrant

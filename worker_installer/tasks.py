@@ -170,15 +170,26 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
         'celery_user': worker_config['user'],
         'celery_group': worker_config['user']
     }
+
+    ctx.logger.debug(
+        'Populating celery config jinja2 template with the following '
+        'values: {0}'.format(config_template_values))
+
     config = config_template.render(config_template_values)
     init_template = env.get_template(CELERY_INIT_PATH)
     init_template_values = {'worker_modifier': worker_config['name']}
+
+    ctx.logger.debug(
+        'Populating celery init.d jinja2 template with the following '
+        'values: {0}'.format(init_template_values))
+
     init = init_template.render(init_template_values)
-    ctx.logger.info('Writing celery worker config file to: {0}'.format(
-        worker_config['config_file']))
+
+    ctx.logger.debug(
+        'Creating celery config and init files [worker_config={0}]'.format(
+            worker_config))
+
     runner.put(worker_config['config_file'], config, use_sudo=True)
-    ctx.logger.info('Writing celery init.d file to: {0}'.format(
-        worker_config['init_file']))
     runner.put(worker_config['init_file'], init, use_sudo=True)
 
 

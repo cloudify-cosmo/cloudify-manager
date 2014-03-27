@@ -145,21 +145,3 @@ class FabricRunnerException(Exception):
     def __str__(self):
         return "Command '{0}' exited with code {1}: {2}".format(
             self.command, self.code, self.message)
-
-
-if __name__ == '__main__':
-    worker_config = {
-        'user': 'vagrant',
-        'port': 2222,
-        # 'host': '127.0.0.1',
-        'key': '~/.vagrant.d/insecure_private_key'
-    }
-    runner = FabricRunner(worker_config)
-    try:
-        result = runner.run('klsdfhjklsafj')
-        print "result is:", result
-    except FabricRunnerException as e:
-        print str(e)
-    except BaseException as e:
-        print "Exception is:", e.__class__
-        print e

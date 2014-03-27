@@ -24,9 +24,8 @@ import uuid
 
 from cloudify.mocks import MockCloudifyContext
 
-FILE_SERVER_PORT = 53229
-FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
-VAGRANT_MACHINE_IP = "192.168.11.84"
+VAGRANT_MACHINE_IP = "10.0.0.5"
+MANAGER_IP = '10.0.0.1'
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
 logging.basicConfig(
