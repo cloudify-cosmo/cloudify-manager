@@ -22,7 +22,7 @@ import time
 import tempfile
 from functools import wraps
 from StringIO import StringIO
-from fabric.api import run, put, get, local
+from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
 
@@ -34,7 +34,7 @@ def retry(timeout=60):
             while time.time() < deadline:
                 try:
                     return func(*args, **kwargs)
-                except BaseException:
+                except Exception:
                     time.sleep(5)
             else:
                 return func(*args, **kwargs)
@@ -44,7 +44,8 @@ def retry(timeout=60):
 
 class FabricRunner(object):
 
-    def __init__(self, worker_config=None):
+    def __init__(self, ctx, worker_config=None):
+        self.ctx = ctx
         config = worker_config or {}
         self.local = 'host' not in config
         if not self.local:
@@ -56,17 +57,22 @@ class FabricRunner(object):
         self.run('echo "ping!"')
 
     def run(self, command):
-        out = StringIO()
+        self.ctx.logger.debug('Running command: {0}'.format(command))
         if self.local:
             try:
-                return local(command, capture=True)
-            except SystemExit as e:
+                with settings(warn_only=True):
+                    r = local(command, capture=True)
+                    if r.return_code != 0:
+                        raise FabricRunnerException(command,
+                                                    r.return_code,
+                                                    r.stderr)
+                    return r.stdout
+            except Exception as e:
                 raise FabricRunnerException(command, -1, str(e))
-
+        out = StringIO()
         with settings(host_string=self.host_string,
                       key_filename=self.key_filename,
                       disable_known_hosts=True):
-
             try:
                 return run(command, stdout=out, stderr=out)
             except SystemExit, e:
@@ -81,6 +87,8 @@ class FabricRunner(object):
             return exists(file_path)
 
     def put(self, file_path, content, use_sudo=False):
+        self.ctx.logger.debug(
+            'Putting file: {0} [use_sudo={1}]'.format(file_path, use_sudo))
         directory = "/".join(file_path.split("/")[:-1])
         if self.local:
             if os.path.exists(file_path):
@@ -100,7 +108,7 @@ class FabricRunner(object):
                 # no sudo needed. just use python for this
                 if not os.path.exists(directory):
                     os.makedirs(directory)
-                with open(file_path, "w") as f:
+                with open(file_path, 'w') as f:
                     f.write(content)
         else:
             with settings(host_string=self.host_string,
@@ -109,8 +117,8 @@ class FabricRunner(object):
                 if exists(file_path):
                     raise IOError('Cannot put file, file already '
                                   'exists: {0}'.format(file_path))
-                sudo_prefix = 'sudo ' if use_sudo else ''
-                run('{0}mkdir -p {1}'.format(sudo_prefix, directory))
+                mkdir_command = 'mkdir -p {0}'.format(directory)
+                sudo(mkdir_command) if use_sudo else run(mkdir_command)
                 put(StringIO(content), file_path, use_sudo=use_sudo)
 
     def get(self, file_path):
@@ -122,7 +130,12 @@ class FabricRunner(object):
             return output.getvalue()
 
 
-class FabricRunnerException(SystemExit):
+class FabricRunnerException(Exception):
+    """
+    Describes an error caused in a fabric command execution.
+
+    The exception contains the command, return code and error message.
+    """
 
     def __init__(self, command, code, message):
         self.command = command
@@ -138,12 +151,12 @@ if __name__ == '__main__':
     worker_config = {
         'user': 'vagrant',
         'port': 2222,
-        'host': '127.0.0.1',
+        # 'host': '127.0.0.1',
         'key': '~/.vagrant.d/insecure_private_key'
     }
     runner = FabricRunner(worker_config)
     try:
-        result = runner.ping()
+        result = runner.run('klsdfhjklsafj')
         print "result is:", result
     except FabricRunnerException as e:
         print str(e)

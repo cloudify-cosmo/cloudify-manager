@@ -17,8 +17,7 @@ __author__ = 'elip'
 
 import os
 import jinja2
-from worker_installer import with_fabric_runner
-
+from worker_installer import init_worker_installer
 from cloudify.decorators import operation
 from cloudify import manager
 from cloudify import utils
@@ -37,7 +36,7 @@ AGENT_PACKAGE_URL = \
 
 
 @operation
-@with_fabric_runner
+@init_worker_installer
 def install(ctx, runner, worker_config, **kwargs):
 
     ctx.logger.debug("Pinging agent installer target")
@@ -60,8 +59,8 @@ def install(ctx, runner, worker_config, **kwargs):
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(AGENT_PACKAGE_URL))
 
-    runner.run('wget -N -O {0}/agent.tar {1}'.format(worker_config['base_dir'],
-                                                     AGENT_PACKAGE_URL))
+    runner.run('wget -N -T 30 -O {0}/agent.tar {1}'.format(
+        worker_config['base_dir'], AGENT_PACKAGE_URL))
 
     runner.run(
         'tar -xvf {0}/agent.tar --strip=4 -C {0} ./opt/agent-Ubuntu/'
@@ -79,7 +78,7 @@ def install(ctx, runner, worker_config, **kwargs):
 
 
 @operation
-@with_fabric_runner
+@init_worker_installer
 def uninstall(ctx, runner, worker_config, **kwargs):
 
     ctx.logger.info(
@@ -120,7 +119,7 @@ def delete_folders_if_exist(ctx, worker_config, runner, folders):
 
 
 @operation
-@with_fabric_runner
+@init_worker_installer
 def stop(ctx, runner, worker_config, **kwargs):
 
     ctx.logger.info("stopping celery worker {0}".format(worker_config['name']))
@@ -137,7 +136,7 @@ def stop(ctx, runner, worker_config, **kwargs):
 
 
 @operation
-@with_fabric_runner
+@init_worker_installer
 def start(ctx, runner, worker_config, **kwargs):
 
     ctx.logger.info("starting celery worker {0}".format(worker_config['name']))
@@ -148,7 +147,7 @@ def start(ctx, runner, worker_config, **kwargs):
 
 
 @operation
-@with_fabric_runner
+@init_worker_installer
 def restart(ctx, runner, worker_config, **kwargs):
 
     ctx.logger.info(
@@ -206,7 +205,6 @@ def restart_celery_worker(runner, worker_config):
 
 
 def _verify_no_celery_error(runner, worker_config):
-
     celery_error_out = os.path.join(
         worker_config['base_dir'], 'work/celery_error.out')
 
@@ -218,10 +216,3 @@ def _verify_no_celery_error(runner, worker_config):
         runner.run('rm {0}'.format(celery_error_out))
         raise RuntimeError(
             'Celery worker failed to start:\n{0}'.format(output))
-
-
-def build_env_string(env):
-    string = ""
-    for key, value in env.iteritems():
-        string = "export {0}=\"{1}\"\n{2}".format(key, value, string)
-    return string

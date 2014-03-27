@@ -18,14 +18,14 @@ __author__ = 'idanmo'
 import unittest
 import os
 from os import path
-from worker_installer import with_fabric_runner
+from worker_installer import init_worker_installer
 from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
 from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
 
 
-@with_fabric_runner
+@init_worker_installer
 def m(ctx, runner, worker_config, **kwargs):
     return worker_config
 

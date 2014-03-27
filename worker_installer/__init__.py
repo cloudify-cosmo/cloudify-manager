@@ -32,7 +32,7 @@ def _find_type_in_kwargs(cls, all_args):
     return result[0]
 
 
-def with_fabric_runner(func):
+def init_worker_installer(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
@@ -45,7 +45,7 @@ def with_fabric_runner(func):
             worker_config = {}
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
-        kwargs['runner'] = FabricRunner(worker_config)
+        kwargs['runner'] = FabricRunner(ctx, worker_config)
         return func(*args, **kwargs)
     return wrapper
 
