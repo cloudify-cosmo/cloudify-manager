@@ -3,25 +3,11 @@ define start_deployment_worker
   sequence if: '${plan.is_management_plugins_to_install} == true'
       log message: 'installing worker for deployment ${deployment_id}'
       event event: { "stage" => "Installing management worker" }
-      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.install", payload: {
-        properties: {
-          worker_config: {
-            name: '${deployment_id}'
-          },
-          local: true
-        }
-      }
+      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.install"
 
       log message: 'starting worker for deployment ${deployment_id}'
       event event: { "stage" => "Starting management worker" }
-      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.start", payload: {
-        properties: {
-          worker_config: {
-            name: '${deployment_id}'
-          },
-          local: true
-        }
-      }
+      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.start"
 
       log message: 'installing plugin for deployment ${deployment_id}'
       event event: { "stage" => "Installing management worker plugins" }
@@ -36,14 +22,7 @@ define start_deployment_worker
           log message: 'successfully installed plugin: ${v:plugin.name} on worker: ${deployment_id}'
 
       log message: 'restarting worker for deployment ${deployment_id}'
-      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.restart", payload: {
-        properties: {
-          worker_config: {
-            name: '${deployment_id}'
-          },
-          local: true
-        }
-      }
+      execute_task target: 'cloudify.management', exec: "worker_installer.tasks.restart"
 
       execute_task target: '${deployment_id}', exec: "kv_store.tasks.put", payload: {
         properties: {

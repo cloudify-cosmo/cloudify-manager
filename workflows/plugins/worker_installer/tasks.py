@@ -30,13 +30,15 @@ current_worker_name = None
 
 
 def fix_worker(ctx, worker_config):
-    if worker_config["name"] == "${node_id}":
-        worker_config["name"] = ctx.node_id
+    if ctx.node_id is None:
+        worker_config['name'] = ctx.deployment_id
+    else:
+        worker_config['name'] = ctx.node_id
 
 
 @operation
-def install(ctx, worker_config, local=False, **kwargs):
-
+def install(ctx, **kwargs):
+    worker_config = ctx.properties['worker_config']
     fix_worker(ctx, worker_config)
 
     global current_worker_name

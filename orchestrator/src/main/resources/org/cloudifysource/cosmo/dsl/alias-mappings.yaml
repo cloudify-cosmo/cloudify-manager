@@ -24,4 +24,3 @@ middleware_component_installer: cloudify/plugins/middleware_component_installer.
 celery_worker_installer: cloudify/plugins/worker_installer.yaml
 celery_plugin_installer: cloudify/plugins/plugin_installer.yaml
 vagrant_host_provisioner: cloudify/plugins/vagrant_host_provisioner.yaml
-kv_store: cloudify/plugins/kv_store.yaml
