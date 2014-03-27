@@ -24,8 +24,8 @@ import uuid
 
 from cloudify.mocks import MockCloudifyContext
 
-VAGRANT_MACHINE_IP = "192.168.11.27"
-MANAGER_IP = '192.168.10.212'
+VAGRANT_MACHINE_IP = "10.0.0.5"
+MANAGER_IP = '10.0.0.1'
 VAGRANT_PATH = os.path.join(tempfile.gettempdir(), "vagrant-vms")
 
 logging.basicConfig(

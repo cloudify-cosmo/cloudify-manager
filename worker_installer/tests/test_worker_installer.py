@@ -102,9 +102,8 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         os.environ['MANAGEMENT_IP'] = MANAGER_IP
         os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
         manager.get_resource = get_resource
-        # from vagrant_helper import launch_vagrant
-        # launch_vagrant(cls.VM_ID, cls.RAN_ID)
-        # cls.runner = get_remote_runner()
+        from vagrant_helper import launch_vagrant
+        launch_vagrant(cls.VM_ID, cls.RAN_ID)
 
     @classmethod
     def tearDownClass(cls):

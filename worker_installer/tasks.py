@@ -75,15 +75,6 @@ def install(ctx, runner, worker_config, **kwargs):
     runner.run("sed -i '1 s|.*/bin/python.*$|#!{0}/env/bin/python|g' "
                "{0}/env/bin/*".format(worker_config['base_dir']))
 
-    # runner.run("sed -i 's|/opt/agent-Ubuntu/cloudify.management__worker"
-    #            "/env/bin/python|{0}/env/bin/python|g' "
-    #            "{0}/env/bin/*".format(worker_config['base_dir']))
-    # runner.run("sed -i 's|/opt/agent-Ubuntu/cloudify.management__worker"
-    #            "/env/bin/python|{0}/env/bin/python|g' "
-    #            "{0}/env/bin/*".format(worker_config['base_dir']))
-    # runner.run("sed -i 's|#!.*|#!{0}/env/bin/python|g' "
-    #            "{0}/env/bin/*".format(worker_config['base_dir']))
-
 
 @operation
 @init_worker_installer
