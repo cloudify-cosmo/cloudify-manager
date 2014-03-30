@@ -30,8 +30,9 @@ from celery import Celery
 from worker_installer import tasks as t
 from cloudify import manager
 
-AGENT_PACKAGE_URL = \
-    'https://dl.dropboxusercontent.com/u/407576/agent-Ubuntu.tar'
+# AGENT_PACKAGE_URL = \
+#     'https://dl.dropboxusercontent.com/u/407576/agent-Ubuntu.tar'
+AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
 
 
 def _get_custom_agent_package_url():
