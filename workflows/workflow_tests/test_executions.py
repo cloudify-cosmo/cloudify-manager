@@ -30,7 +30,7 @@ from workflow_tests.testenv import (TestCase,
                                     get_deployment_executions)
 
 
-class BasicWorkflowsTest(TestCase):
+class ExecutionsTest(TestCase):
 
     def test_cancel_execution(self):
         dsl_path = resource("dsl/sleep_workflow.yaml")
@@ -61,20 +61,18 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/sleep_workflow.yaml")
         deployment, execution_id = deploy(dsl_path,
                                           wait_for_execution=False)
-        time.sleep(1)
-        try:
-            execute_install(deployment.id,
-                            force=False,
-                            wait_for_execution=False)
-            self.fail('Expected error')
-        except CosmoManagerRestCallError:
-            pass
+        time.sleep(2)
+        self.assertRaises(CosmoManagerRestCallError,
+                          execute_install,
+                          deployment.id,
+                          force=False,
+                          wait_for_execution=False)
 
     def test_execute_more_than_one_workflow_succeeds_with_force(self):
         dsl_path = resource("dsl/sleep_workflow.yaml")
         deployment, execution_id = deploy(dsl_path,
                                           wait_for_execution=False)
-        time.sleep(1)
+        time.sleep(2)
         execute_install(deployment.id,
                         force=True,
                         wait_for_execution=False)
