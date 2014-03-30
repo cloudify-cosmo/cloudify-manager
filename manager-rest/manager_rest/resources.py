@@ -1036,13 +1036,13 @@ class ProviderContext(Resource):
     @swagger.operation(
         responseClass=responses.ProviderContext,
         nickname="getContext",
-        notes="TODO"
+        notes="Get the provider context"
     )
     @marshal_with(responses.ProviderContext.resource_fields)
     @exceptions_handled
     def get(self):
         """
-        TODO
+        Get the provider context.
         """
         context = get_storage_manager().get_provider_context()
         return responses.ProviderContext(**context.to_dict())
@@ -1050,13 +1050,22 @@ class ProviderContext(Resource):
     @swagger.operation(
         responseClass=responses.ProviderContextPostStatus,
         nickname='postContext',
-        notes="TODO"
+        notes="Post the provider context",
+        parameters=[{'name': 'body',
+                     'description': 'Provider context',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.PostProviderContextRequest.__name__,  # NOQA
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
     )
     @marshal_with(responses.ProviderContextPostStatus.resource_fields)
     @exceptions_handled
     def post(self):
         """
-        TODO
+        Post the provider context
         """
         verify_json_content_type()
         request_json = request.json
