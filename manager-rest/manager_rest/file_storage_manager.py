@@ -20,7 +20,8 @@ import json
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
-                                 DeploymentNode)
+                                 DeploymentNode,
+                                 ProviderContext)
 from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
@@ -29,6 +30,8 @@ NODES = 'nodes'
 BLUEPRINTS = 'blueprints'
 DEPLOYMENTS = 'deployments'
 EXECUTIONS = 'executions'
+PROVIDER_CONTEXT = 'provider_context'
+PROVIDER_CONTEXT_ID = '1'
 
 
 class FileStorageManager(object):
@@ -46,7 +49,8 @@ class FileStorageManager(object):
             NODES: {},
             BLUEPRINTS: {},
             DEPLOYMENTS: {},
-            EXECUTIONS: {}
+            EXECUTIONS: {},
+            PROVIDER_CONTEXT: {}
         }
         self._dump_data(data)
 
@@ -68,6 +72,10 @@ class FileStorageManager(object):
             deserialized_data[EXECUTIONS] = \
                 {key: Execution(**val) for key, val in data[EXECUTIONS]
                     .iteritems()}
+            deserialized_data[PROVIDER_CONTEXT] = \
+                {key: ProviderContext(**val)
+                 for key, val in data[PROVIDER_CONTEXT].iteritems()}
+
             return deserialized_data
 
     def _dump_data(self, data):
@@ -83,6 +91,9 @@ class FileStorageManager(object):
                     .iteritems()}
             serialized_data[EXECUTIONS] =\
                 {key: val.to_dict() for key, val in data[EXECUTIONS]
+                    .iteritems()}
+            serialized_data[PROVIDER_CONTEXT] = \
+                {key: val.to_dict() for key, val in data[PROVIDER_CONTEXT]
                     .iteritems()}
             json.dump(serialized_data, f)
 
@@ -204,6 +215,21 @@ class FileStorageManager(object):
             return bp
         raise manager_exceptions.NotFoundError(
             "Blueprint {0} not found".format(blueprint_id))
+
+    def put_provider_context(self, provider_context):
+        data = self._load_data()
+        if PROVIDER_CONTEXT_ID in data[PROVIDER_CONTEXT]:
+            raise manager_exceptions.ConflictError(
+                'Provider context already set')
+        data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID] = provider_context
+        self._dump_data(data)
+
+    def get_provider_context(self):
+        data = self._load_data()
+        if PROVIDER_CONTEXT_ID in data[PROVIDER_CONTEXT]:
+            return data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID]
+        raise manager_exceptions.NotFoundError(
+            "Provider context not set")
 
 
 def create():

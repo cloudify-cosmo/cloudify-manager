@@ -168,3 +168,25 @@ class Status(object):
 
     def __init__(self, **kwargs):
         self.status = kwargs['status']
+
+
+@swagger.model
+class ProviderContextPostStatus(object):
+
+    resource_fields = {
+        'status': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.status = kwargs['status']
+
+
+@swagger.model
+class ProviderContext(object):
+
+    resource_fields = {
+        'context': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.context = kwargs['context']

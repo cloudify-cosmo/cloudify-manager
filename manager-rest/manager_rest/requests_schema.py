@@ -41,3 +41,11 @@ class ModifyExecutionRequest(object):
     resource_fields = {
         'action': fields.String
     }
+
+
+@swagger.model
+class PostProviderContextRequest(object):
+
+    resource_fields = {
+        'context': fields.Raw
+    }

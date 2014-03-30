@@ -138,6 +138,7 @@ def setup_resources(api):
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
+    api.add_resource(ProviderContext, '/provider/context')
 
 
 class BlueprintsUpload(object):
@@ -465,8 +466,7 @@ class ExecutionsId(Resource):
                                     'Legal values for action are: [cancel]',
                      'required': True,
                      'allowMultiple': False,
-                     'dataType':
-                         requests_schema.ModifyExecutionRequest.__name__,
+                     'dataType': requests_schema.ModifyExecutionRequest.__name__,  # NOQA
                      'paramType': 'body'}],
         consumes=[
             "application/json"
@@ -1029,3 +1029,48 @@ class Status(Resource):
         Returns an alive status (mainly used for pinging reasons).
         """
         return responses.Status(status='running')
+
+
+class ProviderContext(Resource):
+
+    @swagger.operation(
+        responseClass=responses.ProviderContext,
+        nickname="getContext",
+        notes="Get the provider context"
+    )
+    @marshal_with(responses.ProviderContext.resource_fields)
+    @exceptions_handled
+    def get(self):
+        """
+        Get the provider context.
+        """
+        context = get_storage_manager().get_provider_context()
+        return responses.ProviderContext(**context.to_dict())
+
+    @swagger.operation(
+        responseClass=responses.ProviderContextPostStatus,
+        nickname='postContext',
+        notes="Post the provider context",
+        parameters=[{'name': 'body',
+                     'description': 'Provider context',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.PostProviderContextRequest.__name__,  # NOQA
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.ProviderContextPostStatus.resource_fields)
+    @exceptions_handled
+    def post(self):
+        """
+        Post the provider context
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'context' not in request_json:
+            abort(400, message='400: Missing workflowId in json request body')
+        context = models.ProviderContext(context=request.json['context'])
+        get_storage_manager().put_provider_context(context)
+        return responses.ProviderContextPostStatus(status='ok'), 201

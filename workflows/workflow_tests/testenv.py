@@ -1056,6 +1056,16 @@ def get_node_instance(node_id):
     return node_instance
 
 
+def post_provider_context(provider_context):
+    client = CosmoManagerRestClient('localhost')
+    return client.post_provider_context(provider_context)
+
+
+def get_provider_context():
+    client = CosmoManagerRestClient('localhost')
+    return client.get_provider_context()
+
+
 def is_node_started(node_id):
     client = CosmoManagerRestClient('localhost')
     state = client.get_node_state(node_id, get_state=True,
