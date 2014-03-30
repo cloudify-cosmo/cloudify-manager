@@ -313,7 +313,7 @@ class Blueprints(Resource):
                         'allowMultiple': False,
                         'dataType': 'binary',
                         'paramType': 'body',
-                    }],
+        }],
         consumes=[
             "application/octet-stream"
         ]
