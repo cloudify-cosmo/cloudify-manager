@@ -79,6 +79,9 @@ def install(ctx, runner, worker_config, **kwargs):
     runner.run("sed -i '1 s|.*/bin/python.*$|#!{0}/env/bin/python|g' "
                "{0}/env/bin/*".format(worker_config['base_dir']))
 
+    # Remove downloaded agent package
+    runner.run('rm {0}/agent.tar.gz'.format(worker_config['base_dir']))
+
 
 @operation
 @init_worker_installer
@@ -159,6 +162,12 @@ def restart(ctx, runner, worker_config, **kwargs):
     restart_celery_worker(runner, worker_config)
 
 
+def get_agent_ip(worker_config):
+    if 'host' in worker_config:
+        return worker_config['host']
+    return utils.get_manager_ip()
+
+
 def create_celery_configuration(ctx, runner, worker_config, resource_loader):
     create_celery_includes_file(ctx, runner, worker_config)
     loader = jinja2.FunctionLoader(resource_loader)
@@ -169,7 +178,7 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
         'celery_base_dir': worker_config['celery_base_dir'],
         'worker_modifier': worker_config['name'],
         'management_ip': utils.get_manager_ip(),
-        'agent_ip': utils.get_local_ip(),
+        'agent_ip': get_agent_ip(worker_config),
         'celery_user': worker_config['user'],
         'celery_group': worker_config['user']
     }
@@ -180,7 +189,10 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
 
     config = config_template.render(config_template_values)
     init_template = env.get_template(CELERY_INIT_PATH)
-    init_template_values = {'worker_modifier': worker_config['name']}
+    init_template_values = {
+        'celery_base_dir': worker_config['celery_base_dir'],
+        'worker_modifier': worker_config['name']
+    }
 
     ctx.logger.debug(
         'Populating celery init.d jinja2 template with the following '

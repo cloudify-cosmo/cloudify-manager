@@ -19,7 +19,7 @@
 ### END INIT INFO
 
 WORKER_MODIFIER="{{ worker_modifier }}"
-CELERY_BASE_DIR="/opt/celery"
+CELERY_BASE_DIR="{{ celery_base_dir }}"
 ME=$(basename $0)
 export CELERY_WORK_DIR="${CELERY_BASE_DIR}/cloudify.${WORKER_MODIFIER}/work"
 CELERY_DEFAULTS="/etc/default/${ME}"
