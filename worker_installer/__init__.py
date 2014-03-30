@@ -39,7 +39,7 @@ def init_worker_installer(func):
                                    kwargs.values() + list(args))
         if not ctx:
             raise RuntimeError('CloudifyContext not found in invocation args')
-        if 'worker_config' in ctx.properties:
+        if ctx.properties and 'worker_config' in ctx.properties:
             worker_config = ctx.properties['worker_config']
         else:
             worker_config = {}

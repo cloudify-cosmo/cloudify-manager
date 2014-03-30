@@ -31,8 +31,6 @@ CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/linux-agent.tar.gz'
 
 
-#http://fileserver:port/packages/templates/...
-
 def get_agent_package_url():
     """
     Returns the agent package url it would be downloaded from.
@@ -65,12 +63,12 @@ def install(ctx, runner, worker_config, **kwargs):
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(get_agent_package_url()))
 
-    runner.run('wget -N -T 30 -O {0}/agent.tar.gz {1}'.format(
+    runner.run('wget -T 30 -O {0}/agent.tar.gz {1}'.format(
         worker_config['base_dir'], get_agent_package_url()))
 
     runner.run(
-        'tar xzvf {0}/agent.tar.gz --strip=1 -C {0}'
-        'cloudify.management__worker/'.format(worker_config['base_dir']))
+        'tar xzvf {0}/agent.tar.gz --strip=1 -C {1}'.format(
+            worker_config['base_dir'], worker_config['base_dir']))
 
     create_celery_configuration(
         ctx, runner, worker_config, manager.get_resource)
