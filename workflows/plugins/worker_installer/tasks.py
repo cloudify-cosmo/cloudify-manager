@@ -33,8 +33,6 @@ def fix_worker(ctx):
     worker_config = {}
     if ctx.properties and 'worker_config' in ctx.properties:
         worker_config = ctx.properties['worker_config']
-    if 'worker_config' in ctx.properties:
-        worker_config = ctx.properties['worker_config']
     if ctx.node_id is None:
         worker_config['name'] = ctx.deployment_id
     else:
