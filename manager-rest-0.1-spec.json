@@ -66,6 +66,45 @@
         }
       }
     },
+    "PostProviderContextRequest": {
+      "description": null,
+      "id": "PostProviderContextRequest",
+      "properties": {
+        "context": {
+          "type": "null"
+        }
+      }
+    },
+    "ProviderContext": {
+      "description": null,
+      "id": "ProviderContext",
+      "properties": {
+        "context": {
+          "type": "null"
+        }
+      }
+    },
+    "DeploymentNode": {
+      "description": null,
+      "id": "DeploymentNode",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reachable": {
+          "type": "boolean"
+        },
+        "runtimeInfo": {
+          "type": "null"
+        },
+        "state": {
+          "type": "string"
+        },
+        "stateVersion": {
+          "type": "null"
+        }
+      }
+    },
     "Status": {
       "description": null,
       "id": "Status",
@@ -110,6 +149,15 @@
           "type": "string"
         },
         "name": {
+          "type": "string"
+        }
+      }
+    },
+    "ProviderContextPostStatus": {
+      "description": null,
+      "id": "ProviderContextPostStatus",
+      "properties": {
+        "status": {
           "type": "string"
         }
       }
@@ -165,27 +213,6 @@
       "properties": {
         "blueprintId": {
           "type": "string"
-        }
-      }
-    },
-    "DeploymentNode": {
-      "description": null,
-      "id": "DeploymentNode",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "reachable": {
-          "type": "boolean"
-        },
-        "runtimeInfo": {
-          "type": "null"
-        },
-        "state": {
-          "type": "string"
-        },
-        "stateVersion": {
-          "type": "null"
         }
       }
     }
@@ -724,6 +751,40 @@
           "notes": "Returns an alive message from the rest service.",
           "responseClass": "Status",
           "parameters": []
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/provider/context",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "getContext",
+          "summary": "Get the provider context.",
+          "notes": "Get the provider context",
+          "responseClass": "ProviderContext",
+          "parameters": []
+        },
+        {
+          "method": "POST",
+          "nickname": "postContext",
+          "summary": "Post the provider context",
+          "consumes": [
+            "application/json"
+          ],
+          "notes": "Post the provider context",
+          "responseClass": "ProviderContextPostStatus",
+          "parameters": [
+            {
+              "description": "Provider context",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "PostProviderContextRequest",
+              "name": "body"
+            }
+          ]
         }
       ]
     }
