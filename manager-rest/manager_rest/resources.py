@@ -313,7 +313,7 @@ class Blueprints(Resource):
                         'allowMultiple': False,
                         'dataType': 'binary',
                         'paramType': 'body',
-        }],
+                    }],
         consumes=[
             "application/octet-stream"
         ]
@@ -466,8 +466,7 @@ class ExecutionsId(Resource):
                                     'Legal values for action are: [cancel]',
                      'required': True,
                      'allowMultiple': False,
-                     'dataType':
-                         requests_schema.ModifyExecutionRequest.__name__,
+                     'dataType': requests_schema.ModifyExecutionRequest.__name__,  # NOQA
                      'paramType': 'body'}],
         consumes=[
             "application/json"
