@@ -11,12 +11,14 @@ install:
     - echo "### Creating agent package..."
     - mkdir package
     - virtualenv package/env
+    - echo "Current virtualenv is: ${VIRTUALENV}"
+    - echo $VIRTUAL_ENV > env.txt
     - source package/env/bin/activate
     - pip install https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/develop.zip --process-dependency-links
     - pip install https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip --process-dependency-links
     - tar czf agent.tar.gz package
     - rm -r package
-    - deactivate
+    - source `cat env.txt`/bin/activate
 
     # celery needs the /dev/shm device for billiard semaphore functionality.
     # this device is not mounted by default on travis hosts.
