@@ -8,13 +8,13 @@ python:
 
 
 install:
-    - echo "### Creating agent package..."
-    - mkdir package
-    - virtualenv package/env
-    - source package/env/bin/activate
-    - pip install https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/develop.zip --process-dependency-links
-    - pip install https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip --process-dependency-links
-    - tar czf agent.tar.gz package
+#    - echo "### Creating agent package..."
+#    - mkdir package
+#    - virtualenv package/env
+#    - source package/env/bin/activate
+#    - pip install https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/develop.zip --process-dependency-links
+#    - pip install https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip --process-dependency-links
+#    - tar czf agent.tar.gz package
 
     # celery needs the /dev/shm device for billiard semaphore functionality.
     # this device is not mounted by default on travis hosts.
@@ -26,7 +26,7 @@ install:
     - pip install --process-dependency-links .
 
     - sudo pip install flake8
-    - sudo pip install nose
+#    - sudo pip install nose
 
 
 before_script:
