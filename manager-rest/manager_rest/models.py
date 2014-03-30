@@ -82,3 +82,11 @@ class DeploymentNode(SerializableObject):
         self.runtime_info = kwargs['runtime_info']
         self.reachable = kwargs['reachable']
         self.state_version = kwargs['state_version']
+
+
+class ProviderContext(SerializableObject):
+
+    fields = {'context'}
+
+    def __init__(self, **kwargs):
+        self.context = kwargs['context']

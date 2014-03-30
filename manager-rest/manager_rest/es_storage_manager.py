@@ -21,13 +21,16 @@ from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
-                                 DeploymentNode)
+                                 DeploymentNode,
+                                 ProviderContext)
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 NODE_TYPE = 'node'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
 EXECUTION_TYPE = 'execution'
+PROVIDER_CONTEXT_TYPE = 'provider_context'
+PROVIDER_CONTEXT_ID = '1'
 
 DEFAULT_SEARCH_SIZE = 500
 
@@ -212,6 +215,17 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 'Node update conflict: mismatching versions')
+
+    def put_provider_context(self, provider_context):
+        doc_data = provider_context.to_dict()
+        self._put_doc_if_not_exists(PROVIDER_CONTEXT_TYPE,
+                                    PROVIDER_CONTEXT_ID,
+                                    doc_data)
+
+    def get_provider_context(self):
+        return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
+                                             PROVIDER_CONTEXT_ID,
+                                             ProviderContext)
 
 
 def create():

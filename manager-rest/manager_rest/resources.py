@@ -1036,7 +1036,7 @@ class ProviderContext(Resource):
 
     @swagger.operation(
         responseClass=responses.ProviderContext,
-        nickname="get_context",
+        nickname="getContext",
         notes="TODO"
     )
     @marshal_with(responses.ProviderContext.resource_fields)
@@ -1045,11 +1045,12 @@ class ProviderContext(Resource):
         """
         TODO
         """
-        return responses.ProviderContext(context={})
+        context = get_storage_manager().get_provider_context()
+        return responses.ProviderContext(**context.to_dict())
 
     @swagger.operation(
         responseClass=responses.ProviderContextPostStatus,
-        nickname='post_context',
+        nickname='postContext',
         notes="TODO"
     )
     @marshal_with(responses.ProviderContextPostStatus.resource_fields)
@@ -1058,4 +1059,10 @@ class ProviderContext(Resource):
         """
         TODO
         """
+        verify_json_content_type()
+        request_json = request.json
+        if 'context' not in request_json:
+            abort(400, message='400: Missing workflowId in json request body')
+        context = models.ProviderContext(context=request.json['context'])
+        get_storage_manager().put_provider_context(context)
         return responses.ProviderContextPostStatus(status='ok'), 201
