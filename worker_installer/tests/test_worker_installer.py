@@ -73,9 +73,9 @@ def read_file(file_name):
 
 
 def get_resource(resource_name):
-    if CELERY_INIT_PATH in resource_name:
+    if t.CELERY_INIT_PATH in resource_name:
         return read_file('celeryd-cloudify.init.jinja2')
-    elif CELERY_CONFIG_PATH in resource_name:
+    elif t.CELERY_CONFIG_PATH in resource_name:
         return read_file('celeryd-cloudify.conf.jinja2')
     return None
 
