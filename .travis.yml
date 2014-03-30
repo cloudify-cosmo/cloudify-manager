@@ -29,6 +29,7 @@ install:
     - pip install -r test-requirements.txt
 
     - sudo pip install flake8
+    - sudo pip install nose
 
 
 before_script:
@@ -36,7 +37,7 @@ before_script:
     - python -m SimpleHTTPServer 8000 &
 
 script:
-    - flake8 .
+    - flake8 worker_installer
     - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
     - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
 
