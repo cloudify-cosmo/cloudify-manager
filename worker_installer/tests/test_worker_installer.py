@@ -27,9 +27,15 @@ from worker_installer.tests import \
     get_remote_context, VAGRANT_MACHINE_IP, MANAGER_IP
 
 from celery import Celery
-from worker_installer.tasks import install, start, uninstall, stop
-from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
+from worker_installer import tasks as t
 from cloudify import manager
+
+AGENT_PACKAGE_URL = \
+    'https://dl.dropboxusercontent.com/u/407576/agent-Ubuntu.tar'
+
+
+def _get_custom_agent_package_url():
+    return AGENT_PACKAGE_URL
 
 
 def _extract_registered_plugins(worker_name):
@@ -102,6 +108,7 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         os.environ['MANAGEMENT_IP'] = MANAGER_IP
         os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
         manager.get_resource = get_resource
+        t.get_agent_package_url = _get_custom_agent_package_url
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID, cls.RAN_ID)
 
@@ -113,19 +120,19 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
     def test_install_vm_worker(self):
         ctx = get_remote_context()
 
-        install(ctx)
-        start(ctx)
+        t.install(ctx)
+        t.start(ctx)
 
         self.assert_installed_plugins(ctx)
 
     def test_install_same_worker_twice(self):
         ctx = get_remote_context()
 
-        install(ctx)
-        start(ctx)
+        t.install(ctx)
+        t.start(ctx)
 
-        install(ctx)
-        start(ctx)
+        t.install(ctx)
+        t.start(ctx)
 
         self.assert_installed_plugins(ctx)
 
@@ -134,12 +141,12 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         ctx2 = get_remote_context()
 
         # install first worker
-        install(ctx1)
-        start(ctx1)
+        t.install(ctx1)
+        t.start(ctx1)
 
         # install second worker
-        install(ctx2)
-        start(ctx2)
+        t.install(ctx2)
+        t.start(ctx2)
 
         self.assert_installed_plugins(ctx1)
         self.assert_installed_plugins(ctx2)
@@ -148,10 +155,10 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         ctx = get_remote_context()
 
         # install first worker
-        install(ctx)
-        start(ctx)
-        stop(ctx)
-        uninstall(ctx)
+        t.install(ctx)
+        t.start(ctx)
+        t.stop(ctx)
+        t.uninstall(ctx)
 
         worker_config = ctx.properties['worker_config']
 
@@ -174,11 +181,11 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
     def test_uninstall_non_existing_worker(self):
         ctx = get_remote_context()
-        uninstall(ctx)
+        t.uninstall(ctx)
 
     def test_stop_non_existing_worker(self):
         ctx = get_remote_context()
-        stop(ctx)
+        t.stop(ctx)
 
 
 class TestLocalInstallerCase(WorkerInstallerTestCase):
@@ -190,30 +197,31 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         os.environ['MANAGEMENT_IP'] = 'localhost'
         os.environ['AGENT_IP'] = 'localhost'
         manager.get_resource = get_resource
+        t.get_agent_package_url = _get_custom_agent_package_url
 
     def test_install_worker(self):
         ctx = get_local_context()
-        install(ctx)
-        start(ctx)
+        t.install(ctx)
+        t.start(ctx)
         self.assert_installed_plugins(ctx)
 
     def test_install_same_worker_twice(self):
         ctx = get_local_context()
-        install(ctx)
-        start(ctx)
+        t.install(ctx)
+        t.start(ctx)
 
-        install(ctx)
-        start(ctx)
+        t.install(ctx)
+        t.start(ctx)
 
         self.assert_installed_plugins(ctx)
 
     def test_remove_worker(self):
         ctx = get_local_context()
 
-        install(ctx)
-        start(ctx)
-        stop(ctx)
-        uninstall(ctx)
+        t.install(ctx)
+        t.start(ctx)
+        t.stop(ctx)
+        t.uninstall(ctx)
 
         worker_config = ctx.properties['worker_config']
 
@@ -236,11 +244,11 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_uninstall_non_existing_worker(self):
         ctx = get_local_context()
-        uninstall(ctx)
+        t.uninstall(ctx)
 
     def test_stop_non_existing_worker(self):
         ctx = get_local_context()
-        stop(ctx)
+        t.stop(ctx)
 
 
 if __name__ == '__main__':

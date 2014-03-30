@@ -26,13 +26,19 @@ from cloudify import utils
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
 AGENT_INSTALLER_PLUGIN_PATH = 'worker_installer.tasks'
 
-CELERY_CONFIG_PATH = \
-    '/packages/agents/templates/celeryd-cloudify.conf.template'
+CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
+CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
+AGENT_PACKAGE_PATH = '/packages/agents/linux-agent.tar.gz'
 
-CELERY_INIT_PATH = '/packages/agents/templates/celeryd-cloudify.init.template'
 
-AGENT_PACKAGE_URL = \
-    'https://dl.dropboxusercontent.com/u/407576/agent-Ubuntu.tar'
+#http://fileserver:port/packages/templates/...
+
+def get_agent_package_url():
+    """
+    Returns the agent package url it would be downloaded from.
+    """
+    return '{0}{1}'.format(utils.get_manager_file_server_url(),
+                           AGENT_PACKAGE_PATH)
 
 
 @operation
@@ -57,13 +63,13 @@ def install(ctx, runner, worker_config, **kwargs):
     runner.run('mkdir -p {0}'.format(worker_config['base_dir']))
 
     ctx.logger.debug(
-        'Downloading agent package from: {0}'.format(AGENT_PACKAGE_URL))
+        'Downloading agent package from: {0}'.format(get_agent_package_url()))
 
-    runner.run('wget -N -T 30 -O {0}/agent.tar {1}'.format(
-        worker_config['base_dir'], AGENT_PACKAGE_URL))
+    runner.run('wget -N -T 30 -O {0}/agent.tar.gz {1}'.format(
+        worker_config['base_dir'], get_agent_package_url()))
 
     runner.run(
-        'tar -xvf {0}/agent.tar --strip=4 -C {0} ./opt/agent-Ubuntu/'
+        'tar xzvf {0}/agent.tar.gz --strip=1 -C {0}'
         'cloudify.management__worker/'.format(worker_config['base_dir']))
 
     create_celery_configuration(
