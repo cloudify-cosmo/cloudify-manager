@@ -31,7 +31,7 @@ current_worker_name = None
 
 def fix_worker(ctx):
     worker_config = ctx.properties['worker_config'] if 'worker_config' \
-        in ctx.proeprties else {}
+        in ctx.properties else {}
     if 'worker_config' in ctx.properties:
         worker_config = ctx.properties['worker_config']
     if ctx.node_id is None:
