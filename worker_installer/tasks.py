@@ -73,9 +73,13 @@ def install(ctx, runner, worker_config, **kwargs):
 
     for link in ['archives', 'bin', 'include', 'lib']:
         link_path = '{0}/env/local/{1}'.format(worker_config['base_dir'], link)
-        runner.run('unlink {0}'.format(link_path))
-        runner.run('ln -s {0}/env/{1} {2}'.format(
-            worker_config['base_dir'], link, link_path))
+        try:
+            runner.run('unlink {0}'.format(link_path))
+            runner.run('ln -s {0}/env/{1} {2}'.format(
+                worker_config['base_dir'], link, link_path))
+        except Exception as e:
+            ctx.logger.warn('Error process link: {0} [error={1}] - '
+                            'ignoring..'.format(link_path, str(e)))
 
     create_celery_configuration(
         ctx, runner, worker_config, manager.get_resource)
