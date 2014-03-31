@@ -75,6 +75,14 @@ def install(ctx, runner, worker_config, **kwargs):
         ctx, runner, worker_config, manager.get_resource)
 
     runner.run('sudo chmod +x {0}'.format(worker_config['init_file']))
+    for link in ['bin', 'include', 'lib']:
+        runner.run('unlink {0}/env/local/{1}'.format(
+            worker_config['base_dir'], link))
+        runner.run('ln -s {0}/env/{1}'.format(worker_config['base_dir'], link))
+
+    runner.run('unlink {0}/env/local/include'.format(
+        worker_config['base_dir']))
+    runner.run('unlink {0}/env/local/lib'.format(worker_config['base_dir']))
 
     # This is for fixing virtualenv included in package paths
     runner.run("sed -i '1 s|.*/bin/python.*$|#!{0}/env/bin/python|g' "
