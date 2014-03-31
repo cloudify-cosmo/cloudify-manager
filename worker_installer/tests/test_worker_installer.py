@@ -20,21 +20,29 @@ import getpass
 import unittest
 import time
 import os
-
-from worker_installer.tests import get_remote_runner, get_local_runner, \
-    id_generator, get_local_worker_config, get_local_context, \
-    get_remote_context, \
-    get_remote_management_worker_config, VAGRANT_MACHINE_IP, \
-    FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER, \
-    get_remote_worker_config, get_local_management_worker_config
+from os import path
+from worker_installer.utils import FabricRunner
+from worker_installer.tests import \
+    id_generator, get_local_context, \
+    get_remote_context, VAGRANT_MACHINE_IP, MANAGER_IP
 
 from celery import Celery
-from worker_installer.tasks import install, start, \
-    build_env_string, uninstall, stop
+from worker_installer import tasks as t
+from cloudify import manager
+
+# agent is created and served via python simple http server when
+# tests run in travis.
+AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
 
 
-def _extract_registered_plugins(broker_url, worker_name):
+def _get_custom_agent_package_url():
+    return AGENT_PACKAGE_URL
 
+
+def _extract_registered_plugins(worker_name):
+
+    # c = Celery(broker=broker_url, backend=broker_url)
+    broker_url = 'amqp://guest:guest@localhost:5672//'
     c = Celery(broker=broker_url, backend=broker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
 
@@ -58,360 +66,190 @@ def _extract_registered_plugins(broker_url, worker_name):
     return plugins
 
 
-class TestRemoteInstallerCase(unittest.TestCase):
+def read_file(file_name):
+    file_path = path.join(path.dirname(__file__), file_name)
+    with open(file_path, 'r') as f:
+        return f.read()
+
+
+def get_resource(resource_name):
+    if t.CELERY_INIT_PATH in resource_name:
+        return read_file('celeryd-cloudify.init.jinja2')
+    elif t.CELERY_CONFIG_PATH in resource_name:
+        return read_file('celeryd-cloudify.conf.jinja2')
+    return None
+
+
+class WorkerInstallerTestCase(unittest.TestCase):
+
+    def assert_installed_plugins(self, ctx):
+        worker_name = ctx.properties['worker_config']['name']
+        ctx.logger.info("extracting plugins from newly installed worker")
+        plugins = _extract_registered_plugins(worker_name)
+        if not plugins:
+            raise AssertionError(
+                "No plugins were detected on the installed worker")
+        ctx.logger.info("Detected plugins : {0}".format(plugins))
+        # check built in agent plugins are registered
+        self.assertTrue(
+            '{0}@plugin_installer'.format(worker_name) in plugins)
+        self.assertTrue(
+            '{0}@worker_installer'.format(worker_name) in plugins)
+
+
+class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
     VM_ID = "TestRemoteInstallerCase"
-    RUNNER = None
     RAN_ID = id_generator(3)
 
     @classmethod
     def setUpClass(cls):
+        os.environ['MANAGEMENT_USER'] = 'vagrant'
+        os.environ['MANAGER_REST_PORT'] = '8100'
+        os.environ['MANAGEMENT_IP'] = MANAGER_IP
+        os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
+        manager.get_resource = get_resource
+        t.get_agent_package_url = _get_custom_agent_package_url
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID, cls.RAN_ID)
-        cls.RUNNER = get_remote_runner()
 
     @classmethod
     def tearDownClass(cls):
         from vagrant_helper import terminate_vagrant
         terminate_vagrant(cls.VM_ID, cls.RAN_ID)
 
-    def test_install_worker(self):
-
+    def test_install_vm_worker(self):
         ctx = get_remote_context()
-        worker_config = get_remote_worker_config()
 
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        t.install(ctx)
+        t.start(ctx)
 
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue(
-            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assert_installed_plugins(ctx)
 
     def test_install_same_worker_twice(self):
-
         ctx = get_remote_context()
-        worker_config = get_remote_worker_config()
 
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        t.install(ctx)
+        t.start(ctx)
 
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        t.install(ctx)
+        t.start(ctx)
 
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue(
-            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+        self.assert_installed_plugins(ctx)
 
     def test_install_multiple_workers(self):
-
-        ctx = get_remote_context()
-        worker_config = get_remote_worker_config()
-        name1 = worker_config["name"]
+        ctx1 = get_remote_context()
+        ctx2 = get_remote_context()
 
         # install first worker
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
-
-        worker_config = get_remote_worker_config()
-        name2 = worker_config["name"]
+        t.install(ctx1)
+        t.start(ctx1)
 
         # install second worker
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        t.install(ctx2)
+        t.start(ctx2)
 
-        # lets make sure it did
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue('{0}@plugin_installer'.format(name1) in plugins)
-        self.assertTrue('{0}@kv_store'.format(name1) in plugins)
-        self.assertTrue('{0}@plugin_installer'.format(name2) in plugins)
-        self.assertTrue('{0}@kv_store'.format(name2) in plugins)
-
-    def test_install_management_worker(self):
-
-        ctx = get_remote_context()
-        worker_config = get_remote_management_worker_config()
-
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
-
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue(
-            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@kv_store'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@worker_installer'.format(worker_config["name"]) in plugins)
+        self.assert_installed_plugins(ctx1)
+        self.assert_installed_plugins(ctx2)
 
     def test_remove_worker(self):
-
         ctx = get_remote_context()
-        worker_config = get_remote_worker_config()
 
         # install first worker
-        install(ctx, worker_config, local=False)
-        start(ctx, worker_config, local=False)
+        t.install(ctx)
+        t.start(ctx)
+        t.stop(ctx)
+        t.uninstall(ctx)
 
-        stop(ctx, worker_config, local=False)
-        uninstall(ctx, worker_config, local=False)
+        worker_config = ctx.properties['worker_config']
 
-        plugins = _extract_registered_plugins(
-            worker_config["env"]["BROKER_URL"], worker_config["name"])
-
+        plugins = _extract_registered_plugins(worker_config['name'])
         # make sure the worker has stopped
-        self.assertTrue(len(plugins) == 0)
+        self.assertEqual(0, len(plugins))
 
         # make sure files are deleted
         service_file_path = "/etc/init.d/celeryd-{0}".format(
-            worker_config["name"])
+            worker_config['name'])
         defaults_file_path = "/etc/default/celeryd-{0}".format(
-            worker_config["name"])
-        worker_home = "{0}/{1}__worker"\
-            .format(worker_config['home'], worker_config['name'])
+            worker_config['name'])
+        worker_home = worker_config['base_dir']
 
-        self.assertFalse(self.RUNNER.exists(service_file_path))
-        self.assertFalse(self.RUNNER.exists(defaults_file_path))
-        self.assertFalse(self.RUNNER.exists(worker_home))
+        runner = FabricRunner(worker_config)
+
+        self.assertFalse(runner.exists(service_file_path))
+        self.assertFalse(runner.exists(defaults_file_path))
+        self.assertFalse(runner.exists(worker_home))
 
     def test_uninstall_non_existing_worker(self):
-
-        worker_config = {
-            "name": "non-existing-worker",
-            "user": "vagrant",
-            "port": 22,
-            "key": "~/.vagrant.d/insecure_private_key",
-            "env": {
-                "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-                "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100,
-                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
-                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
-                                                FILE_SERVER_PORT,
-                                                FILE_SERVER_BLUEPRINTS_FOLDER)
-            }
-        }
-        uninstall(get_remote_context(), worker_config, True)
+        ctx = get_remote_context()
+        t.uninstall(ctx)
 
     def test_stop_non_existing_worker(self):
-
-        worker_config = {
-            "name": "non-existing-worker",
-            "user": "vagrant",
-            "port": 22,
-            "key": "~/.vagrant.d/insecure_private_key",
-            "env": {
-                "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-                "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100,
-                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
-                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
-                                                FILE_SERVER_PORT,
-                                                FILE_SERVER_BLUEPRINTS_FOLDER)
-            }
-        }
-        stop(get_remote_context(), worker_config, True)
+        ctx = get_remote_context()
+        t.stop(ctx)
 
 
-class TestLocalInstallerCase(unittest.TestCase):
-
-    RUNNER = None
+class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.RUNNER = get_local_runner()
-        os.environ["BROKER_URL"] = "localhost"
-        os.environ["MANAGEMENT_IP"] = "localhost"
+        os.environ['MANAGEMENT_USER'] = getpass.getuser()
+        os.environ['MANAGER_REST_PORT'] = '8100'
+        os.environ['MANAGEMENT_IP'] = 'localhost'
+        os.environ['AGENT_IP'] = 'localhost'
+        manager.get_resource = get_resource
+        t.get_agent_package_url = _get_custom_agent_package_url
 
     def test_install_worker(self):
-
         ctx = get_local_context()
-        worker_config = get_local_worker_config()
-
-        install(ctx, worker_config, local=True)
-        start(ctx, worker_config, local=True)
-
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue(
-            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@kv_store'.format(worker_config["name"]) in plugins)
+        t.install(ctx)
+        t.start(ctx)
+        self.assert_installed_plugins(ctx)
 
     def test_install_same_worker_twice(self):
-
         ctx = get_local_context()
-        worker_config = get_local_worker_config()
+        t.install(ctx)
+        t.start(ctx)
 
-        install(ctx, worker_config, local=True)
-        start(ctx, worker_config, local=True)
+        t.install(ctx)
+        t.start(ctx)
 
-        install(ctx, worker_config, local=True)
-        start(ctx, worker_config, local=True)
-
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue(
-            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@kv_store'.format(worker_config["name"]) in plugins)
-
-    def test_install_management_worker(self):
-
-        ctx = get_local_context()
-        worker_config = get_local_management_worker_config()
-
-        install(ctx, worker_config, local=True)
-        start(ctx, worker_config, local=True)
-
-        ctx.logger.info("extracting plugins from newly installed worker")
-        plugins = _extract_registered_plugins(
-            worker_config['env']['BROKER_URL'], worker_config["name"])
-        if not plugins:
-            raise AssertionError(
-                "No plugins were detected on the installed worker")
-
-        ctx.logger.info("Detected plugins : {0}".format(plugins))
-
-        # check built in agent plugins are registered
-        self.assertTrue(
-            '{0}@plugin_installer'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@kv_store'.format(worker_config["name"]) in plugins)
-        self.assertTrue(
-            '{0}@worker_installer'.format(worker_config["name"]) in plugins)
+        self.assert_installed_plugins(ctx)
 
     def test_remove_worker(self):
-
         ctx = get_local_context()
-        worker_config = get_local_worker_config()
 
-        # install first worker
-        install(ctx, worker_config, local=True)
-        start(ctx, worker_config, local=True)
+        t.install(ctx)
+        t.start(ctx)
+        t.stop(ctx)
+        t.uninstall(ctx)
 
-        stop(ctx, worker_config, local=True)
-        uninstall(ctx, worker_config, local=True)
+        worker_config = ctx.properties['worker_config']
 
-        plugins = _extract_registered_plugins(
-            worker_config["env"]["BROKER_URL"], worker_config["name"])
-
+        plugins = _extract_registered_plugins(worker_config['name'])
         # make sure the worker has stopped
-        self.assertTrue(len(plugins) == 0)
+        self.assertEqual(0, len(plugins))
 
         # make sure files are deleted
         service_file_path = "/etc/init.d/celeryd-{0}".format(
-            worker_config["name"])
+            worker_config['name'])
         defaults_file_path = "/etc/default/celeryd-{0}".format(
-            worker_config["name"])
+            worker_config['name'])
+        worker_home = worker_config['base_dir']
 
-        self.assertFalse(self.RUNNER.exists(service_file_path))
-        self.assertFalse(self.RUNNER.exists(defaults_file_path))
+        runner = FabricRunner(ctx, worker_config)
 
-    def test_create_env_string(self):
-        env = {
-            "TEST_KEY1": "TEST_VALUE1",
-            "TEST_KEY2": "TEST_VALUE2"
-        }
-
-        expected_string = "export TEST_KEY2=\"TEST_VALUE2\"\nexport " \
-                          "TEST_KEY1=\"TEST_VALUE1\"\n"
-
-        assert expected_string == build_env_string(env)
-
-    def test_create_empty_env_string(self):
-
-        expected_string = ""
-
-        assert expected_string == build_env_string({})
+        self.assertFalse(runner.exists(service_file_path))
+        self.assertFalse(runner.exists(defaults_file_path))
+        self.assertFalse(runner.exists(worker_home))
 
     def test_uninstall_non_existing_worker(self):
-
-        worker_config = {
-            "user": getpass.getuser(),
-            "name": "non-existing-worker",
-            "env": {
-                "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-                "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100,
-                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
-                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
-                                                FILE_SERVER_PORT,
-                                                FILE_SERVER_BLUEPRINTS_FOLDER)
-            }
-        }
-        uninstall(get_remote_context(), worker_config, True)
+        ctx = get_local_context()
+        t.uninstall(ctx)
 
     def test_stop_non_existing_worker(self):
-
-        worker_config = {
-            "user": getpass.getuser(),
-            "name": "non-existing-worker",
-            "env": {
-                "BROKER_URL": "amqp://guest:guest@10.0.0.1:5672//",
-                "MANAGEMENT_IP": VAGRANT_MACHINE_IP,
-                "MANAGER_REST_PORT": 8100,
-                "MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL":
-                    "http://{0}:{1}/{2}".format(VAGRANT_MACHINE_IP,
-                                                FILE_SERVER_PORT,
-                                                FILE_SERVER_BLUEPRINTS_FOLDER)
-            }
-        }
-        stop(get_remote_context(), worker_config, True)
+        ctx = get_local_context()
+        t.stop(ctx)
 
 
 if __name__ == '__main__':
