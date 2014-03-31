@@ -18,7 +18,7 @@ __author__ = 'elip'
 import os
 import jinja2
 from worker_installer import init_worker_installer
-from worker_installer import is_deployment_worker
+from worker_installer.utils import is_deployment_worker
 from cloudify.decorators import operation
 from cloudify import manager
 from cloudify import utils

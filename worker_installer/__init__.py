@@ -18,7 +18,7 @@ __author__ = 'idanmo'
 import os
 import cloudify
 from functools import wraps
-from fabric_runner import FabricRunner
+from worker_installer.utils import FabricRunner, is_deployment_worker
 
 
 def _find_type_in_kwargs(cls, all_args):
@@ -48,13 +48,6 @@ def init_worker_installer(func):
         kwargs['runner'] = FabricRunner(ctx, worker_config)
         return func(*args, **kwargs)
     return wrapper
-
-
-def is_deployment_worker(ctx):
-    """
-    Gets whether agent installation was invoked for a deployment.
-    """
-    return ctx.node_id is None
 
 
 def get_machine_ip(ctx):

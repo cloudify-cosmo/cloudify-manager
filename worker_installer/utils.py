@@ -25,7 +25,6 @@ from StringIO import StringIO
 from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
-from worker_installer import is_deployment_worker
 
 
 def retry(timeout=60):
@@ -41,6 +40,13 @@ def retry(timeout=60):
                 return func(*args, **kwargs)
         return wraps(func)(wrapper)
     return decorator
+
+
+def is_deployment_worker(ctx):
+    """
+    Gets whether agent installation was invoked for a deployment.
+    """
+    return ctx.node_id is None
 
 
 class FabricRunner(object):
