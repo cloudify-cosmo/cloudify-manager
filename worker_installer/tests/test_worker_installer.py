@@ -21,7 +21,7 @@ import unittest
 import time
 import os
 from os import path
-from worker_installer.fabric_runner import FabricRunner
+from worker_installer.utils import FabricRunner
 from worker_installer.tests import \
     id_generator, get_local_context, \
     get_remote_context, VAGRANT_MACHINE_IP, MANAGER_IP
