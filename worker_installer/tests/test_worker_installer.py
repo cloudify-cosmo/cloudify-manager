@@ -237,7 +237,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             worker_config['name'])
         worker_home = worker_config['base_dir']
 
-        runner = FabricRunner(worker_config)
+        runner = FabricRunner(ctx, worker_config)
 
         self.assertFalse(runner.exists(service_file_path))
         self.assertFalse(runner.exists(defaults_file_path))
