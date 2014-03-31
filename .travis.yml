@@ -9,11 +9,11 @@ python:
 
 install:
     - echo "### Creating agent package..."
-    - mkdir package
-    - virtualenv package/env
+    - mkdir -p package/linux
+    - virtualenv package/linux/env
     - echo "Current virtualenv is $VIRTUAL_ENV"
     - echo $VIRTUAL_ENV > env.txt
-    - source package/env/bin/activate
+    - source package/linux/env/bin/activate
     - pip install https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/develop.zip --process-dependency-links
     - pip install https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.zip --process-dependency-links
     - tar czf agent.tar.gz package

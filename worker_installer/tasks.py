@@ -68,17 +68,19 @@ def install(ctx, runner, worker_config, **kwargs):
         worker_config['base_dir'], get_agent_package_url()))
 
     runner.run(
-        'tar xzvf {0}/agent.tar.gz --strip=1 -C {1}'.format(
+        'tar xzvf {0}/agent.tar.gz --strip=2 -C {1}'.format(
             worker_config['base_dir'], worker_config['base_dir']))
+
+    for link in ['archives', 'bin', 'include', 'lib']:
+        link_path = '{0}/env/local/{1}'.format(worker_config['base_dir'], link)
+        runner.run('unlink {0}'.format(link_path))
+        runner.run('ln -s {0}/env/{1} {2}'.format(
+            worker_config['base_dir'], link, link_path))
 
     create_celery_configuration(
         ctx, runner, worker_config, manager.get_resource)
 
     runner.run('sudo chmod +x {0}'.format(worker_config['init_file']))
-    for link in ['bin', 'include', 'lib']:
-        runner.run('unlink {0}/env/local/{1}'.format(
-            worker_config['base_dir'], link))
-        runner.run('ln -s {0}/env/{1}'.format(worker_config['base_dir'], link))
 
     runner.run('unlink {0}/env/local/include'.format(
         worker_config['base_dir']))
