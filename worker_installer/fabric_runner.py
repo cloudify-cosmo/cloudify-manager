@@ -25,6 +25,7 @@ from StringIO import StringIO
 from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
+from worker_installer import is_deployment_worker
 
 
 def retry(timeout=60):
@@ -47,7 +48,7 @@ class FabricRunner(object):
     def __init__(self, ctx, worker_config=None):
         self.ctx = ctx
         config = worker_config or {}
-        self.local = 'host' not in config
+        self.local = is_deployment_worker(ctx)
         if not self.local:
             self.host_string = '%(user)s@%(host)s:%(port)s' % config
             self.key_filename = config['key']
@@ -141,6 +142,7 @@ class FabricRunnerException(Exception):
         self.command = command
         self.message = message
         self.code = code
+        Exception.__init__(self, self.__str__())
 
     def __str__(self):
         return "Command '{0}' exited with code {1}: {2}".format(

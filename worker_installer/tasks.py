@@ -18,6 +18,7 @@ __author__ = 'elip'
 import os
 import jinja2
 from worker_installer import init_worker_installer
+from worker_installer import is_deployment_worker
 from cloudify.decorators import operation
 from cloudify import manager
 from cloudify import utils
@@ -130,9 +131,7 @@ def stop(ctx, runner, worker_config, **kwargs):
 
     ctx.logger.info("stopping celery worker {0}".format(worker_config['name']))
 
-    service_file_path = "/etc/init.d/celeryd-{0}".format(worker_config['name'])
-
-    if runner.exists(service_file_path):
+    if runner.exists(worker_config['init_file']):
         runner.run(
             "sudo service celeryd-{0} stop".format(worker_config["name"]))
     else:
@@ -162,10 +161,10 @@ def restart(ctx, runner, worker_config, **kwargs):
     restart_celery_worker(runner, worker_config)
 
 
-def get_agent_ip(worker_config):
-    if 'host' in worker_config:
-        return worker_config['host']
-    return utils.get_manager_ip()
+def get_agent_ip(ctx, worker_config):
+    if is_deployment_worker(ctx):
+        return utils.get_manager_ip()
+    return worker_config['host']
 
 
 def create_celery_configuration(ctx, runner, worker_config, resource_loader):
