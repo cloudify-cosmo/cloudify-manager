@@ -580,7 +580,7 @@ class ElasticSearchProcess(object):
         es_index = IndicesClient(es)
         if es_index.exists(STORAGE_INDEX_NAME):
             logger.info(
-                "Elasticsearch index '{0}' already  exists and "
+                "Elasticsearch index '{0}' already exists and "
                 "will be deleted".format(STORAGE_INDEX_NAME))
             try:
                 es_index.delete(STORAGE_INDEX_NAME)

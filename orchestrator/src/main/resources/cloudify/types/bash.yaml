@@ -1,3 +1,7 @@
+##################################################################################
+# Cloudify Bash built in types and plugins definitions.
+##################################################################################
+
 plugins:
     bash_runner:
         derived_from: cloudify.plugins.agent_plugin

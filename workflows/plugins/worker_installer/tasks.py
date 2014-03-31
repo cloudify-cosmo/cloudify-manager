@@ -29,15 +29,20 @@ workers_state = {}
 current_worker_name = None
 
 
-def fix_worker(ctx, worker_config):
-    if worker_config["name"] == "${node_id}":
-        worker_config["name"] = ctx.node_id
+def fix_worker(ctx):
+    worker_config = {}
+    if ctx.properties and 'worker_config' in ctx.properties:
+        worker_config = ctx.properties['worker_config']
+    if ctx.node_id is None:
+        worker_config['name'] = ctx.deployment_id
+    else:
+        worker_config['name'] = ctx.node_id
+    return worker_config
 
 
 @operation
-def install(ctx, worker_config, local=False, **kwargs):
-
-    fix_worker(ctx, worker_config)
+def install(ctx, **kwargs):
+    worker_config = fix_worker(ctx)
 
     global current_worker_name
     global workers_state
@@ -48,9 +53,8 @@ def install(ctx, worker_config, local=False, **kwargs):
 
 
 @operation
-def start(ctx, worker_config, local=False, **kwargs):
-
-    fix_worker(ctx, worker_config)
+def start(ctx, **kwargs):
+    worker_config = fix_worker(ctx)
 
     global workers_state
 
@@ -63,9 +67,8 @@ def start(ctx, worker_config, local=False, **kwargs):
 
 
 @operation
-def restart(ctx, worker_config, local=False, **kwargs):
-
-    fix_worker(ctx, worker_config)
+def restart(ctx, **kwargs):
+    worker_config = fix_worker(ctx)
 
     global workers_state
 
@@ -74,9 +77,8 @@ def restart(ctx, worker_config, local=False, **kwargs):
 
 
 @operation
-def stop(ctx, worker_config, local=False, **kwargs):
-
-    fix_worker(ctx, worker_config)
+def stop(ctx, **kwargs):
+    worker_config = fix_worker(ctx)
 
     global workers_state
 
@@ -89,9 +91,8 @@ def stop(ctx, worker_config, local=False, **kwargs):
 
 
 @operation
-def uninstall(ctx, worker_config, local=False, **kwargs):
-
-    fix_worker(ctx, worker_config)
+def uninstall(ctx, **kwargs):
+    worker_config = fix_worker(ctx)
 
     global workers_state
 

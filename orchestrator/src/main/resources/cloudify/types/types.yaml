@@ -4,7 +4,6 @@
 imports:
     - 'celery_worker_installer'
     - 'celery_plugin_installer'
-    - 'kv_store'
 
 ##################################################################################
 # Base type definitions
@@ -47,9 +46,6 @@ types:
                 - restart: worker_installer.tasks.restart
             cloudify.interfaces.plugin_installer:
                 - install: plugin_installer.tasks.install
-            cloudify.interfaces.kv_store:
-                - put: kv_store.tasks.put
-                - get: kv_store.tasks.get
             cloudify.interfaces.host:
                 - get_state
         properties:
