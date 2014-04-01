@@ -20,35 +20,16 @@ import shutil
 __author__ = 'dank'
 
 
-def copy_resources(file_server_root,
-                   orchestrator_dir=None):
-
-    # build orchestrator dir
-    orchestrator_resources = path.abspath(__file__)
+def copy_resources(file_server_root):
+    cloudify_resources = path.abspath(__file__)
     for i in range(3):
-        orchestrator_resources = path.dirname(orchestrator_resources)
-    # shaky workaround intellij 'out' folder
-    if not path.isdir(path.join(orchestrator_resources, 'orchestrator')):
-        for i in range(2):
-            orchestrator_resources = path.dirname(orchestrator_resources)
-
-    if orchestrator_dir is not None:
-        orchestrator_resources = path.join(orchestrator_dir,
-                                           'src/main/resources')
-    else:
-        orchestrator_resources = path.join(orchestrator_resources,
-                                           'orchestrator/src/main/resources')
-    # resources for dsl parser
-    cloudify_resources = path.join(orchestrator_resources, 'cloudify')
+        cloudify_resources = path.dirname(cloudify_resources)
+    cloudify_resources = path.join(cloudify_resources,
+                                   'resources',
+                                   'rest-service',
+                                   'cloudify')
     shutil.copytree(cloudify_resources, path.join(file_server_root,
                                                   'cloudify'))
-
-    alias_mapping_resource = path.join(orchestrator_resources,
-                                       'org/cloudifysource/cosmo/dsl'
-                                       '/alias-mappings.yaml')
-    shutil.copy(alias_mapping_resource, path.join(file_server_root,
-                                                  'cloudify'
-                                                  '/alias-mappings.yaml'))
 
 
 def maybe_register_teardown(app, f):
