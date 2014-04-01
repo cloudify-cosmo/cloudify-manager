@@ -1,0 +1,26 @@
+. {{ includes_file_path }}
+CELERY_BASE_DIR="{{ celery_base_dir }}"
+
+# replaces management__worker
+WORKER_MODIFIER="{{ worker_modifier }}"
+
+export MANAGEMENT_IP="{{ management_ip }}"
+export BROKER_URL="amqp://guest:guest@${MANAGEMENT_IP}:5672//"
+export MANAGER_REST_PORT="8100"
+export CELERY_WORK_DIR="${CELERY_BASE_DIR}/cloudify.${WORKER_MODIFIER}/work"
+export IS_MANAGEMENT_NODE="False"
+export AGENT_IP="{{ agent_ip }}"
+export VIRTUALENV="${CELERY_BASE_DIR}/cloudify.${WORKER_MODIFIER}/env"
+export MANAGER_FILE_SERVER_URL="http://${MANAGEMENT_IP}:53229"
+export MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL="${MANAGER_FILE_SERVER_URL}/blueprints"
+
+
+CELERYD_MULTI="${VIRTUALENV}/bin/celeryd-multi"
+CELERYD_USER="{{ celery_user }}"
+CELERYD_GROUP="{{ celery_group }}"
+CELERY_TASK_SERIALIZER="json"
+CELERY_RESULT_SERIALIZER="json"
+CELERY_RESULT_BACKEND="$BROKER_URL"
+DEFAULT_PID_FILE="${CELERY_WORK_DIR}/celery.pid"
+DEFAULT_LOG_FILE="${CELERY_WORK_DIR}/celery.log"
+CELERYD_OPTS="--events --loglevel=debug --app=cloudify --include=${INCLUDES} -Q ${WORKER_MODIFIER} --broker=${BROKER_URL} --hostname=${WORKER_MODIFIER}"
