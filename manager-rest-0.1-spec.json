@@ -1,0 +1,793 @@
+{
+  "apiVersion": "0.1",
+  "resourcePath": "/",
+  "produces": [
+    "application/json"
+  ],
+  "basePath": "http://localhost:8100",
+  "models": {
+    "BlueprintValidationStatus": {
+      "description": null,
+      "id": "BlueprintValidationStatus",
+      "properties": {
+        "blueprintId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "BlueprintState": {
+      "description": null,
+      "id": "BlueprintState",
+      "properties": {
+        "updatedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "plan": {
+          "type": "null"
+        },
+        "source": {
+          "type": "null"
+        }
+      }
+    },
+    "ExecutionRequest": {
+      "description": null,
+      "id": "ExecutionRequest",
+      "properties": {
+        "workflowId": {
+          "type": "string"
+        }
+      }
+    },
+    "Workflows": {
+      "description": null,
+      "id": "Workflows",
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "$ref": "Workflow"
+          }
+        },
+        "deploymentId": {
+          "type": "string"
+        },
+        "blueprintId": {
+          "type": "string"
+        }
+      }
+    },
+    "PostProviderContextRequest": {
+      "description": null,
+      "id": "PostProviderContextRequest",
+      "properties": {
+        "context": {
+          "type": "null"
+        }
+      }
+    },
+    "ProviderContext": {
+      "description": null,
+      "id": "ProviderContext",
+      "properties": {
+        "context": {
+          "type": "null"
+        }
+      }
+    },
+    "DeploymentNode": {
+      "description": null,
+      "id": "DeploymentNode",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reachable": {
+          "type": "boolean"
+        },
+        "runtimeInfo": {
+          "type": "null"
+        },
+        "state": {
+          "type": "string"
+        },
+        "stateVersion": {
+          "type": "null"
+        }
+      }
+    },
+    "Status": {
+      "description": null,
+      "id": "Status",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "Execution": {
+      "description": null,
+      "id": "Execution",
+      "properties": {
+        "createdAt": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "blueprintId": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "deploymentId": {
+          "type": "string"
+        },
+        "workflowId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "Workflow": {
+      "description": null,
+      "id": "Workflow",
+      "properties": {
+        "createdAt": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "ProviderContextPostStatus": {
+      "description": null,
+      "id": "ProviderContextPostStatus",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "Deployment": {
+      "description": null,
+      "id": "Deployment",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "plan": {
+          "type": "null"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "blueprintId": {
+          "type": "string"
+        }
+      }
+    },
+    "DeploymentNodes": {
+      "description": null,
+      "id": "DeploymentNodes",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "DeploymentNode"
+          }
+        },
+        "deploymentId": {
+          "type": "string"
+        }
+      }
+    },
+    "ModifyExecutionRequest": {
+      "description": null,
+      "id": "ModifyExecutionRequest",
+      "properties": {
+        "action": {
+          "type": "string"
+        }
+      }
+    },
+    "DeploymentRequest": {
+      "description": null,
+      "id": "DeploymentRequest",
+      "properties": {
+        "blueprintId": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "apis": [
+    {
+      "description": null,
+      "path": "/blueprints",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "list",
+          "summary": "Returns a list of submitted blueprints.",
+          "notes": "Returns a list a submitted blueprints.",
+          "responseClass": "List[BlueprintState]",
+          "parameters": []
+        },
+        {
+          "method": "POST",
+          "nickname": "upload",
+          "summary": "Submit a new blueprint.",
+          "consumes": [
+            "application/octet-stream"
+          ],
+          "notes": "Submitted blueprint should be a tar gzipped directory containing the blueprint.",
+          "responseClass": "BlueprintState",
+          "parameters": [
+            {
+              "description": "File name of yaml containing the \"main\" blueprint.",
+              "paramType": "query",
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "application_file_name",
+              "defaultValue": "blueprint.yaml"
+            },
+            {
+              "description": "Binary form of the tar gzipped blueprint directory",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "binary",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/blueprints/{blueprint_id}",
+      "operations": [
+        {
+          "method": "DELETE",
+          "nickname": "deleteById",
+          "summary": null,
+          "notes": "deletes a blueprint by its id.",
+          "responseClass": "BlueprintState",
+          "parameters": [
+            {
+              "name": "blueprint_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "nickname": "getById",
+          "summary": "Returns a blueprint by its id.",
+          "notes": "Returns a blueprint by its id.",
+          "responseClass": "BlueprintState",
+          "parameters": [
+            {
+              "name": "blueprint_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "nickname": "upload",
+          "summary": "Submit a new blueprint with a blueprint_id.",
+          "consumes": [
+            "application/octet-stream"
+          ],
+          "notes": "Submitted blueprint should be a tar gzipped directory containing the blueprint.",
+          "responseClass": "BlueprintState",
+          "parameters": [
+            {
+              "name": "blueprint_id",
+              "paramType": "path",
+              "dataType": "string"
+            },
+            {
+              "description": "File name of yaml containing the \"main\" blueprint.",
+              "paramType": "query",
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "application_file_name",
+              "defaultValue": "blueprint.yaml"
+            },
+            {
+              "description": "Binary form of the tar gzipped blueprint directory",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "binary",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/blueprints/{blueprint_id}/source",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "getBlueprintSource",
+          "summary": "Returns a blueprint by its id.",
+          "notes": "Returns a blueprint's source by the blueprint's id.",
+          "responseClass": "BlueprintState",
+          "parameters": [
+            {
+              "name": "blueprint_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/blueprints/{blueprint_id}/validate",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "validate",
+          "summary": "Validates a given blueprint.",
+          "notes": "Validates a given blueprint.",
+          "responseClass": "BlueprintValidationStatus",
+          "parameters": [
+            {
+              "name": "blueprint_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/executions/{execution_id}",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "getById",
+          "summary": "Returns the execution state by its id.",
+          "notes": "Returns the execution state by its id.",
+          "responseClass": "Execution",
+          "parameters": [
+            {
+              "name": "execution_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "nickname": "modify_state",
+          "summary": "Modify a running execution state.",
+          "consumes": [
+            "application/json"
+          ],
+          "notes": "Modifies a running execution state (currently, only cancel is supported)",
+          "responseClass": "Execution",
+          "parameters": [
+            {
+              "name": "execution_id",
+              "paramType": "path",
+              "dataType": "string"
+            },
+            {
+              "description": "json with an action key. Legal values for action are: [cancel]",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "ModifyExecutionRequest",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/deployments",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "list",
+          "summary": "Returns a list of existing deployments.",
+          "notes": "Returns a list existing deployments.",
+          "responseClass": "List[Deployment]",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/deployments/{deployment_id}",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "getById",
+          "summary": "Returns a deployment by its id.",
+          "notes": "Returns a deployment by its id.",
+          "responseClass": "Deployment",
+          "parameters": [
+            {
+              "name": "deployment_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "nickname": "createDeployment",
+          "summary": "Creates a new deployment",
+          "consumes": [
+            "application/json"
+          ],
+          "notes": "Created a new deployment of the given blueprint.",
+          "responseClass": "Deployment",
+          "parameters": [
+            {
+              "name": "deployment_id",
+              "paramType": "path",
+              "dataType": "string"
+            },
+            {
+              "description": "Deployment blue print",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "DeploymentRequest",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/deployments/{deployment_id}/executions",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "list",
+          "summary": "Returns a list of executions related to the provided deployment.",
+          "notes": "Returns a list of executions related to the provided deployment.",
+          "responseClass": "List[Execution]",
+          "parameters": [
+            {
+              "name": "deployment_id",
+              "paramType": "path",
+              "dataType": "string"
+            },
+            {
+              "description": "Specifies whether to return current statuses and errors data for the deployment's executions",
+              "defaultValue": false,
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "boolean",
+              "name": "statuses",
+              "paramType": "query"
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "nickname": "execute",
+          "summary": "Execute a workflow",
+          "consumes": [
+            "application/json"
+          ],
+          "notes": "Executes the provided workflow under the given deployment context.",
+          "responseClass": "Execution",
+          "parameters": [
+            {
+              "name": "deployment_id",
+              "paramType": "path",
+              "dataType": "string"
+            },
+            {
+              "description": "Workflow execution request",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "ExecutionRequest",
+              "name": "body"
+            },
+            {
+              "description": "Specifies whether to force workflow execution even if there is an ongoing workflow executing for the same deployment",
+              "defaultValue": false,
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "boolean",
+              "name": "force",
+              "paramType": "query"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/deployments/{deployment_id}/workflows",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "workflows",
+          "summary": "Returns a list of workflows related to the provided deployment.",
+          "notes": "Returns a list of workflows related to the provided deployment.",
+          "responseClass": "Workflows",
+          "parameters": [
+            {
+              "name": "deployment_id",
+              "paramType": "path",
+              "dataType": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/deployments/{deployment_id}/nodes",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "list",
+          "summary": "Returns an object containing nodes associated with this deployment.",
+          "notes": "Returns an object containing nodes associated with this deployment.",
+          "responseClass": "DeploymentNodes",
+          "parameters": [
+            {
+              "name": "deployment_id",
+              "paramType": "path",
+              "dataType": "string"
+            },
+            {
+              "description": "Specifies whether to return state for the nodes.",
+              "defaultValue": false,
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "boolean",
+              "name": "state",
+              "paramType": "query"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/nodes/{node_id}",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "getNodeState",
+          "summary": "Gets node runtime or reachable state.",
+          "notes": "Returns node state/runtime properties according to the provided query parameters.",
+          "responseClass": "DeploymentNode",
+          "parameters": [
+            {
+              "description": "Node Id",
+              "paramType": "path",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "node_id"
+            },
+            {
+              "description": "Specifies whether to return state.",
+              "defaultValue": false,
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "boolean",
+              "name": "state",
+              "paramType": "query"
+            },
+            {
+              "description": "Specifies whether to return runtime properties.",
+              "defaultValue": true,
+              "required": false,
+              "allowMultiple": false,
+              "dataType": "boolean",
+              "name": "runtime",
+              "paramType": "query"
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "nickname": "patchNodeState",
+          "summary": "Updates node runtime state.",
+          "consumes": [
+            "application/json"
+          ],
+          "notes": "Update node runtime state. Expecting the request body to be a dictionary containing both 'runtime_info' - which is theupdated keys/values information (possibly partial update), and 'state_version', which is used for optimistic locking during the update",
+          "responseClass": "DeploymentNode",
+          "parameters": [
+            {
+              "description": "Node Id",
+              "paramType": "path",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "node_id"
+            },
+            {
+              "description": "Node state updated keys/values and state version",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "body"
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "nickname": "putNodeState",
+          "summary": "Puts node runtime state.",
+          "notes": "Put node runtime state (state will be entirely replaced) with the provided dictionary of keys and values.",
+          "responseClass": "DeploymentNode",
+          "parameters": [
+            {
+              "description": "Node Id",
+              "paramType": "path",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "node_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/events",
+      "operations": [
+        {
+          "consumes": [
+            "application/json"
+          ],
+          "nickname": "events",
+          "summary": "Returns events for the provided ElasticSearch query",
+          "method": "GET",
+          "notes": "Returns a list of events for the provided ElasticSearch query. The response format is as ElasticSearch response format.",
+          "parameters": [
+            {
+              "description": "ElasticSearch query.",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "body"
+            }
+          ]
+        },
+        {
+          "consumes": [
+            "application/json"
+          ],
+          "nickname": "events",
+          "summary": "Returns events for the provided ElasticSearch query",
+          "method": "POST",
+          "notes": "Returns a list of events for the provided ElasticSearch query. The response format is as ElasticSearch response format.",
+          "parameters": [
+            {
+              "description": "ElasticSearch query.",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/search",
+      "operations": [
+        {
+          "consumes": [
+            "application/json"
+          ],
+          "nickname": "search",
+          "summary": "Returns results for the provided ElasticSearch query",
+          "method": "POST",
+          "notes": "Returns results from the storage for the provided ElasticSearch query. The response format is as ElasticSearch response format.",
+          "parameters": [
+            {
+              "description": "ElasticSearch query.",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "string",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/status",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "status",
+          "summary": "Returns an alive status (mainly used for pinging reasons).",
+          "notes": "Returns an alive message from the rest service.",
+          "responseClass": "Status",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "description": null,
+      "path": "/provider/context",
+      "operations": [
+        {
+          "method": "GET",
+          "nickname": "getContext",
+          "summary": "Get the provider context.",
+          "notes": "Get the provider context",
+          "responseClass": "ProviderContext",
+          "parameters": []
+        },
+        {
+          "method": "POST",
+          "nickname": "postContext",
+          "summary": "Post the provider context",
+          "consumes": [
+            "application/json"
+          ],
+          "notes": "Post the provider context",
+          "responseClass": "ProviderContextPostStatus",
+          "parameters": [
+            {
+              "description": "Provider context",
+              "paramType": "body",
+              "required": true,
+              "allowMultiple": false,
+              "dataType": "PostProviderContextRequest",
+              "name": "body"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "swaggerVersion": "1.2"
+}
