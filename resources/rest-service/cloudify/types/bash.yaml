@@ -1,6 +1,8 @@
 ##################################################################################
 # Cloudify Bash built in types and plugins definitions.
 ##################################################################################
+imports:
+    - cloudify.types
 
 plugins:
     bash_runner:
