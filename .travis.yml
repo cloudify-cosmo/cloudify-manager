@@ -66,3 +66,6 @@ script:
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
    - cd ..
+
+notifications:
+  hipchat: 60884046bb8dec459418f468ba68b9@cosmo
