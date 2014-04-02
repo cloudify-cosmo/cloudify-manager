@@ -64,5 +64,5 @@ script:
 
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
-   - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --ologcapture --nocapture
+   - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
    - cd ..
