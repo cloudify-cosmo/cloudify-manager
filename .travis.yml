@@ -19,6 +19,8 @@ before_script:
    - sudo test -d /dev/shm && sudo rm -rf /dev/shm
    - sudo ln -Tsf /{run,dev}/shm
    - sudo chmod 777 /dev/shm  # for celery worker
+   - echo "### Starting HTTP server for serving agent package (for agent installer tests)"
+   - python -m SimpleHTTPServer 8000 &
 
 install:
    - rvm install ruby-2.1.0
@@ -45,10 +47,6 @@ install:
    - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
    - cd rest-service && pip install --process-dependency-links . && cd ..
    - cd tests && pip install --process-dependency-links . && cd ..
-
-before_script:
-    - echo "### Starting HTTP server for serving agent package (for agent installer tests)"
-    - python -m SimpleHTTPServer 8000 &
 
 script:
    - flake8 plugins/agent-installer/
