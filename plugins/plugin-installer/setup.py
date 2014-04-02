@@ -2,15 +2,15 @@ __author__ = 'elip'
 
 from setuptools import setup
 
-COSMO_CELERY_VERSION = '0.3'
-COSMO_CELERY_BRANCH = 'develop'
-COSMO_CELERY = "https://github.com/CloudifySource/" \
-               "cosmo-celery-common/tarball/{0}"\
-               .format(COSMO_CELERY_BRANCH)
+PLUGINS_COMMON_VERSION = "3.0"
+PLUGINS_COMMON_BRANCH = "develop"
+PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
+                 "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
+                     PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)
 
 setup(
-    name='cosmo-plugin-plugin-installer',
-    version='0.3',
+    name='cloudify-plugin-installer-plugin',
+    version='3.0',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['plugin_installer'],
@@ -18,11 +18,10 @@ setup(
     description='Plugin for installing plugins into an existing celery worker',
     zip_safe=False,
     install_requires=[
-        "cosmo-celery-common"
+        "cloudify-plugins-common"
     ],
     tests_require=[
         "nose"
     ],
-    dependency_links=["{0}#egg=cosmo-celery-common-{1}"
-                      .format(COSMO_CELERY, COSMO_CELERY_VERSION)]
+    dependency_links=[PLUGINS_COMMON]
 )

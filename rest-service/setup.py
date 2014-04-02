@@ -17,29 +17,29 @@ __author__ = 'dank'
 
 from setuptools import setup
 
-DSL_PARSER_VERSION = '0.3'
+DSL_PARSER_VERSION = '3.0'
 DSL_PARSER_BRANCH = 'develop'
-DSL_PARSER = 'https://github.com/CloudifySource/cosmo-plugin-dsl-parser/'\
-             'tarball/{0}#egg=cosmo-plugin-dsl-parser-{1}'\
-             .format(DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
+DSL_PARSER = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/tarball/{'\
+             '0}#egg=cloudify-dsl-parser-{1}'.format(
+                 DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
 
 setup(
-    name='cloudify-manager-rest',
-    version='0.3',
+    name='cloudify-rest-service',
+    version='3.0',
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
     packages=['manager_rest'],
     license='LICENSE',
-    description='Cloudify manager rest server',
+    description='Cloudify manager rest service',
     zip_safe=False,
     install_requires=[
-        'six',
-        'Flask',
+        'six==1.6.1',
+        'Flask==0.10.1',
         'flask-restful==0.2.5',
         'flask-restful-swagger',
-        'cosmo-plugin-dsl-parser',
-        'requests',
-        'bernhard',
+        'cloudify-dsl-parser',
+        'requests==2.2.1',
+        'bernhard==0.1.0',
         'gunicorn==18.0',
         'PyYAML==3.10',
         'elasticsearch==1.0.0'
