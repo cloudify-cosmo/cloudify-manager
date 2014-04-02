@@ -20,12 +20,13 @@ import shutil
 __author__ = 'dank'
 
 
-def copy_resources(file_server_root):
-    cloudify_resources = path.abspath(__file__)
-    for i in range(3):
-        cloudify_resources = path.dirname(cloudify_resources)
-    cloudify_resources = path.join(cloudify_resources,
-                                   'resources',
+def copy_resources(file_server_root, resources_path=None):
+    if resources_path is None:
+        resources_path = path.abspath(__file__)
+        for i in range(3):
+            resources_path = path.dirname(resources_path)
+        resources_path = path.join(resources_path, 'resources')
+    cloudify_resources = path.join(resources_path,
                                    'rest-service',
                                    'cloudify')
     shutil.copytree(cloudify_resources, path.join(file_server_root,
