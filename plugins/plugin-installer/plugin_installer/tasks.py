@@ -1,4 +1,4 @@
-#/***************************************************************************
+# ***************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +86,7 @@ def verify_plugin(worker_id, plugin_name, operation, throw_on_failure,
                 registered_operations.append(task_name)
                 if task_name == plugin_name + "." + operation:
                     return True
-    #Could not locate registered plugin and the specified operation
+    # Could not locate registered plugin and the specified operation
     if throw_on_failure:
         raise RuntimeError(
             """
@@ -171,7 +171,7 @@ def extract_module_paths(plugin_name):
     files = run_command("{0} show -f {1}"
                         .format(get_pip(), plugin_name)).splitlines()
     for module in files:
-        if module.endswith(".py") and not "__init__" in module:
+        if module.endswith(".py") and "__init__" not in module:
             # the files paths are relative to the package __init__.py file.
             module_paths.append(module.replace("../", "")
                                 .replace("/", ".").replace(".py", "").strip())

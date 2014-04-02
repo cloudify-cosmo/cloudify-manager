@@ -55,9 +55,16 @@ script:
    - flake8 plugins/plugin-installer/
    - flake8 rest-service/
    - flake8 tests/
-   - cd workflow-service; rake; cd ..
+
+   - cd workflow-service
+   - rake
+   - cd ..
+
    - nosetests rest-service/manager_rest/test --nologcapture --nocapture
    - nosetests tests/workflow_tests --nologcapture --nocapture -v
    - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
-   - cd plugins/agent-installer; nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture; cd ../..
-   - cd plugins/agent-installer; nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture; cd ../..
+
+   - cd plugins/agent-installer
+   - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
+   - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --ologcapture --nocapture
+   - cd ..
