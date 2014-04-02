@@ -6,7 +6,7 @@ plugins:
     bash_runner:
         derived_from: cloudify.plugins.agent_plugin
         properties:
-            url: https://github.com/CloudifySource/cloudify-bash-plugin/archive/develop.zip
+            url: https://github.com/cloudify-cosmo/cloudify-bash-plugin/archive/develop.zip
 
 types:
 
