@@ -45,7 +45,7 @@ install:
    - pip install nose
    - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
    - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
-   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install --process-dependency-links . && cd ../..
+   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install --process-dependency-links . && cd ../../../../..
    - cd rest-service && pip install --process-dependency-links . && cd ..
    - cd tests && pip install --process-dependency-links . && cd ..
 
