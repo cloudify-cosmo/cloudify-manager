@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # now modify sudoers configuration to allow execution without tty
 grep -i ubuntu /proc/version > /dev/null
 if [ "$?" -eq "0" ]; then
