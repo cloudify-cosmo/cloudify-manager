@@ -29,8 +29,6 @@ setup(
     author='idanmo',
     author_email='idan@gigaspaces.com',
     packages=['sudo_plugin'],
-    package_data={'bash_runner': ['resources/file_server.sh',
-                                  'resources/logging.sh']},
     license='LICENSE',
     description='Plugin for running simple bash scripts',
     install_requires=[
