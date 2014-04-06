@@ -207,7 +207,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         manager.get_resource = get_resource
         t.get_agent_package_url = _get_custom_agent_package_url
         t.get_disable_requiretty_script_url = \
-            _get_custom_disable_requiretty_script_url()
+            _get_custom_disable_requiretty_script_url
 
     def test_install_worker(self):
         ctx = get_local_context()
