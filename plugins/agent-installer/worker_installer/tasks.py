@@ -30,14 +30,25 @@ AGENT_INSTALLER_PLUGIN_PATH = 'worker_installer.tasks'
 CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/linux-agent.tar.gz'
+DISABLE_REQUIRETTY_SCRIPT_URL =\
+    '/packages/scripts/linux-agent-disable-requiretty.sh'
 
 
 def get_agent_package_url():
     """
-    Returns the agent package url it would be downloaded from.
+    Returns the agent package url the package will be downloaded from.
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
                            AGENT_PACKAGE_PATH)
+
+
+def get_disable_requiretty_script_url():
+    """
+    Returns the disable requiretty script url the script will be downloaded
+    from.
+    """
+    return '{0}{1}'.format(utils.get_manager_file_server_url(),
+                           DISABLE_REQUIRETTY_SCRIPT_URL)
 
 
 @operation
@@ -92,6 +103,14 @@ def install(ctx, runner, worker_config, **kwargs):
 
     # Remove downloaded agent package
     runner.run('rm {0}/agent.tar.gz'.format(worker_config['base_dir']))
+
+    # Disable require tty
+    disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
+        worker_config['base_dir'])
+    runner.run('wget -T 30 -O {0} {1}'.format(
+        disable_requiretty_script, get_disable_requiretty_script_url()))
+
+    runner.run(disable_requiretty_script)
 
 
 @operation

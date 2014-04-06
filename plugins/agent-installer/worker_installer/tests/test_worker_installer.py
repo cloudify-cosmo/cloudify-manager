@@ -33,10 +33,15 @@ from cloudify import manager
 # agent is created and served via python simple http server when
 # tests run in travis.
 AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
+DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/disable-require-tty.sh'  #NOQA
 
 
 def _get_custom_agent_package_url():
     return AGENT_PACKAGE_URL
+
+
+def _get_custom_disable_requiretty_script_url():
+    return DISABLE_REQUIRETTY_SCRIPT_URL
 
 
 def _extract_registered_plugins(worker_name):
@@ -110,6 +115,8 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
         manager.get_resource = get_resource
         t.get_agent_package_url = _get_custom_agent_package_url
+        t.get_disable_requiretty_script_url = \
+            _get_custom_disable_requiretty_script_url()
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID, cls.RAN_ID)
 
@@ -199,6 +206,8 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         os.environ['AGENT_IP'] = 'localhost'
         manager.get_resource = get_resource
         t.get_agent_package_url = _get_custom_agent_package_url
+        t.get_disable_requiretty_script_url = \
+            _get_custom_disable_requiretty_script_url()
 
     def test_install_worker(self):
         ctx = get_local_context()

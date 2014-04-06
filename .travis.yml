@@ -23,13 +23,13 @@ before_script:
    - python -m SimpleHTTPServer 8000 &
 
 install:
-   - rvm install ruby-2.1.0
-   - rvm use ruby-2.1.0
-   - rvm --default use ruby-2.1.0
-   - gem install bundler
-   - cd workflow-service; bundle install; cd ..
-   - sudo pip install virtualenv
-   - sudo pip install flake8
+   # - rvm install ruby-2.1.0
+   # - rvm use ruby-2.1.0
+   # - rvm --default use ruby-2.1.0
+   # - gem install bundler
+   # - cd workflow-service; bundle install; cd ..
+   # - sudo pip install virtualenv
+   # - sudo pip install flake8
 
    - echo "### Creating agent package..."
    - mkdir -p package/linux
@@ -49,18 +49,18 @@ install:
    - cd tests && pip install --process-dependency-links . && cd ..
 
 script:
-   - flake8 plugins/agent-installer/
-   - flake8 plugins/plugin-installer/
-   - flake8 rest-service/
-   - flake8 tests/
+   # - flake8 plugins/agent-installer/
+   # - flake8 plugins/plugin-installer/
+   # - flake8 rest-service/
+   # - flake8 tests/
 
-   - cd workflow-service
-   - rake
-   - cd ..
+   # - cd workflow-service
+   # - rake
+   # - cd ..
 
-   - nosetests rest-service/manager_rest/test --nologcapture --nocapture
-   - nosetests tests/workflow_tests --nologcapture --nocapture -v
-   - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
+   # - nosetests rest-service/manager_rest/test --nologcapture --nocapture
+   # - nosetests tests/workflow_tests --nologcapture --nocapture -v
+   # - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
 
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
