@@ -119,7 +119,7 @@ def install(ctx, runner, worker_config, **kwargs):
 
     runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
-    #runner.run('sudo {0}'.format(disable_requiretty_script))
+    runner.run('sudo {0}'.format(disable_requiretty_script))
 
 
 @operation
