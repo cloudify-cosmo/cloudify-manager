@@ -63,6 +63,7 @@ script:
    # - nosetests tests/workflow_tests --nologcapture --nocapture -v
    # - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
 
+   - sudo echo 'Defaults:travis  !requiretty' >> /etc/sudoers'
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
