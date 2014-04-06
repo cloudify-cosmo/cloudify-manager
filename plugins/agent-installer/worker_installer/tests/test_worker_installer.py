@@ -47,7 +47,9 @@ def _get_custom_disable_requiretty_script_url():
 
 
 def _get_custom_celery_includes_list():
-    return t.CELERY_INCLUDES_LIST[:].append(MOCK_SUDO_PLUGIN_INCLUDE)
+    includes_list = t.CELERY_INCLUDES_LIST[:]
+    includes_list.append(MOCK_SUDO_PLUGIN_INCLUDE)
+    return includes_list
 
 
 def _extract_registered_plugins(worker_name):
