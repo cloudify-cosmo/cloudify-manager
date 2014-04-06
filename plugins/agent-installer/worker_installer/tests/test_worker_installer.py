@@ -33,7 +33,7 @@ from cloudify import manager
 # agent is created and served via python simple http server when
 # tests run in travis.
 AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/disable-require-tty.sh'  #NOQA
+DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/disable-require-tty.sh'  # NOQA
 
 
 def _get_custom_agent_package_url():

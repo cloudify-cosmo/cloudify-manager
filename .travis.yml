@@ -28,8 +28,8 @@ install:
    # - rvm --default use ruby-2.1.0
    # - gem install bundler
    # - cd workflow-service; bundle install; cd ..
-   # - sudo pip install virtualenv
-   # - sudo pip install flake8
+   - sudo pip install virtualenv
+   - sudo pip install flake8
 
    - echo "### Creating agent package..."
    - mkdir -p package/linux
