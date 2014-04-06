@@ -26,6 +26,9 @@ from cloudify import utils
 
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
 AGENT_INSTALLER_PLUGIN_PATH = 'worker_installer.tasks'
+CELERY_INCLUDES_LIST = [
+    AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH
+]
 
 CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
@@ -49,6 +52,10 @@ def get_disable_requiretty_script_url():
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
                            DISABLE_REQUIRETTY_SCRIPT_URL)
+
+
+def get_celery_includes_list():
+    return CELERY_INCLUDES_LIST
 
 
 @operation
@@ -240,7 +247,7 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
 
 def create_celery_includes_file(ctx, runner, worker_config):
     # build initial includes
-    includes_list = [AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH]
+    includes_list = get_celery_includes_list()
 
     runner.put(worker_config['includes_file'],
                'INCLUDES={0}\n'.format(','.join(includes_list)))
