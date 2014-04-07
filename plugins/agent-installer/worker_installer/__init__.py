@@ -98,3 +98,17 @@ def prepare_configuration(ctx, worker_config):
         worker_config['name'])
     worker_config['includes_file'] = '{0}/work/celeryd-includes'.format(
         worker_config['base_dir'])
+
+    disable_requiretty = True
+    if 'disable_requiretty' in worker_config:
+        disable_requiretty_value = str(
+            worker_config['disable_requiretty']).lower()
+        if disable_requiretty_value.lower() == 'true':
+            disable_requiretty = True
+        elif disable_requiretty_value.lower() == 'false':
+            disable_requiretty = False
+        else:
+            raise ValueError(
+                'Value for disable_requiretty property should be true/false '
+                'but is: {0}'.format(disable_requiretty_value))
+    worker_config['disable_requiretty'] = disable_requiretty
