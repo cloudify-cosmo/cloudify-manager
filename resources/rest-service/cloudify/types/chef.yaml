@@ -1,0 +1,291 @@
+# WARNING:
+# /etc/sudoers must not have "Default requiretty" for Chef plugin to work
+#
+# WARNING:
+# It is not recommended to use different Chef versions on same server and we
+# do not test such configuration. Example:
+#
+#     nodes:
+#         -
+#             name: server
+#             ...
+#         -
+#             name: chef_node_1
+#             type: app_server_chef
+#             properties:
+#                 chef_config:
+#                     version: 11.10.4-1  # *** Different versions ***
+#                     ...
+#             relationships:
+#                 -
+#                     type: cloudify.relationships.contained_in
+#                     target: server  # *** Same server ***
+#         -
+#             name: chef_node_2
+#             type: app_server_chef
+#             properties:
+#                 chef_config:
+#                     version: 10  # *** Different versions ***
+#                     ...
+#             relationships:
+#                 -
+#                     type: cloudify.relationships.contained_in
+#                     target: server  # *** Same server ***
+#
+#
+# WARNING:
+# Chef uninstall is not supported at this time.
+
+imports:
+    - cloudify.types
+
+plugins:
+    chef_plugin:
+        derived_from: cloudify.plugins.agent_plugin
+        properties:
+            url: https://github.com/CloudifySource/cloudify-chef-plugin/archive/develop.zip
+
+types:
+    cloudify.types.chef.middleware_server:
+        derived_from: cloudify.types.middleware_server
+        properties:
+            # All Chef related configuration goes inside
+            # the "chef_config" property.
+            - chef_config
+
+                # Alternative 1: Chef Solo
+                #
+                # - cookbooks (required)
+                #
+                # The `cookbooks` property can be either URL or a path relative
+                # to the root of the cookbook (the "/" is the directory where
+                # the main blueprint YAML resides). `cookbooks`, in both cases
+                # should reference a `.tar.gz` file with `cookbooks` directory
+                # under which all the required cookbooks reside. This works
+                # as specified at http://docs.opscode.com/config_rb_solo.html
+                # with the addition of the resource (file in blueprint's
+                # directory) option. For consistency, the Cloudify Chef plugin
+                # in both cases (URL or resource), downloads the cookbooks to
+                # a local file and `solo.rb` has the reference to that file.
+                #
+                # - environments (optional)
+                # - data_bags    (optional)
+                # - roles        (optional)
+                #
+                # The settings above work similar to the `solo.rb`
+                # specification at http://docs.opscode.com/config_rb_solo.html
+                # with the differences:
+                # * They reference URL or resource (same way `cookbooks` does,
+                #   see above)
+                # * The referenced file is a `.tar.gz` file that is extracted
+                #   to appropriate folder by the Cloudify Chef plugin. For
+                #   user's convenience, the `.tar.gz` file can either have
+                #   the needed files at top level or in the appropriate
+                #   directory. For example `environments.tar.gz` can have the
+                #   files at `environments/*.json`.
+
+                # Alternative 2: Chef Client
+                #
+                # - chef_server_url        (required)
+                # - environment            (required)
+                # - validation_client_name (required)
+                # - validation_key         (required)
+                #
+                # The settings above with the exception of `validation_key`
+                # are used when creating `client.rb` file as described at
+                # http://docs.opscode.com/config_rb_client.html
+                # The `validation_key` property does not specify the name of
+                # the file but rather it's contents. They are written to a file
+                # and the `client.rb` includes `validation_key` pointing to
+                # that file.
+
+                # Common for Solo and Client - start
+                #
+                # Either `runlist` or `runlists` property must be specified.
+                # If both are used, the `runlist` takes precedence.
+                #
+                # - runlist   (optional)
+                #
+                # `runlist` - the runlist to pass to Chef. For convenience,
+                # it can be specified as YAML list and not as the Chef-expected
+                # string. In that case it will be just joined using commas to a
+                # string.
+                #
+                # - runlists  (optional)
+                #            # cloudify.interfaces.lifecycle.X
+                #            create:        ...
+                #            configure:     ...
+                #            start:         ...
+                #            stop:          ...
+                #            delete:        ...
+                #            # cloudify.interfaces.relationship_lifecycle.X
+                #            preconfigure:  ...
+                #            postconfigure: ...
+                #            establish:     ...
+                #            unlink:        ...
+                #
+                # `runlists` - hash map that maps an operation to a runlist.
+                # For convenience, the hash key is the last part of the
+                # operation name. This might cause clashes in future, hence
+                # a warning is issued if the operation has an unexpected
+                # beginning.
+                #
+                # If `runlists` does not have a runlist for current operation,
+                # a warning is issued. To suppress it, add the operation to
+                # `runlists` using `null` as the value.
+                #
+                # - attributes
+                #
+                # `attributes` are the attributes to pass to Chef. They are
+                # put in a JSON file. Chef is invoked with the file name as
+                # an argument.
+                #
+                # It's an error if `attributes` have `cloudify` section.
+                # The reason is that `cloudify` section is added
+                # automatically by the Cloudify Chef plugin and we are avoiding
+                # the possible collision.
+                #
+                # Any value can be a reference to a Cloudify runtime property
+                # or Chef attribute of related YAML node when using
+                # relationships. For example:
+                #     - attributes:
+                #         my_attr1: {related_chef_attribute: his.sub.attr}
+                #         my_attr2: {related_runtime_property: other_prop}
+                #
+                # Such reference can also have default value:
+                #     - attributes:
+                #         my_attr1:
+                #             related_chef_attribute: his.sub.attr
+                #             default_value: 4096
+                #
+                # Default value must be specified if there is any runlist
+                # that will run without related node (a runlist for any
+                # non-relationship operation).
+                #
+                # Default value will be used if there is no related node
+                # or if the specified chef attribute or runtime property
+                # does not exist.
+                #
+                # - version (required)
+                #
+                # `version` is the Chef Client / Solo version to install
+                # and use on the server. See
+                # http://www.getchef.com/chef/install/ , "Chef Client"
+                # section.
+                #
+                # Use the full version number. Example: `11.10.4-1`,
+                # `10.30.4-1`, ...
+                #
+                # Common for Solo and Client - end
+        interfaces:
+            # All operations mapped to same entry point in Chef plugin
+            # The "operation" function decides what to run according
+            # to the operation being performed. The operation is taken
+            # from the passed context (CloudifyContext.operation)
+            cloudify.interfaces.lifecycle:
+                - create:    chef_plugin.operations.operation
+                - configure: chef_plugin.operations.operation
+                - start:     chef_plugin.operations.operation
+                - stop:      chef_plugin.operations.operation
+                - delete:    chef_plugin.operations.operation
+
+    # A web server configured with chef
+    # see docs for cloudify.types.chef.middleware_server
+    cloudify.types.bash.web_server:
+        derived_from: cloudify.types.web_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create:    chef_plugin.operations.operation
+                - configure: chef_plugin.operations.operation
+                - start:     chef_plugin.operations.operation
+                - stop:      chef_plugin.operations.operation
+                - delete:    chef_plugin.operations.operation
+        properties:
+            - chef_config
+
+    # An app server configured with chef
+    # see docs for cloudify.types.chef.middleware_server
+    cloudify.types.chef.app_server:
+        derived_from: cloudify.types.app_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create:    chef_plugin.operations.operation
+                - configure: chef_plugin.operations.operation
+                - start:     chef_plugin.operations.operation
+                - stop:      chef_plugin.operations.operation
+                - delete:    chef_plugin.operations.operation
+        properties:
+            - chef_config
+
+    # A db server configured with chef
+    # see docs for cloudify.types.chef.middleware_server
+    cloudify.types.chef.db_server:
+        derived_from: cloudify.types.db_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create:    chef_plugin.operations.operation
+                - configure: chef_plugin.operations.operation
+                - start:     chef_plugin.operations.operation
+                - stop:      chef_plugin.operations.operation
+                - delete:    chef_plugin.operations.operation
+        properties:
+            - chef_config
+
+    # A message bus server configured with chef
+    # see docs for cloudify.types.chef.middleware_server
+    cloudify.types.chef.message_bus_server:
+        derived_from: cloudify.types.message_bus_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create:    chef_plugin.operations.operation
+                - configure: chef_plugin.operations.operation
+                - start:     chef_plugin.operations.operation
+                - stop:      chef_plugin.operations.operation
+                - delete:    chef_plugin.operations.operation
+        properties:
+            - chef_config
+
+    # An app module configured with chef
+    # see docs for cloudify.types.chef.middleware_server
+    cloudify.types.chef.app_module:
+        derived_from: cloudify.types.app_module
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create:    chef_plugin.operations.operation
+                - configure: chef_plugin.operations.operation
+                - start:     chef_plugin.operations.operation
+                - stop:      chef_plugin.operations.operation
+                - delete:    chef_plugin.operations.operation
+        properties:
+            - chef_config
+
+relationships:
+    cloudify.chef.depends_on:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            # The comment under types.interfaces applies here too
+            cloudify.interfaces.relationship_lifecycle:
+                - preconfigure:  chef_plugin.operations.operation
+                - postconfigure: chef_plugin.operations.operation
+                - establish:     chef_plugin.operations.operation
+                - unlink:        chef_plugin.operations.operation
+
+    cloudify.chef.connected_to:
+        derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            # The comment under types.interfaces applies here too
+            cloudify.interfaces.relationship_lifecycle:
+                - preconfigure:  chef_plugin.operations.operation
+                - postconfigure: chef_plugin.operations.operation
+                - establish:     chef_plugin.operations.operation
+                - unlink:        chef_plugin.operations.operation
+
+    cloudify.chef.contained_in:
+        derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            # The comment under types.interfaces applies here too
+            cloudify.interfaces.relationship_lifecycle:
+                - preconfigure:  chef_plugin.operations.operation
+                - postconfigure: chef_plugin.operations.operation
+                - establish:     chef_plugin.operations.operation
+                - unlink:        chef_plugin.operations.operation
