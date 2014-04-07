@@ -1,0 +1,24 @@
+imports:
+    - cloudify.types
+    - cloudmock.yaml
+    - testmockoperations.yaml
+
+blueprint:
+    name: simple
+    nodes:
+        -   name: host
+            type: test_host_type
+            interfaces:
+                cloudify.interfaces.host:
+                    - get_state: cloudmock.tasks.get_state
+                cloudify.interfaces.lifecycle:
+                    - create: cloudmock.tasks.provision
+                    - configure: testmockoperations.tasks.set_property
+                    - start: cloudmock.tasks.start
+
+types:
+    test_host_type:
+        derived_from: cloudify.types.host
+        properties:
+            - property_name: property_name
+            - value: property_value

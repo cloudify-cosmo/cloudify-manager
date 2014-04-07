@@ -45,7 +45,7 @@ def start(ctx, **kwargs):
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
     machines[ctx.node_id] = RUNNING
-    ctx['id'] = ctx.node_id
+    ctx.runtime_properties['id'] = ctx.node_id
     global raise_exception_on_start
     if raise_exception_on_start:
         raise RuntimeError('Exception raised from CloudMock.start()!')
