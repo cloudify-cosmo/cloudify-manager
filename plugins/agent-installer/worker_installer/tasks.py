@@ -111,15 +111,17 @@ def install(ctx, runner, worker_config, **kwargs):
     # Remove downloaded agent package
     runner.run('rm {0}/agent.tar.gz'.format(worker_config['base_dir']))
 
-    # Disable require tty
-    disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
-        worker_config['base_dir'])
-    runner.run('wget -T 30 -O {0} {1}'.format(
-        disable_requiretty_script, get_disable_requiretty_script_url()))
+    # Disable requiretty
+    if worker_config['disable_requiretty']:
+        ctx.logger.debug("Removing requiretty in sudoers file")
+        disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
+            worker_config['base_dir'])
+        runner.run('wget -T 30 -O {0} {1}'.format(
+            disable_requiretty_script, get_disable_requiretty_script_url()))
 
-    runner.run('chmod +x {0}'.format(disable_requiretty_script))
+        runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
-    runner.run('sudo {0}'.format(disable_requiretty_script))
+        runner.run('sudo {0}'.format(disable_requiretty_script))
 
 
 @operation

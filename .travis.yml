@@ -64,7 +64,6 @@ script:
    - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
 
    - echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
-   - sudo cat /etc/sudoers
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
