@@ -92,7 +92,9 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dsl_with_agent_plugin(self):
         dsl_path = resource("dsl/with_plugin.yaml")
-        deploy(dsl_path)
+        # since this test involves vm with an agent, deployment_id must
+        # be named after the management's worker queue name.
+        deploy(dsl_path, deployment_id='cloudify.management')
 
         from plugins.plugin_installer.tasks import get_installed_plugins as \
             test_get_installed_plugins
@@ -102,7 +104,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dsl_with_manager_plugin(self):
         dsl_path = resource("dsl/with_manager_plugin.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path, deployment_id='cloudify.management')
         deployment_id = deployment.id
 
         from plugins.worker_installer.tasks import \
