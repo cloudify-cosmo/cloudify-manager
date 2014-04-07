@@ -4,6 +4,6 @@ imports:
 
 plugins:
     worker_installer:
-        derived_from: "cloudify.plugins.remote_plugin"
+        derived_from: "cloudify.plugins.manager_plugin"
         properties:
             url: "cloudify/poc/plugins/celery-worker-installer.zip"
