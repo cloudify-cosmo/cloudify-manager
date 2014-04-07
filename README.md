@@ -2,19 +2,19 @@
 
 Cosmo is the code name for the new release of Cloudify (version 3.0). Cloudify is an open soruce tool for deploying, managing and scaling applications on the cloud. 
 This repo contains the source code for the Cloudify Cosmo management server. 
-To install Cloudify Cosmo refer the [README file of the Cloudify Cosmo CLI project](https://github.com/CloudifySource/cosmo-cli/blob/develop/README.md). 
+To install Cloudify 3.0 refer the [README file of the Cloudify CLI project](https://github.com/cloudify-cosmo/cloudify-cli/blob/develop/README.md). 
 
 Fuller documentation for the new Cosmo architecture will be available soon at [The CloudifySource web site](http://www.cloudifysource.org). 
 
 
-## Contribute to Cosmo ##
+## Contribute to Cloudify ##
 
 - Open a new bug or feature request in [JIRA](cloudifysource.atlassian.net) under the "CFY" project
 
 - clone this repo
 
 ```
-cloudify-manager$ git clone https://github.com/CloudifySource/cosmo-manager.git
+cloudify-manager$ git clone https://github.com/cloudify-cosmo/cloudify-manager.git
 ```
 
 - make changes on a seperate branch named `feature/CFY-XXXX` where XXXX is the JIRA ID.
@@ -142,12 +142,12 @@ We'll go through the following steps:
 
 ### Source Code Checkout ###
 
-Checkout the `cosmo-manager` repository:
+Clone this repository:
 ```
-mkdir -p ~/dev/cosmo
-cd ~/dev/cosmo
-git clone https://github.com/CloudifySource/cosmo-manager
-cd cosmo-manager
+mkdir -p ~/dev/cloudify
+cd ~/dev/cloudify
+git clone https://github.com/cloudify-cosmo/cloudify-manager
+cd cloudify-manager
 git checkout develop
 ```
 
@@ -156,12 +156,12 @@ git checkout develop
 Workflow service is a Sinatra Ruby project which runs on Ruby 2.1.0.
 We use `bundler` for installing its dependencies:
 ```
-# in cosmo-manager folder
+# in cloudify-manager folder
 cd workflow-service
 bundle install
 ```
 
-## Install manager-rest Project Dependencies ##
+## Install rest-service Project Dependencies ##
 
 First install dependencies for compiling with Python
 ```
@@ -172,7 +172,7 @@ First install dependencies for compiling with Python
 This project contains Cloudify's manager REST service.
 In order to install its dependencies run:
 ```
-# in cosmo-manager folder
+# in cloudify-manager folder
 cd rest-service
 python setup.py install
 ```
@@ -184,7 +184,7 @@ testing Cloudify's manager functionality and workflows behavior.
 
 In order to install its dependencies run:
 ```
-# in cosmo-manager folder
+# in cloudify-manager folder
 cd tests
 python setup.py install
 
@@ -207,7 +207,7 @@ The environment will be created once per Python package (different tests in the 
 
 Now that we're set, lets run some basic integration tests (goodluck):
 ```
-# in cosmo-manager folder
+# in cloudify-manager folder
 cd tests
 nosetests workflow_tests/test_workflow.py
 ```

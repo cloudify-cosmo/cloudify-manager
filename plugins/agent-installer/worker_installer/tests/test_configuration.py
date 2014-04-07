@@ -89,6 +89,36 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         self.assertTrue('config_file' in conf)
         self.assertTrue('includes_file' in conf)
 
+    def test_disable_requiretty_config(self):
+        self._test_disable_requiretty_config('true', True)
+        self._test_disable_requiretty_config('false', False)
+        self._test_disable_requiretty_config('true', True)
+        self._test_disable_requiretty_config('true', True)
+        self._test_disable_requiretty_config(True, True)
+        self._test_disable_requiretty_config(False, False)
+        self._test_disable_requiretty_config(value=None,
+                                             should_raise_exception=True)
+        self._test_disable_requiretty_config(value='1234',
+                                             should_raise_exception=True)
+
+    def _test_disable_requiretty_config(self,
+                                        value=None,
+                                        expected=None,
+                                        should_raise_exception=False):
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            properties={
+                'worker_config': {
+                    'disable_requiretty': value
+                }
+            }
+        )
+        if should_raise_exception:
+            self.assertRaises(ValueError, m, ctx)
+        else:
+            conf = m(ctx)
+            self.assertEqual(expected, conf['disable_requiretty'])
+
 
 class MockFabricRunner(FabricRunner):
 

@@ -37,6 +37,7 @@ install:
    - source package/linux/env/bin/activate
    - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
    - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
+   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install --process-dependency-links . && cd ../../../../..
    - tar czf agent.tar.gz package
    - rm -r package
 
@@ -62,6 +63,7 @@ script:
    - nosetests tests/workflow_tests --nologcapture --nocapture -v
    - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
 
+   - echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture

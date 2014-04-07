@@ -33,6 +33,6 @@ class TestProviderContext(TestCase):
         post_response = post_provider_context(context)
         self.assertEqual(post_response.status, 'ok')
         response_context = get_provider_context()
-        self.assertEqual(context, response_context['context'])
+        self.assertEqual(context, response_context)
         self.assertRaises(CosmoManagerRestCallError,
                           post_provider_context, context)
