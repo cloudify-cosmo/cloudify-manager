@@ -7,15 +7,15 @@ services:
   - rabbitmq
 
 before_script:
-   - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb
-   - sudo dpkg -i elasticsearch-1.0.1.deb
-   - export PATH=$PATH:/usr/share/elasticsearch/bin
-   - sudo mkdir -p /usr/share/elasticsearch/data
-   - sudo chmod 777 /usr/share/elasticsearch/data
-   - wget http://aphyr.com/riemann/riemann_0.2.2_all.deb
-   - sudo dpkg -i riemann_0.2.2_all.deb
-   - sudo touch /var/log/riemann/riemann.log
-   - sudo chmod 666 /var/log/riemann/riemann.log
+   # - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb
+   # - sudo dpkg -i elasticsearch-1.0.1.deb
+   # - export PATH=$PATH:/usr/share/elasticsearch/bin
+   # - sudo mkdir -p /usr/share/elasticsearch/data
+   # - sudo chmod 777 /usr/share/elasticsearch/data
+   # - wget http://aphyr.com/riemann/riemann_0.2.2_all.deb
+   # - sudo dpkg -i riemann_0.2.2_all.deb
+   # - sudo touch /var/log/riemann/riemann.log
+   # - sudo chmod 666 /var/log/riemann/riemann.log
    - sudo test -d /dev/shm && sudo rm -rf /dev/shm
    - sudo ln -Tsf /{run,dev}/shm
    - sudo chmod 777 /dev/shm  # for celery worker
@@ -23,11 +23,11 @@ before_script:
    - python -m SimpleHTTPServer 8000 &
 
 install:
-   - rvm install ruby-2.1.0
-   - rvm use ruby-2.1.0
-   - rvm --default use ruby-2.1.0
-   - gem install bundler
-   - cd workflow-service; bundle install; cd ..
+   # - rvm install ruby-2.1.0
+   # - rvm use ruby-2.1.0
+   # - rvm --default use ruby-2.1.0
+   # - gem install bundler
+   # - cd workflow-service; bundle install; cd ..
    - sudo pip install virtualenv
    - sudo pip install flake8
 
@@ -50,18 +50,18 @@ install:
    - cd tests && pip install --process-dependency-links . && cd ..
 
 script:
-   - flake8 plugins/agent-installer/
-   - flake8 plugins/plugin-installer/
-   - flake8 rest-service/
-   - flake8 tests/
+   # - flake8 plugins/agent-installer/
+   # - flake8 plugins/plugin-installer/
+   # - flake8 rest-service/
+   # - flake8 tests/
 
-   - cd workflow-service
-   - rake
-   - cd ..
+   # - cd workflow-service
+   # - rake
+   # - cd ..
 
-   - nosetests rest-service/manager_rest/test --nologcapture --nocapture
-   - nosetests tests/workflow_tests --nologcapture --nocapture -v
-   - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
+   # - nosetests rest-service/manager_rest/test --nologcapture --nocapture
+   # - nosetests tests/workflow_tests --nologcapture --nocapture -v
+   # - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
 
    - echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
    - cd plugins/agent-installer

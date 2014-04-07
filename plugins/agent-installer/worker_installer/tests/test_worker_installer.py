@@ -282,7 +282,20 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         result = c.send_task(name='sudo_plugin.sudo.run',
                              kwargs=kwargs,
                              queue=ctx.properties['worker_config']['name'])
-        result.get(timeout=30)
+        self.assertRaises(Exception, result.get, timeout=10)
+        ctx = get_local_context()
+        ctx.properties['worker_config']['disable_requiretty'] = True
+        t.install(ctx)
+        t.start(ctx)
+        self.assert_installed_plugins(ctx)
+
+        broker_url = 'amqp://guest:guest@localhost:5672//'
+        c = Celery(broker=broker_url, backend=broker_url)
+        kwargs = {'command': 'ls -l'}
+        result = c.send_task(name='sudo_plugin.sudo.run',
+                             kwargs=kwargs,
+                             queue=ctx.properties['worker_config']['name'])
+        result.get(timeout=10)
 
 
 if __name__ == '__main__':
