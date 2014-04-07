@@ -30,13 +30,26 @@ from celery import Celery
 from worker_installer import tasks as t
 from cloudify import manager
 
+
 # agent is created and served via python simple http server when
 # tests run in travis.
 AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
+DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/disable-require-tty.sh'  # NOQA
+MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
 
 
 def _get_custom_agent_package_url():
     return AGENT_PACKAGE_URL
+
+
+def _get_custom_disable_requiretty_script_url():
+    return DISABLE_REQUIRETTY_SCRIPT_URL
+
+
+def _get_custom_celery_includes_list():
+    includes_list = t.CELERY_INCLUDES_LIST[:]
+    includes_list.append(MOCK_SUDO_PLUGIN_INCLUDE)
+    return includes_list
 
 
 def _extract_registered_plugins(worker_name):
@@ -110,6 +123,9 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
         manager.get_resource = get_resource
         t.get_agent_package_url = _get_custom_agent_package_url
+        t.get_disable_requiretty_script_url = \
+            _get_custom_disable_requiretty_script_url()
+        t.get_celery_includes_list = _get_custom_celery_includes_list
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID, cls.RAN_ID)
 
@@ -199,6 +215,9 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         os.environ['AGENT_IP'] = 'localhost'
         manager.get_resource = get_resource
         t.get_agent_package_url = _get_custom_agent_package_url
+        t.get_disable_requiretty_script_url = \
+            _get_custom_disable_requiretty_script_url
+        t.get_celery_includes_list = _get_custom_celery_includes_list
 
     def test_install_worker(self):
         ctx = get_local_context()
@@ -250,6 +269,33 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
     def test_stop_non_existing_worker(self):
         ctx = get_local_context()
         t.stop(ctx)
+
+    def test_install_worker_with_sudo_plugin(self):
+        ctx = get_local_context()
+        t.install(ctx)
+        t.start(ctx)
+        self.assert_installed_plugins(ctx)
+
+        broker_url = 'amqp://guest:guest@localhost:5672//'
+        c = Celery(broker=broker_url, backend=broker_url)
+        kwargs = {'command': 'ls -l'}
+        result = c.send_task(name='sudo_plugin.sudo.run',
+                             kwargs=kwargs,
+                             queue=ctx.properties['worker_config']['name'])
+        self.assertRaises(Exception, result.get, timeout=10)
+        ctx = get_local_context()
+        ctx.properties['worker_config']['disable_requiretty'] = True
+        t.install(ctx)
+        t.start(ctx)
+        self.assert_installed_plugins(ctx)
+
+        broker_url = 'amqp://guest:guest@localhost:5672//'
+        c = Celery(broker=broker_url, backend=broker_url)
+        kwargs = {'command': 'ls -l'}
+        result = c.send_task(name='sudo_plugin.sudo.run',
+                             kwargs=kwargs,
+                             queue=ctx.properties['worker_config']['name'])
+        result.get(timeout=10)
 
 
 if __name__ == '__main__':

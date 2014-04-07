@@ -130,11 +130,14 @@ class FabricRunner(object):
 
     def get(self, file_path):
         if self.local:
-            return run('sudo cat {0}'.format(file_path))
+            return self.run('sudo cat {0}'.format(file_path))
         else:
             output = StringIO()
-            get(file_path, output)
-            return output.getvalue()
+            with settings(host_string=self.host_string,
+                          key_filename=self.key_filename,
+                          disable_known_hosts=True):
+                get(file_path, output)
+                return output.getvalue()
 
 
 class FabricRunnerException(Exception):

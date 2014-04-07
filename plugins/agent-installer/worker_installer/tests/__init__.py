@@ -47,7 +47,9 @@ def get_local_context():
     return MockCloudifyContext(
         deployment_id=deployment_id,
         properties={
-            'worker_config': {}
+            'worker_config': {
+                'disable_requiretty': False
+            }
         },
         runtime_properties={
             'ip': 'localhost'

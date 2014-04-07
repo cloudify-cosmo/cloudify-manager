@@ -26,18 +26,36 @@ from cloudify import utils
 
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
 AGENT_INSTALLER_PLUGIN_PATH = 'worker_installer.tasks'
+CELERY_INCLUDES_LIST = [
+    AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH
+]
 
 CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/linux-agent.tar.gz'
+DISABLE_REQUIRETTY_SCRIPT_URL =\
+    '/packages/scripts/linux-agent-disable-requiretty.sh'
 
 
 def get_agent_package_url():
     """
-    Returns the agent package url it would be downloaded from.
+    Returns the agent package url the package will be downloaded from.
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
                            AGENT_PACKAGE_PATH)
+
+
+def get_disable_requiretty_script_url():
+    """
+    Returns the disable requiretty script url the script will be downloaded
+    from.
+    """
+    return '{0}{1}'.format(utils.get_manager_file_server_url(),
+                           DISABLE_REQUIRETTY_SCRIPT_URL)
+
+
+def get_celery_includes_list():
+    return CELERY_INCLUDES_LIST
 
 
 @operation
@@ -92,6 +110,18 @@ def install(ctx, runner, worker_config, **kwargs):
 
     # Remove downloaded agent package
     runner.run('rm {0}/agent.tar.gz'.format(worker_config['base_dir']))
+
+    # Disable requiretty
+    if worker_config['disable_requiretty']:
+        ctx.logger.debug("Removing requiretty in sudoers file")
+        disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
+            worker_config['base_dir'])
+        runner.run('wget -T 30 -O {0} {1}'.format(
+            disable_requiretty_script, get_disable_requiretty_script_url()))
+
+        runner.run('chmod +x {0}'.format(disable_requiretty_script))
+
+        runner.run('sudo {0}'.format(disable_requiretty_script))
 
 
 @operation
@@ -219,7 +249,7 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
 
 def create_celery_includes_file(ctx, runner, worker_config):
     # build initial includes
-    includes_list = [AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH]
+    includes_list = get_celery_includes_list()
 
     runner.put(worker_config['includes_file'],
                'INCLUDES={0}\n'.format(','.join(includes_list)))
