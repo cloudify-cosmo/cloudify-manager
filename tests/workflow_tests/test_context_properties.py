@@ -32,7 +32,6 @@ class TestContextProperties(TestCase):
         self.assertEqual(node_state['property_name'], 'property_value')
 
     def test_no_update_runtime_properties(self):
-        dsl_path = resource("dsl/no_update_runtime_properties.yaml")
+        dsl_path = resource("dsl/update-node-state.yaml")
+        # simply expecting workflow execution to succeed
         deploy(dsl_path)
-
-        self.fail()
