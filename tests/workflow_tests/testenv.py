@@ -44,6 +44,9 @@ import elasticsearch
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
+DEPLOYMENT_QUEUE_NAME = 'cloudify_deployment_id'
+CELERY_QUEUES_LIST = [MANAGEMENT_NODE_ID, DEPLOYMENT_QUEUE_NAME]
+
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
@@ -332,7 +335,7 @@ class CeleryWorkerProcess(object):
             "--app=cloudify",
             "--logfile={0}".format(celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
-            "--queues={0}".format(CLOUDIFY_MANAGEMENT_QUEUE),
+            "--queues={0}".format(','.join(CELERY_QUEUES_LIST)),
             "--concurrency=1",
             "--include={0}".format(','.join(includes))
         ]

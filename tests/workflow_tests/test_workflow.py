@@ -25,6 +25,7 @@ from workflow_tests.testenv import run_search as search
 from workflow_tests.testenv import get_blueprint
 from workflow_tests.testenv import delete_blueprint
 from workflow_tests.testenv import publish_blueprint
+from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
@@ -92,9 +93,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dsl_with_agent_plugin(self):
         dsl_path = resource("dsl/with_plugin.yaml")
-        # since this test involves vm with an agent, deployment_id must
-        # be named after the management's worker queue name.
-        deploy(dsl_path, deployment_id='cloudify.management')
+        deploy(dsl_path, deployment_id=DEPLOYMENT_QUEUE_NAME)
 
         from plugins.plugin_installer.tasks import get_installed_plugins as \
             test_get_installed_plugins
@@ -104,7 +103,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dsl_with_manager_plugin(self):
         dsl_path = resource("dsl/with_manager_plugin.yaml")
-        deployment, _ = deploy(dsl_path, deployment_id='cloudify.management')
+        deployment, _ = deploy(dsl_path, deployment_id=DEPLOYMENT_QUEUE_NAME)
         deployment_id = deployment.id
 
         from plugins.worker_installer.tasks import \
