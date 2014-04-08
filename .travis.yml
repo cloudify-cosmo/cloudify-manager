@@ -23,8 +23,6 @@ before_script:
    - python -m SimpleHTTPServer 8000 &
 
 install:
-   - pip install --process-dependency-links https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/feature/CFY-415-runtime-properties-changes.zip
-
    - rvm install ruby-2.1.0
    - rvm use ruby-2.1.0
    - rvm --default use ruby-2.1.0
@@ -45,6 +43,7 @@ install:
 
    - virtualenv ~/env
    - source ~/env/bin/activate
+   - pip install --process-dependency-links https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/feature/CFY-415-runtime-properties-changes.zip
    - pip install nose
    - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
    - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
