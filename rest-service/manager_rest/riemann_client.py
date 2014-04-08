@@ -35,44 +35,26 @@ class RiemannClient(object):
         """
         Get node reachable state.
         """
-        return self.get_nodes_state([node_id])[node_id]
+        query = 'service = "{0}"'.format(node_id)
+        states = self._client.query(query)
+        node_reachable_state = {
+            'reachable': False,
+            'state': 'uninitialized'
+        }
+        for state in states:
+            host = state.host
+            node_reachable_state['host'] = host
+            node_reachable_state['state'] = state.state
+            if 'started' in state.state:
+                node_reachable_state['reachable'] = True
+                break
+        return node_reachable_state
 
     def get_nodes_state(self, node_ids):
         """
         Get nodes reachable state.
         """
-        node_result = {}
-
-        or_query = ' or '
-
-        # construct quest with or separator
-        query = or_query.join('service = "{0}"'.format(node_id)
-                              for node_id in node_ids)
-
-        for node_id in node_ids:
-            node_result[node_id] = []
-
-        raw_results = self._client.query(query)
-        for raw_result in raw_results:
-            raw_result_node_id = raw_result.service
-            node_result[raw_result_node_id].append(raw_result)
-
-        node_reachable_states = {}
-        for node_id, states in node_result.iteritems():
-            node_reachable_state = {
-                'reachable': False,
-                'state': 'uninitialized'
-            }
-            for state in states:
-                host = state.host
-                node_reachable_state['host'] = host
-                node_reachable_state['state'] = state.state
-                if 'started' in state.state:
-                    node_reachable_state['reachable'] = True
-                    break
-            node_reachable_states[node_id] = node_reachable_state
-
-        return node_reachable_states
+        return {nid: self.get_node_state(nid) for nid in node_ids}
 
     def teardown(self):
         self._client.disconnect()
