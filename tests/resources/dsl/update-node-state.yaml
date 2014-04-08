@@ -3,7 +3,7 @@ imports:
   - context_plugin.yaml
 
 blueprint:
-  name: simple
+  name: nosetproperty
   nodes:
     - name: host
       type: cloudify.types.host

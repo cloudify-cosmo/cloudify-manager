@@ -4,7 +4,7 @@ imports:
     - testmockoperations.yaml
 
 blueprint:
-    name: simple
+    name: setproperty
     nodes:
         -   name: host
             type: test_host_type
