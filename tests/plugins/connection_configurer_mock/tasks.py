@@ -38,8 +38,8 @@ def append_to_state(ctx):
         'id': ctx.node_id,
         'related_id': ctx.related.node_id,
         'time': time(),
-        'properties': ctx.properties,
-        'runtime_properties': ctx.runtime_properties,
+        'properties': dict(ctx.properties),
+        'runtime_properties': dict(ctx.runtime_properties),
         'related_properties': ctx.related.properties,
         'related_runtime_properties': ctx.related.runtime_properties,
         'capabilities': ctx.capabilities.get_all()
@@ -47,5 +47,5 @@ def append_to_state(ctx):
 
 
 @operation
-def get_state(**kwargs):
+def get_state(ctx, **kwargs):
     return state
