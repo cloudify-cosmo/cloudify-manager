@@ -55,7 +55,7 @@ def make_unreachable(ctx, **kwargs):
 def set_property(property_name, value, ctx, **kwargs):
     ctx.logger.info('Setting property [{0}={1}] for node: {2}'
                     .format(property_name, value, ctx.node_id))
-    ctx[property_name] = value
+    ctx.runtime_properties[property_name] = value
 
 
 @operation

@@ -1,0 +1,16 @@
+imports:
+  - cloudify.types
+  - context_plugin.yaml
+
+blueprint:
+  name: nosetproperty
+  nodes:
+    - name: host
+      type: cloudify.types.host
+      interfaces:
+        cloudify.interfaces.host:
+          - get_state: context_plugin.tasks.get_state
+        cloudify.interfaces.lifecycle:
+          - create: context_plugin.tasks.nop_and_assert_no_runtime_update
+          - configure: context_plugin.tasks.read_runtime_properties_and_assert_no_runtime_update
+          - start: context_plugin.tasks.change_runtime_properties_and_assert_runtime_update
