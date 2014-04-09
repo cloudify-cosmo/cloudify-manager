@@ -185,10 +185,10 @@ class ProviderContextPostStatus(object):
 class ProviderContext(object):
 
     resource_fields = {
-        'provider': fields.String,
+        'name': fields.String,
         'context': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.context = kwargs['context']
-        self.provider = kwargs['provider']
+        self.name = kwargs['name']

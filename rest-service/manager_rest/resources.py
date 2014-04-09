@@ -1071,9 +1071,9 @@ class ProviderContext(Resource):
         request_json = request.json
         if 'context' not in request_json:
             abort(400, message='400: Missing context in json request body')
-        if 'provider' not in request_json:
+        if 'name' not in request_json:
             abort(400, message='400: Missing provider in json request body')
-        context = models.ProviderContext(provider=request.json['provider'],
+        context = models.ProviderContext(name=request.json['name'],
                                          context=request.json['context'])
         get_storage_manager().put_provider_context(context)
         return responses.ProviderContextPostStatus(status='ok'), 201

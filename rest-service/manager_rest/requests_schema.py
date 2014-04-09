@@ -47,5 +47,6 @@ class ModifyExecutionRequest(object):
 class PostProviderContextRequest(object):
 
     resource_fields = {
+        'name': fields.String,
         'context': fields.Raw
     }
