@@ -1070,7 +1070,10 @@ class ProviderContext(Resource):
         verify_json_content_type()
         request_json = request.json
         if 'context' not in request_json:
-            abort(400, message='400: Missing workflowId in json request body')
-        context = models.ProviderContext(context=request.json['context'])
+            abort(400, message='400: Missing context in json request body')
+        if 'provider' not in request_json:
+            abort(400, message='400: Missing provider in json request body')
+        context = models.ProviderContext(provider=request.json['provider'],
+                                         context=request.json['context'])
         get_storage_manager().put_provider_context(context)
         return responses.ProviderContextPostStatus(status='ok'), 201
