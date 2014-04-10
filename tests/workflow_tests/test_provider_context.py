@@ -26,13 +26,15 @@ from testenv import get_provider_context
 class TestProviderContext(TestCase):
 
     def test_provider_context(self):
+        name = 'test_provider'
         context = {
             'key1': 'value1',
             'key2': 'value2'
         }
-        post_response = post_provider_context(context)
+        post_response = post_provider_context(name, context)
         self.assertEqual(post_response.status, 'ok')
         response_context = get_provider_context()
-        self.assertEqual(context, response_context)
+        self.assertEqual(name, response_context['name'])
+        self.assertEqual(context, response_context['context'])
         self.assertRaises(CosmoManagerRestCallError,
-                          post_provider_context, context)
+                          post_provider_context, name, context)

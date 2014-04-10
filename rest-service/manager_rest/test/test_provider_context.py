@@ -23,6 +23,7 @@ class ProviderContextTestCase(BaseServerTestCase):
 
     def test_post_provider_context(self):
         result = self.post('/provider/context', data={
+            'name': 'test_provider',
             'context': {'key': 'value'}
         })
         self.assertEqual(result.status_code, 201)
@@ -32,6 +33,7 @@ class ProviderContextTestCase(BaseServerTestCase):
         self.test_post_provider_context()
         result = self.get('/provider/context').json
         self.assertEqual(result['context']['key'], 'value')
+        self.assertEqual(result['name'], 'test_provider')
 
     def test_post_provider_context_twice_fails(self):
         self.test_post_provider_context()

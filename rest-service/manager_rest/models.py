@@ -86,7 +86,8 @@ class DeploymentNode(SerializableObject):
 
 class ProviderContext(SerializableObject):
 
-    fields = {'context'}
+    fields = {'context', 'name'}
 
     def __init__(self, **kwargs):
         self.context = kwargs['context']
+        self.name = kwargs['name']
