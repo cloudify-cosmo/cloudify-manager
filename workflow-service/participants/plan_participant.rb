@@ -37,13 +37,40 @@ class PlanParticipant < Ruote::Participant
         plan = workitem.fields[PrepareOperationParticipant::PLAN]
         nodes_map = {}
         plan[PrepareOperationParticipant::NODES].each do |node|
-          nodes_map[node[PrepareOperationParticipant::NODE_ID]] = node
+          full_node = node.clone
+          node['workflows'] = nil
+          node['relationships'] = nil
+          node['dependents'] = nil
+          nodes_map[node[PrepareOperationParticipant::NODE_ID]] = full_node
         end
         plan[NODES_MAP] = nodes_map
         PlanHolder.put(execution_id, plan)
       elsif do_what == 'put_plan_on_workitem'
         plan = PlanHolder.get(execution_id)
         workitem.fields[PrepareOperationParticipant::PLAN] = plan
+      elsif do_what == 'get_node_workflow'
+        raise 'node_id not set' unless workitem.params.has_key? 'node_id'
+        raise 'workflow_id not set' unless workitem.params.has_key? 'workflow_id'
+        raise 'to_f not set' unless workitem.params.has_key? 'to_f'
+        plan = PlanHolder.get(execution_id)
+        node_id = workitem.params['node_id']
+        workflow_id = workitem.params['workflow_id']
+        to_f = workitem.params['to_f']
+        workitem.fields[to_f] = plan[NODES_MAP][node_id]['workflows'][workflow_id]
+      elsif do_what == 'get_node_relationships'
+        raise 'node_id not set' unless workitem.params.has_key? 'node_id'
+        raise 'to_f not set' unless workitem.params.has_key? 'to_f'
+        plan = PlanHolder.get(execution_id)
+        node_id = workitem.params['node_id']
+        to_f = workitem.params['to_f']
+        workitem.fields[to_f] = plan[NODES_MAP][node_id]['relationships']
+      elsif do_what == 'get_node_dependents'
+        raise 'node_id not set' unless workitem.params.has_key? 'node_id'
+        raise 'to_f not set' unless workitem.params.has_key? 'to_f'
+        plan = PlanHolder.get(execution_id)
+        node_id = workitem.params['node_id']
+        to_f = workitem.params['to_f']
+        workitem.fields[to_f] = plan[NODES_MAP][node_id]['dependents']
       end
       reply
     rescue => e

@@ -1,26 +1,26 @@
 define install_deployment
 
-    start_deployment_worker
-
-    set 'v:plan': '$f:plan'
     plan_helper do: 'modify_and_save_plan'
+    set 'v:plan': '$f:plan'
     unset 'f:plan'
 
-    log message: 'processing nodes: ${v:plan.nodes}'
+    start_deployment_worker
+
     concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
 
         state action: 'set', node_id: '${node.id}', value: 'initializing'
 
-        log message: 'processing node: ${f:node}'
-        iterator on: '$f:node.relationships', to_v: 'relationship'
-            log message: 'waiting for node: ${node.id} relationship: ${v:relationship}'
+        plan_helper do: 'get_node_relationships', node_id: '${node.id}', to_f: '_relationships'
+        iterator on: '$f:_relationships', to_v: 'relationship'
             state action: 'wait', node_id: '${v:relationship.target_id}', value: 'started'
         unset 'v:relationship'
+        unset 'f:_relationships'
 
         state action: 'set', node_id: '${node.id}', value: 'creating'
         event event: { "stage" => "Creating node" }
-        log message: 'executing create workflow for node: ${node.id}'
-        set 'v:create': "$f:node.workflows.create"
+        plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'create', to_f: '_create'
+        set 'v:create': '$f:_create'
+        unset 'f:_create'
         create
         unset 'v:create'
         state action: 'set', node_id: '${node.id}', value: 'created'
@@ -29,8 +29,9 @@ define install_deployment
 
         state action: 'set', node_id: '${node.id}', value: 'configuring'
         event event: { "stage" => "Configuring node" }
-        log message: 'executing configure workflow for node: ${node.id}'
-        set 'v:configure': "$f:node.workflows.configure"
+        plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'configure', to_f: '_configure'
+        set 'v:configure': '$f:_configure'
+        unset 'f:_configure'
         configure
         unset 'v:configure'
         state action: 'set', node_id: '${node.id}', value: 'configured'
@@ -39,8 +40,9 @@ define install_deployment
 
         state action: 'set', node_id: '${node.id}', value: 'starting'
         event event: { "stage" => "Starting node" }
-        log message: 'executing start workflow for node: ${node.id}'
-        set 'v:start': "$f:node.workflows.start"
+        plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'start', to_f: '_start'
+        set 'v:start': '$f:_start'
+        unset 'f:_start'
         start
         unset 'v:start'
         state action: 'set', node_id: '${node.id}', value: 'started'

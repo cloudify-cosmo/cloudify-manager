@@ -1,17 +1,19 @@
 define uninstall_deployment
 
-    set 'v:plan': '$f:plan'
     plan_helper do: 'modify_and_save_plan'
+    set 'v:plan': '$f:plan'
     unset 'f:plan'
 
     log message: 'uninstalling nodes: ${v:plan.nodes}'
     concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
         log message: 'processing node: ${node.id}'
         # wait for all dependents to be uninstalled first
-        iterator on: '$f:node.dependents', to_v: 'dependent'
+        plan_helper do: 'get_node_dependents', node_id: '${node.id}', to_f: '_dependents'
+        iterator on: '$f:_dependents', to_v: 'dependent'
             log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
             state action: 'wait', node_id: '${v:dependent}', value: 'deleted'
         unset 'v:dependent'
+        unset 'f:_dependents'
 
         state action: 'get', node_id: '${node.id}', to_f: 'node_state'
         log message: 'node state is: ${node_state}'
@@ -23,7 +25,9 @@ define uninstall_deployment
             event event: { "stage" => "Stopping node" }
             log message: 'executing stop workflow for node: ${node.id}'
             # 'stop' is a Ruote reserved word so therefore '_stop'
-            set 'v:_stop': "$f:node.workflows.stop"
+            plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'stop', to_f: '_stop'
+            set 'v:_stop': '$f:_stop'
+            unset 'f:_stop'
             _stop on_error: 'handle_stop_error'
             unset 'v:_stop'
 
@@ -36,7 +40,9 @@ define uninstall_deployment
         sequence if: '${node_state} == started'
             event event: { "stage" => "Deleting node" }
             log message: 'executing delete workflow for node: ${node.id}'
-            set 'v:delete': "$f:node.workflows.delete"
+            plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'delete', to_f: '_delete'
+            set 'v:delete': '$f:_delete'
+            unset 'f:_delete'
             delete on_error: 'handle_delete_error'
             unset 'v:delete'
 
