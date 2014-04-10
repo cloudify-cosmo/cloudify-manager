@@ -26,8 +26,8 @@ class PlanParticipant < Ruote::Participant
       unless workitem.fields.has_key? EXECUTION_ID
         raise 'execution_id field not set'
       end
-      execution_id = workitem.fields[EXECUTION_ID]
 
+      execution_id = workitem.fields[EXECUTION_ID]
       do_what = workitem.params['do']
 
       if do_what == 'modify_and_save_plan'
@@ -49,27 +49,22 @@ class PlanParticipant < Ruote::Participant
         plan = PlanHolder.get(execution_id)
         workitem.fields[PrepareOperationParticipant::PLAN] = plan
       elsif do_what == 'get_node_workflow'
-        raise 'node_id not set' unless workitem.params.has_key? 'node_id'
+        node_id = get_node_id(do_what)
+        to_f = get_to_f(do_what)
         raise 'workflow_id not set' unless workitem.params.has_key? 'workflow_id'
-        raise 'to_f not set' unless workitem.params.has_key? 'to_f'
         plan = PlanHolder.get(execution_id)
-        node_id = workitem.params['node_id']
         workflow_id = workitem.params['workflow_id']
         to_f = workitem.params['to_f']
         workitem.fields[to_f] = plan[NODES_MAP][node_id]['workflows'][workflow_id]
       elsif do_what == 'get_node_relationships'
-        raise 'node_id not set' unless workitem.params.has_key? 'node_id'
-        raise 'to_f not set' unless workitem.params.has_key? 'to_f'
+        node_id = get_node_id(do_what)
+        to_f = get_to_f(do_what)
         plan = PlanHolder.get(execution_id)
-        node_id = workitem.params['node_id']
-        to_f = workitem.params['to_f']
         workitem.fields[to_f] = plan[NODES_MAP][node_id]['relationships']
       elsif do_what == 'get_node_dependents'
-        raise 'node_id not set' unless workitem.params.has_key? 'node_id'
-        raise 'to_f not set' unless workitem.params.has_key? 'to_f'
+        node_id = get_node_id(do_what)
+        to_f = get_to_f(do_what)
         plan = PlanHolder.get(execution_id)
-        node_id = workitem.params['node_id']
-        to_f = workitem.params['to_f']
         workitem.fields[to_f] = plan[NODES_MAP][node_id]['dependents']
       end
       reply
@@ -77,6 +72,20 @@ class PlanParticipant < Ruote::Participant
       log_exception(workitem, e, 'plan_participant')
       flunk(workitem, e)
     end
+  end
+
+  def get_node_id(action)
+    if workitem.fields.has_key? PrepareOperationParticipant::NODE
+      return workitem.fields[PrepareOperationParticipant::NODE][PrepareOperationParticipant::NODE_ID]
+    elsif workitem.params.has_key? 'node_id'
+      return workitem.params['node_id']
+    end
+    raise "node_id was not set for action: #{action}"
+  end
+
+  def get_to_f(action)
+    raise "to_f was not set for action: #{action}" unless workitem.params.has_key? 'to_f'
+    return workitem.params['to_f']
   end
 
   def do_not_thread

@@ -8,7 +8,7 @@ define uninstall_deployment
     concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
         log message: 'processing node: ${node.id}'
         # wait for all dependents to be uninstalled first
-        plan_helper do: 'get_node_dependents', node_id: '${node.id}', to_f: '_dependents'
+        plan_helper do: 'get_node_dependents', to_f: '_dependents'
         iterator on: '$f:_dependents', to_v: 'dependent'
             log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
             state action: 'wait', node_id: '${v:dependent}', value: 'deleted'
@@ -25,7 +25,7 @@ define uninstall_deployment
             event event: { "stage" => "Stopping node" }
             log message: 'executing stop workflow for node: ${node.id}'
             # 'stop' is a Ruote reserved word so therefore '_stop'
-            plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'stop', to_f: '_stop'
+            plan_helper do: 'get_node_workflow', workflow_id: 'stop', to_f: '_stop'
             set 'v:_stop': '$f:_stop'
             unset 'f:_stop'
             _stop on_error: 'handle_stop_error'
@@ -40,7 +40,7 @@ define uninstall_deployment
         sequence if: '${node_state} == started'
             event event: { "stage" => "Deleting node" }
             log message: 'executing delete workflow for node: ${node.id}'
-            plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'delete', to_f: '_delete'
+            plan_helper do: 'get_node_workflow', workflow_id: 'delete', to_f: '_delete'
             set 'v:delete': '$f:_delete'
             unset 'f:_delete'
             delete on_error: 'handle_delete_error'

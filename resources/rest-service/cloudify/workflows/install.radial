@@ -10,7 +10,7 @@ define install_deployment
 
         state action: 'set', node_id: '${node.id}', value: 'initializing'
 
-        plan_helper do: 'get_node_relationships', node_id: '${node.id}', to_f: '_relationships'
+        plan_helper do: 'get_node_relationships', to_f: '_relationships'
         iterator on: '$f:_relationships', to_v: 'relationship'
             state action: 'wait', node_id: '${v:relationship.target_id}', value: 'started'
         unset 'v:relationship'
@@ -18,7 +18,7 @@ define install_deployment
 
         state action: 'set', node_id: '${node.id}', value: 'creating'
         event event: { "stage" => "Creating node" }
-        plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'create', to_f: '_create'
+        plan_helper do: 'get_node_workflow', workflow_id: 'create', to_f: '_create'
         set 'v:create': '$f:_create'
         unset 'f:_create'
         create
@@ -29,7 +29,7 @@ define install_deployment
 
         state action: 'set', node_id: '${node.id}', value: 'configuring'
         event event: { "stage" => "Configuring node" }
-        plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'configure', to_f: '_configure'
+        plan_helper do: 'get_node_workflow', workflow_id: 'configure', to_f: '_configure'
         set 'v:configure': '$f:_configure'
         unset 'f:_configure'
         configure
@@ -40,7 +40,7 @@ define install_deployment
 
         state action: 'set', node_id: '${node.id}', value: 'starting'
         event event: { "stage" => "Starting node" }
-        plan_helper do: 'get_node_workflow', node_id: '${node.id}', workflow_id: 'start', to_f: '_start'
+        plan_helper do: 'get_node_workflow', workflow_id: 'start', to_f: '_start'
         set 'v:start': '$f:_start'
         unset 'f:_start'
         start
