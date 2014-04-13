@@ -41,6 +41,8 @@ class PlanParticipant < Ruote::Participant
           node['workflows'] = nil
           node['relationships'] = nil
           node['dependents'] = nil
+          node['operations'] = nil
+          node['plugins'] = nil
           nodes_map[node[PrepareOperationParticipant::NODE_ID]] = full_node
         end
         plan[NODES_MAP] = nodes_map

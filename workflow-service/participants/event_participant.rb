@@ -27,10 +27,6 @@ class EventParticipant < Ruote::Participant
   PLAN = 'plan'
   DEPLOYMENT_ID = 'deployment_id'
 
-  def do_not_thread
-    true
-  end
-
   def on_workitem
     begin
 
