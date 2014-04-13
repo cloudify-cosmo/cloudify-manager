@@ -207,6 +207,11 @@ class DeploymentsTestCase(BaseServerTestCase):
         })
         self.assertEqual(400, response.status_code)
 
+    def test_listing_executions_for_nonexistent_deployment(self):
+        resource_path = '/deployments/{0}/executions'.format('doesnotexist')
+        response = self.get(resource_path)
+        self.assertEqual(404, response.status_code)
+
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()
