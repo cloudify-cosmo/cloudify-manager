@@ -820,7 +820,6 @@ class DeploymentsIdExecutions(Resource):
         # manager with the deployment relevant details
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
 
-
         executions = self._get_executions(deployment_id,
                                           get_executions_statuses)
 
