@@ -281,3 +281,8 @@ class DeploymentsTestCase(BaseServerTestCase):
             self.assertEqual(response.status_code, 201)
         finally:
             mocks.get_workflow_status = previous_method
+
+    def test_get_non_existent_execution(self):
+        resource_path = '/executions/idonotexist'
+        response = self.get(resource_path)
+        self.assertEqual(response.status_code, 404)
