@@ -168,9 +168,9 @@ class ESStorageManager(object):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,
                                              BlueprintState, fields)
 
-    def get_deployment(self, deployment_id):
+    def get_deployment(self, deployment_id, fields=None):
         return self._get_doc_and_deserialize(DEPLOYMENT_TYPE, deployment_id,
-                                             Deployment)
+                                             Deployment, fields)
 
     def get_execution(self, execution_id):
         return self._get_doc_and_deserialize(EXECUTION_TYPE, execution_id,
