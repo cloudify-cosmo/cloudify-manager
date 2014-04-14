@@ -815,6 +815,11 @@ class DeploymentsIdExecutions(Resource):
         get_executions_statuses = verify_and_convert_bool(
             'statuses', args['statuses'])
 
+        # simple call to verify deployment actually exists
+        # if it doesnt, a 404 will be raised by the underlying storage
+        # manager with the deployment relevant details
+        get_storage_manager().get_deployment(deployment_id, fields=['id'])
+
         executions = self._get_executions(deployment_id,
                                           get_executions_statuses)
 

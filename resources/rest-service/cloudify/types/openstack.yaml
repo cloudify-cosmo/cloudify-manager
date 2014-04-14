@@ -42,7 +42,7 @@ types:
                   - create: neutron_plugin.subnet.create
                   # deleted together with network
 
-    cloudfiy.openstack.security_group:
+    cloudify.openstack.security_group:
         derived_from: cloudify.types.base
         properties:
             - security_group

@@ -168,10 +168,15 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Blueprint {0} not found".format(blueprint_id))
 
-    def get_deployment(self, deployment_id):
+    def get_deployment(self, deployment_id, fields=None):
         data = self._load_data()
         if deployment_id in data[DEPLOYMENTS]:
-            return data[DEPLOYMENTS][deployment_id]
+            dep = data[DEPLOYMENTS][deployment_id]
+            if fields:
+                for field in Deployment.fields:
+                    if field not in fields:
+                        setattr(dep, field, None)
+            return dep
         raise manager_exceptions.NotFoundError(
             "Deployment {0} not found".format(deployment_id))
 
