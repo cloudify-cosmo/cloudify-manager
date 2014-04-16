@@ -66,10 +66,6 @@ class ExecuteTaskParticipant < Ruote::Participant
                             GET_KV_STORE_TASK_NAME,
                             PUT_KV_STORE_TASK_NAME]
 
-  def do_not_thread
-    true
-  end
-
   def on_workitem
     begin
       raise 'executor not set' unless $ruote_properties.has_key? EXECUTOR
