@@ -35,4 +35,4 @@ setup(
         "cloudify-plugins-common"
     ],
     dependency_links=["{0}#egg=cloudify-plugins-common-{1}"
-                          .format(PLUGINS_COMMON, PLUGINS_COMMON_VERSION)])
+                      .format(PLUGINS_COMMON, PLUGINS_COMMON_VERSION)])
