@@ -4,9 +4,6 @@ define execute_operation
                       run_on_node: "${v:run_on_node}"
 
     sequence if: '${operation} != no_op'
-        log message: 'check whether plugin: ${plugin_name} is installed on target: ${target} and contains
-        operation: ${operation}'
-
         execute_task target: '${target}', exec: 'plugin_installer.tasks.verify_plugin', payload: {
             properties: {
                 worker_id: "${worker_id}",
@@ -22,5 +19,10 @@ define execute_operation
             relationship_properties: '$relationship_other_node.properties'
         }, to_f: '${v:to_f}'
 
-    sequence if: '${operation} == no_op'
-        log message: 'skipping ${v:operation} operation as it is not defined and is will be considered a no-op'
+    unset 'f:operation'
+    unset 'f:target'
+    unset 'f:worker_id'
+    unset 'f:plugin_name'
+    unset 'f:operation_mapping'
+    unset 'f:operation_properties'
+    unset 'f:relationship_other_node.properties'
