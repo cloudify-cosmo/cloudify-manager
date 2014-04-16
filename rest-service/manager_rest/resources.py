@@ -27,7 +27,7 @@ from functools import wraps
 from os import path
 
 import elasticsearch
-from flask import request
+from flask import request, jsonify
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
@@ -37,6 +37,7 @@ from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import manager_exceptions
+from manager_rest import upstartdbus
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
@@ -1027,13 +1028,25 @@ class Status(Resource):
         nickname="status",
         notes="Returns an alive message from the rest service."
     )
-    @marshal_with(responses.Status.resource_fields)
     @exceptions_handled
     def get(self):
         """
         Returns an alive status (mainly used for pinging reasons).
         """
-        return responses.Status(status='running')
+        job_list = {'rsyslog': 'Syslog',
+                    'manager': 'Cloudify Manager',
+                    'workflow': 'Workflow Service',
+                    'riemann': 'Riemann',
+                    'rabbitmq-server': 'RabbitMQ',
+                    'celeryd-cloudify-managment': 'Celery Managment',
+                    'ssh': 'SSH',
+                    'elasticsearch': 'Elasticsearch',
+                    'cloudify-ui': 'Cloudify UI',
+                    'logstash': 'Logstash',
+                    'nginx': 'Webserver'
+                    }
+
+        return jsonify(upstartdbus.get_jobs(job_list.keys(), job_list.values()))
 
 
 class ProviderContext(Resource):

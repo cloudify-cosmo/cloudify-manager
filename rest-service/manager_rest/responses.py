@@ -160,17 +160,6 @@ class DeploymentNodes(object):
 
 
 @swagger.model
-class Status(object):
-
-    resource_fields = {
-        'status': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.status = kwargs['status']
-
-
-@swagger.model
 class ProviderContextPostStatus(object):
 
     resource_fields = {
