@@ -7,6 +7,7 @@ services:
   - rabbitmq
 
 before_script:
+   - sudo apt-get udpate && sudo apt-get install python-dbus -y
    - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb
    - sudo dpkg -i elasticsearch-1.0.1.deb
    - export PATH=$PATH:/usr/share/elasticsearch/bin
