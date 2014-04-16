@@ -1046,7 +1046,8 @@ class Status(Resource):
                     'nginx': 'Webserver'
                     }
 
-        return jsonify(upstartdbus.get_jobs(job_list.keys(), job_list.values()))
+        return jsonify(upstartdbus.get_jobs(job_list.keys(),
+                                            job_list.values()))
 
 
 class ProviderContext(Resource):
