@@ -1,0 +1,47 @@
+##################################################################################
+# Cloudify vSphere built in types and plugins definitions.
+##################################################################################
+
+imports:
+    - cloudify.types
+
+plugins:
+    server_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-vsphere-plugin/archive/develop.zip
+    network_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-vsphere-plugin/archive/develop.zip
+
+types:
+    cloudify.vsphere.server:
+        derived_from: cloudify.types.host
+        properties:
+            - server
+            - management_network_name: ''
+            - connection_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: server_plugin.server.create
+                - start: server_plugin.server.start
+                - stop: server_plugin.server.stop
+                - shutdown_guest: server_plugin.server.shutdown_guest
+                - delete: server_plugin.server.delete
+            cloudify.interfaces.host:
+                - get_state: server_plugin.server.get_state
+
+    cloudify.vsphere.network:
+        derived_from: cloudify.types.network
+        properties:
+            - network
+            - connection_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: network_plugin.network.create
+                - delete: network_plugin.network.delete
+
+relationships:
+    cloudify.vsphere.server_connected_to_network:
+        derived_from: cloudify.relationships.connected_to
