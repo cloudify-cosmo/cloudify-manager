@@ -42,6 +42,7 @@ class RuoteWorkflowEngine
     end
     storage.add_type('plans')
     storage.add_type('states')
+    storage.add_type('nodes')
 
     PlanHolder.set_storage(storage)
 

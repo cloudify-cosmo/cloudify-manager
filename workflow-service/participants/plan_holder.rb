@@ -41,16 +41,25 @@ class PlanHolder
   def self.put(execution_id, plan)
     PlanHolder.instance.storage.put({
       'type' => 'plans',
-      '_id' => execution_id
-    }.merge(plan))
+      '_id' => execution_id,
+      'data' => plan
+    })
+    plan[NODES_MAP].each do |node_id, node|
+      PlanHolder.instance.storage.put({
+        'type' => 'nodes',
+        '_id' => "#{execution_id}.#{node_id}",
+        'data' => node
+      })
+    end
   end
 
   def self.get(execution_id)
-    PlanHolder.instance.storage.get('plans', execution_id)
+    PlanHolder.instance.storage.get('plans', execution_id)['data']
   end
 
   def self.delete(execution_id)
-    PlahHolder.instance.storage.delete({
+    # TODO remove nodes from storage
+    PlanHolder.instance.storage.delete({
       '_rev' => 0,
       'type' => 'plans',
       '_id' => execution_id
@@ -58,7 +67,7 @@ class PlanHolder
   end
 
   def self.get_node(execution_id, node_id)
-    self.get(execution_id)[NODES_MAP][node_id]
+    PlanHolder.instance.storage.get('nodes', "#{execution_id}.#{node_id}")['data']
   end
 
 end
