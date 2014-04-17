@@ -43,7 +43,7 @@ class PlanParticipant < Ruote::Participant
           node['dependents'] = nil
           node['operations'] = nil
           node['plugins'] = nil
-          nodes_map[node[PrepareOperationParticipant::NODE_ID]] = full_node
+          nodes_map[node['id']] = full_node
         end
         plan[NODES_MAP] = nodes_map
         PlanHolder.put(execution_id, plan)
@@ -78,7 +78,7 @@ class PlanParticipant < Ruote::Participant
 
   def get_node_id(action)
     if workitem.fields.has_key? PrepareOperationParticipant::NODE
-      return workitem.fields[PrepareOperationParticipant::NODE][PrepareOperationParticipant::NODE_ID]
+      return workitem.fields[PrepareOperationParticipant::NODE]['id']
     elsif workitem.params.has_key? 'node_id'
       return workitem.params['node_id']
     end

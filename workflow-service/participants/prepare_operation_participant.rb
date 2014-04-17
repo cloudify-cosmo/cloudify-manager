@@ -24,7 +24,7 @@ class PrepareOperationParticipant < Ruote::Participant
   RELATIONSHIP = 'relationship'
   RELATIONSHIPS = 'relationships'
   TARGET_ID = 'target_id'
-  NODE_ID = 'id'
+  NODE_ID = 'node_id'
   RELATIONSHIP_OTHER_NODE = 'relationship_other_node'
   RUOTE_RELATIONSHIP_NODE_ID = 'relationship_node_id'
   RUN_ON_NODE = 'run_on_node'
@@ -50,7 +50,7 @@ class PrepareOperationParticipant < Ruote::Participant
 
   def on_workitem
     begin
-      raise "#{NODE} field not set" unless workitem.fields.has_key? NODE
+      raise "#{NODE_ID} field not set" unless workitem.fields.has_key? NODE_ID
       raise "#{OPERATION} parameter not set" unless workitem.params.has_key? OPERATION
 
       unless workitem.fields.has_key? EXECUTION_ID
@@ -69,7 +69,7 @@ class PrepareOperationParticipant < Ruote::Participant
 
         raise "Relationship [#{relationship}] missing target_id" if target_id.nil? or target_id.empty?
 
-        source_id = workitem.fields[NODE][NODE_ID]
+        source_id = workitem.fields[NODE_ID]
         source_node = PlanHolder.get_node(execution_id, source_id)
         target_node = PlanHolder.get_node(execution_id, target_id)
         workitem.fields[RELATIONSHIP_OTHER_NODE] = target_node
@@ -91,7 +91,7 @@ class PrepareOperationParticipant < Ruote::Participant
         # cleanup
         workitem.fields.delete(RUOTE_RELATIONSHIP_NODE_ID)
         workitem.fields.delete(RELATIONSHIP_OTHER_NODE)
-        node_id = workitem.fields[NODE][NODE_ID]
+        node_id = workitem.fields[NODE_ID]
         node = PlanHolder.get_node(execution_id, node_id)
         operations = node[OPERATIONS]
       end
