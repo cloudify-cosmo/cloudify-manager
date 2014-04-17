@@ -15,12 +15,15 @@
 #
 
 require 'ruote'
+require 'ruote-fs'
 require 'json'
 require 'thread'
 require 'pathname'
 
 require_relative '../participants/all'
+require_relative '../participants/plan_holder'
 require_relative '../data/workflow_state'
+require_relative '../data/states_holder'
 require_relative '../utils/logs'
 require_relative '../utils/events'
 require_relative '../amqp/task_executor'
@@ -28,9 +31,24 @@ require_relative '../amqp/task_executor'
 class RuoteWorkflowEngine
 
   def initialize(opts={})
+    test = opts[:test]
+    test = !test.nil? && test.eql?(true)
+
+    if test
+      storage = Ruote::HashStorage.new
+    else
+      storage_path = ENV['RUOTE_STORAGE_DIR_PATH']
+      storage = Ruote::FsStorage.new(storage_path)
+    end
+    storage.add_type('plans')
+    storage.add_type('states')
+
+    PlanHolder.set_storage(storage)
+
     @mutex = Mutex.new
-    @states = Hash.new
-    @dashboard = Ruote::Dashboard.new(Ruote::Worker.new(Ruote::HashStorage.new))
+    @states = StatesHolder.new(storage)
+
+    @dashboard = Ruote::Dashboard.new(Ruote::Worker.new(storage))
     @dashboard.add_service('ruote_listener', self)
     @dashboard.register_participant 'wait_for_node_state', NodeStateParticipant
     @dashboard.register_participant 'execute_task', ExecuteTaskParticipant
@@ -42,8 +60,7 @@ class RuoteWorkflowEngine
     @dashboard.register_participant 'plan_helper', PlanParticipant
 
     # in tests this will not work since Riemann is supposed to be running.
-    test = opts[:test]
-    if test.nil? or test.eql?(false)
+    unless test
       $ruote_properties = {
         'executor' => TaskExecutor.new,
       }
@@ -194,7 +211,11 @@ class RuoteWorkflowEngine
 
   def clear_plan_if_exists(workitem)
     if workitem.fields.has_key?(EXECUTION_ID)
-      PlanHolder.delete(workitem[EXECUTION_ID])
+      begin
+        PlanHolder.delete(workitem[EXECUTION_ID])
+      rescue => exception
+        log(:debug, "Exception caught in while trying to clear plan: #{exception}: #{exception.backtrace}")
+      end
     end
   end
 
@@ -248,6 +269,7 @@ class RuoteWorkflowEngine
       elsif state.eql?(:failed)
         wf_state.error = error
       end
+      @states[wfid] = wf_state
       wf_state
     ensure
       @mutex.unlock

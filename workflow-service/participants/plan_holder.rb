@@ -24,30 +24,41 @@ class PlanHolder
   include Singleton
 
   def initialize
-    # map from execution_id => plan
-    @plans = {}
   end
 
-  def plans
-    @plans
+  def storage
+    @storage
+  end
+
+  def set_storage(storage)
+    @storage = storage
+  end
+
+  def self.set_storage(storage)
+    PlanHolder.instance.set_storage(storage)
   end
 
   def self.put(execution_id, plan)
-    PlanHolder.instance.plans[execution_id] = plan
+    PlanHolder.instance.storage.put({
+      'type' => 'plans',
+      '_id' => execution_id
+    }.merge(plan))
   end
 
   def self.get(execution_id)
-    PlanHolder.instance.plans[execution_id]
+    PlanHolder.instance.storage.get('plans', execution_id)
   end
 
   def self.delete(execution_id)
-    PlanHolder.instance.plans.delete(execution_id)
+    PlahHolder.instance.storage.delete({
+      '_rev' => 0,
+      'type' => 'plans',
+      '_id' => execution_id
+    })
   end
 
   def self.get_node(execution_id, node_id)
-    PlanHolder.instance.plans[execution_id][NODES_MAP][node_id]
+    self.get(execution_id)[NODES_MAP][node_id]
   end
-
-
 
 end
