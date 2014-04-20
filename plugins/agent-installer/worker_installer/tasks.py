@@ -217,7 +217,8 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
         'celery_base_dir': worker_config['celery_base_dir'],
         'worker_modifier': worker_config['name'],
         'management_ip': utils.get_manager_ip(),
-        'broker_ip': '127.0.0.1' if is_deployment_worker(ctx) else utils.get_manager_ip(),
+        'broker_ip': '127.0.0.1' if is_deployment_worker(ctx)
+        else utils.get_manager_ip(),
         'agent_ip': get_agent_ip(ctx, worker_config),
         'celery_user': worker_config['user'],
         'celery_group': worker_config['user']
