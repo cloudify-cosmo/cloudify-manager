@@ -1,5 +1,6 @@
 imports:
-  - "cloudify.types"
+  - cloudify.types
+  - cloudmock.yaml
 
 blueprint:
     name: multi_instance_many_different_hosts

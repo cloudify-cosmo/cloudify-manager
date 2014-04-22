@@ -24,50 +24,30 @@ class PlanHolder
   include Singleton
 
   def initialize
+    # map from execution_id => plan
+    @plans = {}
   end
 
-  def storage
-    @storage
-  end
-
-  def set_storage(storage)
-    @storage = storage
-  end
-
-  def self.set_storage(storage)
-    PlanHolder.instance.set_storage(storage)
+  def plans
+    @plans
   end
 
   def self.put(execution_id, plan)
-    PlanHolder.instance.storage.put({
-      'type' => 'plans',
-      '_id' => execution_id,
-      'data' => plan
-    })
-    plan[NODES_MAP].each do |node_id, node|
-      PlanHolder.instance.storage.put({
-        'type' => 'nodes',
-        '_id' => "#{execution_id}.#{node_id}",
-        'data' => node
-      })
-    end
+    PlanHolder.instance.plans[execution_id] = plan
   end
 
   def self.get(execution_id)
-    PlanHolder.instance.storage.get('plans', execution_id)['data']
+    PlanHolder.instance.plans[execution_id]
   end
 
   def self.delete(execution_id)
-    # TODO remove nodes from storage
-    PlanHolder.instance.storage.delete({
-      '_rev' => 0,
-      'type' => 'plans',
-      '_id' => execution_id
-    })
+    PlanHolder.instance.plans.delete(execution_id)
   end
 
   def self.get_node(execution_id, node_id)
-    PlanHolder.instance.storage.get('nodes', "#{execution_id}.#{node_id}")['data']
+    PlanHolder.instance.plans[execution_id][NODES_MAP][node_id]
   end
+
+
 
 end

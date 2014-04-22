@@ -40,14 +40,9 @@ class RuoteWorkflowEngine
       storage_path = ENV['RUOTE_STORAGE_DIR_PATH']
       storage = Ruote::FsStorage.new(storage_path)
     end
-    storage.add_type('plans')
-    storage.add_type('states')
-    storage.add_type('nodes')
-
-    PlanHolder.set_storage(storage)
 
     @mutex = Mutex.new
-    @states = StatesHolder.new(storage)
+    @states = {}
 
     @dashboard = Ruote::Dashboard.new(Ruote::Worker.new(storage))
     @dashboard.add_service('ruote_listener', self)
@@ -270,7 +265,6 @@ class RuoteWorkflowEngine
       elsif state.eql?(:failed)
         wf_state.error = error
       end
-      @states[wfid] = wf_state
       wf_state
     ensure
       @mutex.unlock

@@ -17,7 +17,6 @@ import unittest
 
 __author__ = 'idanmo'
 
-import multiprocessing
 import shutil
 import tempfile
 import shlex
@@ -803,7 +802,8 @@ class TestEnvironment(object):
             self._manager_rest_process.start()
 
             # ruote service
-            num_of_unicorn_workers = 1 #multiprocessing.cpu_count()
+            # currently, only a single unicorn worker is supported
+            num_of_unicorn_workers = 1
             self._ruote_service = RuoteServiceProcess(
                 self._tempdir,
                 num_of_workers=num_of_unicorn_workers)
