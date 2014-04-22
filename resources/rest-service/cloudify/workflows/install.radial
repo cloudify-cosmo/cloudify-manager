@@ -6,7 +6,10 @@ define install_deployment
 
     start_deployment_worker
 
+    event event: { "stage" => "Processing topsorted '${v:plan.topsorted_node_batches}'" }
     iterator on: '$v:plan.topsorted_node_batches', to_v: 'node_batch'
+
+        event event: { "stage" => "Processing batch" }
 
         concurrent_iterator on: '$v:node_batch', to_v: 'node', merge_type: 'ignore'
 
@@ -52,3 +55,5 @@ define install_deployment
             state action: 'set', node_id: '${v:node.id}', value: 'started'
 
             execute_relationships_workflow workflow: 'establish'
+
+        event event: { "stage" => "Finished processing batch" }
