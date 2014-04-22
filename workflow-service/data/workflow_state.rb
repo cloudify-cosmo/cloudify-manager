@@ -20,46 +20,23 @@ class WorkflowState
 
   attr_accessor :id, :state, :created, :launched, :error, :tags
 
-  def initialize(id, state, created, tags, launched=nil, rev=nil)
+  def initialize(id, state, created, tags, launched=nil)
     @id = id
     @state = state
     @created = created
     @tags = tags
     @launched = launched
     @error = nil
-    @rev = rev
   end
 
   def to_json(*a)
-    to_h(*a).to_json
-  end
-
-  def to_h(*a)
-    result = {
+    {
         :id => @id,
         :state => @state,
         :created => @created,
         :launched => @launched,
-        :error => @error,
-        :tags => @tags,
-    }
-    unless @rev.nil?
-      result['_rev'] = @rev
-    end
-    result
-  end
-
-  def self.from_hash(h)
-    result = WorkflowState.new(
-        h['id'],
-        h['state'].to_sym,
-        h['created'],
-        h['tags'],
-        h['launched'],
-        h['_rev']
-    )
-    result.error = h['error']
-    result
+        :error => @error
+    }.to_json
   end
 
 end
