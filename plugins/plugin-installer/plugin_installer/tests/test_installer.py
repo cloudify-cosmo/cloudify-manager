@@ -20,7 +20,6 @@ import sys
 import tempfile
 
 
-
 __author__ = 'elip'
 
 import unittest
