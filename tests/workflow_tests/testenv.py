@@ -803,7 +803,7 @@ class TestEnvironment(object):
             self._manager_rest_process.start()
 
             # ruote service
-            num_of_unicorn_workers = multiprocessing.cpu_count()
+            num_of_unicorn_workers = 1 #multiprocessing.cpu_count()
             self._ruote_service = RuoteServiceProcess(
                 self._tempdir,
                 num_of_workers=num_of_unicorn_workers)
