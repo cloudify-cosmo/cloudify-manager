@@ -11,7 +11,6 @@ define install_deployment
         concurrent_iterator on: '$v:node_batch', to_v: 'node', merge_type: 'ignore'
 
             set 'f:node_id': '$v:node.id'
-            event event: { "stage" => "Processing node '${v:node.id}'" }
             state action: 'set', node_id: '${v:node.id}', value: 'initializing'
 
             plan_helper do: 'get_node_relationships', node_id: '${v:node.id}', to_f: '_relationships'
