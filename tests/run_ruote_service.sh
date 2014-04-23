@@ -15,6 +15,5 @@ fi
 
 port=$1
 
-cd ..
-cd workflow-service
-RACK_ENV=development unicorn -l 0.0.0.0:${port}
+cd ../workflow-service
+RACK_ENV=development unicorn -l 0.0.0.0:${port} -c unicorn.conf.rb

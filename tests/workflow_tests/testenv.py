@@ -17,30 +17,32 @@ import unittest
 
 __author__ = 'idanmo'
 
-import yaml
 import shutil
 import tempfile
 import shlex
-from os import path
 import subprocess
 import logging
 import os
 import sys
-import plugins
 import time
 import threading
 import re
+from os import path
+from functools import wraps
+from multiprocessing import Process
+
+import yaml
 import pika
 import json
 import bernhard
-from functools import wraps
-from multiprocessing import Process
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient
-from celery import Celery
-from cloudify.constants import MANAGEMENT_NODE_ID
 import requests
 import elasticsearch
+from celery import Celery
+from cloudify.constants import MANAGEMENT_NODE_ID
+from cosmo_manager_rest_client.cosmo_manager_rest_client \
+    import CosmoManagerRestClient
+
+import plugins
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
@@ -93,7 +95,8 @@ class ManagerRestProcess(object):
                  file_server_dir,
                  file_server_base_uri,
                  workflow_service_base_uri,
-                 file_server_blueprints_folder):
+                 file_server_blueprints_folder,
+                 tempdir):
         self.process = None
         self.port = port
         self.file_server_dir = file_server_dir
@@ -101,6 +104,7 @@ class ManagerRestProcess(object):
         self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
         self.client = CosmoManagerRestClient('localhost')
+        self.tempdir = tempdir
 
     def start(self, timeout=10):
         endtime = time.time() + timeout
@@ -112,7 +116,7 @@ class ManagerRestProcess(object):
             'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
-        config_path = tempfile.mktemp()
+        config_path = os.path.join(self.tempdir, 'manager_config.json')
         with open(config_path, 'w') as f:
             f.write(yaml.dump(configuration))
 
@@ -171,10 +175,12 @@ class ManagerRestProcess(object):
 
 class RuoteServiceProcess(object):
 
-    def __init__(self, port=8101):
+    def __init__(self, tempdir, port=8101, num_of_workers=1):
         self._pid = None
         self._port = port
         self._process = None
+        self._tempdir = tempdir
+        self._num_of_workers = num_of_workers
 
     def _get_installed_ruby_packages(self):
         pass
@@ -248,6 +254,9 @@ class RuoteServiceProcess(object):
         script = path.join(startup_script_path, 'run_ruote_service.sh')
         command = [script, str(self._port)]
         env = os.environ.copy()
+        env['RUOTE_STORAGE_DIR_PATH'] = path.join(self._tempdir,
+                                                  'ruote_storage')
+        env['UNICORN_NUMBER_OF_WORKERS'] = str(self._num_of_workers)
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
@@ -788,11 +797,16 @@ class TestEnvironment(object):
                 fileserver_dir,
                 file_server_base_uri,
                 worker_service_base_uri,
-                FILE_SERVER_BLUEPRINTS_FOLDER)
+                FILE_SERVER_BLUEPRINTS_FOLDER,
+                self._tempdir)
             self._manager_rest_process.start()
 
             # ruote service
-            self._ruote_service = RuoteServiceProcess()
+            # currently, only a single unicorn worker is supported
+            num_of_unicorn_workers = 1
+            self._ruote_service = RuoteServiceProcess(
+                self._tempdir,
+                num_of_workers=num_of_unicorn_workers)
 
             self._ruote_service.start()
 
