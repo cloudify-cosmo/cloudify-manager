@@ -150,7 +150,7 @@ SETTINGS = {
 
 
 def create_schema(storage_index_url):
-    #Making three tries, in case of communication errors with elasticsearch
+    # making three tries, in case of communication errors with elasticsearch
     for _ in xrange(3):
         # delete index if already exist
         response = requests.head(storage_index_url)
