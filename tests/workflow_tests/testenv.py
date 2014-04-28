@@ -261,7 +261,7 @@ class RuoteServiceProcess(object):
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
                                          env=env)
-        self._verify_service_started(timeout=30)
+        self._verify_service_started(timeout=60)
         self._verify_service_responsiveness()
         logger.info("Ruote service started [pid=%s]", self._pid)
 
@@ -368,7 +368,7 @@ class CeleryWorkerProcess(object):
                     .format(celery_command))
         self._process = subprocess.Popen(celery_command, env=environment)
 
-        timeout = 30
+        timeout = 60
         deadline = time.time() + timeout
         while not path.exists(self._celery_pid_file) and \
                 (time.time() < deadline):
@@ -476,7 +476,7 @@ class RiemannProcess(object):
                                           kwargs={'process': self._process})
         self._detector.daemon = True
         self._detector.start()
-        timeout = 30
+        timeout = 60
         if not self._event.wait(timeout):
             raise RuntimeError("Unable to start riemann process:\n{0} "
                                "(timed out after {1} seconds)"
@@ -530,7 +530,7 @@ class ElasticSearchProcess(object):
             raise RuntimeError("Elasticsearch service is not responding @ {"
                                "0} (response: {1})".format(service_url, res))
 
-    def _verify_service_started(self, timeout=30):
+    def _verify_service_started(self, timeout=60):
         deadline = time.time() + timeout
         while time.time() < deadline:
             self._pid = self._get_service_pid()
@@ -571,7 +571,7 @@ class ElasticSearchProcess(object):
         logger.info(
             "Starting elasticsearchservice with command {0}".format(command))
         self._process = subprocess.Popen(shlex.split(command))
-        self._verify_service_started(timeout=30)
+        self._verify_service_started()
         self._verify_service_responsiveness()
         logger.info("Elasticsearch service started [pid=%s]", self._pid)
         self._remove_index_if_exists()
@@ -597,7 +597,7 @@ class ElasticSearchProcess(object):
             try:
                 es_index.delete(STORAGE_INDEX_NAME)
                 logger.info("Verifying Elasticsearch index was deleted...")
-                deadline = time.time() + 30
+                deadline = time.time() + 45
                 while es_index.exists(STORAGE_INDEX_NAME):
                     if time.time() > deadline:
                         raise RuntimeError(
@@ -615,7 +615,7 @@ class ElasticSearchProcess(object):
         try:
             es = elasticsearch.Elasticsearch()
             es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
-            deadline = time.time() + 30
+            deadline = time.time() + 45
             while es.count(index=STORAGE_INDEX_NAME, q='*')['count'] != 0:
                 if time.time() > deadline:
                     raise RuntimeError(

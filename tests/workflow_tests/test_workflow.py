@@ -61,7 +61,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertTrue('host_node' in states[0]['id'])
         self.assertTrue('db_node' in states[1]['id'])
 
-    @timeout(seconds=60)
+    @timeout(seconds=120)
     def test_execute_operation_failure(self):
         from plugins.cloudmock.tasks import set_raise_exception_on_start
         self.send_task(set_raise_exception_on_start).get(timeout=10)
