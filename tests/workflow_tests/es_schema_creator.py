@@ -161,7 +161,8 @@ def create_schema(storage_index_url):
                 response.raise_for_status()
 
             # create index
-            response = requests.post(storage_index_url, data=json.dumps(SETTINGS))
+            response = requests.post(storage_index_url, data=json.dumps(
+                SETTINGS))
             response.raise_for_status()
 
             # set mappings
