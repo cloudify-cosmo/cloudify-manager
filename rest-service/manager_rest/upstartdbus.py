@@ -34,15 +34,23 @@ def has_instances(name):
 
 def get_jobs(jobs, names=[]):
     """
-    Return dict of jobs and their job details.
+    Return list of jobs and their job details.
 
     Args:
         jobs (list): list of job names to return
-        names (list): alternative names for jobs
+        names (list): list of display names for jobs
 
     """
-    return {name or job: get_job_details(job)
-            for job, name in map(None, jobs, names)}
+    output = []
+    for job, name in map(None, jobs, names):
+        job_details = get_job_details(job)
+        display_name = {'display_name': name or job}
+        if job_details:
+            job_details.update(display_name)
+            output.append(job_details)
+        else:
+            output.append(display_name)
+    return output
 
 
 def get_job_details(name):

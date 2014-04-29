@@ -37,7 +37,7 @@ from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import manager_exceptions
-from manager_rest import upstartdbus
+from manager_rest.upstartdbus import get_jobs
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
@@ -314,7 +314,7 @@ class Blueprints(Resource):
                         'allowMultiple': False,
                         'dataType': 'binary',
                         'paramType': 'body',
-        }],
+                    }],
         consumes=[
             "application/octet-stream"
         ]
@@ -1046,8 +1046,9 @@ class Status(Resource):
                     'nginx': 'Webserver'
                     }
 
-        return jsonify(upstartdbus.get_jobs(job_list.keys(),
-                                            job_list.values()))
+        return jsonify({"status": "running",
+                        "services": get_jobs(job_list.keys(),
+                                             job_list.values())})
 
 
 class ProviderContext(Resource):
