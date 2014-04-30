@@ -49,7 +49,7 @@ class PluginInstallerTestCase(unittest.TestCase):
     }
 
     def create_temp_folder(self):
-        path_join = os.path.join(tempfile.gettempdir(), id_generator(3))
+        path_join = os.path.join(tempfile.gettempdir(), id_generator(8))
         os.makedirs(path_join)
         return path_join
 

@@ -22,10 +22,6 @@ class LoggerParticipant < Ruote::Participant
 
   MESSAGE = 'message'
 
-  def do_not_thread
-    true
-  end
-
   def on_workitem
     begin
       raise 'message not set' unless workitem.params.has_key? MESSAGE
