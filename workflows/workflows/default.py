@@ -44,6 +44,7 @@ def _host_post_start(ctx, host_node):
         for plugin in host_node.plugins_to_install:
             ctx.send_event('Installing plugin: {0}'.format(plugin['name']))
             host_node.execute_operation(
-                'cloudify.interfaces.plugin_installer.install', plugin=plugin)
+                'cloudify.interfaces.plugin_installer.install',
+                kwargs={'plugin': plugin})
         host_node.execute_operation(
             'cloudify.interfaces.worker_installer.restart')
