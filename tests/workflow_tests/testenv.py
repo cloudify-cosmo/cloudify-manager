@@ -873,7 +873,10 @@ class TestEnvironment(object):
             self._celery_operations_worker_process.start()
 
             # celery workflows worker
-            workflow_plugin_path = os.path.join(os.getcwd(), "../workflows")
+            # workflow_plugin_path = os.path.join(os.getcwd(), "../workflows")
+            workflow_plugin_path = os.path.join(
+                path.dirname(path.dirname(path.realpath(plugins.__file__))),
+                "workflows")
             self._celery_workflows_worker_process = \
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir, self._plugins_tempdir, workflow_plugin_path,
