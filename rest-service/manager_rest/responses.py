@@ -163,11 +163,13 @@ class DeploymentNodes(object):
 class Status(object):
 
     resource_fields = {
-        'status': fields.String
+        'status': fields.String,
+        'services': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.status = kwargs['status']
+        self.services = kwargs['services']
 
 
 @swagger.model
