@@ -873,10 +873,17 @@ class TestEnvironment(object):
             self._celery_operations_worker_process.start()
 
             # celery workflows worker
-            # workflow_plugin_path = os.path.join(os.getcwd(), "../workflows")
-            workflow_plugin_path = os.path.join(
-                path.dirname(path.dirname(path.realpath(plugins.__file__))),
-                "workflows")
+            # cloudify-manager/tests/plugins/__init__.py(c)
+            workflow_plugin_path = os.path.abspath(plugins.__file__)
+            # cloudify-manager/tests/plugins
+            workflow_plugin_path = os.path.dirname(workflow_plugin_path)
+            # cloudify-manager/tests
+            workflow_plugin_path = os.path.dirname(workflow_plugin_path)
+            # cloudify-manager
+            workflow_plugin_path = os.path.dirname(workflow_plugin_path)
+            # cloudify-manager/workflows
+            workflow_plugin_path = os.path.join(workflow_plugin_path,
+                                                'workflows')
             self._celery_workflows_worker_process = \
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir, self._plugins_tempdir, workflow_plugin_path,
@@ -951,7 +958,7 @@ class TestEnvironment(object):
             self._file_server_process.stop()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
-            shutil.rmtree(self._tempdir, ignore_errors=True)
+            # shutil.rmtree(self._tempdir, ignore_errors=True)
 
     @staticmethod
     def create(scope=TestEnvironmentScope.PACKAGE):
