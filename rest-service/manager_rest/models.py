@@ -91,3 +91,15 @@ class ProviderContext(SerializableObject):
     def __init__(self, **kwargs):
         self.context = kwargs['context']
         self.name = kwargs['name']
+
+
+class ExecutionState(SerializableObject):
+
+    fields = {'id', 'state', 'created', 'launched', 'error'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.state = kwargs['state']
+        self.created = kwargs['created']
+        self.launched = kwargs['launched']
+        self.error = kwargs['error']

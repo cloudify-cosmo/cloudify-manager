@@ -22,9 +22,11 @@ from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
                                  DeploymentNode,
-                                 ProviderContext)
+                                 ProviderContext,
+                                 ExecutionState)
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
+EXECUTION_STATE_TYPE = 'execution_state'
 NODE_TYPE = 'node'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
@@ -140,6 +142,9 @@ class ESStorageManager(object):
                 state_version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
+    def execution_state_list(self):
+        return self._list_docs(EXECUTION_STATE_TYPE, ExecutionState)
+
     def blueprints_list(self):
         return self._list_docs(BLUEPRINT_TYPE, BlueprintState)
 
@@ -163,6 +168,11 @@ class ESStorageManager(object):
         doc = self._get_doc(NODE_TYPE, node_id)
         node = DeploymentNode(state_version=doc['_version'], **doc['_source'])
         return node
+
+    def get_execution_state(self, execution_internal_id):
+        return self._get_doc_and_deserialize(EXECUTION_STATE_TYPE,
+                                             execution_internal_id,
+                                             ExecutionState)
 
     def get_blueprint(self, blueprint_id, fields=None):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,
@@ -188,6 +198,11 @@ class ESStorageManager(object):
         self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
                                     execution.to_dict())
 
+    def put_execution_state(self, execution_internal_id, execution_state):
+        self._put_doc_if_not_exists(EXECUTION_STATE_TYPE,
+                                    str(execution_internal_id),
+                                    execution_state.to_dict())
+
     def put_node(self, node_id, node):
         doc_data = node.to_dict()
         del(doc_data['state_version'])
@@ -197,6 +212,17 @@ class ESStorageManager(object):
     def delete_blueprint(self, blueprint_id):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
+
+    def update_execution_state(self, execution_state):
+        update_doc = {'doc': execution_state.to_dict()}
+        try:
+            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
+                                       doc_type=EXECUTION_STATE_TYPE,
+                                       id=str(execution_state.id),
+                                       body=update_doc)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Execution state not found".format(execution_state.id))
 
     def update_node(self, node_id, node):
         update_doc_data = node.to_dict()

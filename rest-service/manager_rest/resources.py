@@ -135,6 +135,8 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/nodes')
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
+    api.add_resource(ExecutionIdState,
+                     '/executions/<string:execution_internal_id>/state')
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
@@ -613,6 +615,63 @@ class DeploymentsId(Resource):
         blueprint_id = request.json['blueprintId']
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
+
+
+class ExecutionIdState(Resource):
+
+    @swagger.operation(
+        responseClass=responses.ExecutionState,
+        nickname="getExecutionState",
+        notes="Gets the execution's state",
+    )
+    @marshal_with(responses.ExecutionState.resource_fields)
+    @exceptions_handled
+    def get(self, execution_internal_id):
+        execution_state = get_storage_manager().get_execution_state(
+            execution_internal_id)
+        return responses.ExecutionState(**execution_state.to_dict())
+
+    @swagger.operation(
+        responseClass=responses.ExecutionState,
+        nickname="updateExecutionState",
+        notes="Updates the execution's state",
+        parameters=[{'name': 'state',
+                     'description': "The execution's new state",
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'},
+                    {'name': 'error',
+                     'description': "An error message",
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.ExecutionState.resource_fields)
+    @exceptions_handled
+    def patch(self, execution_internal_id):
+        """
+        Updates a workflow's state
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'state' not in request_json:
+            abort(400, message="400: Missing 'state' in json request body")
+
+        execution_state = get_storage_manager().get_execution_state(
+            execution_internal_id)
+
+        execution_state.state = request_json['state']
+        if 'error' in request_json:
+            execution_state.error = request_json['error']
+
+        get_storage_manager().update_execution_state(execution_state)
+
+        return responses.ExecutionState(**execution_state.to_dict())
 
 
 class NodesId(Resource):

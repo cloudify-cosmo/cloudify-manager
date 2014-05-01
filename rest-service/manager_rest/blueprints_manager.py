@@ -148,7 +148,15 @@ class BlueprintsManager(object):
             deployment_id=deployment_id,
             error='None')
 
-        self.sm.put_execution(new_execution.id, new_execution)
+        get_storage_manager().put_execution(new_execution.id, new_execution)
+
+        new_execution_state = models.ExecutionState(
+            id=new_execution.internal_workflow_id,
+            state=new_execution.status,
+            created=new_execution.created_at,
+            launched=new_execution.created_at,
+            error=new_execution.error)
+        get_storage_manager().put_execution_state(new_execution_state)
 
         return new_execution
 
@@ -169,7 +177,10 @@ class BlueprintsManager(object):
 
     def get_workflows_states_by_internal_workflows_ids(self,
                                                        internal_wfs_ids):
-        return workflow_client().get_workflows_statuses(internal_wfs_ids)
+        # return workflow_client().get_workflows_statuses(internal_wfs_ids)
+        return [get_storage_manager().get_execution_state(
+                execution_internal_id).to_json() for execution_internal_id in
+                internal_wfs_ids]
 
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)
