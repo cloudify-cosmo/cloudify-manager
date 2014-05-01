@@ -198,9 +198,9 @@ class ESStorageManager(object):
         self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
                                     execution.to_dict())
 
-    def put_execution_state(self, execution_internal_id, execution_state):
+    def put_execution_state(self, execution_state):
         self._put_doc_if_not_exists(EXECUTION_STATE_TYPE,
-                                    str(execution_internal_id),
+                                    str(execution_state.id),
                                     execution_state.to_dict())
 
     def put_node(self, node_id, node):
