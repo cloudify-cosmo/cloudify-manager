@@ -41,7 +41,6 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
-from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -536,10 +535,6 @@ class DeploymentsIdNodes(Resource):
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
-        reachable_states = {}
-        if get_reachable_state or get_state:
-            reachable_states = get_riemann_client().get_nodes_state(node_ids)
-
         nodes = []
         for node_id in node_ids:
             node_result = responses.DeploymentNode(id=node_id,
@@ -548,9 +543,9 @@ class DeploymentsIdNodes(Resource):
                                                    reachable=None,
                                                    runtime_info=None)
             if get_reachable_state or get_state:
-                state = reachable_states[node_id]
-                node_result.reachable = state['reachable']
-                node_result.state = state['state']
+                node = get_storage_manager().get_node(node_id)
+                node_result.reachable = node.reachable
+                node_result.state = node.state
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -730,15 +725,11 @@ class NodesId(Resource):
         runtime_info = None
         state_version = None
 
-        if get_runtime_info:
+        if get_runtime_info or get_reachable_state or get_state:
             node = get_storage_manager().get_node(node_id)
             runtime_info = node.runtime_info
-            state_version = node.state_version
-
-        if get_reachable_state or get_state:
-            state = get_riemann_client().get_node_state(node_id)
-            reachable_state = state['reachable']
-            state = state['state']
+            reachable_state = node.reachable
+            state = node.state
 
         return responses.DeploymentNode(id=node_id,
                                         state=state,
@@ -771,9 +762,10 @@ class NodesId(Resource):
                                .format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json,
-                                     reachable=None, state_version=None)
+                                     reachable=None,
+                                     state=None, state_version=None)
         node.state_version = get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(state=None, **node.to_dict()), 201
+        return responses.DeploymentNode(**node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -805,15 +797,16 @@ class NodesId(Resource):
         Updates node runtime state.
         """
         verify_json_content_type()
-        if request.json.__class__ is not dict or len(request.json) > 2 \
+        if request.json.__class__ is not dict or len(request.json) > 3 \
             or 'runtime_info' not in request.json \
             or 'state_version' not in request.json \
             or request.json['runtime_info'].__class__ is not dict \
                 or request.json['state_version'].__class__ is not int:
 
-            if request.json.__class__ is not dict or len(request.json) > 2:
+            if request.json.__class__ is not dict or len(request.json) > 3:
                 message = 'request body is expected to be a map containing ' \
-                          'only "runtime_info" and "state_version" fields'
+                          'only "runtime_info", "state_version" and an ' \
+                          'optional "state" fields'
             elif 'runtime_info' not in request.json:
                 message = 'request body must be a map containing a ' \
                           '"runtime_info" field'
@@ -832,10 +825,10 @@ class NodesId(Resource):
 
         node = models.DeploymentNode(
             id=node_id, runtime_info=request.json['runtime_info'],
-            state_version=request.json['state_version'], reachable=None)
+            state_version=request.json['state_version'], reachable=None,
+            state=request.json['state'] if 'state' in request.json else None)
         get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
-            state=None,
             **get_storage_manager().get_node(node_id).to_dict())
 
 

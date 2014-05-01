@@ -129,7 +129,7 @@ class FileStorageManager(object):
                               node.runtime_info.items())
         # TODO: merge reachable field?
         node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
-                              reachable=None,
+                              reachable=None, state=None,
                               state_version=node.state_version+1)
         data[NODES][node_id] = node
         self._dump_data(data)

@@ -204,6 +204,7 @@ class BlueprintsManager(object):
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
             node = models.DeploymentNode(id=node_id, reachable=None,
+                                         state=None,
                                          runtime_info=None,
                                          state_version=None)
             self.sm.put_node(node_id, node)
