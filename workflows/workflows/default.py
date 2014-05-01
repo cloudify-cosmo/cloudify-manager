@@ -26,7 +26,8 @@ def _is_host_node(node):
 
 def _wait_for_host_to_start(host_node):
     while True:
-        state = host_node.execute('cloudify.interfaces.host.get_state')
+        state = host_node.execute_operation(
+            'cloudify.interfaces.host.get_state')
         if state is True:
             break
         time.sleep(5)
