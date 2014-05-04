@@ -219,7 +219,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     unless cloudify_runtime.nil?
       context[:capabilities] = cloudify_runtime
     end
-    if @target == 'cloudify.workflows'
+    if @target == "#{context[:deployment_id]}_workflows"
       context[:plan] = workitem.fields[PrepareOperationParticipant::PLAN]
     end
     props['__cloudify_context'] = context
