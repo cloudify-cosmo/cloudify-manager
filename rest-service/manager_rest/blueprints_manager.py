@@ -177,10 +177,10 @@ class BlueprintsManager(object):
 
     def get_workflows_states_by_internal_workflows_ids(self,
                                                        internal_wfs_ids):
-        # return workflow_client().get_workflows_statuses(internal_wfs_ids)
-        return [get_storage_manager().get_execution_state(
-                execution_internal_id).to_json() for execution_internal_id in
-                internal_wfs_ids]
+        return workflow_client().get_workflows_statuses(internal_wfs_ids)
+        # return [get_storage_manager().get_execution_state(
+        #         execution_internal_id).to_json() for execution_internal_id in
+        #         internal_wfs_ids]
 
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)

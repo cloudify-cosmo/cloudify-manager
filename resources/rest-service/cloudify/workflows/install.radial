@@ -1,5 +1,6 @@
 define install_deployment
 
     start_deployment_worker
+    start_workflows_worker
 
     execute_task target: 'cloudify.workflows', exec: 'workflows.default.install'
