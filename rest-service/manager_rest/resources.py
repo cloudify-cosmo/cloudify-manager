@@ -728,6 +728,7 @@ class NodesId(Resource):
         if get_runtime_info or get_reachable_state or get_state:
             node = get_storage_manager().get_node(node_id)
             runtime_info = node.runtime_info
+            state_version = node.state_version
             reachable_state = node.reachable
             state = node.state
 
