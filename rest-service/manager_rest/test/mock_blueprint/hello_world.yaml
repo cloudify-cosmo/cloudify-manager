@@ -1,0 +1,35 @@
+
+imports:
+    - cloudify.types
+    - cloudify.openstack
+
+plugins:
+    python_webserver_installer:
+        derived_from: cloudify.plugins.agent_plugin
+        properties:
+            url: https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/develop.zip
+
+types:
+    openstack_host:
+        derived_from: cloudify.types.host
+        properties:
+            -   worker_config:
+                    user: ubuntu
+                    port: 22
+                    key: ~/.ssh/cloudify-agents.pem
+            -   nova_config:
+                    region: az-2.region-a.geo-1
+                    instance:
+                        name: web_server_vm_idan
+                        image: 67074
+                        flavor: 101
+                        key_name: cloudify_agents_idan
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                -   start: nova_plugin.server.start
+    web_server:
+        derived_from: cloudify.types.web_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                -   configure: python_webserver_installer.tasks.configure
+                -   start: python_webserver_installer.tasks.start

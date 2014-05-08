@@ -1,0 +1,78 @@
+##################################################################################
+# Cloudify Bash built in types and plugins definitions.
+##################################################################################
+imports:
+    - cloudify.types
+
+plugins:
+    bash_runner:
+        derived_from: cloudify.plugins.agent_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-bash-plugin/archive/develop.zip
+
+types:
+
+    # A web server configured with bash scripts
+    cloudify.types.bash.web_server:
+        derived_from: cloudify.types.web_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: bash_runner.tasks.run
+                - configure: bash_runner.tasks.run
+                - start: bash_runner.tasks.run
+                - stop: bash_runner.tasks.run
+                - delete: bash_runner.tasks.run
+        properties:
+            - scripts
+
+    # An app server configured with bash scripts
+    cloudify.types.bash.app_server:
+        derived_from: cloudify.types.app_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: bash_runner.tasks.run
+                - configure: bash_runner.tasks.run
+                - start: bash_runner.tasks.run
+                - stop: bash_runner.tasks.run
+                - delete: bash_runner.tasks.run
+        properties:
+            - scripts
+
+    # A db server configured with bash scripts
+    cloudify.types.bash.db_server:
+        derived_from: cloudify.types.db_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: bash_runner.tasks.run
+                - configure: bash_runner.tasks.run
+                - start: bash_runner.tasks.run
+                - stop: bash_runner.tasks.run
+                - delete: bash_runner.tasks.run
+        properties:
+            - scripts
+
+    # A message bus server configured with bash scripts
+    cloudify.types.bash.message_bus_server:
+        derived_from: cloudify.types.message_bus_server
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: bash_runner.tasks.run
+                - configure: bash_runner.tasks.run
+                - start: bash_runner.tasks.run
+                - stop: bash_runner.tasks.run
+                - delete: bash_runner.tasks.run
+        properties:
+            - scripts
+
+    # An app module configured with bash scripts
+    cloudify.types.bash.app_module:
+        derived_from: cloudify.types.app_module
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: bash_runner.tasks.run
+                - configure: bash_runner.tasks.run
+                - start: bash_runner.tasks.run
+                - stop: bash_runner.tasks.run
+                - delete: bash_runner.tasks.run
+        properties:
+            - scripts

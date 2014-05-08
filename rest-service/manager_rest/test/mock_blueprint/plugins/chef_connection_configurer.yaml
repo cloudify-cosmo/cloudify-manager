@@ -1,0 +1,8 @@
+imports:
+    - 'cloudify.types'
+
+plugins:
+    chef_connection_configurer:
+        derived_from: 'cloudify.plugins.agent_plugin'
+        properties:
+            url: 'https://github.com/CloudifySource/cosmo-plugin-chef-connection-configurer/archive/0.2.zip'

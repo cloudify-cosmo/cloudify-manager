@@ -1,0 +1,2 @@
+define node_create
+    execute_operation operation: 'cloudify.interfaces.lifecycle.create'

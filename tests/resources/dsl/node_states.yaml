@@ -1,0 +1,16 @@
+imports:
+    - cloudify.types
+    - testmockoperations.yaml
+
+blueprint:
+    name: node_states
+    nodes:
+        -   name: node1234
+            type: cloudify.types.base
+            interfaces:
+                cloudify.interfaces.lifecycle:
+                    - create: testmockoperations.tasks.append_node_state
+                    - configure: testmockoperations.tasks.append_node_state
+                    - start: testmockoperations.tasks.append_node_state
+                    - stop: testmockoperations.tasks.append_node_state
+                    - delete: testmockoperations.tasks.append_node_state

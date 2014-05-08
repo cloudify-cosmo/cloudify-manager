@@ -1,6 +1,0 @@
-plugins:
-    cloudify.plugins.pickledb_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            interface: "cloudify.interfaces.middleware_component_installer"
-            url: "#{plugin_repository}/pickledb-installer.zip"

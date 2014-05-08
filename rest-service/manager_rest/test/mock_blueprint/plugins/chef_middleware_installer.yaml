@@ -1,0 +1,8 @@
+imports:
+    - 'cloudify.types'
+
+plugins:
+    chef_middleware_installer:
+        derived_from: 'cloudify.plugins.agent_plugin'
+        properties:
+            url: 'https://github.com/CloudifySource/cosmo-plugin-chef-middleware-installer/archive/0.2.zip'

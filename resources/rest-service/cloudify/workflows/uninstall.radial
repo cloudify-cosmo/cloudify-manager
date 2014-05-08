@@ -1,0 +1,53 @@
+define uninstall_deployment
+
+    plan_helper do: 'modify_and_save_plan'
+    set 'v:plan': '$f:plan'
+    unset 'f:plan'
+
+    log message: 'uninstalling nodes: ${v:plan.nodes}'
+    concurrent_iterator on: '$v:plan.nodes', to_f: 'node', merge_type: 'ignore'
+        # wait for all dependents to be uninstalled first
+        plan_helper do: 'get_node_dependents', to_f: '_dependents'
+        iterator on: '$f:_dependents', to_v: 'dependent'
+            log message: 'waiting for node: ${node.id} dependent: ${v:dependent}'
+            state action: 'wait', node_id: '${v:dependent}', value: 'deleted'
+        unset 'v:dependent'
+        unset 'f:_dependents'
+
+        state action: 'get', node_id: '${node.id}', to_f: 'node_state'
+
+        state action: 'set', node_id: '${node.id}', value: 'stopping'
+
+        # we only call stop on started nodes
+        sequence if: '${node_state} == started'
+            event event: { "stage" => "Stopping node" }
+            # 'stop' is a Ruote reserved word so therefore '_stop'
+            plan_helper do: 'get_node_workflow', workflow_id: 'stop', to_f: '_stop'
+            set 'v:_stop': '$f:_stop'
+            unset 'f:_stop'
+            _stop on_error: 'handle_stop_error'
+            unset 'v:_stop'
+
+        state action: 'set', node_id: '${node.id}', value: 'stopped'
+        execute_relationships_workflow workflow: 'unlink', on_error: 'pass'
+
+        state action: 'set', node_id: '${node.id}', value: 'deleting'
+
+        # we only call delete on started nodes
+        sequence if: '${node_state} == started'
+            event event: { "stage" => "Deleting node" }
+            plan_helper do: 'get_node_workflow', workflow_id: 'delete', to_f: '_delete'
+            set 'v:delete': '$f:_delete'
+            unset 'f:_delete'
+            delete on_error: 'handle_delete_error'
+            unset 'v:delete'
+
+        state action: 'set', node_id: '${node.id}', value: 'deleted'
+
+    remove_deployment_worker
+
+    define handle_stop_error
+        event event: { "stage" => "Error occurred when stopping node - ignoring..." }
+
+    define handle_delete_error
+        event event: { "stage" => "Error occurred when deleting node - ignoring..." }

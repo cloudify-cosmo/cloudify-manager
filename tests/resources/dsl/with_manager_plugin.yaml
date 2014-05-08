@@ -1,0 +1,32 @@
+imports:
+    - "cloudify.types"
+    - "cloudmock.yaml"
+
+plugins:
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin.zip"
+
+blueprint:
+    name: "simple_web_server"
+    nodes:
+        -   name: "webserver_host"
+            type: "cloudify.types.host"
+            interfaces:
+                cloudify.interfaces.lifecycle:
+                    - create: cloudmock.tasks.provision
+                    - start: cloudmock.tasks.start
+                    - stop: cloudmock.tasks.stop
+                    - delete: cloudmock.tasks.terminate
+                cloudify.interfaces.host:
+                    - get_state: cloudmock.tasks.get_state
+                cloudify.interfaces.test_lifecycle:
+                    - create: test_management_plugin.tasks.start
+
+workflows:
+    mock_workflow:
+        radial: |
+            define mock_workflow
+                execute_operation operation: 'make_mock_operation'
+

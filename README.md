@@ -1,72 +1,91 @@
-## Getting Started with Cosmo ##
+## Cloudify Cosmo Manager
 
-Cloudify Cosmo deploys, monitors and manages complex applications. It follows the [TOSCA spec](https://www.oasis-open.org/committees/tosca). 
+Cosmo is the code name for the new release of Cloudify (version 3.0). Cloudify is an open soruce tool for deploying, managing and scaling applications on the cloud.
+This repo contains the source code for the Cloudify Cosmo management server.
+To install Cloudify 3.0 refer the [README file of the Cloudify CLI project](https://github.com/cloudify-cosmo/cloudify-cli/blob/develop/README.md).
 
-The current version of Cosmo runs on a vagrant machine, reads the application plan file, and orchestrates the application deployment and monitoring.
-The [sample application](vagrant/test/python_webserver/python-webserver.yaml) starts and monitors an LXC machine with a python web server. 
+Fuller documentation for the new Cosmo architecture will be available soon at [The CloudifySource web site](http://www.cloudifysource.org).
 
-### Requirements ###
-- Build Status (master branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-manager.png?branch=master)](http://travis-ci.org/CloudifySource/cosmo-manager)
-- Virtual Box (https://www.virtualbox.org/wiki/Downloads)
-- Vagrant 1.2.6 (http://downloads.vagrantup.com)
-- Vagrant snapshot plugin (To install simply run: `vagrant plugin install vagrant-vbox-snapshot`)
+## Contribute to Cloudify ##
 
-the
-### Bootstrap Cosmo ###
+- Open a new bug or feature request in [JIRA](cloudifysource.atlassian.net) under the "CFY" project
 
-The process of creating a new vagrant machine may take up to 20 minutes.
+- clone this repo
 
 ```
-                       $ git clone https://github.com/CloudifySource/cosmo-manager.git
-                       $ cd cosmo-manager/vagrant
-cosmo-manager/vagrant  $ vagrant up
-cosmo-manager/vagrant  $ vagrant snapshot take after-bootstrap-snapshot
-cosmo-manager/vagrant  $ vagrant ssh
-vagrant@cosmo-manager:~$ cd ~/cosmo-work
+cloudify-manager$ git clone https://github.com/cloudify-cosmo/cloudify-manager.git
 ```
 
-### Deploy the sample application ###
+- make changes on a seperate branch named `feature/CFY-XXXX` where XXXX is the JIRA ID.
 
-The cosmo shell script starts cosmo and executes the specified plan file. It will create a new lxc machine with a celery worker and install python web server on the lxc machine.
+# Linux Developement Environment #
+
+Development environment was tested with: Ubuntu & Arch Linux.
+
+## Requirements ##
+
+Make sure you have the following dependencies installed:
+
+* git.
+* Python 2.7 + pip.
+* OpenJDK-7.
+* Ruby 2.1.0.
+* Bundler.
+* RabbitMQ.
+    * Make sure you have a default configured RabbitMQ server running after installing it.
+* Riemann (http://riemann.io).
+    * Make sure Riemann's binary is available in `path` environment variable after installing it.
+* Elasticsearch (http://www.elasticsearch.org/)
+    * Make sure Elasticsearch's binary is availale in `path` environment variable after installing it, as well as having write permission to its `/data` folder (more information below)
+Installation instructions for Ubuntu can be found below, if you're using Arch Linux you should know your way :-)
+
+
+### git ###
+
+Ubuntu installation:
 ```
-vagrant@cosmo-manager:~/cosmo-work$ ./cosmo.sh --dsl=/vagrant/test/python_webserver/python-webserver.yaml
+sudo apt-get install git -y
 ```
 
-Wait until the script prints the following message:
+### pip ###
+Ubuntu installation:
 ```
-ManagerBoot Application has been successfully deployed (press CTRL+C to quit)
-```
-
-Pressing Ctrl+C will stop cosmo processes, but will not destroy the LXC machine.
-The LXC ip address is 10.0.3.5 and the python web server listens on port 8888.
-```
-vagrant@cosmo-manager:~/cosmo-work$ wget -O /dev/stdout http://10.0.3.5:8888
-```
-You can terminate all LXC machines with:
-```
-vagrant@cosmo-manager:~/cosmo-work$ ./cosmo.sh undeploy
+sudo apt-get install python-pip -y
 ```
 
-For commandline usage see `./cosmo.sh --help`
+Arch Linux installation:
+```
+pacman -S python2-pip
+```
 
-### Suspend/Restore Cosmo ###
-To save the current running state of the vagrant machine and stop it use `vagrant suspend`.
-To start the vagrant machine at its last running state `vagrant up`.
-
-To restore the Vagrant Machine to its original state (just after bootstrap) `vagrant snapshot go after-bootstrap-snapshot`
-
-### Teardown Cosmo ###
-To delete the vagrant machine run `vagrant terminate`.
-That means the next time you run `vagrant up` it will need another 20 minutes to bootstrap.
-
-## Upgrade ##
-
-### Upgrade Cosmo to latest version ###
-
-In case a new version of cosmo was released, you will probably want to upgrade.
-It a simple matter of replacing a jar file.
+### OpenJDK-7 ###
 
 ```
+sudo apt-get install openjdk-7-jdk
+```
+
+### virtualenv ###
+
+We encourage you to use `virtualenv` for the Python environment, this means `virtualenv2` should be installed:
+```
+# install virtualenv
+sudo pip install virtualenv
+
+# create a virtual environment
+sudo virtualenv <env_folder>
+
+# activate the virtual environment
+source <env_folder>/bin/activate
+```
+
+### Ruby 2.1.0 ###
+
+#### Install Using rvm ####
+- Install rvm as described [here](http://rvm.io/).
+- Install Ruby 2.1.0 using rvm:
+
+```
+<<<<<<< HEAD
 vagrant@cosmo-manager:~/cosmo-work$ export cosmo_version=0.1-RELEASE
 vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
 ```
@@ -75,48 +94,132 @@ vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.am
 * To upgrade to a new release use `cosmo_version=${version}-RELEALSE`.
 
 ### Upgrade Cosmo from code ###
+=======
+# install (this might take some time)
+rvm install ruby-2.1.0
 
-First build a new cosmo.jar. Then use the shared directory between the host and vagrant to copy the new jar.
+# use
+rvm use ruby-2.1.0
 
-```
-cosmo-manager          $ mvn package -Pall -DskipTests -f orchestrator/pom.xml
-cosmo-manager          $ cd vagrant
-cosmo-manager/vagrant  $ cp ../orchestrator/target/cosmo.jar cosmo.jar
-cosmo-manager/vagrant  $ vagrant ssh
-vagrant@cosmo-manager:~$ cp /vagrant/cosmo.jar ~/cosmo-work/cosmo.jar
-```
-
-### Upgrade the vagrant operating system ###
-A default box called 'precise64' is automatically added.
-This is a pre-built Ubuntu 12.04 Precise x86_64 for lxc providers.
-To add more boxes see [a list of pre-packaged images for vagrant-lxc](https://github.com/fgrehm/vagrant-lxc/wiki/Base-boxes#available-boxes)
-
-
-## Contribute to Cosmo ##
-
-You will need Maven and Git in order to develop the cosmo project.
-
-- Open a new bug or feature request in [JIRA](cloudifysource.atlassian.net) with the "cosmo" label
-
-- clone this repo
-
-```
-cosmo-manager$ git clone https://github.com/CloudifySource/cosmo-manager.git
+# install bundler
+gem install bundler
 ```
 
-- make changes on a seperate branch named `feature/CLOUDIFY-XXXX` where XXXX is the JIRA ID.
+### RabbitMQ ###
+Installation instructions for Ubuntu can be found [here](http://www.rabbitmq.com/install-debian.html).
+>>>>>>> develop
 
-- Run unit tests
-
+If there are any missing dependencies, this might help:
 ```
-cosmo-manager$ mvn test -f travis-pom.xml
-```
-    
-- Run integration test
-
-```
-cosmo-manager        $ cd vagrant
-cosmo-manager/vagrant$ python2.7 test/dsl_test.py
+apt-get install build-essential libncurses5-dev openssl libssl-dev fop xsltproc unixodbc-dev
 ```
 
-- Open a new pull request with the changes.
+### Riemann ###
+deb file can be downloaded from: http://riemann.io/.
+
+And then:
+```
+sudo dpkg -i <riemann_deb_file>
+```
+
+### Elasticsearch ###
+deb file can be downloaded from: http://www.elasticsearch.org/download
+e.g.:
+`wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb`
+`sudo dpkg -i elasticsearch-1.0.1.deb`
+
+Path variable must include elasticsearch's bin directory, e.g.:
+`export PATH=$PATH:/usr/share/elasticsearch/bin`
+
+You might need to set write permissions for elasticsearch's data folder:
+`sudo mkdir -p /usr/share/elasticsearch/data`
+`sudo chmod 777 /usr/share/elasticsearch/data`
+
+
+## Lets Get It Working! ##
+
+So, after we have all the requirements installed, its time to checkout Cloudify's manager source code and install each of its components.
+
+We'll go through the following steps:
+
+
+* Source code checkout.
+* Install `workflow-service` project dependencies.
+* Install `rest-service` project dependencies.
+* Install `tests` project dependencies.
+* Run a sample test.
+
+
+### Source Code Checkout ###
+
+Clone this repository:
+```
+mkdir -p ~/dev/cloudify
+cd ~/dev/cloudify
+git clone https://github.com/cloudify-cosmo/cloudify-manager
+cd cloudify-manager
+git checkout develop
+```
+
+### Install workflow-service Project Dependencies ###
+
+Workflow service is a Sinatra Ruby project which runs on Ruby 2.1.0.
+We use `bundler` for installing its dependencies:
+```
+# in cloudify-manager folder
+cd workflow-service
+bundle install
+```
+
+## Install rest-service Project Dependencies ##
+
+First install dependencies for compiling with Python
+```
+# sudo apt-get install python-dev -y
+```
+
+
+This project contains Cloudify's manager REST service.
+In order to install its dependencies run:
+```
+# in cloudify-manager folder
+cd rest-service
+python setup.py install
+```
+
+## Install tests Project Dependencies ##
+
+This project is used for running integration tests which use mock Cloudify plugins and mainly used for
+testing Cloudify's manager functionality and workflows behavior.
+
+In order to install its dependencies run:
+```
+# in cloudify-manager folder
+cd tests
+python setup.py install
+
+# install nose tests
+pip install nose
+```
+
+## Running Tests ##
+
+A few words about the testing framework.
+When launching a test, A Cloudify environment will be created which consists of:
+
+1. RabbitMQ Server (should be manually started).
+2. Riemann Server (Riemann binary path should be available in `path` environment variable).
+3. Manager's REST Service.
+4. Workflow Engine Service.
+5. Celery Worker (In tests, all plugins will run on manager's Celery Worker).
+
+The environment will be created once per Python package (different tests in the same Python package will share the same environment - we make sure to clean whatever's needed after each test).
+
+Now that we're set, lets run some basic integration tests (goodluck):
+```
+# in cloudify-manager folder
+cd tests
+nosetests workflow_tests/test_workflow.py
+```
+
+Hopefully, the tests should pass :-)

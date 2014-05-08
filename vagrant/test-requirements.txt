@@ -1,1 +1,0 @@
-https://github.com/CloudifySource/cosmo-fabric-runner/archive/0.1.0.zip

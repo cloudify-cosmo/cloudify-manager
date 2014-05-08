@@ -1,7 +1,0 @@
-define global_workflow
-    log message: 'processing nodes: ${plan.nodes}'
-    iterator on: '$plan.nodes', to_f: 'node'
-        log message: 'executing init workflow for node: ${f:node}'
-        set 'v:init': "$f:node.workflows.init"
-        init
-        init

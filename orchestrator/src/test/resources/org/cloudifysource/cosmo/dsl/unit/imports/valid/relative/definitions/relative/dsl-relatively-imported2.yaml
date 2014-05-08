@@ -1,8 +1,0 @@
-imports:
-    - "/relative/dsl-relatively-imported3.yaml"
-    - "/dsl-relatively-imported0.yaml"
-types:
-    type_b:
-        derived_from: "type_a"
-        properties:
-            property_b: ""

@@ -1,0 +1,9 @@
+
+imports:
+    - "cloudify.types"
+
+plugins:
+    vagrant_host_provisioner:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "cloudify/plugins/vagrant-host-plugin.zip"

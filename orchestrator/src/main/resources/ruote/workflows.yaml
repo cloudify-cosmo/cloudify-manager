@@ -1,3 +1,0 @@
-execute_operation: "ruote/pdefs/execute_operation.radial"
-reload_riemann_config: "ruote/pdefs/reload_riemann_config.radial"
-execute_relationship_workflow: "ruote/pdefs/execute_relationship_workflow.radial"
