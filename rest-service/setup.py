@@ -17,15 +17,15 @@ __author__ = 'dank'
 
 from setuptools import setup
 
-DSL_PARSER_VERSION = '3.0'
-DSL_PARSER_BRANCH = 'develop'
+DSL_PARSER_VERSION = '3.0b1'
+DSL_PARSER_BRANCH = 'master'
 DSL_PARSER = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/tarball/{'\
              '0}#egg=cloudify-dsl-parser-{1}'.format(
                  DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
 
 setup(
     name='cloudify-rest-service',
-    version='3.0',
+    version='3.0b1',
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
     packages=['manager_rest'],

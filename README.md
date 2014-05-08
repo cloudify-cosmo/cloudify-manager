@@ -85,16 +85,6 @@ source <env_folder>/bin/activate
 - Install Ruby 2.1.0 using rvm:
 
 ```
-<<<<<<< HEAD
-vagrant@cosmo-manager:~/cosmo-work$ export cosmo_version=0.1-RELEASE
-vagrant@cosmo-manager:~/cosmo-work$ wget -O ~/cosmo-work/cosmo.jar https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/.m2/repository/org/cloudifysource/cosmo/orchestrator/${cosmo_version}/orchestrator-${cosmo_version}-all.jar
-```
-
-* To upgrade to the latest development code use `cosmo_vesrsion=${version}-SNAPHOT`.
-* To upgrade to a new release use `cosmo_version=${version}-RELEALSE`.
-
-### Upgrade Cosmo from code ###
-=======
 # install (this might take some time)
 rvm install ruby-2.1.0
 
@@ -107,7 +97,6 @@ gem install bundler
 
 ### RabbitMQ ###
 Installation instructions for Ubuntu can be found [here](http://www.rabbitmq.com/install-debian.html).
->>>>>>> develop
 
 If there are any missing dependencies, this might help:
 ```

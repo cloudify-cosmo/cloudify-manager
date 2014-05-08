@@ -9,11 +9,11 @@ plugins:
     nova_plugin:
         derived_from: cloudify.plugins.manager_plugin
         properties:
-            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/develop.zip
+            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/master.zip
     neutron_plugin:
         derived_from: cloudify.plugins.manager_plugin
         properties:
-            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/develop.zip
+            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/master.zip
 
 
 types:
@@ -116,6 +116,6 @@ relationships:
 
     cloudify.openstack.server_connected_to_port:
         derived_from: cloudify.relationships.connected_to
-        
+
     cloudify.openstack.floating_ip_connected_to_port:
         derived_from: cloudify.relationships.connected_to
