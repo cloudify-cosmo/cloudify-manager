@@ -8,7 +8,7 @@ plugins:
     bash_runner:
         derived_from: cloudify.plugins.agent_plugin
         properties:
-            url: https://github.com/cloudify-cosmo/cloudify-bash-plugin/archive/master.zip
+            url: https://github.com/cloudify-cosmo/cloudify-bash-plugin/archive/1.0b1.zip
 
 types:
 

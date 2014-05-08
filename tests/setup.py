@@ -18,13 +18,13 @@ __author__ = "idanmo"
 from setuptools import setup
 
 REST_CLIENT_VERSION = '3.0b1'
-REST_CLIENT_BRANCH = 'master'
+REST_CLIENT_BRANCH = '3.0b1'
 REST_CLIENT = 'https://github.com/cloudify-cosmo/cloudify-rest-client' \
               '/tarball/{0}#egg=cloudify-rest-client-{1}'.format(
                   REST_CLIENT_BRANCH, REST_CLIENT_VERSION)
 
 PLUGINS_COMMON_VERSION = "3.0b1"
-PLUGINS_COMMON_BRANCH = "master"
+PLUGINS_COMMON_BRANCH = "3.0b1"
 PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
                  "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
                      PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)

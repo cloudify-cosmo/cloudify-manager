@@ -19,7 +19,7 @@ from setuptools import setup
 
 
 PLUGINS_COMMON_VERSION = "3.0b1"
-PLUGINS_COMMON_BRANCH = "master"
+PLUGINS_COMMON_BRANCH = "3.0b1"
 PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
                  "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
                      PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)

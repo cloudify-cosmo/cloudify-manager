@@ -9,11 +9,11 @@ plugins:
     nova_plugin:
         derived_from: cloudify.plugins.manager_plugin
         properties:
-            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/master.zip
+            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/1.0b1.zip
     neutron_plugin:
         derived_from: cloudify.plugins.manager_plugin
         properties:
-            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/master.zip
+            url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/1.0b1.zip
 
 
 types:

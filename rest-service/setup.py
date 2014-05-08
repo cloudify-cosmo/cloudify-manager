@@ -18,7 +18,7 @@ __author__ = 'dank'
 from setuptools import setup
 
 DSL_PARSER_VERSION = '3.0b1'
-DSL_PARSER_BRANCH = 'master'
+DSL_PARSER_BRANCH = '3.0b1'
 DSL_PARSER = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/tarball/{'\
              '0}#egg=cloudify-dsl-parser-{1}'.format(
                  DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
