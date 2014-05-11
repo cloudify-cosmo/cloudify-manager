@@ -17,8 +17,8 @@ __author__ = 'idanmo'
 
 from setuptools import setup
 
-PLUGINS_COMMON_VERSION = "3.0b1"
-PLUGINS_COMMON_BRANCH = "3.0b1"
+PLUGINS_COMMON_VERSION = "3.0"
+PLUGINS_COMMON_BRANCH = "3.0"
 PLUGINS_COMMON = "https://github.com/cloudify-cosmo" \
                  "/cloudify-plugins-common/tarball/{0}" \
     .format(PLUGINS_COMMON_BRANCH)
