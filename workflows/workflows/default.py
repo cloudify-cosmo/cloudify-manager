@@ -8,13 +8,16 @@ from cloudify.workflows.tasks_graph import TaskDependencyGraph
 def install(ctx, **kwargs):
 
     graph = TaskDependencyGraph(ctx)
+    node_sequences = {node.id: graph.sequence() for node in ctx.nodes}
+    node_set_state_creating_tasks = {node.id: node.set_state('creating')
+                                     for node in ctx.nodes}
 
+    # Create node linear task sequences
     for node in ctx.nodes:
-
-        sequence = graph.sequence()
+        sequence = node_sequences[node.id]
         sequence.add(
             node.set_state('initializing'),
-            node.set_state('creating'),
+            node_set_state_creating_tasks[node.id],
             node.send_event('Creating node'),
             node.execute_operation('cloudify.interfaces.lifecycle.create'),
             node.set_state('created'),
@@ -28,6 +31,14 @@ def install(ctx, **kwargs):
         if _is_host_node(node):
             _host_post_start(node, sequence)
         sequence.add(node.set_state('started'))
+
+    # Create task dependencies based on node relationships
+    for node in ctx.nodes:
+        for relationship in node.relationships:
+            target_node_sequence = node_sequences[relationship.target_id]
+            node_set_state_create_task = node_set_state_creating_tasks[node.id]
+            graph.add_dependency(node_set_state_create_task,
+                                 target_node_sequence.last_task)
 
     graph.execute()
 
