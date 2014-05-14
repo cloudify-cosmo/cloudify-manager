@@ -500,8 +500,6 @@ class DeploymentsIdNodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=str,
-                                       default='false', location='args')
         self._args_parser.add_argument('state', type=str,
                                        default='false', location='args')
 
@@ -526,8 +524,6 @@ class DeploymentsIdNodes(Resource):
         Returns an object containing nodes associated with this deployment.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = verify_and_convert_bool(
-            'reachable', args['reachable'])
         get_state = verify_and_convert_bool(
             'state', args['state'])
 
@@ -540,11 +536,9 @@ class DeploymentsIdNodes(Resource):
             node_result = responses.DeploymentNode(id=node_id,
                                                    state=None,
                                                    state_version=None,
-                                                   reachable=None,
                                                    runtime_info=None)
-            if get_reachable_state or get_state:
+            if get_state:
                 node = get_storage_manager().get_node(node_id)
-                node_result.reachable = node.reachable
                 node_result.state = node.state
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
@@ -675,8 +669,6 @@ class NodesId(Resource):
         self._args_parser = reqparse.RequestParser()
         self._args_parser.add_argument('state', type=str,
                                        default='false', location='args')
-        self._args_parser.add_argument('reachable', type=str,
-                                       default='false', location='args')
         self._args_parser.add_argument('runtime', type=str,
                                        default='true', location='args')
 
@@ -711,30 +703,25 @@ class NodesId(Resource):
     @exceptions_handled
     def get(self, node_id):
         """
-        Gets node runtime or reachable state.
+        Gets node runtime or state.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = verify_and_convert_bool(
-            'reachable', args['reachable'])
         get_runtime_info = verify_and_convert_bool(
             'runtime', args['runtime'])
         get_state = verify_and_convert_bool('state', args['state'])
 
-        reachable_state = None
         state = None
         runtime_info = None
         state_version = None
 
-        if get_runtime_info or get_reachable_state or get_state:
+        if get_runtime_info or get_state:
             node = get_storage_manager().get_node(node_id)
             runtime_info = node.runtime_info
             state_version = node.state_version
-            reachable_state = node.reachable
             state = node.state
 
         return responses.DeploymentNode(id=node_id,
                                         state=state,
-                                        reachable=reachable_state,
                                         runtime_info=runtime_info,
                                         state_version=state_version)
 
@@ -763,7 +750,6 @@ class NodesId(Resource):
                                .format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json,
-                                     reachable=None,
                                      state=None, state_version=None)
         node.state_version = get_storage_manager().put_node(node_id, node)
         return responses.DeploymentNode(**node.to_dict()), 201
@@ -826,7 +812,7 @@ class NodesId(Resource):
 
         node = models.DeploymentNode(
             id=node_id, runtime_info=request.json['runtime_info'],
-            state_version=request.json['state_version'], reachable=None,
+            state_version=request.json['state_version'],
             state=request.json['state'] if 'state' in request.json else None)
         get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(

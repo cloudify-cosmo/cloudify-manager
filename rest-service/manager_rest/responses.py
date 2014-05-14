@@ -132,14 +132,12 @@ class DeploymentNode(object):
         'id': fields.String,
         'runtimeInfo': fields.Raw(attribute='runtime_info'),
         'stateVersion': fields.Raw(attribute='state_version'),
-        'reachable': fields.Boolean,
         'state': fields.String
     }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.runtime_info = kwargs['runtime_info']
-        self.reachable = kwargs['reachable']
         self.state_version = kwargs['state_version']
         self.state = kwargs['state']
 

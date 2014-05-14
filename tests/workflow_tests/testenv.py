@@ -1182,10 +1182,10 @@ def get_deployment_nodes(deployment_id, get_state=False):
     return deployment_nodes
 
 
-def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
+def get_node_state(node_id, get_state=False, get_runtime_state=True):
     client = CosmoManagerRestClient('localhost')
     state = client.get_node_state(node_id,
-                                  get_state=get_reachable_state,
+                                  get_state=get_state,
                                   get_runtime_properties=get_runtime_state)
     return state['runtimeInfo']
 

@@ -233,8 +233,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
         resource_path = '/deployments/{0}/nodes'\
                         .format(deployment_id)
-        nodes = self.get(resource_path,
-                         query_params={'reachable': 'False'}).json
+        nodes = self.get(resource_path).json
         self.assertEquals(deployment_id, nodes['deploymentId'])
         self.assertEquals(2, len(nodes['nodes']))
 
