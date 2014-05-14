@@ -45,7 +45,7 @@ class BasicWorkflowsTest(TestCase):
         result = self.send_task(get_machines)
         machines = result.get(timeout=10)
 
-        self.assertEquals(5, len(machines))
+        self.assertEquals(500, len(machines))
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")

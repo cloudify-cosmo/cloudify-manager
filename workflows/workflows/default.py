@@ -36,17 +36,19 @@ def _is_host_node(node):
     return 'host' in node.type
 
 
-def _wait_for_host_to_start(host_node, sequence):
+def _wait_for_host_to_start(host_node):
         task = host_node.execute_operation(
             'cloudify.interfaces.host.get_state')
-        def get_node_state_handler(task):
-            return task.async_result.get() is False
+
+        # handler for retrying if get_state returns False
+        def get_node_state_handler(tsk):
+            return tsk.async_result.get() is False
         task.on_success = get_node_state_handler
-        sequence.add(task)
+        return task
 
 
 def _host_post_start(host_node, sequence):
-    _wait_for_host_to_start(host_node, sequence)
+    sequence.add(_wait_for_host_to_start(host_node))
     if host_node.properties['install_agent'] is True:
         sequence.add(
             host_node.send_event('Installing worker'),
