@@ -43,6 +43,7 @@ install:
    - rm -r package
 
    - virtualenv ~/env
+   - dpkg -L python-dbus
    - sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
    - sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
    - source ~/env/bin/activate
