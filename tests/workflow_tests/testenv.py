@@ -884,6 +884,10 @@ class TestEnvironment(object):
             # cloudify-manager/workflows
             workflow_plugin_path = os.path.join(workflow_plugin_path,
                                                 'workflows')
+
+            # TODO: change this
+            workflow_plugin_path = '/home/ran/dev/cosmo/venv/lib/python2.7/site-packages/cloudify_workflows-3.0-py2.7.egg/workflows/'
+
             self._celery_workflows_worker_process = \
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir, self._plugins_tempdir, workflow_plugin_path,
@@ -1182,19 +1186,11 @@ def get_deployment_nodes(deployment_id, get_state=False):
     return deployment_nodes
 
 
-def get_node_state(node_id, get_state=False, get_runtime_state=True):
+def get_node_instance(node_id, get_state_and_runtime_properties=True):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id,
-                                  get_state=get_state,
-                                  get_runtime_properties=get_runtime_state)
-    return state['runtimeInfo']
-
-
-def get_node_instance(node_id):
-    client = CosmoManagerRestClient('localhost')
-    node_instance = client.get_node_state(node_id,
-                                          get_state=True,
-                                          get_runtime_properties=True)
+    node_instance = client.get_node_instance(
+        node_id,
+        get_state_and_runtime_properties=get_state_and_runtime_properties)
     return node_instance
 
 
@@ -1210,8 +1206,8 @@ def get_provider_context():
 
 def is_node_started(node_id):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id, get_state=True,
-                                  get_runtime_properties=False)
+    state = client.get_node_instance(
+        node_id, get_state_and_runtime_properties=True)
     return state['state'] == 'started'
 
 

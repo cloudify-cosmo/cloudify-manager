@@ -44,21 +44,12 @@ class NodesTest(BaseServerTestCase):
         # just a bunch of bad calls to patch node
         response = self.patch('/nodes/1234', 'not a dictionary')
         self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'a dict': 'without runtime_info'
-                                                        ' key'})
-        self.assertEqual(400, response.status_code)
         response = self.patch('/nodes/1234', {'a dict': 'without '
-                                                        'state_version key'})
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'runtime_info': {},
-                                              'state_version': 0,
-                                              'extra_prop': 'is bad'})
+                                                        'state_version'
+                                                        ' key'})
         self.assertEqual(400, response.status_code)
         response = self.patch('/nodes/1234', {'runtime_info': {},
                                               'state_version': 'not an int'})
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'runtime_info': 'not a dict',
-                                              'state_version': 0})
         self.assertEqual(400, response.status_code)
 
     def test_patch_node(self):

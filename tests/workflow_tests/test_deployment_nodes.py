@@ -33,7 +33,8 @@ class TestDeploymentNodes(TestCase):
 
         def assert_node_state(node_id_infix):
             self.assertTrue(any(map(
-                lambda n: node_id_infix in n.id and n.reachable, nodes.nodes
+                lambda n: node_id_infix in n.id and n.state == 'started',
+                nodes.nodes
             )), 'Failed finding node {0} state'.format(node_id_infix))
 
         assert_node_state('containing_node')
