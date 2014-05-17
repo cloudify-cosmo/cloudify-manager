@@ -1194,6 +1194,16 @@ def get_node_instance(node_id, get_state_and_runtime_properties=True):
     return node_instance
 
 
+def update_node_instance(node_id, state_version, runtime_properties=None,
+                         state=None):
+    client = CosmoManagerRestClient('localhost')
+    return client.update_node_instance(
+        node_id,
+        state_version=state_version,
+        runtime_properties=runtime_properties,
+        state=state)
+
+
 def post_provider_context(name, provider_context):
     client = CosmoManagerRestClient('localhost')
     return client.post_provider_context(name, provider_context)
