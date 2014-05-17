@@ -47,11 +47,13 @@ install:
    - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
    - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
    - cd rest-service && pip install --process-dependency-links . && cd ..
+   - cd workflows && pip install --process-dependency-links . && cd ..
    - cd tests && pip install --process-dependency-links . && cd ..
 
 script:
    - flake8 plugins/agent-installer/
    - flake8 plugins/plugin-installer/
+   - flake8 workflows/
    - flake8 rest-service/
    - flake8 tests/
 

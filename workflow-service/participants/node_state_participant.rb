@@ -79,7 +79,7 @@ class NodeStateParticipant < Ruote::Participant
 
       # TODO runtime-model: handle HTTP status codes and connection errors
 
-      url = URI::escape("#{base_uri}/nodes/#{node_id}?reachable=true&runtime=#{wait_until_matches and not current_node.nil?}")
+      url = URI::escape("#{base_uri}/nodes/#{node_id}?runtime=#{wait_until_matches and not current_node.nil?}")
       response = RestClient.get(url)
       node_state = JSON.parse(response.to_str)
 

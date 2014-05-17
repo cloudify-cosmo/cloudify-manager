@@ -18,7 +18,8 @@ __author__ = 'idanmo'
 import os
 import cloudify
 from functools import wraps
-from worker_installer.utils import FabricRunner, is_deployment_worker
+from worker_installer.utils import (FabricRunner,
+                                    is_on_management_worker)
 
 
 def _find_type_in_kwargs(cls, all_args):
@@ -34,7 +35,7 @@ def _find_type_in_kwargs(cls, all_args):
 
 def init_worker_installer(func):
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(workflows_worker=False, *args, **kwargs):
         ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
@@ -43,6 +44,7 @@ def init_worker_installer(func):
             worker_config = ctx.properties['worker_config']
         else:
             worker_config = {}
+        worker_config['workflows_worker'] = workflows_worker
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
         kwargs['runner'] = FabricRunner(ctx, worker_config)
@@ -61,7 +63,7 @@ def get_machine_ip(ctx):
 
 
 def prepare_configuration(ctx, worker_config):
-    if is_deployment_worker(ctx):
+    if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
         # (not specific node)
         # use the same user we used when bootstrapping
@@ -70,7 +72,9 @@ def prepare_configuration(ctx, worker_config):
         else:
             raise RuntimeError('Cannot determine user for deployment user:'
                                'MANAGEMENT_USER is not set')
-        worker_config['name'] = ctx.deployment_id
+        suffix = '_workflows' if worker_config['workflows_worker'] else ''
+        name = '{0}{1}'.format(ctx.deployment_id, suffix)
+        worker_config['name'] = name
     else:
         worker_config['host'] = get_machine_ip(ctx)
         if 'key' not in worker_config:
