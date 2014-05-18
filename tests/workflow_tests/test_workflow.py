@@ -180,7 +180,7 @@ class BasicWorkflowsTest(TestCase):
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
         # expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
-        self.assertEquals(4, len(hits))
+        self.assertEquals(5, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")

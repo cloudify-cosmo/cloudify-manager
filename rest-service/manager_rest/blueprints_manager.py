@@ -190,14 +190,45 @@ class BlueprintsManager(object):
 
         self.sm.put_deployment(deployment_id, new_deployment)
 
+        self._create_deployment_nodes(blueprint_id, deployment_id, plan)
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
-            node = models.DeploymentNode(id=node_id, reachable=None,
-                                         runtime_info=None,
-                                         state_version=None)
-            self.sm.put_node(node_id, node)
+            node = models.DeploymentNodeInstance(id=node_id, reachable=None,
+                                                 runtime_info=None,
+                                                 state_version=None)
+            self.sm.put_node_instance(node_id, node)
 
         return new_deployment
+
+    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
+        for raw_node in plan['nodes']:
+            self.sm.put_node(models.DeploymentNode(
+                id=raw_node['name'],
+                deployment_id=deployment_id,
+                blueprint_id=blueprint_id,
+                type=raw_node['type'],
+                type_hierarchy=raw_node['type_hierarchy'],
+                number_of_instances=raw_node['instances']['deploy'],
+                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
+                properties=raw_node['properties'],
+                operations=raw_node['operations'],
+                plugins=raw_node['plugins'],
+                relationships=self._prepare_node_relationships(raw_node)
+            ))
+
+    @staticmethod
+    def _prepare_node_relationships(raw_node):
+        if 'relationship' not in raw_node:
+            return None
+        prepared_relationships = []
+        for raw_relationship in raw_node['relationships']:
+            relationship = {
+                'target_node_id': raw_relationship['target_id'],
+                'type': raw_relationship['type'],
+                'properties': raw_relationship['properties']
+            }
+            prepared_relationships.append(relationship)
+        return prepared_relationships
 
 
 def teardown_blueprints_manager(exception):

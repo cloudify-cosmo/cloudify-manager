@@ -21,12 +21,14 @@ from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
                                  DeploymentNode,
+                                 DeploymentNodeInstance,
                                  ProviderContext)
 from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
 NODES = 'nodes'
+NODE_INSTANCES = 'node_instances'
 BLUEPRINTS = 'blueprints'
 DEPLOYMENTS = 'deployments'
 EXECUTIONS = 'executions'
@@ -47,6 +49,7 @@ class FileStorageManager(object):
     def _init_file(self):
         data = {
             NODES: {},
+            NODE_INSTANCES: {},
             BLUEPRINTS: {},
             DEPLOYMENTS: {},
             EXECUTIONS: {},
@@ -62,6 +65,9 @@ class FileStorageManager(object):
             deserialized_data = dict()
             deserialized_data[NODES] = \
                 {key: DeploymentNode(**val) for key, val in data[NODES]
+                    .iteritems()}
+            deserialized_data[NODE_INSTANCES] = \
+                {key: DeploymentNodeInstance(**val) for key, val in data[NODE_INSTANCES]
                     .iteritems()}
             deserialized_data[BLUEPRINTS] = \
                 {key: BlueprintState(**val) for key, val in data[BLUEPRINTS]
@@ -82,7 +88,9 @@ class FileStorageManager(object):
         with open(self._storage_path, 'w') as f:
             serialized_data = dict()
             serialized_data[NODES] = {key: val.to_dict() for key, val in
-                                      data[NODES].iteritems()}
+                                               data[NODES].iteritems()}
+            serialized_data[NODE_INSTANCES] = {key: val.to_dict() for key, val in
+                                      data[NODE_INSTANCES].iteritems()}
             serialized_data[BLUEPRINTS] =\
                 {key: val.to_dict() for key, val in data[BLUEPRINTS]
                     .iteritems()}
@@ -97,19 +105,20 @@ class FileStorageManager(object):
                     .iteritems()}
             json.dump(serialized_data, f)
 
-    def nodes_list(self):
+    def node_instances_list(self):
         data = self._load_data()
-        return data[NODES].values()
+        return data[NODE_INSTANCES].values()
 
-    def get_node(self, node_id):
+    def get_node_instance(self, node_id):
         data = self._load_data()
-        if node_id in data[NODES]:
-            return data[NODES][node_id]
+        if node_id in data[NODE_INSTANCES]:
+            return data[NODE_INSTANCES][node_id]
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def put_node(self, node_id, node):
+    def put_node(self, node):
         data = self._load_data()
+        node_id = '{0}_{1}'.format(node.deployment_id, node.id)
         if str(node_id) in data[NODES]:
             raise manager_exceptions.ConflictError(
                 'Node {0} already exists'.format(node_id))
@@ -117,21 +126,30 @@ class FileStorageManager(object):
         self._dump_data(data)
         return 1
 
-    def update_node(self, node_id, node):
+    def put_node_instance(self, node_id, node):
         data = self._load_data()
-        if node_id not in data[NODES]:
+        if str(node_id) in data[NODE_INSTANCES]:
+            raise manager_exceptions.ConflictError(
+                'Node {0} already exists'.format(node_id))
+        data[NODE_INSTANCES][str(node_id)] = node
+        self._dump_data(data)
+        return 1
+
+    def update_node_instance(self, node_id, node):
+        data = self._load_data()
+        if node_id not in data[NODE_INSTANCES]:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
 
-        prev_rt_info = DeploymentNode(**data[NODES][node_id].to_dict())\
+        prev_rt_info = DeploymentNodeInstance(**data[NODE_INSTANCES][node_id].to_dict())\
             .runtime_info
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_info.items())
         # TODO: merge reachable field?
-        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
+        node = DeploymentNodeInstance(id=node_id, runtime_info=merged_rt_info,
                               reachable=None,
                               state_version=node.state_version+1)
-        data[NODES][node_id] = node
+        data[NODE_INSTANCES][node_id] = node
         self._dump_data(data)
 
     def blueprints_list(self):

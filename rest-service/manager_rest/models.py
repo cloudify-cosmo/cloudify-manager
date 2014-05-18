@@ -74,6 +74,33 @@ class Execution(SerializableObject):
 
 
 class DeploymentNode(SerializableObject):
+    """
+    Represents an instance of a deployment node.
+    """
+
+    fields = {
+        'id', 'deployment_id', 'blueprint_id', 'type', 'type_hierarchy',
+        'number_of_instances', 'host_id', 'properties',
+        'operations', 'plugins'
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.deployment_id = kwargs['deployment_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.type = kwargs['type']
+        self.type_hierarchy = kwargs['type_hierarchy']
+        self.number_of_instances = kwargs['number_of_instances']
+        self.host_id = kwargs['host_id']
+        self.properties = kwargs['properties']
+        self.operations = kwargs['operations']
+        self.plugins = kwargs['plugins']
+
+
+class DeploymentNodeInstance(SerializableObject):
+    """
+    Represents a node of a deployment.
+    """
 
     fields = {'id', 'runtime_info', 'reachable', 'state_version'}
 

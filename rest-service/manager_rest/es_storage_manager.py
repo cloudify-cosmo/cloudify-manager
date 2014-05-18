@@ -21,11 +21,12 @@ from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
-                                 DeploymentNode,
+                                 DeploymentNodeInstance,
                                  ProviderContext)
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 NODE_TYPE = 'node'
+NODE_INSTANCE_TYPE = 'node_instance'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
 EXECUTION_TYPE = 'execution'
@@ -128,15 +129,15 @@ class ESStorageManager(object):
             }
         }
 
-    def nodes_list(self):
+    def node_instances_list(self):
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
-                                                   doc_type=NODE_TYPE,
+                                                   doc_type=NODE_INSTANCE_TYPE,
                                                    size=DEFAULT_SEARCH_SIZE)
         docs_with_versions = \
             map(lambda hit: (hit['_source'], hit['_version']),
                 search_result['hits']['hits'])
         return map(
-            lambda doc_with_version: DeploymentNode(
+            lambda doc_with_version: DeploymentNodeInstance(
                 state_version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
@@ -159,9 +160,10 @@ class ESStorageManager(object):
                                self._build_field_value_filter(
                                    'deployment_id', deployment_id))
 
-    def get_node(self, node_id):
-        doc = self._get_doc(NODE_TYPE, node_id)
-        node = DeploymentNode(state_version=doc['_version'], **doc['_source'])
+    def get_node_instance(self, node_instance_id):
+        doc = self._get_doc(NODE_INSTANCE_TYPE, node_instance_id)
+        node = DeploymentNodeInstance(state_version=doc['_version'],
+                                      **doc['_source'])
         return node
 
     def get_blueprint(self, blueprint_id, fields=None):
@@ -188,30 +190,37 @@ class ESStorageManager(object):
         self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
                                     execution.to_dict())
 
-    def put_node(self, node_id, node):
+    def put_node(self, node):
+        node_id = '{0}_{1}'.format(node.deployment_id, node.id)
         doc_data = node.to_dict()
-        del(doc_data['state_version'])
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
+
+    def put_node_instance(self, node_instance_id, node_instance):
+        doc_data = node_instance.to_dict()
+        del(doc_data['state_version'])
+        self._put_doc_if_not_exists(NODE_INSTANCE_TYPE,
+                                    str(node_instance_id),
+                                    doc_data)
         return 1
 
     def delete_blueprint(self, blueprint_id):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
 
-    def update_node(self, node_id, node):
+    def update_node_instance(self, node_instance_id, node):
         update_doc_data = node.to_dict()
         del(update_doc_data['state_version'])
         update_doc = {'doc': update_doc_data}
 
         try:
             self._get_es_conn().update(index=STORAGE_INDEX_NAME,
-                                       doc_type=NODE_TYPE,
-                                       id=str(node_id),
+                                       doc_type=NODE_INSTANCE_TYPE,
+                                       id=str(node_instance_id),
                                        body=update_doc,
                                        version=node.state_version)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node_id))
+                "Node {0} not found".format(node_instance_id))
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 'Node update conflict: mismatching versions')

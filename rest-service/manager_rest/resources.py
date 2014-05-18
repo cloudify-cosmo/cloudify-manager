@@ -672,7 +672,7 @@ class NodesId(Resource):
         state_version = None
 
         if get_runtime_info:
-            node = get_storage_manager().get_node(node_id)
+            node = get_storage_manager().get_node_instance(node_id)
             runtime_info = node.runtime_info
             state_version = node.state_version
 
@@ -711,9 +711,10 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
+        node = models.DeploymentNodeInstance(id=node_id, runtime_info=request.json,
                                      reachable=None, state_version=None)
-        node.state_version = get_storage_manager().put_node(node_id, node)
+        node.state_version = get_storage_manager().put_node_instance(node_id,
+                                                                     node)
         return responses.DeploymentNode(state=None, **node.to_dict()), 201
 
     @swagger.operation(
@@ -771,13 +772,13 @@ class NodesId(Resource):
                               request.json['state_version'].__class__.__name__)
             abort(400, message=message)
 
-        node = models.DeploymentNode(
+        node = models.DeploymentNodeInstance(
             id=node_id, runtime_info=request.json['runtime_info'],
             state_version=request.json['state_version'], reachable=None)
-        get_storage_manager().update_node(node_id, node)
+        get_storage_manager().update_node_instance(node_id, node)
         return responses.DeploymentNode(
             state=None,
-            **get_storage_manager().get_node(node_id).to_dict())
+            **get_storage_manager().get_node_instance(node_id).to_dict())
 
 
 class DeploymentsIdExecutions(Resource):

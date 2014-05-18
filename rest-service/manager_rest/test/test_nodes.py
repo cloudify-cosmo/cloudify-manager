@@ -89,18 +89,18 @@ class NodesTest(BaseServerTestCase):
     def test_patch_node_conflict(self):
         import manager_rest.storage_manager as sm
         from manager_rest import manager_exceptions
-        prev_update_node_func = sm.instance().update_node
+        prev_update_node_func = sm.instance().update_node_instance
         try:
             def conflict_update_node_func(node_id, node):
                 raise manager_exceptions.ConflictError()
-            sm.instance().update_node = conflict_update_node_func
+            sm.instance().update_node_instance = conflict_update_node_func
             self.put('/nodes/1234', {'key': 'value'})
             response = self.patch('/nodes/1234', {'runtime_info': {'key': ' \
                                                                ''new_value'},
                                                   'state_version': 2})
             self.assertEqual(409, response.status_code)
         finally:
-            sm.instance().update_node = prev_update_node_func
+            sm.instance().update_node_instance = prev_update_node_func
 
     def test_patch_before_put(self):
         response = self.patch('/nodes/1234',

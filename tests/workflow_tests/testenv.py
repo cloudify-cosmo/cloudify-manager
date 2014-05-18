@@ -944,7 +944,7 @@ def publish_blueprint(dsl_path, blueprint_id=None):
 
 def deploy_application(dsl_path, timeout=240,
                        blueprint_id=None,
-                       deployment_id='deployment',
+                       deployment_id=None,
                        wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
@@ -952,7 +952,9 @@ def deploy_application(dsl_path, timeout=240,
     client = CosmoManagerRestClient('localhost')
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
-
+    if deployment_id is None:
+        import uuid
+        deployment_id = str(uuid.uuid4())
     deployment = client.create_deployment(blueprint_id, deployment_id)
     execution_id, error = client.execute_deployment(
         deployment.id,
