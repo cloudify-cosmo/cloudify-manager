@@ -49,8 +49,7 @@ class ExecutionsTest(TestCase):
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
         deployment, execution_id = deploy(dsl_path)
-        deployments_executions = get_deployment_executions(deployment.id,
-                                                           True)
+        deployments_executions = get_deployment_executions(deployment.id)
 
         self.assertEquals(1, len(deployments_executions))
         self.assertEquals(execution_id, deployments_executions[0].id)

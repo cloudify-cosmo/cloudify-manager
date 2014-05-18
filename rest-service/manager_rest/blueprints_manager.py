@@ -149,38 +149,7 @@ class BlueprintsManager(object):
             error='None')
 
         get_storage_manager().put_execution(new_execution.id, new_execution)
-
-        new_execution_state = models.ExecutionState(
-            id=new_execution.internal_workflow_id,
-            state=new_execution.status,
-            created=new_execution.created_at,
-            launched=new_execution.created_at,
-            error=new_execution.error)
-        get_storage_manager().put_execution_state(new_execution_state)
-
         return new_execution
-
-    def get_workflow_state(self, execution_id):
-        execution = self.get_execution(execution_id)
-
-        response = self.get_workflows_states_by_internal_workflows_ids(
-            [execution.internal_workflow_id])
-
-        if len(response) > 0:
-            execution.status = response[0]['state']
-            if execution.status == 'failed':
-                execution.error = response[0]['error']
-        else:
-            # workflow not found in workflow-service, return unknown values
-            execution.status, execution.error = None, None
-        return execution
-
-    def get_workflows_states_by_internal_workflows_ids(self,
-                                                       internal_wfs_ids):
-        return workflow_client().get_workflows_statuses(internal_wfs_ids)
-        # return [get_storage_manager().get_execution_state(
-        #         execution_internal_id).to_json() for execution_internal_id in
-        #         internal_wfs_ids]
 
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)

@@ -192,21 +192,3 @@ class ProviderContext(object):
     def __init__(self, **kwargs):
         self.context = kwargs['context']
         self.name = kwargs['name']
-
-
-class ExecutionState(object):
-
-    resource_fields = {
-        'id': fields.String,
-        'state': fields.String,
-        'created': fields.String,
-        'launched': fields.String,
-        'error': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.state = kwargs['state']
-        self.created = kwargs['created']
-        self.launched = kwargs['launched']
-        self.error = kwargs['error']

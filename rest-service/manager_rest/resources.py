@@ -134,8 +134,6 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/nodes')
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
-    api.add_resource(ExecutionIdState,
-                     '/executions/<string:execution_internal_id>/state')
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
@@ -454,7 +452,7 @@ class ExecutionsId(Resource):
         """
         Returns the execution state by its id.
         """
-        execution = get_blueprints_manager().get_workflow_state(execution_id)
+        execution = get_blueprints_manager().get_execution(execution_id)
         return responses.Execution(**execution.to_dict())
 
     @swagger.operation(
@@ -494,6 +492,43 @@ class ExecutionsId(Resource):
 
         if action == 'cancel':
             return get_blueprints_manager().cancel_workflow(execution_id), 201
+
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="updateExecutionStatus",
+        notes="Updates the execution's status",
+        parameters=[{'name': 'status',
+                     'description': "The execution's new status",
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'},
+                    {'name': 'error',
+                     'description': "An error message",
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    @exceptions_handled
+    def patch(self, execution_id):
+        """
+        Updates an execution's status
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'status' not in request_json:
+            abort(400, message="400: Missing 'status' in json request body")
+
+        get_storage_manager().update_execution_status(
+            execution_id, request_json['status'], request_json.get('error'))
+
+        return responses.Execution(**get_storage_manager().get_execution(
+            execution_id).to_dict())
 
 
 class DeploymentsIdNodes(Resource):
@@ -610,63 +645,6 @@ class DeploymentsId(Resource):
         blueprint_id = request.json['blueprintId']
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
-
-
-class ExecutionIdState(Resource):
-
-    @swagger.operation(
-        responseClass=responses.ExecutionState,
-        nickname="getExecutionState",
-        notes="Gets the execution's state",
-    )
-    @marshal_with(responses.ExecutionState.resource_fields)
-    @exceptions_handled
-    def get(self, execution_internal_id):
-        execution_state = get_storage_manager().get_execution_state(
-            execution_internal_id)
-        return responses.ExecutionState(**execution_state.to_dict())
-
-    @swagger.operation(
-        responseClass=responses.ExecutionState,
-        nickname="updateExecutionState",
-        notes="Updates the execution's state",
-        parameters=[{'name': 'state',
-                     'description': "The execution's new state",
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'},
-                    {'name': 'error',
-                     'description': "An error message",
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'}],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @marshal_with(responses.ExecutionState.resource_fields)
-    @exceptions_handled
-    def patch(self, execution_internal_id):
-        """
-        Updates a workflow's state
-        """
-        verify_json_content_type()
-        request_json = request.json
-        if 'state' not in request_json:
-            abort(400, message="400: Missing 'state' in json request body")
-
-        execution_state = get_storage_manager().get_execution_state(
-            execution_internal_id)
-
-        execution_state.state = request_json['state']
-        if 'error' in request_json:
-            execution_state.error = request_json['error']
-
-        get_storage_manager().update_execution_state(execution_state)
-
-        return responses.ExecutionState(**execution_state.to_dict())
 
 
 class NodesId(Resource):
@@ -837,8 +815,6 @@ class DeploymentsIdExecutions(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('statuses', type=str,
-                                       default='false', location='args')
 
         self._post_args_parser = reqparse.RequestParser()
         self._post_args_parser.add_argument('force', type=str,
@@ -847,34 +823,20 @@ class DeploymentsIdExecutions(Resource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
-        notes="Returns a list of executions related to the provided"
-              " deployment.",
-        parameters=[{'name': 'statuses',
-                     'description': 'Specifies whether to return '
-                                    'current statuses and errors data for '
-                                    "the deployment's executions",
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': False,
-                     'paramType': 'query'}]
+        notes="Returns a list of executions for the provided deployment."
     )
     @exceptions_handled
     def get(self, deployment_id):
         """
-        Returns a list of executions related to the provided deployment.
+        Returns a list of executions for the provided deployment.
         """
-        args = self._args_parser.parse_args()
-        get_executions_statuses = verify_and_convert_bool(
-            'statuses', args['statuses'])
 
         # simple call to verify deployment actually exists
         # if it doesnt, a 404 will be raised by the underlying storage
         # manager with the deployment relevant details
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
 
-        executions = self._get_executions(deployment_id,
-                                          get_executions_statuses)
+        executions = self._get_executions(deployment_id)
 
         return [marshal(execution, responses.Execution.resource_fields) for
                 execution in executions]
@@ -920,8 +882,7 @@ class DeploymentsIdExecutions(Resource):
 
         # validate no execution is currently in progress
         if not force:
-            executions = self._get_executions(deployment_id,
-                                              statuses=True)
+            executions = self._get_executions(deployment_id)
             running = [e.id for e in executions
                        if e.status not in ['failed', 'terminated']]
             if len(running) > 0:
@@ -936,34 +897,10 @@ class DeploymentsIdExecutions(Resource):
                                                               workflow_id)
         return responses.Execution(**execution.to_dict()), 201
 
-    def _get_executions(self, deployment_id, statuses=False):
-        executions = [responses.Execution(**execution.to_dict()) for
-                      execution in
-                      get_storage_manager().get_deployment_executions(
-                          deployment_id)]
-
-        if statuses:
-            statuses_response = get_blueprints_manager() \
-                .get_workflows_states_by_internal_workflows_ids(
-                    [execution.internal_workflow_id for execution
-                     in executions])
-
-            status_by_id = {status['id']: status for status in
-                            statuses_response}
-            for execution in executions:
-                if execution.internal_workflow_id in status_by_id:
-                    status = status_by_id[execution.internal_workflow_id]
-                    execution.status = status['state']
-                    execution.error = status['error']
-                else:
-                    # execution not found in workflow service, return unknown
-                    # values
-                    execution.status, execution.error = None, None
-        else:
-            # setting None values to dynamic fields which weren't requested
-            for execution in executions:
-                execution.status, execution.error = None, None
-        return executions
+    @staticmethod
+    def _get_executions(deployment_id):
+        return [responses.Execution(**execution.to_dict()) for execution in
+                get_storage_manager().get_deployment_executions(deployment_id)]
 
 
 class DeploymentsIdWorkflows(Resource):
