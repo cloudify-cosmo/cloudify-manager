@@ -15,21 +15,31 @@ def install(ctx, **kwargs):
     # Create node linear task sequences
     for node in ctx.nodes:
         sequence = node_sequences[node.id]
+
         sequence.add(
             node.set_state('initializing'),
             node_set_state_creating_tasks[node.id],
             node.send_event('Creating node'),
             node.execute_operation('cloudify.interfaces.lifecycle.create'),
-            node.set_state('created'),
+            node.set_state('created'))
+
+        sequence.add(*relationship_operations(
+            node, 'cloudify.interfaces.relationship_lifecycle'))
+
+        sequence.add(
             node.set_state('configuring'),
             node.send_event('Configuring node'),
             node.execute_operation('cloudify.interfaces.lifecycle.configure'),
-            node.set_state('configured'),
+            node.set_state('configured'))
+
+        sequence.add(
             node.set_state('starting'),
             node.send_event('Starting node'),
             node.execute_operation('cloudify.interfaces.lifecycle.start'))
+
         if _is_host_node(node):
-            _host_post_start(node, sequence)
+            sequence.add(*_host_post_start(node))
+
         sequence.add(node.set_state('started'))
 
     # Create task dependencies based on node relationships
@@ -41,6 +51,12 @@ def install(ctx, **kwargs):
                                  target_node_sequence.last_task)
 
     graph.execute()
+
+
+def relationship_operations(node, operation, graph):
+    for relationship in node.relationships:
+        relationship.execute_source_operation(operation)
+        relationship.execute_target_operation(operation)
 
 
 def _is_host_node(node):
@@ -58,22 +74,24 @@ def _wait_for_host_to_start(host_node):
         return task
 
 
-def _host_post_start(host_node, sequence):
-    sequence.add(_wait_for_host_to_start(host_node))
+def _host_post_start(host_node):
+    tasks = []
+    tasks.append(_wait_for_host_to_start(host_node))
     if host_node.properties['install_agent'] is True:
-        sequence.add(
+        tasks += [
             host_node.send_event('Installing worker'),
             host_node.execute_operation(
                 'cloudify.interfaces.worker_installer.install'),
             host_node.execute_operation(
                 'cloudify.interfaces.worker_installer.start'),
-            host_node.send_event('Installing plugin'))
+            host_node.send_event('Installing plugin')]
         for plugin in host_node.plugins_to_install:
-            sequence.add(
+            tasks += [
                 host_node.send_event('Installing plugin: {0}'
                                      .format(plugin['name'])),
                 host_node.execute_operation(
                     'cloudify.interfaces.plugin_installer.install',
-                    kwargs={'plugin': plugin}))
-        sequence.add(host_node.execute_operation(
+                    kwargs={'plugin': plugin})]
+        tasks.append(host_node.execute_operation(
             'cloudify.interfaces.worker_installer.restart'))
+    return tasks
