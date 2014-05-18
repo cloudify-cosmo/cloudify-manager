@@ -1030,6 +1030,16 @@ def delete_blueprint(blueprint_id):
     return client.delete_blueprint(blueprint_id)
 
 
+def get_deployment(deployment_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.get_deployment(deployment_id)
+
+
+def delete_deployment(deployment_id, ignore_live_nodes=False):
+    client = CosmoManagerRestClient('localhost')
+    return client.delete_deployment(deployment_id, ignore_live_nodes)
+
+
 def get_deployment_workflows(deployment_id):
     client = CosmoManagerRestClient('localhost')
     return client.list_workflows(deployment_id)

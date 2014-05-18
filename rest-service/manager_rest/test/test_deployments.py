@@ -226,6 +226,31 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(workflows['workflows'][1]['name'], 'uninstall')
         self.assertTrue('createdAt' in workflows['workflows'][1])
 
+    def test_delete_deployment(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+
+        # attempting to delete the deployment - should fail because there
+        # are live nodes for the deployment
+        delete_deployment_response = self.delete('/deployments/{0}'.format(
+            deployment_id))
+        self.assertEquals(400, delete_deployment_response.status_code)
+
+        # deleting the deployment - this time using the ignore_live_nodes
+        # parameter to force deletion
+        delete_deployment_response = self.delete(
+            '/deployments/{0}'.format(deployment_id),
+            query_params={'ignore_live_nodes': 'true'}).json
+        self.assertEquals(deployment_id, delete_deployment_response['id'])
+
+        # verifying deletion of deployment
+        resp = self.get('/deployments/{0}'.format(deployment_id))
+        self.assertEquals(404, resp.status_code)
+
+        # trying to delete a nonexistent deployment
+        resp = self.delete('/deployments/nonexistent-deployment')
+        self.assertEquals(404, resp.status_code)
+
     def test_get_nodes_of_deployment(self):
 
         (blueprint_id, deployment_id, blueprint_response,

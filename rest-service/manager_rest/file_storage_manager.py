@@ -212,14 +212,26 @@ class FileStorageManager(object):
         self._dump_data(data)
 
     def delete_blueprint(self, blueprint_id):
+        return self._delete_object(blueprint_id, BLUEPRINTS, 'Blueprint')
+
+    def delete_deployment(self, deployment_id):
+        return self._delete_object(deployment_id, DEPLOYMENTS, 'Deployment')
+
+    def delete_execution(self, execution_id):
+        return self._delete_object(execution_id, EXECUTIONS, 'Execution')
+
+    def delete_node(self, node_id):
+        return self._delete_object(node_id, NODES, 'Node')
+
+    def _delete_object(self, object_id, object_type, object_type_name):
         data = self._load_data()
-        if blueprint_id in data[BLUEPRINTS]:
-            bp = data[BLUEPRINTS][blueprint_id]
-            del(data[BLUEPRINTS][blueprint_id])
+        if object_id in data[object_type]:
+            obj = data[object_type][object_id]
+            del(data[object_type][object_id])
             self._dump_data(data)
-            return bp
+            return obj
         raise manager_exceptions.NotFoundError(
-            "Blueprint {0} not found".format(blueprint_id))
+            "{0} {1} not found".format(object_type_name, object_id))
 
     def put_provider_context(self, provider_context):
         data = self._load_data()
