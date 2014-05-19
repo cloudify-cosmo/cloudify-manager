@@ -112,12 +112,16 @@ class BlueprintsManager(object):
 
         deployment_executions =\
             get_storage_manager().get_deployment_executions(deployment_id)
+
+        deployment_executions = [self.get_workflow_state(execution.id) for
+                                 execution in deployment_executions]
+
         # validate there are no running executions for this deployment
         if any(execution.status not in ('terminated', 'failed') for
            execution in deployment_executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
-                "executions for this deployment. Executions ids: {1}"
+                "executions for this deployment. Running executions ids: {1}"
                 .format(
                     deployment_id,
                     ','.join([execution.id for execution in
@@ -129,16 +133,15 @@ class BlueprintsManager(object):
         if not ignore_live_nodes:
             deployment_nodes = [get_storage_manager().get_node(node_id) for
                                 node_id in deployment_nodes_ids]
-            # validate all nodes for this deployment have been deleted
-            # if any(node.state not in ('deleted',) for node in
+            # validate either all nodes for this deployment are still
+            # uninitialized or have been deleted
             if any(not node.reachable for node in
                    deployment_nodes):
                 raise manager_exceptions.DependentExistsError(
                     "Can't delete deployment {0} - There are live nodes for "
-                    "this deployment. Nodes ids: {1}"
+                    "this deployment. Live nodes ids: {1}"
                     .format(deployment_id,
                             ','.join([node.id for node in deployment_nodes
-                                     # if node.state not in ('deleted',)])))
                                      if not node.reachable])))
 
         # delete deployment resources

@@ -226,7 +226,41 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(workflows['workflows'][1]['name'], 'uninstall')
         self.assertTrue('createdAt' in workflows['workflows'][1])
 
-    def test_delete_deployment(self):
+    def test_delete_deployment_with_running_execution(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        self.post(resource_path, {
+            'workflowId': 'install'
+        })
+        # attempting to delete the deployment - should fail because the
+        # execution should be active
+        delete_deployment_response = self.delete('/deployments/{0}'.format(
+            deployment_id))
+        self.assertEquals(400, delete_deployment_response.status_code)
+
+    def test_delete_deployment_verify_nodes_deletion(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+
+        resource_path = '/deployments/{0}/nodes' \
+            .format(deployment_id)
+        nodes = self.get(resource_path).json['nodes']
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node['id'] for node in nodes]
+
+        delete_deployment_response = self.delete(
+            '/deployments/{0}'.format(deployment_id),
+            query_params={'ignore_live_nodes': 'true'}).json
+        self.assertEquals(deployment_id, delete_deployment_response['id'])
+
+        # verifying deletion of deployment nodes and executions
+        for node_id in nodes_ids:
+            resp = self.get('/nodes/{0}'.format(node_id))
+            self.assertEquals(404, resp.status_code)
+
+    def test_delete_deployment_with_live_nodes(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()
 
@@ -236,8 +270,10 @@ class DeploymentsTestCase(BaseServerTestCase):
             deployment_id))
         self.assertEquals(400, delete_deployment_response.status_code)
 
-        # deleting the deployment - this time using the ignore_live_nodes
-        # parameter to force deletion
+    def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+
         delete_deployment_response = self.delete(
             '/deployments/{0}'.format(deployment_id),
             query_params={'ignore_live_nodes': 'true'}).json
@@ -247,6 +283,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         resp = self.get('/deployments/{0}'.format(deployment_id))
         self.assertEquals(404, resp.status_code)
 
+    def test_delete_nonexistent_deployment(self):
         # trying to delete a nonexistent deployment
         resp = self.delete('/deployments/nonexistent-deployment')
         self.assertEquals(404, resp.status_code)

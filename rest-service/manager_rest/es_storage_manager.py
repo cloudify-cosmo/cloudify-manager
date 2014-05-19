@@ -202,7 +202,7 @@ class ESStorageManager(object):
         return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
 
     def delete_execution(self, execution_id):
-        return self._delete_doc(DEPLOYMENT_TYPE, execution_id, Execution)
+        return self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
 
     def delete_node(self, node_id):
         return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)

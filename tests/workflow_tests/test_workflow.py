@@ -27,6 +27,8 @@ from workflow_tests.testenv import delete_blueprint
 from workflow_tests.testenv import get_deployment
 from workflow_tests.testenv import delete_deployment
 from workflow_tests.testenv import publish_blueprint
+from workflow_tests.testenv import cancel_execution
+from workflow_tests.testenv import get_execution
 from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
@@ -223,13 +225,27 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
         deployment_id = 'my_new_deployment'
-        client = CosmoManagerRestClient('localhost')
-        client.publish_blueprint(dsl_path, blueprint_id)
-        client.create_deployment(blueprint_id, deployment_id)
+        _, execution_id = deploy(dsl_path, blueprint_id=blueprint_id,
+                                 deployment_id=deployment_id)
 
         # verifying deployment exists
         result = get_deployment(deployment_id)
         self.assertEqual(deployment_id, result.id)
+
+        # attempting to delete the deployment - should fail because the
+        # execution should be active
+        try:
+            delete_deployment(deployment_id, False)
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "should have had a running execution"
+                      .format(deployment_id))
+        except CosmoManagerRestCallError:
+            pass
+
+        # stopping the execution
+        execution = cancel_execution(execution_id, True)
+        self.assertEquals(execution.status, 'terminated')
+
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
         try:
@@ -239,9 +255,17 @@ class BasicWorkflowsTest(TestCase):
                       "flag was set to False".format(deployment_id))
         except CosmoManagerRestCallError:
             pass
-        # deleting deployment
+
+        # retrieving deployment nodes
+        nodes = get_deployment_nodes(deployment_id).nodes
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node.id for node in nodes]
+
+        # deleting deployment - this time there's no execution running,
+        # and using the ignore_live_nodes parameter to force deletion
         deleted_deployment_id = delete_deployment(deployment_id, True).id
         self.assertEqual(deployment_id, deleted_deployment_id)
+
         # verifying deployment does no longer exist
         try:
             get_deployment(deployment_id)
@@ -249,6 +273,26 @@ class BasicWorkflowsTest(TestCase):
                       "wasn't expected to exist".format(deployment_id))
         except CosmoManagerRestCallError:
             pass
+
+        # verifying deployment's execution does no longer exist
+        try:
+            get_execution(execution_id)
+            self.fail('execution {0} still exists even though it should have '
+                      'been deleted when its deployment was deleted'
+                      .format(execution_id))
+        except CosmoManagerRestCallError:
+            pass
+
+        # verifying deployment's nodes do no longer exist
+        for node_id in nodes_ids:
+            try:
+                get_node_instance(node_id)
+                self.fail('node {0} still exists even though it should have '
+                          'been deleted when its deployment was deleted'
+                          .format(node_id))
+            except CosmoManagerRestCallError:
+                pass
+
         # trying to delete a nonexistent deployment
         try:
             delete_deployment(deployment_id)
