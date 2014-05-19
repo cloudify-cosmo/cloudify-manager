@@ -572,6 +572,11 @@ class Deployments(Resource):
 
 class DeploymentsId(Resource):
 
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('ignore_live_nodes', type=str,
+                                       default='false', location='args')
+
     @swagger.operation(
         responseClass=responses.Deployment,
         nickname="getById",
@@ -613,6 +618,32 @@ class DeploymentsId(Resource):
         blueprint_id = request.json['blueprintId']
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
+
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="deleteById",
+        notes="deletes a deployment by its id.",
+        parameters=[{'name': 'ignore_live_nodes',
+                     'description': 'Specifies whether to ignore live nodes,'
+                                    'or raise an error upon such nodes '
+                                    'instead.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    @exceptions_handled
+    def delete(self, deployment_id):
+        args = self._args_parser.parse_args()
+
+        ignore_live_nodes = verify_and_convert_bool(
+            'ignore_live_nodes', args['ignore_live_nodes'])
+
+        deployment = get_blueprints_manager().delete_deployment(
+            deployment_id, ignore_live_nodes)
+        return responses.Deployment(**deployment.to_dict()), 200
 
 
 class NodesId(Resource):

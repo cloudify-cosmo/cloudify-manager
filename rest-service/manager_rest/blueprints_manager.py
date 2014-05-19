@@ -99,12 +99,59 @@ class BlueprintsManager(object):
 
         if len(blueprint_deployments) > 0:
             raise manager_exceptions.DependentExistsError(
-                "Deleting blueprint {0} not allowed - There exist "
-                "deployments for this blueprint; Deployments ids: {0}"
-                .format(','.join([dep.id for dep
+                "Can't delete blueprint {0} - There exist "
+                "deployments for this blueprint; Deployments ids: {1}"
+                .format(blueprint_id,
+                        ','.join([dep.id for dep
                                   in blueprint_deployments])))
 
         return get_storage_manager().delete_blueprint(blueprint_id)
+
+    def delete_deployment(self, deployment_id, ignore_live_nodes=False):
+        deployment = get_storage_manager().get_deployment(deployment_id)
+
+        deployment_executions =\
+            get_storage_manager().get_deployment_executions(deployment_id)
+
+        deployment_executions = [self.get_workflow_state(execution.id) for
+                                 execution in deployment_executions]
+
+        # validate there are no running executions for this deployment
+        if any(execution.status not in ('terminated', 'failed') for
+           execution in deployment_executions):
+            raise manager_exceptions.DependentExistsError(
+                "Can't delete deployment {0} - There are running "
+                "executions for this deployment. Running executions ids: {1}"
+                .format(
+                    deployment_id,
+                    ','.join([execution.id for execution in
+                              deployment_executions if execution.status not
+                              in ('terminated', 'failed')])))
+
+        deployment_nodes_ids = [node['id'] for node in
+                                deployment.plan['nodes']]
+        if not ignore_live_nodes:
+            deployment_nodes = [get_storage_manager().get_node(node_id) for
+                                node_id in deployment_nodes_ids]
+            # validate either all nodes for this deployment are still
+            # uninitialized or have been deleted
+            if any(not node.reachable for node in
+                   deployment_nodes):
+                raise manager_exceptions.DependentExistsError(
+                    "Can't delete deployment {0} - There are live nodes for "
+                    "this deployment. Live nodes ids: {1}"
+                    .format(deployment_id,
+                            ','.join([node.id for node in deployment_nodes
+                                     if not node.reachable])))
+
+        # delete deployment resources
+        for execution in deployment_executions:
+            get_storage_manager().delete_execution(execution.id)
+
+        for node_id in deployment_nodes_ids:
+            get_storage_manager().delete_node(node_id)
+
+        return get_storage_manager().delete_deployment(deployment_id)
 
     # currently validation is split to 2 phases: the first
     # part is during submission (dsl parsing)

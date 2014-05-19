@@ -198,6 +198,15 @@ class ESStorageManager(object):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
 
+    def delete_deployment(self, deployment_id):
+        return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
+
+    def delete_execution(self, execution_id):
+        return self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
+
+    def delete_node(self, node_id):
+        return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
+
     def update_node(self, node_id, node):
         update_doc_data = node.to_dict()
         del(update_doc_data['state_version'])

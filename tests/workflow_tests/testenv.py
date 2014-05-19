@@ -993,12 +993,22 @@ def execute_install(deployment_id,
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
-def cancel_execution(execution_id):
+def cancel_execution(execution_id, wait_for_termination=False):
     """
     Cancels an execution by its id
     """
     client = CosmoManagerRestClient('localhost')
-    return client.cancel_execution(execution_id)
+
+    if wait_for_termination:
+        execution = client.cancel_execution(execution_id)
+        endtime = time.time() + 10
+        while execution.status not in \
+                ['terminated', 'failed'] and time.time() < endtime:
+            execution = get_execution(execution_id)
+            time.sleep(1)
+        return execution
+    else:
+        return client.cancel_execution(execution_id)
 
 
 def validate_dsl(blueprint_id, timeout=240):
@@ -1017,7 +1027,7 @@ def get_execution(execution_id):
     Returns the exeuction status
     """
     client = CosmoManagerRestClient('localhost')
-    return client._executions_api.getById(execution_id)
+    return client.get_execution(execution_id)
 
 
 def get_blueprint(blueprint_id):
@@ -1028,6 +1038,16 @@ def get_blueprint(blueprint_id):
 def delete_blueprint(blueprint_id):
     client = CosmoManagerRestClient('localhost')
     return client.delete_blueprint(blueprint_id)
+
+
+def get_deployment(deployment_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.get_deployment(deployment_id)
+
+
+def delete_deployment(deployment_id, ignore_live_nodes=False):
+    client = CosmoManagerRestClient('localhost')
+    return client.delete_deployment(deployment_id, ignore_live_nodes)
 
 
 def get_deployment_workflows(deployment_id):
