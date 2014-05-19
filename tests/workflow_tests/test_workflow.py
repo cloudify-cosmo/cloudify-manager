@@ -241,7 +241,7 @@ class BasicWorkflowsTest(TestCase):
 
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had a running execution"
-                .format(deployment_id))
+                      .format(deployment_id))
         except CosmoManagerRestCallError, e:
             # self.assertTrue('live nodes' in str(e))
             pass
@@ -283,7 +283,7 @@ class BasicWorkflowsTest(TestCase):
             get_execution(execution_id)
             self.fail('execution {0} still exists even though it should have '
                       'been deleted when its deployment was deleted'
-                .format(execution_id))
+                      .format(execution_id))
         except CosmoManagerRestCallError, e:
             self.assertTrue('not found' in str(e))
 
@@ -293,7 +293,7 @@ class BasicWorkflowsTest(TestCase):
                 get_node_instance(node_id)
                 self.fail('node {0} still exists even though it should have '
                           'been deleted when its deployment was deleted'
-                    .format(node_id))
+                          .format(node_id))
             except CosmoManagerRestCallError, e:
                 self.assertTrue('not found' in str(e))
 
