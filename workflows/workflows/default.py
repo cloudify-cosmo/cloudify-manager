@@ -18,45 +18,61 @@ def install(ctx, **kwargs):
 
         sequence.add(
             node.set_state('initializing'),
-            node_set_state_creating_tasks[node.id],
-            node.send_event('Creating node'),
+            [
+                node_set_state_creating_tasks[node.id],
+                node.send_event('Creating node')
+            ],
             node.execute_operation('cloudify.interfaces.lifecycle.create'),
-            node.set_state('created'))
+            node.set_state('created'),
 
-        sequence.add(*relationship_operations(
-            node, 'cloudify.interfaces.relationship_lifecycle'))
+            relationship_operations(
+                node,
+                'cloudify.interfaces.relationship_lifecycle.preconfigure'),
 
-        sequence.add(
-            node.set_state('configuring'),
-            node.send_event('Configuring node'),
+            [
+                node.set_state('configuring'),
+                node.send_event('Configuring node')
+            ],
             node.execute_operation('cloudify.interfaces.lifecycle.configure'),
-            node.set_state('configured'))
+            node.set_state('configured'),
 
-        sequence.add(
-            node.set_state('starting'),
-            node.send_event('Starting node'),
+            relationship_operations(
+                node,
+                'cloudify.interfaces.relationship_lifecycle.postconfigure'),
+
+            [
+                node.set_state('starting'),
+                node.send_event('Starting node')
+            ],
             node.execute_operation('cloudify.interfaces.lifecycle.start'))
 
         if _is_host_node(node):
             sequence.add(*_host_post_start(node))
 
-        sequence.add(node.set_state('started'))
+        sequence.add(
+            node.set_state('started'),
+
+            relationship_operations(
+                node,
+                'cloudify.interfaces.relationship_lifecycle.establish'))
 
     # Create task dependencies based on node relationships
     for node in ctx.nodes:
         for relationship in node.relationships:
             target_node_sequence = node_sequences[relationship.target_id]
             node_set_state_create_task = node_set_state_creating_tasks[node.id]
-            graph.add_dependency(node_set_state_create_task,
-                                 target_node_sequence.last_task)
+            target_node_sequence.add_dependency_to_last(
+                node_set_state_create_task)
 
     graph.execute()
 
 
-def relationship_operations(node, operation, graph):
+def relationship_operations(node, operation):
+    tasks = []
     for relationship in node.relationships:
-        relationship.execute_source_operation(operation)
-        relationship.execute_target_operation(operation)
+        tasks.append(relationship.execute_source_operation(operation))
+        tasks.append(relationship.execute_target_operation(operation))
+    return tasks
 
 
 def _is_host_node(node):
@@ -75,8 +91,7 @@ def _wait_for_host_to_start(host_node):
 
 
 def _host_post_start(host_node):
-    tasks = []
-    tasks.append(_wait_for_host_to_start(host_node))
+    tasks = [_wait_for_host_to_start(host_node)]
     if host_node.properties['install_agent'] is True:
         tasks += [
             host_node.send_event('Installing worker'),
