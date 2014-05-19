@@ -127,8 +127,9 @@ class FileStorageManager(object):
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_info.items()) if node\
             .runtime_info else prev_rt_info
+        new_state = node.state or data[NODES][node_id].to_dict()['state']
         node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
-                              state=node.state,
+                              state=new_state,
                               state_version=node.state_version+1)
         data[NODES][node_id] = node
         self._dump_data(data)

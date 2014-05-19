@@ -94,3 +94,15 @@ class TestDeploymentNodes(TestCase):
         self.assertEquals(3, len(node_instance['runtimeInfo']))
         self.assertEquals('another_value', node_instance['runtimeInfo'][
             'new_key'])
+
+        # Updating neither state nor runtime properties (empty update)
+        node_instance = update_node_instance(
+            node_id,
+            state_version=node_instance['stateVersion'])
+
+        # Verifying state hasn't changed
+        self.assertEquals('final_state', node_instance['state'])
+        # Verifying the runtime properties haven't changed
+        self.assertEquals(3, len(node_instance['runtimeInfo']))
+        self.assertEquals('another_value', node_instance['runtimeInfo'][
+            'new_key'])

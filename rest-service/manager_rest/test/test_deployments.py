@@ -246,7 +246,7 @@ class DeploymentsTestCase(BaseServerTestCase):
             resp = self.get('/nodes/{0}'.format(node_id))
             self.assertEquals(404, resp.status_code)
 
-    def test_delete_deployment_with_live_nodes(self):
+    def test_delete_deployment_with_live_nodes_without_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()
 
@@ -268,6 +268,45 @@ class DeploymentsTestCase(BaseServerTestCase):
         delete_deployment_response = self.delete('/deployments/{0}'.format(
             deployment_id))
         self.assertEquals(400, delete_deployment_response.status_code)
+
+    def test_delete_deployment_with_uninitialized_nodes(self):
+        # simulates a deletion of a deployment right after its creation
+        # (i.e. all nodes are still in 'uninitialized' state because no
+        # execution has yet to take place)
+        self._test_delete_deployment_with_nodes_in_certain_state(
+            'uninitialized')
+
+    def test_delete_deployment_without_ignore_flag(self):
+        # simulates a deletion of a deployment after the uninstall workflow
+        # has completed (i.e. all nodes are in 'deleted' state)
+        self._test_delete_deployment_with_nodes_in_certain_state('deleted')
+
+    def _test_delete_deployment_with_nodes_in_certain_state(self, state):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self._put_test_deployment()
+
+        resource_path = '/deployments/{0}/nodes' \
+            .format(deployment_id)
+        nodes = self.get(resource_path,
+                         query_params={'state': 'true'}).json['nodes']
+
+        # modifying nodes states
+        for node in nodes:
+            resp = self.patch('/nodes/{0}'.format(node['id']), {
+                'state_version': 0,
+                'state': state
+            })
+            self.assertEquals(200, resp.status_code)
+
+        # deleting the deployment
+        delete_deployment_response = self.delete('/deployments/{0}'.format(
+            deployment_id))
+        self.assertEquals(200, delete_deployment_response.status_code)
+        self.assertEquals(deployment_id,
+                          delete_deployment_response.json['id'])
+        # verifying deletion of deployment
+        resp = self.get('/deployments/{0}'.format(deployment_id))
+        self.assertEquals(404, resp.status_code)
 
     def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,

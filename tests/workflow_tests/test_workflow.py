@@ -16,6 +16,7 @@
 __author__ = 'idanmo'
 
 import uuid
+import time
 from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
@@ -226,6 +227,18 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
         deployment_id = 'my_new_deployment'
+
+        # verifying a deletion of a new deployment, i.e. one which hasn't
+        # been installed yet, and therefore all its nodes are still in
+        # 'uninitialized' state.
+        client = CosmoManagerRestClient('localhost')
+        client.publish_blueprint(dsl_path, blueprint_id)
+        client.create_deployment(blueprint_id, deployment_id)
+        delete_deployment(deployment_id, False)
+        time.sleep(5)  # waiting for elasticsearch to clear deployment...
+        delete_blueprint(blueprint_id)
+
+        # recreating the deployment, this time actually deploying it too
         _, execution_id = deploy(dsl_path,
                                  blueprint_id=blueprint_id,
                                  deployment_id=deployment_id,
