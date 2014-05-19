@@ -209,7 +209,11 @@ class ESStorageManager(object):
 
     def update_node(self, node_id, node):
         update_doc_data = node.to_dict()
+        # deleting state_version field as it's maintained by ES internally
         del(update_doc_data['state_version'])
+        # removing fields with value None as they're not to be updated
+        update_doc_data = \
+            {k: v for k, v in update_doc_data.iteritems() if v is not None}
         update_doc = {'doc': update_doc_data}
 
         try:

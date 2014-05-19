@@ -19,8 +19,8 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
-from testenv import set_node_stopped
 from testenv import get_node_instance
+from testenv import update_node_instance
 from plugins.cloudmock import tasks as cloudmock
 
 
@@ -80,7 +80,10 @@ class TestUninstallDeployment(TestCase):
         states = self.send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
 
-        set_node_stopped(node_id)
+        node_instance = get_node_instance(node_id, True)
+        update_node_instance(node_id,
+                             node_instance['stateVersion'],
+                             state='stopped')
 
         import time
         time.sleep(10)

@@ -29,6 +29,7 @@ from workflow_tests.testenv import delete_deployment
 from workflow_tests.testenv import publish_blueprint
 from workflow_tests.testenv import cancel_execution
 from workflow_tests.testenv import get_execution
+from workflow_tests.testenv import update_node_instance
 from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
@@ -234,6 +235,15 @@ class BasicWorkflowsTest(TestCase):
         result = get_deployment(deployment_id)
         self.assertEqual(deployment_id, result.id)
 
+        # retrieving deployment nodes
+        nodes = get_deployment_nodes(deployment_id, True).nodes
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node.id for node in nodes]
+
+        # setting one node's state to 'started' (making it a 'live' node)
+        update_node_instance(nodes[0].id, nodes[0].stateVersion,
+                             state='started')
+
         # attempting to delete the deployment - should fail because the
         # execution should be active
         try:
@@ -259,11 +269,6 @@ class BasicWorkflowsTest(TestCase):
                       "flag was set to False".format(deployment_id))
         except CosmoManagerRestCallError:
             self.assertTrue('live nodes' in str(e))
-
-        # retrieving deployment nodes
-        nodes = get_deployment_nodes(deployment_id).nodes
-        self.assertTrue(len(nodes) > 0)
-        nodes_ids = [node.id for node in nodes]
 
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion

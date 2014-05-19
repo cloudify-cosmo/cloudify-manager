@@ -123,13 +123,12 @@ class FileStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
 
-        prev_rt_info = DeploymentNode(**data[NODES][node_id].to_dict())\
-            .runtime_info
+        prev_rt_info = data[NODES][node_id].to_dict()['runtime_info'] or {}
         merged_rt_info = dict(prev_rt_info.items() +
-                              node.runtime_info.items())
-        # TODO: merge reachable field?
+                              node.runtime_info.items()) if node\
+            .runtime_info else prev_rt_info
         node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
-                              reachable=None,
+                              state=node.state,
                               state_version=node.state_version+1)
         data[NODES][node_id] = node
         self._dump_data(data)

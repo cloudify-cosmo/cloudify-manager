@@ -135,14 +135,15 @@ class BlueprintsManager(object):
                                 node_id in deployment_nodes_ids]
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
-            if any(not node.reachable for node in
+            if any(node.state not in ('uninitialized', 'deleted') for node in
                    deployment_nodes):
                 raise manager_exceptions.DependentExistsError(
                     "Can't delete deployment {0} - There are live nodes for "
                     "this deployment. Live nodes ids: {1}"
                     .format(deployment_id,
                             ','.join([node.id for node in deployment_nodes
-                                     if not node.reachable])))
+                                     if node.state not in
+                                     ('uninitialized', 'deleted')])))
 
         # delete deployment resources
         for execution in deployment_executions:
@@ -195,7 +196,7 @@ class BlueprintsManager(object):
             deployment_id=deployment_id,
             error='None')
 
-        self.sm.put_execution(new_execution.id, new_execution)
+        get_storage_manager().put_execution(new_execution.id, new_execution)
 
         return new_execution
 
@@ -239,7 +240,8 @@ class BlueprintsManager(object):
 
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
-            node = models.DeploymentNode(id=node_id, reachable=None,
+            node = models.DeploymentNode(id=node_id,
+                                         state='uninitialized',
                                          runtime_info=None,
                                          state_version=None)
             self.sm.put_node(node_id, node)

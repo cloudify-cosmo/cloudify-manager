@@ -226,20 +226,6 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(workflows['workflows'][1]['name'], 'uninstall')
         self.assertTrue('createdAt' in workflows['workflows'][1])
 
-    def test_delete_deployment_with_running_execution(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
-            'workflowId': 'install'
-        })
-        # attempting to delete the deployment - should fail because the
-        # execution should be active
-        delete_deployment_response = self.delete('/deployments/{0}'.format(
-            deployment_id))
-        self.assertEquals(400, delete_deployment_response.status_code)
-
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()
@@ -263,6 +249,19 @@ class DeploymentsTestCase(BaseServerTestCase):
     def test_delete_deployment_with_live_nodes(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self._put_test_deployment()
+
+        # modifying a node's state so there'll be a node in a state other
+        # than 'uninitialized'
+        resource_path = '/deployments/{0}/nodes' \
+            .format(deployment_id)
+        nodes = self.get(resource_path,
+                         query_params={'state': 'true'}).json['nodes']
+
+        resp = self.patch('/nodes/{0}'.format(nodes[0]['id']), {
+            'state_version': 0,
+            'state': 'started'
+        })
+        self.assertEquals(200, resp.status_code)
 
         # attempting to delete the deployment - should fail because there
         # are live nodes for the deployment
@@ -295,8 +294,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
         resource_path = '/deployments/{0}/nodes'\
                         .format(deployment_id)
-        nodes = self.get(resource_path,
-                         query_params={'reachable': 'False'}).json
+        nodes = self.get(resource_path).json
         self.assertEquals(deployment_id, nodes['deploymentId'])
         self.assertEquals(2, len(nodes['nodes']))
 

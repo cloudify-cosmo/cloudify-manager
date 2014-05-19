@@ -41,7 +41,6 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
-from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -499,8 +498,6 @@ class DeploymentsIdNodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=str,
-                                       default='false', location='args')
         self._args_parser.add_argument('state', type=str,
                                        default='false', location='args')
 
@@ -525,8 +522,6 @@ class DeploymentsIdNodes(Resource):
         Returns an object containing nodes associated with this deployment.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = verify_and_convert_bool(
-            'reachable', args['reachable'])
         get_state = verify_and_convert_bool(
             'state', args['state'])
 
@@ -534,21 +529,16 @@ class DeploymentsIdNodes(Resource):
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
-        reachable_states = {}
-        if get_reachable_state or get_state:
-            reachable_states = get_riemann_client().get_nodes_state(node_ids)
-
         nodes = []
         for node_id in node_ids:
             node_result = responses.DeploymentNode(id=node_id,
                                                    state=None,
                                                    state_version=None,
-                                                   reachable=None,
                                                    runtime_info=None)
-            if get_reachable_state or get_state:
-                state = reachable_states[node_id]
-                node_result.reachable = state['reachable']
-                node_result.state = state['state']
+            if get_state:
+                node = get_storage_manager().get_node(node_id)
+                node_result.state = node.state
+                node_result.state_version = node.state_version
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -650,16 +640,14 @@ class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('state', type=str,
-                                       default='false', location='args')
-        self._args_parser.add_argument('reachable', type=str,
-                                       default='false', location='args')
-        self._args_parser.add_argument('runtime', type=str,
-                                       default='true', location='args')
+        self._args_parser.add_argument('state_and_runtime_properties',
+                                       type=str,
+                                       default='true',
+                                       location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="getNodeState",
+        nickname="getNodeInstance",
         notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
@@ -668,16 +656,9 @@ class NodesId(Resource):
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'state',
-                     'description': 'Specifies whether to return state.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': False,
-                     'paramType': 'query'},
-                    {'name': 'runtime',
-                     'description': 'Specifies whether to return runtime '
-                                    'properties.',
+                    {'name': 'state_and_runtime_properties',
+                     'description': 'Specifies whether to return state and '
+                                    'runtime properties',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -688,41 +669,32 @@ class NodesId(Resource):
     @exceptions_handled
     def get(self, node_id):
         """
-        Gets node runtime or reachable state.
+        Gets node runtime or state.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = verify_and_convert_bool(
-            'reachable', args['reachable'])
-        get_runtime_info = verify_and_convert_bool(
-            'runtime', args['runtime'])
-        get_state = verify_and_convert_bool('state', args['state'])
+        get_state_and_runtime_properties = verify_and_convert_bool(
+            'state_and_runtime_properties',
+            args['state_and_runtime_properties'])
 
-        reachable_state = None
         state = None
         runtime_info = None
         state_version = None
 
-        if get_runtime_info:
+        if get_state_and_runtime_properties:
             node = get_storage_manager().get_node(node_id)
             runtime_info = node.runtime_info
             state_version = node.state_version
-
-        if get_reachable_state or get_state:
-            state = get_riemann_client().get_node_state(node_id)
-            reachable_state = state['reachable']
-            state = state['state']
+            state = node.state
 
         return responses.DeploymentNode(id=node_id,
                                         state=state,
-                                        reachable=reachable_state,
                                         runtime_info=runtime_info,
                                         state_version=state_version)
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="putNodeState",
-        notes="Put node runtime state (state will be entirely replaced) " +
-              "with the provided dictionary of keys and values.",
+        nickname="putNodeInstance",
+        notes="Put node instance",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -743,28 +715,44 @@ class NodesId(Resource):
                                .format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json,
-                                     reachable=None, state_version=None)
+                                     state='uninitialized',
+                                     state_version=None)
         node.state_version = get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(state=None, **node.to_dict()), 201
+        return responses.DeploymentNode(**node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
         nickname="patchNodeState",
         notes="Update node runtime state. Expecting the request body to "
-              "be a dictionary containing both 'runtime_info' - which is the"
-              "updated keys/values information (possibly partial update), "
-              "and 'state_version', which is used for optimistic locking "
-              "during the update",
+              "be a dictionary containing 'state_version' which is used for "
+              "optimistic locking during the update, and optionally "
+              "'runtime_info' (dictionary) and/or 'state' (string) "
+              "properties",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'body',
-                     'description': 'Node state updated keys/values and '
-                                    'state version',
+                    {'name': 'state_version',
+                     'description': 'used for optimistic locking during '
+                                    'update',
                      'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'int',
+                     'paramType': 'body'},
+                    {'name': 'runtime_properties',
+                     'description': 'a dictionary of runtime properties. If '
+                                    'omitted, the runtime properties wont be '
+                                    'updated',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'dict',
+                     'paramType': 'body'},
+                    {'name': 'state',
+                     'description': "the new node's state. If omitted, "
+                                    "the state wont be updated",
+                     'required': False,
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'body'}],
@@ -774,40 +762,33 @@ class NodesId(Resource):
     @exceptions_handled
     def patch(self, node_id):
         """
-        Updates node runtime state.
+        Updates node instance
         """
         verify_json_content_type()
-        if request.json.__class__ is not dict or len(request.json) > 2 \
-            or 'runtime_info' not in request.json \
-            or 'state_version' not in request.json \
-            or request.json['runtime_info'].__class__ is not dict \
-                or request.json['state_version'].__class__ is not int:
+        if request.json.__class__ is not dict or \
+                'state_version' not in request.json or \
+                request.json['state_version'].__class__ is not int:
 
-            if request.json.__class__ is not dict or len(request.json) > 2:
+            if request.json.__class__ is not dict:
                 message = 'request body is expected to be a map containing ' \
-                          'only "runtime_info" and "state_version" fields'
-            elif 'runtime_info' not in request.json:
-                message = 'request body must be a map containing a ' \
-                          '"runtime_info" field'
+                          'a "state_version" field and optionally ' \
+                          '"runtime_info" and/or "state" fields'
             elif 'state_version' not in request.json:
                 message = 'request body must be a map containing a ' \
                           '"state_version" field'
-            elif request.json['runtime_info'].__class__ is not dict:
-                message = "request body's 'runtime_info' field must be a " \
-                          "map but is of type {0}".format(
-                              request.json['runtime_info'].__class__.__name__)
             else:
-                message = "request body's 'state_version' field must be an " \
-                          "int but is of type {0}".format(
-                              request.json['state_version'].__class__.__name__)
+                message = \
+                    "request body's 'state_version' field must be an int but" \
+                    " is of type {0}".format(request.json['state_version']
+                                             .__class__.__name__)
             abort(400, message=message)
 
         node = models.DeploymentNode(
-            id=node_id, runtime_info=request.json['runtime_info'],
-            state_version=request.json['state_version'], reachable=None)
+            id=node_id, runtime_info=request.json.get('runtime_info'),
+            state=request.json.get('state'),
+            state_version=request.json['state_version'])
         get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
-            state=None,
             **get_storage_manager().get_node(node_id).to_dict())
 
 
