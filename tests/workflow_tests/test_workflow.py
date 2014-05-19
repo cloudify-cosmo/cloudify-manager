@@ -59,7 +59,7 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state)\
+        states = self.send_task(testmock_get_state) \
             .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('host_node' in states[0]['id'])
@@ -238,10 +238,12 @@ class BasicWorkflowsTest(TestCase):
         # execution should be active
         try:
             delete_deployment(deployment_id, False)
+
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had a running execution"
-                      .format(deployment_id))
-        except CosmoManagerRestCallError:
+                .format(deployment_id))
+        except CosmoManagerRestCallError, e:
+            # self.assertTrue('live nodes' in str(e))
             pass
 
         # stopping the execution
@@ -256,7 +258,7 @@ class BasicWorkflowsTest(TestCase):
                       "should have had live nodes and the ignore_live_nodes "
                       "flag was set to False".format(deployment_id))
         except CosmoManagerRestCallError:
-            pass
+            self.assertTrue('live nodes' in str(e))
 
         # retrieving deployment nodes
         nodes = get_deployment_nodes(deployment_id).nodes
@@ -273,17 +275,17 @@ class BasicWorkflowsTest(TestCase):
             get_deployment(deployment_id)
             self.fail("Got deployment {0} successfully even though it "
                       "wasn't expected to exist".format(deployment_id))
-        except CosmoManagerRestCallError:
-            pass
+        except CosmoManagerRestCallError, e:
+            self.assertTrue('not found' in str(e))
 
         # verifying deployment's execution does no longer exist
         try:
             get_execution(execution_id)
             self.fail('execution {0} still exists even though it should have '
                       'been deleted when its deployment was deleted'
-                      .format(execution_id))
-        except CosmoManagerRestCallError:
-            pass
+                .format(execution_id))
+        except CosmoManagerRestCallError, e:
+            self.assertTrue('not found' in str(e))
 
         # verifying deployment's nodes do no longer exist
         for node_id in nodes_ids:
@@ -291,17 +293,17 @@ class BasicWorkflowsTest(TestCase):
                 get_node_instance(node_id)
                 self.fail('node {0} still exists even though it should have '
                           'been deleted when its deployment was deleted'
-                          .format(node_id))
-            except CosmoManagerRestCallError:
-                pass
+                    .format(node_id))
+            except CosmoManagerRestCallError, e:
+                self.assertTrue('not found' in str(e))
 
         # trying to delete a nonexistent deployment
         try:
             delete_deployment(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "wasn't expected to exist".format(deployment_id))
-        except CosmoManagerRestCallError:
-            pass
+        except CosmoManagerRestCallError, e:
+            self.assertTrue('not found' in str(e))
 
     def test_node_state_uninitialized(self):
         dsl_path = resource('dsl/node_states.yaml')
