@@ -27,17 +27,17 @@ class TestStorage(TestCase):
 
         node_id = '1'
         state_version = 1
-        result = client.put_node_state(node_id, {})
+        result = client.put_node_instance(node_id, {})
         self.assertEquals(state_version, result['stateVersion'])
         self.assertEquals('1', result['id'])
         self.assertEquals({}, result['runtimeInfo'])
 
-        result = client.update_node_state(node_id, {}, state_version)
+        result = client.update_node_instance(node_id, state_version, {})
         self.assertEquals(2, result['stateVersion'])
         self.assertEquals('1', result['id'])
         self.assertEquals({}, result['runtimeInfo'])
 
         # making another call with a bad state_version
         self.assertRaises(
-            CosmoManagerRestCallError, client.update_node_state,
-            node_id, {}, state_version)
+            CosmoManagerRestCallError, client.update_node_instance,
+            node_id, state_version, {})

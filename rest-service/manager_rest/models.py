@@ -75,12 +75,12 @@ class Execution(SerializableObject):
 
 class DeploymentNode(SerializableObject):
 
-    fields = {'id', 'runtime_info', 'reachable', 'state_version'}
+    fields = {'id', 'runtime_info', 'state', 'state_version'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.runtime_info = kwargs['runtime_info']
-        self.reachable = kwargs['reachable']
+        self.state = kwargs['state']
         self.state_version = kwargs['state_version']
 
 

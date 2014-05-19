@@ -34,7 +34,6 @@ from multiprocessing import Process
 import yaml
 import pika
 import json
-import bernhard
 import requests
 import elasticsearch
 from celery import Celery
@@ -1067,20 +1066,22 @@ def get_deployment_nodes(deployment_id, get_state=False):
     return deployment_nodes
 
 
-def get_node_state(node_id, get_reachable_state=False, get_runtime_state=True):
+def get_node_instance(node_id, get_state_and_runtime_properties=True):
     client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id,
-                                  get_state=get_reachable_state,
-                                  get_runtime_properties=get_runtime_state)
-    return state['runtimeInfo']
-
-
-def get_node_instance(node_id):
-    client = CosmoManagerRestClient('localhost')
-    node_instance = client.get_node_state(node_id,
-                                          get_state=True,
-                                          get_runtime_properties=True)
+    node_instance = client.get_node_instance(
+        node_id,
+        get_state_and_runtime_properties=get_state_and_runtime_properties)
     return node_instance
+
+
+def update_node_instance(node_id, state_version, runtime_properties=None,
+                         state=None):
+    client = CosmoManagerRestClient('localhost')
+    return client.update_node_instance(
+        node_id,
+        state_version=state_version,
+        runtime_properties=runtime_properties,
+        state=state)
 
 
 def post_provider_context(name, provider_context):
@@ -1094,10 +1095,8 @@ def get_provider_context():
 
 
 def is_node_started(node_id):
-    client = CosmoManagerRestClient('localhost')
-    state = client.get_node_state(node_id, get_state=True,
-                                  get_runtime_properties=False)
-    return state['state'] == 'started'
+    node_instance = get_node_instance(node_id)
+    return node_instance['state'] == 'started'
 
 
 def get_workflows_state():
@@ -1122,27 +1121,3 @@ def timeout(seconds=60):
                     'test timeout exceeded [timeout={0}'.format(seconds))
         return wraps(func)(wrapper)
     return decorator
-
-
-def set_node_stopped(node_id):
-    """
-    Set node state to stopped for the provided node id.
-
-    This will first query Riemann for getting current event fields and then
-    send an updated event with the new state.
-
-    This is for being compliant with workflow generated events sent to Riemann.
-    """
-    client = bernhard.Client()
-    results = client.query('service = "{0}"'.format(node_id))
-    if len(results) != 1:
-        raise RuntimeError(
-            'Received several results from Riemann for node id [{0}]'
-            .format(node_id))
-    event = {
-        'host': results[0].host,
-        'service': node_id,
-        'ttl': sys.maxint,
-        'state': 'stopped'
-    }
-    client.send(event)

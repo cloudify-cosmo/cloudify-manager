@@ -140,9 +140,9 @@ def get_mock_operation_invocations(**kwargs):
 @operation
 def append_node_state(ctx, **kwargs):
     client = get_manager_rest_client()
-    node_state = client.get_node_state(ctx.node_id,
-                                       get_state=True,
-                                       get_runtime_properties=False)
+    node_state = client.get_node_instance(
+        ctx.node_id,
+        get_state_and_runtime_properties=True)
     global node_states
     node_states.append(node_state['state'])
 
