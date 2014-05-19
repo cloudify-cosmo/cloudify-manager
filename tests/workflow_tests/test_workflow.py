@@ -225,8 +225,10 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
         deployment_id = 'my_new_deployment'
-        _, execution_id = deploy(dsl_path, blueprint_id=blueprint_id,
-                                 deployment_id=deployment_id)
+        _, execution_id = deploy(dsl_path,
+                                 blueprint_id=blueprint_id,
+                                 deployment_id=deployment_id,
+                                 wait_for_execution=False)
 
         # verifying deployment exists
         result = get_deployment(deployment_id)

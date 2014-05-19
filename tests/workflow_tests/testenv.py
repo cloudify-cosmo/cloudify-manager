@@ -1000,7 +1000,8 @@ def cancel_execution(execution_id, wait_for_termination=False):
     client = CosmoManagerRestClient('localhost')
 
     if wait_for_termination:
-        execution = get_execution(execution_id)
+        client.cancel_execution(execution_id)
+        execution = client.get_execution(execution_id)
         endtime = time.time() + 10
         while execution.status not in \
                 ['terminated', 'failed'] and time.time() < endtime:
