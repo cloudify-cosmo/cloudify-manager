@@ -28,9 +28,8 @@ raise_exception_on_stop = False
 @operation
 def provision(ctx, **kwargs):
     global machines
-    # ctx.logger.info("cloudmock provision: [node_id=%s, machines=%s]",
-    #                 ctx.node_id, machines)
-    ctx.logger.info('provision: {}'.format(ctx.node_id))
+    ctx.logger.info("cloudmock provision: [node_id=%s, machines=%s]",
+                    ctx.node_id, machines)
     if ctx.node_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
                            .format(ctx.node_id))
@@ -40,9 +39,8 @@ def provision(ctx, **kwargs):
 @operation
 def start(ctx, **kwargs):
     global machines
-    # ctx.logger.info("cloudmock start: [node_id={0}, machines={1}]".format(
-    #     ctx.node_id, machines))
-    ctx.logger.info('start: {}'.format(ctx.node_id))
+    ctx.logger.info("cloudmock start: [node_id={0}, machines={1}]".format(
+        ctx.node_id, machines))
     if ctx.node_id not in machines:
         raise RuntimeError("machine with id [{0}] does not exist"
                            .format(ctx.node_id))
@@ -53,14 +51,9 @@ def start(ctx, **kwargs):
         raise RuntimeError('Exception raised from CloudMock.start()!')
 
 
-my_temp = {}
-
 @operation
 def get_state(ctx, **kwargs):
-    called = my_temp.get(ctx.node_id) is not None
-    if not called:
-        my_temp[ctx.node_id] = ''
-    result = machines[ctx.node_id] == RUNNING and called
+    result = machines[ctx.node_id] == RUNNING
     ctx.logger.info('get_state: {} [{}]'.format(ctx.node_id, result))
     return result
 
