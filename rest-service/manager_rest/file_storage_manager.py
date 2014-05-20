@@ -117,6 +117,25 @@ class FileStorageManager(object):
         self._dump_data(data)
         return 1
 
+    def update_execution_status(self, execution_id, status, error=None):
+        data = self._load_data()
+        if execution_id not in data[EXECUTIONS]:
+            raise manager_exceptions.NotFoundError(
+                "Execution {0} not found".format(execution_id))
+
+        execution = data[EXECUTIONS][execution_id].to_dict()
+        updated_execution = Execution(
+            id=execution['id'],
+            deployment_id=execution['deployment_id'],
+            internal_workflow_id=execution['internal_workflow_id'],
+            workflow_id=execution['workflow_id'],
+            blueprint_id=execution['blueprint_id'],
+            created_at=execution['created_at'],
+            status=status,
+            error=error)
+        data[EXECUTIONS][execution_id] = updated_execution
+        self._dump_data(data)
+
     def update_node(self, node_id, node):
         data = self._load_data()
         if node_id not in data[NODES]:

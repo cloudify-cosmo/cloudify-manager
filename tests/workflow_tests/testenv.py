@@ -739,12 +739,6 @@ class ElasticSearchProcess(object):
         logger.info("Elasticsearch schema created successfully")
 
 
-class RuoteServiceClient(object):
-
-    def get_workflows_states(self):
-        return requests.get('http://localhost:8101/workflows').json()
-
-
 class TestEnvironmentScope(object):
     CLASS = "CLASS"
     MODULE = "MODULE"
@@ -1033,8 +1027,6 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
         self.logger.setLevel(logging.INFO)
-        self.logger.info('Current workflows state:\n{0}'
-                         .format(get_workflows_state()))
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
