@@ -915,6 +915,10 @@ class TestCase(unittest.TestCase):
             queue=CLOUDIFY_MANAGEMENT_QUEUE)
 
 
+def create_rest_client():
+    return CosmoManagerRestClient('localhost', port=MANAGER_REST_PORT)
+
+
 def get_resource(resource):
     """
     Gets the path for the provided resource.
@@ -930,12 +934,12 @@ def get_resource(resource):
 
 
 def run_search(query):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.run_search(query)
 
 
 def publish_blueprint(dsl_path, blueprint_id=None):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
     return blueprint_id
@@ -948,7 +952,7 @@ def deploy_application(dsl_path, timeout=240,
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
 
@@ -970,7 +974,7 @@ def undeploy_application(deployment_id, timeout=240):
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     _, error = client.execute_deployment(deployment_id,
                                          'uninstall',
                                          timeout=timeout)
@@ -982,7 +986,7 @@ def execute_install(deployment_id,
                     timeout=240,
                     force=False,
                     wait_for_execution=True):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     _, error = client.execute_deployment(deployment_id,
                                          'install',
                                          timeout=timeout,
@@ -996,7 +1000,7 @@ def cancel_execution(execution_id, wait_for_termination=False):
     """
     Cancels an execution by its id
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
 
     if wait_for_termination:
         execution = client.cancel_execution(execution_id)
@@ -1014,7 +1018,7 @@ def validate_dsl(blueprint_id, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     response = client.validate_blueprint(blueprint_id)
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
@@ -1025,49 +1029,49 @@ def get_execution(execution_id):
     """
     Returns the exeuction status
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_execution(execution_id)
 
 
 def get_blueprint(blueprint_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_blueprint(blueprint_id)
 
 
 def delete_blueprint(blueprint_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.delete_blueprint(blueprint_id)
 
 
 def get_deployment(deployment_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_deployment(deployment_id)
 
 
 def delete_deployment(deployment_id, ignore_live_nodes=False):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.delete_deployment(deployment_id, ignore_live_nodes)
 
 
 def get_deployment_workflows(deployment_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.list_workflows(deployment_id)
 
 
 def get_deployment_executions(deployment_id, with_statuses=False):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.list_deployment_executions(deployment_id, with_statuses)
 
 
 def get_deployment_nodes(deployment_id, get_state=False):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     deployment_nodes = client.list_deployment_nodes(
         deployment_id, get_state)
     return deployment_nodes
 
 
 def get_node_instance(node_id, get_state_and_runtime_properties=True):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     node_instance = client.get_node_instance(
         node_id,
         get_state_and_runtime_properties=get_state_and_runtime_properties)
@@ -1076,7 +1080,7 @@ def get_node_instance(node_id, get_state_and_runtime_properties=True):
 
 def update_node_instance(node_id, state_version, runtime_properties=None,
                          state=None):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.update_node_instance(
         node_id,
         state_version=state_version,
@@ -1085,12 +1089,12 @@ def update_node_instance(node_id, state_version, runtime_properties=None,
 
 
 def post_provider_context(name, provider_context):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.post_provider_context(name, provider_context)
 
 
 def get_provider_context():
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_provider_context()
 
 
