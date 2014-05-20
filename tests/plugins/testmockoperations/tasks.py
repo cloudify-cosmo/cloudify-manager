@@ -19,7 +19,7 @@ import tempfile
 import os
 import shutil
 from cloudify.manager import get_manager_rest_client
-
+import copy
 
 state = []
 touched_time = None
@@ -94,7 +94,7 @@ def mock_operation(ctx, **kwargs):
     mock_operation_invocation.append({
         'id': ctx.node_id,
         'mockprop': mockprop,
-        'kwargs': kwargs
+        'kwargs': copy.copy(ctx.properties)
     })
 
 
