@@ -113,9 +113,6 @@ class BlueprintsManager(object):
         deployment_executions =\
             get_storage_manager().get_deployment_executions(deployment_id)
 
-        deployment_executions = [self.get_workflow_state(execution.id) for
-                                 execution in deployment_executions]
-
         # validate there are no running executions for this deployment
         if any(execution.status not in ('terminated', 'failed') for
            execution in deployment_executions):
