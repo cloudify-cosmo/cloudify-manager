@@ -24,7 +24,6 @@ from cosmo_manager_rest_client.cosmo_manager_rest_client import \
 from workflow_tests.testenv import (TestCase,
                                     get_resource as resource,
                                     deploy_application as deploy,
-                                    get_execution,
                                     cancel_execution,
                                     execute_install,
                                     get_deployment_executions)
@@ -36,14 +35,7 @@ class ExecutionsTest(TestCase):
         dsl_path = resource("dsl/sleep_workflow.yaml")
         _, execution_id = deploy(dsl_path,
                                  wait_for_execution=False)
-        cancel_execution(execution_id)
-        execution = get_execution(execution_id)
-        endtime = time.time() + 10
-        while execution.status not in ['terminated', 'failed'] and \
-                time.time() < endtime:
-            execution = get_execution(execution_id)
-            time.sleep(1)
-
+        execution = cancel_execution(execution_id, True)
         self.assertEquals(execution.status, 'terminated')
 
     def test_get_deployments_executions_with_status(self):

@@ -16,6 +16,7 @@
 __author__ = 'idanmo'
 
 import uuid
+import time
 from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
@@ -24,7 +25,12 @@ from workflow_tests.testenv import timeout
 from workflow_tests.testenv import run_search as search
 from workflow_tests.testenv import get_blueprint
 from workflow_tests.testenv import delete_blueprint
+from workflow_tests.testenv import get_deployment
+from workflow_tests.testenv import delete_deployment
 from workflow_tests.testenv import publish_blueprint
+from workflow_tests.testenv import cancel_execution
+from workflow_tests.testenv import get_execution
+from workflow_tests.testenv import update_node_instance
 from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
@@ -55,7 +61,7 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state)\
+        states = self.send_task(testmock_get_state) \
             .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('host_node' in states[0]['id'])
@@ -197,8 +203,8 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/basic.yaml")
         blueprint_id = publish_blueprint(dsl_path)
         # verifying blueprint exists
-        temp = get_blueprint(blueprint_id)
-        self.assertEqual(blueprint_id, temp.id)
+        result = get_blueprint(blueprint_id)
+        self.assertEqual(blueprint_id, result.id)
         # deleting blueprint
         deleted_bp_id = delete_blueprint(blueprint_id).id
         self.assertEqual(blueprint_id, deleted_bp_id)
@@ -216,6 +222,106 @@ class BasicWorkflowsTest(TestCase):
                       "wasn't expected to exist".format(blueprint_id))
         except CosmoManagerRestCallError:
             pass
+
+    def test_delete_deployment(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = 'my_new_blueprint'
+        deployment_id = 'my_new_deployment'
+
+        # verifying a deletion of a new deployment, i.e. one which hasn't
+        # been installed yet, and therefore all its nodes are still in
+        # 'uninitialized' state.
+        client = CosmoManagerRestClient('localhost')
+        client.publish_blueprint(dsl_path, blueprint_id)
+        client.create_deployment(blueprint_id, deployment_id)
+        delete_deployment(deployment_id, False)
+        time.sleep(5)  # waiting for elasticsearch to clear deployment...
+        delete_blueprint(blueprint_id)
+
+        # recreating the deployment, this time actually deploying it too
+        _, execution_id = deploy(dsl_path,
+                                 blueprint_id=blueprint_id,
+                                 deployment_id=deployment_id,
+                                 wait_for_execution=False)
+
+        # verifying deployment exists
+        result = get_deployment(deployment_id)
+        self.assertEqual(deployment_id, result.id)
+
+        # retrieving deployment nodes
+        nodes = get_deployment_nodes(deployment_id, True).nodes
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node.id for node in nodes]
+
+        # setting one node's state to 'started' (making it a 'live' node)
+        update_node_instance(nodes[0].id, nodes[0].stateVersion,
+                             state='started')
+
+        # attempting to delete the deployment - should fail because the
+        # execution should be active
+        try:
+            delete_deployment(deployment_id, False)
+
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "should have had a running execution"
+                      .format(deployment_id))
+        except CosmoManagerRestCallError, e:
+            # self.assertTrue('live nodes' in str(e))
+            pass
+
+        # stopping the execution
+        execution = cancel_execution(execution_id, True)
+        self.assertEquals(execution.status, 'terminated')
+
+        # attempting to delete deployment - should fail because there are
+        # live nodes for this deployment
+        try:
+            delete_deployment(deployment_id, False)
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "should have had live nodes and the ignore_live_nodes "
+                      "flag was set to False".format(deployment_id))
+        except CosmoManagerRestCallError:
+            self.assertTrue('live nodes' in str(e))
+
+        # deleting deployment - this time there's no execution running,
+        # and using the ignore_live_nodes parameter to force deletion
+        deleted_deployment_id = delete_deployment(deployment_id, True).id
+        self.assertEqual(deployment_id, deleted_deployment_id)
+
+        # verifying deployment does no longer exist
+        try:
+            get_deployment(deployment_id)
+            self.fail("Got deployment {0} successfully even though it "
+                      "wasn't expected to exist".format(deployment_id))
+        except CosmoManagerRestCallError, e:
+            self.assertTrue('not found' in str(e))
+
+        # verifying deployment's execution does no longer exist
+        try:
+            get_execution(execution_id)
+            self.fail('execution {0} still exists even though it should have '
+                      'been deleted when its deployment was deleted'
+                      .format(execution_id))
+        except CosmoManagerRestCallError, e:
+            self.assertTrue('not found' in str(e))
+
+        # verifying deployment's nodes do no longer exist
+        for node_id in nodes_ids:
+            try:
+                get_node_instance(node_id)
+                self.fail('node {0} still exists even though it should have '
+                          'been deleted when its deployment was deleted'
+                          .format(node_id))
+            except CosmoManagerRestCallError, e:
+                self.assertTrue('not found' in str(e))
+
+        # trying to delete a nonexistent deployment
+        try:
+            delete_deployment(deployment_id)
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "wasn't expected to exist".format(deployment_id))
+        except CosmoManagerRestCallError, e:
+            self.assertTrue('not found' in str(e))
 
     def test_node_state_uninitialized(self):
         dsl_path = resource('dsl/node_states.yaml')

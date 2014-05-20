@@ -19,7 +19,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import get_deployment_nodes
-from testenv import get_node_state
+from testenv import get_node_instance
 
 
 class TestContextProperties(TestCase):
@@ -28,8 +28,8 @@ class TestContextProperties(TestCase):
         dsl_path = resource("dsl/set-property.yaml")
         deployment, _ = deploy(dsl_path)
         node_id = get_deployment_nodes(deployment.id).nodes[0].id
-        node_state = get_node_state(node_id)
-        self.assertEqual(node_state['property_name'], 'property_value')
+        node_runtime_info = get_node_instance(node_id)['runtimeInfo']
+        self.assertEqual(node_runtime_info['property_name'], 'property_value')
 
     def test_no_update_runtime_properties(self):
         dsl_path = resource("dsl/update-node-state.yaml")

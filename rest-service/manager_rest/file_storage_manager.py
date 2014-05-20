@@ -123,13 +123,13 @@ class FileStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
 
-        prev_rt_info = DeploymentNode(**data[NODES][node_id].to_dict())\
-            .runtime_info
+        prev_rt_info = data[NODES][node_id].to_dict()['runtime_info'] or {}
         merged_rt_info = dict(prev_rt_info.items() +
-                              node.runtime_info.items())
-        # TODO: merge reachable field?
+                              node.runtime_info.items()) if node\
+            .runtime_info else prev_rt_info
+        new_state = node.state or data[NODES][node_id].to_dict()['state']
         node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
-                              reachable=None, state=None,
+                              state=new_state,
                               state_version=node.state_version+1)
         data[NODES][node_id] = node
         self._dump_data(data)
@@ -212,14 +212,26 @@ class FileStorageManager(object):
         self._dump_data(data)
 
     def delete_blueprint(self, blueprint_id):
+        return self._delete_object(blueprint_id, BLUEPRINTS, 'Blueprint')
+
+    def delete_deployment(self, deployment_id):
+        return self._delete_object(deployment_id, DEPLOYMENTS, 'Deployment')
+
+    def delete_execution(self, execution_id):
+        return self._delete_object(execution_id, EXECUTIONS, 'Execution')
+
+    def delete_node(self, node_id):
+        return self._delete_object(node_id, NODES, 'Node')
+
+    def _delete_object(self, object_id, object_type, object_type_name):
         data = self._load_data()
-        if blueprint_id in data[BLUEPRINTS]:
-            bp = data[BLUEPRINTS][blueprint_id]
-            del(data[BLUEPRINTS][blueprint_id])
+        if object_id in data[object_type]:
+            obj = data[object_type][object_id]
+            del(data[object_type][object_id])
             self._dump_data(data)
-            return bp
+            return obj
         raise manager_exceptions.NotFoundError(
-            "Blueprint {0} not found".format(blueprint_id))
+            "{0} {1} not found".format(object_type_name, object_id))
 
     def put_provider_context(self, provider_context):
         data = self._load_data()
