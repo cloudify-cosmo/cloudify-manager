@@ -74,4 +74,4 @@ script:
    - cd ..
 
 notifications:
-  hipchat: 60884046bb8dec459418f468ba68b9@cosmo
+  flowdock: 1563c50664ffcb851c73e5588ec241a5
