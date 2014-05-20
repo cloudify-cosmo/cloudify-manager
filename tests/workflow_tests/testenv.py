@@ -275,30 +275,36 @@ class RuoteServiceProcess(object):
             self._verify_service_ended()
 
 
-class CeleryWorkflowsWorkerProcess(object):
+class CeleryWorkerProcess(object):
     _process = None
 
-    def __init__(self, tempdir, plugins_tempdir, workflow_plugin_path,
-                 manager_rest_port):
-        self._celery_pid_file = path.join(tempdir, "celery-workflows.pid")
-        self._workflow_plugin_path = workflow_plugin_path
+    def __init__(self,
+                 tempdir,
+                 plugins_tempdir,
+                 manager_rest_port,
+                 name,
+                 queues,
+                 includes,
+                 plugins_path):
+        self._name = name
+        self._celery_pid_file = path.join(tempdir, "celery-{}.pid".format(
+            name))
+        self._celery_log_file = path.join(tempdir, "celery-{}.log".format(
+            name))
         self._app_path = path.join(tempdir, "plugins")
         self._tempdir = tempdir
         self._plugins_tempdir = plugins_tempdir
         self._manager_rest_port = manager_rest_port
-
-    def _build_includes(self):
-        return ["workflows.default"]
+        self._includes = includes
+        self._queues = queues
+        self._plugins_path = plugins_path
 
     def start(self):
-        logger.info("Copying %s to %s", self._workflow_plugin_path,
-                    self._app_path)
-        distutils.dir_util.copy_tree(self._workflow_plugin_path,
-                                     self._app_path)
-        celery_log_file = path.join(self._tempdir, "celery-workflows.log")
+        logger.info("Copying %s to %s", self._plugins_path, self._app_path)
+        distutils.dir_util.copy_tree(self._plugins_path, self._app_path)
         python_path = sys.executable
-        logger.info("Building includes list for celery workflows worker")
-        includes = self._build_includes()
+        logger.info("Building includes list for celery {} worker".format(
+            self._name))
         celery_command = [
             "{0}/celery".format(dirname(python_path)),
             "worker",
@@ -307,11 +313,11 @@ class CeleryWorkflowsWorkerProcess(object):
             "--hostname=celery.{0}".format(MANAGEMENT_NODE_ID),
             "--purge",
             "--app=cloudify",
-            "--logfile={0}".format(celery_log_file),
+            "--logfile={0}".format(self._celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
-            "--queues={0}".format(','.join(CELERY_WORKFLOWS_QUEUE_LIST)),
+            "--queues={0}".format(','.join(self._queues)),
             "--concurrency=1",
-            "--include={0}".format(','.join(includes))
+            "--include={0}".format(','.join(self._includes))
         ]
 
         prevdir = os.getcwd()
@@ -341,11 +347,11 @@ class CeleryWorkflowsWorkerProcess(object):
             time.sleep(1)
 
         if not path.exists(self._celery_pid_file):
-            if path.exists(celery_log_file):
-                with open(celery_log_file, "r") as f:
+            if path.exists(self._celery_log_file):
+                with open(self._celery_log_file, "r") as f:
                     celery_log = f.read()
-                    logger.info("{0} content:\n{1}".format(celery_log_file,
-                                                           celery_log))
+                    logger.info("{0} content:\n{1}".format(
+                        self._celery_log_file, celery_log))
             raise RuntimeError("Failed to start celery workflows worker: {0} "
                                "- process "
                                "did not start after {1} seconds"
@@ -356,8 +362,8 @@ class CeleryWorkflowsWorkerProcess(object):
 
     def close(self):
         if self._process:
-            logger.info("Shutting down celery workflows worker [pid=%s]",
-                        self._process.pid)
+            logger.info("Shutting down celery {} worker [pid={}]"
+                        .format(self._name, self._process.pid))
             self._process.kill()
 
     def _get_celery_process_ids(self):
@@ -382,7 +388,8 @@ class CeleryWorkflowsWorkerProcess(object):
             # kill celery child process
             if pid != str(self._process.pid):
                 logger.info(
-                    "Killing celery workflows worker [pid={0}]".format(pid))
+                    "Killing celery {} worker [pid={}]".format(
+                        self._name, pid))
                 os.system('kill -9 {0}'.format(pid))
         timeout = time.time() + 30
         # wait until celery master creates a new child
@@ -390,26 +397,38 @@ class CeleryWorkflowsWorkerProcess(object):
             time.sleep(1)
             if time.time() > timeout:
                 raise RuntimeError(
-                    'Celery workflows worker restart timeout '
-                    '[current_ids={0}, previous_ids={1}'.format(
-                        self._get_celery_process_ids(), process_ids))
+                    'Celery {} worker restart timeout '
+                    '[current_ids={}, previous_ids={}'.format(
+                        self._name, self._get_celery_process_ids(),
+                        process_ids))
 
 
-class CeleryOperationsWorkerProcess(object):
-    _process = None
+class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
+
+    def __init__(self, tempdir, plugins_tempdir, workflow_plugin_path,
+                 manager_rest_port):
+        super(CeleryWorkflowsWorkerProcess, self).__init__(
+            tempdir, plugins_tempdir, manager_rest_port,
+            name='workflows',
+            queues=CELERY_WORKFLOWS_QUEUE_LIST,
+            includes=["workflows.default"],
+            plugins_path=workflow_plugin_path)
+
+
+class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
 
     def __init__(self, tempdir, plugins_tempdir, cosmo_path,
                  manager_rest_port):
-        self._celery_pid_file = path.join(tempdir, "celery-operations.pid")
-        self._cosmo_path = cosmo_path
-        self._app_path = path.join(tempdir, "plugins")
-        self._tempdir = tempdir
-        self._plugins_tempdir = plugins_tempdir
-        self._manager_rest_port = manager_rest_port
+        super(CeleryOperationsWorkerProcess, self).__init__(
+            tempdir, plugins_tempdir, manager_rest_port,
+            name='operations',
+            queues=CELERY_QUEUES_LIST,
+            includes=self._build_includes(),
+            plugins_path=cosmo_path)
 
-    def _build_includes(self):
+    @staticmethod
+    def _build_includes():
         includes = []
-
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path\
             .join(dirname(dirname(abspath(__file__))), "plugins")
@@ -425,108 +444,6 @@ class CeleryOperationsWorkerProcess(object):
                                .format(plugin_dir_name))
 
         return includes
-
-    def start(self):
-        logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
-        distutils.dir_util.copy_tree(self._cosmo_path, self._app_path)
-        celery_log_file = path.join(self._tempdir, "celery-operations.log")
-        python_path = sys.executable
-        logger.info("Building includes list for celery operations worker")
-        includes = self._build_includes()
-        celery_command = [
-            "{0}/celery".format(dirname(python_path)),
-            "worker",
-            "--events",
-            "--loglevel=debug",
-            "--hostname=celery.{0}".format(MANAGEMENT_NODE_ID),
-            "--purge",
-            "--app=cloudify",
-            "--logfile={0}".format(celery_log_file),
-            "--pidfile={0}".format(self._celery_pid_file),
-            "--queues={0}".format(','.join(CELERY_QUEUES_LIST)),
-            "--concurrency=1",
-            "--include={0}".format(','.join(includes))
-        ]
-
-        prevdir = os.getcwd()
-        os.chdir(os.path.join(self._tempdir, "plugins"))
-
-        environment = os.environ.copy()
-        environment['TEMP_DIR'] = self._plugins_tempdir
-        environment['MANAGER_REST_PORT'] = self._manager_rest_port
-        environment['MANAGEMENT_IP'] = 'localhost'
-        environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
-            'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
-                                              FILE_SERVER_BLUEPRINTS_FOLDER)
-        environment['MANAGER_FILE_SERVER_URL'] = 'http://localhost:{0}'\
-                                                 .format(FILE_SERVER_PORT)
-
-        environment['AGENT_IP'] = 'localhost'
-        environment['VIRTUALENV'] = dirname(dirname(python_path))
-
-        logger.info("Starting celery worker with command {0}"
-                    .format(celery_command))
-        self._process = subprocess.Popen(celery_command, env=environment)
-
-        timeout = 60
-        deadline = time.time() + timeout
-        while not path.exists(self._celery_pid_file) and \
-                (time.time() < deadline):
-            time.sleep(1)
-
-        if not path.exists(self._celery_pid_file):
-            if path.exists(celery_log_file):
-                with open(celery_log_file, "r") as f:
-                    celery_log = f.read()
-                    logger.info("{0} content:\n{1}".format(celery_log_file,
-                                                           celery_log))
-            raise RuntimeError("Failed to start celery operations worker: {"
-                               "0} - process "
-                               "did not start after {1} seconds"
-                               .format(self._process.returncode, timeout))
-
-        os.chdir(prevdir)
-        logger.info("Celery worker started [pid=%s]", self._process.pid)
-
-    def close(self):
-        if self._process:
-            logger.info("Shutting down celery operations worker [pid=%s]",
-                        self._process.pid)
-            self._process.kill()
-
-    def _get_celery_process_ids(self):
-        from subprocess import CalledProcessError
-        try:
-            grep = "ps aux | grep 'celery.*{0}' | grep -v grep".format(
-                self._celery_pid_file)
-            grep += " | awk '{print $2}'"
-            output = subprocess.check_output(grep, shell=True)
-            ids = filter(lambda x: len(x) > 0, output.split(os.linesep))
-            return ids
-        except CalledProcessError:
-            return []
-
-    def restart(self):
-        """
-        Restarts the single celery worker process.
-        Celery's child process will have a different PID.
-        """
-        process_ids = self._get_celery_process_ids()
-        for pid in process_ids:
-            # kill celery child process
-            if pid != str(self._process.pid):
-                logger.info("Killing celery operations worker [pid={0}]"
-                            .format(pid))
-                os.system('kill -9 {0}'.format(pid))
-        timeout = time.time() + 30
-        # wait until celery master creates a new child
-        while len(self._get_celery_process_ids()) != 2:
-            time.sleep(1)
-            if time.time() > timeout:
-                raise RuntimeError(
-                    'Celery operations worker restart timeout '
-                    '[current_ids={0}, previous_ids={1}'.format(
-                        self._get_celery_process_ids(), process_ids))
 
 
 class RiemannProcess(object):
