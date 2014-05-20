@@ -32,10 +32,11 @@ from workflow_tests.testenv import cancel_execution
 from workflow_tests.testenv import get_execution
 from workflow_tests.testenv import update_node_instance
 from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
+from workflow_tests.testenv import create_rest_client
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient, CosmoManagerRestCallError
+    import CosmoManagerRestCallError
 
 
 class BasicWorkflowsTest(TestCase):
@@ -231,7 +232,7 @@ class BasicWorkflowsTest(TestCase):
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
-        client = CosmoManagerRestClient('localhost')
+        client = create_rest_client()
         client.publish_blueprint(dsl_path, blueprint_id)
         client.create_deployment(blueprint_id, deployment_id)
         delete_deployment(deployment_id, False)
@@ -328,7 +329,7 @@ class BasicWorkflowsTest(TestCase):
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
-        client = CosmoManagerRestClient('localhost')
+        client = create_rest_client()
         client.publish_blueprint(dsl_path, blueprint_id)
         client.create_deployment(blueprint_id, deployment_id)
         deployment_nodes = get_deployment_nodes(deployment_id)

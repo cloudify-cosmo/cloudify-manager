@@ -16,14 +16,15 @@
 __author__ = 'ran'
 
 from testenv import TestCase
+from testenv import create_rest_client
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient, CosmoManagerRestCallError
+    import CosmoManagerRestCallError
 
 
 class TestStorage(TestCase):
 
     def test_update_node_bad_version(self):
-        client = CosmoManagerRestClient('localhost')
+        client = create_rest_client()
 
         node_id = '1'
         state_version = 1
