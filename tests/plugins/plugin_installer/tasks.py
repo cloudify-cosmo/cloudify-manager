@@ -33,20 +33,5 @@ def install(ctx, plugin, **kwargs):
 
 
 @operation
-def verify_plugin(ctx, worker_id, plugin_name, operation, throw_on_failure,
-                  **kwargs):
-    full_operation_name = "{0}.{1}".format(plugin_name, operation)
-    is_non_existing = full_operation_name in NON_EXISTING_OPERATIONS
-    if throw_on_failure and is_non_existing:
-        raise RuntimeError("")
-    return not is_non_existing
-
-
-@operation
-def get_arguments(plugin_name, operation, **kwargs):
-    pass
-
-
-@operation
 def get_installed_plugins(**kwargs):
     return INSTALLED_PLUGINS

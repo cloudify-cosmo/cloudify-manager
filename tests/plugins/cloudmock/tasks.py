@@ -53,9 +53,9 @@ def start(ctx, **kwargs):
 
 @operation
 def get_state(ctx, **kwargs):
-    if machines[ctx.node_id] == RUNNING:
-        return True
-    return False
+    result = machines[ctx.node_id] == RUNNING
+    ctx.logger.info('get_state: {} [{}]'.format(ctx.node_id, result))
+    return result
 
 
 @operation

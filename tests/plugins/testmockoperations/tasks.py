@@ -19,7 +19,7 @@ import tempfile
 import os
 import shutil
 from cloudify.manager import get_manager_rest_client
-
+import copy
 
 state = []
 touched_time = None
@@ -52,7 +52,9 @@ def make_unreachable(ctx, **kwargs):
 
 
 @operation
-def set_property(property_name, value, ctx, **kwargs):
+def set_property(ctx, **kwargs):
+    property_name = ctx.properties['property_name']
+    value = ctx.properties['value']
     ctx.logger.info('Setting property [{0}={1}] for node: {2}'
                     .format(property_name, value, ctx.node_id))
     ctx.runtime_properties[property_name] = value
@@ -86,17 +88,19 @@ def get_unreachable_call_order(**kwargs):
 
 
 @operation
-def mock_operation(ctx, mockprop, **kwargs):
+def mock_operation(ctx, **kwargs):
+    mockprop = ctx.properties['mockprop']
     global mock_operation_invocation
     mock_operation_invocation.append({
         'id': ctx.node_id,
         'mockprop': mockprop,
-        'kwargs': kwargs
+        'kwargs': copy.copy(ctx.properties)
     })
 
 
 @operation
-def get_resource_operation(ctx, resource_path, **kwargs):
+def get_resource_operation(ctx, **kwargs):
+    resource_path = ctx.properties['resource_path']
     # trying to retrieve a resource
     res1 = ctx.download_resource(resource_path)
     if not res1:
