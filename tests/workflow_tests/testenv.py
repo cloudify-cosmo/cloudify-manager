@@ -51,6 +51,7 @@ CELERY_QUEUES_LIST = [MANAGEMENT_NODE_ID, DEPLOYMENT_QUEUE_NAME]
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
+MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
 root = logging.getLogger()
@@ -102,7 +103,8 @@ class ManagerRestProcess(object):
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
-        self.client = CosmoManagerRestClient('localhost')
+        self.client = CosmoManagerRestClient('localhost',
+                                             port=MANAGER_REST_PORT)
         self.tempdir = tempdir
 
     def start(self, timeout=10):
@@ -756,7 +758,7 @@ class TestEnvironment(object):
             self._elasticsearch_process = ElasticSearchProcess()
             self._elasticsearch_process.start()
 
-            manager_rest_port = '8100'
+            manager_rest_port = MANAGER_REST_PORT
 
             # celery
             plugins_path = path.dirname(path.realpath(plugins.__file__))
