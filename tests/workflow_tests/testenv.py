@@ -347,11 +347,10 @@ class CeleryWorkerProcess(object):
             time.sleep(1)
 
         if not path.exists(self._celery_pid_file):
-            if path.exists(self._celery_log_file):
-                with open(self._celery_log_file, "r") as f:
-                    celery_log = f.read()
-                    logger.info("{0} content:\n{1}".format(
-                        self._celery_log_file, celery_log))
+            celery_log = self.try_read_logfile()
+            if celery_log is not None:
+                logger.info("{0} content:\n{1}".format(
+                    self._celery_log_file, celery_log))
             raise RuntimeError("Failed to start celery workflows worker: {0} "
                                "- process "
                                "did not start after {1} seconds"
@@ -401,6 +400,12 @@ class CeleryWorkerProcess(object):
                     '[current_ids={}, previous_ids={}'.format(
                         self._name, self._get_celery_process_ids(),
                         process_ids))
+
+    def try_read_logfile(self):
+        if path.exists(self._celery_log_file):
+            with open(self._celery_log_file, "r") as f:
+                return f.read()
+        return None
 
 
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
