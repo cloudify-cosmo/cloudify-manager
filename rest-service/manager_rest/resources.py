@@ -311,8 +311,8 @@ class Blueprints(Resource):
                         'required': True,
                         'allowMultiple': False,
                         'dataType': 'binary',
-                        'paramType': 'body',
-        }],
+                        'paramType': 'body'}
+                    ],
         consumes=[
             "application/octet-stream"
         ]
@@ -1037,15 +1037,34 @@ class Status(Resource):
     @swagger.operation(
         responseClass=responses.Status,
         nickname="status",
-        notes="Returns an alive message from the rest service."
+        notes="Returns state of running system services"
     )
     @marshal_with(responses.Status.resource_fields)
     @exceptions_handled
     def get(self):
         """
-        Returns an alive status (mainly used for pinging reasons).
+        Returns state of running system services
         """
-        return responses.Status(status='running')
+        job_list = {'rsyslog': 'Syslog',
+                    'manager': 'Cloudify Manager',
+                    'workflow': 'Workflow Service',
+                    'riemann': 'Riemann',
+                    'rabbitmq-server': 'RabbitMQ',
+                    'celeryd-cloudify-managment': 'Celery Managment',
+                    'ssh': 'SSH',
+                    'elasticsearch': 'Elasticsearch',
+                    'cloudify-ui': 'Cloudify UI',
+                    'logstash': 'Logstash',
+                    'nginx': 'Webserver'
+                    }
+
+        try:
+            from manager_rest.upstartdbus import get_jobs
+            jobs = get_jobs(job_list.keys(), job_list.values())
+        except ImportError:
+            jobs = ['undefined']
+
+        return responses.Status(status='running', services=jobs)
 
 
 class ProviderContext(Resource):
