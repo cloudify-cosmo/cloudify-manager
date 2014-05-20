@@ -44,21 +44,12 @@ class NodesTest(BaseServerTestCase):
         # just a bunch of bad calls to patch node
         response = self.patch('/nodes/1234', 'not a dictionary')
         self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'a dict': 'without runtime_info'
-                                                        ' key'})
-        self.assertEqual(400, response.status_code)
         response = self.patch('/nodes/1234', {'a dict': 'without '
-                                                        'state_version key'})
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'runtime_info': {},
-                                              'state_version': 0,
-                                              'extra_prop': 'is bad'})
+                                                        'state_version'
+                                                        ' key'})
         self.assertEqual(400, response.status_code)
         response = self.patch('/nodes/1234', {'runtime_info': {},
                                               'state_version': 'not an int'})
-        self.assertEqual(400, response.status_code)
-        response = self.patch('/nodes/1234', {'runtime_info': 'not a dict',
-                                              'state_version': 0})
         self.assertEqual(400, response.status_code)
 
     def test_patch_node(self):
@@ -85,6 +76,44 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual(2, len(response.json['runtimeInfo']))
         self.assertEqual('value', response.json['runtimeInfo']['key'])
         self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
+
+    def test_partial_patch_node(self):
+        self.put('/nodes/1234', {'key': 'value'})
+
+        # full patch
+        response = self.patch('/nodes/1234',
+                              {
+                                  'state': 'a-state',
+                                  'runtime_info': {'aaa': 'bbb'},
+                                  'state_version': 2
+                              })
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
+        self.assertEqual('a-state', response.json['state'])
+
+        # patch with no runtime properties
+        response = self.patch('/nodes/1234', {'state': 'b-state',
+                                              'state_version': 3})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
+        self.assertEqual('b-state', response.json['state'])
+
+        # patch with neither state nor runtime properties
+        response = self.patch('/nodes/1234', {'state_version': 4})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
+        self.assertEqual('b-state', response.json['state'])
+
+        # patch with no state
+        response = self.patch('/nodes/1234',
+                              {
+                                  'runtime_info': {'ccc': 'ddd'},
+                                  'state_version': 5
+                              })
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('bbb', response.json['runtimeInfo']['aaa'])
+        self.assertEqual('ddd', response.json['runtimeInfo']['ccc'])
+        self.assertEqual('b-state', response.json['state'])
 
     def test_patch_node_conflict(self):
         import manager_rest.storage_manager as sm

@@ -101,8 +101,8 @@ class BaseServerTestCase(unittest.TestCase):
         result = self.app.head(urllib.quote(resource_path))
         return result
 
-    def delete(self, resource_path):
-        result = self.app.delete(urllib.quote(resource_path))
+    def delete(self, resource_path, query_params=None):
+        result = self.app.delete(self._build_url(resource_path, query_params))
         result.json = json.loads(result.data)
         return result
 
