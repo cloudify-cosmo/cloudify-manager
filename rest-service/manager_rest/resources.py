@@ -646,6 +646,32 @@ class DeploymentsId(Resource):
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
 
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="deleteById",
+        notes="deletes a deployment by its id.",
+        parameters=[{'name': 'ignore_live_nodes',
+                     'description': 'Specifies whether to ignore live nodes,'
+                                    'or raise an error upon such nodes '
+                                    'instead.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    @exceptions_handled
+    def delete(self, deployment_id):
+        args = self._args_parser.parse_args()
+
+        ignore_live_nodes = verify_and_convert_bool(
+            'ignore_live_nodes', args['ignore_live_nodes'])
+
+        deployment = get_blueprints_manager().delete_deployment(
+            deployment_id, ignore_live_nodes)
+        return responses.Deployment(**deployment.to_dict()), 200
+
 
 class NodesId(Resource):
 
@@ -1000,63 +1026,6 @@ class Search(Resource):
         verify_json_content_type()
         return _query_elastic_search(index='cloudify_storage',
                                      body=request.json)
-
-
-class ExecutionIdState(Resource):
-
-    @swagger.operation(
-        responseClass=responses.ExecutionState,
-        nickname="getExecutionState",
-        notes="Gets the execution's state",
-        )
-    @marshal_with(responses.ExecutionState.resource_fields)
-    @exceptions_handled
-    def get(self, execution_internal_id):
-        execution_state = get_storage_manager().get_execution_state(
-            execution_internal_id)
-        return responses.ExecutionState(**execution_state.to_dict())
-
-    @swagger.operation(
-        responseClass=responses.ExecutionState,
-        nickname="updateExecutionState",
-        notes="Updates the execution's state",
-        parameters=[{'name': 'state',
-                     'description': "The execution's new state",
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'},
-                    {'name': 'error',
-                     'description': "An error message",
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'}],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @marshal_with(responses.ExecutionState.resource_fields)
-    @exceptions_handled
-    def patch(self, execution_internal_id):
-        """
-        Updates a workflow's state
-        """
-        verify_json_content_type()
-        request_json = request.json
-        if 'state' not in request_json:
-            abort(400, message="400: Missing 'state' in json request body")
-
-        execution_state = get_storage_manager().get_execution_state(
-            execution_internal_id)
-
-        execution_state.state = request_json['state']
-        if 'error' in request_json:
-            execution_state.error = request_json['error']
-
-        get_storage_manager().update_execution_state(execution_state)
-
-        return responses.ExecutionState(**execution_state.to_dict())
 
 
 class Status(Resource):
