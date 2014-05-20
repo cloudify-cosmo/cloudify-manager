@@ -14,6 +14,7 @@ types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
+                - create: 'testmockoperations.tasks.make_reachable'
                 - start:
                       mapping: 'testmockoperations.tasks.mock_operation'
                       properties:

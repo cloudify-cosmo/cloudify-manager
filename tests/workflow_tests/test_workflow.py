@@ -91,11 +91,10 @@ class BasicWorkflowsTest(TestCase):
                 node_runtime_props = v
                 break
         self.assertEquals('value1', node_runtime_props['property1'])
-        # length should be 2 because of auto injected ip property
         self.assertEquals(1,
-                          len(node_runtime_props),
+                          len(node_runtime_props.runtime_properties),
                           msg='Expected 2 but contains: {0}'.format(
-                              node_runtime_props))
+                              node_runtime_props.runtime_properties))
 
     def test_dsl_with_agent_plugin(self):
         dsl_path = resource("dsl/with_plugin.yaml")
@@ -145,8 +144,8 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual('mockpropvalue2', invocation['kwargs']['mockprop2'])
-        self.assertTrue('__cloudify_context' in invocation['kwargs'])
+        self.assertEqual('mockpropvalue2', invocation['properties']
+                                                     ['mockprop2'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
     def test_plugin_get_resource(self):
