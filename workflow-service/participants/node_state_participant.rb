@@ -19,7 +19,6 @@ require 'rest_client'
 require 'json'
 require 'uri'
 require 'set'
-require 'riemann/client'
 require_relative '../utils/logs'
 
 ######
@@ -79,7 +78,7 @@ class NodeStateParticipant < Ruote::Participant
 
       # TODO runtime-model: handle HTTP status codes and connection errors
 
-      url = URI::escape("#{base_uri}/nodes/#{node_id}?reachable=true&runtime=#{wait_until_matches and not current_node.nil?}")
+      url = URI::escape("#{base_uri}/nodes/#{node_id}?state_and_runtime_properties=true")
       response = RestClient.get(url)
       node_state = JSON.parse(response.to_str)
 
@@ -133,12 +132,19 @@ class NodeStateParticipant < Ruote::Participant
         :workitem => workitem
     })
 
-    client = Riemann::Client.new
-    client << {
-        service: node_id,
-        state: value,
-        ttl: 9223372036854775807
-    }
+    base_uri = 'http://localhost:8100'
+
+    url = URI::escape("#{base_uri}/nodes/#{node_id}?state_and_runtime_properties=true")
+    response = RestClient.get(url)
+    state_version = JSON.parse(response.to_str)['stateVersion']
+
+    url = URI::escape("#{base_uri}/nodes/#{node_id}")
+    body = JSON.generate({
+        :state_version => state_version,
+        :state => value
+                         })
+    RestClient.patch url, body, {:content_type => :json}
+
     reply
   end
 
