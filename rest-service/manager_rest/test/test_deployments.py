@@ -130,7 +130,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         get_execution = self.get(get_execution_resource).json
-        self.assertEquals(get_execution['status'], 'terminated')
+        self.assertEquals(get_execution['status'], 'pending')
         self.assertEquals(get_execution['blueprintId'], blueprint_id)
         self.assertEquals(get_execution['deploymentId'],
                           deployment_response['id'])
@@ -183,18 +183,6 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertIsNotNone(execution['createdAt'])
         get_execution = self.get(resource_path).json
         self.assertEquals(1, len(get_execution))
-        # since we're not asking to retrieve execution statuses, status and
-        # error fields should be None in response's executions
-        execution['status'] = None
-        execution['error'] = None
-        self.assertEquals(execution, get_execution[0])
-
-        # testing retrieval of updated execution status
-        get_execution = self.get(resource_path, {'statuses': True}).json
-        self.assertEquals(1, len(get_execution))
-        execution['status'] = 'terminated'  # setting expected status
-        self.assertEquals('terminated', get_execution[0]['status'])
-        self.assertEquals(None, get_execution[0]['error'])
         self.assertEquals(execution, get_execution[0])
 
     def test_executing_nonexisting_workflow(self):
