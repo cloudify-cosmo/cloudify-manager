@@ -51,6 +51,7 @@ CELERY_QUEUES_LIST = [MANAGEMENT_NODE_ID, DEPLOYMENT_QUEUE_NAME]
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
+MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
 root = logging.getLogger()
@@ -102,7 +103,8 @@ class ManagerRestProcess(object):
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
-        self.client = CosmoManagerRestClient('localhost')
+        self.client = CosmoManagerRestClient('localhost',
+                                             port=port)
         self.tempdir = tempdir
 
     def start(self, timeout=10):
@@ -352,7 +354,7 @@ class CeleryWorkerProcess(object):
 
         environment = os.environ.copy()
         environment['TEMP_DIR'] = self._plugins_tempdir
-        environment['MANAGER_REST_PORT'] = self._manager_rest_port
+        environment['MANAGER_REST_PORT'] = str(self._manager_rest_port)
         environment['MANAGEMENT_IP'] = 'localhost'
         environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
             'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
@@ -756,13 +758,11 @@ class TestEnvironment(object):
             self._elasticsearch_process = ElasticSearchProcess()
             self._elasticsearch_process.start()
 
-            manager_rest_port = '8100'
-
             # celery
             plugins_path = path.dirname(path.realpath(plugins.__file__))
             self._celery_worker_process = CeleryWorkerProcess(
                 self._tempdir, self._plugins_tempdir, plugins_path,
-                manager_rest_port)
+                MANAGER_REST_PORT)
             self._celery_worker_process.start()
 
             # workaround to update path
@@ -792,7 +792,7 @@ class TestEnvironment(object):
             file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
             worker_service_base_uri = 'http://localhost:8101'
             self._manager_rest_process = ManagerRestProcess(
-                manager_rest_port,
+                MANAGER_REST_PORT,
                 fileserver_dir,
                 file_server_base_uri,
                 worker_service_base_uri,
