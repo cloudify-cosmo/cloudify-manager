@@ -94,7 +94,7 @@ def mock_operation(ctx, **kwargs):
     mock_operation_invocation.append({
         'id': ctx.node_id,
         'mockprop': mockprop,
-        'kwargs': copy.copy(ctx.properties)
+        'properties': {key: value for (key, value) in ctx.properties.items()}
     })
 
 
@@ -155,3 +155,9 @@ def append_node_state(ctx, **kwargs):
 def get_node_states(**kwargs):
     global node_states
     return node_states
+
+
+@operation
+def sleep(ctx, **kwargs):
+    import time
+    time.sleep(int(ctx.properties['sleep']))
