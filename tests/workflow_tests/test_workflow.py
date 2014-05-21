@@ -28,6 +28,8 @@ from workflow_tests.testenv import delete_blueprint
 from workflow_tests.testenv import get_deployment
 from workflow_tests.testenv import delete_deployment
 from workflow_tests.testenv import publish_blueprint
+from workflow_tests.testenv import update_execution_status
+from workflow_tests.testenv import get_deployment_executions
 from workflow_tests.testenv import cancel_execution
 from workflow_tests.testenv import get_execution
 from workflow_tests.testenv import update_node_instance
@@ -227,6 +229,12 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = 'my_new_blueprint'
         deployment_id = 'my_new_deployment'
 
+        def change_execution_status(execution_id, status):
+            update_execution_status(execution_id, status)
+            time.sleep(5)  # waiting for elasticsearch to update...
+            executions = get_deployment_executions(deployment_id)
+            self.assertEqual(status, executions[0].status)
+
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
@@ -241,7 +249,11 @@ class BasicWorkflowsTest(TestCase):
         _, execution_id = deploy(dsl_path,
                                  blueprint_id=blueprint_id,
                                  deployment_id=deployment_id,
-                                 wait_for_execution=False)
+                                 wait_for_execution=True)
+
+        # execution is supposed to be 'terminated' anyway, but verifying it
+        # anyway (plus elasticsearch might need time to update..)
+        change_execution_status(execution_id, 'terminated')
 
         # verifying deployment exists
         result = get_deployment(deployment_id)
@@ -256,8 +268,12 @@ class BasicWorkflowsTest(TestCase):
         update_node_instance(nodes[0].id, nodes[0].stateVersion,
                              state='started')
 
+        # setting the execution's status to 'launched' so it'll prevent the
+        # deployment deletion
+        change_execution_status(execution_id, 'launched')
+
         # attempting to delete the deployment - should fail because the
-        # execution should be active
+        # execution is active
         try:
             delete_deployment(deployment_id, False)
 
@@ -265,12 +281,12 @@ class BasicWorkflowsTest(TestCase):
                       "should have had a running execution"
                       .format(deployment_id))
         except CosmoManagerRestCallError, e:
-            # self.assertTrue('live nodes' in str(e))
-            pass
+            self.assertTrue('running executions' in str(e))
 
-        # stopping the execution
-        execution = cancel_execution(execution_id, True)
-        self.assertEquals(execution.status, 'terminated')
+        # setting the execution's status to 'terminated' so it won't prevent
+        #  the deployment deletion
+        change_execution_status(execution_id, 'terminated')
+
 
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
@@ -279,7 +295,7 @@ class BasicWorkflowsTest(TestCase):
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had live nodes and the ignore_live_nodes "
                       "flag was set to False".format(deployment_id))
-        except CosmoManagerRestCallError:
+        except CosmoManagerRestCallError, e:
             self.assertTrue('live nodes' in str(e))
 
         # deleting deployment - this time there's no execution running,

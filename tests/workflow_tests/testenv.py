@@ -1040,6 +1040,11 @@ def execute_install(deployment_id,
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
+def update_execution_status(execution_id, status, error=None):
+    client = CosmoManagerRestClient('localhost')
+    return client.update_execution_status(execution_id, status, error)
+
+
 def cancel_execution(execution_id, wait_for_termination=False):
     """
     Cancels an execution by its id
@@ -1067,6 +1072,11 @@ def validate_dsl(blueprint_id, timeout=240):
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
                            .format(blueprint_id, response.status))
+
+
+def get_deployment_executions(deployment_id):
+    client = CosmoManagerRestClient('localhost')
+    return client.list_deployment_executions(deployment_id)
 
 
 def get_execution(execution_id):
