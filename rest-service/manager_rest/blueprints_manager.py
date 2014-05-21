@@ -201,8 +201,6 @@ class BlueprintsManager(object):
         workflow_client().cancel_workflow(
             execution.internal_workflow_id
         )
-        get_storage_manager().update_execution_status(execution_id,
-                                                      'terminated')
         return execution
 
     def create_deployment(self, blueprint_id, deployment_id):

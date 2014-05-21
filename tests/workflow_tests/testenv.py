@@ -35,7 +35,6 @@ from multiprocessing import Process
 import yaml
 import pika
 import json
-import requests
 import elasticsearch
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
@@ -1146,11 +1145,6 @@ def get_provider_context():
 def is_node_started(node_id):
     node_instance = get_node_instance(node_id)
     return node_instance['state'] == 'started'
-
-
-def get_workflows_state():
-    state = RuoteServiceClient().get_workflows_states()
-    return state
 
 
 class TimeoutException(Exception):
