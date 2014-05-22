@@ -221,7 +221,9 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
         else utils.get_manager_ip(),
         'agent_ip': get_agent_ip(ctx, worker_config),
         'celery_user': worker_config['user'],
-        'celery_group': worker_config['user']
+        'celery_group': worker_config['user'],
+        'worker_autoscale': '{0},{1}'.format(worker_config['max_workers'],
+                                             worker_config['min_workers'])
     }
 
     ctx.logger.debug(
