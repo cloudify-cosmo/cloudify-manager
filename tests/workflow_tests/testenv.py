@@ -284,7 +284,8 @@ class CeleryWorkerProcess(object):
                  name,
                  queues,
                  includes,
-                 plugins_paths):
+                 plugins_paths,
+                 hostname):
         self._name = name
         self._celery_pid_file = path.join(tempdir, "celery-{}.pid".format(
             name))
@@ -297,6 +298,7 @@ class CeleryWorkerProcess(object):
         self._includes = includes
         self._queues = queues
         self._plugins_paths = plugins_paths
+        self._hostname = hostname
 
     def start(self):
         for plugin_path in self._plugins_paths:
@@ -310,7 +312,7 @@ class CeleryWorkerProcess(object):
             "worker",
             "--events",
             "--loglevel=debug",
-            "--hostname=celery.cloudify.{0}".format(self._name),
+            "--hostname=celery.{}".format(self._hostname),
             "--purge",
             "--app=cloudify",
             "--logfile={0}".format(self._celery_log_file),
@@ -418,7 +420,8 @@ class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
             includes=["workflows.default", "plugin_installer.tasks"],
-            plugins_paths=plugins_paths)
+            plugins_paths=plugins_paths,
+            hostname='cloudify.workflows')
 
 
 class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
@@ -430,7 +433,8 @@ class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
             name='operations',
             queues=CELERY_QUEUES_LIST,
             includes=self._build_includes(),
-            plugins_paths=plugins_paths)
+            plugins_paths=plugins_paths,
+            hostname='cloudify.management')
 
     @staticmethod
     def _build_includes():
