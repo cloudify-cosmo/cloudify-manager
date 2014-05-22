@@ -351,10 +351,11 @@ class CeleryWorkerProcess(object):
             if celery_log is not None:
                 logger.info("{0} content:\n{1}".format(
                     self._celery_log_file, celery_log))
-            raise RuntimeError("Failed to start celery workflows worker: {0} "
+            raise RuntimeError("Failed to start celery {0} worker: {1} "
                                "- process "
-                               "did not start after {1} seconds"
-                               .format(self._process.returncode, timeout))
+                               "did not start after {2} seconds"
+                               .format(self._name,
+                                       self._process.returncode, timeout))
 
         os.chdir(prevdir)
         logger.info("Celery worker started [pid=%s]", self._process.pid)
