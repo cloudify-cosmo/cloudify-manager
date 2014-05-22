@@ -284,7 +284,7 @@ class CeleryWorkerProcess(object):
                  name,
                  queues,
                  includes,
-                 plugins_path):
+                 plugins_paths):
         self._name = name
         self._celery_pid_file = path.join(tempdir, "celery-{}.pid".format(
             name))
@@ -296,11 +296,12 @@ class CeleryWorkerProcess(object):
         self._manager_rest_port = manager_rest_port
         self._includes = includes
         self._queues = queues
-        self._plugins_path = plugins_path
+        self._plugins_paths = plugins_paths
 
     def start(self):
-        logger.info("Copying %s to %s", self._plugins_path, self._app_path)
-        distutils.dir_util.copy_tree(self._plugins_path, self._app_path)
+        for plugin_path in self._plugins_paths:
+            logger.info("Copying %s to %s", plugin_path, self._app_path)
+            distutils.dir_util.copy_tree(plugin_path, self._app_path)
         python_path = sys.executable
         logger.info("Building includes list for celery {} worker".format(
             self._name))
@@ -309,7 +310,7 @@ class CeleryWorkerProcess(object):
             "worker",
             "--events",
             "--loglevel=debug",
-            "--hostname=celery.{0}".format(MANAGEMENT_NODE_ID),
+            "--hostname=celery.cloudify.{0}".format(self._name),
             "--purge",
             "--app=cloudify",
             "--logfile={0}".format(self._celery_log_file),
@@ -409,26 +410,26 @@ class CeleryWorkerProcess(object):
 
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
-    def __init__(self, tempdir, plugins_tempdir, workflow_plugin_path,
+    def __init__(self, tempdir, plugins_tempdir, plugins_paths,
                  manager_rest_port):
         super(CeleryWorkflowsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
-            includes=["workflows.default"],
-            plugins_path=workflow_plugin_path)
+            includes=["workflows.default", "plugin_installer.tasks"],
+            plugins_paths=plugins_paths)
 
 
 class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
 
-    def __init__(self, tempdir, plugins_tempdir, cosmo_path,
+    def __init__(self, tempdir, plugins_tempdir, plugins_paths,
                  manager_rest_port):
         super(CeleryOperationsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
             name='operations',
             queues=CELERY_QUEUES_LIST,
             includes=self._build_includes(),
-            plugins_path=cosmo_path)
+            plugins_paths=plugins_paths)
 
     @staticmethod
     def _build_includes():
@@ -782,7 +783,9 @@ class TestEnvironment(object):
             plugins_path = path.dirname(path.realpath(plugins.__file__))
             self._celery_operations_worker_process = \
                 CeleryOperationsWorkerProcess(
-                    self._tempdir, self._plugins_tempdir, plugins_path,
+                    self._tempdir,
+                    self._plugins_tempdir,
+                    [plugins_path],
                     manager_rest_port)
             self._celery_operations_worker_process.start()
 
@@ -800,7 +803,9 @@ class TestEnvironment(object):
                                                 'workflows')
             self._celery_workflows_worker_process = \
                 CeleryWorkflowsWorkerProcess(
-                    self._tempdir, self._plugins_tempdir, workflow_plugin_path,
+                    self._tempdir,
+                    self._plugins_tempdir,
+                    [workflow_plugin_path, plugins_path],
                     manager_rest_port)
             self._celery_workflows_worker_process.start()
 
