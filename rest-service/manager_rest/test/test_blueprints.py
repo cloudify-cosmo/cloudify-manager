@@ -17,40 +17,7 @@ __author__ = 'dan'
 
 
 from base_test import BaseServerTestCase
-import tempfile
 import os
-import tarfile
-
-
-def post_blueprint_args(convention=False, blueprint_id=None):
-    def make_tarfile(output_filename, source_dir):
-        with tarfile.open(output_filename, "w:gz") as tar:
-            tar.add(source_dir, arcname=os.path.basename(source_dir))
-
-    def tar_mock_blueprint():
-        tar_path = tempfile.mktemp()
-        source_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'mock_blueprint')
-        make_tarfile(tar_path, source_dir)
-        return tar_path
-
-    if blueprint_id is not None:
-        resource_path = '/blueprints/{0}'.format(blueprint_id)
-    else:
-        resource_path = '/blueprints'
-
-    result = [
-        resource_path,
-        tar_mock_blueprint(),
-    ]
-
-    if not convention:
-        data = {'application_file_name': 'blueprint.yaml'}
-    else:
-        data = {}
-
-    result.append(data)
-    return result
 
 
 class BlueprintsTestCase(BaseServerTestCase):
@@ -64,15 +31,15 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertTrue('404' in get_blueprint_response['message'])
 
     def test_post_and_then_search(self):
-        post_blueprints_response = self.post_file(*post_blueprint_args()).json
+        post_blueprints_response = self.post_file(*self.post_blueprint_args()).json
         self.assertEquals('hello_world', post_blueprints_response['id'])
         get_blueprints_response = self.get('/blueprints').json
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
 
     def test_post_blueprint_already_exists(self):
-        self.post_file(*post_blueprint_args())
-        post_blueprints_response = self.post_file(*post_blueprint_args())
+        self.post_file(*self.post_blueprint_args())
+        post_blueprints_response = self.post_file(*self.post_blueprint_args())
         self.assertTrue('already exists' in
                         post_blueprints_response.json['message'])
         self.assertEqual(409, post_blueprints_response.status_code)
@@ -80,17 +47,18 @@ class BlueprintsTestCase(BaseServerTestCase):
     def test_put_blueprint(self):
         blueprint_id = 'new_blueprint_id'
         put_blueprints_response = self.put_file(
-            *post_blueprint_args(blueprint_id=blueprint_id)).json
+            *self.post_blueprint_args(blueprint_id=blueprint_id)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
 
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.post_file(
-            *post_blueprint_args(convention=True)).json
+            *self.post_blueprint_args(convention=True)).json
         self.assertEquals('hello_world',
                           post_blueprints_response['id'])
 
     def test_get_blueprint_by_id(self):
-        post_blueprints_response = self.post_file(*post_blueprint_args()).json
+        post_blueprints_response = self.post_file(
+            *self.post_blueprint_args()).json
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         # setting 'source' field to be None as expected
@@ -99,7 +67,8 @@ class BlueprintsTestCase(BaseServerTestCase):
                           get_blueprint_by_id_response)
 
     def test_get_blueprint_source(self):
-        post_blueprints_response = self.post_file(*post_blueprint_args()).json
+        post_blueprints_response = self.post_file(
+            *self.post_blueprint_args()).json
         get_blueprint_source_response = self.get(
             '/blueprints/{0}/source'.format(post_blueprints_response['id']))\
             .json
@@ -115,7 +84,8 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(None, get_blueprint_source_response['plan'])
 
     def test_delete_blueprint(self):
-        post_blueprints_response = self.post_file(*post_blueprint_args()).json
+        post_blueprints_response = self.post_file(
+            *self.post_blueprint_args()).json
 
         # testing if resources are on fileserver
         self.assertTrue(
@@ -143,13 +113,14 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(404, resp.status_code)
 
     def test_get_blueprints_id_validate(self):
-        post_blueprints_response = self.post_file(*post_blueprint_args()).json
+        post_blueprints_response = self.post_file(
+            *self.post_blueprint_args()).json
         resource_path = '/blueprints/{0}/validate'.format(
             post_blueprints_response['id'])
         validation = self.get(resource_path).json
         self.assertEqual(validation['status'], 'valid')
 
     def test_zipped_plugin(self):
-        self.post_file(*post_blueprint_args())
+        self.post_file(*self.post_blueprint_args())
         self.check_if_resource_on_fileserver('hello_world',
                                              'plugins/stub-installer.zip')

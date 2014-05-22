@@ -16,24 +16,12 @@
 __author__ = 'dan'
 
 
-import mocks
 from base_test import BaseServerTestCase
-from test_blueprints import post_blueprint_args
 
 
 class DeploymentsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
-
-    def _put_test_deployment(self):
-        blueprint_response = self.post_file(*post_blueprint_args()).json
-        blueprint_id = blueprint_response['id']
-        # Execute post deployment
-        deployment_response = self.put(
-            '/deployments/{0}'.format(self.DEPLOYMENT_ID),
-            {'blueprintId': blueprint_id}).json
-        return (blueprint_id, deployment_response['id'], blueprint_response,
-                deployment_response)
 
     def test_get_empty(self):
         result = self.get('/deployments')
@@ -43,7 +31,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         self.assertEquals(deployment_id, self.DEPLOYMENT_ID)
         self.assertEquals(blueprint_id, deployment_response['blueprintId'])
@@ -58,7 +46,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         resp = self.delete('/blueprints/{0}'.format(blueprint_id))
         self.assertEqual(400, resp.status_code)
         self.assertTrue('There exist deployments for this blueprint' in
@@ -68,7 +56,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         deployment_response = self.put(
             '/deployments/{0}'.format(self.DEPLOYMENT_ID),
             {'blueprintId': blueprint_id})
@@ -78,7 +66,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         single_deployment = self.get('/deployments/{0}'
                                      .format(deployment_id)).json
@@ -96,7 +84,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         get_deployments_response = self.get('/deployments').json
         self.assertEquals(1, len(get_deployments_response))
@@ -113,65 +101,9 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(deployment_response['plan'],
                           single_deployment['plan'])
 
-    def test_get_blueprints_id_executions_empty(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-        get_executions = self.get('/deployments/{0}/executions'
-                                  .format(deployment_response['id'])).json
-        self.assertEquals(len(get_executions), 0)
-
-    def test_get_execution_by_id(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflowId': 'install'
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        get_execution = self.get(get_execution_resource).json
-        self.assertEquals(get_execution['status'], 'pending')
-        self.assertEquals(get_execution['blueprintId'], blueprint_id)
-        self.assertEquals(get_execution['deploymentId'],
-                          deployment_response['id'])
-        self.assertIsNotNone(get_execution['createdAt'])
-
-        return execution
-
-    def test_cancel_execution_by_id(self):
-        execution = self.test_get_execution_by_id()
-        resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'action': 'cancel'
-        }).json
-        self.assertEquals(execution, cancel_response)
-
-    def test_cancel_non_existent_execution(self):
-        resource_path = '/executions/do_not_exist'
-        cancel_response = self.post(resource_path, {
-            'action': 'cancel'
-        })
-        self.assertEquals(cancel_response.status_code, 404)
-
-    def test_cancel_bad_action(self):
-        execution = self.test_get_execution_by_id()
-        resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'action': 'not_really_cancel'
-        })
-        self.assertEquals(cancel_response.status_code, 400)
-
-    def test_cancel_no_action(self):
-        execution = self.test_get_execution_by_id()
-        resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'not_action': 'some_value'
-        })
-        self.assertEquals(cancel_response.status_code, 400)
-
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -187,7 +119,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_executing_nonexisting_workflow(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         response = self.post(resource_path, {
@@ -202,7 +134,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/workflows'.format(deployment_id)
         workflows = self.get(resource_path).json
@@ -216,7 +148,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/nodes' \
             .format(deployment_id)
@@ -236,7 +168,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_delete_deployment_with_live_nodes_without_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         # modifying a node's state so there'll be a node in a state other
         # than 'uninitialized'
@@ -271,7 +203,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def _test_delete_deployment_with_nodes_in_certain_state(self, state):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/nodes' \
             .format(deployment_id)
@@ -298,7 +230,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         delete_deployment_response = self.delete(
             '/deployments/{0}'.format(deployment_id),
@@ -317,7 +249,7 @@ class DeploymentsTestCase(BaseServerTestCase):
     def test_get_nodes_of_deployment(self):
 
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/nodes'\
                         .format(deployment_id)
@@ -332,44 +264,3 @@ class DeploymentsTestCase(BaseServerTestCase):
                 'Failed finding node with prefix {0}'.format(starts_with))
         assert_node_exists('vm')
         assert_node_exists('http_web_server')
-
-    def test_execute_more_than_one_workflow_fails(self):
-        previous_method = mocks.get_workflow_status
-
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
-            'workflowId': 'install'
-        })
-        try:
-            mocks.get_workflow_status = lambda wfid: 'running'
-            response = self.post(resource_path, {
-                'workflowId': 'install'
-            })
-            self.assertEqual(response.status_code, 400)
-        finally:
-            mocks.get_workflow_status = previous_method
-
-    def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        previous_method = mocks.get_workflow_status
-
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
-            'workflowId': 'install'
-        })
-        try:
-            mocks.get_workflow_status = lambda wfid: 'running'
-            response = self.post(resource_path, {
-                'workflowId': 'install'
-            }, query_params={'force': 'true'})
-            self.assertEqual(response.status_code, 201)
-        finally:
-            mocks.get_workflow_status = previous_method
-
-    def test_get_non_existent_execution(self):
-        resource_path = '/executions/idonotexist'
-        response = self.get(resource_path)
-        self.assertEqual(response.status_code, 404)
