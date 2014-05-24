@@ -1079,11 +1079,6 @@ def validate_dsl(blueprint_id, timeout=240):
                            .format(blueprint_id, response.status))
 
 
-def get_deployment_executions(deployment_id):
-    client = CosmoManagerRestClient('localhost')
-    return client.list_deployment_executions(deployment_id)
-
-
 def get_execution(execution_id):
     """
     Returns the exeuction status

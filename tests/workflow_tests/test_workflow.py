@@ -30,7 +30,6 @@ from workflow_tests.testenv import delete_deployment
 from workflow_tests.testenv import publish_blueprint
 from workflow_tests.testenv import update_execution_status
 from workflow_tests.testenv import get_deployment_executions
-from workflow_tests.testenv import cancel_execution
 from workflow_tests.testenv import get_execution
 from workflow_tests.testenv import update_node_instance
 from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
@@ -286,7 +285,6 @@ class BasicWorkflowsTest(TestCase):
         # setting the execution's status to 'terminated' so it won't prevent
         #  the deployment deletion
         change_execution_status(execution_id, 'terminated')
-
 
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
