@@ -12,10 +12,6 @@ def install(ctx, **kwargs):
     node_set_state_creating_tasks = {node.id: node.set_state('creating')
                                      for node in ctx.nodes}
 
-    started_task = ctx.send_event('Starting (default) install workflow')
-    for sequence in node_sequences.values():
-        sequence.add(started_task)
-
     # Create node linear task sequences
     for node in ctx.nodes:
         sequence = node_sequences[node.id]
@@ -67,10 +63,6 @@ def install(ctx, **kwargs):
             node_set_state_create_task = node_set_state_creating_tasks[node.id]
             target_node_sequence.add_dependency_to_last(
                 node_set_state_create_task)
-
-    ended_task = ctx.send_event('Ending (default) install workflow')
-    for sequence in node_sequences.values():
-        sequence.add(ended_task)
 
     graph.execute()
 

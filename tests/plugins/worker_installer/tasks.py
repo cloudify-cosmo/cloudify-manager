@@ -16,7 +16,6 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
-from cloudify.celery import celery as app
 
 INSTALLED = "installed"
 STARTED = "started"
@@ -29,11 +28,13 @@ workers_state = {}
 current_worker_name = None
 
 
-def fix_worker(ctx):
+def fix_worker(ctx, **kwargs):
     worker_config = {}
     if ctx.properties and 'worker_config' in ctx.properties:
         worker_config = ctx.properties['worker_config']
-    if ctx.node_id is None:
+    if 'workflows_worker' in kwargs:
+        worker_config['name'] = 'cloudify.workflows'
+    elif ctx.node_id is None:
         worker_config['name'] = ctx.deployment_id
     else:
         worker_config['name'] = ctx.node_id
@@ -42,33 +43,33 @@ def fix_worker(ctx):
 
 @operation
 def install(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
+    worker_config = fix_worker(ctx, **kwargs)
 
     global current_worker_name
     global workers_state
 
     ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
-    current_worker_name = worker_config["name"]
+    if 'workflows_worker' not in kwargs:
+        current_worker_name = worker_config["name"]
     workers_state[worker_config["name"]] = [INSTALLED]
 
 
 @operation
 def start(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
+    worker_config = fix_worker(ctx, **kwargs)
 
     global workers_state
 
     ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
     # adding a consumer that handles tasks from a
     # queue called worker_config["name"]
-    app.control.add_consumer(worker_config["name"], reply=True)
     ctx.logger.info("Workers state before change is {0}".format(workers_state))
     workers_state[worker_config["name"]].append(STARTED)
 
 
 @operation
 def restart(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
+    worker_config = fix_worker(ctx, **kwargs)
 
     global workers_state
 
@@ -78,7 +79,7 @@ def restart(ctx, **kwargs):
 
 @operation
 def stop(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
+    worker_config = fix_worker(ctx, **kwargs)
 
     global workers_state
 
@@ -86,13 +87,12 @@ def stop(ctx, **kwargs):
     if worker_config["name"] not in workers_state:
         ctx.logger.debug("No worker. nothing to do.")
         return
-    app.control.cancel_consumer(worker_config["name"], reply=True)
     workers_state[worker_config["name"]].append(STOPPED)
 
 
 @operation
 def uninstall(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
+    worker_config = fix_worker(ctx, **kwargs)
 
     global workers_state
 
@@ -104,5 +104,6 @@ def uninstall(ctx, **kwargs):
 
 
 @operation
-def get_current_worker_state(**kwargs):
-    return workers_state[current_worker_name]
+def get_current_worker_state(workflows_worker=False, **kwargs):
+    name = 'cloudify.workflows' if workflows_worker else current_worker_name
+    return workers_state[name]

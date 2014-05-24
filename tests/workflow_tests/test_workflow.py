@@ -32,7 +32,6 @@ from workflow_tests.testenv import update_execution_status
 from workflow_tests.testenv import get_deployment_executions
 from workflow_tests.testenv import get_execution
 from workflow_tests.testenv import update_node_instance
-from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
@@ -96,38 +95,6 @@ class BasicWorkflowsTest(TestCase):
                           len(node_runtime_props.runtime_properties),
                           msg='Expected 2 but contains: {0}'.format(
                               node_runtime_props.runtime_properties))
-
-    def test_dsl_with_agent_plugin(self):
-        dsl_path = resource("dsl/with_plugin.yaml")
-        deploy(dsl_path, deployment_id=DEPLOYMENT_QUEUE_NAME)
-
-        from plugins.plugin_installer.tasks import get_installed_plugins as \
-            test_get_installed_plugins
-        result = self.send_task(test_get_installed_plugins)
-        installed_plugins = result.get(timeout=10)
-        self.assertTrue("test_plugin" in installed_plugins)
-
-    def test_dsl_with_manager_plugin(self):
-        dsl_path = resource("dsl/with_manager_plugin.yaml")
-        deployment, _ = deploy(dsl_path, deployment_id=DEPLOYMENT_QUEUE_NAME)
-        deployment_id = deployment.id
-
-        from plugins.worker_installer.tasks import \
-            RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
-
-        from plugins.worker_installer.tasks \
-            import get_current_worker_state as \
-            test_get_current_worker_state
-        result = self.send_task(test_get_current_worker_state)
-        state = result.get(timeout=10)
-        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED])
-
-        undeploy(deployment_id)
-        result = self.send_task(test_get_current_worker_state)
-        state = result.get(timeout=10)
-        self.assertEquals(state,
-                          [INSTALLED, STARTED,
-                           RESTARTED, STOPPED, UNINSTALLED])
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
