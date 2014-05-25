@@ -138,8 +138,7 @@ def execute(ctx, session, command, blocker=True):
     return response
 
 
-@operation
-def download(ctx, source_url, destination_path):
+def download(ctx):
     """
     downloads the windows agent using powershell's Downloadfile method
 
@@ -152,7 +151,7 @@ def download(ctx, source_url, destination_path):
     ctx.logger.debug('downloading windows agent...')
     return execute(ctx, s,
         '''@powershell -Command "(new-object System.Net.WebClient).Downloadfile('{0}', '{1}')"''' # NOQA
-            .format(AGENT_URL, AGENT_EXEC_PATH))
+            .format(get_agent_package_url(), AGENT_EXEC_PATH))
 
 
 @operation
@@ -165,6 +164,7 @@ def install(ctx, broker='127.0.0.1'):
     :rtype: `None`
     """
     s = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    download(ctx)
     ctx.logger.debug('extracting agent...')
     # print('extracting agent...')
     execute(ctx, s, '{} -o"{}" -y'.format(AGENT_EXEC_PATH,
