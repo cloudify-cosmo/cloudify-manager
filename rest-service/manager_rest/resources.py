@@ -28,6 +28,7 @@ from os import path
 
 import elasticsearch
 from flask import request
+from flask import make_response
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
@@ -148,13 +149,33 @@ class BlueprintsUpload(object):
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
                 file_server_root, archive_target_path)
+            blueprint = self._prepare_and_submit_blueprint(file_server_root,
+                                                           application_dir,
+                                                           blueprint_id)
+            self._move_archive_to_uploaded_blueprints_dir(blueprint.id,
+                                                          file_server_root,
+                                                          archive_target_path)
+            return blueprint, 201
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
 
-        return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  blueprint_id), 201
+    @staticmethod
+    def _move_archive_to_uploaded_blueprints_dir(blueprint_id,
+                                                 file_server_root,
+                                                 archive_path):
+        if not os.path.exists(archive_path):
+            raise RuntimeError("Archive [{0}] doesn't exist - Cannot move "
+                               "archive to uploaded blueprints "
+                               "directory".format(archive_path))
+        uploaded_blueprint_dir = os.path.join(
+            file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id)
+        os.makedirs(uploaded_blueprint_dir)
+        archive_file_name = '{0}.tar.gz'.format(blueprint_id)
+        shutil.move(archive_path,
+                    os.path.join(uploaded_blueprint_dir, archive_file_name))
 
     def _process_plugins(self, file_server_root, blueprint_id):
         plugins_directory = path.join(file_server_root,
@@ -353,16 +374,36 @@ class BlueprintsId(Resource):
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
-    @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
     def get(self, blueprint_id):
         """
         Returns a blueprint by its id.
         """
+        if 'download' in request.args:
+            blueprint_path = '/resources/{0}/{1}/{1}.tar.gz'.format(
+                config.instance().file_server_uploaded_blueprints_folder,
+                blueprint_id)
+
+            local_path = os.path.join(
+                config.instance().file_server_root,
+                config.instance().file_server_uploaded_blueprints_folder,
+                blueprint_id,
+                '%s.tar.gz' % blueprint_id)
+
+            response = make_response()
+            response.headers['Content-Description'] = 'File Transfer'
+            response.headers['Cache-Control'] = 'no-cache'
+            response.headers['Content-Type'] = 'application/octet-stream'
+            response.headers['Content-Disposition'] = 'attachment; filename=%s.tar.gz' % blueprint_id
+            response.headers['Content-Length'] = os.path.getsize(local_path)
+            response.headers['X-Accel-Redirect'] = blueprint_path
+            return response
+
         fields = {'id', 'plan', 'created_at', 'updated_at'}
         blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
                                                            fields)
-        return responses.BlueprintState(**blueprint.to_dict())
+        return marshal(blueprint,
+                       responses.BlueprintState.resource_fields)
 
     @swagger.operation(
         responseClass=responses.BlueprintState,

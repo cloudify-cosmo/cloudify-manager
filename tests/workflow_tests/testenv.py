@@ -34,6 +34,7 @@ from multiprocessing import Process
 import yaml
 import pika
 import json
+import bernhard
 import requests
 import elasticsearch
 from celery import Celery
@@ -53,6 +54,7 @@ STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
 MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -96,6 +98,7 @@ class ManagerRestProcess(object):
                  file_server_base_uri,
                  workflow_service_base_uri,
                  file_server_blueprints_folder,
+                 file_server_uploaded_blueprints_folder,
                  tempdir):
         self.process = None
         self.port = port
@@ -103,6 +106,8 @@ class ManagerRestProcess(object):
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
+        self.file_server_uploaded_blueprints_folder = \
+            file_server_uploaded_blueprints_folder
         self.client = CosmoManagerRestClient('localhost',
                                              port=port)
         self.tempdir = tempdir
@@ -114,6 +119,8 @@ class ManagerRestProcess(object):
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
             'workflow_service_base_uri': self.workflow_service_base_uri,
+            'file_server_uploaded_blueprints_folder':
+            self.file_server_uploaded_blueprints_folder,
             'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
@@ -797,6 +804,7 @@ class TestEnvironment(object):
                 file_server_base_uri,
                 worker_service_base_uri,
                 FILE_SERVER_BLUEPRINTS_FOLDER,
+                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                 self._tempdir)
             self._manager_rest_process.start()
 
@@ -1125,3 +1133,27 @@ def timeout(seconds=60):
                     'test timeout exceeded [timeout={0}'.format(seconds))
         return wraps(func)(wrapper)
     return decorator
+
+
+def set_node_stopped(node_id):
+    """
+    Set node state to stopped for the provided node id.
+
+    This will first query Riemann for getting current event fields and then
+    send an updated event with the new state.
+
+    This is for being compliant with workflow generated events sent to Riemann.
+    """
+    client = bernhard.Client()
+    results = client.query('service = "{0}"'.format(node_id))
+    if len(results) != 1:
+        raise RuntimeError(
+            'Received several results from Riemann for node id [{0}]'
+            .format(node_id))
+    event = {
+        'host': results[0].host,
+        'service': node_id,
+        'ttl': sys.maxint,
+        'state': 'stopped'
+    }
+    client.send(event)
