@@ -198,10 +198,9 @@ class ESStorageManager(object):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
 
-    def update_execution_status(self, execution_id, status, error=None):
-        update_doc_data = {'status': status}
-        if error:
-            update_doc_data['error'] = error
+    def update_execution_status(self, execution_id, status, error):
+        update_doc_data = {'status': status,
+                           'error': error}
         update_doc = {'doc': update_doc_data}
 
         try:

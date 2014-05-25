@@ -98,6 +98,12 @@ class ExecutionsTestCase(BaseServerTestCase):
                                 'error': 'some error'}).json
         self.assertEquals('new-status', execution['status'])
         self.assertEquals('some error', execution['error'])
+        # verifying that updating only the status field also resets the
+        # error field to an empty string
+        execution = self.patch('/executions/{0}'.format(execution['id']),
+                               {'status': 'final-status'}).json
+        self.assertEquals('final-status', execution['status'])
+        self.assertEquals('', execution['error'])
 
     def test_update_nonexistent_execution(self):
         resp = self.patch('/executions/1234', {'status': 'new-status'})

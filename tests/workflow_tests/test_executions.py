@@ -77,9 +77,15 @@ class ExecutionsTest(TestCase):
         execution = get_execution(execution_id)
         self.assertEquals('terminated', execution.status)
         execution = update_execution_status(execution_id, 'new-status')
-        self.assertEquals(execution.status, 'new-status')
+        self.assertEquals('new-status', execution.status)
         execution = update_execution_status(execution_id,
                                             'another-new-status',
                                             'some-error')
-        self.assertEquals(execution.status, 'another-new-status')
-        self.assertEquals(execution.error, 'some-error')
+        self.assertEquals('another-new-status', execution.status)
+        self.assertEquals('some-error', execution.error)
+        # verifying that updating only the status field also resets the
+        # error field to an empty string
+        execution = update_execution_status(execution_id,
+                                            'final-status')
+        self.assertEquals('final-status', execution.status)
+        self.assertEquals('', execution.error)

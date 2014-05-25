@@ -504,7 +504,9 @@ class ExecutionsId(Resource):
                      'dataType': 'string',
                      'paramType': 'body'},
                     {'name': 'error',
-                     'description': "An error message",
+                     'description': "An error message. If omitted, "
+                                    "error will be updated to an empty "
+                                    "string",
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'string',
@@ -525,7 +527,9 @@ class ExecutionsId(Resource):
             abort(400, message="400: Missing 'status' in json request body")
 
         get_storage_manager().update_execution_status(
-            execution_id, request_json['status'], request_json.get('error'))
+            execution_id,
+            request_json['status'],
+            request_json.get('error', ''))
 
         return responses.Execution(**get_storage_manager().get_execution(
             execution_id).to_dict())

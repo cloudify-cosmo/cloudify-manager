@@ -117,7 +117,7 @@ class FileStorageManager(object):
         self._dump_data(data)
         return 1
 
-    def update_execution_status(self, execution_id, status, error=None):
+    def update_execution_status(self, execution_id, status, error):
         data = self._load_data()
         if execution_id not in data[EXECUTIONS]:
             raise manager_exceptions.NotFoundError(
