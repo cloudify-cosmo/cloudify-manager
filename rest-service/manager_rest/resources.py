@@ -709,6 +709,8 @@ class NodesId(Resource):
         Gets node runtime or state.
         """
         args = self._args_parser.parse_args()
+        # this parameter is now deprecated and should be removed - state and
+        # runtime properties will be returned regardless of its value
         get_state_and_runtime_properties = verify_and_convert_bool(
             'state_and_runtime_properties',
             args['state_and_runtime_properties'])
