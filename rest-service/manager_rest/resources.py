@@ -372,7 +372,14 @@ class BlueprintsId(Resource):
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="getById",
-        notes="Returns a blueprint by its id."
+        notes="Returns a blueprint by its id.",
+        parameters=[{'name': 'download',
+                     'description': 'If specified, original uploaded archive'
+                                    'will be downloaded',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'paramType': 'query'}]
     )
     @exceptions_handled
     def get(self, blueprint_id):
