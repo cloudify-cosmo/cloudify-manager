@@ -117,6 +117,8 @@ def setup_resources(api):
                      '/blueprints')
     api.add_resource(BlueprintsId,
                      '/blueprints/<string:blueprint_id>')
+    api.add_resource(BlueprintsDownload,
+                     '/blueprints/<string:blueprint_id>/archive')
     api.add_resource(BlueprintsSource,
                      '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
@@ -297,6 +299,39 @@ class BlueprintsUpload(object):
                            'application directory is missing blueprint.yaml')
 
 
+class BlueprintsDownload(Resource):
+
+    @swagger.operation(
+        nickname="getArchive",
+        notes="Downloads blueprint as an archive."
+    )
+    @exceptions_handled
+    def get(self, blueprint_id):
+        # Verify blueprint exists.
+        get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
+        blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
+            config.instance().file_server_resources_uri,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id)
+
+        local_path = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id,
+            '%s.tar.gz' % blueprint_id)
+
+        response = make_response()
+        response.headers['Content-Description'] = 'File Transfer'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/octet-stream'
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=%s.tar.gz' % blueprint_id
+        response.headers['Content-Length'] = os.path.getsize(local_path)
+        response.headers['X-Accel-Redirect'] = blueprint_path
+        response.headers['X-Accel-Buffering'] = 'yes'
+        return response
+
+
 class Blueprints(Resource):
 
     @swagger.operation(
@@ -372,28 +407,18 @@ class BlueprintsId(Resource):
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="getById",
-        notes="Returns a blueprint by its id.",
-        parameters=[{'name': 'download',
-                     'description': 'If specified, original uploaded archive'
-                                    'will be downloaded',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'paramType': 'query'}]
+        notes="Returns a blueprint by its id."
     )
+    @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
     def get(self, blueprint_id):
         """
         Returns a blueprint by its id.
         """
-        if 'download' in request.args:
-            return self._download_blueprint(blueprint_id)
-
         fields = {'id', 'plan', 'created_at', 'updated_at'}
         blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
                                                            fields)
-        return marshal(blueprint,
-                       responses.BlueprintState.resource_fields)
+        return responses.BlueprintState(**blueprint.to_dict())
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -457,32 +482,6 @@ class BlueprintsId(Resource):
         shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
-
-    @staticmethod
-    def _download_blueprint(blueprint_id):
-        # Verify blueprint exists.
-        get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
-        blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
-            config.instance().file_server_resources_uri,
-            config.instance().file_server_uploaded_blueprints_folder,
-            blueprint_id)
-
-        local_path = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_uploaded_blueprints_folder,
-            blueprint_id,
-            '%s.tar.gz' % blueprint_id)
-
-        response = make_response()
-        response.headers['Content-Description'] = 'File Transfer'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] =\
-            'attachment; filename=%s.tar.gz' % blueprint_id
-        response.headers['Content-Length'] = os.path.getsize(local_path)
-        response.headers['X-Accel-Redirect'] = blueprint_path
-        response.headers['X-Accel-Buffering'] = 'yes'
-        return response
 
 
 class BlueprintsIdValidate(Resource):
