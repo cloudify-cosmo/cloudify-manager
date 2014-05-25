@@ -17,7 +17,6 @@ __author__ = 'idanmo'
 
 import uuid
 import time
-from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
