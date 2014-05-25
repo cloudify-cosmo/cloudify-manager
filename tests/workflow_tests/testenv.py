@@ -256,6 +256,7 @@ class RuoteServiceProcess(object):
         env['RUOTE_STORAGE_DIR_PATH'] = path.join(self._tempdir,
                                                   'ruote_storage')
         env['UNICORN_NUMBER_OF_WORKERS'] = str(self._num_of_workers)
+        env['INTEG_TEST_ENV'] = 'true'
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
