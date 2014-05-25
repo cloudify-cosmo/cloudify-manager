@@ -17,6 +17,7 @@ __author__ = 'idanmo'
 
 import uuid
 import time
+import unittest
 from testenv import undeploy_application as undeploy
 from workflow_tests.testenv import TestCase
 from workflow_tests.testenv import get_resource as resource
@@ -43,7 +44,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
+        blueprint_id = self.id()
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
@@ -56,9 +57,10 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deployment, _ = deploy(dsl_path)
+        blueprint_id = self.id()
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEquals('mock_app', deployment.blueprintId)
+        self.assertEquals(blueprint_id, deployment.blueprintId)
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
@@ -191,7 +193,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
+        blueprint_id = str(uuid.uuid4())
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
@@ -226,8 +228,8 @@ class BasicWorkflowsTest(TestCase):
 
     def test_delete_deployment(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
-        deployment_id = 'my_new_deployment'
+        blueprint_id = self.id()
+        deployment_id = str(uuid.uuid4())
 
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
