@@ -1,68 +1,65 @@
 
 
 from cloudify.decorators import workflow
-from cloudify.workflows.tasks_graph import TaskDependencyGraph
+from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
 
 
 @workflow
 def install(ctx, **kwargs):
 
     graph = TaskDependencyGraph(ctx)
-    node_sequences = {node.id: graph.sequence() for node in ctx.nodes}
-    node_set_state_creating_tasks = {node.id: node.set_state('creating')
-                                     for node in ctx.nodes}
+    send_event_creating_tasks = {node.id: node.send_event('Creating node')
+                                 for node in ctx.nodes}
+    set_state_creating_tasks = {node.id: node.set_state('creating')
+                                for node in ctx.nodes}
+    set_state_started_tasks = {node.id: node.set_state('started')
+                               for node in ctx.nodes}
 
     # Create node linear task sequences
     for node in ctx.nodes:
-        sequence = node_sequences[node.id]
+        sequence = graph.sequence()
 
         sequence.add(
             node.set_state('initializing'),
-            [
-                node_set_state_creating_tasks[node.id],
-                node.send_event('Creating node')
-            ],
+            forkjoin(
+                set_state_creating_tasks[node.id],
+                send_event_creating_tasks[node.id]
+            ),
             node.execute_operation('cloudify.interfaces.lifecycle.create'),
             node.set_state('created'),
-
-            relationship_operations(
+            forkjoin(*relationship_operations(
                 node,
-                'cloudify.interfaces.relationship_lifecycle.preconfigure'),
-
-            [
+                'cloudify.interfaces.relationship_lifecycle.preconfigure')),
+            forkjoin(
                 node.set_state('configuring'),
-                node.send_event('Configuring node')
-            ],
+                node.send_event('Configuring node')),
             node.execute_operation('cloudify.interfaces.lifecycle.configure'),
             node.set_state('configured'),
-
-            relationship_operations(
+            forkjoin(*relationship_operations(
                 node,
-                'cloudify.interfaces.relationship_lifecycle.postconfigure'),
-
-            [
+                'cloudify.interfaces.relationship_lifecycle.postconfigure')),
+            forkjoin(
                 node.set_state('starting'),
-                node.send_event('Starting node')
-            ],
+                node.send_event('Starting node')),
             node.execute_operation('cloudify.interfaces.lifecycle.start'))
 
         if _is_host_node(node):
             sequence.add(*_host_post_start(node))
 
         sequence.add(
-            node.set_state('started'),
-
-            relationship_operations(
+            set_state_started_tasks[node.id],
+            forkjoin(*relationship_operations(
                 node,
-                'cloudify.interfaces.relationship_lifecycle.establish'))
+                'cloudify.interfaces.relationship_lifecycle.establish')))
 
     # Create task dependencies based on node relationships
     for node in ctx.nodes:
-        for relationship in node.relationships:
-            target_node_sequence = node_sequences[relationship.target_id]
-            node_set_state_create_task = node_set_state_creating_tasks[node.id]
-            target_node_sequence.add_dependency_to_last(
-                node_set_state_create_task)
+        for rel in node.relationships:
+            node_set_creating = set_state_creating_tasks[node.id]
+            node_event_creating = send_event_creating_tasks[node.id]
+            target_set_started = set_state_started_tasks[rel.target_id]
+            graph.add_dependency(node_set_creating, target_set_started)
+            graph.add_dependency(node_event_creating, target_set_started)
 
     graph.execute()
 
