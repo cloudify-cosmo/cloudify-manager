@@ -117,9 +117,9 @@ def setup_resources(api):
                      '/blueprints')
     api.add_resource(BlueprintsId,
                      '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsDownload,
+    api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
-    api.add_resource(BlueprintsSource,
+    api.add_resource(BlueprintsIdSource,
                      '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
                      '/blueprints/<string:blueprint_id>/validate')
@@ -299,7 +299,7 @@ class BlueprintsUpload(object):
                            'application directory is missing blueprint.yaml')
 
 
-class BlueprintsDownload(Resource):
+class BlueprintsIdArchive(Resource):
 
     @swagger.operation(
         nickname="getArchive",
@@ -383,7 +383,7 @@ class Blueprints(Resource):
         return BlueprintsUpload().do_request()
 
 
-class BlueprintsSource(Resource):
+class BlueprintsIdSource(Resource):
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
