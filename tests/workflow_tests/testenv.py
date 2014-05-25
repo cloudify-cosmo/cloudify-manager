@@ -27,6 +27,7 @@ import sys
 import time
 import threading
 import re
+import uuid
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -53,6 +54,8 @@ STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
 MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
+FILE_SERVER_RESOURCES_URI = '/resources'
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -96,6 +99,8 @@ class ManagerRestProcess(object):
                  file_server_base_uri,
                  workflow_service_base_uri,
                  file_server_blueprints_folder,
+                 file_server_uploaded_blueprints_folder,
+                 file_server_resources_uri,
                  tempdir):
         self.process = None
         self.port = port
@@ -103,6 +108,9 @@ class ManagerRestProcess(object):
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
+        self.file_server_uploaded_blueprints_folder = \
+            file_server_uploaded_blueprints_folder
+        self.file_server_resources_uri = file_server_resources_uri
         self.client = CosmoManagerRestClient('localhost',
                                              port=port)
         self.tempdir = tempdir
@@ -114,6 +122,9 @@ class ManagerRestProcess(object):
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
             'workflow_service_base_uri': self.workflow_service_base_uri,
+            'file_server_uploaded_blueprints_folder':
+            self.file_server_uploaded_blueprints_folder,
+            'file_server_resources_uri': self.file_server_resources_uri,
             'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
@@ -797,6 +808,8 @@ class TestEnvironment(object):
                 file_server_base_uri,
                 worker_service_base_uri,
                 FILE_SERVER_BLUEPRINTS_FOLDER,
+                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                FILE_SERVER_RESOURCES_URI,
                 self._tempdir)
             self._manager_rest_process.start()
 
@@ -940,6 +953,8 @@ def run_search(query):
 
 def publish_blueprint(dsl_path, blueprint_id=None):
     client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
     return blueprint_id
@@ -953,6 +968,8 @@ def deploy_application(dsl_path, timeout=240,
     A blocking method which deploys an application from the provided dsl path.
     """
     client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
 
