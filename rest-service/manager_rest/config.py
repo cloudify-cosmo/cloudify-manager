@@ -24,7 +24,7 @@ class Config(object):
         self._workflow_service_base_uri = None
         self._file_server_blueprints_folder = None
         self._file_server_uploaded_blueprints_folder = None
-        self._file_server_resources_uri
+        self._file_server_resources_uri = None
         self._test_mode = False
 
     @property
