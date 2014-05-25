@@ -854,10 +854,12 @@ class DeploymentsIdExecutions(Resource):
         # manager with the deployment relevant details
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
 
-        executions = self._get_executions(deployment_id)
+        executions = get_blueprints_manager().get_deployment_executions(
+            deployment_id)
 
-        return [marshal(execution, responses.Execution.resource_fields) for
-                execution in executions]
+        return [marshal(responses.Execution(**execution.to_dict()),
+                        responses.Execution.resource_fields) for execution
+                in executions]
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -900,7 +902,8 @@ class DeploymentsIdExecutions(Resource):
 
         # validate no execution is currently in progress
         if not force:
-            executions = self._get_executions(deployment_id)
+            executions = get_blueprints_manager().get_deployment_executions(
+                deployment_id)
             running = [e.id for e in executions
                        if e.status not in ['failed', 'terminated']]
             if len(running) > 0:
@@ -914,11 +917,6 @@ class DeploymentsIdExecutions(Resource):
         execution = get_blueprints_manager().execute_workflow(deployment_id,
                                                               workflow_id)
         return responses.Execution(**execution.to_dict()), 201
-
-    @staticmethod
-    def _get_executions(deployment_id):
-        return [responses.Execution(**execution.to_dict()) for execution in
-                get_storage_manager().get_deployment_executions(deployment_id)]
 
 
 class DeploymentsIdWorkflows(Resource):

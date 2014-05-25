@@ -67,6 +67,9 @@ class BlueprintsManager(object):
     def get_execution(self, execution_id):
         return self.sm.get_execution(execution_id)
 
+    def get_deployment_executions(self, deployment_id):
+        return self.sm.get_deployment_executions(deployment_id)
+
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url,
