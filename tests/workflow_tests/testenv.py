@@ -35,7 +35,6 @@ from multiprocessing import Process
 import yaml
 import pika
 import json
-import bernhard
 import requests
 import elasticsearch
 from celery import Celery
@@ -1143,27 +1142,3 @@ def timeout(seconds=60):
                     'test timeout exceeded [timeout={0}'.format(seconds))
         return wraps(func)(wrapper)
     return decorator
-
-
-def set_node_stopped(node_id):
-    """
-    Set node state to stopped for the provided node id.
-
-    This will first query Riemann for getting current event fields and then
-    send an updated event with the new state.
-
-    This is for being compliant with workflow generated events sent to Riemann.
-    """
-    client = bernhard.Client()
-    results = client.query('service = "{0}"'.format(node_id))
-    if len(results) != 1:
-        raise RuntimeError(
-            'Received several results from Riemann for node id [{0}]'
-            .format(node_id))
-    event = {
-        'host': results[0].host,
-        'service': node_id,
-        'ttl': sys.maxint,
-        'state': 'stopped'
-    }
-    client.send(event)
