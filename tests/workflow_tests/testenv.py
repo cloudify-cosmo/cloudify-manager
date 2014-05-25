@@ -789,12 +789,14 @@ class TestEnvironment(object):
             # celery workflows worker
             try:
                 import workflows
-                # cloudify-manager/workflows/__init__.py(c)
+                # workflows/__init__.py(c)
                 workflow_plugin_path = path.abspath(workflows.__file__)
-                # cloudify-manager/workflows
+                # workflows/
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # package / egg folder
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
             except:
-                # cloudify-manager/tests/plugins/__init__.py(c)
+                cloudify-manager/tests/plugins/__init__.py(c)
                 workflow_plugin_path = path.abspath(plugins.__file__)
                 # cloudify-manager/tests/plugins
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
