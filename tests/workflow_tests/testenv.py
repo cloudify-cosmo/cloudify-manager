@@ -796,7 +796,7 @@ class TestEnvironment(object):
                 # package / egg folder
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
             except:
-                cloudify-manager/tests/plugins/__init__.py(c)
+                # cloudify-manager/tests/plugins/__init__.py(c)
                 workflow_plugin_path = path.abspath(plugins.__file__)
                 # cloudify-manager/tests/plugins
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
