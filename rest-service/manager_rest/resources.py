@@ -1105,7 +1105,7 @@ class Status(Resource):
                     'workflow': 'Workflow Service',
                     'riemann': 'Riemann',
                     'rabbitmq-server': 'RabbitMQ',
-                    'celeryd-cloudify-managment': 'Celery Managment',
+                    'celeryd-cloudify-management': 'Celery Managment',
                     'ssh': 'SSH',
                     'elasticsearch': 'Elasticsearch',
                     'cloudify-ui': 'Cloudify UI',
