@@ -1,0 +1,228 @@
+#########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+
+import winrm
+from cloudify.decorators import operation
+from cloudify import utils
+
+
+AGENT_PATH = 'c:\cloudify'
+AGENT_SERVICE_DIR = '{}\scripts'.format(AGENT_PATH)
+PYTHON_PATH = '{}\python.exe'.format(AGENT_SERVICE_DIR)
+
+# AGENT_URL = 'http://{0}:53229/packages/agents/windows-agent.exe'
+AGENT_URL = 'http://download.thinkbroadband.com/5MB.zip'
+AGENT_INSTALLER_PATH = 'c:\\'
+AGENT_EXEC_PATH = 'C:\\windows-agent.exe'
+AGENT_SERVICE_NAME = 'CloudifyAgent'
+AGENT_SERVICE_HANDLER = '{}\\nssm.exe'.format(AGENT_SERVICE_DIR)
+
+# CELERY_SERVICE_HANDLER = 'celery_service.py'
+CELERY_SERVICE_HANDLER = 'CeleryService.py'
+CELERY_SERVICE_PATH = AGENT_SERVICE_DIR + '\\' + CELERY_SERVICE_HANDLER
+CELERY_LOGFILE_PATH = AGENT_PATH + '\celery.log'
+# CELERY_PIDFILE_PATH = AGENT_PATH + '\celery.pid'
+
+TEST_HOST_URL = 'http://54.195.158.137:5985/wsman'
+TEST_HOST_USER = 'Administrator'
+TEST_HOST_PWD = 'y4=c9WGxns)'
+
+PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
+CELERY_INCLUDES_LIST = [
+    PLUGIN_INSTALLER_PLUGIN_PATH
+]
+
+# CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
+# CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
+AGENT_PACKAGE_PATH = '/packages/agents/windows-agent.exe'
+
+
+def get_agent_package_url():
+    """
+    Returns the agent package url the package will be downloaded from.
+    """
+    return '{0}{1}'.format(utils.get_manager_file_server_url(),
+                           AGENT_PACKAGE_PATH)
+
+
+# class WindowsAgentHandler():
+
+#     def __init__(self, session):
+#         """
+#         :param session: a winrm session
+#         """
+#         self.session = session
+
+def execute(session, command, blocker=True):
+    """
+    executes a command above a winRM session
+
+    :param string command: command to execute
+    :param bool blocker: is the command a blocker upon failure
+    :rtype: `pywinrm response`
+    """
+    # powershell -noexit "& 'PATH_TO_POWER_SHELL_SCRIPT.ps1 '
+    # -gettedServerName 'HOST'"
+    def _chk(response, blocker=True):
+        """
+        handles command execution output
+
+        :param response: pywinrm response object
+        :param bool blocker: is the command a blocker upon failure
+        :rtype: `None`
+        """
+        r = response
+        if r.status_code == 0:
+            print('command executed successfully')
+            if not len(r.std_out) == 0:
+                print ('COMMAND:', command)
+                print('OUTPUT: ', r.std_out)
+        else:
+            print('command execution failed! white executing: {0}'
+                  ' (with code: {1})'.format(
+                      command, r.status_code))
+            if not len(r.std_err) == 0:
+                print('ERROR: ', r.std_err)
+            else:
+                print('ERROR: ', 'unknown error')
+            if blocker:
+                raise AgentInstallerError
+
+    response = session.run_cmd(command)
+    _chk(response, blocker)
+    return response
+
+
+def download(ctx, source_url, destination_path):
+    """
+    downloads the windows agent using powershell's Downloadfile method
+
+    :param string source_url: source_url from which the agent is retrieved
+    :param string destination_path: where to download the agent to
+    :rtype: `None`
+    """
+    print('downloading windows agent...')
+    return execute('''@powershell -Command "(new-object System.Net.WebClient).Downloadfile('{0}', '{1}')"''' # NOQA
+            .format(AGENT_URL, AGENT_EXEC_PATH))
+
+# def _service_handler(self, action):
+#     """
+#     handles the celery service
+
+#     :param string action: action to perform (install, remove)
+#     :rtype: `None`
+#     """
+#     return self.execute('{} {} {}'.format(
+#         PYTHON_PATH, CELERY_SERVICE_PATH, action))
+
+
+@operation
+def install(ctx, broker='127.0.0.1'):
+    """
+    extracts and installs the agent
+
+    :param string params: a string of celery params to pass
+     to the installer
+    :rtype: `None`
+    """
+    ctx.logger.debug('extracting agent...')
+    # print('extracting agent...')
+    execute('{} -o"{}" -y'.format(AGENT_EXEC_PATH,
+                                  AGENT_INSTALLER_PATH))
+    ctx.logger.debug('installing agent...')
+    # print('installing agent...')
+    params = ('--broker=amqp://guest:guest@${0}:5672// '
+              '--include=plugin_installer.tasks '
+              '--events '
+              '--app=cloudify '
+              '--loglevel=debug '
+              '-Q cloudify.agent '
+              '-n celery.cloudify.agent '
+              '--logfile={1}'.format(
+                  broker, CELERY_LOGFILE_PATH))
+    execute('{0} install {1} "{2}\\celeryd.exe" "{3}"'.format(
+        AGENT_SERVICE_HANDLER, AGENT_SERVICE_NAME,
+        AGENT_SERVICE_DIR, params))
+    execute('sc config {} start=auto'.format(
+        AGENT_SERVICE_NAME))
+    execute('sc failure {} reset=60 actions=restart/5000'.format(
+        AGENT_SERVICE_NAME))
+    execute('sc start {}'.format(
+        AGENT_SERVICE_NAME))
+
+    # install service using python service installer
+    # self._service_handler('install')
+
+    # install service using windows task scheduler
+    # print('creating agent scheduled task...')
+    # self.execute('schtasks /Create /RU Administrator /RP y4=c9WGxns) /TN "Cloudify Agent" /XML c:\cloudify\cloudify_agent_task.xml /NP /F') # NOQA
+    # print('running task...')
+    # self.execute('schtasks /Run /U Administrator /RP y4=c9WGxns) /TN "Cloudify Agent"') # NOQA
+
+    # print 'deleting agent installer...'
+    # self.execute('del /q {}'.format(AGENT_EXEC_PATH))
+    return True
+
+
+def uninstall(self, blocker):
+    """
+    uninstalls the agent
+
+    :rtype: `None`
+    """
+    print('uninstalling agent service...')
+    # install service using nssm
+    self.execute('sc stop {}'.format(AGENT_SERVICE_NAME), blocker=blocker)
+    self.execute('{0} remove {1} confirm'.format(
+        AGENT_SERVICE_HANDLER, AGENT_SERVICE_NAME), blocker=blocker)
+    # self._service_handler('remove')
+    # print('deleting agent files...')
+    # self.execute('del /q {}'.format(AGENT_PATH))
+
+
+def reinstall(self):
+    """
+    reinstalls the agent
+
+    :rtype: `None`
+    """
+    self.uninstall()
+    self.install()
+
+
+def _winrm_session(host_url, user, pwd):
+        """
+        returns a winRM client
+
+        :param string host_url: host's winrm url
+        :param string user: Windows user
+        :param string pwd: Windows password
+        :rtype: `winrm client`
+        """
+        print('openning winRM session: {}...'.format(host_url))
+        return winrm.Session(host_url, auth=(user, pwd))
+
+
+class AgentInstallerError(Exception):
+    pass
+
+
+if __name__ == '__main__':
+    # create http session with host (can use _get_mgmt_ip from plugins_common)
+    session = _winrm_session(TEST_HOST_URL, TEST_HOST_USER, TEST_HOST_PWD)
+    # agent = WindowsAgentHandler(session)
+    # agent.download(AGENT_URL, AGENT_EXEC_PATH)
+    reinstall(blocker=False)
+    # agent.uninstall()

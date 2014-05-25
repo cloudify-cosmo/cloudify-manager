@@ -1,0 +1,29 @@
+agent on windows
+download and install python http://www.python.org/ftp/python/2.7.6/python-2.7.6.msi
+download https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+install 7zip
+run python get.pip.py
+cd c:\python27\scripts
+run pip install virtualenv
+run virtualenv c:\cloudify
+cd c:\cloudify\scripts
+run activate
+download https://github.com/cloudify-cosmo/cloudify-manager/archive/develop.zip
+unzip the file to c:\cloudify
+run pip install billiard==2.7.3.28 celery==3.0.24 bernhard pika
+run pip install c:\cloudify\cloudify-manager-develop\plugins/plugin-installer/
+easy_install http://sourceforge.net/projects/pywin32/files/pywin32/Build%20218/pywin32-218.win32-py2.7.exe/download
+
+
+
+configure winrm on the destination machine
+winrm quickconfig
+winrm s winrm/config/service @{AllowUnencrypted="true";MaxConcurrentOperationsPerUser="4294967295"}
+winrm s winrm/config/service/auth @{Basic="true"}
+winrm s winrm/config/winrs @{MaxShellsPerUser="2147483647"}
+
+unzip the agent to c:\cloudify
+copy celeryd.ini and celery_service.py to c:\cloudify\scripts
+run python c:\cloudify\scripts\celery_service.py install
+
+TODO: CONFIGURE CELERY
