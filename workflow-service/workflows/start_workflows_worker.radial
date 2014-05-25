@@ -29,8 +29,7 @@ define start_workflows_worker
 
       log message: 'installing workflows plugin on workflows worker: ${deployment_id}'
       event event: { "stage" => "Installing workflows plugin" }
-      #execute_task target: '${deployment_id}_workflows', exec: "plugin_installer.tasks.install", payload: '$v:plugin_payload'
-      execute_task target: 'cloudify.workflows', exec: "plugin_installer.tasks.install", payload: '$v:plugin_payload'
+      execute_task target: '${deployment_id}_workflows', exec: "plugin_installer.tasks.install", payload: '$v:plugin_payload'
       log message: 'successfully installed workflows plugin on workflows worker: ${deployment_id}'
 
       log message: 'restarting workflows worker for deployment ${deployment_id}'

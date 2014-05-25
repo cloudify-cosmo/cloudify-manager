@@ -709,24 +709,19 @@ class NodesId(Resource):
         Gets node runtime or state.
         """
         args = self._args_parser.parse_args()
+        # this parameter is now deprecated and should be removed - state and
+        # runtime properties will be returned regardless of its value
         get_state_and_runtime_properties = verify_and_convert_bool(
             'state_and_runtime_properties',
             args['state_and_runtime_properties'])
 
-        state = None
-        runtime_info = None
-        state_version = None
-
-        if get_state_and_runtime_properties:
-            node = get_storage_manager().get_node(node_id)
-            runtime_info = node.runtime_info
-            state_version = node.state_version
-            state = node.state
+        node = get_storage_manager().get_node(node_id)
 
         return responses.DeploymentNode(id=node_id,
-                                        state=state,
-                                        runtime_info=runtime_info,
-                                        state_version=state_version)
+                                        state=node.state,
+                                        runtime_info=node.runtime_info,
+                                        state_version=node.state_version)
+
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
@@ -854,10 +849,12 @@ class DeploymentsIdExecutions(Resource):
         # manager with the deployment relevant details
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
 
-        executions = self._get_executions(deployment_id)
+        executions = get_blueprints_manager().get_deployment_executions(
+            deployment_id)
 
-        return [marshal(execution, responses.Execution.resource_fields) for
-                execution in executions]
+        return [marshal(responses.Execution(**execution.to_dict()),
+                        responses.Execution.resource_fields) for execution
+                in executions]
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -900,7 +897,8 @@ class DeploymentsIdExecutions(Resource):
 
         # validate no execution is currently in progress
         if not force:
-            executions = self._get_executions(deployment_id)
+            executions = get_blueprints_manager().get_deployment_executions(
+                deployment_id)
             running = [e.id for e in executions
                        if e.status not in ['failed', 'terminated']]
             if len(running) > 0:
@@ -914,11 +912,6 @@ class DeploymentsIdExecutions(Resource):
         execution = get_blueprints_manager().execute_workflow(deployment_id,
                                                               workflow_id)
         return responses.Execution(**execution.to_dict()), 201
-
-    @staticmethod
-    def _get_executions(deployment_id):
-        return [responses.Execution(**execution.to_dict()) for execution in
-                get_storage_manager().get_deployment_executions(deployment_id)]
 
 
 class DeploymentsIdWorkflows(Resource):

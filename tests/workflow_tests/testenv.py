@@ -256,6 +256,7 @@ class RuoteServiceProcess(object):
         env['RUOTE_STORAGE_DIR_PATH'] = path.join(self._tempdir,
                                                   'ruote_storage')
         env['UNICORN_NUMBER_OF_WORKERS'] = str(self._num_of_workers)
+        env['INTEG_TEST_ENV'] = 'true'
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
@@ -786,16 +787,24 @@ class TestEnvironment(object):
 
             # copy all plugins to app path
             # celery workflows worker
-            # cloudify-manager/tests/plugins/__init__.py(c)
-            workflow_plugin_path = path.abspath(plugins.__file__)
-            # cloudify-manager/tests/plugins
-            workflow_plugin_path = path.dirname(workflow_plugin_path)
-            # cloudify-manager/tests
-            workflow_plugin_path = path.dirname(workflow_plugin_path)
-            # cloudify-manager
-            workflow_plugin_path = path.dirname(workflow_plugin_path)
-            # cloudify-manager/workflows
-            workflow_plugin_path = path.join(workflow_plugin_path, 'workflows')
+            try:
+                import workflows
+                # cloudify-manager/workflows/__init__.py(c)
+                workflow_plugin_path = path.abspath(workflows.__file__)
+                # cloudify-manager/workflows
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+            except:
+                # cloudify-manager/tests/plugins/__init__.py(c)
+                workflow_plugin_path = path.abspath(plugins.__file__)
+                # cloudify-manager/tests/plugins
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager/tests
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager/workflows
+                workflow_plugin_path = path.join(workflow_plugin_path,
+                                                 'workflows')
 
             plugins_path = path.dirname(path.realpath(plugins.__file__))
             app_path = path.join(self._tempdir, "plugins")
@@ -1101,11 +1110,6 @@ def validate_dsl(blueprint_id, timeout=240):
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
                            .format(blueprint_id, response.status))
-
-
-def get_deployment_executions(deployment_id):
-    client = CosmoManagerRestClient('localhost')
-    return client.list_deployment_executions(deployment_id)
 
 
 def get_execution(execution_id):

@@ -76,6 +76,9 @@ class ExecuteTaskParticipant < Ruote::Participant
 
       @full_task_name = workitem.params[EXEC]
       @target = workitem.params[TARGET]
+      if !ENV["INTEG_TEST_ENV"].nil? and @target=="#{workitem.fields['deployment_id']}_workflows"
+        @target = "cloudify.workflows"
+      end
       @task_id = SecureRandom.uuid
       payload = to_map(workitem.params[PAYLOAD])
 
@@ -219,8 +222,7 @@ class ExecuteTaskParticipant < Ruote::Participant
     unless cloudify_runtime.nil?
       context[:capabilities] = cloudify_runtime
     end
-    #if @target == "#{context[:deployment_id]}_workflows"
-    if @target == "cloudify.workflows"
+    if (ENV["INTEG_TEST_ENV"].nil? and @target=="#{context[:deployment_id]}_workflows") or @target == "cloudify.workflows"
       context[:plan] = workitem.fields[PrepareOperationParticipant::PLAN]
     end
     props['__cloudify_context'] = context

@@ -26,7 +26,9 @@ from workflow_tests.testenv import (TestCase,
                                     deploy_application as deploy,
                                     cancel_execution,
                                     execute_install,
-                                    get_deployment_executions)
+                                    get_deployment_executions,
+                                    get_execution,
+                                    update_execution_status)
 
 
 class ExecutionsTest(TestCase):
@@ -36,7 +38,7 @@ class ExecutionsTest(TestCase):
         _, execution_id = deploy(dsl_path,
                                  wait_for_execution=False)
         execution = cancel_execution(execution_id, True)
-        self.assertEquals(execution.status, 'terminated')
+        self.assertEquals('terminated', execution.status)
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -67,3 +69,17 @@ class ExecutionsTest(TestCase):
         execute_install(deployment.id,
                         force=True,
                         wait_for_execution=False)
+
+    def test_update_execution_status(self):
+        dsl_path = resource("dsl/basic.yaml")
+        _, execution_id = deploy(dsl_path,
+                                 wait_for_execution=True)
+        execution = get_execution(execution_id)
+        self.assertEquals('terminated', execution.status)
+        execution = update_execution_status(execution_id, 'new-status')
+        self.assertEquals(execution.status, 'new-status')
+        execution = update_execution_status(execution_id,
+                                            'another-new-status',
+                                            'some-error')
+        self.assertEquals(execution.status, 'another-new-status')
+        self.assertEquals(execution.error, 'some-error')

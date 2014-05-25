@@ -253,7 +253,6 @@ class BasicWorkflowsTest(TestCase):
         #  the deployment deletion
         change_execution_status(execution_id, 'terminated')
 
-
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
         try:
