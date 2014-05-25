@@ -713,20 +713,13 @@ class NodesId(Resource):
             'state_and_runtime_properties',
             args['state_and_runtime_properties'])
 
-        state = None
-        runtime_info = None
-        state_version = None
-
-        if get_state_and_runtime_properties:
-            node = get_storage_manager().get_node(node_id)
-            runtime_info = node.runtime_info
-            state_version = node.state_version
-            state = node.state
+        node = get_storage_manager().get_node(node_id)
 
         return responses.DeploymentNode(id=node_id,
-                                        state=state,
-                                        runtime_info=runtime_info,
-                                        state_version=state_version)
+                                        state=node.state,
+                                        runtime_info=node.runtime_info,
+                                        state_version=node.state_version)
+
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
