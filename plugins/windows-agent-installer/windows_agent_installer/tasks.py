@@ -45,8 +45,6 @@ CELERY_INCLUDES_LIST = [
     PLUGIN_INSTALLER_PLUGIN_PATH
 ]
 
-# CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
-# CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/windows-agent.exe'
 
 
@@ -56,15 +54,6 @@ def get_agent_package_url():
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
                            AGENT_PACKAGE_PATH)
-
-
-# class WindowsAgentHandler():
-
-#     def __init__(self, session):
-#         """
-#         :param session: a winrm session
-#         """
-#         self.session = session
 
 
 # def session(func):
@@ -95,6 +84,7 @@ def execute(ctx, session, command, blocker=True):
     """
     executes a command above a winRM session
 
+    :param session: a winrm session
     :param string command: command to execute
     :param bool blocker: is the command a blocker upon failure
     :rtype: `pywinrm response`
@@ -135,9 +125,7 @@ def download(ctx, session):
     """
     downloads the windows agent using powershell's Downloadfile method
 
-    :param string source_url: source_url from which the agent is retrieved
-    :param string destination_path: where to download the agent to
-    :rtype: `None`
+    :param session: a winrm session
     """
     ctx.logger.debug('downloading windows agent...')
     return execute(ctx, session,
@@ -148,11 +136,11 @@ def download(ctx, session):
 @operation
 def install(ctx, broker='127.0.0.1'):
     """
-    extracts and installs the agent
+    installs the agent
 
     :param string params: a string of celery params to pass
      to the installer
-    :rtype: `None`
+    :rtype: `bool` - True if installation is successful
     """
     session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
     download(ctx, session)
@@ -205,10 +193,6 @@ def install(ctx, broker='127.0.0.1'):
 def start(ctx):
     """
     starts the agent
-
-    :param string params: a string of celery params to pass
-     to the installer
-    :rtype: `None`
     """
     session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
     ctx.logger.debug('starting agent...')
@@ -219,10 +203,6 @@ def start(ctx):
 def restart(ctx):
     """
     restarts the agent
-
-    :param string params: a string of celery params to pass
-     to the installer
-    :rtype: `None`
     """
     session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
     ctx.logger.debug('restarting agent...')
@@ -234,8 +214,6 @@ def restart(ctx):
 def uninstall(ctx, blocker):
     """
     uninstalls the agent
-
-    :rtype: `None`
     """
     session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
     ctx.logger.debug('uninstalling agent service...')
@@ -253,8 +231,6 @@ def uninstall(ctx, blocker):
 def reinstall(ctx):
     """
     reinstalls the agent
-
-    :rtype: `None`
     """
     ctx.logger.debug('reinstalling agent')
     uninstall()
