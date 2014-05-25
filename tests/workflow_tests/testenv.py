@@ -787,16 +787,24 @@ class TestEnvironment(object):
 
             # copy all plugins to app path
             # celery workflows worker
-            # cloudify-manager/tests/plugins/__init__.py(c)
-            workflow_plugin_path = path.abspath(plugins.__file__)
-            # cloudify-manager/tests/plugins
-            workflow_plugin_path = path.dirname(workflow_plugin_path)
-            # cloudify-manager/tests
-            workflow_plugin_path = path.dirname(workflow_plugin_path)
-            # cloudify-manager
-            workflow_plugin_path = path.dirname(workflow_plugin_path)
-            # cloudify-manager/workflows
-            workflow_plugin_path = path.join(workflow_plugin_path, 'workflows')
+            try:
+                import workflows
+                # cloudify-manager/workflows/__init__.py(c)
+                workflow_plugin_path = path.abspath(workflows.__file__)
+                # cloudify-manager/workflows
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+            except:
+                # cloudify-manager/tests/plugins/__init__.py(c)
+                workflow_plugin_path = path.abspath(plugins.__file__)
+                # cloudify-manager/tests/plugins
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager/tests
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager/workflows
+                workflow_plugin_path = path.join(workflow_plugin_path,
+                                                 'workflows')
 
             plugins_path = path.dirname(path.realpath(plugins.__file__))
             app_path = path.join(self._tempdir, "plugins")
