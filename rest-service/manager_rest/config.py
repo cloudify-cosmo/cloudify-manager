@@ -22,6 +22,9 @@ class Config(object):
         self._file_server_root = None
         self._file_server_base_uri = None
         self._workflow_service_base_uri = None
+        self._file_server_blueprints_folder = None
+        self._file_server_uploaded_blueprints_folder = None
+        self._file_server_resources_uri
         self._test_mode = False
 
     @property
@@ -39,6 +42,30 @@ class Config(object):
     @file_server_base_uri.setter
     def file_server_base_uri(self, value):
         self._file_server_base_uri = value
+
+    @property
+    def file_server_blueprints_folder(self):
+        return self._file_server_blueprints_folder
+
+    @file_server_blueprints_folder.setter
+    def file_server_blueprints_folder(self, value):
+        self._file_server_blueprints_folder = value
+
+    @property
+    def file_server_uploaded_blueprints_folder(self):
+        return self._file_server_uploaded_blueprints_folder
+
+    @file_server_uploaded_blueprints_folder.setter
+    def file_server_uploaded_blueprints_folder(self, value):
+        self._file_server_uploaded_blueprints_folder = value
+
+    @property
+    def file_server_resources_uri(self):
+        return self._file_server_resources_uri
+
+    @file_server_resources_uri.setter
+    def file_server_resources_uri(self, value):
+        self._file_server_resources_uri = value
 
     @property
     def workflow_service_base_uri(self):

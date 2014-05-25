@@ -443,13 +443,20 @@ class BlueprintsId(Resource):
             config.instance().file_server_blueprints_folder,
             blueprint.id)
         shutil.rmtree(blueprint_folder)
+        uploaded_blueprint_folder = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint.id)
+        shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
 
-    def _download_blueprint(self, blueprint_id):
+    @staticmethod
+    def _download_blueprint(blueprint_id):
         # Verify blueprint exists.
         get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
-        blueprint_path = '/resources/{0}/{1}/{1}.tar.gz'.format(
+        blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
+            config.instance().file_server_resources_uri,
             config.instance().file_server_uploaded_blueprints_folder,
             blueprint_id)
 
@@ -463,7 +470,8 @@ class BlueprintsId(Resource):
         response.headers['Content-Description'] = 'File Transfer'
         response.headers['Cache-Control'] = 'no-cache'
         response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = 'attachment; filename=%s.tar.gz' % blueprint_id
+        response.headers['Content-Disposition'] =\
+            'attachment; filename=%s.tar.gz' % blueprint_id
         response.headers['Content-Length'] = os.path.getsize(local_path)
         response.headers['X-Accel-Redirect'] = blueprint_path
         response.headers['X-Accel-Buffering'] = 'yes'
