@@ -27,6 +27,7 @@ import sys
 import time
 import threading
 import re
+import uuid
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -948,6 +949,8 @@ def run_search(query):
 
 def publish_blueprint(dsl_path, blueprint_id=None):
     client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
     return blueprint_id
@@ -961,6 +964,8 @@ def deploy_application(dsl_path, timeout=240,
     A blocking method which deploys an application from the provided dsl path.
     """
     client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
 
