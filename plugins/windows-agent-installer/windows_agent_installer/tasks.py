@@ -16,6 +16,7 @@
 import winrm
 from cloudify.decorators import operation
 from cloudify import utils
+# from functools import wraps
 
 
 AGENT_PATH = 'c:\cloudify'
@@ -65,7 +66,33 @@ def get_agent_package_url():
 #         """
 #         self.session = session
 
-def execute(session, command, blocker=True):
+
+# def session(func):
+#     @wraps(func)
+#     def execution_handler(*args, **kwargs):
+#         ctx.logger.debug('openning winRM session: {}...'.format(host_url))
+#         # print('openning winRM session: {}...'.format(host_url))
+#         session = winrm.Session(host_url, auth=(user, pwd))
+#         func(*args, **kwargs)
+#         return session
+
+#     return execution_handler
+
+
+def _winrm_client(host_url, user, pwd):
+        """
+        returns a winRM client
+
+        :param string host_url: host's winrm url
+        :param string user: Windows user
+        :param string pwd: Windows password
+        :rtype: `winrm client`
+        """
+        print('openning winRM session: {}...'.format(host_url))
+        return winrm.Session(host_url, auth=(user, pwd))
+
+
+def execute(ctx, session, command, blocker=True):
     """
     executes a command above a winRM session
 
@@ -85,26 +112,33 @@ def execute(session, command, blocker=True):
         """
         r = response
         if r.status_code == 0:
-            print('command executed successfully')
+            # print('command executed successfully')
+            ctx.logger.debug('command executed successfully')
             if not len(r.std_out) == 0:
-                print ('COMMAND:', command)
-                print('OUTPUT: ', r.std_out)
+                # print('OUTPUT: ', r.std_out)
+                ctx.logger.debug('OUTPUT: {}'.format(r.std_out))
         else:
-            print('command execution failed! white executing: {0}'
-                  ' (with code: {1})'.format(
-                      command, r.status_code))
+            # print('command execution failed! white executing: {0}'
+            #       ' (with code: {1})'.format(command, r.status_code))
+            ctx.logger.debug('command execution failed! white executing: {0}'
+                             ' (with code: {1})'.format(
+                                 command, r.status_code))
             if not len(r.std_err) == 0:
-                print('ERROR: ', r.std_err)
+                # print('ERROR: ', r.std_err)
+                ctx.logger.debug('ERROR: {}'.format(r.std_err))
             else:
-                print('ERROR: ', 'unknown error')
+                # print('ERROR: ', 'unknown error')
+                ctx.logger.debug('ERROR: ', 'unknown error')
             if blocker:
                 raise AgentInstallerError
 
+    ctx.logger.debug('executing: {}'.format(command))
     response = session.run_cmd(command)
     _chk(response, blocker)
     return response
 
 
+@operation
 def download(ctx, source_url, destination_path):
     """
     downloads the windows agent using powershell's Downloadfile method
@@ -113,19 +147,12 @@ def download(ctx, source_url, destination_path):
     :param string destination_path: where to download the agent to
     :rtype: `None`
     """
-    print('downloading windows agent...')
-    return execute('''@powershell -Command "(new-object System.Net.WebClient).Downloadfile('{0}', '{1}')"''' # NOQA
+    s = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    # print('downloading windows agent...')
+    ctx.logger.debug('downloading windows agent...')
+    return execute(ctx, s,
+        '''@powershell -Command "(new-object System.Net.WebClient).Downloadfile('{0}', '{1}')"''' # NOQA
             .format(AGENT_URL, AGENT_EXEC_PATH))
-
-# def _service_handler(self, action):
-#     """
-#     handles the celery service
-
-#     :param string action: action to perform (install, remove)
-#     :rtype: `None`
-#     """
-#     return self.execute('{} {} {}'.format(
-#         PYTHON_PATH, CELERY_SERVICE_PATH, action))
 
 
 @operation
@@ -137,10 +164,11 @@ def install(ctx, broker='127.0.0.1'):
      to the installer
     :rtype: `None`
     """
+    s = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
     ctx.logger.debug('extracting agent...')
     # print('extracting agent...')
-    execute('{} -o"{}" -y'.format(AGENT_EXEC_PATH,
-                                  AGENT_INSTALLER_PATH))
+    execute(ctx, s, '{} -o"{}" -y'.format(AGENT_EXEC_PATH,
+                                          AGENT_INSTALLER_PATH))
     ctx.logger.debug('installing agent...')
     # print('installing agent...')
     params = ('--broker=amqp://guest:guest@${0}:5672// '
@@ -152,15 +180,23 @@ def install(ctx, broker='127.0.0.1'):
               '-n celery.cloudify.agent '
               '--logfile={1}'.format(
                   broker, CELERY_LOGFILE_PATH))
-    execute('{0} install {1} "{2}\\celeryd.exe" "{3}"'.format(
+    execute(ctx, s, '{0} install {1} "{2}\\celeryd.exe" "{3}"'.format(
         AGENT_SERVICE_HANDLER, AGENT_SERVICE_NAME,
         AGENT_SERVICE_DIR, params))
-    execute('sc config {} start=auto'.format(
+    execute(ctx, s, 'sc config {} start=auto'.format(
         AGENT_SERVICE_NAME))
-    execute('sc failure {} reset=60 actions=restart/5000'.format(
+    execute(ctx, s, 'sc failure {} reset=60 actions=restart/5000'.format(
         AGENT_SERVICE_NAME))
-    execute('sc start {}'.format(
-        AGENT_SERVICE_NAME))
+
+    # def _service_handler(self, action):
+    # """
+    # handles the celery service
+
+    # :param string action: action to perform (install, remove)
+    # :rtype: `None`
+    # """
+    # return self.execute('{} {} {}'.format(
+    #     PYTHON_PATH, CELERY_SERVICE_PATH, action))
 
     # install service using python service installer
     # self._service_handler('install')
@@ -176,43 +212,63 @@ def install(ctx, broker='127.0.0.1'):
     return True
 
 
-def uninstall(self, blocker):
+@operation
+def start(ctx):
+    """
+    starts the agent
+
+    :param string params: a string of celery params to pass
+     to the installer
+    :rtype: `None`
+    """
+    s = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    ctx.logger.debug('starting agent...')
+    execute(ctx, s, 'sc start {}'.format(AGENT_SERVICE_NAME))
+
+
+@operation
+def restart(ctx):
+    """
+    restarts the agent
+
+    :param string params: a string of celery params to pass
+     to the installer
+    :rtype: `None`
+    """
+    s = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    ctx.logger.debug('restarting agent...')
+    execute(ctx, s, 'sc stop {}'.format(AGENT_SERVICE_NAME))
+    execute(ctx, s, 'sc start {}'.format(AGENT_SERVICE_NAME))
+
+
+@operation
+def uninstall(ctx, blocker):
     """
     uninstalls the agent
 
     :rtype: `None`
     """
+    s = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
     print('uninstalling agent service...')
     # install service using nssm
-    self.execute('sc stop {}'.format(AGENT_SERVICE_NAME), blocker=blocker)
-    self.execute('{0} remove {1} confirm'.format(
+    execute(ctx, s, 'sc stop {}'.format(AGENT_SERVICE_NAME), blocker=blocker)
+    execute(ctx, s, '{0} remove {1} confirm'.format(
         AGENT_SERVICE_HANDLER, AGENT_SERVICE_NAME), blocker=blocker)
     # self._service_handler('remove')
     # print('deleting agent files...')
     # self.execute('del /q {}'.format(AGENT_PATH))
 
 
-def reinstall(self):
+@operation
+def reinstall(ctx):
     """
     reinstalls the agent
 
     :rtype: `None`
     """
-    self.uninstall()
-    self.install()
-
-
-def _winrm_session(host_url, user, pwd):
-        """
-        returns a winRM client
-
-        :param string host_url: host's winrm url
-        :param string user: Windows user
-        :param string pwd: Windows password
-        :rtype: `winrm client`
-        """
-        print('openning winRM session: {}...'.format(host_url))
-        return winrm.Session(host_url, auth=(user, pwd))
+    ctx.logger.debug('reinstalling agent')
+    uninstall()
+    install()
 
 
 class AgentInstallerError(Exception):
@@ -221,7 +277,7 @@ class AgentInstallerError(Exception):
 
 if __name__ == '__main__':
     # create http session with host (can use _get_mgmt_ip from plugins_common)
-    session = _winrm_session(TEST_HOST_URL, TEST_HOST_USER, TEST_HOST_PWD)
+    session = _winrm_client(TEST_HOST_URL, TEST_HOST_USER, TEST_HOST_PWD)
     # agent = WindowsAgentHandler(session)
     # agent.download(AGENT_URL, AGENT_EXEC_PATH)
     reinstall(blocker=False)
