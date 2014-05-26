@@ -46,6 +46,7 @@ types:
         derived_from: cloudify.types.base
         properties:
             - security_group
+            - create_if_missing: true
             - neutron_config: {}
             - rules: []
             - disable_egress: false
