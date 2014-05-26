@@ -10,9 +10,6 @@ imports:
 ##################################################################################
 types:
 
-    # A tier in a topology
-    cloudify.types.tier: { }
-
     # base type for provided cloudify types
     cloudify.types.base:
         interfaces:
@@ -54,6 +51,10 @@ types:
         workflows:
             start:
                 ref: cloudify.workflows.host.start
+
+    # A tier in a topology
+    cloudify.types.tier:
+        derived_from: cloudify.types.base
                 
     # A Linux container with or without docker
     cloudify.types.container:
