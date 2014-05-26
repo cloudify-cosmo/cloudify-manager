@@ -16,7 +16,8 @@
 import winrm
 from cloudify.decorators import operation
 from cloudify import utils
-# from functools import wraps
+from cloudify import context
+from functools import wraps
 
 
 AGENT_PATH = 'c:\cloudify'
@@ -35,6 +36,10 @@ CELERY_SERVICE_HANDLER = 'CeleryService.py'
 CELERY_SERVICE_PATH = AGENT_SERVICE_DIR + '\\' + CELERY_SERVICE_HANDLER
 CELERY_LOGFILE_PATH = AGENT_PATH + '\celery.log'
 # CELERY_PIDFILE_PATH = AGENT_PATH + '\celery.pid'
+
+DEFAULT_WINRM_PORT = '5985'
+DEFAULT_WINRM_URI = 'wsman'
+DEFAULT_WINRM_PROTOCOL = 'http'
 
 TEST_HOST_URL = 'http://54.195.158.137:5985/wsman'
 TEST_HOST_USER = 'Administrator'
@@ -67,17 +72,102 @@ def get_agent_package_url():
 #     return execution_handler
 
 
-def _winrm_client(ctx, host_url, user, pwd):
-        """
-        returns a winRM client
+def get_machine_ip(ctx):
+    if 'ip' in ctx.properties:
+        return ctx.properties['ip']
+    if 'ip' in ctx.runtime_properties:
+        return ctx.runtime_properties['ip']
+    raise ValueError(
+        'ip property is not set for node: {0}. This is mandatory'
+        ' for installing agent via ssh.'.format(ctx.node_id))
 
-        :param string host_url: host's winrm url
-        :param string user: Windows user
-        :param string pwd: Windows password
-        :rtype: `winrm client`
-        """
-        ctx.logger.debug('creating winrm session: {}...'.format(host_url))
-        return winrm.Session(host_url, auth=(user, pwd))
+
+def _find_type_in_kwargs(cls, all_args):
+    result = [v for v in all_args if isinstance(v, cls)]
+    if not result:
+        return None
+    if len(result) > 1:
+        raise RuntimeError(
+            "Expected to find exactly one instance of {0} in "
+            "kwargs but found {1}".format(cls, len(result)))
+    return result[0]
+
+
+def session(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        ctx = _find_type_in_kwargs(context.CloudifyContext,
+                                   kwargs.values() + list(args))
+        if not ctx:
+            return func(*args, **kwargs)
+        machine_ip = get_machine_ip(ctx)
+        # create default worker_config dict
+        try:
+            agent_config = ctx.properties['worker_config']
+        except IndexError:
+            agent_config = {
+                'protocol': DEFAULT_WINRM_PROTOCOL,
+                'port': DEFAULT_WINRM_PORT,
+                'uri': DEFAULT_WINRM_URI,
+            }
+        except:
+            # TODO: handle exception
+            raise
+
+        # agent_config['protocol'] = DEFAULT_WINRM_PROTOCOL
+        # agent_config['port'] = DEFAULT_WINRM_PORT
+        # agent_config['uri'] = DEFAULT_WINRM_URI
+
+        winrm_url = '{}://{}:{}/{}'.format(
+            agent_config['protocol'] or DEFAULT_WINRM_PROTOCOL,
+            machine_ip,
+            agent_config['port'] or DEFAULT_WINRM_PORT,
+            agent_config['uri'] or DEFAULT_WINRM_URI)
+
+        # TODO: check if it's possible to use winrm password-less-ly
+        ctx.logger.debug('creating winrm session: {}...'.format(machine_ip))
+        return winrm.Session(winrm_url, auth=(
+            agent_config['user'], agent_config['password']))
+    return wrapper
+
+
+# def _winrm_client(ctx):
+#         """
+#         returns a winRM client
+
+#         :param string host_url: host's winrm url
+#         :param string user: Windows user
+#         :param string pwd: Windows password
+#         :rtype: `winrm client`
+#         """
+#         machine_ip = get_machine_ip(ctx)
+#         # create default worker_config dict
+#         try:
+#             agent_config = ctx.properties['worker_config']
+#         except IndexError:
+#             agent_config = {
+#                 'protocol': DEFAULT_WINRM_PROTOCOL,
+#                 'port': DEFAULT_WINRM_PORT,
+#                 'uri': DEFAULT_WINRM_URI,
+#             }
+#         except:
+#             # TODO: handle exception
+#             raise
+
+#         # agent_config['protocol'] = DEFAULT_WINRM_PROTOCOL
+#         # agent_config['port'] = DEFAULT_WINRM_PORT
+#         # agent_config['uri'] = DEFAULT_WINRM_URI
+
+#         winrm_url = '{}://{}:{}/{}'.format(
+#             agent_config['protocol'] or DEFAULT_WINRM_PROTOCOL,
+#             machine_ip,
+#             agent_config['port'] or DEFAULT_WINRM_PORT,
+#             agent_config['uri'] or DEFAULT_WINRM_URI)
+
+#         # TODO: check if it's possible to use winrm password-less-ly
+#         ctx.logger.debug('creating winrm session: {}...'.format(machine_ip))
+#         return winrm.Session(winrm_url, auth=(
+#             agent_config['user'], agent_config['password']))
 
 
 def execute(ctx, session, command, blocker=True):
@@ -134,7 +224,7 @@ def download(ctx, session):
 
 
 @operation
-def install(ctx, broker='127.0.0.1'):
+def install(ctx, **kwargs):
     """
     installs the agent
 
@@ -142,7 +232,7 @@ def install(ctx, broker='127.0.0.1'):
      to the installer
     :rtype: `bool` - True if installation is successful
     """
-    session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    # session = _winrm_client(ctx)
     download(ctx, session)
     ctx.logger.debug('extracting agent...')
     execute(ctx, session, '{} -o"{}" -y'.format(AGENT_EXEC_PATH,
@@ -156,7 +246,7 @@ def install(ctx, broker='127.0.0.1'):
               '-Q cloudify.agent '
               '-n celery.cloudify.agent '
               '--logfile={1}'.format(
-                  broker, CELERY_LOGFILE_PATH))
+                  utils.get.manager_ip(), CELERY_LOGFILE_PATH))
     execute(ctx, session, '{0} install {1} "{2}\\celeryd.exe" "{3}"'.format(
         AGENT_SERVICE_HANDLER, AGENT_SERVICE_NAME,
         AGENT_SERVICE_DIR, params))
@@ -190,32 +280,35 @@ def install(ctx, broker='127.0.0.1'):
 
 
 @operation
-def start(ctx):
+@session
+def start(ctx, **kwargs):
     """
     starts the agent
     """
-    session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    # session = _winrm_client(ctx)
     ctx.logger.debug('starting agent...')
     execute(ctx, session, 'sc start {}'.format(AGENT_SERVICE_NAME))
 
 
 @operation
-def restart(ctx):
+@session
+def restart(ctx, **kwargs):
     """
     restarts the agent
     """
-    session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    # session = _winrm_client(ctx)
     ctx.logger.debug('restarting agent...')
     execute(ctx, session, 'sc stop {}'.format(AGENT_SERVICE_NAME))
     execute(ctx, session, 'sc start {}'.format(AGENT_SERVICE_NAME))
 
 
 @operation
-def uninstall(ctx, blocker):
+@session
+def uninstall(ctx, blocker, **kwargs):
     """
     uninstalls the agent
     """
-    session = _winrm_client(ctx['host_url'], ctx['user'], ctx['pwd'])
+    # session = _winrm_client(ctx)
     ctx.logger.debug('uninstalling agent service...')
     # install service using nssm
     execute(ctx, session, 'sc stop {}'.format(
@@ -228,7 +321,8 @@ def uninstall(ctx, blocker):
 
 
 @operation
-def reinstall(ctx):
+@session
+def reinstall(ctx, **kwargs):
     """
     reinstalls the agent
     """
@@ -243,7 +337,7 @@ class AgentInstallerError(Exception):
 
 if __name__ == '__main__':
     # create http session with host (can use _get_mgmt_ip from plugins_common)
-    session = _winrm_client(TEST_HOST_URL, TEST_HOST_USER, TEST_HOST_PWD)
+    # session = _winrm_client(TEST_HOST_URL, TEST_HOST_USER, TEST_HOST_PWD)
     # agent = WindowsAgentHandler(session)
     # agent.download(AGENT_URL, AGENT_EXEC_PATH)
     reinstall(blocker=False)
