@@ -9,8 +9,7 @@ define start_workflows_worker
   set 'v:plugin_payload': {
     properties: {
       plugin: {
-        name: "workflow-default-plugin",
-        url: "https://github.com/dankilman/cloudify-workflows/archive/master.zip"
+        name: "default-workflow-plugin"
       }
     }
   }
