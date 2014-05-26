@@ -29,7 +29,7 @@ def install(ctx, **kwargs):
 
     # We need reference to the create event/state tasks and the started
     # task so we can later create a proper dependency between nodes and
-    # their relationships. We use the above tasks as part of a single node
+    # their relationships. We use the below tasks as part of a single node
     # workflow, and to create the dependency (at the bottom)
     send_event_creating_tasks = {
         node.id: node.send_event('Creating node')
