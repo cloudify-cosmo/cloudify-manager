@@ -1,3 +1,19 @@
+########
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
+__author__ = 'dank'
 
 
 from cloudify.decorators import workflow
@@ -6,16 +22,28 @@ from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
 
 @workflow
 def install(ctx, **kwargs):
+    """Default install workflow"""
 
+    # instantiate and new graph instance to build install tasks workflow
     graph = TaskDependencyGraph(ctx)
-    send_event_creating_tasks = {node.id: node.send_event('Creating node')
-                                 for node in ctx.nodes}
-    set_state_creating_tasks = {node.id: node.set_state('creating')
-                                for node in ctx.nodes}
-    set_state_started_tasks = {node.id: node.set_state('started')
-                               for node in ctx.nodes}
+
+    # We need reference to the create event/state tasks and the started
+    # task so we can later create a proper dependency between nodes and
+    # their relationships. We use the above tasks as part of a single node
+    # workflow, and to create the dependency (at the bottom)
+    send_event_creating_tasks = {
+        node.id: node.send_event('Creating node')
+        for node in ctx.nodes}
+    set_state_creating_tasks = {
+        node.id: node.set_state('creating')
+        for node in ctx.nodes}
+    set_state_started_tasks = {
+        node.id: node.set_state('started')
+        for node in ctx.nodes}
 
     # Create node linear task sequences
+    # For each node, we create a "task sequence" in which all tasks
+    # added to it will be executed in a sequential manner
     for node in ctx.nodes:
         sequence = graph.sequence()
 
@@ -43,6 +71,9 @@ def install(ctx, **kwargs):
                 node.send_event('Starting node')),
             node.execute_operation('cloudify.interfaces.lifecycle.start'))
 
+        # If this is a host node, we need to add specific host start
+        # tasks such as waiting for it to start and installing the agent
+        # worker (if necessary)
         if _is_host_node(node):
             sequence.add(*_host_post_start(node))
 
@@ -53,6 +84,8 @@ def install(ctx, **kwargs):
                 'cloudify.interfaces.relationship_lifecycle.establish')))
 
     # Create task dependencies based on node relationships
+    # for each node, make a dependency between the create tasks (event, state)
+    # and the started state task of the target
     for node in ctx.nodes:
         for rel in node.relationships:
             node_set_creating = set_state_creating_tasks[node.id]
@@ -80,10 +113,12 @@ def _wait_for_host_to_start(host_node):
         task = host_node.execute_operation(
             'cloudify.interfaces.host.get_state')
 
-        # handler for retrying if get_state returns False
-        def get_node_state_handler(tsk):
+        # handler returns True if if get_state returns False,
+        # this means, that get_state will be re-executed until
+        # get_state returns True
+        def node_get_state_handler(tsk):
             return tsk.async_result.get() is False
-        task.on_success = get_node_state_handler
+        task.on_success = node_get_state_handler
         return task
 
 
