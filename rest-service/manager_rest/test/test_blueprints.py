@@ -31,7 +31,8 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertTrue('404' in get_blueprint_response['message'])
 
     def test_post_and_then_search(self):
-        post_blueprints_response = self.post_file(*self.post_blueprint_args()).json
+        post_blueprints_response = self.post_file(
+            *self.post_blueprint_args()).json
         self.assertEquals('hello_world', post_blueprints_response['id'])
         get_blueprints_response = self.get('/blueprints').json
         self.assertEquals(1, len(get_blueprints_response))

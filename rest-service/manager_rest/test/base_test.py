@@ -130,8 +130,8 @@ class BaseServerTestCase(unittest.TestCase):
 
         def tar_mock_blueprint():
             tar_path = tempfile.mktemp()
-            source_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                      'mock_blueprint')
+            source_dir = os.path.join(os.path.dirname(
+                os.path.abspath(__file__)), 'mock_blueprint')
             make_tarfile(tar_path, source_dir)
             return tar_path
 
