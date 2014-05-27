@@ -147,7 +147,7 @@ class TestUninstallDeployment(TestCase):
         self.send_task(cloudmock.set_raise_exception_on_stop).get(timeout=10)
 
         self.logger.info('** uninstall **')
-        time.sleep(5)
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
 
         from plugins.cloudmock.tasks import get_machines
