@@ -31,17 +31,18 @@ from workflow_tests.testenv import update_execution_status
 from workflow_tests.testenv import get_deployment_executions
 from workflow_tests.testenv import get_execution
 from workflow_tests.testenv import update_node_instance
+from workflow_tests.testenv import create_rest_client
 from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient, CosmoManagerRestCallError
+    import CosmoManagerRestCallError
 
 
 class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
+        blueprint_id = self.id()
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
@@ -54,9 +55,10 @@ class BasicWorkflowsTest(TestCase):
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deployment, _ = deploy(dsl_path)
+        blueprint_id = self.id()
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEquals('mock_app', deployment.blueprintId)
+        self.assertEquals(blueprint_id, deployment.blueprintId)
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
@@ -156,7 +158,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
+        blueprint_id = str(uuid.uuid4())
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprintId)
@@ -191,8 +193,8 @@ class BasicWorkflowsTest(TestCase):
 
     def test_delete_deployment(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
-        deployment_id = 'my_new_deployment'
+        blueprint_id = self.id()
+        deployment_id = str(uuid.uuid4())
 
         def change_execution_status(execution_id, status):
             update_execution_status(execution_id, status)
@@ -203,7 +205,7 @@ class BasicWorkflowsTest(TestCase):
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
-        client = CosmoManagerRestClient('localhost')
+        client = create_rest_client()
         client.publish_blueprint(dsl_path, blueprint_id)
         client.create_deployment(blueprint_id, deployment_id)
         delete_deployment(deployment_id, False)
@@ -307,7 +309,7 @@ class BasicWorkflowsTest(TestCase):
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
-        client = CosmoManagerRestClient('localhost')
+        client = create_rest_client()
         client.publish_blueprint(dsl_path, blueprint_id)
         client.create_deployment(blueprint_id, deployment_id)
         deployment_nodes = get_deployment_nodes(deployment_id)

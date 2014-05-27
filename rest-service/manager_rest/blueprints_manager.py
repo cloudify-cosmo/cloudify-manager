@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from manager_rest.util import maybe_register_teardown
 
 __author__ = 'dan'
 
@@ -31,6 +30,7 @@ from manager_rest import responses
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
+from manager_rest.util import maybe_register_teardown
 
 
 class DslParseException(Exception):

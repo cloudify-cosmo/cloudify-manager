@@ -28,6 +28,8 @@ from manager_rest.file_server import FileServer
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
+FILE_SERVER_RESOURCES_URI = '/resources'
 
 
 class BaseServerTestCase(unittest.TestCase):
@@ -56,6 +58,9 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_PORT)
         test_config.file_server_blueprints_folder = \
             FILE_SERVER_BLUEPRINTS_FOLDER
+        test_config.file_server_uploaded_blueprints_folder = \
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
+        test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
         return test_config
 
     def post(self, resource_path, data, query_params=None):

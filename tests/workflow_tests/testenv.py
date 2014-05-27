@@ -28,6 +28,7 @@ import sys
 import time
 import threading
 import re
+import uuid
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -51,7 +52,10 @@ CELERY_WORKFLOWS_QUEUE_LIST = [CLOUDIFY_WORKFLOWS_QUEUE]
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
+MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
+FILE_SERVER_RESOURCES_URI = '/resources'
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -95,6 +99,8 @@ class ManagerRestProcess(object):
                  file_server_base_uri,
                  workflow_service_base_uri,
                  file_server_blueprints_folder,
+                 file_server_uploaded_blueprints_folder,
+                 file_server_resources_uri,
                  tempdir):
         self.process = None
         self.port = port
@@ -102,7 +108,11 @@ class ManagerRestProcess(object):
         self.file_server_base_uri = file_server_base_uri
         self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
-        self.client = CosmoManagerRestClient('localhost')
+        self.file_server_uploaded_blueprints_folder = \
+            file_server_uploaded_blueprints_folder
+        self.file_server_resources_uri = file_server_resources_uri
+        self.client = CosmoManagerRestClient('localhost',
+                                             port=port)
         self.tempdir = tempdir
 
     def start(self, timeout=10):
@@ -112,6 +122,9 @@ class ManagerRestProcess(object):
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
             'workflow_service_base_uri': self.workflow_service_base_uri,
+            'file_server_uploaded_blueprints_folder':
+            self.file_server_uploaded_blueprints_folder,
+            'file_server_resources_uri': self.file_server_resources_uri,
             'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
 
@@ -320,7 +333,7 @@ class CeleryWorkerProcess(object):
         environment = os.environ.copy()
         environment['CELERY_QUEUES'] = self._queues
         environment['TEMP_DIR'] = self._plugins_tempdir
-        environment['MANAGER_REST_PORT'] = self._manager_rest_port
+        environment['MANAGER_REST_PORT'] = str(self._manager_rest_port)
         environment['MANAGEMENT_IP'] = 'localhost'
         environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
             'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
@@ -754,7 +767,6 @@ class TestEnvironment(object):
     _scope = None
     _ruote_service = None
     _file_server_process = None
-    _manager_rest_port = '8100'
 
     def __init__(self, scope):
         try:
@@ -786,7 +798,6 @@ class TestEnvironment(object):
             self._elasticsearch_process.start()
 
             # copy all plugins to app path
-            # celery workflows worker
             try:
                 import workflows
                 # workflows/__init__.py(c)
@@ -819,14 +830,15 @@ class TestEnvironment(object):
                 CeleryOperationsWorkerProcess(
                     self._tempdir,
                     self._plugins_tempdir,
-                    self._manager_rest_port)
+                    MANAGER_REST_PORT)
             self._celery_operations_worker_process.start()
 
+            # celery workflows worker
             self._celery_workflows_worker_process = \
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir,
                     self._plugins_tempdir,
-                    self._manager_rest_port)
+                    MANAGER_REST_PORT)
             self._celery_workflows_worker_process.start()
 
             # workaround to update path
@@ -856,11 +868,13 @@ class TestEnvironment(object):
             file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
             worker_service_base_uri = 'http://localhost:8101'
             self._manager_rest_process = ManagerRestProcess(
-                self._manager_rest_port,
+                MANAGER_REST_PORT,
                 fileserver_dir,
                 file_server_base_uri,
                 worker_service_base_uri,
                 FILE_SERVER_BLUEPRINTS_FOLDER,
+                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                FILE_SERVER_RESOURCES_URI,
                 self._tempdir)
             self._manager_rest_process.start()
 
@@ -903,7 +917,7 @@ class TestEnvironment(object):
         return CeleryTestWorkerProcess(
             self._tempdir,
             self._plugins_tempdir,
-            self._manager_rest_port,
+            MANAGER_REST_PORT,
             queue)
 
     @staticmethod
@@ -1002,6 +1016,9 @@ class TestCase(unittest.TestCase):
     def create_celery_worker(self, queue):
         return TestEnvironment.create_celery_worker(queue)
 
+def create_rest_client():
+    return CosmoManagerRestClient('localhost', port=MANAGER_REST_PORT)
+
 
 def get_resource(resource):
     """
@@ -1018,12 +1035,14 @@ def get_resource(resource):
 
 
 def run_search(query):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.run_search(query)
 
 
 def publish_blueprint(dsl_path, blueprint_id=None):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
     return blueprint_id
@@ -1036,7 +1055,9 @@ def deploy_application(dsl_path, timeout=240,
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
 
@@ -1058,7 +1079,7 @@ def undeploy_application(deployment_id, timeout=240):
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     _, error = client.execute_deployment(deployment_id,
                                          'uninstall',
                                          timeout=timeout)
@@ -1070,7 +1091,7 @@ def execute_install(deployment_id,
                     timeout=240,
                     force=False,
                     wait_for_execution=True):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     _, error = client.execute_deployment(deployment_id,
                                          'install',
                                          timeout=timeout,
@@ -1081,7 +1102,7 @@ def execute_install(deployment_id,
 
 
 def update_execution_status(execution_id, status, error=None):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.update_execution_status(execution_id, status, error)
 
 
@@ -1089,7 +1110,7 @@ def cancel_execution(execution_id, wait_for_termination=False):
     """
     Cancels an execution by its id
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
 
     if wait_for_termination:
         execution = client.cancel_execution(execution_id)
@@ -1107,7 +1128,7 @@ def validate_dsl(blueprint_id, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     response = client.validate_blueprint(blueprint_id)
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
@@ -1118,49 +1139,49 @@ def get_execution(execution_id):
     """
     Returns the exeuction status
     """
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_execution(execution_id)
 
 
 def get_blueprint(blueprint_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_blueprint(blueprint_id)
 
 
 def delete_blueprint(blueprint_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.delete_blueprint(blueprint_id)
 
 
 def get_deployment(deployment_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_deployment(deployment_id)
 
 
 def delete_deployment(deployment_id, ignore_live_nodes=False):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.delete_deployment(deployment_id, ignore_live_nodes)
 
 
 def get_deployment_workflows(deployment_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.list_workflows(deployment_id)
 
 
 def get_deployment_executions(deployment_id):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.list_deployment_executions(deployment_id)
 
 
 def get_deployment_nodes(deployment_id, get_state=False):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     deployment_nodes = client.list_deployment_nodes(
         deployment_id, get_state)
     return deployment_nodes
 
 
 def get_node_instance(node_id, get_state_and_runtime_properties=True):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     node_instance = client.get_node_instance(
         node_id,
         get_state_and_runtime_properties=get_state_and_runtime_properties)
@@ -1169,7 +1190,7 @@ def get_node_instance(node_id, get_state_and_runtime_properties=True):
 
 def update_node_instance(node_id, state_version, runtime_properties=None,
                          state=None):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.update_node_instance(
         node_id,
         state_version=state_version,
@@ -1178,12 +1199,12 @@ def update_node_instance(node_id, state_version, runtime_properties=None,
 
 
 def post_provider_context(name, provider_context):
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.post_provider_context(name, provider_context)
 
 
 def get_provider_context():
-    client = CosmoManagerRestClient('localhost')
+    client = create_rest_client()
     return client.get_provider_context()
 
 

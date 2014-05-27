@@ -48,7 +48,7 @@ class ExecutionsTest(TestCase):
         self.assertEquals(1, len(deployments_executions))
         self.assertEquals(execution_id, deployments_executions[0].id)
         self.assertEquals('terminated', deployments_executions[0].status)
-        self.assertEquals('None', deployments_executions[0].error)
+        self.assertEquals('', deployments_executions[0].error)
 
     def test_execute_more_than_one_workflow_fails(self):
         dsl_path = resource("dsl/sleep_workflow.yaml")

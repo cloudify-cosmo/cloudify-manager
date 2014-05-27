@@ -28,6 +28,7 @@ from os import path
 
 import elasticsearch
 from flask import request
+from flask import make_response
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
@@ -116,7 +117,9 @@ def setup_resources(api):
                      '/blueprints')
     api.add_resource(BlueprintsId,
                      '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsSource,
+    api.add_resource(BlueprintsIdArchive,
+                     '/blueprints/<string:blueprint_id>/archive')
+    api.add_resource(BlueprintsIdSource,
                      '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
                      '/blueprints/<string:blueprint_id>/validate')
@@ -148,13 +151,33 @@ class BlueprintsUpload(object):
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
                 file_server_root, archive_target_path)
+            blueprint = self._prepare_and_submit_blueprint(file_server_root,
+                                                           application_dir,
+                                                           blueprint_id)
+            self._move_archive_to_uploaded_blueprints_dir(blueprint.id,
+                                                          file_server_root,
+                                                          archive_target_path)
+            return blueprint, 201
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
 
-        return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  blueprint_id), 201
+    @staticmethod
+    def _move_archive_to_uploaded_blueprints_dir(blueprint_id,
+                                                 file_server_root,
+                                                 archive_path):
+        if not os.path.exists(archive_path):
+            raise RuntimeError("Archive [{0}] doesn't exist - Cannot move "
+                               "archive to uploaded blueprints "
+                               "directory".format(archive_path))
+        uploaded_blueprint_dir = os.path.join(
+            file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id)
+        os.makedirs(uploaded_blueprint_dir)
+        archive_file_name = '{0}.tar.gz'.format(blueprint_id)
+        shutil.move(archive_path,
+                    os.path.join(uploaded_blueprint_dir, archive_file_name))
 
     def _process_plugins(self, file_server_root, blueprint_id):
         plugins_directory = path.join(file_server_root,
@@ -276,6 +299,39 @@ class BlueprintsUpload(object):
                            'application directory is missing blueprint.yaml')
 
 
+class BlueprintsIdArchive(Resource):
+
+    @swagger.operation(
+        nickname="getArchive",
+        notes="Downloads blueprint as an archive."
+    )
+    @exceptions_handled
+    def get(self, blueprint_id):
+        # Verify blueprint exists.
+        get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
+        blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
+            config.instance().file_server_resources_uri,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id)
+
+        local_path = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id,
+            '%s.tar.gz' % blueprint_id)
+
+        response = make_response()
+        response.headers['Content-Description'] = 'File Transfer'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/octet-stream'
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=%s.tar.gz' % blueprint_id
+        response.headers['Content-Length'] = os.path.getsize(local_path)
+        response.headers['X-Accel-Redirect'] = blueprint_path
+        response.headers['X-Accel-Buffering'] = 'yes'
+        return response
+
+
 class Blueprints(Resource):
 
     @swagger.operation(
@@ -311,8 +367,8 @@ class Blueprints(Resource):
                         'required': True,
                         'allowMultiple': False,
                         'dataType': 'binary',
-                        'paramType': 'body',
-        }],
+                        'paramType': 'body'}
+                    ],
         consumes=[
             "application/octet-stream"
         ]
@@ -327,7 +383,7 @@ class Blueprints(Resource):
         return BlueprintsUpload().do_request()
 
 
-class BlueprintsSource(Resource):
+class BlueprintsIdSource(Resource):
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -419,6 +475,11 @@ class BlueprintsId(Resource):
             config.instance().file_server_blueprints_folder,
             blueprint.id)
         shutil.rmtree(blueprint_folder)
+        uploaded_blueprint_folder = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint.id)
+        shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
 
@@ -1030,15 +1091,34 @@ class Status(Resource):
     @swagger.operation(
         responseClass=responses.Status,
         nickname="status",
-        notes="Returns an alive message from the rest service."
+        notes="Returns state of running system services"
     )
     @marshal_with(responses.Status.resource_fields)
     @exceptions_handled
     def get(self):
         """
-        Returns an alive status (mainly used for pinging reasons).
+        Returns state of running system services
         """
-        return responses.Status(status='running')
+        job_list = {'rsyslog': 'Syslog',
+                    'manager': 'Cloudify Manager',
+                    'workflow': 'Workflow Service',
+                    'riemann': 'Riemann',
+                    'rabbitmq-server': 'RabbitMQ',
+                    'celeryd-cloudify-management': 'Celery Managment',
+                    'ssh': 'SSH',
+                    'elasticsearch': 'Elasticsearch',
+                    'cloudify-ui': 'Cloudify UI',
+                    'logstash': 'Logstash',
+                    'nginx': 'Webserver'
+                    }
+
+        try:
+            from manager_rest.upstartdbus import get_jobs
+            jobs = get_jobs(job_list.keys(), job_list.values())
+        except ImportError:
+            jobs = ['undefined']
+
+        return responses.Status(status='running', services=jobs)
 
 
 class ProviderContext(Resource):
