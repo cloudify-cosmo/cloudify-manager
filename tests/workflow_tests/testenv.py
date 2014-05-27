@@ -1016,6 +1016,7 @@ class TestCase(unittest.TestCase):
     def create_celery_worker(self, queue):
         return TestEnvironment.create_celery_worker(queue)
 
+
 def create_rest_client():
     return CosmoManagerRestClient('localhost', port=MANAGER_REST_PORT)
 
