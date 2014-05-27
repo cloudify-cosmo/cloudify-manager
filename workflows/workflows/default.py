@@ -106,8 +106,7 @@ def relationship_operations(node, operation):
 
 
 def _is_host_node(node):
-    return 'host' in node.type
-    # return 'cloudify.types.host' in node.type_hierarchy
+    return 'cloudify.types.host' in node.type_hierarchy
 
 
 def _wait_for_host_to_start(host_node):
