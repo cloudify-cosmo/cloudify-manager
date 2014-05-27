@@ -1,7 +1,4 @@
 # WARNING:
-# This file is work in progress!!!
-#
-# WARNING:
 # /etc/sudoers must not have "Default requiretty" for Puppet plugin to work
 
 
