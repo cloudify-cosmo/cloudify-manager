@@ -22,6 +22,7 @@ from testenv import undeploy_application as undeploy
 from testenv import get_node_instance
 from testenv import update_node_instance
 from plugins.cloudmock import tasks as cloudmock
+import time
 
 
 class TestUninstallDeployment(TestCase):
@@ -146,6 +147,7 @@ class TestUninstallDeployment(TestCase):
         self.send_task(cloudmock.set_raise_exception_on_stop).get(timeout=10)
 
         self.logger.info('** uninstall **')
+        time.sleep(5)
         undeploy(deployment_id)
 
         from plugins.cloudmock.tasks import get_machines
