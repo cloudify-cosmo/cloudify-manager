@@ -2,7 +2,9 @@ define remove_workflows_worker
 
     set 'v:worker_payload': {
       properties: {
-        workflows_worker: true
+        worker_config: {
+          workflows_worker: true
+        }
       }
     }
 
