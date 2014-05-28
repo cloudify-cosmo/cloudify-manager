@@ -28,7 +28,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         get_executions = self.get('/deployments/{0}/executions'
-            .format(deployment_response['id'])).json
+                                  .format(deployment_response['id'])).json
         self.assertEquals(len(get_executions), 0)
 
     def test_get_execution_by_id(self):

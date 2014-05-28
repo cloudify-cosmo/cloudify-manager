@@ -19,7 +19,6 @@ import tempfile
 import os
 import shutil
 from cloudify.manager import get_manager_rest_client
-import copy
 
 state = []
 touched_time = None

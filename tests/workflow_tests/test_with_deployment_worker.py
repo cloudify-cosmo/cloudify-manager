@@ -61,7 +61,7 @@ class TestWitDeploymentWorker(TestCase):
 
         # test plugin installed in workflows worker
         workflow_plugin = self._get(get_installed_plugins, queue=WORKFLOWS)
-        self.assertIn('workflow-default-plugin', workflow_plugin)
+        self.assertIn('default-workflows-plugin', workflow_plugin)
 
         # test plugins installed in agent worker
         agent_plugins = self._get(get_installed_plugins, queue=self.node_id)
