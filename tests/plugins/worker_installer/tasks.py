@@ -112,4 +112,4 @@ def get_current_worker_state(workflows_worker=False, **kwargs):
 def _is_workflows_worker(config_container):
     return 'worker_config' in config_container and 'workflows_worker' in \
            config_container['worker_config'] and config_container[
-           'worker_config']['workflows_worker']
+               'worker_config']['workflows_worker']
