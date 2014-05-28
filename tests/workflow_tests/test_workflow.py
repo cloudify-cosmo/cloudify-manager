@@ -93,9 +93,9 @@ class BasicWorkflowsTest(TestCase):
                 break
         self.assertEquals('value1', node_runtime_props['property1'])
         self.assertEquals(1,
-                          len(node_runtime_props.runtime_properties),
+                          len(node_runtime_props),
                           msg='Expected 2 but contains: {0}'.format(
-                              node_runtime_props.runtime_properties))
+                              node_runtime_props))
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
