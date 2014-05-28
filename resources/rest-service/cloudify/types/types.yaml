@@ -21,6 +21,9 @@ types:
                 - start
                 - stop
                 - delete
+            cloudify.interfaces.monitor_lifecycle:
+                - start
+                - stop
 
         workflows:
             create:
