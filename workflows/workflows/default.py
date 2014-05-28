@@ -139,7 +139,7 @@ def uninstall(ctx, **kwargs):
 
         sequence.add(set_state_stopping_tasks[node.id])
         # only call stop on started nodes
-        if node_to_state[node.id].state == 'started':
+        if node_to_state[node.id] == 'started':
             sequence.add(
                 forkjoin(
                     node.send_event('Stopping node'),
@@ -153,7 +153,7 @@ def uninstall(ctx, **kwargs):
                      node.set_state('deleting'))
 
         # only call delete on started nodes
-        if node_to_state[node.id].state == 'started':
+        if node_to_state[node.id] == 'started':
             sequence.add(
                 forkjoin(
                     node.send_event('Deleting node'),
