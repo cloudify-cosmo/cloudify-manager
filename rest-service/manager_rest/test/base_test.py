@@ -20,6 +20,8 @@ import json
 import urllib
 import urllib2
 import tempfile
+import os
+import tarfile
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
 
@@ -120,6 +122,46 @@ class BaseServerTestCase(unittest.TestCase):
             return True
         except urllib2.HTTPError:
             return False
+
+    def post_blueprint_args(self, convention=False, blueprint_id=None):
+        def make_tarfile(output_filename, source_dir):
+            with tarfile.open(output_filename, "w:gz") as tar:
+                tar.add(source_dir, arcname=os.path.basename(source_dir))
+
+        def tar_mock_blueprint():
+            tar_path = tempfile.mktemp()
+            source_dir = os.path.join(os.path.dirname(
+                os.path.abspath(__file__)), 'mock_blueprint')
+            make_tarfile(tar_path, source_dir)
+            return tar_path
+
+        if blueprint_id is not None:
+            resource_path = '/blueprints/{0}'.format(blueprint_id)
+        else:
+            resource_path = '/blueprints'
+
+        result = [
+            resource_path,
+            tar_mock_blueprint(),
+            ]
+
+        if not convention:
+            data = {'application_file_name': 'blueprint.yaml'}
+        else:
+            data = {}
+
+        result.append(data)
+        return result
+
+    def put_test_deployment(self, deployment_id='deployment'):
+        blueprint_response = self.post_file(*self.post_blueprint_args()).json
+        blueprint_id = blueprint_response['id']
+        # Execute post deployment
+        deployment_response = self.put(
+            '/deployments/{0}'.format(deployment_id),
+            {'blueprintId': blueprint_id}).json
+        return (blueprint_id, deployment_response['id'], blueprint_response,
+                deployment_response)
 
     def _build_url(self, resource_path, query_params):
         query_string = ''

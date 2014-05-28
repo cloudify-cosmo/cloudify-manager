@@ -20,7 +20,6 @@ import os
 import shutil
 from cloudify.manager import get_manager_rest_client
 
-
 state = []
 touched_time = None
 unreachable_call_order = []
@@ -52,7 +51,9 @@ def make_unreachable(ctx, **kwargs):
 
 
 @operation
-def set_property(property_name, value, ctx, **kwargs):
+def set_property(ctx, **kwargs):
+    property_name = ctx.properties['property_name']
+    value = ctx.properties['value']
     ctx.logger.info('Setting property [{0}={1}] for node: {2}'
                     .format(property_name, value, ctx.node_id))
     ctx.runtime_properties[property_name] = value
@@ -86,17 +87,19 @@ def get_unreachable_call_order(**kwargs):
 
 
 @operation
-def mock_operation(ctx, mockprop, **kwargs):
+def mock_operation(ctx, **kwargs):
+    mockprop = ctx.properties['mockprop']
     global mock_operation_invocation
     mock_operation_invocation.append({
         'id': ctx.node_id,
         'mockprop': mockprop,
-        'kwargs': kwargs
+        'properties': {key: value for (key, value) in ctx.properties.items()}
     })
 
 
 @operation
-def get_resource_operation(ctx, resource_path, **kwargs):
+def get_resource_operation(ctx, **kwargs):
+    resource_path = ctx.properties['resource_path']
     # trying to retrieve a resource
     res1 = ctx.download_resource(resource_path)
     if not res1:
@@ -151,3 +154,9 @@ def append_node_state(ctx, **kwargs):
 def get_node_states(**kwargs):
     global node_states
     return node_states
+
+
+@operation
+def sleep(ctx, **kwargs):
+    import time
+    time.sleep(int(ctx.properties['sleep']))

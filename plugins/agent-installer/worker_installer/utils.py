@@ -42,7 +42,7 @@ def retry(timeout=60):
     return decorator
 
 
-def is_deployment_worker(ctx):
+def is_on_management_worker(ctx):
     """
     Gets whether agent installation was invoked for a deployment.
     """
@@ -54,7 +54,7 @@ class FabricRunner(object):
     def __init__(self, ctx, worker_config=None):
         self.ctx = ctx
         config = worker_config or {}
-        self.local = is_deployment_worker(ctx)
+        self.local = is_on_management_worker(ctx)
         if not self.local:
             self.host_string = '%(user)s@%(host)s:%(port)s' % config
             self.key_filename = config['key']

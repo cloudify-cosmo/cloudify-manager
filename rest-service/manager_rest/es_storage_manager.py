@@ -198,6 +198,20 @@ class ESStorageManager(object):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
 
+    def update_execution_status(self, execution_id, status, error):
+        update_doc_data = {'status': status,
+                           'error': error}
+        update_doc = {'doc': update_doc_data}
+
+        try:
+            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
+                                       doc_type=EXECUTION_TYPE,
+                                       id=str(execution_id),
+                                       body=update_doc)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Execution {0} not found".format(execution_id))
+
     def delete_deployment(self, deployment_id):
         return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
 

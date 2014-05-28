@@ -25,26 +25,11 @@ INSTALLED_PLUGINS = []
 
 @operation
 def install(ctx, plugin, **kwargs):
-
+    print '###########', plugin, '#####################'
     global INSTALLED_PLUGINS
     ctx.logger.info("in plugin_installer.install --> "
                     "installing plugin {0}".format(plugin))
     INSTALLED_PLUGINS.append(plugin['name'])
-
-
-@operation
-def verify_plugin(ctx, worker_id, plugin_name, operation, throw_on_failure,
-                  **kwargs):
-    full_operation_name = "{0}.{1}".format(plugin_name, operation)
-    is_non_existing = full_operation_name in NON_EXISTING_OPERATIONS
-    if throw_on_failure and is_non_existing:
-        raise RuntimeError("")
-    return not is_non_existing
-
-
-@operation
-def get_arguments(plugin_name, operation, **kwargs):
-    pass
 
 
 @operation

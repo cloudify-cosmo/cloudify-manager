@@ -26,7 +26,9 @@ from workflow_tests.testenv import (TestCase,
                                     deploy_application as deploy,
                                     cancel_execution,
                                     execute_install,
-                                    get_deployment_executions)
+                                    get_deployment_executions,
+                                    get_execution,
+                                    update_execution_status)
 
 
 class ExecutionsTest(TestCase):
@@ -36,18 +38,18 @@ class ExecutionsTest(TestCase):
         _, execution_id = deploy(dsl_path,
                                  wait_for_execution=False)
         execution = cancel_execution(execution_id, True)
-        self.assertEquals(execution.status, 'terminated')
+        self.assertEquals('terminated', execution.status)
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
         deployment, execution_id = deploy(dsl_path)
-        deployments_executions = get_deployment_executions(deployment.id,
-                                                           True)
+        time.sleep(5)  # give elasticsearch time to update...
+        deployments_executions = get_deployment_executions(deployment.id)
 
         self.assertEquals(1, len(deployments_executions))
         self.assertEquals(execution_id, deployments_executions[0].id)
         self.assertEquals('terminated', deployments_executions[0].status)
-        self.assertEquals('None', deployments_executions[0].error)
+        self.assertEquals('', deployments_executions[0].error)
 
     def test_execute_more_than_one_workflow_fails(self):
         dsl_path = resource("dsl/sleep_workflow.yaml")
@@ -68,3 +70,23 @@ class ExecutionsTest(TestCase):
         execute_install(deployment.id,
                         force=True,
                         wait_for_execution=False)
+
+    def test_update_execution_status(self):
+        dsl_path = resource("dsl/basic.yaml")
+        _, execution_id = deploy(dsl_path,
+                                 wait_for_execution=True)
+        execution = get_execution(execution_id)
+        self.assertEquals('terminated', execution.status)
+        execution = update_execution_status(execution_id, 'new-status')
+        self.assertEquals('new-status', execution.status)
+        execution = update_execution_status(execution_id,
+                                            'another-new-status',
+                                            'some-error')
+        self.assertEquals('another-new-status', execution.status)
+        self.assertEquals('some-error', execution.error)
+        # verifying that updating only the status field also resets the
+        # error field to an empty string
+        execution = update_execution_status(execution_id,
+                                            'final-status')
+        self.assertEquals('final-status', execution.status)
+        self.assertEquals('', execution.error)

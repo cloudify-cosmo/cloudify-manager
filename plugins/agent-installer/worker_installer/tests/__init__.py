@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from cloudify.context import BootstrapContext
 
 __author__ = 'idanmo'
 
@@ -71,5 +72,13 @@ def get_remote_context():
         },
         runtime_properties={
             'ip': '127.0.0.1'
-        }
+        },
+        bootstrap_context=BootstrapContext({
+            'cloudify_agent': {
+                'min_workers': 2,
+                'max_workers': 5,
+                'user': 'john doe',
+                'remote_execution_port': 2222
+            }
+        })
     )

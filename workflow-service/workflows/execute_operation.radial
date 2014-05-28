@@ -4,15 +4,6 @@ define execute_operation
                       run_on_node: "${v:run_on_node}"
 
     sequence if: '${operation} != no_op'
-        execute_task target: '${target}', exec: 'plugin_installer.tasks.verify_plugin', payload: {
-            properties: {
-                worker_id: "${worker_id}",
-                plugin_name: "${plugin_name}",
-                operation: "${operation_mapping}",
-                throw_on_failure: true
-            }
-        }
-
         execute_task target: '${target}', exec: '${operation}', payload: {
             properties: '$operation_properties',
             params: '$v:params',

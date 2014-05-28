@@ -18,6 +18,7 @@ import unittest
 __author__ = 'idanmo'
 
 import shutil
+import distutils.core
 import tempfile
 import shlex
 import subprocess
@@ -35,7 +36,6 @@ from multiprocessing import Process
 import yaml
 import pika
 import json
-import requests
 import elasticsearch
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
@@ -46,9 +46,9 @@ import plugins
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
-DEPLOYMENT_QUEUE_NAME = 'cloudify_deployment_id'
-CELERY_QUEUES_LIST = [MANAGEMENT_NODE_ID, DEPLOYMENT_QUEUE_NAME]
-
+CLOUDIFY_WORKFLOWS_QUEUE = 'cloudify.workflows'
+CELERY_QUEUES_LIST = [MANAGEMENT_NODE_ID]
+CELERY_WORKFLOWS_QUEUE_LIST = [CLOUDIFY_WORKFLOWS_QUEUE]
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 FILE_SERVER_PORT = 53229
@@ -269,6 +269,7 @@ class RuoteServiceProcess(object):
         env['RUOTE_STORAGE_DIR_PATH'] = path.join(self._tempdir,
                                                   'ruote_storage')
         env['UNICORN_NUMBER_OF_WORKERS'] = str(self._num_of_workers)
+        env['INTEG_TEST_ENV'] = 'true'
         logger.info("Starting Ruote service with command {0}".format(command))
         self._process = subprocess.Popen(command,
                                          cwd=startup_script_path,
@@ -289,89 +290,56 @@ class RuoteServiceProcess(object):
 class CeleryWorkerProcess(object):
     _process = None
 
-    def __init__(self, tempdir, plugins_tempdir, cosmo_path,
-                 manager_rest_port):
-        self._celery_pid_file = path.join(tempdir, "celery.pid")
-        self._cosmo_path = cosmo_path
-        self._app_path = path.join(tempdir, "plugins")
+    def __init__(self,
+                 tempdir,
+                 plugins_tempdir,
+                 manager_rest_port,
+                 name,
+                 queues,
+                 includes,
+                 hostname):
+        self._name = name
+        self._celery_pid_file = path.join(tempdir, "celery-{}.pid".format(
+            name))
+        self._celery_log_file = path.join(tempdir, "celery-{}.log".format(
+            name))
         self._tempdir = tempdir
         self._plugins_tempdir = plugins_tempdir
-        self._cosmo_plugins = self._app_path
         self._manager_rest_port = manager_rest_port
-
-    def _build_includes(self):
-
-        includes = []
-
-        # iterate over the mock plugins directory and include all of them
-        mock_plugins_path = os.path\
-            .join(dirname(dirname(abspath(__file__))), "plugins")
-
-        for plugin_dir_name in os.walk(mock_plugins_path).next()[1]:
-            tasks_path = os.path\
-                .join(mock_plugins_path, plugin_dir_name, "tasks.py")
-            if os.path.exists(tasks_path):
-                includes.append("{0}.tasks".format(plugin_dir_name))
-            else:
-                logger.warning("Could not find tasks.py file under plugin {0}."
-                               " This plugin will not be loaded!"
-                               .format(plugin_dir_name))
-
-        return includes
-
-    def _copy_plugin(self, plugin):
-        installed_plugin_path = path.dirname(plugin.__file__)
-        self._create_python_module_path(self._cosmo_plugins)
-        target = path.join(self._cosmo_plugins, plugin.__name__)
-        shutil.copytree(installed_plugin_path, target)
-        self._remove_test_dir_if_exists(target)
-
-    def _remove_test_dir_if_exists(self, plugin_path):
-        tests_dir = path.join(plugin_path, 'tests')
-        if path.isdir(tests_dir):
-            shutil.rmtree(tests_dir)
-
-    def _create_python_module_path(self, module_path):
-        if not path.exists(module_path):
-            os.makedirs(module_path)
-        while not path.exists(path.join(module_path, "__init__.py")):
-            with open(path.join(module_path, "__init__.py"), "w") as f:
-                f.write("")
-            module_path = path.realpath(path.join(module_path, ".."))
+        self._includes = includes
+        self._queues = ','.join(queues)
+        self._hostname = hostname
 
     def start(self):
-        logger.info("Copying %s to %s", self._cosmo_path, self._app_path)
-        shutil.copytree(self._cosmo_path, self._app_path)
-        celery_log_file = path.join(self._tempdir, "celery.log")
         python_path = sys.executable
-        logger.info("Building includes list for celery worker")
-        includes = self._build_includes()
         celery_command = [
             "{0}/celery".format(dirname(python_path)),
             "worker",
             "--events",
             "--loglevel=debug",
-            "--hostname=celery.{0}".format(MANAGEMENT_NODE_ID),
+            "--hostname=celery.{}".format(self._hostname),
             "--purge",
             "--app=cloudify",
-            "--logfile={0}".format(celery_log_file),
+            "--logfile={0}".format(self._celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
-            "--queues={0}".format(','.join(CELERY_QUEUES_LIST)),
+            "--queues={0}".format(self._queues),
             "--concurrency=1",
-            "--include={0}".format(','.join(includes))
+            "--include={0}".format(','.join(self._includes))
         ]
 
+        prevdir = os.getcwd()
         os.chdir(os.path.join(self._tempdir, "plugins"))
 
         environment = os.environ.copy()
+        environment['CELERY_QUEUES'] = self._queues
         environment['TEMP_DIR'] = self._plugins_tempdir
         environment['MANAGER_REST_PORT'] = str(self._manager_rest_port)
         environment['MANAGEMENT_IP'] = 'localhost'
         environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
             'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
                                               FILE_SERVER_BLUEPRINTS_FOLDER)
-        environment['MANAGER_FILE_SERVER_URL'] = 'http://localhost:{0}'\
-                                                 .format(FILE_SERVER_PORT)
+        environment['MANAGER_FILE_SERVER_URL'] = 'http://localhost:{0}' \
+            .format(FILE_SERVER_PORT)
 
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
@@ -387,30 +355,32 @@ class CeleryWorkerProcess(object):
             time.sleep(1)
 
         if not path.exists(self._celery_pid_file):
-            if path.exists(celery_log_file):
-                with open(celery_log_file, "r") as f:
-                    celery_log = f.read()
-                    logger.info("{0} content:\n{1}".format(celery_log_file,
-                                                           celery_log))
-            raise RuntimeError("Failed to start celery worker: {0} - process "
-                               "did not start after {1} seconds"
-                               .format(self._process.returncode, timeout))
+            celery_log = self.try_read_logfile()
+            if celery_log is not None:
+                logger.error("{0} content:\n{1}".format(
+                    self._celery_log_file, celery_log))
+            raise RuntimeError("Failed to start celery {0} worker: {1} "
+                               "- process "
+                               "did not start after {2} seconds"
+                               .format(self._name,
+                                       self._process.returncode, timeout))
 
+        os.chdir(prevdir)
         logger.info("Celery worker started [pid=%s]", self._process.pid)
 
     def close(self):
         if self._process:
-            logger.info("Shutting down celery worker [pid=%s]",
-                        self._process.pid)
+            logger.info("Shutting down celery {} worker [pid={}]"
+                        .format(self._name, self._process.pid))
             self._process.kill()
 
-    @staticmethod
-    def _get_celery_process_ids():
+    def _get_celery_process_ids(self):
         from subprocess import CalledProcessError
         try:
-            output = subprocess.check_output(
-                "ps aux | grep 'celery' | grep -v grep | awk '{print $2}'",
-                shell=True)
+            grep = "ps aux | grep 'celery.*{0}' | grep -v grep".format(
+                self._celery_pid_file)
+            grep += " | awk '{print $2}'"
+            output = subprocess.check_output(grep, shell=True)
             ids = filter(lambda x: len(x) > 0, output.split(os.linesep))
             return ids
         except CalledProcessError:
@@ -425,7 +395,9 @@ class CeleryWorkerProcess(object):
         for pid in process_ids:
             # kill celery child process
             if pid != str(self._process.pid):
-                logger.info("Killing celery worker [pid={0}]".format(pid))
+                logger.info(
+                    "Killing celery {} worker [pid={}]".format(
+                        self._name, pid))
                 os.system('kill -9 {0}'.format(pid))
         timeout = time.time() + 30
         # wait until celery master creates a new child
@@ -433,9 +405,70 @@ class CeleryWorkerProcess(object):
             time.sleep(1)
             if time.time() > timeout:
                 raise RuntimeError(
-                    'Celery worker restart timeout '
-                    '[current_ids={0}, previous_ids={1}'.format(
-                        self._get_celery_process_ids(), process_ids))
+                    'Celery {} worker restart timeout '
+                    '[current_ids={}, previous_ids={}'.format(
+                        self._name, self._get_celery_process_ids(),
+                        process_ids))
+
+    def try_read_logfile(self):
+        if path.exists(self._celery_log_file):
+            with open(self._celery_log_file, "r") as f:
+                return f.read()
+        return None
+
+    @staticmethod
+    def _build_includes():
+        includes = []
+        # iterate over the mock plugins directory and include all of them
+        mock_plugins_path = os.path \
+            .join(dirname(dirname(abspath(__file__))), "plugins")
+
+        for plugin_dir_name in os.walk(mock_plugins_path).next()[1]:
+            tasks_path = os.path \
+                .join(mock_plugins_path, plugin_dir_name, "tasks.py")
+            if os.path.exists(tasks_path):
+                includes.append("{0}.tasks".format(plugin_dir_name))
+            else:
+                logger.warning("Could not find tasks.py file under plugin {0}."
+                               " This plugin will not be loaded!"
+                               .format(plugin_dir_name))
+        return includes
+
+
+class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
+
+    def __init__(self, tempdir, plugins_tempdir,
+                 manager_rest_port):
+        super(CeleryWorkflowsWorkerProcess, self).__init__(
+            tempdir, plugins_tempdir, manager_rest_port,
+            name='workflows',
+            queues=CELERY_WORKFLOWS_QUEUE_LIST,
+            includes=["workflows.default", "plugin_installer.tasks"],
+            hostname='cloudify.workflows')
+
+
+class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
+
+    def __init__(self, tempdir, plugins_tempdir,
+                 manager_rest_port):
+        super(CeleryOperationsWorkerProcess, self).__init__(
+            tempdir, plugins_tempdir, manager_rest_port,
+            name='operations',
+            queues=CELERY_QUEUES_LIST,
+            includes=self._build_includes(),
+            hostname='cloudify.management')
+
+
+class CeleryTestWorkerProcess(CeleryWorkerProcess):
+
+    def __init__(self, tempdir, plugins_tempdir,
+                 manager_rest_port, queue):
+        super(CeleryTestWorkerProcess, self).__init__(
+            tempdir, plugins_tempdir, manager_rest_port,
+            name=queue,
+            queues=[queue],
+            includes=self._build_includes(),
+            hostname=queue)
 
 
 class RiemannProcess(object):
@@ -648,12 +681,6 @@ class ElasticSearchProcess(object):
         logger.info("Elasticsearch schema created successfully")
 
 
-class RuoteServiceClient(object):
-
-    def get_workflows_states(self):
-        return requests.get('http://localhost:8101/workflows').json()
-
-
 class TestEnvironmentScope(object):
     CLASS = "CLASS"
     MODULE = "MODULE"
@@ -730,7 +757,8 @@ class TestEnvironment(object):
           riemann configurer and plugin installer.
     """
     _instance = None
-    _celery_worker_process = None
+    _celery_operations_worker_process = None
+    _celery_workflows_worker_process = None
     _riemann_process = None
     _elasticsearch_process = None
     _manager_rest_process = None
@@ -769,12 +797,49 @@ class TestEnvironment(object):
             self._elasticsearch_process = ElasticSearchProcess()
             self._elasticsearch_process.start()
 
-            # celery
+            # copy all plugins to app path
+            try:
+                import workflows
+                # workflows/__init__.py(c)
+                workflow_plugin_path = path.abspath(workflows.__file__)
+                # workflows/
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # package / egg folder
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+            except:
+                # cloudify-manager/tests/plugins/__init__.py(c)
+                workflow_plugin_path = path.abspath(plugins.__file__)
+                # cloudify-manager/tests/plugins
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager/tests
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager
+                workflow_plugin_path = path.dirname(workflow_plugin_path)
+                # cloudify-manager/workflows
+                workflow_plugin_path = path.join(workflow_plugin_path,
+                                                 'workflows')
+
             plugins_path = path.dirname(path.realpath(plugins.__file__))
-            self._celery_worker_process = CeleryWorkerProcess(
-                self._tempdir, self._plugins_tempdir, plugins_path,
-                MANAGER_REST_PORT)
-            self._celery_worker_process.start()
+            app_path = path.join(self._tempdir, "plugins")
+            for plugin_path in [plugins_path, workflow_plugin_path]:
+                logger.info("Copying %s to %s", plugin_path, app_path)
+                distutils.dir_util.copy_tree(plugin_path, app_path)
+
+            # celery operations worker
+            self._celery_operations_worker_process = \
+                CeleryOperationsWorkerProcess(
+                    self._tempdir,
+                    self._plugins_tempdir,
+                    MANAGER_REST_PORT)
+            self._celery_operations_worker_process.start()
+
+            # celery workflows worker
+            self._celery_workflows_worker_process = \
+                CeleryWorkflowsWorkerProcess(
+                    self._tempdir,
+                    self._plugins_tempdir,
+                    MANAGER_REST_PORT)
+            self._celery_workflows_worker_process.start()
 
             # workaround to update path
             manager_rest_path = \
@@ -825,7 +890,7 @@ class TestEnvironment(object):
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
-            raise error
+            raise
 
     def _destroy(self):
         logger.info("Destroying test environment... [scope={0}]"
@@ -834,8 +899,10 @@ class TestEnvironment(object):
             self._riemann_process.close()
         if self._elasticsearch_process:
             self._elasticsearch_process.close()
-        if self._celery_worker_process:
-            self._celery_worker_process.close()
+        if self._celery_operations_worker_process:
+            self._celery_operations_worker_process.close()
+        if self._celery_workflows_worker_process:
+            self._celery_workflows_worker_process.close()
         if self._manager_rest_process:
             self._manager_rest_process.close()
         if self._ruote_service:
@@ -844,7 +911,14 @@ class TestEnvironment(object):
             self._file_server_process.stop()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
-            shutil.rmtree(self._tempdir, ignore_errors=True)
+            # shutil.rmtree(self._tempdir, ignore_errors=True)
+
+    def _create_celery_worker(self, queue):
+        return CeleryTestWorkerProcess(
+            self._tempdir,
+            self._plugins_tempdir,
+            MANAGER_REST_PORT,
+            queue)
 
     @staticmethod
     def create(scope=TestEnvironmentScope.PACKAGE):
@@ -879,10 +953,23 @@ class TestEnvironment(object):
                 os.makedirs(plugins_tempdir)
 
     @staticmethod
-    def restart_celery_worker():
+    def create_celery_worker(queue):
+        if TestEnvironment._instance:
+            return TestEnvironment._instance._create_celery_worker(queue)
+
+    @staticmethod
+    def restart_celery_operations_worker():
         if TestEnvironment._instance and \
-           (TestEnvironment._instance._celery_worker_process):
-            TestEnvironment._instance._celery_worker_process.restart()
+           (TestEnvironment._instance._celery_operations_worker_process):
+            TestEnvironment._instance._celery_operations_worker_process\
+                .restart()
+
+    @staticmethod
+    def restart_celery_workflows_worker():
+        if TestEnvironment._instance and \
+                (TestEnvironment._instance._celery_workflows_worker_process):
+                TestEnvironment._instance._celery_workflows_worker_process\
+                    .restart()
 
     @staticmethod
     def reset_elasticsearch_data():
@@ -912,20 +999,22 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
         self.logger.setLevel(logging.INFO)
-        self.logger.info('Current workflows state:\n{0}'
-                         .format(get_workflows_state()))
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
-        TestEnvironment.restart_celery_worker()
+        TestEnvironment.restart_celery_operations_worker()
+        TestEnvironment.restart_celery_workflows_worker()
         TestEnvironment.reset_elasticsearch_data()
 
-    def send_task(self, task, args=None):
+    def send_task(self, task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         task_name = task.name.replace("plugins.", "")
         return celery.send_task(
             name=task_name,
             args=args,
-            queue=CLOUDIFY_MANAGEMENT_QUEUE)
+            queue=queue)
+
+    def create_celery_worker(self, queue):
+        return TestEnvironment.create_celery_worker(queue)
 
 
 def create_rest_client():
@@ -1013,6 +1102,11 @@ def execute_install(deployment_id,
         raise RuntimeError('Workflow execution failed: {0}'.format(error))
 
 
+def update_execution_status(execution_id, status, error=None):
+    client = create_rest_client()
+    return client.update_execution_status(execution_id, status, error)
+
+
 def cancel_execution(execution_id, wait_for_termination=False):
     """
     Cancels an execution by its id
@@ -1075,9 +1169,9 @@ def get_deployment_workflows(deployment_id):
     return client.list_workflows(deployment_id)
 
 
-def get_deployment_executions(deployment_id, with_statuses=False):
+def get_deployment_executions(deployment_id):
     client = create_rest_client()
-    return client.list_deployment_executions(deployment_id, with_statuses)
+    return client.list_deployment_executions(deployment_id)
 
 
 def get_deployment_nodes(deployment_id, get_state=False):
@@ -1118,11 +1212,6 @@ def get_provider_context():
 def is_node_started(node_id):
     node_instance = get_node_instance(node_id)
     return node_instance['state'] == 'started'
-
-
-def get_workflows_state():
-    state = RuoteServiceClient().get_workflows_states()
-    return state
 
 
 class TimeoutException(Exception):

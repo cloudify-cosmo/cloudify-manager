@@ -18,7 +18,8 @@ __author__ = 'idanmo'
 import os
 import cloudify
 from functools import wraps
-from worker_installer.utils import FabricRunner, is_deployment_worker
+from worker_installer.utils import (FabricRunner,
+                                    is_on_management_worker)
 
 DEFAULT_MIN_WORKERS = 2
 DEFAULT_MAX_WORKERS = 5
@@ -123,7 +124,7 @@ def _set_remote_execution_port(ctx, config):
 
 
 def prepare_configuration(ctx, worker_config):
-    if is_deployment_worker(ctx):
+    if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
         # (not specific node)
         # use the same user we used when bootstrapping
@@ -132,7 +133,11 @@ def prepare_configuration(ctx, worker_config):
         else:
             raise RuntimeError('Cannot determine user for deployment user:'
                                'MANAGEMENT_USER is not set')
-        worker_config['name'] = ctx.deployment_id
+        workflows_worker = worker_config['workflows_worker']\
+            if 'workflows_worker' in worker_config else 'false'
+        suffix = '_workflows' if workflows_worker.lower() == 'true' else ''
+        name = '{0}{1}'.format(ctx.deployment_id, suffix)
+        worker_config['name'] = name
     else:
         worker_config['host'] = get_machine_ip(ctx)
         _set_ssh_key(ctx, worker_config)

@@ -17,19 +17,10 @@ blueprint:
 types:
     mock_type:
         derived_from: "cloudify.types.base"
+        properties:
+            - property_name: property1
+            - value: value1
         interfaces:
             cloudify.interfaces.lifecycle:
                 - start: testmockoperations.tasks.make_reachable
-            mock_interface:
-                - "touch": testmockoperations.tasks.touch
-                - "make_reachable": testmockoperations.tasks.make_reachable
-                - "make_unreachable": testmockoperations.tasks.make_unreachable
-                - "set_property": testmockoperations.tasks.set_property
-        workflows:
-            create:
-                radial: |
-                    define mock_create
-                        execute_operation operation: 'set_property', params: {
-                            property_name: 'property1',
-                            value: 'value1'
-                        }
+                - create: testmockoperations.tasks.set_property
