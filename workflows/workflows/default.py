@@ -97,6 +97,99 @@ def install(ctx, **kwargs):
     graph.execute()
 
 
+@workflow
+def uninstall(ctx, **kwargs):
+    """Default uninstall workflow"""
+
+    # instantiate a new graph instance to build uninstall tasks workflow
+    graph = TaskDependencyGraph(ctx)
+
+    # TODO: comment about apply_async here..
+    node_to_state = {
+        node.id: node.get_state().apply_async().get()
+        for node in ctx.nodes}
+
+    # We need reference to the set deleted state tasks and the set stopping
+    # state tasks so we can later create a proper dependency between nodes and
+    # their relationships. We use the below tasks as part of a single node
+    # workflow, and to create the dependency (at the bottom)
+    set_state_stopping_tasks = {
+        node.id: node.set_state('stopping')
+        for node in ctx.nodes}
+    set_state_deleted_tasks = {
+        node.id: node.set_state('deleted')
+        for node in ctx.nodes}
+
+    # We need reference to the stop node tasks and delete node tasks as we
+    # augment them with on_failure error handlers later on
+    stop_node_tasks = {
+        node.id: node.execute_operation(
+            'cloudify.interfaces.lifecycle.stop')
+        for node in ctx.nodes}
+    delete_node_tasks = {
+        node.id: node.execute_operation(
+            'cloudify.interfaces.lifecycle.delete')
+        for node in ctx.nodes}
+
+    # Create node linear task sequences
+    # For each node, we create a "task sequence" in which all tasks
+    # added to it will be executed in a sequential manner
+    for node in ctx.nodes:
+        sequence = graph.sequence()
+
+        sequence.add(set_state_stopping_tasks[node.id])
+        # only call stop on started nodes
+        if node_to_state[node.id].state == 'started':
+            sequence.add(
+                forkjoin(
+                    node.send_event('Stopping node'),
+                    stop_node_tasks[node.id]))
+
+        sequence.add(node.set_state('stopped'),
+                     forkjoin(*relationship_operations(
+                         node,
+                         'cloudify.interfaces.relationship_lifecycle'
+                         '.unlink')),
+                     node.set_state('deleting'))
+
+        # only call delete on started nodes
+        if node_to_state[node.id].state == 'started':
+            sequence.add(
+                forkjoin(
+                    node.send_event('Deleting node'),
+                    delete_node_tasks[node.id]))
+
+        sequence.add(set_state_deleted_tasks[node.id])
+
+        # augmenting the stop and delete node tasks with error handlers
+        _set_send_node_event_on_error_handler(
+            stop_node_tasks[node.id],
+            node,
+            "Error occurred while stopping node - ignoring...")
+        _set_send_node_event_on_error_handler(
+            delete_node_tasks[node.id],
+            node,
+            "Error occurred while deleting node - ignoring...")
+
+    # Create task dependencies based on node relationships
+    # for each node, make a dependency between the stopping task
+    # and the deleted state task of the target
+    for node in ctx.nodes:
+        for rel in node.relationships:
+            node_set_stopping = set_state_stopping_tasks[node.id]
+            target_set_deleted = set_state_deleted_tasks[rel.target_id]
+            graph.add_dependency(node_set_stopping, target_set_deleted)
+
+    graph.execute()
+
+
+def _set_send_node_event_on_error_handler(task, node, error_message):
+    def send_node_event_error_handler(tsk):
+        node.send_event(error_message)
+        return False
+    task.on_failure = send_node_event_error_handler
+
+
 def relationship_operations(node, operation):
     tasks = []
     for relationship in node.relationships:
