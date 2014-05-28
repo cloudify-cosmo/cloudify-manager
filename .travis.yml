@@ -39,8 +39,6 @@ install:
    - mkdir -p package/linux
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
-   - pip install --process-dependency-links https://github.com/cloudify-cosmo/cloudify-rest-client/archive/feature/CFY-642-workflow-framework.zip
-   - pip install --process-dependency-links https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/feature/CFY-642-workflow-framework.zip
    - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
    - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
    - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install --process-dependency-links . && cd ../../../../..
@@ -51,10 +49,6 @@ install:
    - source ~/env/bin/activate
    - pip install nose
    - pip install fabric
-   - pip install --process-dependency-links https://github.com/cloudify-cosmo/cloudify-rest-client/archive/feature/CFY-642-workflow-framework.zip
-   - pip install --process-dependency-links https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/feature/CFY-642-workflow-framework.zip
-     #   - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
-     #   - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
    - cd rest-service && pip install --process-dependency-links . && cd ..
    - cd workflows && pip install --process-dependency-links . && cd ..
    - cd tests && pip install --process-dependency-links . && cd ..
