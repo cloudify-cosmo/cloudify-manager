@@ -99,35 +99,31 @@ def session(func):
         ctx = _find_type_in_kwargs(context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
-            return func(*args, **kwargs)
-        machine_ip = get_machine_ip(ctx)
-        # create default worker_config dict
-        try:
+            raise RuntimeError('CloudifyContext not found in invocation args')
+        if ctx.properties and 'worker_config' in ctx.properties:
             agent_config = ctx.properties['worker_config']
-        except IndexError:
+        else:
             agent_config = {
                 'protocol': DEFAULT_WINRM_PROTOCOL,
                 'port': DEFAULT_WINRM_PORT,
                 'uri': DEFAULT_WINRM_URI,
             }
-        except:
-            # TODO: handle exception
-            raise
-
-        # agent_config['protocol'] = DEFAULT_WINRM_PROTOCOL
-        # agent_config['port'] = DEFAULT_WINRM_PORT
-        # agent_config['uri'] = DEFAULT_WINRM_URI
-
+        machine_ip = get_machine_ip(ctx)
         winrm_url = '{}://{}:{}/{}'.format(
             agent_config['protocol'] or DEFAULT_WINRM_PROTOCOL,
             machine_ip,
             agent_config['port'] or DEFAULT_WINRM_PORT,
             agent_config['uri'] or DEFAULT_WINRM_URI)
+        agent_config['session'] = winrm.Session(winrm_url, auth=(
+            agent_config['user'], agent_config['password']))
+        kwargs['worker_config'] = agent_config
+        return func(*args, **kwargs)
+
+        # agent_config['protocol'] = DEFAULT_WINRM_PROTOCOL
+        # agent_config['port'] = DEFAULT_WINRM_PORT
+        # agent_config['uri'] = DEFAULT_WINRM_URI
 
         # TODO: check if it's possible to use winrm password-less-ly
-        ctx.logger.debug('creating winrm session: {}...'.format(machine_ip))
-        return winrm.Session(winrm_url, auth=(
-            agent_config['user'], agent_config['password']))
     return wrapper
 
 
@@ -224,6 +220,7 @@ def download(ctx, session):
 
 
 @operation
+@session
 def install(ctx, **kwargs):
     """
     installs the agent
@@ -281,7 +278,7 @@ def install(ctx, **kwargs):
 
 @operation
 @session
-def start(ctx, **kwargs):
+def start(ctx, session, **kwargs):
     """
     starts the agent
     """
@@ -292,7 +289,7 @@ def start(ctx, **kwargs):
 
 @operation
 @session
-def restart(ctx, **kwargs):
+def restart(ctx, session, **kwargs):
     """
     restarts the agent
     """
@@ -304,7 +301,7 @@ def restart(ctx, **kwargs):
 
 @operation
 @session
-def uninstall(ctx, blocker, **kwargs):
+def uninstall(ctx, session, blocker, **kwargs):
     """
     uninstalls the agent
     """
@@ -321,7 +318,6 @@ def uninstall(ctx, blocker, **kwargs):
 
 
 @operation
-@session
 def reinstall(ctx, **kwargs):
     """
     reinstalls the agent
