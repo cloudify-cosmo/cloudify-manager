@@ -39,7 +39,7 @@ def _find_type_in_kwargs(cls, all_args):
 
 def init_worker_installer(func):
     @wraps(func)
-    def wrapper(workflows_worker=False, *args, **kwargs):
+    def wrapper(*args, **kwargs):
         ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
@@ -48,7 +48,6 @@ def init_worker_installer(func):
             worker_config = ctx.properties['worker_config']
         else:
             worker_config = {}
-        worker_config['workflows_worker'] = workflows_worker
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
         kwargs['runner'] = FabricRunner(ctx, worker_config)
@@ -134,7 +133,9 @@ def prepare_configuration(ctx, worker_config):
         else:
             raise RuntimeError('Cannot determine user for deployment user:'
                                'MANAGEMENT_USER is not set')
-        suffix = '_workflows' if worker_config['workflows_worker'] else ''
+        workflows_worker = worker_config['workflows_worker']\
+            if 'workflows_worker' in worker_config else 'false'
+        suffix = '_workflows' if workflows_worker.lower() == 'true' else ''
         name = '{0}{1}'.format(ctx.deployment_id, suffix)
         worker_config['name'] = name
     else:
