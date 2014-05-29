@@ -133,18 +133,16 @@ def uninstall(ctx, **kwargs):
         sequence = graph.sequence()
 
         sequence.add(set_state_stopping_tasks[node.id],
-                     forkjoin(
-                         node.send_event('Stopping node'),
-                         stop_node_tasks[node.id]),
+                     node.send_event('Stopping node'),
+                     stop_node_tasks[node.id],
                      node.set_state('stopped'),
                      forkjoin(*_relationship_operations(
                          node,
                          'cloudify.interfaces.relationship_lifecycle'
                          '.unlink')),
                      node.set_state('deleting'),
-                     forkjoin(
-                         node.send_event('Deleting node'),
-                         delete_node_tasks[node.id]),
+                     node.send_event('Deleting node'),
+                     delete_node_tasks[node.id],
                      set_state_deleted_tasks[node.id])
 
         # augmenting the stop and delete node tasks with error handlers
