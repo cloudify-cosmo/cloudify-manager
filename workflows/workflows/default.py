@@ -186,7 +186,7 @@ def uninstall(ctx, **kwargs):
 def _set_send_node_event_on_error_handler(task, node, error_message):
     def send_node_event_error_handler(tsk):
         node.send_event(error_message)
-        return False
+        return True
     task.on_failure = send_node_event_error_handler
 
 
