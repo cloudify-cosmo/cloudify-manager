@@ -214,7 +214,7 @@ def _host_post_start(host_node):
         for plugin in host_node.plugins_to_install:
             tasks += [
                 host_node.send_event('Installing plugin: {0}'
-                    .format(plugin['name'])),
+                                     .format(plugin['name'])),
                 host_node.execute_operation(
                     'cloudify.interfaces.plugin_installer.install',
                     kwargs={'plugin': plugin})]
