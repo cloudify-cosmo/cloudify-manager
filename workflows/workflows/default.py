@@ -104,11 +104,6 @@ def uninstall(ctx, **kwargs):
     # instantiate a new graph instance to build uninstall tasks workflow
     graph = TaskDependencyGraph(ctx)
 
-    # TODO: comment about apply_async here..
-    node_to_state = {
-        node.id: node.get_state().apply_async().get()
-        for node in ctx.nodes}
-
     # We need reference to the set deleted state tasks and the set stopping
     # state tasks so we can later create a proper dependency between nodes and
     # their relationships. We use the below tasks as part of a single node
@@ -137,29 +132,20 @@ def uninstall(ctx, **kwargs):
     for node in ctx.nodes:
         sequence = graph.sequence()
 
-        sequence.add(set_state_stopping_tasks[node.id])
-        # only call stop on started nodes
-        if node_to_state[node.id] == 'started':
-            sequence.add(
-                forkjoin(
-                    node.send_event('Stopping node'),
-                    stop_node_tasks[node.id]))
-
-        sequence.add(node.set_state('stopped'),
+        sequence.add(set_state_stopping_tasks[node.id],
+                     forkjoin(
+                         node.send_event('Stopping node'),
+                         stop_node_tasks[node.id]),
+                     node.set_state('stopped'),
                      forkjoin(*_relationship_operations(
                          node,
                          'cloudify.interfaces.relationship_lifecycle'
                          '.unlink')),
-                     node.set_state('deleting'))
-
-        # only call delete on started nodes
-        if node_to_state[node.id] == 'started':
-            sequence.add(
-                forkjoin(
-                    node.send_event('Deleting node'),
-                    delete_node_tasks[node.id]))
-
-        sequence.add(set_state_deleted_tasks[node.id])
+                     node.set_state('deleting'),
+                     forkjoin(
+                         node.send_event('Deleting node'),
+                         delete_node_tasks[node.id]),
+                     set_state_deleted_tasks[node.id])
 
         # augmenting the stop and delete node tasks with error handlers
         _set_send_node_event_on_error_handler(
