@@ -47,7 +47,7 @@ def init_worker_installer(func):
         if ctx.properties and 'worker_config' in ctx.properties:
             worker_config = ctx.properties['worker_config']
         else:
-            worker_config = {}
+            worker_config = kwargs.get('worker_config', {})
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
         kwargs['runner'] = FabricRunner(ctx, worker_config)
@@ -134,8 +134,8 @@ def prepare_configuration(ctx, worker_config):
             raise RuntimeError('Cannot determine user for deployment user:'
                                'MANAGEMENT_USER is not set')
         workflows_worker = worker_config['workflows_worker']\
-            if 'workflows_worker' in worker_config else 'false'
-        suffix = '_workflows' if workflows_worker.lower() == 'true' else ''
+            if 'workflows_worker' in worker_config else False
+        suffix = '_workflows' if workflows_worker else ''
         name = '{0}{1}'.format(ctx.deployment_id, suffix)
         worker_config['name'] = name
     else:
