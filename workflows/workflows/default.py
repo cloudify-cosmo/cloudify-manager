@@ -172,13 +172,13 @@ def uninstall(ctx, **kwargs):
             "Error occurred while deleting node - ignoring...")
 
     # Create task dependencies based on node relationships
-    # for each node, make a dependency between the stopping task
-    # and the deleted state task of the target
+    # for each node, make a dependency between the target's stopping task
+    # and the deleted state task of the current node
     for node in ctx.nodes:
         for rel in node.relationships:
-            node_set_stopping = set_state_stopping_tasks[node.id]
-            target_set_deleted = set_state_deleted_tasks[rel.target_id]
-            graph.add_dependency(node_set_stopping, target_set_deleted)
+            target_set_stopping = set_state_stopping_tasks[rel.target_id]
+            node_set_deleted = set_state_deleted_tasks[node.id]
+            graph.add_dependency(target_set_stopping, node_set_deleted)
 
     graph.execute()
 
@@ -203,16 +203,16 @@ def _is_host_node(node):
 
 
 def _wait_for_host_to_start(host_node):
-        task = host_node.execute_operation(
-            'cloudify.interfaces.host.get_state')
+    task = host_node.execute_operation(
+        'cloudify.interfaces.host.get_state')
 
-        # handler returns True if if get_state returns False,
-        # this means, that get_state will be re-executed until
-        # get_state returns True
-        def node_get_state_handler(tsk):
-            return tsk.async_result.get() is False
-        task.on_success = node_get_state_handler
-        return task
+    # handler returns True if if get_state returns False,
+    # this means, that get_state will be re-executed until
+    # get_state returns True
+    def node_get_state_handler(tsk):
+        return tsk.async_result.get() is False
+    task.on_success = node_get_state_handler
+    return task
 
 
 def _host_post_start(host_node):
@@ -228,7 +228,7 @@ def _host_post_start(host_node):
         for plugin in host_node.plugins_to_install:
             tasks += [
                 host_node.send_event('Installing plugin: {0}'
-                                     .format(plugin['name'])),
+                    .format(plugin['name'])),
                 host_node.execute_operation(
                     'cloudify.interfaces.plugin_installer.install',
                     kwargs={'plugin': plugin})]
