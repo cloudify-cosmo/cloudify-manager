@@ -279,6 +279,21 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         conf = m(ctx)
         self.assertEqual(conf['port'], 2222)
 
+    def test_workflows_worker_config(self):
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            properties={
+                'worker_config': {
+                    'workflows_worker': 'true'
+                }
+            },
+            runtime_properties={
+                'ip': '192.168.0.1'
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['name'], 'test_workflows')
+
 
 class MockFabricRunner(FabricRunner):
 
