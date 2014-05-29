@@ -20,7 +20,6 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
 from testenv import get_node_instance
-from testenv import update_node_instance
 from plugins.cloudmock import tasks as cloudmock
 import time
 
