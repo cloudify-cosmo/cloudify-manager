@@ -55,7 +55,7 @@ def install(ctx, **kwargs):
             ),
             node.execute_operation('cloudify.interfaces.lifecycle.create'),
             node.set_state('created'),
-            forkjoin(*relationship_operations(
+            forkjoin(*_relationship_operations(
                 node,
                 'cloudify.interfaces.relationship_lifecycle.preconfigure')),
             forkjoin(
@@ -63,7 +63,7 @@ def install(ctx, **kwargs):
                 node.send_event('Configuring node')),
             node.execute_operation('cloudify.interfaces.lifecycle.configure'),
             node.set_state('configured'),
-            forkjoin(*relationship_operations(
+            forkjoin(*_relationship_operations(
                 node,
                 'cloudify.interfaces.relationship_lifecycle.postconfigure')),
             forkjoin(
@@ -79,7 +79,7 @@ def install(ctx, **kwargs):
 
         sequence.add(
             set_state_started_tasks[node.id],
-            forkjoin(*relationship_operations(
+            forkjoin(*_relationship_operations(
                 node,
                 'cloudify.interfaces.relationship_lifecycle.establish')))
 
@@ -146,7 +146,7 @@ def uninstall(ctx, **kwargs):
                     stop_node_tasks[node.id]))
 
         sequence.add(node.set_state('stopped'),
-                     forkjoin(*relationship_operations(
+                     forkjoin(*_relationship_operations(
                          node,
                          'cloudify.interfaces.relationship_lifecycle'
                          '.unlink')),
@@ -190,7 +190,7 @@ def _set_send_node_event_on_error_handler(task, node, error_message):
     task.on_failure = send_node_event_error_handler
 
 
-def relationship_operations(node, operation):
+def _relationship_operations(node, operation):
     tasks = []
     for relationship in node.relationships:
         tasks.append(relationship.execute_source_operation(operation))
