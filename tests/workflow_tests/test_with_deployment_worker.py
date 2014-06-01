@@ -88,10 +88,9 @@ class TestWitDeploymentWorker(TestCase):
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
         # test valid workflows worker un-installation order
-        # currently this is unimplemented
-        # state = self._get(get_current_worker_state, queue=MANAGEMENT,
-        #                   args=[True])
-        # self.assertEquals(state, AFTER_UNINSTALL_STAGES)
+        state = self._get(get_current_worker_state, queue=MANAGEMENT,
+                          args=[True])
+        self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
         # test valid agent worker un-installation order
         # we do not call stop and uninstall on agent workers

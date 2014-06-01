@@ -20,7 +20,6 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
 from testenv import get_node_instance
-from testenv import update_node_instance
 from plugins.cloudmock import tasks as cloudmock
 import time
 
@@ -67,34 +66,6 @@ class TestUninstallDeployment(TestCase):
         machines = result.get(timeout=10)
 
         self.assertEquals(0, len(machines))
-
-    def test_uninstall_not_calling_unreachable_nodes(self):
-        dsl_path = resource("dsl/single_node_no_host.yaml")
-        self.logger.info('starting deploy process')
-        deployment, _ = deploy(dsl_path)
-        deployment_id = deployment.id
-        self.logger.info('deploy completed')
-        self.logger.info('making node unreachable from test')
-        # make node unreachable
-        from plugins.testmockoperations.tasks import get_state as \
-            testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
-        node_id = states[0]['id']
-
-        node_instance = get_node_instance(node_id, True)
-        update_node_instance(node_id,
-                             node_instance['stateVersion'],
-                             state='stopped')
-
-        import time
-        time.sleep(10)
-        self.logger.info('starting undeploy process')
-        undeploy(deployment_id)
-        self.logger.info('undeploy completed')
-        # Checking that uninstall wasn't called on unreachable node
-        from plugins.testmockoperations.tasks import is_unreachable_called
-        result = self.send_task(is_unreachable_called, [node_id])
-        self.assertFalse(result.get(timeout=10))
 
     def test_uninstall_with_dependency_order(self):
         dsl_path = resource(
