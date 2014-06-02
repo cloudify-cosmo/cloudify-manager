@@ -121,5 +121,5 @@ relationships:
         derived_from: cloudify.relationships.connected_to
     
     cloudify.openstack.server_connected_to_network:
-    derived_from: cloudify.relationship.connected_to
+        derived_from: cloudify.relationships.connected_to
     
