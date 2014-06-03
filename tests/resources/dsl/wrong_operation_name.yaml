@@ -1,5 +1,6 @@
 imports:
     - "cloudify.types"
+    - testmockoperations.yaml
 
 blueprint:
     name: "mock_app"
@@ -11,16 +12,5 @@ types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
-            mock_interface:
-                - "non_existing_in_python_impl": testmockoperations.non_existent
-        workflows:
-            create:
-                radial: |
-                    define mock_init
-                        execute_operation operation: 'non_existing_in_python_impl'
-
-plugins:
-    testmockoperations:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "mock_interface.zip"
+            cloudify.interfaces.lifecycle:
+                - start: testmockoperations.non_existent

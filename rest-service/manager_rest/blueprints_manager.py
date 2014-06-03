@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from manager_rest.util import maybe_register_teardown
 
 __author__ = 'dan'
 
@@ -31,6 +30,7 @@ from manager_rest import responses
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
+from manager_rest.util import maybe_register_teardown
 
 
 class DslParseException(Exception):
@@ -67,6 +67,9 @@ class BlueprintsManager(object):
     def get_execution(self, execution_id):
         return self.sm.get_execution(execution_id)
 
+    def get_deployment_executions(self, deployment_id):
+        return self.sm.get_deployment_executions(deployment_id)
+
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url,
@@ -99,12 +102,57 @@ class BlueprintsManager(object):
 
         if len(blueprint_deployments) > 0:
             raise manager_exceptions.DependentExistsError(
-                "Deleting blueprint {0} not allowed - There exist "
-                "deployments for this blueprint; Deployments ids: {0}"
-                .format(','.join([dep.id for dep
+                "Can't delete blueprint {0} - There exist "
+                "deployments for this blueprint; Deployments ids: {1}"
+                .format(blueprint_id,
+                        ','.join([dep.id for dep
                                   in blueprint_deployments])))
 
         return get_storage_manager().delete_blueprint(blueprint_id)
+
+    def delete_deployment(self, deployment_id, ignore_live_nodes=False):
+        deployment = get_storage_manager().get_deployment(deployment_id)
+
+        deployment_executions =\
+            get_storage_manager().get_deployment_executions(deployment_id)
+
+        # validate there are no running executions for this deployment
+        if any(execution.status not in ('terminated', 'failed') for
+           execution in deployment_executions):
+            raise manager_exceptions.DependentExistsError(
+                "Can't delete deployment {0} - There are running "
+                "executions for this deployment. Running executions ids: {1}"
+                .format(
+                    deployment_id,
+                    ','.join([execution.id for execution in
+                              deployment_executions if execution.status not
+                              in ('terminated', 'failed')])))
+
+        deployment_nodes_ids = [node['id'] for node in
+                                deployment.plan['nodes']]
+        if not ignore_live_nodes:
+            deployment_nodes = [get_storage_manager().get_node(node_id) for
+                                node_id in deployment_nodes_ids]
+            # validate either all nodes for this deployment are still
+            # uninitialized or have been deleted
+            if any(node.state not in ('uninitialized', 'deleted') for node in
+                   deployment_nodes):
+                raise manager_exceptions.DependentExistsError(
+                    "Can't delete deployment {0} - There are live nodes for "
+                    "this deployment. Live nodes ids: {1}"
+                    .format(deployment_id,
+                            ','.join([node.id for node in deployment_nodes
+                                     if node.state not in
+                                     ('uninitialized', 'deleted')])))
+
+        # delete deployment resources
+        for execution in deployment_executions:
+            get_storage_manager().delete_execution(execution.id)
+
+        for node_id in deployment_nodes_ids:
+            get_storage_manager().delete_node(node_id)
+
+        return get_storage_manager().delete_deployment(deployment_id)
 
     # currently validation is split to 2 phases: the first
     # part is during submission (dsl parsing)
@@ -148,28 +196,8 @@ class BlueprintsManager(object):
             deployment_id=deployment_id,
             error='None')
 
-        self.sm.put_execution(new_execution.id, new_execution)
-
+        get_storage_manager().put_execution(new_execution.id, new_execution)
         return new_execution
-
-    def get_workflow_state(self, execution_id):
-        execution = self.get_execution(execution_id)
-
-        response = self.get_workflows_states_by_internal_workflows_ids(
-            [execution.internal_workflow_id])
-
-        if len(response) > 0:
-            execution.status = response[0]['state']
-            if execution.status == 'failed':
-                execution.error = response[0]['error']
-        else:
-            # workflow not found in workflow-service, return unknown values
-            execution.status, execution.error = None, None
-        return execution
-
-    def get_workflows_states_by_internal_workflows_ids(self,
-                                                       internal_wfs_ids):
-        return workflow_client().get_workflows_statuses(internal_wfs_ids)
 
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)
@@ -190,45 +218,15 @@ class BlueprintsManager(object):
 
         self.sm.put_deployment(deployment_id, new_deployment)
 
-        self._create_deployment_nodes(blueprint_id, deployment_id, plan)
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
-            node = models.DeploymentNodeInstance(id=node_id, reachable=None,
-                                                 runtime_info=None,
-                                                 state_version=None)
-            self.sm.put_node_instance(node_id, node)
+            node = models.DeploymentNode(id=node_id,
+                                         state='uninitialized',
+                                         runtime_info=None,
+                                         state_version=None)
+            self.sm.put_node(node_id, node)
 
         return new_deployment
-
-    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
-        for raw_node in plan['nodes']:
-            self.sm.put_node(models.DeploymentNode(
-                id=raw_node['name'],
-                deployment_id=deployment_id,
-                blueprint_id=blueprint_id,
-                type=raw_node['type'],
-                type_hierarchy=raw_node['type_hierarchy'],
-                number_of_instances=raw_node['instances']['deploy'],
-                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
-                properties=raw_node['properties'],
-                operations=raw_node['operations'],
-                plugins=raw_node['plugins'],
-                relationships=self._prepare_node_relationships(raw_node)
-            ))
-
-    @staticmethod
-    def _prepare_node_relationships(raw_node):
-        if 'relationship' not in raw_node:
-            return None
-        prepared_relationships = []
-        for raw_relationship in raw_node['relationships']:
-            relationship = {
-                'target_node_id': raw_relationship['target_id'],
-                'type': raw_relationship['type'],
-                'properties': raw_relationship['properties']
-            }
-            prepared_relationships.append(relationship)
-        return prepared_relationships
 
 
 def teardown_blueprints_manager(exception):

@@ -28,6 +28,7 @@ from os import path
 
 import elasticsearch
 from flask import request
+from flask import make_response
 from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
 from flask_restful_swagger import swagger
 
@@ -41,7 +42,6 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
-from manager_rest.riemann_client import get_riemann_client
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -117,7 +117,9 @@ def setup_resources(api):
                      '/blueprints')
     api.add_resource(BlueprintsId,
                      '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsSource,
+    api.add_resource(BlueprintsIdArchive,
+                     '/blueprints/<string:blueprint_id>/archive')
+    api.add_resource(BlueprintsIdSource,
                      '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
                      '/blueprints/<string:blueprint_id>/validate')
@@ -149,13 +151,33 @@ class BlueprintsUpload(object):
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
                 file_server_root, archive_target_path)
+            blueprint = self._prepare_and_submit_blueprint(file_server_root,
+                                                           application_dir,
+                                                           blueprint_id)
+            self._move_archive_to_uploaded_blueprints_dir(blueprint.id,
+                                                          file_server_root,
+                                                          archive_target_path)
+            return blueprint, 201
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
 
-        return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  blueprint_id), 201
+    @staticmethod
+    def _move_archive_to_uploaded_blueprints_dir(blueprint_id,
+                                                 file_server_root,
+                                                 archive_path):
+        if not os.path.exists(archive_path):
+            raise RuntimeError("Archive [{0}] doesn't exist - Cannot move "
+                               "archive to uploaded blueprints "
+                               "directory".format(archive_path))
+        uploaded_blueprint_dir = os.path.join(
+            file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id)
+        os.makedirs(uploaded_blueprint_dir)
+        archive_file_name = '{0}.tar.gz'.format(blueprint_id)
+        shutil.move(archive_path,
+                    os.path.join(uploaded_blueprint_dir, archive_file_name))
 
     def _process_plugins(self, file_server_root, blueprint_id):
         plugins_directory = path.join(file_server_root,
@@ -277,6 +299,39 @@ class BlueprintsUpload(object):
                            'application directory is missing blueprint.yaml')
 
 
+class BlueprintsIdArchive(Resource):
+
+    @swagger.operation(
+        nickname="getArchive",
+        notes="Downloads blueprint as an archive."
+    )
+    @exceptions_handled
+    def get(self, blueprint_id):
+        # Verify blueprint exists.
+        get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
+        blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
+            config.instance().file_server_resources_uri,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id)
+
+        local_path = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint_id,
+            '%s.tar.gz' % blueprint_id)
+
+        response = make_response()
+        response.headers['Content-Description'] = 'File Transfer'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/octet-stream'
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=%s.tar.gz' % blueprint_id
+        response.headers['Content-Length'] = os.path.getsize(local_path)
+        response.headers['X-Accel-Redirect'] = blueprint_path
+        response.headers['X-Accel-Buffering'] = 'yes'
+        return response
+
+
 class Blueprints(Resource):
 
     @swagger.operation(
@@ -312,8 +367,8 @@ class Blueprints(Resource):
                         'required': True,
                         'allowMultiple': False,
                         'dataType': 'binary',
-                        'paramType': 'body',
-        }],
+                        'paramType': 'body'}
+                    ],
         consumes=[
             "application/octet-stream"
         ]
@@ -328,7 +383,7 @@ class Blueprints(Resource):
         return BlueprintsUpload().do_request()
 
 
-class BlueprintsSource(Resource):
+class BlueprintsIdSource(Resource):
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -420,6 +475,11 @@ class BlueprintsId(Resource):
             config.instance().file_server_blueprints_folder,
             blueprint.id)
         shutil.rmtree(blueprint_folder)
+        uploaded_blueprint_folder = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_blueprints_folder,
+            blueprint.id)
+        shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
 
@@ -453,7 +513,7 @@ class ExecutionsId(Resource):
         """
         Returns the execution state by its id.
         """
-        execution = get_blueprints_manager().get_workflow_state(execution_id)
+        execution = get_blueprints_manager().get_execution(execution_id)
         return responses.Execution(**execution.to_dict())
 
     @swagger.operation(
@@ -494,13 +554,52 @@ class ExecutionsId(Resource):
         if action == 'cancel':
             return get_blueprints_manager().cancel_workflow(execution_id), 201
 
+    @swagger.operation(
+        responseClass=responses.Execution,
+        nickname="updateExecutionStatus",
+        notes="Updates the execution's status",
+        parameters=[{'name': 'status',
+                     'description': "The execution's new status",
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'},
+                    {'name': 'error',
+                     'description': "An error message. If omitted, "
+                                    "error will be updated to an empty "
+                                    "string",
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @marshal_with(responses.Execution.resource_fields)
+    @exceptions_handled
+    def patch(self, execution_id):
+        """
+        Updates an execution's status
+        """
+        verify_json_content_type()
+        request_json = request.json
+        if 'status' not in request_json:
+            abort(400, message="400: Missing 'status' in json request body")
+
+        get_storage_manager().update_execution_status(
+            execution_id,
+            request_json['status'],
+            request_json.get('error', ''))
+
+        return responses.Execution(**get_storage_manager().get_execution(
+            execution_id).to_dict())
+
 
 class DeploymentsIdNodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('reachable', type=str,
-                                       default='false', location='args')
         self._args_parser.add_argument('state', type=str,
                                        default='false', location='args')
 
@@ -525,8 +624,6 @@ class DeploymentsIdNodes(Resource):
         Returns an object containing nodes associated with this deployment.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = verify_and_convert_bool(
-            'reachable', args['reachable'])
         get_state = verify_and_convert_bool(
             'state', args['state'])
 
@@ -534,21 +631,16 @@ class DeploymentsIdNodes(Resource):
         node_ids = map(lambda node: node['id'],
                        deployment.plan['nodes'])
 
-        reachable_states = {}
-        if get_reachable_state or get_state:
-            reachable_states = get_riemann_client().get_nodes_state(node_ids)
-
         nodes = []
         for node_id in node_ids:
             node_result = responses.DeploymentNode(id=node_id,
                                                    state=None,
                                                    state_version=None,
-                                                   reachable=None,
                                                    runtime_info=None)
-            if get_reachable_state or get_state:
-                state = reachable_states[node_id]
-                node_result.reachable = state['reachable']
-                node_result.state = state['state']
+            if get_state:
+                node = get_storage_manager().get_node(node_id)
+                node_result.state = node.state
+                node_result.state_version = node.state_version
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -571,6 +663,11 @@ class Deployments(Resource):
 
 
 class DeploymentsId(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('ignore_live_nodes', type=str,
+                                       default='false', location='args')
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -614,21 +711,45 @@ class DeploymentsId(Resource):
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
 
+    @swagger.operation(
+        responseClass=responses.Deployment,
+        nickname="deleteById",
+        notes="deletes a deployment by its id.",
+        parameters=[{'name': 'ignore_live_nodes',
+                     'description': 'Specifies whether to ignore live nodes,'
+                                    'or raise an error upon such nodes '
+                                    'instead.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
+    )
+    @marshal_with(responses.Deployment.resource_fields)
+    @exceptions_handled
+    def delete(self, deployment_id):
+        args = self._args_parser.parse_args()
+
+        ignore_live_nodes = verify_and_convert_bool(
+            'ignore_live_nodes', args['ignore_live_nodes'])
+
+        deployment = get_blueprints_manager().delete_deployment(
+            deployment_id, ignore_live_nodes)
+        return responses.Deployment(**deployment.to_dict()), 200
+
 
 class NodesId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('state', type=str,
-                                       default='false', location='args')
-        self._args_parser.add_argument('reachable', type=str,
-                                       default='false', location='args')
-        self._args_parser.add_argument('runtime', type=str,
-                                       default='true', location='args')
+        self._args_parser.add_argument('state_and_runtime_properties',
+                                       type=str,
+                                       default='true',
+                                       location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="getNodeState",
+        nickname="getNodeInstance",
         notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
@@ -637,16 +758,9 @@ class NodesId(Resource):
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'state',
-                     'description': 'Specifies whether to return state.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': False,
-                     'paramType': 'query'},
-                    {'name': 'runtime',
-                     'description': 'Specifies whether to return runtime '
-                                    'properties.',
+                    {'name': 'state_and_runtime_properties',
+                     'description': 'Specifies whether to return state and '
+                                    'runtime properties',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'boolean',
@@ -657,41 +771,26 @@ class NodesId(Resource):
     @exceptions_handled
     def get(self, node_id):
         """
-        Gets node runtime or reachable state.
+        Gets node runtime or state.
         """
         args = self._args_parser.parse_args()
-        get_reachable_state = verify_and_convert_bool(
-            'reachable', args['reachable'])
-        get_runtime_info = verify_and_convert_bool(
-            'runtime', args['runtime'])
-        get_state = verify_and_convert_bool('state', args['state'])
+        # this parameter is now deprecated and should be removed - state and
+        # runtime properties will be returned regardless of its value
+        get_state_and_runtime_properties = verify_and_convert_bool(  # NOQA
+            'state_and_runtime_properties',
+            args['state_and_runtime_properties'])
 
-        reachable_state = None
-        state = None
-        runtime_info = None
-        state_version = None
-
-        if get_runtime_info:
-            node = get_storage_manager().get_node_instance(node_id)
-            runtime_info = node.runtime_info
-            state_version = node.state_version
-
-        if get_reachable_state or get_state:
-            state = get_riemann_client().get_node_state(node_id)
-            reachable_state = state['reachable']
-            state = state['state']
+        node = get_storage_manager().get_node(node_id)
 
         return responses.DeploymentNode(id=node_id,
-                                        state=state,
-                                        reachable=reachable_state,
-                                        runtime_info=runtime_info,
-                                        state_version=state_version)
+                                        state=node.state,
+                                        runtime_info=node.runtime_info,
+                                        state_version=node.state_version)
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="putNodeState",
-        notes="Put node runtime state (state will be entirely replaced) " +
-              "with the provided dictionary of keys and values.",
+        nickname="putNodeInstance",
+        notes="Put node instance",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
@@ -703,7 +802,7 @@ class NodesId(Resource):
     @exceptions_handled
     def put(self, node_id):
         """
-        Puts node runtime state.
+        Puts node instance.
         """
         verify_json_content_type()
         if request.json.__class__ is not dict:
@@ -711,30 +810,45 @@ class NodesId(Resource):
                                ' of key/value map type but is {0}'
                                .format(request.json.__class__.__name__))
 
-        node = models.DeploymentNodeInstance(id=node_id, runtime_info=request.json,
-                                     reachable=None, state_version=None)
-        node.state_version = get_storage_manager().put_node_instance(node_id,
-                                                                     node)
-        return responses.DeploymentNode(state=None, **node.to_dict()), 201
+        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
+                                     state='uninitialized',
+                                     state_version=None)
+        node.state_version = get_storage_manager().put_node(node_id, node)
+        return responses.DeploymentNode(**node.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
         nickname="patchNodeState",
         notes="Update node runtime state. Expecting the request body to "
-              "be a dictionary containing both 'runtime_info' - which is the"
-              "updated keys/values information (possibly partial update), "
-              "and 'state_version', which is used for optimistic locking "
-              "during the update",
+              "be a dictionary containing 'state_version' which is used for "
+              "optimistic locking during the update, and optionally "
+              "'runtime_info' (dictionary) and/or 'state' (string) "
+              "properties",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'body',
-                     'description': 'Node state updated keys/values and '
-                                    'state version',
+                    {'name': 'state_version',
+                     'description': 'used for optimistic locking during '
+                                    'update',
                      'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'int',
+                     'paramType': 'body'},
+                    {'name': 'runtime_properties',
+                     'description': 'a dictionary of runtime properties. If '
+                                    'omitted, the runtime properties wont be '
+                                    'updated',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'dict',
+                     'paramType': 'body'},
+                    {'name': 'state',
+                     'description': "the new node's state. If omitted, "
+                                    "the state wont be updated",
+                     'required': False,
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'body'}],
@@ -744,49 +858,40 @@ class NodesId(Resource):
     @exceptions_handled
     def patch(self, node_id):
         """
-        Updates node runtime state.
+        Updates node instance
         """
         verify_json_content_type()
-        if request.json.__class__ is not dict or len(request.json) > 2 \
-            or 'runtime_info' not in request.json \
-            or 'state_version' not in request.json \
-            or request.json['runtime_info'].__class__ is not dict \
-                or request.json['state_version'].__class__ is not int:
+        if request.json.__class__ is not dict or \
+                'state_version' not in request.json or \
+                request.json['state_version'].__class__ is not int:
 
-            if request.json.__class__ is not dict or len(request.json) > 2:
+            if request.json.__class__ is not dict:
                 message = 'request body is expected to be a map containing ' \
-                          'only "runtime_info" and "state_version" fields'
-            elif 'runtime_info' not in request.json:
-                message = 'request body must be a map containing a ' \
-                          '"runtime_info" field'
+                          'a "state_version" field and optionally ' \
+                          '"runtime_info" and/or "state" fields'
             elif 'state_version' not in request.json:
                 message = 'request body must be a map containing a ' \
                           '"state_version" field'
-            elif request.json['runtime_info'].__class__ is not dict:
-                message = "request body's 'runtime_info' field must be a " \
-                          "map but is of type {0}".format(
-                              request.json['runtime_info'].__class__.__name__)
             else:
-                message = "request body's 'state_version' field must be an " \
-                          "int but is of type {0}".format(
-                              request.json['state_version'].__class__.__name__)
+                message = \
+                    "request body's 'state_version' field must be an int but" \
+                    " is of type {0}".format(request.json['state_version']
+                                             .__class__.__name__)
             abort(400, message=message)
 
-        node = models.DeploymentNodeInstance(
-            id=node_id, runtime_info=request.json['runtime_info'],
-            state_version=request.json['state_version'], reachable=None)
-        get_storage_manager().update_node_instance(node_id, node)
+        node = models.DeploymentNode(
+            id=node_id, runtime_info=request.json.get('runtime_info'),
+            state=request.json.get('state'),
+            state_version=request.json['state_version'])
+        get_storage_manager().update_node(node_id, node)
         return responses.DeploymentNode(
-            state=None,
-            **get_storage_manager().get_node_instance(node_id).to_dict())
+            **get_storage_manager().get_node(node_id).to_dict())
 
 
 class DeploymentsIdExecutions(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('statuses', type=str,
-                                       default='false', location='args')
 
         self._post_args_parser = reqparse.RequestParser()
         self._post_args_parser.add_argument('force', type=str,
@@ -795,37 +900,25 @@ class DeploymentsIdExecutions(Resource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
-        notes="Returns a list of executions related to the provided"
-              " deployment.",
-        parameters=[{'name': 'statuses',
-                     'description': 'Specifies whether to return '
-                                    'current statuses and errors data for '
-                                    "the deployment's executions",
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': False,
-                     'paramType': 'query'}]
+        notes="Returns a list of executions for the provided deployment."
     )
     @exceptions_handled
     def get(self, deployment_id):
         """
-        Returns a list of executions related to the provided deployment.
+        Returns a list of executions for the provided deployment.
         """
-        args = self._args_parser.parse_args()
-        get_executions_statuses = verify_and_convert_bool(
-            'statuses', args['statuses'])
 
         # simple call to verify deployment actually exists
         # if it doesnt, a 404 will be raised by the underlying storage
         # manager with the deployment relevant details
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
 
-        executions = self._get_executions(deployment_id,
-                                          get_executions_statuses)
+        executions = get_blueprints_manager().get_deployment_executions(
+            deployment_id)
 
-        return [marshal(execution, responses.Execution.resource_fields) for
-                execution in executions]
+        return [marshal(responses.Execution(**execution.to_dict()),
+                        responses.Execution.resource_fields) for execution
+                in executions]
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -868,8 +961,8 @@ class DeploymentsIdExecutions(Resource):
 
         # validate no execution is currently in progress
         if not force:
-            executions = self._get_executions(deployment_id,
-                                              statuses=True)
+            executions = get_blueprints_manager().get_deployment_executions(
+                deployment_id)
             running = [e.id for e in executions
                        if e.status not in ['failed', 'terminated']]
             if len(running) > 0:
@@ -883,35 +976,6 @@ class DeploymentsIdExecutions(Resource):
         execution = get_blueprints_manager().execute_workflow(deployment_id,
                                                               workflow_id)
         return responses.Execution(**execution.to_dict()), 201
-
-    def _get_executions(self, deployment_id, statuses=False):
-        executions = [responses.Execution(**execution.to_dict()) for
-                      execution in
-                      get_storage_manager().get_deployment_executions(
-                          deployment_id)]
-
-        if statuses:
-            statuses_response = get_blueprints_manager() \
-                .get_workflows_states_by_internal_workflows_ids(
-                    [execution.internal_workflow_id for execution
-                     in executions])
-
-            status_by_id = {status['id']: status for status in
-                            statuses_response}
-            for execution in executions:
-                if execution.internal_workflow_id in status_by_id:
-                    status = status_by_id[execution.internal_workflow_id]
-                    execution.status = status['state']
-                    execution.error = status['error']
-                else:
-                    # execution not found in workflow service, return unknown
-                    # values
-                    execution.status, execution.error = None, None
-        else:
-            # setting None values to dynamic fields which weren't requested
-            for execution in executions:
-                execution.status, execution.error = None, None
-        return executions
 
 
 class DeploymentsIdWorkflows(Resource):
@@ -1026,15 +1090,34 @@ class Status(Resource):
     @swagger.operation(
         responseClass=responses.Status,
         nickname="status",
-        notes="Returns an alive message from the rest service."
+        notes="Returns state of running system services"
     )
     @marshal_with(responses.Status.resource_fields)
     @exceptions_handled
     def get(self):
         """
-        Returns an alive status (mainly used for pinging reasons).
+        Returns state of running system services
         """
-        return responses.Status(status='running')
+        job_list = {'rsyslog': 'Syslog',
+                    'manager': 'Cloudify Manager',
+                    'workflow': 'Workflow Service',
+                    'riemann': 'Riemann',
+                    'rabbitmq-server': 'RabbitMQ',
+                    'celeryd-cloudify-management': 'Celery Managment',
+                    'ssh': 'SSH',
+                    'elasticsearch': 'Elasticsearch',
+                    'cloudify-ui': 'Cloudify UI',
+                    'logstash': 'Logstash',
+                    'nginx': 'Webserver'
+                    }
+
+        try:
+            from manager_rest.upstartdbus import get_jobs
+            jobs = get_jobs(job_list.keys(), job_list.values())
+        except ImportError:
+            jobs = ['undefined']
+
+        return responses.Status(status='running', services=jobs)
 
 
 class ProviderContext(Resource):

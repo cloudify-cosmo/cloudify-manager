@@ -10,8 +10,7 @@ imports:
 ##################################################################################
 types:
 
-    # A tier in a topology
-    cloudify.types.tier: { }
+    
 
     # base type for provided cloudify types
     cloudify.types.base:
@@ -22,6 +21,9 @@ types:
                 - start
                 - stop
                 - delete
+            cloudify.interfaces.monitor_lifecycle:
+                - start
+                - stop
 
         workflows:
             create:
@@ -34,6 +36,12 @@ types:
                 ref: cloudify.workflows.node.stop
             delete:
                 ref: cloudify.workflows.node.delete
+                
+                
+    # A tier in a topology
+    cloudify.types.tier: 
+        derived_from: cloudify.types.base
+        
 
 
     # A host (physical / virtual or LXC) in a topology

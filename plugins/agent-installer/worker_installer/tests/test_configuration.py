@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from cloudify.context import BootstrapContext
 
 __author__ = 'idanmo'
 
@@ -19,6 +20,7 @@ import unittest
 import os
 from os import path
 from worker_installer import init_worker_installer
+from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
 from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
 from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
@@ -118,6 +120,179 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         else:
             conf = m(ctx)
             self.assertEqual(expected, conf['disable_requiretty'])
+
+    def test_autoscale_configuration(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                }
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], DEFAULT_MIN_WORKERS)
+        self.assertEqual(conf['max_workers'], DEFAULT_MAX_WORKERS)
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'min_workers': 2,
+                    'max_workers': 5
+                }
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], 2)
+        self.assertEqual(conf['max_workers'], 5)
+
+    def test_illegal_autoscale_configuration(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'min_workers': 10,
+                    'max_workers': 5
+                }
+            }
+        )
+        self.assertRaises(ValueError, m, ctx)
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'min_workers': 'aaa',
+                    'max_workers': 5
+                }
+            }
+        )
+        self.assertRaises(ValueError, m, ctx)
+
+    def test_autoscale_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                }
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'min_workers': 2,
+                    'max_workers': 5
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], 2)
+        self.assertEqual(conf['max_workers'], 5)
+
+    def test_key_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'user': 'user',
+                }
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here'
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['key'], 'here')
+
+    def test_user_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe'
+
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['user'], 'john doe')
+
+    def test_ssh_port_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe',
+                    'remote_execution_port': 2222
+
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['port'], 2222)
+
+    def test_workflows_worker_config(self):
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            properties={
+                'worker_config': {
+                    'workflows_worker': 'true'
+                }
+            },
+            runtime_properties={
+                'ip': '192.168.0.1'
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['name'], 'test_workflows')
 
 
 class MockFabricRunner(FabricRunner):

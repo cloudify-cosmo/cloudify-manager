@@ -18,7 +18,12 @@ __author__ = 'idanmo'
 import os
 import cloudify
 from functools import wraps
-from worker_installer.utils import FabricRunner, is_deployment_worker
+from worker_installer.utils import (FabricRunner,
+                                    is_on_management_worker)
+
+DEFAULT_MIN_WORKERS = 2
+DEFAULT_MAX_WORKERS = 5
+DEFAULT_REMOTE_EXECUTION_PORT = 22
 
 
 def _find_type_in_kwargs(cls, all_args):
@@ -42,7 +47,7 @@ def init_worker_installer(func):
         if ctx.properties and 'worker_config' in ctx.properties:
             worker_config = ctx.properties['worker_config']
         else:
-            worker_config = {}
+            worker_config = kwargs.get('worker_config', {})
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
         kwargs['runner'] = FabricRunner(ctx, worker_config)
@@ -60,8 +65,66 @@ def get_machine_ip(ctx):
         ' for installing agent via ssh.'.format(ctx.node_id))
 
 
+def _prepare_and_validate_autoscale_params(ctx, config):
+    if 'min_workers' not in config and\
+            ctx.bootstrap_context.cloudify_agent.min_workers:
+        config['min_workers'] = \
+            ctx.bootstrap_context.cloudify_agent.min_workers
+    if 'max_workers' not in config and\
+            ctx.bootstrap_context.cloudify_agent.max_workers:
+        config['max_workers'] = \
+            ctx.bootstrap_context.cloudify_agent.max_workers
+
+    min_workers = config.get('min_workers', DEFAULT_MIN_WORKERS)
+    max_workers = config.get('max"workers', DEFAULT_MAX_WORKERS)
+
+    if not str(min_workers).isdigit():
+        raise ValueError('min_workers is supposed to be a number '
+                         'but is: {0}'.format(min_workers))
+    if not str(max_workers).isdigit():
+        raise ValueError('max_workers is supposed to be a number '
+                         'but is: {0}'.format(max_workers))
+    min_workers = int(min_workers)
+    max_workers = int(max_workers)
+    if int(min_workers) > int(max_workers):
+        raise ValueError('min_workers cannot be greater than max_workers '
+                         '[min_workers={0}, max_workers={1}]'
+                         .format(min_workers, max_workers))
+    config['min_workers'] = min_workers
+    config['max_workers'] = max_workers
+
+
+def _set_ssh_key(ctx, config):
+    if 'key' not in config:
+        if ctx.bootstrap_context.cloudify_agent.agent_key_path:
+            config['key'] = ctx.bootstrap_context.cloudify_agent.agent_key_path
+        else:
+            raise ValueError(
+                'Missing ssh key path in worker configuration '
+                '[worker_config={0}'.format(config))
+
+
+def _set_user(ctx, config):
+    if 'user' not in config:
+        if ctx.bootstrap_context.cloudify_agent.user:
+            config['user'] = ctx.bootstrap_context.cloudify_agent.user
+        else:
+            raise ValueError(
+                'Missing user in worker configuration '
+                '[worker_config={0}'.format(config))
+
+
+def _set_remote_execution_port(ctx, config):
+    if 'remote_execution_port' not in config:
+        if ctx.bootstrap_context.cloudify_agent.remote_execution_port:
+            config['port'] =\
+                ctx.bootstrap_context.cloudify_agent.remote_execution_port
+        else:
+            config['port'] = DEFAULT_REMOTE_EXECUTION_PORT
+
+
 def prepare_configuration(ctx, worker_config):
-    if is_deployment_worker(ctx):
+    if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
         # (not specific node)
         # use the same user we used when bootstrapping
@@ -70,19 +133,16 @@ def prepare_configuration(ctx, worker_config):
         else:
             raise RuntimeError('Cannot determine user for deployment user:'
                                'MANAGEMENT_USER is not set')
-        worker_config['name'] = ctx.deployment_id
+        workflows_worker = worker_config['workflows_worker']\
+            if 'workflows_worker' in worker_config else False
+        suffix = '_workflows' if workflows_worker else ''
+        name = '{0}{1}'.format(ctx.deployment_id, suffix)
+        worker_config['name'] = name
     else:
         worker_config['host'] = get_machine_ip(ctx)
-        if 'key' not in worker_config:
-            raise ValueError(
-                'Missing ssh key path in worker configuration '
-                '[worker_config={0}'.format(worker_config))
-        if 'user' not in worker_config:
-            raise ValueError(
-                'Missing user in worker configuration '
-                '[worker_config={0}'.format(worker_config))
-        if 'port' not in worker_config:
-            worker_config['port'] = 22
+        _set_ssh_key(ctx, worker_config)
+        _set_user(ctx, worker_config)
+        _set_remote_execution_port(ctx, worker_config)
         worker_config['name'] = ctx.node_id
 
     home_dir = "/home/" + worker_config['user'] \
@@ -112,3 +172,4 @@ def prepare_configuration(ctx, worker_config):
                 'Value for disable_requiretty property should be true/false '
                 'but is: {0}'.format(disable_requiretty_value))
     worker_config['disable_requiretty'] = disable_requiretty
+    _prepare_and_validate_autoscale_params(ctx, worker_config)

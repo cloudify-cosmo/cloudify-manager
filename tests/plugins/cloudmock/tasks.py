@@ -39,6 +39,7 @@ def provision(ctx, **kwargs):
 @operation
 def start(ctx, **kwargs):
     global machines
+    ctx.send_event('starting machine event')
     ctx.logger.info("cloudmock start: [node_id={0}, machines={1}]".format(
         ctx.node_id, machines))
     if ctx.node_id not in machines:
@@ -53,9 +54,7 @@ def start(ctx, **kwargs):
 
 @operation
 def get_state(ctx, **kwargs):
-    if machines[ctx.node_id] == RUNNING:
-        return True
-    return False
+    return machines[ctx.node_id] == RUNNING
 
 
 @operation

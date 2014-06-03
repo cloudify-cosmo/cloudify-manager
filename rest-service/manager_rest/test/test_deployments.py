@@ -16,24 +16,12 @@
 __author__ = 'dan'
 
 
-import mocks
 from base_test import BaseServerTestCase
-from test_blueprints import post_blueprint_args
 
 
 class DeploymentsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
-
-    def _put_test_deployment(self):
-        blueprint_response = self.post_file(*post_blueprint_args()).json
-        blueprint_id = blueprint_response['id']
-        # Execute post deployment
-        deployment_response = self.put(
-            '/deployments/{0}'.format(self.DEPLOYMENT_ID),
-            {'blueprintId': blueprint_id}).json
-        return (blueprint_id, deployment_response['id'], blueprint_response,
-                deployment_response)
 
     def test_get_empty(self):
         result = self.get('/deployments')
@@ -43,7 +31,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         self.assertEquals(deployment_id, self.DEPLOYMENT_ID)
         self.assertEquals(blueprint_id, deployment_response['blueprintId'])
@@ -58,7 +46,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         resp = self.delete('/blueprints/{0}'.format(blueprint_id))
         self.assertEqual(400, resp.status_code)
         self.assertTrue('There exist deployments for this blueprint' in
@@ -68,7 +56,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         deployment_response = self.put(
             '/deployments/{0}'.format(self.DEPLOYMENT_ID),
             {'blueprintId': blueprint_id})
@@ -78,7 +66,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         single_deployment = self.get('/deployments/{0}'
                                      .format(deployment_id)).json
@@ -96,7 +84,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         get_deployments_response = self.get('/deployments').json
         self.assertEquals(1, len(get_deployments_response))
@@ -113,65 +101,9 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(deployment_response['plan'],
                           single_deployment['plan'])
 
-    def test_get_blueprints_id_executions_empty(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-        get_executions = self.get('/deployments/{0}/executions'
-                                  .format(deployment_response['id'])).json
-        self.assertEquals(len(get_executions), 0)
-
-    def test_get_execution_by_id(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflowId': 'install'
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        get_execution = self.get(get_execution_resource).json
-        self.assertEquals(get_execution['status'], 'terminated')
-        self.assertEquals(get_execution['blueprintId'], blueprint_id)
-        self.assertEquals(get_execution['deploymentId'],
-                          deployment_response['id'])
-        self.assertIsNotNone(get_execution['createdAt'])
-
-        return execution
-
-    def test_cancel_execution_by_id(self):
-        execution = self.test_get_execution_by_id()
-        resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'action': 'cancel'
-        }).json
-        self.assertEquals(execution, cancel_response)
-
-    def test_cancel_non_existent_execution(self):
-        resource_path = '/executions/do_not_exist'
-        cancel_response = self.post(resource_path, {
-            'action': 'cancel'
-        })
-        self.assertEquals(cancel_response.status_code, 404)
-
-    def test_cancel_bad_action(self):
-        execution = self.test_get_execution_by_id()
-        resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'action': 'not_really_cancel'
-        })
-        self.assertEquals(cancel_response.status_code, 400)
-
-    def test_cancel_no_action(self):
-        execution = self.test_get_execution_by_id()
-        resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'not_action': 'some_value'
-        })
-        self.assertEquals(cancel_response.status_code, 400)
-
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -183,23 +115,11 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertIsNotNone(execution['createdAt'])
         get_execution = self.get(resource_path).json
         self.assertEquals(1, len(get_execution))
-        # since we're not asking to retrieve execution statuses, status and
-        # error fields should be None in response's executions
-        execution['status'] = None
-        execution['error'] = None
-        self.assertEquals(execution, get_execution[0])
-
-        # testing retrieval of updated execution status
-        get_execution = self.get(resource_path, {'statuses': True}).json
-        self.assertEquals(1, len(get_execution))
-        execution['status'] = 'terminated'  # setting expected status
-        self.assertEquals('terminated', get_execution[0]['status'])
-        self.assertEquals(None, get_execution[0]['error'])
         self.assertEquals(execution, get_execution[0])
 
     def test_executing_nonexisting_workflow(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         response = self.post(resource_path, {
@@ -214,7 +134,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/workflows'.format(deployment_id)
         workflows = self.get(resource_path).json
@@ -226,15 +146,114 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(workflows['workflows'][1]['name'], 'uninstall')
         self.assertTrue('createdAt' in workflows['workflows'][1])
 
+    def test_delete_deployment_verify_nodes_deletion(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+
+        resource_path = '/deployments/{0}/nodes' \
+            .format(deployment_id)
+        nodes = self.get(resource_path).json['nodes']
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node['id'] for node in nodes]
+
+        delete_deployment_response = self.delete(
+            '/deployments/{0}'.format(deployment_id),
+            query_params={'ignore_live_nodes': 'true'}).json
+        self.assertEquals(deployment_id, delete_deployment_response['id'])
+
+        # verifying deletion of deployment nodes and executions
+        for node_id in nodes_ids:
+            resp = self.get('/nodes/{0}'.format(node_id))
+            self.assertEquals(404, resp.status_code)
+
+    def test_delete_deployment_with_live_nodes_without_ignore_flag(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+
+        # modifying a node's state so there'll be a node in a state other
+        # than 'uninitialized'
+        resource_path = '/deployments/{0}/nodes' \
+            .format(deployment_id)
+        nodes = self.get(resource_path,
+                         query_params={'state': 'true'}).json['nodes']
+
+        resp = self.patch('/nodes/{0}'.format(nodes[0]['id']), {
+            'state_version': 0,
+            'state': 'started'
+        })
+        self.assertEquals(200, resp.status_code)
+
+        # attempting to delete the deployment - should fail because there
+        # are live nodes for the deployment
+        delete_deployment_response = self.delete('/deployments/{0}'.format(
+            deployment_id))
+        self.assertEquals(400, delete_deployment_response.status_code)
+
+    def test_delete_deployment_with_uninitialized_nodes(self):
+        # simulates a deletion of a deployment right after its creation
+        # (i.e. all nodes are still in 'uninitialized' state because no
+        # execution has yet to take place)
+        self._test_delete_deployment_with_nodes_in_certain_state(
+            'uninitialized')
+
+    def test_delete_deployment_without_ignore_flag(self):
+        # simulates a deletion of a deployment after the uninstall workflow
+        # has completed (i.e. all nodes are in 'deleted' state)
+        self._test_delete_deployment_with_nodes_in_certain_state('deleted')
+
+    def _test_delete_deployment_with_nodes_in_certain_state(self, state):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+
+        resource_path = '/deployments/{0}/nodes' \
+            .format(deployment_id)
+        nodes = self.get(resource_path,
+                         query_params={'state': 'true'}).json['nodes']
+
+        # modifying nodes states
+        for node in nodes:
+            resp = self.patch('/nodes/{0}'.format(node['id']), {
+                'state_version': 0,
+                'state': state
+            })
+            self.assertEquals(200, resp.status_code)
+
+        # deleting the deployment
+        delete_deployment_response = self.delete('/deployments/{0}'.format(
+            deployment_id))
+        self.assertEquals(200, delete_deployment_response.status_code)
+        self.assertEquals(deployment_id,
+                          delete_deployment_response.json['id'])
+        # verifying deletion of deployment
+        resp = self.get('/deployments/{0}'.format(deployment_id))
+        self.assertEquals(404, resp.status_code)
+
+    def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+
+        delete_deployment_response = self.delete(
+            '/deployments/{0}'.format(deployment_id),
+            query_params={'ignore_live_nodes': 'true'}).json
+        self.assertEquals(deployment_id, delete_deployment_response['id'])
+
+        # verifying deletion of deployment
+        resp = self.get('/deployments/{0}'.format(deployment_id))
+        self.assertEquals(404, resp.status_code)
+
+    def test_delete_nonexistent_deployment(self):
+        # trying to delete a nonexistent deployment
+        resp = self.delete('/deployments/nonexistent-deployment')
+        self.assertEquals(404, resp.status_code)
+
     def test_get_nodes_of_deployment(self):
 
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/nodes'\
                         .format(deployment_id)
-        nodes = self.get(resource_path,
-                         query_params={'reachable': 'False'}).json
+        nodes = self.get(resource_path).json
         self.assertEquals(deployment_id, nodes['deploymentId'])
         self.assertEquals(2, len(nodes['nodes']))
 
@@ -245,44 +264,3 @@ class DeploymentsTestCase(BaseServerTestCase):
                 'Failed finding node with prefix {0}'.format(starts_with))
         assert_node_exists('vm')
         assert_node_exists('http_web_server')
-
-    def test_execute_more_than_one_workflow_fails(self):
-        previous_method = mocks.get_workflow_status
-
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
-            'workflowId': 'install'
-        })
-        try:
-            mocks.get_workflow_status = lambda wfid: 'running'
-            response = self.post(resource_path, {
-                'workflowId': 'install'
-            })
-            self.assertEqual(response.status_code, 400)
-        finally:
-            mocks.get_workflow_status = previous_method
-
-    def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        previous_method = mocks.get_workflow_status
-
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self._put_test_deployment()
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
-            'workflowId': 'install'
-        })
-        try:
-            mocks.get_workflow_status = lambda wfid: 'running'
-            response = self.post(resource_path, {
-                'workflowId': 'install'
-            }, query_params={'force': 'true'})
-            self.assertEqual(response.status_code, 201)
-        finally:
-            mocks.get_workflow_status = previous_method
-
-    def test_get_non_existent_execution(self):
-        resource_path = '/executions/idonotexist'
-        response = self.get(resource_path)
-        self.assertEqual(response.status_code, 404)
