@@ -29,6 +29,7 @@ from manager_rest import config
 # from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
+from manager_rest import manager_exceptions
 
 
 # app factory
@@ -111,6 +112,7 @@ def internal_error(e):
         {"message":
          "Internal error occurred in manager REST server - {0}: {1}"
             .format(type(e).__name__, str(e)),
+         "errorCode": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
          "traceback": traceback.format_tb(sys.exc_info()[2])})
     response.status_code = 500
     return response

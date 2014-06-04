@@ -52,14 +52,15 @@ def exceptions_handled(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except manager_exceptions.ConflictError, e:
-            abort_conflict(e)
-        except manager_exceptions.NotFoundError, e:
-            abort_not_found(e)
-        except manager_exceptions.DependentExistsError, e:
-            abort_dependent_exists(e)
-        except manager_exceptions.NonexistentWorkflowError, e:
-            abort_nonexistent_workflow(e)
+        except (manager_exceptions.ConflictError,
+                manager_exceptions.NotFoundError,
+                manager_exceptions.DependentExistsError,
+                manager_exceptions.NonexistentWorkflowError,
+                manager_exceptions.BadParametersError,
+                manager_exceptions.UnsupportedContentTypeError,
+                manager_exceptions.InvalidBlueprintError,
+                manager_exceptions.ExistingRunningExecutionError) as e:
+            abort_error(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)
     return wrapper
@@ -67,36 +68,29 @@ def exceptions_handled(func):
 
 def abort_workflow_service_operation(workflow_service_error):
     abort(500,
-          message='500: Workflow service failed with status code {0},'
-                  ' full response {1}'
-                  .format(workflow_service_error.status_code,
-                          workflow_service_error.json))
+          message='Workflow service failed with status code {0},'
+                  ' full response {1}'.format(
+                      workflow_service_error.status_code,
+                      workflow_service_error.json),
+          errorCode=manager_exceptions.INTERNAL_SERVER_ERROR_CODE)
 
 
-def abort_conflict(conflict_error):
-    abort_error(409, conflict_error)
-
-
-def abort_not_found(not_exists_error):
-    abort_error(404, not_exists_error)
-
-
-def abort_dependent_exists(dependent_exists_error):
-    abort_error(400, dependent_exists_error)
-
-
-def abort_nonexistent_workflow(nonexistent_workflow_error):
-    abort_error(400, nonexistent_workflow_error)
-
-
-def abort_error(status_code, error):
-    abort(status_code,
-          message='{0}: {1}'.format(status_code, str(error)))
+def abort_error(error):
+    abort(error.http_code,
+          message='{0}: {1}'.format(error.http_code, str(error)),
+          errorCode=error.error_code)
 
 
 def verify_json_content_type():
     if request.content_type != 'application/json':
-        abort(415, message='415: Content type must be application/json')
+        raise manager_exceptions.UnsupportedContentTypeError(
+            'Content type must be application/json')
+
+
+def verify_parameter_in_request_body(param, request_json):
+    if param not in request_json:
+        raise manager_exceptions.BadParametersError(
+            'Missing {0} in json request body'.format(param))
 
 
 def verify_and_convert_bool(attribute_name, str_bool):
@@ -104,9 +98,8 @@ def verify_and_convert_bool(attribute_name, str_bool):
         return True
     if str_bool.lower() == 'false':
         return False
-    abort(400,
-          message='400: {0} must be <true/false>, got {1}'
-                  .format(attribute_name, str_bool))
+    raise manager_exceptions.BadParametersError(
+        '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
 def setup_resources(api):
@@ -215,8 +208,8 @@ class BlueprintsUpload(object):
                     f.write(buffered_chunked)
         else:
             if not request.data:
-                abort(400,
-                      message='Missing application archive in request body')
+                raise manager_exceptions.BadParametersError(
+                    'Missing application archive in request body')
             uploaded_file_data = request.data
             with open(archive_file_name, 'w') as f:
                 f.write(uploaded_file_data)
@@ -231,8 +224,8 @@ class BlueprintsUpload(object):
             archive_file_list = os.listdir(tempdir)
             if len(archive_file_list) != 1 or not path.isdir(
                     path.join(tempdir, archive_file_list[0])):
-                abort(400,
-                      message='400: archive must contain exactly 1 directory')
+                raise manager_exceptions.BadParametersError(
+                    'archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
             # generating temporary unique name for app dir, to allow multiple
             # uploads of apps with the same name (as it appears in the file
@@ -278,7 +271,8 @@ class BlueprintsUpload(object):
             return blueprint
         except DslParseException, ex:
             shutil.rmtree(os.path.join(file_server_root, application_dir))
-            abort(400, message='400: Invalid blueprint - {0}'.format(ex.args))
+            raise manager_exceptions.InvalidBlueprintError(
+                'Invalid blueprint - {0}'.format(ex.args))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:
@@ -295,8 +289,9 @@ class BlueprintsUpload(object):
                 application_file = path.join(
                     application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
                 return application_file
-        abort(400, message='Missing application_file_name query parameter or '
-                           'application directory is missing blueprint.yaml')
+        raise manager_exceptions.BadParametersError(
+            'Missing application_file_name query parameter or '
+            'application directory is missing blueprint.yaml')
 
 
 class BlueprintsIdArchive(Resource):
@@ -540,16 +535,15 @@ class ExecutionsId(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        if 'action' not in request_json:
-            abort(400, message='400: Missing action in json request body')
+        verify_parameter_in_request_body('action', request_json)
         action = request.json['action']
 
         valid_actions = ['cancel']
 
         if action not in valid_actions:
-            abort(400, message='400: Invalid action: {0}, '
-                               'Valid action values are: {1}'
-                               .format(action, valid_actions))
+            raise manager_exceptions.BadParametersError(
+                'Invalid action: {0}, Valid action values are: {1}'.format(
+                    action, valid_actions))
 
         if action == 'cancel':
             return get_blueprints_manager().cancel_workflow(execution_id), 201
@@ -584,8 +578,7 @@ class ExecutionsId(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        if 'status' not in request_json:
-            abort(400, message="400: Missing 'status' in json request body")
+        verify_parameter_in_request_body('status', request_json)
 
         get_storage_manager().update_execution_status(
             execution_id,
@@ -705,8 +698,7 @@ class DeploymentsId(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        if 'blueprintId' not in request_json:
-            abort(400, message='400: Missing blueprintId in json request body')
+        verify_parameter_in_request_body('blueprintId', request_json)
         blueprint_id = request.json['blueprintId']
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
@@ -806,9 +798,9 @@ class NodesId(Resource):
         """
         verify_json_content_type()
         if request.json.__class__ is not dict:
-            abort(400, message='request body is expected to be'
-                               ' of key/value map type but is {0}'
-                               .format(request.json.__class__.__name__))
+            raise manager_exceptions.BadParametersError(
+                'request body is expected to be of key/value map type'
+                ' but is {0}'.format(request.json.__class__.__name__))
 
         node = models.DeploymentNode(id=node_id, runtime_info=request.json,
                                      state='uninitialized',
@@ -877,7 +869,7 @@ class NodesId(Resource):
                     "request body's 'state_version' field must be an int but" \
                     " is of type {0}".format(request.json['state_version']
                                              .__class__.__name__)
-            abort(400, message=message)
+            raise manager_exceptions.BadParametersError(message)
 
         node = models.DeploymentNode(
             id=node_id, runtime_info=request.json.get('runtime_info'),
@@ -908,9 +900,6 @@ class DeploymentsIdExecutions(Resource):
         Returns a list of executions for the provided deployment.
         """
 
-        # simple call to verify deployment actually exists
-        # if it doesnt, a 404 will be raised by the underlying storage
-        # manager with the deployment relevant details
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
 
         executions = get_blueprints_manager().get_deployment_executions(
@@ -953,8 +942,7 @@ class DeploymentsIdExecutions(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        if 'workflowId' not in request_json:
-            abort(400, message='400: Missing workflowId in json request body')
+        verify_parameter_in_request_body('workflowId', request_json)
 
         args = self._post_args_parser.parse_args()
         force = verify_and_convert_bool('force', args['force'])
@@ -966,11 +954,11 @@ class DeploymentsIdExecutions(Resource):
             running = [e.id for e in executions
                        if e.status not in ['failed', 'terminated']]
             if len(running) > 0:
-                abort_error(400, 'The following executions are currently '
-                                 'running for this deployment: {0}. To '
-                                 'execute this workflow anyway, '
-                                 'pass "force=true" as a query parameter to'
-                                 ' this request'.format(running))
+                raise manager_exceptions.ExistingRunningExecutionError(
+                    'The following executions are currently running for this '
+                    'deployment: {0}. To execute this workflow anyway, pass '
+                    '"force=true" as a query parameter to this request'.format(
+                        running))
 
         workflow_id = request.json['workflowId']
         execution = get_blueprints_manager().execute_workflow(deployment_id,
@@ -1016,6 +1004,7 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 
 class Events(Resource):
 
+    @exceptions_handled
     def _query_events(self):
         """
         Returns events for the provided ElasticSearch query
@@ -1076,6 +1065,7 @@ class Search(Resource):
                      'paramType': 'body'}],
         consumes=['application/json']
     )
+    @exceptions_handled
     def post(self):
         """
         Returns results for the provided ElasticSearch query
@@ -1158,10 +1148,8 @@ class ProviderContext(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        if 'context' not in request_json:
-            abort(400, message='400: Missing context in json request body')
-        if 'name' not in request_json:
-            abort(400, message='400: Missing provider in json request body')
+        verify_parameter_in_request_body('context', request_json)
+        verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
                                          context=request.json['context'])
         get_storage_manager().put_provider_context(context)
