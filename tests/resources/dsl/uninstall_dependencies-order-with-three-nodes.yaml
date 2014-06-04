@@ -34,3 +34,6 @@ types:
             cloudify.interfaces.lifecycle:
                 - "create": testmockoperations.tasks.make_reachable
                 - "delete": testmockoperations.tasks.make_unreachable
+            cloudify.interfaces.monitor_lifecycle:
+                            - start: testmockoperations.tasks.start_monitor
+                            - stop: testmockoperations.tasks.stop_monitor

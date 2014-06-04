@@ -34,6 +34,7 @@ class TestUninstallDeployment(TestCase):
         deployment_id = deployment.id
         logger.info('deploy completed')
         logger.info('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         logger.info('undeploy completed')
 
@@ -58,6 +59,7 @@ class TestUninstallDeployment(TestCase):
         self.logger.info('deploy completed')
 
         self.logger.info('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         self.logger.info('undeploy completed')
 
@@ -75,6 +77,7 @@ class TestUninstallDeployment(TestCase):
         deployment_id = deployment.id
         print('deploy completed')
         print('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         print('undeploy completed')
         # Checking that uninstall wasn't called on the contained node
@@ -95,6 +98,25 @@ class TestUninstallDeployment(TestCase):
         self.assertEquals(node3_id, unreachable_call_order[0]['id'])
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
+
+        # test stop monitor invocations and order
+        from plugins.testmockoperations.tasks import \
+            get_monitoring_operations_invocation
+        invocations = self.send_task(get_monitoring_operations_invocation) \
+            .get(timeout=10)
+        self.assertEqual(6, len(invocations))
+        self.assertEquals(node1_id, invocations[0]['id'])
+        self.assertEquals('start_monitor', invocations[0]['operation'])
+        self.assertEquals(node2_id, invocations[1]['id'])
+        self.assertEquals('start_monitor', invocations[1]['operation'])
+        self.assertEquals(node3_id, invocations[2]['id'])
+        self.assertEquals('start_monitor', invocations[2]['operation'])
+        self.assertEquals(node3_id, invocations[3]['id'])
+        self.assertEquals('stop_monitor', invocations[3]['operation'])
+        self.assertEquals(node2_id, invocations[4]['id'])
+        self.assertEquals('stop_monitor', invocations[4]['operation'])
+        self.assertEquals(node1_id, invocations[5]['id'])
+        self.assertEquals('stop_monitor', invocations[5]['operation'])
 
         from plugins.connection_configurer_mock.tasks import get_state \
             as config_get_state
