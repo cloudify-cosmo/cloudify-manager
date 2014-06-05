@@ -73,6 +73,8 @@ script:
 
    - echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
    - cd plugins/agent-installer
+   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - cd cloudify-rest-client; pip install .; cd ..
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
    - cd ..
