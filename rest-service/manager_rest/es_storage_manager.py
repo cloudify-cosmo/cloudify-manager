@@ -21,6 +21,7 @@ from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
+                                 DeploymentNode,
                                  DeploymentNodeInstance,
                                  ProviderContext)
 
@@ -33,7 +34,7 @@ EXECUTION_TYPE = 'execution'
 PROVIDER_CONTEXT_TYPE = 'provider_context'
 PROVIDER_CONTEXT_ID = 'CONTEXT'
 
-DEFAULT_SEARCH_SIZE = 500
+DEFAULT_SEARCH_SIZE = 10000
 
 
 class ESStorageManager(object):
@@ -47,6 +48,10 @@ class ESStorageManager(object):
                                                    size=DEFAULT_SEARCH_SIZE,
                                                    body=query)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
+        # ES doesn't return _version if using its search API.
+        if doc_type == NODE_INSTANCE_TYPE:
+            return map(
+                lambda doc: model_class(version=None, **doc), docs)
         return map(lambda doc: model_class(**doc), docs)
 
     def _get_doc(self, doc_type, doc_id, fields=None):
@@ -102,6 +107,11 @@ class ESStorageManager(object):
         return self._fill_missing_fields_and_deserialize(fields_data,
                                                          model_class)
 
+    def _delete_doc_by_query(self, doc_type, query):
+        self._get_es_conn().delete_by_query(index=STORAGE_INDEX_NAME,
+                                            doc_type=doc_type,
+                                            body=query)
+
     def _fill_missing_fields_and_deserialize(self, fields_data, model_class):
         for field in model_class.fields:
             if field not in fields_data:
@@ -138,7 +148,7 @@ class ESStorageManager(object):
                 search_result['hits']['hits'])
         return map(
             lambda doc_with_version: DeploymentNodeInstance(
-                state_version=doc_with_version[1], **doc_with_version[0]),
+                version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
     def blueprints_list(self):
@@ -162,9 +172,19 @@ class ESStorageManager(object):
 
     def get_node_instance(self, node_instance_id):
         doc = self._get_doc(NODE_INSTANCE_TYPE, node_instance_id)
-        node = DeploymentNodeInstance(state_version=doc['_version'],
+        node = DeploymentNodeInstance(version=doc['_version'],
                                       **doc['_source'])
         return node
+
+    def get_node_instances(self, deployment_id):
+        query = {'query': {'term': {'deployment_id': deployment_id}}}
+        return self._list_docs(NODE_INSTANCE_TYPE,
+                               DeploymentNodeInstance,
+                               query)
+
+    def get_nodes(self, deployment_id):
+        query = {'query': {'term': {'deployment_id': deployment_id}}}
+        return self._list_docs(NODE_TYPE, DeploymentNodeInstance, query)
 
     def get_blueprint(self, blueprint_id, fields=None):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,
@@ -195,9 +215,15 @@ class ESStorageManager(object):
         doc_data = node.to_dict()
         self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
 
-    def put_node_instance(self, node_instance_id, node_instance):
+    def put_node_instance(self, node_instance):
+        node_instance_id = node_instance.id
         doc_data = node_instance.to_dict()
-        del(doc_data['state_version'])
+        del(doc_data['version'])
+
+        with open('/tmp/idan.txt', 'a') as f:
+            f.write(str(doc_data))
+            f.write('\n')
+
         self._put_doc_if_not_exists(NODE_INSTANCE_TYPE,
                                     str(node_instance_id),
                                     doc_data)
@@ -222,6 +248,10 @@ class ESStorageManager(object):
                 "Execution {0} not found".format(execution_id))
 
     def delete_deployment(self, deployment_id):
+        query = {'query': {'term': {'deployment_id': deployment_id}}}
+        self._delete_doc_by_query(EXECUTION_TYPE, query)
+        self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
+        self._delete_doc_by_query(NODE_TYPE, query)
         return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
 
     def delete_execution(self, execution_id):
@@ -230,10 +260,15 @@ class ESStorageManager(object):
     def delete_node(self, node_id):
         return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
 
+    def delete_node_instance(self, node_instance_id):
+        return self._delete_doc(NODE_INSTANCE_TYPE,
+                                node_instance_id,
+                                DeploymentNodeInstance)
+
     def update_node_instance(self, node_instance_id, node):
         update_doc_data = node.to_dict()
-        # deleting state_version field as it's maintained by ES internally
-        del(update_doc_data['state_version'])
+        # deleting version field as it's maintained by ES internally
+        del(update_doc_data['version'])
         # removing fields with value None as they're not to be updated
         update_doc_data = \
             {k: v for k, v in update_doc_data.iteritems() if v is not None}
@@ -244,7 +279,7 @@ class ESStorageManager(object):
                                        doc_type=NODE_INSTANCE_TYPE,
                                        id=str(node_instance_id),
                                        body=update_doc,
-                                       version=node.state_version)
+                                       version=node.version)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_instance_id))

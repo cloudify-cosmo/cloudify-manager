@@ -42,7 +42,7 @@ DEPLOYMENT_SCHEMA = {
 }
 
 NODE_SCHEMA = {
-    'node_test': {
+    'node': {
         '_id': {
             'path': 'id'
         },
@@ -50,7 +50,6 @@ NODE_SCHEMA = {
             'types': {
                 'type': 'string',
                 'index_name': 'type'
-
             },
             'properties': {
                 'enabled': False
@@ -58,6 +57,20 @@ NODE_SCHEMA = {
         }
     }
 }
+
+NODE_INSTANCE_SCHEMA = {
+    'node_instance': {
+        '_id': {
+            'path': 'id'
+        },
+        'properties': {
+            'runtimeProperties': {
+                'enabled': False
+            }
+        }
+    }
+}
+
 
 SETTINGS = {
     "settings": {
@@ -70,7 +83,6 @@ SETTINGS = {
         }
     }
 }
-
 
 
 def create_schema(storage_index_url):
@@ -98,6 +110,10 @@ def create_schema(storage_index_url):
 
             response = requests.put("{0}/node/_mapping".format(
                 storage_index_url), json.dumps(NODE_SCHEMA))
+            response.raise_for_status()
+
+            response = requests.put("{0}/node_instance/_mapping".format(
+                storage_index_url), json.dumps(NODE_INSTANCE_SCHEMA))
             response.raise_for_status()
 
             print 'Done creating elasticsearch storage schema.'

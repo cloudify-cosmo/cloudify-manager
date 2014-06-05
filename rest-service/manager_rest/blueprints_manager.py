@@ -111,48 +111,39 @@ class BlueprintsManager(object):
         return get_storage_manager().delete_blueprint(blueprint_id)
 
     def delete_deployment(self, deployment_id, ignore_live_nodes=False):
-        deployment = get_storage_manager().get_deployment(deployment_id)
+        storage = get_storage_manager()
 
-        deployment_executions =\
-            get_storage_manager().get_deployment_executions(deployment_id)
+        # Verify deployment exists.
+        storage.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
+        executions = storage.get_deployment_executions(deployment_id)
         if any(execution.status not in ('terminated', 'failed') for
-           execution in deployment_executions):
+           execution in executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
                 "executions for this deployment. Running executions ids: {1}"
                 .format(
                     deployment_id,
                     ','.join([execution.id for execution in
-                              deployment_executions if execution.status not
+                              executions if execution.status not
                               in ('terminated', 'failed')])))
 
-        deployment_nodes_ids = [node['id'] for node in
-                                deployment.plan['nodes']]
         if not ignore_live_nodes:
-            deployment_nodes = [get_storage_manager().get_node(node_id) for
-                                node_id in deployment_nodes_ids]
+            node_instances = storage.get_node_instances(
+                deployment_id=deployment_id)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
             if any(node.state not in ('uninitialized', 'deleted') for node in
-                   deployment_nodes):
+                   node_instances):
                 raise manager_exceptions.DependentExistsError(
                     "Can't delete deployment {0} - There are live nodes for "
                     "this deployment. Live nodes ids: {1}"
                     .format(deployment_id,
-                            ','.join([node.id for node in deployment_nodes
+                            ','.join([node.id for node in node_instances
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
-
-        # delete deployment resources
-        for execution in deployment_executions:
-            get_storage_manager().delete_execution(execution.id)
-
-        for node_id in deployment_nodes_ids:
-            get_storage_manager().delete_node(node_id)
-
-        return get_storage_manager().delete_deployment(deployment_id)
+        return storage.delete_deployment(deployment_id)
 
     # currently validation is split to 2 phases: the first
     # part is during submission (dsl parsing)
@@ -217,16 +208,48 @@ class BlueprintsManager(object):
             blueprint_id=blueprint_id, created_at=now, updated_at=now)
 
         self.sm.put_deployment(deployment_id, new_deployment)
+        self._create_deployment_nodes(blueprint_id, deployment_id, plan)
 
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
-            node = models.DeploymentNode(id=node_id,
-                                         state='uninitialized',
-                                         runtime_info=None,
-                                         state_version=None)
-            self.sm.put_node(node_id, node)
+            node = models.DeploymentNodeInstance(id=node_id,
+                                                 deployment_id=deployment_id,
+                                                 state='uninitialized',
+                                                 runtime_properties=None,
+                                                 version=None)
+            self.sm.put_node_instance(node)
 
         return new_deployment
+
+    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
+        for raw_node in plan['nodes']:
+            self.sm.put_node(models.DeploymentNode(
+                id=raw_node['name'],
+                deployment_id=deployment_id,
+                blueprint_id=blueprint_id,
+                type=raw_node['type'],
+                type_hierarchy=raw_node['type_hierarchy'],
+                number_of_instances=raw_node['instances']['deploy'],
+                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
+                properties=raw_node['properties'],
+                operations=raw_node['operations'],
+                plugins=raw_node['plugins'],
+                relationships=self._prepare_node_relationships(raw_node)
+            ))
+
+    @staticmethod
+    def _prepare_node_relationships(raw_node):
+        if 'relationship' not in raw_node:
+            return None
+        prepared_relationships = []
+        for raw_relationship in raw_node['relationships']:
+            relationship = {
+                'target_node_id': raw_relationship['target_id'],
+                'type': raw_relationship['type'],
+                'properties': raw_relationship['properties']
+            }
+            prepared_relationships.append(relationship)
+        return prepared_relationships
 
 
 def teardown_blueprints_manager(exception):

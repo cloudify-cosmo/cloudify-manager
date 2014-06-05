@@ -135,8 +135,10 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/workflows')
     api.add_resource(DeploymentsIdNodes,
                      '/deployments/<string:deployment_id>/nodes')
-    api.add_resource(NodesId,
+    api.add_resource(NodeId,
                      '/nodes/<string:node_id>')
+    api.add_resource(NodeInstanceId,
+                     '/node-instances/<string:node_instance_id>')
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
@@ -638,9 +640,9 @@ class DeploymentsIdNodes(Resource):
                                                    state_version=None,
                                                    runtime_info=None)
             if get_state:
-                node = get_storage_manager().get_node(node_id)
+                node = get_storage_manager().get_node_instance(node_id)
                 node_result.state = node.state
-                node_result.state_version = node.state_version
+                node_result.state_version = node.version
             nodes.append(node_result)
         return responses.DeploymentNodes(deployment_id=deployment_id,
                                          nodes=nodes)
@@ -738,7 +740,7 @@ class DeploymentsId(Resource):
         return responses.Deployment(**deployment.to_dict()), 200
 
 
-class NodesId(Resource):
+class NodeId(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
@@ -777,60 +779,214 @@ class NodesId(Resource):
         # this parameter is now deprecated and should be removed - state and
         # runtime properties will be returned regardless of its value
         get_state_and_runtime_properties = verify_and_convert_bool(  # NOQA
-            'state_and_runtime_properties',
-            args['state_and_runtime_properties'])
+                                                                     'state_and_runtime_properties',
+                                                                     args['state_and_runtime_properties'])
 
-        node = get_storage_manager().get_node(node_id)
+        node = get_storage_manager().get_node_instance(node_id)
 
         return responses.DeploymentNode(id=node_id,
                                         state=node.state,
-                                        runtime_info=node.runtime_info,
-                                        state_version=node.state_version)
+                                        runtime_info=node.runtime_properties,
+                                        state_version=node.version)
+
+    # @swagger.operation(
+    #     responseClass=responses.DeploymentNode,
+    #     nickname="putNodeInstance",
+    #     notes="Put node instance",
+    #     parameters=[{'name': 'node_id',
+    #                  'description': 'Node Id',
+    #                  'required': True,
+    #                  'allowMultiple': False,
+    #                  'dataType': 'string',
+    #                  'paramType': 'path'}]
+    # )
+    # @marshal_with(responses.DeploymentNode.resource_fields)
+    # @exceptions_handled
+    # def put(self, node_id):
+    #     """
+    #     Puts node instance.
+    #     """
+    #     verify_json_content_type()
+    #     if request.json.__class__ is not dict:
+    #         abort(400, message='request body is expected to be'
+    #                            ' of key/value map type but is {0}'
+    #               .format(request.json.__class__.__name__))
+    #
+    #     node = models.DeploymentNodeInstance(id=node_id,
+    #                                          runtime_info=request.json,
+    #                                          state='uninitialized',
+    #                                          state_version=None)
+    #     node.state_version = get_storage_manager().put_node_instance(node_id,
+    #                                                                  node)
+    #     return responses.DeploymentNode(**node.to_dict()), 201
+    #
+    # @swagger.operation(
+    #     responseClass=responses.DeploymentNode,
+    #     nickname="patchNodeState",
+    #     notes="Update node runtime state. Expecting the request body to "
+    #           "be a dictionary containing 'state_version' which is used for "
+    #           "optimistic locking during the update, and optionally "
+    #           "'runtime_info' (dictionary) and/or 'state' (string) "
+    #           "properties",
+    #     parameters=[{'name': 'node_id',
+    #                  'description': 'Node Id',
+    #                  'required': True,
+    #                  'allowMultiple': False,
+    #                  'dataType': 'string',
+    #                  'paramType': 'path'},
+    #                 {'name': 'state_version',
+    #                  'description': 'used for optimistic locking during '
+    #                                 'update',
+    #                  'required': True,
+    #                  'allowMultiple': False,
+    #                  'dataType': 'int',
+    #                  'paramType': 'body'},
+    #                 {'name': 'runtime_properties',
+    #                  'description': 'a dictionary of runtime properties. If '
+    #                                 'omitted, the runtime properties wont be '
+    #                                 'updated',
+    #                  'required': False,
+    #                  'allowMultiple': False,
+    #                  'dataType': 'dict',
+    #                  'paramType': 'body'},
+    #                 {'name': 'state',
+    #                  'description': "the new node's state. If omitted, "
+    #                                 "the state wont be updated",
+    #                  'required': False,
+    #                  'allowMultiple': False,
+    #                  'dataType': 'string',
+    #                  'paramType': 'body'}],
+    #     consumes=["application/json"]
+    # )
+    # @marshal_with(responses.DeploymentNode.resource_fields)
+    # @exceptions_handled
+    # def patch(self, node_id):
+    #     """
+    #     Updates node instance
+    #     """
+    #     verify_json_content_type()
+    #     if request.json.__class__ is not dict or \
+    #                     'state_version' not in request.json or \
+    #                     request.json['state_version'].__class__ is not int:
+    #
+    #         if request.json.__class__ is not dict:
+    #             message = 'request body is expected to be a map containing ' \
+    #                       'a "state_version" field and optionally ' \
+    #                       '"runtime_info" and/or "state" fields'
+    #         elif 'state_version' not in request.json:
+    #             message = 'request body must be a map containing a ' \
+    #                       '"state_version" field'
+    #         else:
+    #             message = \
+    #                 "request body's 'state_version' field must be an int but" \
+    #                 " is of type {0}".format(request.json['state_version']
+    #                                          .__class__.__name__)
+    #         abort(400, message=message)
+    #
+    #     node = models.DeploymentNodeInstance(
+    #         id=node_id,
+    #         deployment_id=request.json.get('deployment_id'),
+    #         runtime_info=request.json.get('runtime_info'),
+    #         state=request.json.get('state'),
+    #         state_version=request.json['state_version'])
+    #     get_storage_manager().update_node_instance(node_id, node)
+    #     return responses.DeploymentNode(
+    #         **get_storage_manager().get_node_instance(node_id).to_dict())
+
+
+class NodeInstanceId(Resource):
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
-        nickname="putNodeInstance",
-        notes="Put node instance",
-        parameters=[{'name': 'node_id',
-                     'description': 'Node Id',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'path'}]
-    )
-    @marshal_with(responses.DeploymentNode.resource_fields)
-    @exceptions_handled
-    def put(self, node_id):
-        """
-        Puts node instance.
-        """
-        verify_json_content_type()
-        if request.json.__class__ is not dict:
-            abort(400, message='request body is expected to be'
-                               ' of key/value map type but is {0}'
-                               .format(request.json.__class__.__name__))
-
-        node = models.DeploymentNode(id=node_id, runtime_info=request.json,
-                                     state='uninitialized',
-                                     state_version=None)
-        node.state_version = get_storage_manager().put_node(node_id, node)
-        return responses.DeploymentNode(**node.to_dict()), 201
-
-    @swagger.operation(
-        responseClass=responses.DeploymentNode,
-        nickname="patchNodeState",
-        notes="Update node runtime state. Expecting the request body to "
-              "be a dictionary containing 'state_version' which is used for "
-              "optimistic locking during the update, and optionally "
-              "'runtime_info' (dictionary) and/or 'state' (string) "
-              "properties",
+        nickname="getNodeInstance",
+        notes="Returns node state/runtime properties "
+              "according to the provided query parameters.",
         parameters=[{'name': 'node_id',
                      'description': 'Node Id',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': 'string',
                      'paramType': 'path'},
-                    {'name': 'state_version',
+                    {'name': 'state_and_runtime_properties',
+                     'description': 'Specifies whether to return state and '
+                                    'runtime properties',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'boolean',
+                     'defaultValue': True,
+                     'paramType': 'query'}]
+    )
+    @marshal_with(responses.NodeInstance.resource_fields)
+    @exceptions_handled
+    def get(self, node_instance_id):
+        """
+        Returns node instance from Cloudify's storage.
+        """
+        get_storage_manager().get_node_instance(node_instance_id)
+        instance = get_storage_manager().get_node_instance(node_instance_id)
+        return responses.NodeInstance(
+            id=node_instance_id,
+            deployment_id=instance.deployment_id,
+            state=instance.state,
+            runtime_properties=instance.runtime_properties,
+            version=instance.version)
+
+    @swagger.operation(
+        responseClass=responses.NodeInstance,
+        nickname="createNodeInstance",
+        notes="Create instance instance",
+        parameters=[{'name': 'node_instance_id',
+                     'description': 'Node instance identifier',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'}]
+    )
+    @marshal_with(responses.NodeInstance.resource_fields)
+    @exceptions_handled
+    def put(self, node_instance_id):
+        """
+        Creates a instance instance in Cloudify's storage and returns it.
+        """
+        verify_json_content_type()
+        body = request.json
+
+        if body.__class__ is not dict:
+            abort(400, message='Request body is expected to be'
+                               ' of key/value map type but is {0}'
+                               .format(body.__class__.__name__))
+
+        if 'deploymentId' not in body:
+            abort(400, message='Node creation request body is expected to '
+                               'contain a deployment_id field')
+
+        storage = get_storage_manager()
+        runtime_properties = \
+            body['runtimeProperties'] if 'runtimeProperties' in body else {}
+        instance = models.DeploymentNodeInstance(
+            id=node_instance_id,
+            deployment_id=body['deploymentId'],
+            runtime_properties=runtime_properties,
+            state='uninitialized',
+            version=None)
+        instance.version = storage.put_node_instance(instance)
+        return responses.NodeInstance(**instance.to_dict()), 201
+
+    @swagger.operation(
+        responseClass=responses.NodeInstance,
+        nickname="patchNodeState",
+        notes="Update node instance. Expecting the request body to "
+              "be a dictionary containing 'version' which is used for "
+              "optimistic locking during the update, and optionally "
+              "'runtime_properties' (dictionary) and/or 'state' (string) "
+              "properties",
+        parameters=[{'name': 'node_instance_id',
+                     'description': 'Node instance identifier',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'path'},
+                    {'name': 'version',
                      'description': 'used for optimistic locking during '
                                     'update',
                      'required': True,
@@ -854,38 +1010,42 @@ class NodesId(Resource):
                      'paramType': 'body'}],
         consumes=["application/json"]
     )
-    @marshal_with(responses.DeploymentNode.resource_fields)
+    @marshal_with(responses.NodeInstance.resource_fields)
     @exceptions_handled
-    def patch(self, node_id):
+    def patch(self, node_instance_id):
         """
         Updates node instance
         """
         verify_json_content_type()
         if request.json.__class__ is not dict or \
-                'state_version' not in request.json or \
-                request.json['state_version'].__class__ is not int:
+                'version' not in request.json or \
+                request.json['version'].__class__ is not int:
 
             if request.json.__class__ is not dict:
-                message = 'request body is expected to be a map containing ' \
-                          'a "state_version" field and optionally ' \
-                          '"runtime_info" and/or "state" fields'
-            elif 'state_version' not in request.json:
-                message = 'request body must be a map containing a ' \
-                          '"state_version" field'
+                message = 'Request body is expected to be a map containing ' \
+                          'a "version" field and optionally ' \
+                          '"runtimeProperties" and/or "state" fields'
+            elif 'version' not in request.json:
+                message = 'Request body must be a map containing a ' \
+                          '"version" field'
             else:
                 message = \
-                    "request body's 'state_version' field must be an int but" \
-                    " is of type {0}".format(request.json['state_version']
-                                             .__class__.__name__)
+                    "Request body's 'version' field must be an int but" \
+                    " is of type {0} [{1}]".format(
+                        request.json['version'].__class__.__name__,
+                        request.json['version'])
             abort(400, message=message)
 
-        node = models.DeploymentNode(
-            id=node_id, runtime_info=request.json.get('runtime_info'),
+        node = models.DeploymentNodeInstance(
+            id=node_instance_id,
+            deployment_id=request.json.get('deploymentId'),
+            runtime_properties=request.json.get('runtimeProperties'),
             state=request.json.get('state'),
-            state_version=request.json['state_version'])
-        get_storage_manager().update_node(node_id, node)
-        return responses.DeploymentNode(
-            **get_storage_manager().get_node(node_id).to_dict())
+            version=request.json['version'])
+        get_storage_manager().update_node_instance(node_instance_id, node)
+        return responses.NodeInstance(
+            **get_storage_manager().get_node_instance(
+                node_instance_id).to_dict())
 
 
 class DeploymentsIdExecutions(Resource):

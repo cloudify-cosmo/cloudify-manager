@@ -160,14 +160,16 @@ class FileStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
 
-        prev_rt_info = data[NODES][node_id].to_dict()['runtime_info'] or {}
+        prev_rt_info = \
+            data[NODE_INSTANCES][node_id].to_dict()['runtime_info'] or {}
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_info.items()) if node\
             .runtime_info else prev_rt_info
-        new_state = node.state or data[NODES][node_id].to_dict()['state']
-        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
-                              state=new_state,
-                              state_version=node.state_version+1)
+        new_state = node.state or\
+                    data[NODE_INSTANCES][node_id].to_dict()['state']
+        node = DeploymentNodeInstance(id=node_id, runtime_info=merged_rt_info,
+                                      state=new_state,
+                                      state_version=node.state_version+1)
         data[NODE_INSTANCES][node_id] = node
         self._dump_data(data)
 
@@ -259,6 +261,9 @@ class FileStorageManager(object):
 
     def delete_node(self, node_id):
         return self._delete_object(node_id, NODES, 'Node')
+
+    def delete_node_instance(self, node_instance_id):
+        return self._delete_object(node_instance_id, NODE_INSTANCES, 'Node')
 
     def _delete_object(self, object_id, object_type, object_type_name):
         data = self._load_data()

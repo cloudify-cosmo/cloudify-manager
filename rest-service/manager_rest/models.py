@@ -102,13 +102,16 @@ class DeploymentNodeInstance(SerializableObject):
     Represents a node of a deployment.
     """
 
-    fields = {'id', 'runtime_info', 'state', 'state_version'}
+    fields = {
+        'id', 'deployment_id', 'runtime_properties', 'state', 'version'
+    }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info']
+        self.deployment_id = kwargs['deployment_id']
+        self.runtime_properties = kwargs['runtime_properties']
         self.state = kwargs['state']
-        self.state_version = kwargs['state_version']
+        self.version = kwargs['version']
 
 
 class ProviderContext(SerializableObject):
