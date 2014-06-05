@@ -99,25 +99,6 @@ class TestUninstallDeployment(TestCase):
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
 
-        # test stop monitor invocations and order
-        from plugins.testmockoperations.tasks import \
-            get_monitoring_operations_invocation
-        invocations = self.send_task(get_monitoring_operations_invocation) \
-            .get(timeout=10)
-        self.assertEqual(6, len(invocations))
-        self.assertEquals(node1_id, invocations[0]['id'])
-        self.assertEquals('start_monitor', invocations[0]['operation'])
-        self.assertEquals(node2_id, invocations[1]['id'])
-        self.assertEquals('start_monitor', invocations[1]['operation'])
-        self.assertEquals(node3_id, invocations[2]['id'])
-        self.assertEquals('start_monitor', invocations[2]['operation'])
-        self.assertEquals(node3_id, invocations[3]['id'])
-        self.assertEquals('stop_monitor', invocations[3]['operation'])
-        self.assertEquals(node2_id, invocations[4]['id'])
-        self.assertEquals('stop_monitor', invocations[4]['operation'])
-        self.assertEquals(node1_id, invocations[5]['id'])
-        self.assertEquals('stop_monitor', invocations[5]['operation'])
-
         from plugins.connection_configurer_mock.tasks import get_state \
             as config_get_state
         configurer_state = self.send_task(config_get_state).get(timeout=10)
@@ -130,6 +111,28 @@ class TestUninstallDeployment(TestCase):
             configurer_state[1]['id'].startswith('containing_node'))
         self.assertTrue(
             configurer_state[1]['related_id'].startswith('contained_in_node1'))
+
+    def test_stop_monitor_node_operation(self):
+        dsl_path = resource(
+            "dsl/hardcoded-operation-properties.yaml")
+        print('starting deploy process')
+        deployment, _ = deploy(dsl_path)
+        deployment_id = deployment.id
+        print('deploy completed')
+        print('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
+        undeploy(deployment_id)
+        print('undeploy completed')
+        # test stop monitor invocations
+        from plugins.testmockoperations.tasks import \
+            get_monitoring_operations_invocation
+        invocations = self.send_task(get_monitoring_operations_invocation) \
+            .get(timeout=10)
+        self.assertEqual(2, len(invocations))
+        self.assertTrue('single_node' in invocations[0]['id'])
+        self.assertEquals('start_monitor', invocations[0]['operation'])
+        self.assertTrue('single_node' in invocations[1]['id'])
+        self.assertEquals('stop_monitor', invocations[1]['operation'])
 
     def test_failed_uninstall_task(self):
         dsl_path = resource("dsl/basic.yaml")

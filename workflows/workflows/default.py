@@ -27,7 +27,7 @@ def install(ctx, **kwargs):
     # instantiate and new graph instance to build install tasks workflow
     graph = TaskDependencyGraph(ctx)
 
-    # We need reference to the create event/state tasks and the start monitor
+    # We need reference to the create event/state tasks and the started
     # task so we can later create a proper dependency between nodes and
     # their relationships. We use the below tasks as part of a single node
     # workflow, and to create the dependency (at the bottom)
@@ -37,9 +37,8 @@ def install(ctx, **kwargs):
     set_state_creating_tasks = {
         node.id: node.set_state('creating')
         for node in ctx.nodes}
-    start_monitor_tasks = {
-        node.id: node.execute_operation(
-            'cloudify.interfaces.monitor_lifecycle.start')
+    set_state_started_tasks = {
+        node.id: node.set_state('started')
         for node in ctx.nodes}
 
     # Create node linear task sequences
@@ -79,22 +78,24 @@ def install(ctx, **kwargs):
             sequence.add(*_host_post_start(node))
 
         sequence.add(
-            node.set_state('started'),
-            forkjoin(*_relationship_operations(
-                node,
-                'cloudify.interfaces.relationship_lifecycle.establish')),
-            start_monitor_tasks[node.id])
+            set_state_started_tasks[node.id],
+            forkjoin(
+                node.execute_operation(
+                    'cloudify.interfaces.monitor_lifecycle.start'),
+                *_relationship_operations(
+                    node,
+                    'cloudify.interfaces.relationship_lifecycle.establish')))
 
     # Create task dependencies based on node relationships
     # for each node, make a dependency between the create tasks (event, state)
-    # and the start monitor task of the target
+    # and the started state task of the target
     for node in ctx.nodes:
         for rel in node.relationships:
             node_set_creating = set_state_creating_tasks[node.id]
             node_event_creating = send_event_creating_tasks[node.id]
-            target_monitor_started = start_monitor_tasks[rel.target_id]
-            graph.add_dependency(node_set_creating, target_monitor_started)
-            graph.add_dependency(node_event_creating, target_monitor_started)
+            target_set_started = set_state_started_tasks[rel.target_id]
+            graph.add_dependency(node_set_creating, target_set_started)
+            graph.add_dependency(node_event_creating, target_set_started)
 
     graph.execute()
 
@@ -106,23 +107,27 @@ def uninstall(ctx, **kwargs):
     # instantiate a new graph instance to build uninstall tasks workflow
     graph = TaskDependencyGraph(ctx)
 
-    # We need reference to the set deleted state tasks and the stop monitor
-    # tasks so we can later create a proper dependency between nodes and
+    # We need reference to the set deleted state tasks and the set stopping
+    # state tasks so we can later create a proper dependency between nodes and
     # their relationships. We use the below tasks as part of a single node
     # workflow, and to create the dependency (at the bottom)
-    stop_monitor_tasks = {
-        node.id: node.execute_operation(
-            'cloudify.interfaces.monitor_lifecycle.stop')
+    set_state_stopping_tasks = {
+        node.id: node.set_state('stopping')
         for node in ctx.nodes}
     set_state_deleted_tasks = {
         node.id: node.set_state('deleted')
         for node in ctx.nodes}
 
-    # We need reference to the stop node tasks and delete node tasks as we
-    # augment them with on_failure error handlers later on
+    # We need reference to the stop node tasks, stop monitor tasks and
+    # delete node tasks as we augment them with on_failure error handlers
+    # later on
     stop_node_tasks = {
         node.id: node.execute_operation(
             'cloudify.interfaces.lifecycle.stop')
+        for node in ctx.nodes}
+    stop_monitor_tasks = {
+        node.id: node.execute_operation(
+            'cloudify.interfaces.monitor_lifecycle.stop')
         for node in ctx.nodes}
     delete_node_tasks = {
         node.id: node.execute_operation(
@@ -135,8 +140,7 @@ def uninstall(ctx, **kwargs):
     for node in ctx.nodes:
         sequence = graph.sequence()
 
-        sequence.add(stop_monitor_tasks[node.id],
-                     node.set_state('stopping'),
+        sequence.add(set_state_stopping_tasks[node.id],
                      node.send_event('Stopping node'),
                      stop_node_tasks[node.id],
                      node.set_state('stopped'),
@@ -149,24 +153,36 @@ def uninstall(ctx, **kwargs):
                      delete_node_tasks[node.id],
                      set_state_deleted_tasks[node.id])
 
-        # augmenting the stop and delete node tasks with error handlers
+        # adding the stop monitor task not as a part of the sequence,
+        # as it can happen in parallel with any other task, and is only
+        # dependent on the set node state 'stopping' task
+        graph.add_task(stop_monitor_tasks[node.id])
+        graph.add_dependency(stop_monitor_tasks[node.id],
+                             set_state_stopping_tasks[node.id])
+
+        # augmenting the stop node, stop monitor and delete node tasks with
+        # error handlers
         _set_send_node_event_on_error_handler(
             stop_node_tasks[node.id],
             node,
             "Error occurred while stopping node - ignoring...")
+        _set_send_node_event_on_error_handler(
+            stop_monitor_tasks[node.id],
+            node,
+            "Error occurred while stopping monitor - ignoring...")
         _set_send_node_event_on_error_handler(
             delete_node_tasks[node.id],
             node,
             "Error occurred while deleting node - ignoring...")
 
     # Create task dependencies based on node relationships
-    # for each node, make a dependency between the target's stop monitor task
+    # for each node, make a dependency between the target's stopping task
     # and the deleted state task of the current node
     for node in ctx.nodes:
         for rel in node.relationships:
-            target_stop_monitor = stop_monitor_tasks[rel.target_id]
+            target_set_stopping = set_state_stopping_tasks[rel.target_id]
             node_set_deleted = set_state_deleted_tasks[node.id]
-            graph.add_dependency(target_stop_monitor, node_set_deleted)
+            graph.add_dependency(target_set_stopping, node_set_deleted)
 
     graph.execute()
 
