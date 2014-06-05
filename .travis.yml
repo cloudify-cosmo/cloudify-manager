@@ -39,9 +39,9 @@ install:
    - mkdir -p package/linux
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
-   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b feature/CFY-660-add-node-type
    - cd cloudify-rest-client; pip install .; cd ..
-   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
+   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b feature/CFY-660-add-node-type
    - cd cloudify-plugins-common; pip install . -r requirements.txt; cd ..
    - cd plugins/agent-installer && pip install . && cd ../..
    - cd plugins/plugin-installer && pip install . && cd ../..
