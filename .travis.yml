@@ -39,9 +39,11 @@ install:
    - mkdir -p package/linux
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
-   - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
-   - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
-   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install --process-dependency-links . && cd ../../../../..
+   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
+   - cd cloudify-plugins-common; pip install . -r requirements.txt; cd ..
+   - cd plugins/agent-installer && pip install . && cd ../..
+   - cd plugins/plugin-installer && pip install . && cd ../..
+   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
    - tar czf agent.tar.gz package
    - rm -r package
 
@@ -49,9 +51,11 @@ install:
    - source ~/env/bin/activate
    - pip install nose
    - pip install fabric
-   - cd rest-service && pip install --process-dependency-links . && cd ..
-   - cd workflows && pip install --process-dependency-links . && cd ..
-   - cd tests && pip install --process-dependency-links . && cd ..
+   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
+   - cd cloudify-plugins-common; pip install . -r requirements.txt; cd ..
+   - cd rest-service && pip install . -r requirements.txt && cd ..
+   - cd workflows && pip install . && cd ..
+   - cd tests && pip install . && cd ..
 
 script:
    - flake8 plugins/agent-installer/
