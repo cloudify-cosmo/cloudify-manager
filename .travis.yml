@@ -50,8 +50,7 @@ install:
    - virtualenv ~/env
    - source ~/env/bin/activate
    - pip install nose
-   - pip install fabric
-   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
+   - pip install fabric   
    - cd cloudify-plugins-common; pip install . -r requirements.txt; cd ..
    - cd rest-service && pip install . -r requirements.txt && cd ..
    - cd workflows && pip install . && cd ..
