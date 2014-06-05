@@ -118,6 +118,17 @@ class BasicWorkflowsTest(TestCase):
                                                      ['mockprop2'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
+    def test_start_monitor_node_operation(self):
+        dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
+        deploy(dsl_path)
+        from plugins.testmockoperations.tasks import \
+            get_monitoring_operations_invocation
+        invocations = self.send_task(get_monitoring_operations_invocation)\
+            .get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        invocation = invocations[0]
+        self.assertEqual('start_monitor', invocation['operation'])
+
     def test_plugin_get_resource(self):
         dsl_path = resource("dsl/get_resource_in_plugin.yaml")
         deploy(dsl_path)

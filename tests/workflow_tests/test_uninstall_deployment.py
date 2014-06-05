@@ -34,6 +34,7 @@ class TestUninstallDeployment(TestCase):
         deployment_id = deployment.id
         logger.info('deploy completed')
         logger.info('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         logger.info('undeploy completed')
 
@@ -58,6 +59,7 @@ class TestUninstallDeployment(TestCase):
         self.logger.info('deploy completed')
 
         self.logger.info('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         self.logger.info('undeploy completed')
 
@@ -75,6 +77,7 @@ class TestUninstallDeployment(TestCase):
         deployment_id = deployment.id
         print('deploy completed')
         print('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         print('undeploy completed')
         # Checking that uninstall wasn't called on the contained node
@@ -108,6 +111,28 @@ class TestUninstallDeployment(TestCase):
             configurer_state[1]['id'].startswith('containing_node'))
         self.assertTrue(
             configurer_state[1]['related_id'].startswith('contained_in_node1'))
+
+    def test_stop_monitor_node_operation(self):
+        dsl_path = resource(
+            "dsl/hardcoded-operation-properties.yaml")
+        print('starting deploy process')
+        deployment, _ = deploy(dsl_path)
+        deployment_id = deployment.id
+        print('deploy completed')
+        print('starting undeploy process')
+        time.sleep(5)  # give elasticsearch time to update execution status..
+        undeploy(deployment_id)
+        print('undeploy completed')
+        # test stop monitor invocations
+        from plugins.testmockoperations.tasks import \
+            get_monitoring_operations_invocation
+        invocations = self.send_task(get_monitoring_operations_invocation) \
+            .get(timeout=10)
+        self.assertEqual(2, len(invocations))
+        self.assertTrue('single_node' in invocations[0]['id'])
+        self.assertEquals('start_monitor', invocations[0]['operation'])
+        self.assertTrue('single_node' in invocations[1]['id'])
+        self.assertEquals('stop_monitor', invocations[1]['operation'])
 
     def test_failed_uninstall_task(self):
         dsl_path = resource("dsl/basic.yaml")

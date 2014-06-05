@@ -26,6 +26,7 @@ unreachable_call_order = []
 mock_operation_invocation = []
 node_states = []
 get_resource_operation_invocation = []
+monitoring_operations_invocation = []
 
 
 @operation
@@ -87,6 +88,24 @@ def get_unreachable_call_order(**kwargs):
 
 
 @operation
+def start_monitor(ctx, **kwargs):
+    global monitoring_operations_invocation
+    monitoring_operations_invocation.append({
+        'id': ctx.node_id,
+        'operation': 'start_monitor'
+    })
+
+
+@operation
+def stop_monitor(ctx, **kwargs):
+    global monitoring_operations_invocation
+    monitoring_operations_invocation.append({
+        'id': ctx.node_id,
+        'operation': 'stop_monitor'
+    })
+
+
+@operation
 def mock_operation(ctx, **kwargs):
     mockprop = ctx.properties['mockprop']
     global mock_operation_invocation
@@ -138,6 +157,11 @@ def get_resource_operation_invocations(**kwargs):
 @operation
 def get_mock_operation_invocations(**kwargs):
     return mock_operation_invocation
+
+
+@operation
+def get_monitoring_operations_invocation(**kwargs):
+    return monitoring_operations_invocation
 
 
 @operation
