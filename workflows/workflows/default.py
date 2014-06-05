@@ -79,9 +79,12 @@ def install(ctx, **kwargs):
 
         sequence.add(
             set_state_started_tasks[node.id],
-            forkjoin(*_relationship_operations(
-                node,
-                'cloudify.interfaces.relationship_lifecycle.establish')))
+            forkjoin(
+                node.execute_operation(
+                    'cloudify.interfaces.monitor_lifecycle.start'),
+                *_relationship_operations(
+                    node,
+                    'cloudify.interfaces.relationship_lifecycle.establish')))
 
     # Create task dependencies based on node relationships
     # for each node, make a dependency between the create tasks (event, state)
@@ -115,11 +118,16 @@ def uninstall(ctx, **kwargs):
         node.id: node.set_state('deleted')
         for node in ctx.nodes}
 
-    # We need reference to the stop node tasks and delete node tasks as we
-    # augment them with on_failure error handlers later on
+    # We need reference to the stop node tasks, stop monitor tasks and
+    # delete node tasks as we augment them with on_failure error handlers
+    # later on
     stop_node_tasks = {
         node.id: node.execute_operation(
             'cloudify.interfaces.lifecycle.stop')
+        for node in ctx.nodes}
+    stop_monitor_tasks = {
+        node.id: node.execute_operation(
+            'cloudify.interfaces.monitor_lifecycle.stop')
         for node in ctx.nodes}
     delete_node_tasks = {
         node.id: node.execute_operation(
@@ -145,11 +153,23 @@ def uninstall(ctx, **kwargs):
                      delete_node_tasks[node.id],
                      set_state_deleted_tasks[node.id])
 
-        # augmenting the stop and delete node tasks with error handlers
+        # adding the stop monitor task not as a part of the sequence,
+        # as it can happen in parallel with any other task, and is only
+        # dependent on the set node state 'stopping' task
+        graph.add_task(stop_monitor_tasks[node.id])
+        graph.add_dependency(stop_monitor_tasks[node.id],
+                             set_state_stopping_tasks[node.id])
+
+        # augmenting the stop node, stop monitor and delete node tasks with
+        # error handlers
         _set_send_node_event_on_error_handler(
             stop_node_tasks[node.id],
             node,
             "Error occurred while stopping node - ignoring...")
+        _set_send_node_event_on_error_handler(
+            stop_monitor_tasks[node.id],
+            node,
+            "Error occurred while stopping monitor - ignoring...")
         _set_send_node_event_on_error_handler(
             delete_node_tasks[node.id],
             node,
