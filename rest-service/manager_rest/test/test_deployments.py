@@ -17,6 +17,7 @@ __author__ = 'dan'
 
 
 from base_test import BaseServerTestCase
+from manager_rest import manager_exceptions
 
 
 class DeploymentsTestCase(BaseServerTestCase):
@@ -51,6 +52,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEqual(400, resp.status_code)
         self.assertTrue('There exist deployments for this blueprint' in
                         resp.json['message'])
+        self.assertEquals(resp.json['errorCode'],
+                          manager_exceptions.DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_deployment_already_exists(self):
         (blueprint_id,
@@ -63,6 +66,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertTrue('already exists' in
                         deployment_response.json['message'])
         self.assertEqual(409, deployment_response.status_code)
+        self.assertEqual(deployment_response.json['errorCode'],
+                         manager_exceptions.CONFLICT_ERROR_CODE)
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -126,11 +131,15 @@ class DeploymentsTestCase(BaseServerTestCase):
             'workflowId': 'nonexisting-workflow-id'
         })
         self.assertEqual(400, response.status_code)
+        self.assertEquals(response.json['errorCode'],
+                          manager_exceptions.NONEXISTENT_WORKFLOW_ERROR_CODE)
 
     def test_listing_executions_for_nonexistent_deployment(self):
         resource_path = '/deployments/{0}/executions'.format('doesnotexist')
         response = self.get(resource_path)
         self.assertEqual(404, response.status_code)
+        self.assertEquals(response.json['errorCode'],
+                          manager_exceptions.NOT_FOUND_ERROR_CODE)
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -188,6 +197,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         delete_deployment_response = self.delete('/deployments/{0}'.format(
             deployment_id))
         self.assertEquals(400, delete_deployment_response.status_code)
+        self.assertEquals(delete_deployment_response.json['errorCode'],
+                          manager_exceptions.DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_delete_deployment_with_uninitialized_nodes(self):
         # simulates a deletion of a deployment right after its creation
@@ -245,6 +256,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         # trying to delete a nonexistent deployment
         resp = self.delete('/deployments/nonexistent-deployment')
         self.assertEquals(404, resp.status_code)
+        self.assertEquals(resp.json['errorCode'],
+                          manager_exceptions.NOT_FOUND_ERROR_CODE)
 
     def test_get_nodes_of_deployment(self):
 

@@ -18,6 +18,7 @@ __author__ = 'ran'
 
 import mocks
 from base_test import BaseServerTestCase
+from manager_rest import manager_exceptions
 
 
 class ExecutionsTestCase(BaseServerTestCase):
@@ -65,6 +66,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         resp = self.patch('/executions/{0}'.format(execution['id']), {})
         self.assertEquals(400, resp.status_code)
         self.assertTrue('status' in resp.json['message'])
+        self.assertEquals(resp.json['errorCode'],
+                          manager_exceptions.BAD_PARAMETERS_ERROR_CODE)
 
     def test_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -123,6 +126,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             'action': 'cancel'
         })
         self.assertEquals(cancel_response.status_code, 404)
+        self.assertEquals(cancel_response.json['errorCode'],
+                          manager_exceptions.NOT_FOUND_ERROR_CODE)
 
     def test_cancel_bad_action(self):
         execution = self.test_get_execution_by_id()
@@ -131,6 +136,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             'action': 'not_really_cancel'
         })
         self.assertEquals(cancel_response.status_code, 400)
+        self.assertEquals(cancel_response.json['errorCode'],
+                          manager_exceptions.BAD_PARAMETERS_ERROR_CODE)
 
     def test_cancel_no_action(self):
         execution = self.test_get_execution_by_id()
