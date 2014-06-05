@@ -18,13 +18,6 @@ __author__ = 'dank'
 from setuptools import setup
 
 
-PLUGINS_COMMON_VERSION = "3.0"
-PLUGINS_COMMON_BRANCH = "develop"
-PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
-                 "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
-                     PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)
-
-
 setup(
     name='cloudify-workflows',
     version='3.0',
@@ -34,10 +27,6 @@ setup(
     license='LICENSE',
     description='Default cloudify workflows',
     install_requires=[
-        'cloudify-plugins-common',
-    ],
-    tests_require=[
-        "nose",
-    ],
-    dependency_links=[PLUGINS_COMMON]
+        'cloudify-plugins-common==3.0',
+    ]
 )
