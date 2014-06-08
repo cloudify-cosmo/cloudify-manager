@@ -260,7 +260,7 @@ class ESStorageManager(object):
                                 node_instance_id,
                                 DeploymentNodeInstance)
 
-    def update_node_instance(self, node_instance_id, node):
+    def update_node_instance(self, node):
         update_doc_data = node.to_dict()
         # deleting version field as it's maintained by ES internally
         del(update_doc_data['version'])
@@ -272,12 +272,12 @@ class ESStorageManager(object):
         try:
             self._get_es_conn().update(index=STORAGE_INDEX_NAME,
                                        doc_type=NODE_INSTANCE_TYPE,
-                                       id=str(node_instance_id),
+                                       id=str(node.id),
                                        body=update_doc,
                                        version=node.version)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node_instance_id))
+                "Node {0} not found".format(node.id))
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 'Node update conflict: mismatching versions')

@@ -928,7 +928,7 @@ class NodeInstancesId(Resource):
             runtime_properties=request.json.get('runtimeProperties'),
             state=request.json.get('state'),
             version=request.json['version'])
-        get_storage_manager().update_node_instance(node_instance_id, node)
+        get_storage_manager().update_node_instance(node)
         return responses.NodeInstance(
             **get_storage_manager().get_node_instance(
                 node_instance_id).to_dict())

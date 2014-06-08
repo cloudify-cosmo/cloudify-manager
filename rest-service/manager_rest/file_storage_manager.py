@@ -162,25 +162,25 @@ class FileStorageManager(object):
         data[EXECUTIONS][execution_id] = updated_execution
         self._dump_data(data)
 
-    def update_node_instance(self, node_id, node):
+    def update_node_instance(self, node):
         data = self._load_data()
-        if node_id not in data[NODE_INSTANCES]:
+        if node.id not in data[NODE_INSTANCES]:
             raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node_id))
-        deployment_id = data[NODE_INSTANCES][node_id].deployment_id
+                "Node {0} not found".format(node.id))
+        deployment_id = data[NODE_INSTANCES][node.id].deployment_id
         prev_rt_info = \
-            data[NODE_INSTANCES][node_id].to_dict()['runtime_properties'] or {}
+            data[NODE_INSTANCES][node.id].to_dict()['runtime_properties'] or {}
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_properties.items()) if node\
             .runtime_properties else prev_rt_info
         new_state = node.state or\
-            data[NODE_INSTANCES][node_id].to_dict()['state']
-        node = DeploymentNodeInstance(id=node_id,
+            data[NODE_INSTANCES][node.id].to_dict()['state']
+        node = DeploymentNodeInstance(id=node.id,
                                       deployment_id=deployment_id,
                                       runtime_properties=merged_rt_info,
                                       state=new_state,
                                       version=node.version+1)
-        data[NODE_INSTANCES][node_id] = node
+        data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
     def blueprints_list(self):

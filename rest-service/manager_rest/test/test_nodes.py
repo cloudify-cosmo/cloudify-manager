@@ -145,7 +145,7 @@ class NodesTest(BaseServerTestCase):
         from manager_rest import manager_exceptions
         prev_update_node_func = sm.instance().update_node_instance
         try:
-            def conflict_update_node_func(node_id, node):
+            def conflict_update_node_func(node):
                 raise manager_exceptions.ConflictError()
             sm.instance().update_node_instance = conflict_update_node_func
             self.put('/node-instances/1234', {

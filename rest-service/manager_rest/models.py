@@ -75,7 +75,7 @@ class Execution(SerializableObject):
 
 class DeploymentNode(SerializableObject):
     """
-    Represents an instance of a deployment node.
+    Represents a node in a deployment.
     """
 
     fields = {
@@ -99,7 +99,7 @@ class DeploymentNode(SerializableObject):
 
 class DeploymentNodeInstance(SerializableObject):
     """
-    Represents a node of a deployment.
+    Represents a node instance in a deployment.
     """
 
     fields = {
