@@ -50,59 +50,60 @@ class TestDeploymentNodes(TestCase):
         node_instance = get_node_instance(node_id)
 
         # Initial assertions
-        self.assertEquals('started', node_instance['state'])
-        self.assertIsNotNone(node_instance['stateVersion'])
-        self.assertEquals(2, len(node_instance['runtimeInfo']))
+        self.assertEquals('started', node_instance.state)
+        self.assertIsNotNone(node_instance.version)
+        self.assertEquals(2, len(node_instance.runtime_properties))
 
         # Updating only the state
         node_instance = update_node_instance(
             node_id,
-            state_version=node_instance['stateVersion'],
+            version=node_instance.version,
             state='new_state')
 
         # Verifying the node's state has changed
-        self.assertEquals('new_state', node_instance['state'])
+        self.assertEquals('new_state', node_instance.state)
         # Verifying the node's runtime properties remained without a change
-        self.assertEquals(2, len(node_instance['runtimeInfo']))
+        self.assertEquals(2, len(node_instance.runtime_properties))
 
         # Updating only the runtime properties
         node_instance = update_node_instance(
             node_id,
-            state_version=node_instance['stateVersion'],
+            version=node_instance.version,
             runtime_properties={'new_key': 'new_value'})
 
         # Verifying the node's state remained the same despite the update to
         #  the runtime_properties
-        self.assertEquals('new_state', node_instance['state'])
+        self.assertEquals('new_state', node_instance.state)
         # Verifying the new property is in the node's runtime properties
-        self.assertTrue('new_key' in node_instance['runtimeInfo'])
-        self.assertEquals('new_value', node_instance['runtimeInfo']['new_key'])
+        self.assertTrue('new_key' in node_instance.runtime_properties)
+        self.assertEquals('new_value',
+                          node_instance.runtime_properties['new_key'])
         # Verifying the older properties are still there too (partial update)
-        self.assertEquals(3, len(node_instance['runtimeInfo']))
+        self.assertEquals(3, len(node_instance.runtime_properties))
 
         # Updating both state and runtime properties (updating an existing
         # key in runtime properties)
         node_instance = update_node_instance(
             node_id,
-            state_version=node_instance['stateVersion'],
+            version=node_instance.version,
             runtime_properties={'new_key': 'another_value'},
             state='final_state')
 
         # Verifying state has updated
-        self.assertEquals('final_state', node_instance['state'])
+        self.assertEquals('final_state', node_instance.state)
         # Verifying the update to the runtime properties
-        self.assertEquals(3, len(node_instance['runtimeInfo']))
-        self.assertEquals('another_value', node_instance['runtimeInfo'][
-            'new_key'])
+        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEquals('another_value',
+                          node_instance.runtime_properties['new_key'])
 
         # Updating neither state nor runtime properties (empty update)
         node_instance = update_node_instance(
             node_id,
-            state_version=node_instance['stateVersion'])
+            version=node_instance.version)
 
         # Verifying state hasn't changed
-        self.assertEquals('final_state', node_instance['state'])
+        self.assertEquals('final_state', node_instance.state)
         # Verifying the runtime properties haven't changed
-        self.assertEquals(3, len(node_instance['runtimeInfo']))
-        self.assertEquals('another_value', node_instance['runtimeInfo'][
-            'new_key'])
+        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEquals('another_value',
+                          node_instance.runtime_properties['new_key'])

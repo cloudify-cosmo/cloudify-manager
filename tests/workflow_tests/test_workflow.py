@@ -36,6 +36,7 @@ from testenv import get_node_instance
 from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestCallError
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class BasicWorkflowsTest(TestCase):
@@ -165,7 +166,7 @@ class BasicWorkflowsTest(TestCase):
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
         # expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
-        self.assertEquals(4, len(hits))
+        self.assertEquals(5, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -304,7 +305,7 @@ class BasicWorkflowsTest(TestCase):
                 self.fail('node {0} still exists even though it should have '
                           'been deleted when its deployment was deleted'
                           .format(node_id))
-            except CosmoManagerRestCallError, e:
+            except CloudifyClientError, e:
                 self.assertTrue('not found' in str(e))
 
         # trying to delete a nonexistent deployment

@@ -21,12 +21,14 @@ from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  Execution,
                                  DeploymentNode,
+                                 DeploymentNodeInstance,
                                  ProviderContext)
 from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
 
 NODES = 'nodes'
+NODE_INSTANCES = 'node_instances'
 BLUEPRINTS = 'blueprints'
 DEPLOYMENTS = 'deployments'
 EXECUTIONS = 'executions'
@@ -47,6 +49,7 @@ class FileStorageManager(object):
     def _init_file(self):
         data = {
             NODES: {},
+            NODE_INSTANCES: {},
             BLUEPRINTS: {},
             DEPLOYMENTS: {},
             EXECUTIONS: {},
@@ -63,6 +66,9 @@ class FileStorageManager(object):
             deserialized_data[NODES] = \
                 {key: DeploymentNode(**val) for key, val in data[NODES]
                     .iteritems()}
+            deserialized_data[NODE_INSTANCES] = \
+                {key: DeploymentNodeInstance(**val) for key, val in
+                 data[NODE_INSTANCES].iteritems()}
             deserialized_data[BLUEPRINTS] = \
                 {key: BlueprintState(**val) for key, val in data[BLUEPRINTS]
                     .iteritems()}
@@ -83,6 +89,9 @@ class FileStorageManager(object):
             serialized_data = dict()
             serialized_data[NODES] = {key: val.to_dict() for key, val in
                                       data[NODES].iteritems()}
+            serialized_data[NODE_INSTANCES] = {
+                key: val.to_dict()
+                for key, val in data[NODE_INSTANCES].iteritems()}
             serialized_data[BLUEPRINTS] =\
                 {key: val.to_dict() for key, val in data[BLUEPRINTS]
                     .iteritems()}
@@ -97,23 +106,40 @@ class FileStorageManager(object):
                     .iteritems()}
             json.dump(serialized_data, f)
 
-    def nodes_list(self):
+    def node_instances_list(self):
         data = self._load_data()
-        return data[NODES].values()
+        return data[NODE_INSTANCES].values()
 
-    def get_node(self, node_id):
+    def get_node_instance(self, node_id):
         data = self._load_data()
-        if node_id in data[NODES]:
-            return data[NODES][node_id]
+        if node_id in data[NODE_INSTANCES]:
+            return data[NODE_INSTANCES][node_id]
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def put_node(self, node_id, node):
+    def get_node_instances(self, deployment_id):
+        instances = [
+            x for x in self._load_data()[NODE_INSTANCES].values()
+            if x.deployment_id == deployment_id]
+        return instances
+
+    def put_node(self, node):
         data = self._load_data()
+        node_id = '{0}_{1}'.format(node.deployment_id, node.id)
         if str(node_id) in data[NODES]:
             raise manager_exceptions.ConflictError(
                 'Node {0} already exists'.format(node_id))
         data[NODES][str(node_id)] = node
+        self._dump_data(data)
+        return 1
+
+    def put_node_instance(self, node):
+        data = self._load_data()
+        node_id = node.id
+        if str(node_id) in data[NODE_INSTANCES]:
+            raise manager_exceptions.ConflictError(
+                'Node {0} already exists'.format(node_id))
+        data[NODE_INSTANCES][str(node_id)] = node
         self._dump_data(data)
         return 1
 
@@ -136,21 +162,25 @@ class FileStorageManager(object):
         data[EXECUTIONS][execution_id] = updated_execution
         self._dump_data(data)
 
-    def update_node(self, node_id, node):
+    def update_node_instance(self, node):
         data = self._load_data()
-        if node_id not in data[NODES]:
+        if node.id not in data[NODE_INSTANCES]:
             raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node_id))
-
-        prev_rt_info = data[NODES][node_id].to_dict()['runtime_info'] or {}
+                "Node {0} not found".format(node.id))
+        deployment_id = data[NODE_INSTANCES][node.id].deployment_id
+        prev_rt_info = \
+            data[NODE_INSTANCES][node.id].to_dict()['runtime_properties'] or {}
         merged_rt_info = dict(prev_rt_info.items() +
-                              node.runtime_info.items()) if node\
-            .runtime_info else prev_rt_info
-        new_state = node.state or data[NODES][node_id].to_dict()['state']
-        node = DeploymentNode(id=node_id, runtime_info=merged_rt_info,
-                              state=new_state,
-                              state_version=node.state_version+1)
-        data[NODES][node_id] = node
+                              node.runtime_properties.items()) if node\
+            .runtime_properties else prev_rt_info
+        new_state = node.state or\
+            data[NODE_INSTANCES][node.id].to_dict()['state']
+        node = DeploymentNodeInstance(id=node.id,
+                                      deployment_id=deployment_id,
+                                      runtime_properties=merged_rt_info,
+                                      state=new_state,
+                                      version=node.version+1)
+        data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
     def blueprints_list(self):
@@ -234,6 +264,15 @@ class FileStorageManager(object):
         return self._delete_object(blueprint_id, BLUEPRINTS, 'Blueprint')
 
     def delete_deployment(self, deployment_id):
+        data = self._load_data()
+        for instance in data[NODE_INSTANCES].values():
+            if instance.deployment_id == deployment_id:
+                del data[NODE_INSTANCES][instance.id]
+        for node in data[NODES].values():
+            if node.deployment_id == deployment_id:
+                node_id = '{0}_{1}'.format(deployment_id, node.id)
+                del data[NODES][node_id]
+        self._dump_data(data)
         return self._delete_object(deployment_id, DEPLOYMENTS, 'Deployment')
 
     def delete_execution(self, execution_id):
@@ -241,6 +280,9 @@ class FileStorageManager(object):
 
     def delete_node(self, node_id):
         return self._delete_object(node_id, NODES, 'Node')
+
+    def delete_node_instance(self, node_instance_id):
+        return self._delete_object(node_instance_id, NODE_INSTANCES, 'Node')
 
     def _delete_object(self, object_id, object_type, object_type_name):
         data = self._load_data()

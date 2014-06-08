@@ -15,30 +15,37 @@
 
 __author__ = 'ran'
 
+import uuid
+
 from testenv import TestCase
-from testenv import create_rest_client
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestCallError
+from testenv import create_new_rest_client
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class TestStorage(TestCase):
 
     def test_update_node_bad_version(self):
-        client = create_rest_client()
+        client = create_new_rest_client()
 
-        node_id = '1'
-        state_version = 1
-        result = client.put_node_instance(node_id, {})
-        self.assertEquals(state_version, result['stateVersion'])
-        self.assertEquals('1', result['id'])
-        self.assertEquals({}, result['runtimeInfo'])
+        instance_id = str(uuid.uuid4())
+        deployment_id = str(uuid.uuid4())
+        version = 1
+        result = client.node_instances.create(instance_id, deployment_id, {})
+        self.assertEquals(version, result.version)
+        self.assertEquals(instance_id, result.id)
+        self.assertEquals({}, result.runtime_properties)
 
-        result = client.update_node_instance(node_id, state_version, {})
-        self.assertEquals(2, result['stateVersion'])
-        self.assertEquals('1', result['id'])
-        self.assertEquals({}, result['runtimeInfo'])
+        props = {'key': 'value'}
+        result = client.node_instances.update(instance_id,
+                                              state='started',
+                                              runtime_properties=props,
+                                              version=result.version,)
+        self.assertEquals(2, result.version)
+        self.assertEquals(instance_id, result.id)
+        self.assertEquals(props, result.runtime_properties)
+        self.assertEquals('started', result.state)
 
-        # making another call with a bad state_version
+        # making another call with a bad version
         self.assertRaises(
-            CosmoManagerRestCallError, client.update_node_instance,
-            node_id, state_version, {})
+            CloudifyClientError, client.node_instances.update,
+            instance_id, version=1)

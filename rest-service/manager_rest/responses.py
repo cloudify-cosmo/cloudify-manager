@@ -143,6 +143,25 @@ class DeploymentNode(object):
 
 
 @swagger.model
+class NodeInstance(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'deploymentId': fields.String(attribute='deployment_id'),
+        'runtimeProperties': fields.Raw(attribute='runtime_properties'),
+        'version': fields.Raw,
+        'state': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.deployment_id = kwargs['deployment_id']
+        self.runtime_properties = kwargs['runtime_properties']
+        self.version = kwargs['version']
+        self.state = kwargs['state']
+
+
+@swagger.model
 @swagger.nested(nodes=DeploymentNode.__name__)
 class DeploymentNodes(object):
 

@@ -12,11 +12,10 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-from os.path import dirname, abspath
-import unittest
 
 __author__ = 'idanmo'
 
+import unittest
 import shutil
 import distutils.core
 import tempfile
@@ -32,6 +31,7 @@ import uuid
 from os import path
 from functools import wraps
 from multiprocessing import Process
+from os.path import dirname, abspath
 
 import yaml
 import pika
@@ -41,6 +41,7 @@ from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
+from cloudify_rest_client import CloudifyClient
 
 import plugins
 
@@ -1021,6 +1022,10 @@ def create_rest_client():
     return CosmoManagerRestClient('localhost', port=MANAGER_REST_PORT)
 
 
+def create_new_rest_client():
+    return CloudifyClient('localhost', port=MANAGER_REST_PORT)
+
+
 def get_resource(resource):
     """
     Gets the path for the provided resource.
@@ -1051,7 +1056,7 @@ def publish_blueprint(dsl_path, blueprint_id=None):
 
 def deploy_application(dsl_path, timeout=240,
                        blueprint_id=None,
-                       deployment_id='deployment',
+                       deployment_id=None,
                        wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
@@ -1061,7 +1066,8 @@ def deploy_application(dsl_path, timeout=240,
         blueprint_id = str(uuid.uuid4())
     blueprint_id = client.publish_blueprint(dsl_path,
                                             blueprint_id).id
-
+    if deployment_id is None:
+        deployment_id = str(uuid.uuid4())
     deployment = client.create_deployment(blueprint_id, deployment_id)
     execution_id, error = client.execute_deployment(
         deployment.id,
@@ -1181,20 +1187,20 @@ def get_deployment_nodes(deployment_id, get_state=False):
     return deployment_nodes
 
 
-def get_node_instance(node_id, get_state_and_runtime_properties=True):
-    client = create_rest_client()
-    node_instance = client.get_node_instance(
-        node_id,
-        get_state_and_runtime_properties=get_state_and_runtime_properties)
+def get_node_instance(node_instance_id):
+    client = create_new_rest_client()
+    node_instance = client.node_instances.get(node_instance_id)
     return node_instance
 
 
-def update_node_instance(node_id, state_version, runtime_properties=None,
+def update_node_instance(node_id,
+                         version,
+                         runtime_properties=None,
                          state=None):
-    client = create_rest_client()
-    return client.update_node_instance(
+    client = create_new_rest_client()
+    return client.node_instances.update(
         node_id,
-        state_version=state_version,
+        version=version,
         runtime_properties=runtime_properties,
         state=state)
 
