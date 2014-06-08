@@ -39,12 +39,15 @@ install:
    - mkdir -p package/linux
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
+
    - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b feature/CFY-660-add-node-type
    - git checkout feature/CFY-660-add-node-type
    - cd cloudify-rest-client; pip install .; cd ..
+     
    - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b feature/CFY-660-add-node-type
    - git checkout feature/CFY-660-add-node-type
    - cd cloudify-plugins-common; pip install .; cd ..
+     
    - cd plugins/agent-installer && pip install . && cd ../..
    - cd plugins/plugin-installer && pip install . && cd ../..
    - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
@@ -69,7 +72,7 @@ script:
    - flake8 tests/
 
    - cd workflow-service
-   - rake
+     #   - rake
    - cd ..
 
      #   - nosetests rest-service/manager_rest/test --nologcapture --nocapture
@@ -81,6 +84,7 @@ script:
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
    - cd ..
+   - pip list
 
 notifications:
   flowdock: 1563c50664ffcb851c73e5588ec241a5

@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from cloudify.context import BootstrapContext
 
 __author__ = 'idanmo'
 
@@ -25,6 +24,7 @@ from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
 from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
+from cloudify.context import BootstrapContext
 
 
 @init_worker_installer

@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from cloudify.context import BootstrapContext
 
 __author__ = 'idanmo'
 
@@ -24,6 +23,7 @@ import tempfile
 import uuid
 
 from cloudify.mocks import MockCloudifyContext
+from cloudify.context import BootstrapContext
 
 VAGRANT_MACHINE_IP = "10.0.0.5"
 MANAGER_IP = '10.0.0.1'

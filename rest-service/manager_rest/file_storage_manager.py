@@ -67,8 +67,8 @@ class FileStorageManager(object):
                 {key: DeploymentNode(**val) for key, val in data[NODES]
                     .iteritems()}
             deserialized_data[NODE_INSTANCES] = \
-                {key: DeploymentNodeInstance(**val) for key, val in data[NODE_INSTANCES]
-                    .iteritems()}
+                {key: DeploymentNodeInstance(**val) for key, val in
+                 data[NODE_INSTANCES].iteritems()}
             deserialized_data[BLUEPRINTS] = \
                 {key: BlueprintState(**val) for key, val in data[BLUEPRINTS]
                     .iteritems()}
@@ -88,9 +88,10 @@ class FileStorageManager(object):
         with open(self._storage_path, 'w') as f:
             serialized_data = dict()
             serialized_data[NODES] = {key: val.to_dict() for key, val in
-                                               data[NODES].iteritems()}
-            serialized_data[NODE_INSTANCES] = {key: val.to_dict() for key, val in
-                                      data[NODE_INSTANCES].iteritems()}
+                                      data[NODES].iteritems()}
+            serialized_data[NODE_INSTANCES] = {
+                key: val.to_dict()
+                for key, val in data[NODE_INSTANCES].iteritems()}
             serialized_data[BLUEPRINTS] =\
                 {key: val.to_dict() for key, val in data[BLUEPRINTS]
                     .iteritems()}
@@ -173,7 +174,7 @@ class FileStorageManager(object):
                               node.runtime_properties.items()) if node\
             .runtime_properties else prev_rt_info
         new_state = node.state or\
-                    data[NODE_INSTANCES][node_id].to_dict()['state']
+            data[NODE_INSTANCES][node_id].to_dict()['state']
         node = DeploymentNodeInstance(id=node_id,
                                       deployment_id=deployment_id,
                                       runtime_properties=merged_rt_info,
