@@ -219,11 +219,6 @@ class ESStorageManager(object):
         node_instance_id = node_instance.id
         doc_data = node_instance.to_dict()
         del(doc_data['version'])
-
-        with open('/tmp/idan.txt', 'a') as f:
-            f.write(str(doc_data))
-            f.write('\n')
-
         self._put_doc_if_not_exists(NODE_INSTANCE_TYPE,
                                     str(node_instance_id),
                                     doc_data)
