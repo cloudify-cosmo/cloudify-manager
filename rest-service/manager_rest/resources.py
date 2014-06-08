@@ -128,9 +128,9 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/workflows')
     api.add_resource(DeploymentsIdNodes,
                      '/deployments/<string:deployment_id>/nodes')
-    api.add_resource(NodeId,
+    api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
-    api.add_resource(NodeInstanceId,
+    api.add_resource(NodeInstancesId,
                      '/node-instances/<string:node_instance_id>')
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
@@ -837,10 +837,11 @@ class NodeInstancesId(Resource):
         Creates a instance instance in Cloudify's storage and returns it.
         """
         verify_json_content_type()
-        if request.json.__class__ is not dict:
+        body = request.json
+        if body.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
                 'request body is expected to be of key/value map type'
-                ' but is {0}'.format(request.json.__class__.__name__))
+                ' but is {0}'.format(body.__class__.__name__))
 
         if 'deploymentId' not in body:
             abort(400, message='Node creation request body is expected to '
@@ -916,8 +917,8 @@ class NodeInstancesId(Resource):
                           '"version" field'
             else:
                 message = \
-                    "request body's 'state_version' field must be an int but" \
-                    " is of type {0}".format(request.json['state_version']
+                    "request body's 'version' field must be an int but" \
+                    " is of type {0}".format(request.json['version']
                                              .__class__.__name__)
             raise manager_exceptions.BadParametersError(message)
 
