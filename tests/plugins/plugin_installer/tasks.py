@@ -24,12 +24,13 @@ INSTALLED_PLUGINS = []
 
 
 @operation
-def install(ctx, plugin, **kwargs):
-    print '###########', plugin, '#####################'
-    global INSTALLED_PLUGINS
-    ctx.logger.info("in plugin_installer.install --> "
-                    "installing plugin {0}".format(plugin))
-    INSTALLED_PLUGINS.append(plugin['name'])
+def install(ctx, plugins, **kwargs):
+
+    for plugin in plugins:
+        global INSTALLED_PLUGINS
+        ctx.logger.info("in plugin_installer.install --> "
+                        "installing plugin {0}".format(plugin))
+        INSTALLED_PLUGINS.append(plugin['name'])
 
 
 @operation
