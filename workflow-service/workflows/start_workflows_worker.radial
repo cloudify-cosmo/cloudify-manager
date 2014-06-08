@@ -10,9 +10,9 @@ define start_workflows_worker
 
   set 'v:plugin_payload': {
     properties: {
-      plugin: {
+      plugins: [{
         name: "default-workflows-plugin"
-      }
+      }]
     }
   }
 

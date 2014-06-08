@@ -35,38 +35,42 @@ logger.level = logging.DEBUG
 
 
 @operation
-def install(ctx, plugin, **kwargs):
+def install(ctx, plugins, **kwargs):
     """
-    Installs plugin as celery task according to the provided plugins details.
-    plugin parameter is expected to be in the following format:
+    Installs plugins as celery tasks according to the provided plugins
+    details.
+    the plugins parameter is expected to be a list where each element is in
+    the following format:
             { name: "...", url: "..." } OR { name: "...", folder: "..." }
     The plugin url should be a URL pointing to either a zip or tar.gz file.
     The plugin folder should be a a folder name inside the blueprint
     'plugins' directory containing the plugin.
     """
 
-    ctx.logger.info("Installing plugin {0}".format(plugin['name']))
+    for plugin in plugins:
+        ctx.logger.info("Installing plugin {0}".format(plugin['name']))
 
-    if plugin['name'] == 'default-workflows-plugin':
-        # special handling for the default workflows plugin, as it does not
-        # currently sit on the file server and is not under a blueprint
-        # context
-        plugin['url'] = '/opt/manager/cloudify-manager-develop/workflows'
+        if plugin['name'] == 'default-workflows-plugin':
+            # special handling for the default workflows plugin, as it does not
+            # currently sit on the file server and is not under a blueprint
+            # context
+            plugin['url'] = '/opt/manager/cloudify-manager-develop/workflows'
+            install_celery_plugin(plugin)
+            continue
+
+        if "folder" in plugin:
+
+            # convert the folder into a url inside the file server
+
+            management_ip = get_cosmo_properties()["management_ip"]
+            if management_ip:
+                plugin["url"] = \
+                    "http://{0}:53229/blueprints/{1}/plugins/{2}.zip"\
+                    .format(management_ip, ctx.blueprint_id, plugin['folder'])
+
+        ctx.logger.info("Installing plugin from URL --> {0}"
+                        .format(plugin['url']))
         install_celery_plugin(plugin)
-        return
-
-    if "folder" in plugin:
-
-        # convert the folder into a url inside the file server
-
-        management_ip = get_cosmo_properties()["management_ip"]
-        if management_ip:
-            plugin["url"] = "http://{0}:53229/blueprints/{1}/plugins/{2}.zip"\
-                .format(management_ip, ctx.blueprint_id, plugin['folder'])
-
-    ctx.logger.info("Installing plugin from URL --> {0}"
-                    .format(plugin['url']))
-    install_celery_plugin(plugin)
 
 
 def uninstall(plugin, __cloudify_id, **kwargs):

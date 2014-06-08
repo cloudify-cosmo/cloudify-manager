@@ -235,7 +235,7 @@ def _host_post_start(host_node):
                                      .format(plugin['name'])),
                 host_node.execute_operation(
                     'cloudify.interfaces.plugin_installer.install',
-                    kwargs={'plugin': plugin})]
+                    kwargs={'plugins': [plugin]})]
         tasks.append(host_node.execute_operation(
             'cloudify.interfaces.worker_installer.restart'))
     return tasks
