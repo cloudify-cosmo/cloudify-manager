@@ -18,9 +18,6 @@ __author__ = 'ran'
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import get_deployment_nodes
-from testenv import get_node_instance
-from testenv import update_node_instance
 
 
 class TestDeploymentNodes(TestCase):
@@ -29,7 +26,7 @@ class TestDeploymentNodes(TestCase):
         dsl_path = resource("dsl/deployment-nodes-three-nodes.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        nodes = get_deployment_nodes(deployment_id, get_state=True)
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
         self.assertEqual(deployment_id, nodes.deploymentId)
         self.assertEqual(3, len(nodes.nodes))
 
@@ -46,8 +43,10 @@ class TestDeploymentNodes(TestCase):
     def test_partial_update_node_instance(self):
         dsl_path = resource("dsl/set-property.yaml")
         deployment, _ = deploy(dsl_path)
-        node_id = get_deployment_nodes(deployment.id).nodes[0].id
-        node_instance = get_node_instance(node_id)
+
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment.id).id
+        node_instance = self.client.node_instances.get(node_id)
 
         # Initial assertions
         self.assertEquals('started', node_instance.state)
@@ -55,7 +54,7 @@ class TestDeploymentNodes(TestCase):
         self.assertEquals(2, len(node_instance.runtime_properties))
 
         # Updating only the state
-        node_instance = update_node_instance(
+        node_instance = self.client.node_instances.update(
             node_id,
             version=node_instance.version,
             state='new_state')
@@ -66,7 +65,7 @@ class TestDeploymentNodes(TestCase):
         self.assertEquals(2, len(node_instance.runtime_properties))
 
         # Updating only the runtime properties
-        node_instance = update_node_instance(
+        node_instance = self.client.node_instances.update(
             node_id,
             version=node_instance.version,
             runtime_properties={'new_key': 'new_value'})
@@ -83,7 +82,7 @@ class TestDeploymentNodes(TestCase):
 
         # Updating both state and runtime properties (updating an existing
         # key in runtime properties)
-        node_instance = update_node_instance(
+        node_instance = self.client.node_instances.update(
             node_id,
             version=node_instance.version,
             runtime_properties={'new_key': 'another_value'},
@@ -97,7 +96,7 @@ class TestDeploymentNodes(TestCase):
                           node_instance.runtime_properties['new_key'])
 
         # Updating neither state nor runtime properties (empty update)
-        node_instance = update_node_instance(
+        node_instance = self.client.node_instances.update(
             node_id,
             version=node_instance.version)
 

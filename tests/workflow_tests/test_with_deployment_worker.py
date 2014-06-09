@@ -58,7 +58,8 @@ class TestWithDeploymentWorker(TestCase):
         self._execute('install')
 
         # test plugin installed in deployment worker
-        deployment_plugins = self._get(get_installed_plugins, queue=DEPLOYMENT_ID)
+        deployment_plugins = self._get(get_installed_plugins,
+                                       queue=DEPLOYMENT_ID)
         self.assertIn('test_management_plugin', deployment_plugins)
 
         # test plugin installed in workflows worker
