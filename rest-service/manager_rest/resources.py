@@ -304,6 +304,9 @@ class BlueprintsIdArchive(Resource):
     )
     @exceptions_handled
     def get(self, blueprint_id):
+        """
+        Download blueprint's archive
+        """
         # Verify blueprint exists.
         get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
         blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
@@ -338,7 +341,7 @@ class Blueprints(Resource):
     )
     def get(self):
         """
-        Returns a list of submitted blueprints.
+        List uploaded blueprints
         """
         return [marshal(blueprint,
                         responses.BlueprintState.resource_fields) for
@@ -375,7 +378,7 @@ class Blueprints(Resource):
     @exceptions_handled
     def post(self):
         """
-        Submit a new blueprint.
+        Upload a blueprint
         """
         return BlueprintsUpload().do_request()
 
@@ -385,13 +388,14 @@ class BlueprintsIdSource(Resource):
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="getBlueprintSource",
-        notes="Returns a blueprint's source by the blueprint's id."
+        notes="Returns a blueprint's source (main yaml file)"
+              "  by the blueprint's id."
     )
     @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
     def get(self, blueprint_id):
         """
-        Returns a blueprint by its id.
+        Get blueprint's source (main yaml file) by id
         """
         fields = {'id', 'source'}
         blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
@@ -410,7 +414,7 @@ class BlueprintsId(Resource):
     @exceptions_handled
     def get(self, blueprint_id):
         """
-        Returns a blueprint by its id.
+        Get blueprint by id
         """
         fields = {'id', 'plan', 'created_at', 'updated_at'}
         blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
@@ -448,7 +452,7 @@ class BlueprintsId(Resource):
     @exceptions_handled
     def put(self, blueprint_id):
         """
-        Submit a new blueprint with a blueprint_id.
+        Upload a blueprint (id specified)
         """
         return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
 
@@ -460,6 +464,9 @@ class BlueprintsId(Resource):
     @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
     def delete(self, blueprint_id):
+        """
+        Delete blueprint by id
+        """
         # Note: The current delete semantics are such that if a deployment
         # for the blueprint exists, the deletion operation will fail.
         # However, there is no handling of possible concurrency issue with
@@ -492,7 +499,7 @@ class BlueprintsIdValidate(Resource):
     @exceptions_handled
     def get(self, blueprint_id):
         """
-        Validates a given blueprint.
+        Validate blueprint by id
         """
         return get_blueprints_manager().validate_blueprint(blueprint_id)
 
@@ -508,7 +515,7 @@ class ExecutionsId(Resource):
     @exceptions_handled
     def get(self, execution_id):
         """
-        Returns the execution state by its id.
+        Get execution by id
         """
         execution = get_blueprints_manager().get_execution(execution_id)
         return responses.Execution(**execution.to_dict())
@@ -533,7 +540,7 @@ class ExecutionsId(Resource):
     @exceptions_handled
     def post(self, execution_id):
         """
-        Modify a running execution state.
+        Apply execution action (cancel) by id
         """
         verify_json_content_type()
         request_json = request.json
@@ -576,7 +583,7 @@ class ExecutionsId(Resource):
     @exceptions_handled
     def patch(self, execution_id):
         """
-        Updates an execution's status
+        Update execution status by id
         """
         verify_json_content_type()
         request_json = request.json
@@ -600,7 +607,7 @@ class Deployments(Resource):
     )
     def get(self):
         """
-        Returns a list of existing deployments.
+        List deployments
         """
         return [marshal(responses.Deployment(**deployment.to_dict()),
                         responses.Deployment.resource_fields) for
@@ -623,7 +630,7 @@ class DeploymentsId(Resource):
     @exceptions_handled
     def get(self, deployment_id):
         """
-        Returns a deployment by its id.
+        Get deployment by id
         """
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         return responses.Deployment(**deployment.to_dict())
@@ -646,7 +653,7 @@ class DeploymentsId(Resource):
     @exceptions_handled
     def put(self, deployment_id):
         """
-        Creates a new deployment
+        Create a deployment
         """
         verify_json_content_type()
         request_json = request.json
@@ -672,6 +679,9 @@ class DeploymentsId(Resource):
     @marshal_with(responses.Deployment.resource_fields)
     @exceptions_handled
     def delete(self, deployment_id):
+        """
+        Delete deployment by id
+        """
         args = self._args_parser.parse_args()
 
         ignore_live_nodes = verify_and_convert_bool(
@@ -704,6 +714,9 @@ class Nodes(Resource):
     )
     @exceptions_handled
     def get(self):
+        """
+        List nodes
+        """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
         nodes = get_storage_manager().get_nodes(deployment_id)
@@ -735,6 +748,9 @@ class NodeInstances(Resource):
     )
     @exceptions_handled
     def get(self):
+        """
+        List node instances
+        """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
         nodes = get_storage_manager().get_node_instances(deployment_id)
@@ -770,7 +786,7 @@ class NodeInstancesId(Resource):
     @exceptions_handled
     def get(self, node_instance_id):
         """
-        Returns node instance from Cloudify's storage.
+        Get node instance by id
         """
         get_storage_manager().get_node_instance(node_instance_id)
         instance = get_storage_manager().get_node_instance(node_instance_id)
@@ -796,7 +812,7 @@ class NodeInstancesId(Resource):
     @exceptions_handled
     def put(self, node_instance_id):
         """
-        Creates a instance instance in Cloudify's storage and returns it.
+        Create node instance
         """
         verify_json_content_type()
         body = request.json
@@ -863,7 +879,7 @@ class NodeInstancesId(Resource):
     @exceptions_handled
     def patch(self, node_instance_id):
         """
-        Updates node instance
+        Update node instance by id
         """
         verify_json_content_type()
         if request.json.__class__ is not dict or \
@@ -913,7 +929,7 @@ class DeploymentsIdExecutions(Resource):
     @exceptions_handled
     def get(self, deployment_id):
         """
-        Returns a list of executions for the provided deployment.
+        List deployment executions
         """
 
         get_storage_manager().get_deployment(deployment_id, fields=['id'])
@@ -993,7 +1009,7 @@ class DeploymentsIdWorkflows(Resource):
     @exceptions_handled
     def get(self, deployment_id):
         """
-        Returns a list of workflows related to the provided deployment.
+        List deployment workflows
         """
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
@@ -1012,7 +1028,7 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
     """Query ElasticSearch with the provided index and query body.
 
     Returns:
-    ElasticSearch result as is (Python dict).
+    Elasticsearch result as is (Python dict).
     """
     es = elasticsearch.Elasticsearch()
     return es.search(index=index, doc_type=doc_type, body=body)
@@ -1023,7 +1039,7 @@ class Events(Resource):
     @exceptions_handled
     def _query_events(self):
         """
-        Returns events for the provided ElasticSearch query
+        List events for the provided Elasticsearch query
         """
         verify_json_content_type()
         return _query_elastic_search(index='cloudify_events',
@@ -1043,7 +1059,7 @@ class Events(Resource):
     )
     def get(self):
         """
-        Returns events for the provided ElasticSearch query
+        List events for the provided Elasticsearch query
         """
         return self._query_events()
 
@@ -1061,7 +1077,7 @@ class Events(Resource):
     )
     def post(self):
         """
-        Returns events for the provided ElasticSearch query
+        List events for the provided Elasticsearch query
         """
         return self._query_events()
 
@@ -1084,7 +1100,7 @@ class Search(Resource):
     @exceptions_handled
     def post(self):
         """
-        Returns results for the provided ElasticSearch query
+        Search using an Elasticsearch query
         """
         verify_json_content_type()
         return _query_elastic_search(index='cloudify_storage',
@@ -1102,7 +1118,7 @@ class Status(Resource):
     @exceptions_handled
     def get(self):
         """
-        Returns state of running system services
+        Get the status of running system services
         """
         job_list = {'rsyslog': 'Syslog',
                     'manager': 'Cloudify Manager',
@@ -1137,7 +1153,7 @@ class ProviderContext(Resource):
     @exceptions_handled
     def get(self):
         """
-        Get the provider context.
+        Get provider context
         """
         context = get_storage_manager().get_provider_context()
         return responses.ProviderContext(**context.to_dict())
@@ -1160,7 +1176,7 @@ class ProviderContext(Resource):
     @exceptions_handled
     def post(self):
         """
-        Post the provider context
+        Create provider context
         """
         verify_json_content_type()
         request_json = request.json
