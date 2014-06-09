@@ -27,8 +27,7 @@ class TestDeploymentNodes(TestCase):
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
-        self.assertEqual(deployment_id, nodes.deploymentId)
-        self.assertEqual(3, len(nodes.nodes))
+        self.assertEqual(3, len(nodes))
 
         def assert_node_state(node_id_infix):
             self.assertTrue(any(map(
@@ -45,7 +44,7 @@ class TestDeploymentNodes(TestCase):
         deployment, _ = deploy(dsl_path)
 
         node_id = self.client.node_instances.list(
-            deployment_id=deployment.id).id
+            deployment_id=deployment.id)[0].id
         node_instance = self.client.node_instances.get(node_id)
 
         # Initial assertions
