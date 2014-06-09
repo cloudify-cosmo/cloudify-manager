@@ -738,17 +738,16 @@ class Nodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('deployment-id',
+        self._args_parser.add_argument('deployment_id',
                                        type=str,
                                        required=False,
-                                       location='args',
-                                       dest='deployment_id')
+                                       location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentNode,
         nickname="listNodes",
         notes="Returns nodes list according to the provided query parameters.",
-        parameters=[{'name': 'deployment-id',
+        parameters=[{'name': 'deployment_id',
                      'description': 'Deployment id',
                      'required': False,
                      'allowMultiple': False,
