@@ -179,14 +179,11 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
+        instance_id = deployment_response['plan']['node_instances'][0]['id']
+
         # modifying a node's state so there'll be a node in a state other
         # than 'uninitialized'
-        resource_path = '/deployments/{0}/nodes' \
-            .format(deployment_id)
-        nodes = self.get(resource_path,
-                         query_params={'state': 'true'}).json['nodes']
-
-        resp = self.patch('/node-instances/{0}'.format(nodes[0]['id']), {
+        resp = self.patch('/node-instances/{0}'.format(instance_id), {
             'version': 0,
             'state': 'started'
         })
@@ -216,14 +213,12 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/nodes' \
-            .format(deployment_id)
-        nodes = self.get(resource_path,
-                         query_params={'state': 'true'}).json['nodes']
+        instance_ids = [instance['id'] for instance
+                        in deployment_response['plan']['node_instances']]
 
         # modifying nodes states
-        for node in nodes:
-            resp = self.patch('/node-instances/{0}'.format(node['id']), {
+        for instance_id in instance_ids:
+            resp = self.patch('/node-instances/{0}'.format(instance_id), {
                 'version': 0,
                 'state': state
             })
