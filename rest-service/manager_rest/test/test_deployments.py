@@ -159,9 +159,9 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/nodes' \
-            .format(deployment_id)
-        nodes = self.get(resource_path).json['nodes']
+        resource_path = '/node-instances?deployment_id={0}'.format(
+            deployment_id)
+        nodes = self.get(resource_path).json
         self.assertTrue(len(nodes) > 0)
         nodes_ids = [node['id'] for node in nodes]
 
@@ -179,11 +179,13 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
-        instance_id = deployment_response['plan']['node_instances'][0]['id']
-
         # modifying a node's state so there'll be a node in a state other
         # than 'uninitialized'
-        resp = self.patch('/node-instances/{0}'.format(instance_id), {
+        resource_path = '/node-instances?deployment_id={0}'.format(
+            deployment_id)
+        nodes = self.get(resource_path).json
+
+        resp = self.patch('/node-instances/{0}'.format(nodes[0]['id']), {
             'version': 0,
             'state': 'started'
         })
@@ -213,12 +215,13 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
-        instance_ids = [instance['id'] for instance
-                        in deployment_response['plan']['node_instances']]
+        resource_path = '/node-instances?deployment_id={0}'.format(
+            deployment_id)
+        nodes = self.get(resource_path).json
 
         # modifying nodes states
-        for instance_id in instance_ids:
-            resp = self.patch('/node-instances/{0}'.format(instance_id), {
+        for node in nodes:
+            resp = self.patch('/node-instances/{0}'.format(node['id']), {
                 'version': 0,
                 'state': state
             })
@@ -259,16 +262,14 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/nodes'\
-                        .format(deployment_id)
+        resource_path = '/node-instances?deployment_id={0}'.format(
+            deployment_id)
         nodes = self.get(resource_path).json
-        self.assertEquals(deployment_id, nodes['deploymentId'])
-        self.assertEquals(2, len(nodes['nodes']))
+        self.assertEquals(2, len(nodes))
 
         def assert_node_exists(starts_with):
             self.assertTrue(any(map(
-                lambda n: n['id'].startswith(starts_with),
-                nodes['nodes'])),
+                lambda n: n['id'].startswith(starts_with), nodes)),
                 'Failed finding node with prefix {0}'.format(starts_with))
         assert_node_exists('vm')
         assert_node_exists('http_web_server')
