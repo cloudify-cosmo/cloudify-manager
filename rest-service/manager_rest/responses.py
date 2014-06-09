@@ -130,16 +130,30 @@ class DeploymentNode(object):
 
     resource_fields = {
         'id': fields.String,
-        'runtimeInfo': fields.Raw(attribute='runtime_info'),
-        'stateVersion': fields.Raw(attribute='state_version'),
-        'state': fields.String
+        'deployment_id': fields.String,
+        'blueprint_id': fields.String,
+        'type': fields.String,
+        'type_hierarchy': fields.Raw,
+        'number_of_instances': fields.String,
+        'host_id': fields.String,
+        'properties': fields.Raw,
+        'operations': fields.Raw,
+        'plugins': fields.Raw,
+        'relationships': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info']
-        self.state_version = kwargs['state_version']
-        self.state = kwargs['state']
+        self.deployment_id = kwargs['deployment_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.type = kwargs['type']
+        self.type_hierarchy = kwargs['type_hierarchy']
+        self.number_of_instances = kwargs['number_of_instances']
+        self.host_id = kwargs['host_id']
+        self.properties = kwargs['properties']
+        self.operations = kwargs['operations']
+        self.plugins = kwargs['plugins']
+        self.relationships = kwargs['relationships']
 
 
 @swagger.model

@@ -130,6 +130,8 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/nodes')
     api.add_resource(NodesId,
                      '/nodes/<string:node_id>')
+    api.add_resource(Nodes,
+                     '/nodes')
     api.add_resource(NodeInstancesId,
                      '/node-instances/<string:node_instance_id>')
     api.add_resource(Events, '/events')
@@ -730,6 +732,37 @@ class DeploymentsId(Resource):
         deployment = get_blueprints_manager().delete_deployment(
             deployment_id, ignore_live_nodes)
         return responses.Deployment(**deployment.to_dict()), 200
+
+
+class Nodes(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('deployment-id',
+                                       type=str,
+                                       required=False,
+                                       location='args',
+                                       dest='deployment_id')
+
+    @swagger.operation(
+        responseClass=responses.DeploymentNode,
+        nickname="listNodes",
+        notes="Returns nodes list according to the provided query parameters.",
+        parameters=[{'name': 'deployment-id',
+                     'description': 'Deployment id',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'}]
+    )
+    @exceptions_handled
+    def get(self):
+        args = self._args_parser.parse_args()
+        deployment_id = args.get('deployment_id')
+        nodes = get_storage_manager().get_nodes(deployment_id)
+        return [marshal(
+            responses.DeploymentNode(**node.to_dict()),
+            responses.DeploymentNode.resource_fields) for node in nodes]
 
 
 class NodesId(Resource):
