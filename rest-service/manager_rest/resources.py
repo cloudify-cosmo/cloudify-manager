@@ -126,10 +126,10 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>/executions')
     api.add_resource(DeploymentsIdWorkflows,
                      '/deployments/<string:deployment_id>/workflows')
-    api.add_resource(DeploymentsIdNodes,
-                     '/deployments/<string:deployment_id>/nodes')
-    api.add_resource(NodesId,
-                     '/nodes/<string:node_id>')
+    api.add_resource(Nodes,
+                     '/nodes')
+    api.add_resource(NodeInstances,
+                     '/node-instances')
     api.add_resource(NodeInstancesId,
                      '/node-instances/<string:node_instance_id>')
     api.add_resource(Events, '/events')
@@ -591,56 +591,6 @@ class ExecutionsId(Resource):
             execution_id).to_dict())
 
 
-class DeploymentsIdNodes(Resource):
-
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('state', type=str,
-                                       default='false', location='args')
-
-    @swagger.operation(
-        responseClass=responses.DeploymentNodes,
-        nickname="list",
-        notes="Returns an object containing nodes associated with "
-              "this deployment.",
-        parameters=[{'name': 'state',
-                     'description': 'Specifies whether to return state '
-                                    'for the nodes.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': False,
-                     'paramType': 'query'}]
-    )
-    @marshal_with(responses.DeploymentNodes.resource_fields)
-    @exceptions_handled
-    def get(self, deployment_id):
-        """
-        Returns an object containing nodes associated with this deployment.
-        """
-        args = self._args_parser.parse_args()
-        get_state = verify_and_convert_bool(
-            'state', args['state'])
-
-        deployment = get_blueprints_manager().get_deployment(deployment_id)
-        node_ids = map(lambda node: node['id'],
-                       deployment.plan['nodes'])
-
-        nodes = []
-        for node_id in node_ids:
-            node_result = responses.DeploymentNode(id=node_id,
-                                                   state=None,
-                                                   state_version=None,
-                                                   runtime_info=None)
-            if get_state:
-                node = get_storage_manager().get_node_instance(node_id)
-                node_result.state = node.state
-                node_result.state_version = node.version
-            nodes.append(node_result)
-        return responses.DeploymentNodes(deployment_id=deployment_id,
-                                         nodes=nodes)
-
-
 class Deployments(Resource):
 
     @swagger.operation(
@@ -732,60 +682,72 @@ class DeploymentsId(Resource):
         return responses.Deployment(**deployment.to_dict()), 200
 
 
-class NodesId(Resource):
+class Nodes(Resource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('state_and_runtime_properties',
+        self._args_parser.add_argument('deployment_id',
                                        type=str,
-                                       default='true',
+                                       required=False,
                                        location='args')
 
     @swagger.operation(
-        responseClass=responses.DeploymentNode,
-        nickname="getNodeInstance",
-        notes="Returns node state/runtime properties "
-              "according to the provided query parameters.",
-        parameters=[{'name': 'node_id',
-                     'description': 'Node Id',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'path'},
-                    {'name': 'state_and_runtime_properties',
-                     'description': 'Specifies whether to return state and '
-                                    'runtime properties',
+        responseClass='List[{0}]'.format(responses.Node.__name__),
+        nickname="listNodes",
+        notes="Returns nodes list according to the provided query parameters.",
+        parameters=[{'name': 'deployment_id',
+                     'description': 'Deployment id',
                      'required': False,
                      'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': True,
+                     'dataType': 'string',
                      'paramType': 'query'}]
     )
-    @marshal_with(responses.DeploymentNode.resource_fields)
     @exceptions_handled
-    def get(self, node_id):
-        """
-        Gets node runtime or state.
-        """
+    def get(self):
         args = self._args_parser.parse_args()
-        # this parameter is now deprecated and should be removed - state and
-        # runtime properties will be returned regardless of its value
-        get_state_and_runtime_properties = verify_and_convert_bool(  # NOQA
-            'state_and_runtime_properties',
-            args['state_and_runtime_properties'])
+        deployment_id = args.get('deployment_id')
+        nodes = get_storage_manager().get_nodes(deployment_id)
+        return [marshal(
+            responses.Node(**node.to_dict()),
+            responses.Node.resource_fields) for node in nodes]
 
-        node = get_storage_manager().get_node_instance(node_id)
 
-        return responses.DeploymentNode(id=node_id,
-                                        state=node.state,
-                                        runtime_info=node.runtime_properties,
-                                        state_version=node.version)
+class NodeInstances(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('deployment_id',
+                                       type=str,
+                                       required=False,
+                                       location='args')
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
+        nickname="listNodeInstances",
+        notes="Returns node instances list according to the provided query"
+              " parameters.",
+        parameters=[{'name': 'deployment_id',
+                     'description': 'Deployment id',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'}]
+    )
+    @exceptions_handled
+    def get(self):
+        args = self._args_parser.parse_args()
+        deployment_id = args.get('deployment_id')
+        nodes = get_storage_manager().get_node_instances(deployment_id)
+        return [marshal(
+            responses.NodeInstance(**node.to_dict()),
+            responses.NodeInstance.resource_fields)
+            for node in nodes]
 
 
 class NodeInstancesId(Resource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentNode,
+        responseClass=responses.Node,
         nickname="getNodeInstance",
         notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
@@ -843,16 +805,16 @@ class NodeInstancesId(Resource):
                 'request body is expected to be of key/value map type'
                 ' but is {0}'.format(body.__class__.__name__))
 
-        if 'deploymentId' not in body:
+        if 'deployment_id' not in body:
             abort(400, message='Node creation request body is expected to '
                                'contain a deployment_id field')
 
         storage = get_storage_manager()
         runtime_properties = \
-            body['runtimeProperties'] if 'runtimeProperties' in body else {}
+            body['runtime_properties'] if 'runtime_properties' in body else {}
         instance = models.DeploymentNodeInstance(
             id=node_instance_id,
-            deployment_id=body['deploymentId'],
+            deployment_id=body['deployment_id'],
             runtime_properties=runtime_properties,
             state='uninitialized',
             version=None)
@@ -924,8 +886,8 @@ class NodeInstancesId(Resource):
 
         node = models.DeploymentNodeInstance(
             id=node_instance_id,
-            deployment_id=request.json.get('deploymentId'),
-            runtime_properties=request.json.get('runtimeProperties'),
+            deployment_id=request.json.get('deployment_id'),
+            runtime_properties=request.json.get('runtime_properties'),
             state=request.json.get('state'),
             version=request.json['version'])
         get_storage_manager().update_node_instance(node)

@@ -30,10 +30,7 @@ from workflow_tests.testenv import publish_blueprint
 from workflow_tests.testenv import update_execution_status
 from workflow_tests.testenv import get_deployment_executions
 from workflow_tests.testenv import get_execution
-from workflow_tests.testenv import update_node_instance
 from workflow_tests.testenv import create_rest_client
-from testenv import get_node_instance
-from testenv import get_deployment_nodes
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestCallError
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -239,13 +236,16 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(deployment_id, result.id)
 
         # retrieving deployment nodes
-        nodes = get_deployment_nodes(deployment_id, True).nodes
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
         self.assertTrue(len(nodes) > 0)
         nodes_ids = [node.id for node in nodes]
 
         # setting one node's state to 'started' (making it a 'live' node)
-        update_node_instance(nodes[0].id, nodes[0].stateVersion,
-                             state='started')
+        # node must be read using get in order for it to have a version.
+        node = self.client.node_instances.get(nodes[0].id)
+        self.client.node_instances.update(node.id,
+                                          state='started',
+                                          version=node.version)
 
         # setting the execution's status to 'launched' so it'll prevent the
         # deployment deletion
@@ -301,7 +301,7 @@ class BasicWorkflowsTest(TestCase):
         # verifying deployment's nodes do no longer exist
         for node_id in nodes_ids:
             try:
-                get_node_instance(node_id)
+                self.client.node_instances.get(node_id)
                 self.fail('node {0} still exists even though it should have '
                           'been deleted when its deployment was deleted'
                           .format(node_id))
@@ -324,11 +324,19 @@ class BasicWorkflowsTest(TestCase):
         client = create_rest_client()
         client.publish_blueprint(dsl_path, blueprint_id)
         client.create_deployment(blueprint_id, deployment_id)
-        deployment_nodes = get_deployment_nodes(deployment_id)
-        self.assertEqual(1, len(deployment_nodes.nodes))
-        node_id = deployment_nodes.nodes[0].id
-        node_instance = get_node_instance(node_id)
-        self.assertEqual('uninitialized', node_instance['state'])
+
+        def assert_deployment_nodes_length():
+            deployment_nodes = self.client.node_instances.list(
+                deployment_id=deployment_id)
+            self.assertEqual(1, len(deployment_nodes))
+
+        self.do_assertions(assert_deployment_nodes_length, timeout=30)
+
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        node_id = deployment_nodes[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        self.assertEqual('uninitialized', node_instance.state)
 
     def test_node_states(self):
         dsl_path = resource('dsl/node_states.yaml')
@@ -346,8 +354,9 @@ class BasicWorkflowsTest(TestCase):
             'creating', 'configuring', 'starting'
         ])
 
-        deployment_nodes = get_deployment_nodes(deployment_id)
-        self.assertEqual(1, len(deployment_nodes.nodes))
-        node_id = deployment_nodes.nodes[0].id
-        node_instance = get_node_instance(node_id)
-        self.assertEqual('started', node_instance['state'])
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        self.assertEqual(1, len(deployment_nodes))
+        node_id = deployment_nodes[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        self.assertEqual('started', node_instance.state)

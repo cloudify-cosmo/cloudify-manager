@@ -1000,6 +1000,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
         self.logger.setLevel(logging.INFO)
+        self.client = create_new_rest_client()
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
@@ -1013,6 +1014,17 @@ class TestCase(unittest.TestCase):
             name=task_name,
             args=args,
             queue=queue)
+
+    def do_assertions(self, assertions_func, timeout=10):
+        deadline = time.time() + timeout
+        while True:
+            try:
+                assertions_func()
+                break
+            except AssertionError:
+                if time.time() > deadline:
+                    raise
+                time.sleep(1)
 
     def create_celery_worker(self, queue):
         return TestEnvironment.create_celery_worker(queue)

@@ -177,14 +177,18 @@ class ESStorageManager(object):
         return node
 
     def get_node_instances(self, deployment_id):
-        query = {'query': {'term': {'deployment_id': deployment_id}}}
+        query = None
+        if deployment_id:
+            query = {'query': {'term': {'deployment_id': deployment_id}}}
         return self._list_docs(NODE_INSTANCE_TYPE,
                                DeploymentNodeInstance,
                                query)
 
-    def get_nodes(self, deployment_id):
-        query = {'query': {'term': {'deployment_id': deployment_id}}}
-        return self._list_docs(NODE_TYPE, DeploymentNodeInstance, query)
+    def get_nodes(self, deployment_id=None):
+        query = None
+        if deployment_id:
+            query = {'query': {'term': {'deployment_id': deployment_id}}}
+        return self._list_docs(NODE_TYPE, DeploymentNode, query)
 
     def get_blueprint(self, blueprint_id, fields=None):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,

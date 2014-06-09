@@ -126,20 +126,34 @@ class Execution(object):
 
 
 @swagger.model
-class DeploymentNode(object):
+class Node(object):
 
     resource_fields = {
         'id': fields.String,
-        'runtimeInfo': fields.Raw(attribute='runtime_info'),
-        'stateVersion': fields.Raw(attribute='state_version'),
-        'state': fields.String
+        'deployment_id': fields.String,
+        'blueprint_id': fields.String,
+        'type': fields.String,
+        'type_hierarchy': fields.Raw,
+        'number_of_instances': fields.String,
+        'host_id': fields.String,
+        'properties': fields.Raw,
+        'operations': fields.Raw,
+        'plugins': fields.Raw,
+        'relationships': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info']
-        self.state_version = kwargs['state_version']
-        self.state = kwargs['state']
+        self.deployment_id = kwargs['deployment_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.type = kwargs['type']
+        self.type_hierarchy = kwargs['type_hierarchy']
+        self.number_of_instances = kwargs['number_of_instances']
+        self.host_id = kwargs['host_id']
+        self.properties = kwargs['properties']
+        self.operations = kwargs['operations']
+        self.plugins = kwargs['plugins']
+        self.relationships = kwargs['relationships']
 
 
 @swagger.model
@@ -147,8 +161,8 @@ class NodeInstance(object):
 
     resource_fields = {
         'id': fields.String,
-        'deploymentId': fields.String(attribute='deployment_id'),
-        'runtimeProperties': fields.Raw(attribute='runtime_properties'),
+        'deployment_id': fields.String,
+        'runtime_properties': fields.Raw,
         'version': fields.Raw,
         'state': fields.String
     }
@@ -159,21 +173,6 @@ class NodeInstance(object):
         self.runtime_properties = kwargs['runtime_properties']
         self.version = kwargs['version']
         self.state = kwargs['state']
-
-
-@swagger.model
-@swagger.nested(nodes=DeploymentNode.__name__)
-class DeploymentNodes(object):
-
-    resource_fields = {
-        'deploymentId': fields.String(attribute='deployment_id'),
-        'nodes': fields.List(
-            fields.Nested(DeploymentNode.resource_fields))
-    }
-
-    def __init__(self, **kwargs):
-        self.deployment_id = kwargs['deployment_id']
-        self.nodes = kwargs['nodes']
 
 
 @swagger.model

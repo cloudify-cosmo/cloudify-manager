@@ -81,7 +81,7 @@ class DeploymentNode(SerializableObject):
     fields = {
         'id', 'deployment_id', 'blueprint_id', 'type', 'type_hierarchy',
         'number_of_instances', 'host_id', 'properties',
-        'operations', 'plugins'
+        'operations', 'plugins', 'relationships'
     }
 
     def __init__(self, **kwargs):
@@ -95,6 +95,7 @@ class DeploymentNode(SerializableObject):
         self.properties = kwargs['properties']
         self.operations = kwargs['operations']
         self.plugins = kwargs['plugins']
+        self.relationships = kwargs['relationships']
 
 
 class DeploymentNodeInstance(SerializableObject):
