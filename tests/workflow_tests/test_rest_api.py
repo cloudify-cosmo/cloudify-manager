@@ -53,3 +53,26 @@ class RestAPITest(TestCase):
         self.assertEqual(self.deployment_id, node.deployment_id)
         self.assertEqual('cloudify.types.host', node.type)
         self.assertTrue(len(node.properties) > 0)
+
+    def test_node_instances(self):
+        def assert_instances():
+            instances = self.client.node_instances.list(
+                deployment_id=self.deployment_id)
+            self.assertEqual(1, len(instances))
+        self.do_assertions(assert_instances, timeout=30)
+
+        all_instances = self.client.node_instances.list()
+        self.assertEqual(1, len(all_instances))
+
+        instance = all_instances[0]
+        self.assertIsNotNone(instance.id)
+        self.assertEqual(self.deployment_id, instance.deployment_id)
+        self.assertIsNone(instance.runtime_properties)
+        self.assertEqual('uninitialized', instance.state)
+
+        instance = self.client.node_instances.get(instance.id)
+        self.assertIsNotNone(instance.id)
+        self.assertEqual(self.deployment_id, instance.deployment_id)
+        self.assertIsNone(instance.runtime_properties)
+        self.assertEqual('uninitialized', instance.state)
+        self.assertEqual(1, instance.version)

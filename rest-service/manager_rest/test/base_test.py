@@ -167,4 +167,5 @@ class BaseServerTestCase(unittest.TestCase):
         query_string = ''
         if query_params and len(query_params) > 0:
             query_string += '&' + urllib.urlencode(query_params)
-        return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
+            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
+        return resource_path

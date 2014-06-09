@@ -84,7 +84,6 @@ script:
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
    - cd ..
-   - pip list
 
 notifications:
   flowdock: 1563c50664ffcb851c73e5588ec241a5
