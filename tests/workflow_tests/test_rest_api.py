@@ -29,7 +29,7 @@ class RestAPITest(TestCase):
         self.node_id = 'webserver_host'
         self.blueprint_id = 'blueprint-' + str(uuid.uuid4())
         self.deployment_id = 'deployment-' + str(uuid.uuid4())
-        self.client.blueprints.upload_blueprint(dsl_path, self.blueprint_id)
+        self.client.blueprints.upload(dsl_path, self.blueprint_id)
         self.client.deployments.create(self.blueprint_id, self.deployment_id)
 
     def test_nodes(self):

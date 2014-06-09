@@ -15,9 +15,7 @@
 
 __author__ = 'dank'
 
-
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient
+import uuid
 
 from testenv import TestCase
 from testenv import get_resource as resource
@@ -31,21 +29,25 @@ from plugins.worker_installer.tasks import (get_current_worker_state,
                                             INSTALLED,
                                             STOPPED,
                                             UNINSTALLED)
+from cosmo_manager_rest_client.cosmo_manager_rest_client \
+    import CosmoManagerRestClient
 
-DEPLOYMENT = 'deployment_id'
+
+BLUEPRINT_ID = str(uuid.uuid4())
+DEPLOYMENT_ID = str(uuid.uuid4())
 
 AFTER_INSTALL_STAGES = [INSTALLED, STARTED, RESTARTED]
 AFTER_UNINSTALL_STAGES = AFTER_INSTALL_STAGES + [STOPPED, UNINSTALLED]
 
 
-class TestWitDeploymentWorker(TestCase):
+class TestWithDeploymentWorker(TestCase):
 
     def setUp(self):
-        super(TestWitDeploymentWorker, self).setUp()
-        self.rest = CosmoManagerRestClient('localhost', port=8100)
+        super(TestWithDeploymentWorker, self).setUp()
         self._upload_and_deploy(resource('dsl/with_plugin.yaml'))
+        self.rest = CosmoManagerRestClient('localhost', port=8100)
         self.node_id = self._list_nodes()[0].id
-        self.deployment_worker = self.create_celery_worker(DEPLOYMENT)
+        self.deployment_worker = self.create_celery_worker(DEPLOYMENT_ID)
         self.agent_worker = self.create_celery_worker(self.node_id)
         self.addCleanup(self.deployment_worker.close)
         self.addCleanup(self.agent_worker.close)
@@ -56,7 +58,7 @@ class TestWitDeploymentWorker(TestCase):
         self._execute('install')
 
         # test plugin installed in deployment worker
-        deployment_plugins = self._get(get_installed_plugins, queue=DEPLOYMENT)
+        deployment_plugins = self._get(get_installed_plugins, queue=DEPLOYMENT_ID)
         self.assertIn('test_management_plugin', deployment_plugins)
 
         # test plugin installed in workflows worker
@@ -78,7 +80,7 @@ class TestWitDeploymentWorker(TestCase):
         self.assertEquals(state, AFTER_INSTALL_STAGES)
 
         # test valid agent worker installation order
-        state = self._get(get_current_worker_state, queue=DEPLOYMENT)
+        state = self._get(get_current_worker_state, queue=DEPLOYMENT_ID)
         self.assertEquals(state, AFTER_INSTALL_STAGES)
 
         self._execute('uninstall')
@@ -98,18 +100,23 @@ class TestWitDeploymentWorker(TestCase):
         # self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
     def _upload_and_deploy(self, dsl_path):
-        blueprint_id = self.rest.publish_blueprint(dsl_path).id
-        return self.rest.create_deployment(blueprint_id, DEPLOYMENT)
+        blueprint_id = self.client.blueprints.upload(dsl_path, BLUEPRINT_ID).id
+        return self.client.deployments.create(blueprint_id, DEPLOYMENT_ID)
 
     def _execute(self, workflow):
-        _, error = self.rest.execute_deployment(DEPLOYMENT,
+        _, error = self.rest.execute_deployment(DEPLOYMENT_ID,
                                                 workflow,
                                                 timeout=300)
         if error is not None:
             raise RuntimeError('Workflow execution failed: {}'.format(error))
 
     def _list_nodes(self):
-        return self.rest.list_deployment_nodes(DEPLOYMENT).nodes
+        def assert_nodes_exist():
+            nodes = self.client.node_instances.list(
+                deployment_id=DEPLOYMENT_ID)
+            self.assertTrue(len(nodes) > 0)
+        self.do_assertions(assert_nodes_exist, timeout=30)
+        return self.client.node_instances.list(deployment_id=DEPLOYMENT_ID)
 
     def _get(self, task, queue, args=None):
         return self.send_task(task, queue=queue, args=args).get(timeout=10)
