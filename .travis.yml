@@ -57,6 +57,9 @@ install:
    - pip install nose
    - pip install fabric
 
+   - pip install https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/feature/CFY-768-reduce-plan-size.zip
+   - pip install https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/feature/CFY-768-reduce-plan-size.zip
+
    - cd cloudify-rest-client; pip install .; cd ..
    - cd cloudify-plugins-common; pip install .; cd ..
 

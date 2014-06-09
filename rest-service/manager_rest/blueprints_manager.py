@@ -210,8 +210,8 @@ class BlueprintsManager(object):
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)
 
-        for plan_node in new_deployment.plan['nodes']:
-            node_id = plan_node['id']
+        for node_instance in new_deployment.plan['node_instances']:
+            node_id = node_instance['id']
             node = models.DeploymentNodeInstance(id=node_id,
                                                  deployment_id=deployment_id,
                                                  state='uninitialized',
