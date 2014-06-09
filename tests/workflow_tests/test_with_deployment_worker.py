@@ -29,8 +29,6 @@ from plugins.worker_installer.tasks import (get_current_worker_state,
                                             INSTALLED,
                                             STOPPED,
                                             UNINSTALLED)
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient
 
 
 BLUEPRINT_ID = str(uuid.uuid4())
@@ -45,7 +43,6 @@ class TestWithDeploymentWorker(TestCase):
     def setUp(self):
         super(TestWithDeploymentWorker, self).setUp()
         self._upload_and_deploy(resource('dsl/with_plugin.yaml'))
-        self.rest = CosmoManagerRestClient('localhost', port=8100)
         self.node_id = self._list_nodes()[0].id
         self.deployment_worker = self.create_celery_worker(DEPLOYMENT_ID)
         self.agent_worker = self.create_celery_worker(self.node_id)
