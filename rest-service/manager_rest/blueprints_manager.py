@@ -244,9 +244,11 @@ class BlueprintsManager(object):
         prepared_relationships = []
         for raw_relationship in raw_node['relationships']:
             relationship = {
-                'target_node_id': raw_relationship['target_id'],
+                'target_id': raw_relationship['target_id'],
                 'type': raw_relationship['type'],
-                'properties': raw_relationship['properties']
+                'properties': raw_relationship['properties'],
+                'source_operations': raw_relationship['source_operations'],
+                'target_operations': raw_relationship['target_operations'],
             }
             prepared_relationships.append(relationship)
         return prepared_relationships
