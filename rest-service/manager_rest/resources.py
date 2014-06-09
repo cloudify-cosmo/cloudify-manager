@@ -692,7 +692,7 @@ class Nodes(Resource):
                                        location='args')
 
     @swagger.operation(
-        responseClass=responses.Node,
+        responseClass='List[{0}]'.format(responses.Node.__name__),
         nickname="listNodes",
         notes="Returns nodes list according to the provided query parameters.",
         parameters=[{'name': 'deployment_id',
@@ -722,7 +722,7 @@ class NodeInstances(Resource):
                                        location='args')
 
     @swagger.operation(
-        responseClass=responses.Node,
+        responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
         nickname="listNodeInstances",
         notes="Returns node instances list according to the provided query"
               " parameters.",
