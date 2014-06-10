@@ -19,7 +19,7 @@ from setuptools import setup
 
 
 PLUGINS_COMMON_VERSION = "3.0"
-PLUGINS_COMMON_BRANCH = "develop"
+PLUGINS_COMMON_BRANCH = "feature/CFY-606-add-windows-agent"
 PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
                  "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
                      PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)
@@ -36,7 +36,6 @@ setup(
     install_requires=[
         'cloudify-plugins-common',
         'pywinrm==0.0.2dev',
-        'kerberos==1.1.1',
     ],
     tests_require=[
         "nose",
