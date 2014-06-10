@@ -123,6 +123,13 @@ class FileStorageManager(object):
             if x.deployment_id == deployment_id]
         return instances
 
+    def get_nodes(self, deployment_id=None):
+        nodes = [
+            x for x in self._load_data()[NODES].values()
+            if deployment_id is None or x.deployment_id == deployment_id
+        ]
+        return nodes
+
     def put_node(self, node):
         data = self._load_data()
         node_id = '{0}_{1}'.format(node.deployment_id, node.id)
