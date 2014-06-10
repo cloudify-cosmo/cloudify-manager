@@ -210,7 +210,8 @@ class BlueprintsManager(object):
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)
 
-        for node_instance in new_deployment.plan['node_instances']:
+        node_instances = new_deployment.plan['node_instances']
+        for node_instance in node_instances:
             instance_id = node_instance['id']
             node_id = node_instance['name']
             relationships = node_instance.get('relationships', [])
@@ -226,6 +227,10 @@ class BlueprintsManager(object):
                 runtime_properties=None,
                 version=None)
             self.sm.put_node_instance(instance)
+
+        self._wait_for_count(expected_count=len(node_instances),
+                             query_method=self.sm.get_node_instances,
+                             deployment_id=deployment_id)
 
         return new_deployment
 
@@ -246,6 +251,10 @@ class BlueprintsManager(object):
                 relationships=self._prepare_node_relationships(raw_node)
             ))
 
+        self._wait_for_count(expected_count=len(plan['nodes']),
+                             query_method=self.sm.get_nodes,
+                             deployment_id=deployment_id)
+
     @staticmethod
     def _prepare_node_relationships(raw_node):
         if 'relationships' not in raw_node:
@@ -261,6 +270,19 @@ class BlueprintsManager(object):
             }
             prepared_relationships.append(relationship)
         return prepared_relationships
+
+    @staticmethod
+    def _wait_for_count(expected_count, query_method, deployment_id):
+        import time
+        timeout = time.time() + 5
+        # workaround ES eventual consistency
+        # TODO check if there is a count query and do that
+        actual_count = len(query_method(deployment_id))
+        while actual_count < expected_count and time.time() < timeout:
+            time.sleep(1)
+            actual_count = len(query_method(deployment_id))
+        if actual_count < expected_count:
+            raise RuntimeError('Timed out while waiting for nodes count')
 
 
 def teardown_blueprints_manager(exception):
