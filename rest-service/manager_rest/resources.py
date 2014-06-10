@@ -657,8 +657,8 @@ class DeploymentsId(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        verify_parameter_in_request_body('blueprintId', request_json)
-        blueprint_id = request.json['blueprintId']
+        verify_parameter_in_request_body('blueprint_id', request_json)
+        blueprint_id = request.json['blueprint_id']
         return get_blueprints_manager().create_deployment(blueprint_id,
                                                           deployment_id), 201
 
@@ -940,7 +940,7 @@ class DeploymentsIdExecutions(Resource):
         """
         verify_json_content_type()
         request_json = request.json
-        verify_parameter_in_request_body('workflowId', request_json)
+        verify_parameter_in_request_body('workflow_id', request_json)
 
         args = self._post_args_parser.parse_args()
         force = verify_and_convert_bool('force', args['force'])
@@ -958,7 +958,7 @@ class DeploymentsIdExecutions(Resource):
                     '"force=true" as a query parameter to this request'.format(
                         running))
 
-        workflow_id = request.json['workflowId']
+        workflow_id = request.json['workflow_id']
         execution = get_blueprints_manager().execute_workflow(deployment_id,
                                                               workflow_id)
         return responses.Execution(**execution.to_dict()), 201

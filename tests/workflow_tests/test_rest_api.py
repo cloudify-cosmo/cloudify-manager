@@ -32,6 +32,12 @@ class RestAPITest(TestCase):
         self.client.blueprints.upload(dsl_path, self.blueprint_id)
         self.client.deployments.create(self.blueprint_id, self.deployment_id)
 
+
+
+
+        from time import sleep
+        sleep(10000000000)
+
     def test_nodes(self):
         nodes = self.client.nodes.list(deployment_id=self.deployment_id)
         self.assertEqual(1, len(nodes))

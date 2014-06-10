@@ -56,10 +56,9 @@ class Deployment(object):
 
     resource_fields = {
         'id': fields.String,
-        # 'permalink': fields.Url('blueprint_ep')
-        'createdAt': fields.String(attribute='created_at'),
-        'updatedAt': fields.String(attribute='updated_at'),
-        'blueprintId': fields.String(attribute='blueprint_id'),
+        'created_at': fields.String,
+        'updated_at': fields.String,
+        'blueprint_id': fields.String,
         'plan': fields.Raw,
     }
 

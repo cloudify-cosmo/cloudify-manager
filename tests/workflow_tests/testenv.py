@@ -24,10 +24,10 @@ import subprocess
 import logging
 import os
 import sys
-import time
 import threading
 import re
 import uuid
+import time
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -1066,31 +1066,36 @@ def publish_blueprint(dsl_path, blueprint_id=None):
     return blueprint_id
 
 
-def deploy_application(dsl_path, timeout=240,
+def deploy_application(dsl_path,
+                       timeout=240,
                        blueprint_id=None,
                        deployment_id=None,
                        wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = create_rest_client()
+    client = create_new_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
-    blueprint_id = client.publish_blueprint(dsl_path,
-                                            blueprint_id).id
+    blueprint = client.blueprints.upload(dsl_path, blueprint_id)
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
-    deployment = client.create_deployment(blueprint_id, deployment_id)
-    execution_id, error = client.execute_deployment(
-        deployment.id,
-        'install',
-        timeout=timeout,
-        wait_for_execution=wait_for_execution)
+    deployment = client.deployments.create(blueprint.id, deployment_id)
+    execution = client.deployments.execute(deployment_id, 'install')
 
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+    deadline = time.time() + timeout
+    if wait_for_execution:
+        while execution.status not in ['terminated', 'failed']:
+            time.sleep(1)
+            execution = client.executions.get(execution.id)
+            if time.time() > deadline:
+                raise TimeoutException()
 
-    return deployment, execution_id
+    if execution.error:
+        raise RuntimeError(
+            'Workflow execution failed: {0} [{1}]'.format(execution.error,
+                                                          execution.status))
+    return deployment, execution.id
 
 
 def undeploy_application(deployment_id, timeout=240):
