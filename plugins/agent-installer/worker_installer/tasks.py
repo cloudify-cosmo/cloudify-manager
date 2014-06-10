@@ -32,9 +32,17 @@ CELERY_INCLUDES_LIST = [
 
 CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
-AGENT_PACKAGE_PATH = '/packages/agents/linux-agent.tar.gz'
+AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
 DISABLE_REQUIRETTY_SCRIPT_URL =\
     '/packages/scripts/linux-agent-disable-requiretty.sh'
+
+SUPPORTED_DISTROS = ('Ubuntu', 'debian', 'centos')
+
+
+@init_worker_installer
+def get_machine_distro(runner):
+    return runner.run(
+        'python -c "import platform; print(platform.dist()[0])"').out
 
 
 def get_agent_package_url():
@@ -42,7 +50,7 @@ def get_agent_package_url():
     Returns the agent package url the package will be downloaded from.
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           AGENT_PACKAGE_PATH)
+                           AGENT_PACKAGE_PATH.format(get_machine_distro()))
 
 
 def get_disable_requiretty_script_url():
@@ -61,6 +69,8 @@ def get_celery_includes_list():
 @operation
 @init_worker_installer
 def install(ctx, runner, worker_config, **kwargs):
+
+    distro = get_machine_distro()
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -82,12 +92,12 @@ def install(ctx, runner, worker_config, **kwargs):
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(get_agent_package_url()))
 
-    runner.run('wget -T 30 -O {0}/agent.tar.gz {1}'.format(
-        worker_config['base_dir'], get_agent_package_url()))
+    runner.run('wget -T 30 -O {0}/{1}-agent.tar.gz {2}'.format(
+        worker_config['base_dir'], distro, get_agent_package_url()))
 
     runner.run(
-        'tar xzvf {0}/agent.tar.gz --strip=2 -C {1}'.format(
-            worker_config['base_dir'], worker_config['base_dir']))
+        'tar xzvf {0}/{1}-agent.tar.gz --strip=2 -C {2}'.format(
+            worker_config['base_dir'], distro, worker_config['base_dir']))
 
     for link in ['archives', 'bin', 'include', 'lib']:
         link_path = '{0}/env/local/{1}'.format(worker_config['base_dir'], link)
@@ -109,7 +119,8 @@ def install(ctx, runner, worker_config, **kwargs):
                "{0}/env/bin/*".format(worker_config['base_dir']))
 
     # Remove downloaded agent package
-    runner.run('rm {0}/agent.tar.gz'.format(worker_config['base_dir']))
+    runner.run('rm {0}/{1}-agent.tar.gz'.format(
+        worker_config['base_dir'], distro))
 
     # Disable requiretty
     if worker_config['disable_requiretty']:
