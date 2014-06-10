@@ -274,7 +274,7 @@ class BlueprintsManager(object):
     @staticmethod
     def _wait_for_count(expected_count, query_method, deployment_id):
         import time
-        timeout = time.time() + 5
+        timeout = time.time() + 30
         # workaround ES eventual consistency
         # TODO check if there is a count query and do that
         actual_count = len(query_method(deployment_id))
