@@ -213,7 +213,7 @@ class BlueprintsManager(object):
         for node_instance in new_deployment.plan['node_instances']:
             instance_id = node_instance['id']
             node_id = node_instance['name']
-            relationships = node_instance['relationships']
+            relationships = node_instance.get('relationships', [])
             host_id = node_instance.get('host_id')
 
             instance = models.DeploymentNodeInstance(
@@ -248,8 +248,8 @@ class BlueprintsManager(object):
 
     @staticmethod
     def _prepare_node_relationships(raw_node):
-        if 'relationship' not in raw_node:
-            return None
+        if 'relationships' not in raw_node:
+            return []
         prepared_relationships = []
         for raw_relationship in raw_node['relationships']:
             relationship = {

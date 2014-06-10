@@ -167,19 +167,22 @@ class FileStorageManager(object):
         if node.id not in data[NODE_INSTANCES]:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node.id))
-        deployment_id = data[NODE_INSTANCES][node.id].deployment_id
-        prev_rt_info = \
-            data[NODE_INSTANCES][node.id].to_dict()['runtime_properties'] or {}
+        prev_instance = data[NODE_INSTANCES][node.id]
+        deployment_id = prev_instance.deployment_id
+        prev_rt_info = prev_instance.to_dict()['runtime_properties'] or {}
         merged_rt_info = dict(prev_rt_info.items() +
                               node.runtime_properties.items()) if node\
             .runtime_properties else prev_rt_info
-        new_state = node.state or\
-            data[NODE_INSTANCES][node.id].to_dict()['state']
-        node = DeploymentNodeInstance(id=node.id,
-                                      deployment_id=deployment_id,
-                                      runtime_properties=merged_rt_info,
-                                      state=new_state,
-                                      version=node.version+1)
+        new_state = node.state or prev_instance.to_dict()['state']
+        node = DeploymentNodeInstance(
+            id=node.id,
+            node_id=prev_instance.node_id,
+            relationships=prev_instance.relationships,
+            host_id=prev_instance.host_id,
+            deployment_id=deployment_id,
+            runtime_properties=merged_rt_info,
+            state=new_state,
+            version=node.version+1)
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 

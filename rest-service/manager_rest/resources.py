@@ -833,6 +833,9 @@ class NodeInstancesId(Resource):
             body['runtime_properties'] if 'runtime_properties' in body else {}
         instance = models.DeploymentNodeInstance(
             id=node_instance_id,
+            node_id=None,
+            relationships=None,
+            host_id=None,
             deployment_id=body['deployment_id'],
             runtime_properties=runtime_properties,
             state='uninitialized',
@@ -905,7 +908,10 @@ class NodeInstancesId(Resource):
 
         node = models.DeploymentNodeInstance(
             id=node_instance_id,
-            deployment_id=request.json.get('deployment_id'),
+            node_id=None,
+            relationships=None,
+            host_id=None,
+            deployment_id=None,
             runtime_properties=request.json.get('runtime_properties'),
             state=request.json.get('state'),
             version=request.json['version'])
