@@ -15,7 +15,6 @@
 
 __author__ = 'ran'
 
-import uuid
 
 from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
