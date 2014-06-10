@@ -419,6 +419,8 @@ class CeleryWorkerProcess(object):
     @staticmethod
     def _build_includes():
         includes = []
+        #TODO: doc
+        includes.append("workflows.workers_installation")
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path \
             .join(dirname(dirname(abspath(__file__))), "plugins")
@@ -443,7 +445,8 @@ class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
             tempdir, plugins_tempdir, manager_rest_port,
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
-            includes=["workflows.default", "plugin_installer.tasks"],
+            includes=["workflows.default",
+                      "plugin_installer.tasks"],
             hostname='cloudify.workflows')
 
 

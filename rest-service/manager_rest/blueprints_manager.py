@@ -31,6 +31,7 @@ from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.util import maybe_register_teardown
+from manager_rest.celery_client import execute_task
 
 
 class DslParseException(Exception):
@@ -145,12 +146,22 @@ class BlueprintsManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
+        # delete deployment workers
+        workers_uninstallation_task_id = str(uuid.uuid4())
+        uninstall_workers_task_async_result = execute_task(
+            'workflows.workers_installation.uninstall',
+            'cloudify.management',
+            workers_uninstallation_task_id)
+
         # delete deployment resources
         for execution in deployment_executions:
             get_storage_manager().delete_execution(execution.id)
 
         for node_id in deployment_nodes_ids:
             get_storage_manager().delete_node(node_id)
+
+        # wait for workers uninstall to complete
+        uninstall_workers_task_async_result.get()
 
         return get_storage_manager().delete_deployment(deployment_id)
 
@@ -176,6 +187,9 @@ class BlueprintsManager(object):
                     workflow_id, deployment_id))
         workflow = deployment.plan['workflows'][workflow_id]
         plan = deployment.plan
+
+        self._validate_deployment_workers_installed_successfully(
+            deployment_id)
 
         execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(
@@ -218,6 +232,8 @@ class BlueprintsManager(object):
 
         self.sm.put_deployment(deployment_id, new_deployment)
 
+        self._install_deployment_workers(new_deployment, now)
+
         for plan_node in new_deployment.plan['nodes']:
             node_id = plan_node['id']
             node = models.DeploymentNode(id=node_id,
@@ -227,6 +243,49 @@ class BlueprintsManager(object):
             self.sm.put_node(node_id, node)
 
         return new_deployment
+
+    def _validate_deployment_workers_installed_successfully(self,
+                                                            deployment_id):
+        workers_installation_execution = self.get_execution(
+            '{0}_workers_installation'.format(deployment_id))
+        if workers_installation_execution.status != 'terminated':
+            raise RuntimeError('PROBLEM') # TODO: change
+
+    def _install_deployment_workers(self, deployment, now):
+        workers_installation_task_id = str(uuid.uuid4())
+        execution_id = '{0}_workers_installation'.format(deployment.id)
+        wf_id = 'workers_installation'
+
+        context = {
+            # '__cloudify_context': '0.3',#TODO
+            'plan': deployment.plan,
+            'task_id': workers_installation_task_id,
+            'task_name': 'workflows.workers_installation.install',
+            'task_target': 'cloudify.management',
+            'blueprint_id': deployment.blueprint_id,
+            'deployment_id': deployment.id,
+            'execution_id': execution_id,
+            'workflow_id': wf_id,
+        }
+
+        new_execution = models.Execution(
+            id=execution_id,
+            status='pending',
+            internal_workflow_id=workers_installation_task_id,
+            created_at=now,
+            blueprint_id=deployment.blueprint_id,
+            workflow_id=wf_id,
+            deployment_id=deployment.id,
+            error='None')
+        get_storage_manager().put_execution(new_execution.id, new_execution)
+
+        execute_task('workflows.workers_installation.install',
+                     'cloudify.management',
+                     workers_installation_task_id,
+                     kwargs=
+                     {'management_plugins_to_install':
+                      deployment.plan['management_plugins_to_install'],
+                      '__cloudify_context': context})
 
 
 def teardown_blueprints_manager(exception):
