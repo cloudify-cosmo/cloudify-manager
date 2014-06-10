@@ -211,13 +211,21 @@ class BlueprintsManager(object):
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)
 
         for node_instance in new_deployment.plan['node_instances']:
-            node_id = node_instance['id']
-            node = models.DeploymentNodeInstance(id=node_id,
-                                                 deployment_id=deployment_id,
-                                                 state='uninitialized',
-                                                 runtime_properties=None,
-                                                 version=None)
-            self.sm.put_node_instance(node)
+            instance_id = node_instance['id']
+            node_id = node_instance['name']
+            relationships = node_instance['relationships']
+            host_id = node_instance.get('host_id')
+
+            instance = models.DeploymentNodeInstance(
+                id=instance_id,
+                node_id=node_id,
+                host_id=host_id,
+                relationships=relationships,
+                deployment_id=deployment_id,
+                state='uninitialized',
+                runtime_properties=None,
+                version=None)
+            self.sm.put_node_instance(instance)
 
         return new_deployment
 
@@ -234,6 +242,7 @@ class BlueprintsManager(object):
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
+                plugins_to_install=raw_node.get('plugins_to_install'),
                 relationships=self._prepare_node_relationships(raw_node)
             ))
 

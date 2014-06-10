@@ -792,6 +792,9 @@ class NodeInstancesId(Resource):
         instance = get_storage_manager().get_node_instance(node_instance_id)
         return responses.NodeInstance(
             id=node_instance_id,
+            node_id=instance.node_id,
+            host_id=instance.host_id,
+            relationships=instance.relationships,
             deployment_id=instance.deployment_id,
             state=instance.state,
             runtime_properties=instance.runtime_properties,
