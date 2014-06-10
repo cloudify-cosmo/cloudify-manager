@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+AWS_ACCESS_KEY_ID = ENV['AWS_ACCESS_KEY_ID']
+AWS_ACCESS_KEY = ENV['AWS_ACCESS_KEY']
+AWS_PK_PATH = ENV['AWS_PK_PATH']
+VAGRANTFILE_API_VERSION = "2"
+
+PROVISION = <<EOS
+"cd c:\\ && \
+virtualenv Cloudify  && \
+cd Cloudify  && \
+call Scripts\\activate.bat  && \
+git clone https://github.com/cloudify-cosmo/cloudify-manager.git && \
+cd C:\\Cloudify\\cloudify-manager\\plugins\\plugin-installer && \
+pip install git+https://github.com/cloudify-cosmo/cloudify-rest-client.git && \
+pip install . --process-dependency-links  && \
+cd c:\\ && \
+7z a -r -sfx -x!.* Cloudify.exe Cloudify\\*"
+EOS
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.define "windows" do |windows|
+    windows.vm.box = "dummy"
+    windows.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
+
+    windows.vm.provider :aws do |aws, override|
+      aws.access_key_id = AWS_ACCESS_KEY_ID
+      aws.secret_access_key = AWS_ACCESS_KEY
+
+      #this pre-baked AMI, not pure base image
+      aws.ami = "ami-6dd21c1a"
+      aws.region = "eu-west-1"
+      aws.instance_type = "m3.medium"
+
+      aws.keypair_name = "windows_agent_packager"
+      override.ssh.username = "Administrator"
+      override.ssh.private_key_path = AWS_PK_PATH
+
+      aws.tags = {
+          "Name" => "windows agent packager",
+      }
+      aws.security_groups = "vagrant_windows"
+    end
+
+    windows.vm.synced_folder ".", "/vagrant", disabled: true
+    windows.vm.provision "shell" do |shell|
+      shell.inline = "cmd /c #{PROVISION}"
+      shell.privileged = false
+    end
+  end
+end
+
