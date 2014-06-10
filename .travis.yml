@@ -40,10 +40,10 @@ install:
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
 
-   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b feature/CFY-768-reduce-plan-size
+   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
    - cd cloudify-rest-client; pip install .; cd ..
      
-   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b feature/CFY-768-reduce-plan-size
+   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
    - cd cloudify-plugins-common; pip install .; cd ..
      
    - cd plugins/agent-installer && pip install . && cd ../..
@@ -59,8 +59,7 @@ install:
 
    - cd cloudify-rest-client; pip install .; cd ..
    - cd cloudify-plugins-common; pip install .; cd ..
-   - pip install https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/feature/CFY-768-reduce-plan-size.zip
-
+   
    - cd rest-service && pip install . -r requirements.txt && cd ..
    - cd workflows && pip install . && cd ..
    - cd tests && pip install . && cd ..
