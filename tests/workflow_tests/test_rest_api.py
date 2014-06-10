@@ -33,17 +33,15 @@ class RestAPITest(TestCase):
         self.client.deployments.create(self.blueprint_id, self.deployment_id)
 
     def test_nodes(self):
-        def assert_nodes():
-            nodes = self.client.nodes.list(deployment_id=self.deployment_id)
-            self.assertEqual(1, len(nodes))
-        self.do_assertions(assert_nodes, timeout=30)
+        nodes = self.client.nodes.list(deployment_id=self.deployment_id)
+        self.assertEqual(1, len(nodes))
 
         all_nodes = self.client.nodes.list()
         self.assertEqual(1, len(all_nodes))
 
         node = all_nodes[0]
         self.assertTrue(len(node.operations) > 0)
-        self.assertIsNone(node.relationships)
+        self.assertEqual(node.relationships, [])
         self.assertEqual(self.blueprint_id, node.blueprint_id)
         self.assertTrue(len(node.plugins) > 0)
         self.assertEqual(self.node_id, node.id)
@@ -55,11 +53,9 @@ class RestAPITest(TestCase):
         self.assertTrue(len(node.properties) > 0)
 
     def test_node_instances(self):
-        def assert_instances():
-            instances = self.client.node_instances.list(
-                deployment_id=self.deployment_id)
-            self.assertEqual(1, len(instances))
-        self.do_assertions(assert_instances, timeout=30)
+        instances = self.client.node_instances.list(
+            deployment_id=self.deployment_id)
+        self.assertEqual(1, len(instances))
 
         all_instances = self.client.node_instances.list()
         self.assertEqual(1, len(all_instances))

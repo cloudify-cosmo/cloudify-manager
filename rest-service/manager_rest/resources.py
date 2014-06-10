@@ -792,50 +792,13 @@ class NodeInstancesId(Resource):
         instance = get_storage_manager().get_node_instance(node_instance_id)
         return responses.NodeInstance(
             id=node_instance_id,
+            node_id=instance.node_id,
+            host_id=instance.host_id,
+            relationships=instance.relationships,
             deployment_id=instance.deployment_id,
             state=instance.state,
             runtime_properties=instance.runtime_properties,
             version=instance.version)
-
-    @swagger.operation(
-        responseClass=responses.NodeInstance,
-        nickname="createNodeInstance",
-        notes="Create instance instance",
-        parameters=[{'name': 'node_instance_id',
-                     'description': 'Node instance identifier',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'path'}]
-    )
-    @marshal_with(responses.NodeInstance.resource_fields)
-    @exceptions_handled
-    def put(self, node_instance_id):
-        """
-        Create node instance
-        """
-        verify_json_content_type()
-        body = request.json
-        if body.__class__ is not dict:
-            raise manager_exceptions.BadParametersError(
-                'request body is expected to be of key/value map type'
-                ' but is {0}'.format(body.__class__.__name__))
-
-        if 'deployment_id' not in body:
-            abort(400, message='Node creation request body is expected to '
-                               'contain a deployment_id field')
-
-        storage = get_storage_manager()
-        runtime_properties = \
-            body['runtime_properties'] if 'runtime_properties' in body else {}
-        instance = models.DeploymentNodeInstance(
-            id=node_instance_id,
-            deployment_id=body['deployment_id'],
-            runtime_properties=runtime_properties,
-            state='uninitialized',
-            version=None)
-        instance.version = storage.put_node_instance(instance)
-        return responses.NodeInstance(**instance.to_dict()), 201
 
     @swagger.operation(
         responseClass=responses.NodeInstance,
@@ -902,7 +865,10 @@ class NodeInstancesId(Resource):
 
         node = models.DeploymentNodeInstance(
             id=node_instance_id,
-            deployment_id=request.json.get('deployment_id'),
+            node_id=None,
+            relationships=None,
+            host_id=None,
+            deployment_id=None,
             runtime_properties=request.json.get('runtime_properties'),
             state=request.json.get('state'),
             version=request.json['version'])

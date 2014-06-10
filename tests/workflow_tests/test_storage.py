@@ -15,37 +15,33 @@
 
 __author__ = 'ran'
 
-import uuid
 
-from testenv import TestCase
-from testenv import create_new_rest_client
+from workflow_tests.testenv import get_resource as resource
+from workflow_tests.testenv import deploy_application as deploy
+from workflow_tests.testenv import TestCase
+from workflow_tests.testenv import create_new_rest_client
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class TestStorage(TestCase):
 
     def test_update_node_bad_version(self):
+        deploy(resource("dsl/basic.yaml"))
         client = create_new_rest_client()
-
-        instance_id = str(uuid.uuid4())
-        deployment_id = str(uuid.uuid4())
-        version = 1
-        result = client.node_instances.create(instance_id, deployment_id, {})
-        self.assertEquals(version, result.version)
-        self.assertEquals(instance_id, result.id)
-        self.assertEquals({}, result.runtime_properties)
+        instance = client.node_instances.list()[0]
+        instance = client.node_instances.get(instance.id)  # need the version
 
         props = {'key': 'value'}
-        result = client.node_instances.update(instance_id,
+        result = client.node_instances.update(instance.id,
                                               state='started',
                                               runtime_properties=props,
-                                              version=result.version,)
-        self.assertEquals(2, result.version)
-        self.assertEquals(instance_id, result.id)
-        self.assertEquals(props, result.runtime_properties)
+                                              version=instance.version,)
+        self.assertEquals(instance.version+1, result.version)
+        self.assertEquals(instance.id, result.id)
+        self.assertDictContainsSubset(props, result.runtime_properties)
         self.assertEquals('started', result.state)
 
         # making another call with a bad version
         self.assertRaises(
             CloudifyClientError, client.node_instances.update,
-            instance_id, version=1)
+            instance.id, version=1)
