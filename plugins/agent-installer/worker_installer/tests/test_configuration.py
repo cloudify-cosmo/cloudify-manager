@@ -29,7 +29,6 @@ from cloudify.context import BootstrapContext
 
 @init_worker_installer
 def m(ctx, runner, worker_config, **kwargs):
-    worker_config['distro'] = 'Ubuntu'
     return worker_config
 
 
@@ -47,17 +46,13 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
 
     def test_vm_config_validation(self):
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={'worker_config': {}})
+                                  properties={'worker_config': {
+                                      'distro': 'Ubuntu', }})
         self.assertRaises(ValueError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
-                                      'worker_config': {},
-                                      'ip': '192.168.0.1'
-                                  })
-        self.assertRaises(ValueError, m, ctx)
-        ctx = MockCloudifyContext(node_id='node',
-                                  properties={
-                                      'worker_config': {'user': 'user'},
+                                      'worker_config': {
+                                          'distro': 'Ubuntu', },
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(ValueError, m, ctx)
@@ -65,7 +60,16 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                   properties={
                                       'worker_config': {
                                           'user': 'user',
-                                          'key': 'key.pem'
+                                          'distro': 'Ubuntu', },
+                                      'ip': '192.168.0.1'
+                                  })
+        self.assertRaises(ValueError, m, ctx)
+        ctx = MockCloudifyContext(node_id='node',
+                                  properties={
+                                      'worker_config': {
+                                          'user': 'user',
+                                          'key': 'key.pem',
+                                          'distro': 'Ubuntu',
                                       },
                                       'ip': '192.168.0.1'
                                   })
@@ -82,7 +86,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'worker_config': {
                     'user': 'user',
-                    'key': 'key.pem'
+                    'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -134,6 +139,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'worker_config': {
                     'user': 'user',
                     'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -151,7 +157,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 2,
-                    'max_workers': 5
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -172,7 +179,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 10,
-                    'max_workers': 5
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -188,7 +196,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 'aaa',
-                    'max_workers': 5
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -206,12 +215,13 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'worker_config': {
                     'user': 'user',
                     'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'min_workers': 2,
-                    'max_workers': 5
+                    'max_workers': 5,
                 }
             })
         )
@@ -285,7 +295,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             deployment_id='test',
             properties={
                 'worker_config': {
-                    'workflows_worker': 'true'
+                    'workflows_worker': 'true',
+                    'distro': 'Ubuntu',
                 }
             },
             runtime_properties={
