@@ -465,7 +465,8 @@ class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
             queues=CELERY_QUEUES_LIST,
             includes=self._build_includes(),
             hostname='cloudify.management',
-            concurrency=2)
+            # concurrency=2)
+            concurrency=1)
 
 
 class CeleryTestWorkerProcess(CeleryWorkerProcess):
@@ -837,10 +838,10 @@ class TestEnvironment(object):
             # mock_workflow_plugins overrides workflow_plugin_path for some
             # workflow plugins
             for plugin_path in [plugins_path,
-                                # workflow_plugin_path,
-                                # mock_workflow_plugins]:
-                                mock_workflow_plugins,
-                                workflow_plugin_path]:
+                                workflow_plugin_path,
+                                mock_workflow_plugins]:
+                                # mock_workflow_plugins,
+                                # workflow_plugin_path]:
                 logger.info("Copying %s to %s", plugin_path, app_path)
                 distutils.dir_util.copy_tree(plugin_path, app_path)
 
