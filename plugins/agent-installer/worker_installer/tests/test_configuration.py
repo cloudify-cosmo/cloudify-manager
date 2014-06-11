@@ -240,6 +240,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'worker_config': {
                     'user': 'user',
+                    'distro': 'Ubuntu',
                 }
             },
             bootstrap_context=BootstrapContext({
@@ -259,6 +260,11 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             runtime_properties={
                 'ip': '192.168.0.1'
             },
+            properties={
+                'worker_config': {
+                    'distro': 'Ubuntu',
+                },
+            },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'agent_key_path': 'here',
@@ -277,6 +283,11 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             node_id=node_id,
             runtime_properties={
                 'ip': '192.168.0.1'
+            },
+            properties={
+                'worker_config': {
+                    'distro': 'Ubuntu',
+                },
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
