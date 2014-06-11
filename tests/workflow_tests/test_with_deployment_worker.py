@@ -21,6 +21,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import CLOUDIFY_WORKFLOWS_QUEUE as WORKFLOWS
+from testenv import wait_for_execution_to_end
 
 from plugins.plugin_installer.tasks import get_installed_plugins
 from plugins.worker_installer.tasks import (get_current_worker_state,
@@ -105,11 +106,11 @@ class TestWithDeploymentWorker(TestCase):
         return self.client.deployments.create(blueprint_id, DEPLOYMENT_ID)
 
     def _execute(self, workflow):
-        _, error = self.rest.execute_deployment(DEPLOYMENT_ID,
-                                                workflow,
-                                                timeout=300)
-        if error is not None:
-            raise RuntimeError('Workflow execution failed: {}'.format(error))
+        execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
+        execution = wait_for_execution_to_end(execution)
+        if execution.error:
+            raise RuntimeError(
+                'Workflow execution failed: {}'.format(execution.error))
 
     def _list_nodes(self):
         return self.client.node_instances.list(deployment_id=DEPLOYMENT_ID)

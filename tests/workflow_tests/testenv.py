@@ -24,10 +24,10 @@ import subprocess
 import logging
 import os
 import sys
-import time
 import threading
 import re
 import uuid
+import time
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -1066,31 +1066,43 @@ def publish_blueprint(dsl_path, blueprint_id=None):
     return blueprint_id
 
 
-def deploy_application(dsl_path, timeout=240,
+def wait_for_execution_to_end(execution, timeout=240):
+    client = create_new_rest_client()
+    deadline = time.time() + timeout
+    while execution.status not in ['terminated', 'failed']:
+        time.sleep(1)
+        execution = client.executions.get(execution.id)
+        if time.time() > deadline:
+            raise TimeoutException()
+    if execution.error:
+        raise RuntimeError(
+            'Workflow execution failed: {0} [{1}]'.format(execution.error,
+                                                          execution.status))
+    return execution
+
+
+def deploy_application(dsl_path,
+                       timeout=240,
                        blueprint_id=None,
                        deployment_id=None,
                        wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = create_rest_client()
+    client = create_new_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
-    blueprint_id = client.publish_blueprint(dsl_path,
-                                            blueprint_id).id
+    blueprint = client.blueprints.upload(dsl_path, blueprint_id)
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
-    deployment = client.create_deployment(blueprint_id, deployment_id)
-    execution_id, error = client.execute_deployment(
-        deployment.id,
-        'install',
-        timeout=timeout,
-        wait_for_execution=wait_for_execution)
+    deployment = client.deployments.create(blueprint.id, deployment_id)
+    execution = client.deployments.execute(deployment_id, 'install')
 
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+    if wait_for_execution:
+        execution = wait_for_execution_to_end(execution, timeout=timeout)
+        return deployment, execution.id
 
-    return deployment, execution_id
+    return deployment, execution.id
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -1098,26 +1110,30 @@ def undeploy_application(deployment_id, timeout=240):
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    client = create_rest_client()
-    _, error = client.execute_deployment(deployment_id,
-                                         'uninstall',
-                                         timeout=timeout)
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+    client = create_new_rest_client()
+    execution = client.deployments.execute(deployment_id,
+                                           'uninstall')
+    wait_for_execution_to_end(execution, timeout=timeout)
+
+    print '###### execution:', json.dumps(execution, indent=4)
+
+    if execution.error and execution.error != 'None':
+        raise RuntimeError(
+            'Workflow execution failed: {0}'.format(execution.error))
 
 
 def execute_install(deployment_id,
                     timeout=240,
                     force=False,
                     wait_for_execution=True):
-    client = create_rest_client()
-    _, error = client.execute_deployment(deployment_id,
-                                         'install',
-                                         timeout=timeout,
-                                         force=force,
-                                         wait_for_execution=wait_for_execution)
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+    client = create_new_rest_client()
+    execution = client.deployments.execute(deployment_id,
+                                           'install',
+                                           force=force)
+    execution = wait_for_execution_to_end(execution, timeout=timeout)
+    if execution.error:
+        raise RuntimeError(
+            'Workflow execution failed: {0}'.format(execution.error))
 
 
 def update_execution_status(execution_id, status, error=None):
