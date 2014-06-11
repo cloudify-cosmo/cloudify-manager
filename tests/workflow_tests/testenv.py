@@ -1074,7 +1074,7 @@ def wait_for_execution_to_end(execution, timeout=240):
         execution = client.executions.get(execution.id)
         if time.time() > deadline:
             raise TimeoutException()
-    if execution.error:
+    if execution.status == 'failed':
         raise RuntimeError(
             'Workflow execution failed: {0} [{1}]'.format(execution.error,
                                                           execution.status))

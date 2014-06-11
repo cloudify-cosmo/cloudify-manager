@@ -108,7 +108,7 @@ class TestWithDeploymentWorker(TestCase):
     def _execute(self, workflow):
         execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
         execution = wait_for_execution_to_end(execution)
-        if execution.error:
+        if execution.status == 'failed':
             raise RuntimeError(
                 'Workflow execution failed: {}'.format(execution.error))
 
