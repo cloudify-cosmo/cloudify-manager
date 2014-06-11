@@ -299,7 +299,8 @@ class CeleryWorkerProcess(object):
                  name,
                  queues,
                  includes,
-                 hostname):
+                 hostname,
+                 concurrency=1):
         self._name = name
         self._celery_pid_file = path.join(tempdir, "celery-{}.pid".format(
             name))
@@ -311,6 +312,7 @@ class CeleryWorkerProcess(object):
         self._includes = includes
         self._queues = ','.join(queues)
         self._hostname = hostname
+        self._concurrency = concurrency
 
     def start(self):
         python_path = sys.executable
@@ -325,7 +327,7 @@ class CeleryWorkerProcess(object):
             "--logfile={0}".format(self._celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
             "--queues={0}".format(self._queues),
-            "--concurrency=1",
+            "--concurrency={0}".format(self._concurrency),
             "--include={0}".format(','.join(self._includes))
         ]
 
@@ -462,7 +464,8 @@ class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
             name='operations',
             queues=CELERY_QUEUES_LIST,
             includes=self._build_includes(),
-            hostname='cloudify.management')
+            hostname='cloudify.management',
+            concurrency=2)
 
 
 class CeleryTestWorkerProcess(CeleryWorkerProcess):
@@ -834,8 +837,10 @@ class TestEnvironment(object):
             # mock_workflow_plugins overrides workflow_plugin_path for some
             # workflow plugins
             for plugin_path in [plugins_path,
-                                workflow_plugin_path,
-                                mock_workflow_plugins]:
+                                # workflow_plugin_path,
+                                # mock_workflow_plugins]:
+                                mock_workflow_plugins,
+                                workflow_plugin_path]:
                 logger.info("Copying %s to %s", plugin_path, app_path)
                 distutils.dir_util.copy_tree(plugin_path, app_path)
 
@@ -1030,7 +1035,7 @@ class TestCase(unittest.TestCase):
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10):
-        return do_retries(assertions_func, timeout, AssertionError)
+        return TestCase.do_retries(assertions_func, timeout, AssertionError)
 
     @staticmethod
     def do_retries(func, timeout=10, exception_class=BaseException):

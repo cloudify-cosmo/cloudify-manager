@@ -22,13 +22,19 @@ from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import CLOUDIFY_WORKFLOWS_QUEUE as WORKFLOWS
 
-from plugins.plugin_installer.tasks import get_installed_plugins
-from plugins.worker_installer.tasks import (get_current_worker_state,
-                                            RESTARTED,
-                                            STARTED,
-                                            INSTALLED,
-                                            STOPPED,
-                                            UNINSTALLED)
+from plugins.plugin_installer.tasks import (
+    setup_plugin as setup_plugin_installer,
+    teardown_plugin as teardown_plugin_installer,
+    get_installed_plugins)
+from plugins.worker_installer.tasks import (
+    setup_plugin as setup_worker_installer,
+    teardown_plugin as teardown_worker_installer,
+    get_current_worker_state,
+    RESTARTED,
+    STARTED,
+    INSTALLED,
+    STOPPED,
+    UNINSTALLED)
 from cosmo_manager_rest_client.cosmo_manager_rest_client \
     import CosmoManagerRestClient
 
@@ -51,8 +57,15 @@ class TestWithDeploymentWorker(TestCase):
         self.agent_worker = self.create_celery_worker(self.node_id)
         self.addCleanup(self.deployment_worker.close)
         self.addCleanup(self.agent_worker.close)
+        setup_plugin_installer()
+        setup_worker_installer()
         self.agent_worker.start()
         self.deployment_worker.start()
+
+    def tearDown(self):
+        super(TestWithDeploymentWorker, self).tearDown()
+        teardown_plugin_installer()
+        teardown_worker_installer()
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
         self._execute('install')

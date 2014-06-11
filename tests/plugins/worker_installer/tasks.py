@@ -16,6 +16,10 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
+import os
+import json
+
+DATA_FILE_PATH = '/tmp/agent-installer-data.json'
 
 INSTALLED = "installed"
 STARTED = "started"
@@ -23,12 +27,78 @@ STOPPED = "stopped"
 UNINSTALLED = "uninstalled"
 RESTARTED = "restarted"
 
-workers_state = {}
 
-current_worker_name = None
+@operation
+def install(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
+    if not _is_workflows_worker(kwargs):
+        data['current_worker_name'] = worker_config["name"]
+    data['workers_state'][worker_config["name"]] = [INSTALLED]
+    _store_data(data)
 
 
-def fix_worker(ctx, **kwargs):
+@operation
+def start(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
+    # adding a consumer that handles tasks from a
+    # queue called worker_config["name"]
+    ctx.logger.info("Workers state before change is {0}".format(
+        data['workers_state']))
+    data['workers_state'][worker_config["name"]].append(STARTED)
+    _store_data(data)
+
+
+@operation
+def restart(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Restarting worker {0}".format(worker_config["name"]))
+    data['workers_state'][worker_config["name"]].append(RESTARTED)
+    _store_data(data)
+
+
+@operation
+def stop(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Stopping worker {0}".format(worker_config["name"]))
+    if worker_config["name"] not in data['workers_state']:
+        ctx.logger.debug("No worker. nothing to do.")
+        return
+    data['workers_state'][worker_config["name"]].append(STOPPED)
+    _store_data(data)
+
+
+@operation
+def uninstall(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Uninstalling worker {0}".format(worker_config["name"]))
+    if worker_config["name"] not in data['workers_state']:
+        ctx.logger.debug("No worker. nothing to do.")
+        return
+    data['workers_state'][worker_config["name"]].append(UNINSTALLED)
+    _store_data(data)
+
+
+@operation
+def get_current_worker_state(workflows_worker=False, **kwargs):
+    data = _get_data()
+    name = 'cloudify.workflows' if workflows_worker else \
+        data['current_worker_name']
+    return data['workers_state'][name]
+
+
+def _fix_worker(ctx, **kwargs):
     worker_config = {}
     if ctx.properties and 'worker_config' in ctx.properties:
         worker_config = ctx.properties['worker_config']
@@ -41,75 +111,30 @@ def fix_worker(ctx, **kwargs):
     return worker_config
 
 
-@operation
-def install(ctx, **kwargs):
-    worker_config = fix_worker(ctx, **kwargs)
-
-    global current_worker_name
-    global workers_state
-
-    ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
-    if not _is_workflows_worker(kwargs):
-        current_worker_name = worker_config["name"]
-    workers_state[worker_config["name"]] = [INSTALLED]
-
-
-@operation
-def start(ctx, **kwargs):
-    worker_config = fix_worker(ctx, **kwargs)
-
-    global workers_state
-
-    ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
-    # adding a consumer that handles tasks from a
-    # queue called worker_config["name"]
-    ctx.logger.info("Workers state before change is {0}".format(workers_state))
-    workers_state[worker_config["name"]].append(STARTED)
-
-
-@operation
-def restart(ctx, **kwargs):
-    worker_config = fix_worker(ctx, **kwargs)
-
-    global workers_state
-
-    ctx.logger.info("Restarting worker {0}".format(worker_config["name"]))
-    workers_state[worker_config["name"]].append(RESTARTED)
-
-
-@operation
-def stop(ctx, **kwargs):
-    worker_config = fix_worker(ctx, **kwargs)
-
-    global workers_state
-
-    ctx.logger.info("Stopping worker {0}".format(worker_config["name"]))
-    if worker_config["name"] not in workers_state:
-        ctx.logger.debug("No worker. nothing to do.")
-        return
-    workers_state[worker_config["name"]].append(STOPPED)
-
-
-@operation
-def uninstall(ctx, **kwargs):
-    worker_config = fix_worker(ctx, **kwargs)
-
-    global workers_state
-
-    ctx.logger.info("Uninstalling worker {0}".format(worker_config["name"]))
-    if worker_config["name"] not in workers_state:
-        ctx.logger.debug("No worker. nothing to do.")
-        return
-    workers_state[worker_config["name"]].append(UNINSTALLED)
-
-
-@operation
-def get_current_worker_state(workflows_worker=False, **kwargs):
-    name = 'cloudify.workflows' if workflows_worker else current_worker_name
-    return workers_state[name]
-
-
 def _is_workflows_worker(config_container):
     return 'worker_config' in config_container and 'workflows_worker' in \
            config_container['worker_config'] and config_container[
                'worker_config']['workflows_worker']
+
+
+def _get_data():
+    with open(DATA_FILE_PATH, 'r') as f:
+        data = json.load(f)
+        return data
+
+
+def _store_data(data):
+    with open(DATA_FILE_PATH, 'w') as f:
+        json.dump(data, f)
+
+
+def setup_plugin():
+    data = {
+        'workers_state': {},
+        'current_worker_name': None
+    }
+    _store_data(data)
+
+
+def teardown_plugin():
+    os.remove(DATA_FILE_PATH)
