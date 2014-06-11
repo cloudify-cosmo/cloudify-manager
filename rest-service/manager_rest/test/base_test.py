@@ -159,7 +159,7 @@ class BaseServerTestCase(unittest.TestCase):
         # Execute post deployment
         deployment_response = self.put(
             '/deployments/{0}'.format(deployment_id),
-            {'blueprintId': blueprint_id}).json
+            {'blueprint_id': blueprint_id}).json
         return (blueprint_id, deployment_response['id'], blueprint_response,
                 deployment_response)
 

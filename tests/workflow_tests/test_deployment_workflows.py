@@ -18,7 +18,6 @@ __author__ = 'ran'
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import get_deployment_workflows
 
 
 class TestDeploymentWorkflows(TestCase):
@@ -27,10 +26,10 @@ class TestDeploymentWorkflows(TestCase):
         dsl_path = resource("dsl/basic.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        blueprint_id = deployment.blueprintId
-        workflows = get_deployment_workflows(deployment_id)
-        self.assertEqual(blueprint_id, workflows.blueprintId)
-        self.assertEqual(deployment_id, workflows.deploymentId)
+        blueprint_id = deployment.blueprint_id
+        workflows = self.client.deployments.list_workflows(deployment_id)
+        self.assertEqual(blueprint_id, workflows.blueprint_id)
+        self.assertEqual(deployment_id, workflows.deployment_id)
         self.assertEqual(3, len(workflows.workflows))
         self.assertEqual('mock_workflow', workflows.workflows[0].name)
         self.assertEqual('install', workflows.workflows[1].name)

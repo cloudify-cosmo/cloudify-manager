@@ -26,8 +26,8 @@ class BlueprintState(object):
         'id': fields.String,
         'plan': fields.Raw,
         'source': fields.Raw,
-        'createdAt': fields.String(attribute='created_at'),
-        'updatedAt': fields.String(attribute='updated_at')
+        'created_at': fields.String,
+        'updated_at': fields.String
     }
 
     def __init__(self, **kwargs):
@@ -56,10 +56,9 @@ class Deployment(object):
 
     resource_fields = {
         'id': fields.String,
-        # 'permalink': fields.Url('blueprint_ep')
-        'createdAt': fields.String(attribute='created_at'),
-        'updatedAt': fields.String(attribute='updated_at'),
-        'blueprintId': fields.String(attribute='blueprint_id'),
+        'created_at': fields.String,
+        'updated_at': fields.String,
+        'blueprint_id': fields.String,
         'plan': fields.Raw,
     }
 
@@ -77,7 +76,7 @@ class Workflow(object):
 
     resource_fields = {
         'name': fields.String,
-        'createdAt': fields.String(attribute='created_at')
+        'created_at': fields.String
     }
 
     def __init__(self, **kwargs):
@@ -91,8 +90,8 @@ class Workflows(object):
 
     resource_fields = {
         'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
-        'blueprintId': fields.String(attribute='blueprint_id'),
-        'deploymentId': fields.String(attribute='deployment_id')
+        'blueprint_id': fields.String,
+        'deployment_id': fields.String
     }
 
     def __init__(self, **kwargs):
@@ -106,12 +105,12 @@ class Execution(object):
 
     resource_fields = {
         'id': fields.String,
-        'workflowId': fields.String(attribute='workflow_id'),
-        'blueprintId': fields.String(attribute='blueprint_id'),
-        'deploymentId': fields.String(attribute='deployment_id'),
+        'workflow_id': fields.String,
+        'blueprint_id': fields.String,
+        'deployment_id': fields.String,
         'status': fields.String,
         'error': fields.String,
-        'createdAt': fields.String(attribute='created_at')
+        'created_at': fields.String
     }
 
     def __init__(self, **kwargs):
