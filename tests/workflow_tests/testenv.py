@@ -44,6 +44,7 @@ from cosmo_manager_rest_client.cosmo_manager_rest_client \
 from cloudify_rest_client import CloudifyClient
 
 import plugins
+import mock_workflows
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
@@ -140,7 +141,7 @@ class ManagerRestProcess(object):
 
         manager_rest_command = [
             '{0}/gunicorn'.format(dirname(python_path)),
-            '-w', '1',
+            '-w', '2',
             '-b', '0.0.0.0:{0}'.format(self.port),
             '--timeout', '300',
             'server:app'
@@ -420,8 +421,9 @@ class CeleryWorkerProcess(object):
     @staticmethod
     def _build_includes():
         includes = []
-        #TODO: doc
-        includes.append("workflows.workers_installation")
+        # adding the mock workflow plugin for workers installation
+        includes.append("system_workflows.workers_installation")
+
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path \
             .join(dirname(dirname(abspath(__file__))), "plugins")
@@ -824,8 +826,16 @@ class TestEnvironment(object):
                                                  'workflows')
 
             plugins_path = path.dirname(path.realpath(plugins.__file__))
+            mock_workflow_plugins = path.dirname(path.realpath(
+                mock_workflows.__file__))
+
             app_path = path.join(self._tempdir, "plugins")
-            for plugin_path in [plugins_path, workflow_plugin_path]:
+            # copying plugins. note that the order matters -
+            # mock_workflow_plugins overrides workflow_plugin_path for some
+            # workflow plugins
+            for plugin_path in [plugins_path,
+                                workflow_plugin_path,
+                                mock_workflow_plugins]:
                 logger.info("Copying %s to %s", plugin_path, app_path)
                 distutils.dir_util.copy_tree(plugin_path, app_path)
 
@@ -1018,13 +1028,18 @@ class TestCase(unittest.TestCase):
             args=args,
             queue=queue)
 
-    def do_assertions(self, assertions_func, timeout=10):
+    @staticmethod
+    def do_assertions(assertions_func, timeout=10):
+        return do_retries(assertions_func, timeout, AssertionError)
+
+    @staticmethod
+    def do_retries(func, timeout=10, exception_class=BaseException):
         deadline = time.time() + timeout
         while True:
             try:
-                assertions_func()
+                func()
                 break
-            except AssertionError:
+            except exception_class:
                 if time.time() > deadline:
                     raise
                 time.sleep(1)
@@ -1084,6 +1099,17 @@ def deploy_application(dsl_path, timeout=240,
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
     deployment = client.create_deployment(blueprint_id, deployment_id)
+
+    # a workaround for waiting for the workers installation to complete
+    def verify_workers_installation_complete():
+        execs = client.list_deployment_executions(deployment_id)
+        if not execs or execs[0].status != 'terminated' or execs[0]\
+            .workflowId != 'workers_installation':
+            raise RuntimeError(
+                "Expected a single execution for workflow "
+                "'workers_installation' with status 'terminated'")
+    TestCase.do_retries(verify_workers_installation_complete)
+
     execution_id, error = client.execute_deployment(
         deployment.id,
         'install',

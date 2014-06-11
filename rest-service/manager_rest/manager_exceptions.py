@@ -26,6 +26,8 @@ NONEXISTENT_WORKFLOW_ERROR_CODE = 'bad_content_type_error'
 CONFLICT_ERROR_CODE = 'conflict_error'
 NOT_FOUND_ERROR_CODE = 'not_found_error'
 DEPENDENT_EXISTS_ERROR_CODE = 'dependent_exists_error'
+DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE = \
+    'deployment_workers_not_yet_installed_error'
 
 
 class ManagerException(Exception):
@@ -82,3 +84,10 @@ class ExistingRunningExecutionError(ManagerException):
     def __init__(self, *args, **kwargs):
         super(ExistingRunningExecutionError, self).__init__(
             400, EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
+
+
+class DeploymentWorkersNotYetInstalledError(ManagerException):
+    def __init__(self, *args, **kwargs):
+        super(DeploymentWorkersNotYetInstalledError, self).__init__(
+            400, DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE, *args,
+            **kwargs)

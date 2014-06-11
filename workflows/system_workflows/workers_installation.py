@@ -17,7 +17,7 @@ __author__ = 'ran'
 
 
 from cloudify.decorators import workflow
-from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
+from cloudify.workflows.tasks_graph import TaskDependencyGraph
 
 
 WORKER_PAYLOAD = {
@@ -31,13 +31,13 @@ WORKER_PAYLOAD = {
 
 @workflow
 def install(ctx, **kwargs):
-
     graph = TaskDependencyGraph(ctx)
 
     sequence = graph.sequence()
 
     plugins = kwargs['management_plugins_to_install']
 
+    # installing the operations worker
     sequence.add(
         ctx.send_event('Installing deployment operations worker'),
         ctx.execute_task(
@@ -46,16 +46,22 @@ def install(ctx, **kwargs):
         ctx.send_event('Starting deployment operations worker'),
         ctx.execute_task(
             task_queue='cloudify.management',
-            task_name='worker_installer.tasks.start'),
-        ctx.send_event('Installing deployment operations plugins'),
-        ctx.execute_task(
-            task_queue=ctx.deployment_id,
-            task_name='plugin_installer.tasks.install',
-            kwargs={'properties': plugins}),
+            task_name='worker_installer.tasks.start'))
+
+    if plugins:
+        sequence.add(
+            ctx.send_event('Installing deployment operations plugins'),
+            ctx.execute_task(
+                task_queue=ctx.deployment_id,
+                task_name='plugin_installer.tasks.install',
+                kwargs={'plugins': plugins}))
+
+    sequence.add(
         ctx.execute_task(
             task_queue='cloudify.management',
             task_name='worker_installer.tasks.restart'))
 
+    # installing the workflows worker
     sequence.add(
         ctx.send_event('Installing deployment workflows worker'),
         ctx.execute_task(
@@ -66,12 +72,17 @@ def install(ctx, **kwargs):
         ctx.execute_task(
             task_queue='cloudify.management',
             task_name='worker_installer.tasks.start',
-            kwargs=WORKER_PAYLOAD),
-        ctx.send_event('Installing deployment workflows plugins'),
-        ctx.execute_task(
-            task_queue='{0}_workflows'.format(ctx.deployment_id),
-            task_name='plugin_installer.tasks.install',
-            kwargs={'properties': plugins}),
+            kwargs=WORKER_PAYLOAD))
+
+    if plugins:
+        sequence.add(
+            ctx.send_event('Installing deployment workflows plugins'),
+            ctx.execute_task(
+                task_queue='{0}_workflows'.format(ctx.deployment_id),
+                task_name='plugin_installer.tasks.install',
+                kwargs={'plugins': plugins}))
+
+    sequence.add(
         ctx.execute_task(
             task_queue='cloudify.management',
             task_name='worker_installer.tasks.restart',
@@ -87,6 +98,7 @@ def uninstall(ctx, **kwargs):
 
     sequence = graph.sequence()
 
+    # uninstalling the operations worker
     sequence.add(
         ctx.send_event('Stopping deployment operations worker'),
         ctx.execute_task(
@@ -97,6 +109,7 @@ def uninstall(ctx, **kwargs):
             task_queue='cloudify.management',
             task_name='worker_installer.tasks.uninstall'))
 
+    # uninstalling the workflows worker
     sequence.add(
         ctx.send_event('Stopping deployment workflows worker'),
         ctx.execute_task(

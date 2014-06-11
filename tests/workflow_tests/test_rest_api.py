@@ -36,7 +36,7 @@ class RestAPITest(TestCase):
         def assert_nodes():
             nodes = self.client.nodes.list(deployment_id=self.deployment_id)
             self.assertEqual(1, len(nodes))
-        self.do_assertions(assert_nodes, timeout=30)
+        TestCase.do_assertions(assert_nodes, timeout=30)
 
         all_nodes = self.client.nodes.list()
         self.assertEqual(1, len(all_nodes))
@@ -59,7 +59,7 @@ class RestAPITest(TestCase):
             instances = self.client.node_instances.list(
                 deployment_id=self.deployment_id)
             self.assertEqual(1, len(instances))
-        self.do_assertions(assert_instances, timeout=30)
+        TestCase.do_assertions(assert_instances, timeout=30)
 
         all_instances = self.client.node_instances.list()
         self.assertEqual(1, len(all_instances))

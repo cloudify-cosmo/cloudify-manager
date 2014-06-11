@@ -18,6 +18,7 @@ __author__ = 'dan'
 
 from datetime import datetime
 import json
+import time
 import uuid
 import contextlib
 
@@ -145,19 +146,8 @@ class BlueprintsManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        # delete deployment workers
-        workers_uninstallation_task_id = str(uuid.uuid4())
-        uninstall_workers_task_async_result = execute_task(
-            'workflows.workers_installation.uninstall',
-            'cloudify.management',
-            workers_uninstallation_task_id)
-        
-        deleted_deployment = storage.delete_deployment(deployment_id)
-        
-        # wait for workers uninstall to complete
-        uninstall_workers_task_async_result.get()
-        
-        return deleted_deployment
+        self._uninstall_deployment_workers(deployment_id)
+        return storage.delete_deployment(deployment_id)
 
     # currently validation is split to 2 phases: the first
     # part is during submission (dsl parsing)
@@ -182,8 +172,7 @@ class BlueprintsManager(object):
         workflow = deployment.plan['workflows'][workflow_id]
         plan = deployment.plan
 
-        self._validate_deployment_workers_installed_successfully(
-            deployment_id)
+        self._verify_deployment_workers_installed_successfully(deployment_id)
 
         execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(
@@ -270,32 +259,57 @@ class BlueprintsManager(object):
             prepared_relationships.append(relationship)
         return prepared_relationships
 
-    def _validate_deployment_workers_installed_successfully(self,
-                                                            deployment_id):
-        workers_installation_execution = self.get_execution(
-            '{0}_workers_installation'.format(deployment_id))
-        if workers_installation_execution.status != 'terminated':
-            raise RuntimeError('PROBLEM') # TODO: change
+    def _verify_deployment_workers_installed_successfully(self,
+                                                          deployment_id,
+                                                          is_retry=False):
+        workers_installation_execution = next(
+            (execution for execution in
+             get_storage_manager().get_deployment_executions(
+                 deployment_id) if execution.workflow_id ==
+                'workers_installation'),
+            None)
+
+        if not workers_installation_execution:
+            raise RuntimeError('Failed to find "workers_installation" '
+                               'execution for deployment {0}'.format(
+                               deployment_id))
+
+        if workers_installation_execution.status == 'terminated':
+            return
+        elif workers_installation_execution.status == 'started':
+            raise manager_exceptions\
+                .DeploymentWorkersNotYetInstalledError(
+                    'Deployment workers are still being installed, '
+                    'try again in a minute')
+        elif workers_installation_execution.status == 'failed':
+            raise RuntimeError(
+                'Cant launch executions since workers for deployment {0} '
+                'failed to be installed: {1}'.format(
+                    deployment_id, workers_installation_execution.error))
+
+        # status is 'pending'. Waiting for a few seconds and retrying to
+        # verify (to avoid eventual consistency issues). If this is already a
+        # failed retry, it might mean there was a problem with the Celery task
+        #TODO: check task-received status..
+        if not is_retry:
+            time.sleep(5)
+            self._verify_deployment_workers_installed_successfully(
+                deployment_id, True)
+        else:
+            raise RuntimeError('')
 
     def _install_deployment_workers(self, deployment, now):
         workers_installation_task_id = str(uuid.uuid4())
-        execution_id = '{0}_workers_installation'.format(deployment.id)
         wf_id = 'workers_installation'
+        workers_install_task_name = \
+            'system_workflows.workers_installation.install'
 
-        context = {
-            # '__cloudify_context': '0.3',#TODO
-            'plan': deployment.plan,
-            'task_id': workers_installation_task_id,
-            'task_name': 'workflows.workers_installation.install',
-            'task_target': 'cloudify.management',
-            'blueprint_id': deployment.blueprint_id,
-            'deployment_id': deployment.id,
-            'execution_id': execution_id,
-            'workflow_id': wf_id,
-            }
+        context = self._build_context_from_deployment(
+            deployment, workers_installation_task_id, wf_id,
+            workers_install_task_name)
 
         new_execution = models.Execution(
-            id=execution_id,
+            id=workers_installation_task_id,
             status='pending',
             internal_workflow_id=workers_installation_task_id,
             created_at=now,
@@ -305,13 +319,67 @@ class BlueprintsManager(object):
             error='None')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
-        execute_task('workflows.workers_installation.install',
+        execute_task(workers_install_task_name,
                      'cloudify.management',
                      workers_installation_task_id,
                      kwargs=
                      {'management_plugins_to_install':
-                          deployment.plan['management_plugins_to_install'],
+                      deployment.plan['management_plugins_to_install'],
                       '__cloudify_context': context})
+
+    def _build_context_from_deployment(self, deployment, task_id, wf_id,
+                                       task_name):
+        return {
+            'plan': deployment.plan,
+            'task_id': task_id,
+            'task_name': task_name,
+            'task_target': 'cloudify.management',
+            'blueprint_id': deployment.blueprint_id,
+            'deployment_id': deployment.id,
+            'execution_id': task_id,
+            'workflow_id': wf_id,
+        }
+
+    def _uninstall_deployment_workers(self, deployment_id):
+        deployment = get_storage_manager().get_deployment(deployment_id)
+
+        workers_uninstallation_task_id = str(uuid.uuid4())
+        wf_id = 'workers_uninstallation'
+        workers_uninstall_task_name = \
+            'system_workflows.workers_installation.uninstall'
+
+        context = self._build_context_from_deployment(
+            deployment,
+            workers_uninstallation_task_id,
+            wf_id,
+            workers_uninstall_task_name)
+
+        new_execution = models.Execution(
+            id=workers_uninstallation_task_id,
+            status='pending',
+            internal_workflow_id=workers_uninstallation_task_id,
+            created_at=str(datetime.now()),
+            blueprint_id=deployment.blueprint_id,
+            workflow_id=wf_id,
+            deployment_id=deployment_id,
+            error='None')
+        get_storage_manager().put_execution(new_execution.id, new_execution)
+
+        uninstall_workers_task_async_result = execute_task(
+            workers_uninstall_task_name,
+            'cloudify.management',
+            workers_uninstallation_task_id,
+            kwargs={'__cloudify_context': context})
+
+        # wait for workers uninstall to complete
+        uninstall_workers_task_async_result.get()
+        #verify uninstall completed successfully
+        execution = get_storage_manager().get_execution(
+            workers_uninstallation_task_id)
+        if execution.status != 'terminated':
+            raise RuntimeError('Failed to uninstall deployment workers for '
+                               'deployment {0}'.format(deployment_id))
+
 
 
 def teardown_blueprints_manager(exception):

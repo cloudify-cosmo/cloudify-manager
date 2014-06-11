@@ -27,6 +27,17 @@ celery.conf.update(
 
 
 def execute_task(task_name, task_queue, task_id=None, kwargs=None):
+    """
+        Execute a task
+
+        :param task_name: the task name
+        :param task_queue: the task queue
+        :param task_id: optional id for the task
+        :param kwargs: optional kwargs to be passed to the task
+        :return: the celery task async result
+    """
+
     return celery.send_task(task_name,
                             queue=task_queue,
+                            task_id=task_id,
                             kwargs=kwargs)

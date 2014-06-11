@@ -116,7 +116,7 @@ class TestWithDeploymentWorker(TestCase):
             nodes = self.client.node_instances.list(
                 deployment_id=DEPLOYMENT_ID)
             self.assertTrue(len(nodes) > 0)
-        self.do_assertions(assert_nodes_exist, timeout=30)
+        TestCase.do_assertions(assert_nodes_exist, timeout=30)
         return self.client.node_instances.list(deployment_id=DEPLOYMENT_ID)
 
     def _get(self, task, queue, args=None):

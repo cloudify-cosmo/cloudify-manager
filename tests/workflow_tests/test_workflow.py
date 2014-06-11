@@ -162,8 +162,7 @@ class BasicWorkflowsTest(TestCase):
         result = search('')
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        # expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
-        self.assertEquals(5, len(hits))
+        self.assertEquals(6, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -330,7 +329,7 @@ class BasicWorkflowsTest(TestCase):
                 deployment_id=deployment_id)
             self.assertEqual(1, len(deployment_nodes))
 
-        self.do_assertions(assert_deployment_nodes_length, timeout=30)
+        TestCase.do_assertions(assert_deployment_nodes_length, timeout=30)
 
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment_id)
