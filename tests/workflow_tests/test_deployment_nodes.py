@@ -26,17 +26,21 @@ class TestDeploymentNodes(TestCase):
         dsl_path = resource("dsl/deployment-nodes-three-nodes.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        nodes = self.client.node_instances.list(deployment_id=deployment_id)
-        self.assertEqual(3, len(nodes))
 
-        def assert_node_state(node_id_infix):
+        def assert_node_state(node_id_infix, nodes):
             self.assertTrue(any(map(
                 lambda n: node_id_infix in n.id and n.state == 'started', nodes
             )), 'Failed finding node {0} state'.format(node_id_infix))
 
-        assert_node_state('containing_node')
-        assert_node_state('contained_in_node1')
-        assert_node_state('contained_in_node2')
+        def assert_node_states():
+            nodes = self.client.node_instances.list(
+                deployment_id=deployment_id)
+            self.assertEqual(3, len(nodes))
+            assert_node_state('containing_node', nodes)
+            assert_node_state('contained_in_node1', nodes)
+            assert_node_state('contained_in_node2', nodes)
+
+        self.do_assertions(assert_node_states, timeout=30)
 
     def test_partial_update_node_instance(self):
         dsl_path = resource("dsl/set-property.yaml")

@@ -21,6 +21,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import CLOUDIFY_WORKFLOWS_QUEUE as WORKFLOWS
+from testenv import wait_for_execution_to_end
 
 from plugins.plugin_installer.tasks import get_installed_plugins
 from plugins.worker_installer.tasks import (get_current_worker_state,
@@ -86,6 +87,11 @@ class TestWithDeploymentWorker(TestCase):
 
         self._execute('uninstall')
 
+        # TODO: CFY-646: uninstall is currently not implemented correctly
+        # this should be removed once CFY-646 is resolved.
+        from time import sleep
+        sleep(30)
+
         # test valid deployment worker un-installation order
         state = self._get(get_current_worker_state, queue=MANAGEMENT)
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
@@ -105,18 +111,10 @@ class TestWithDeploymentWorker(TestCase):
         return self.client.deployments.create(blueprint_id, DEPLOYMENT_ID)
 
     def _execute(self, workflow):
-        _, error = self.rest.execute_deployment(DEPLOYMENT_ID,
-                                                workflow,
-                                                timeout=300)
-        if error is not None:
-            raise RuntimeError('Workflow execution failed: {}'.format(error))
+        execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
+        wait_for_execution_to_end(execution)
 
     def _list_nodes(self):
-        def assert_nodes_exist():
-            nodes = self.client.node_instances.list(
-                deployment_id=DEPLOYMENT_ID)
-            self.assertTrue(len(nodes) > 0)
-        self.do_assertions(assert_nodes_exist, timeout=30)
         return self.client.node_instances.list(deployment_id=DEPLOYMENT_ID)
 
     def _get(self, task, queue, args=None):

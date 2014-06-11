@@ -15,6 +15,7 @@
 
 __author__ = 'idanmo'
 
+import manager_rest.storage_manager as sm
 from base_test import BaseServerTestCase
 
 
@@ -25,26 +26,17 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual(404, response.status_code)
 
     def test_get_node(self):
-        self.put('/node-instances/1234', {
-            'deployment_id': '111',
-            'runtime_properties': {
+        self.put_node_instance(
+            instance_id='1234',
+            deployment_id='111',
+            runtime_properties={
                 'key': 'value'
             }
-        })
+        )
         response = self.get('/node-instances/1234')
         self.assertEqual(200, response.status_code)
         self.assertEqual('1234', response.json['id'])
         self.assertTrue('runtime_properties' in response.json)
-        self.assertEqual(1, len(response.json['runtime_properties']))
-        self.assertEqual('value', response.json['runtime_properties']['key'])
-
-    def test_put_new_node(self):
-        response = self.put('/node-instances/1234', {
-            'deployment_id': '111',
-            'runtime_properties': {'key': 'value'}
-        })
-        self.assertEqual(201, response.status_code)
-        self.assertEqual('1234', response.json['id'])
         self.assertEqual(1, len(response.json['runtime_properties']))
         self.assertEqual('value', response.json['runtime_properties']['key'])
 
@@ -63,10 +55,13 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual(400, response.status_code)
 
     def test_patch_node(self):
-        self.put('/node-instances/1234', {
-            'deployment_id': '111',
-            'runtime_properties': {'key': 'value'}
-        })
+        self.put_node_instance(
+            instance_id='1234',
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
         update = {
             'runtime_properties': {'key': 'new_value', 'new_key': 'value'},
             'version': 2}
@@ -86,10 +81,13 @@ class NodesTest(BaseServerTestCase):
                          response.json['runtime_properties']['new_key'])
 
     def test_patch_node_merge(self):
-        self.put('/node-instances/1234', {
-            'deployment_id': '111',
-            'runtime_properties': {'key': 'value'}
-        })
+        self.put_node_instance(
+            instance_id='1234',
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
         response = self.patch('/node-instances/1234', {
             'runtime_properties': {'aaa': 'bbb'},
             'version': 2})
@@ -100,10 +98,13 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
 
     def test_partial_patch_node(self):
-        self.put('/node-instances/1234', {
-            'deployment_id': '111',
-            'runtime_properties': {'key': 'value'}
-        })
+        self.put_node_instance(
+            instance_id='1234',
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
 
         # full patch
         response = self.patch('/node-instances/1234',
@@ -141,17 +142,19 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('b-state', response.json['state'])
 
     def test_patch_node_conflict(self):
-        import manager_rest.storage_manager as sm
         from manager_rest import manager_exceptions
         prev_update_node_func = sm.instance().update_node_instance
         try:
             def conflict_update_node_func(node):
                 raise manager_exceptions.ConflictError()
             sm.instance().update_node_instance = conflict_update_node_func
-            self.put('/node-instances/1234', {
-                'deployment_id': '111',
-                'runtime_properties': {'key': 'value'}
-            })
+            self.put_node_instance(
+                instance_id='1234',
+                deployment_id='111',
+                runtime_properties={
+                    'key': 'value'
+                }
+            )
             response = self.patch('/node-instances/1234',
                                   {'runtime_properties': {'key': 'new_value'},
                                    'version': 2})
@@ -164,3 +167,18 @@ class NodesTest(BaseServerTestCase):
                               {'runtime_properties': {'key': 'value'},
                                'version': 0})
         self.assertEqual(404, response.status_code)
+
+    def put_node_instance(self,
+                          instance_id,
+                          deployment_id,
+                          runtime_properties):
+        from manager_rest.models import DeploymentNodeInstance
+        node = DeploymentNodeInstance(id=instance_id,
+                                      node_id=None,
+                                      deployment_id=deployment_id,
+                                      runtime_properties=runtime_properties,
+                                      state=None,
+                                      version=None,
+                                      relationships=None,
+                                      host_id=None)
+        sm.instance().put_node_instance(node)

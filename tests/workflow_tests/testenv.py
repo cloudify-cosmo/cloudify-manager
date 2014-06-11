@@ -24,10 +24,10 @@ import subprocess
 import logging
 import os
 import sys
-import time
 import threading
 import re
 import uuid
+import time
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -1057,40 +1057,43 @@ def run_search(query):
     return client.run_search(query)
 
 
-def publish_blueprint(dsl_path, blueprint_id=None):
-    client = create_rest_client()
-    if not blueprint_id:
-        blueprint_id = str(uuid.uuid4())
-    blueprint_id = client.publish_blueprint(dsl_path,
-                                            blueprint_id).id
-    return blueprint_id
+def wait_for_execution_to_end(execution, timeout=240):
+    client = create_new_rest_client()
+    deadline = time.time() + timeout
+    while execution.status not in ['terminated', 'failed']:
+        time.sleep(1)
+        execution = client.executions.get(execution.id)
+        if time.time() > deadline:
+            raise TimeoutException()
+    if execution.status == 'failed':
+        raise RuntimeError(
+            'Workflow execution failed: {0} [{1}]'.format(execution.error,
+                                                          execution.status))
+    return execution
 
 
-def deploy_application(dsl_path, timeout=240,
+def deploy_application(dsl_path,
+                       timeout=240,
                        blueprint_id=None,
                        deployment_id=None,
                        wait_for_execution=True):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = create_rest_client()
+    client = create_new_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
-    blueprint_id = client.publish_blueprint(dsl_path,
-                                            blueprint_id).id
+    blueprint = client.blueprints.upload(dsl_path, blueprint_id)
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
-    deployment = client.create_deployment(blueprint_id, deployment_id)
-    execution_id, error = client.execute_deployment(
-        deployment.id,
-        'install',
-        timeout=timeout,
-        wait_for_execution=wait_for_execution)
+    deployment = client.deployments.create(blueprint.id, deployment_id)
+    execution = client.deployments.execute(deployment_id, 'install')
 
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+    if wait_for_execution:
+        execution = wait_for_execution_to_end(execution, timeout=timeout)
+        return deployment, execution.id
 
-    return deployment, execution_id
+    return deployment, execution.id
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -1098,49 +1101,14 @@ def undeploy_application(deployment_id, timeout=240):
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    client = create_rest_client()
-    _, error = client.execute_deployment(deployment_id,
-                                         'uninstall',
-                                         timeout=timeout)
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
+    client = create_new_rest_client()
+    execution = client.deployments.execute(deployment_id,
+                                           'uninstall')
+    wait_for_execution_to_end(execution, timeout=timeout)
 
-
-def execute_install(deployment_id,
-                    timeout=240,
-                    force=False,
-                    wait_for_execution=True):
-    client = create_rest_client()
-    _, error = client.execute_deployment(deployment_id,
-                                         'install',
-                                         timeout=timeout,
-                                         force=force,
-                                         wait_for_execution=wait_for_execution)
-    if error is not None:
-        raise RuntimeError('Workflow execution failed: {0}'.format(error))
-
-
-def update_execution_status(execution_id, status, error=None):
-    client = create_rest_client()
-    return client.update_execution_status(execution_id, status, error)
-
-
-def cancel_execution(execution_id, wait_for_termination=False):
-    """
-    Cancels an execution by its id
-    """
-    client = create_rest_client()
-
-    if wait_for_termination:
-        execution = client.cancel_execution(execution_id)
-        endtime = time.time() + 10
-        while execution.status not in \
-                ['terminated', 'failed'] and time.time() < endtime:
-            execution = get_execution(execution_id)
-            time.sleep(1)
-        return execution
-    else:
-        return client.cancel_execution(execution_id)
+    if execution.error and execution.error != 'None':
+        raise RuntimeError(
+            'Workflow execution failed: {0}'.format(execution.error))
 
 
 def validate_dsl(blueprint_id, timeout=240):
@@ -1154,69 +1122,6 @@ def validate_dsl(blueprint_id, timeout=240):
                            .format(blueprint_id, response.status))
 
 
-def get_execution(execution_id):
-    """
-    Returns the exeuction status
-    """
-    client = create_rest_client()
-    return client.get_execution(execution_id)
-
-
-def get_blueprint(blueprint_id):
-    client = create_rest_client()
-    return client.get_blueprint(blueprint_id)
-
-
-def delete_blueprint(blueprint_id):
-    client = create_rest_client()
-    return client.delete_blueprint(blueprint_id)
-
-
-def get_deployment(deployment_id):
-    client = create_rest_client()
-    return client.get_deployment(deployment_id)
-
-
-def delete_deployment(deployment_id, ignore_live_nodes=False):
-    client = create_rest_client()
-    return client.delete_deployment(deployment_id, ignore_live_nodes)
-
-
-def get_deployment_workflows(deployment_id):
-    client = create_rest_client()
-    return client.list_workflows(deployment_id)
-
-
-def get_deployment_executions(deployment_id):
-    client = create_rest_client()
-    return client.list_deployment_executions(deployment_id)
-
-
-def get_deployment_nodes(deployment_id, get_state=False):
-    client = create_rest_client()
-    deployment_nodes = client.list_deployment_nodes(
-        deployment_id, get_state)
-    return deployment_nodes
-
-
-def get_node_instance(node_instance_id):
-    client = create_new_rest_client()
-    node_instance = client.node_instances.get(node_instance_id)
-    return node_instance
-
-
-def update_node_instance(node_id,
-                         version,
-                         runtime_properties=None,
-                         state=None):
-    client = create_new_rest_client()
-    return client.node_instances.update(
-        node_id,
-        version=version,
-        runtime_properties=runtime_properties,
-        state=state)
-
-
 def post_provider_context(name, provider_context):
     client = create_rest_client()
     return client.post_provider_context(name, provider_context)
@@ -1228,7 +1133,8 @@ def get_provider_context():
 
 
 def is_node_started(node_id):
-    node_instance = get_node_instance(node_id)
+    client = create_new_rest_client()
+    node_instance = client.node_instances.get(node_id)
     return node_instance['state'] == 'started'
 
 

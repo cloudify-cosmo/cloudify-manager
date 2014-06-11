@@ -38,15 +38,15 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
-            'workflowId': 'install'
+            'workflow_id': 'install'
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         get_execution = self.get(get_execution_resource).json
         self.assertEquals(get_execution['status'], 'pending')
-        self.assertEquals(get_execution['blueprintId'], blueprint_id)
-        self.assertEquals(get_execution['deploymentId'],
+        self.assertEquals(get_execution['blueprint_id'], blueprint_id)
+        self.assertEquals(get_execution['deployment_id'],
                           deployment_response['id'])
-        self.assertIsNotNone(get_execution['createdAt'])
+        self.assertIsNotNone(get_execution['created_at'])
 
         return execution
 
@@ -56,7 +56,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
-            'workflowId': 'install'
+            'workflow_id': 'install'
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
@@ -66,7 +66,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         resp = self.patch('/executions/{0}'.format(execution['id']), {})
         self.assertEquals(400, resp.status_code)
         self.assertTrue('status' in resp.json['message'])
-        self.assertEquals(resp.json['errorCode'],
+        self.assertEquals(resp.json['error_code'],
                           manager_exceptions.BAD_PARAMETERS_ERROR_CODE)
 
     def test_update_execution_status(self):
@@ -75,7 +75,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
-            'workflowId': 'install'
+            'workflow_id': 'install'
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
@@ -90,7 +90,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
-            'workflowId': 'install'
+            'workflow_id': 'install'
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
@@ -126,7 +126,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             'action': 'cancel'
         })
         self.assertEquals(cancel_response.status_code, 404)
-        self.assertEquals(cancel_response.json['errorCode'],
+        self.assertEquals(cancel_response.json['error_code'],
                           manager_exceptions.NOT_FOUND_ERROR_CODE)
 
     def test_cancel_bad_action(self):
@@ -136,7 +136,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             'action': 'not_really_cancel'
         })
         self.assertEquals(cancel_response.status_code, 400)
-        self.assertEquals(cancel_response.json['errorCode'],
+        self.assertEquals(cancel_response.json['error_code'],
                           manager_exceptions.BAD_PARAMETERS_ERROR_CODE)
 
     def test_cancel_no_action(self):
@@ -154,12 +154,12 @@ class ExecutionsTestCase(BaseServerTestCase):
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         self.post(resource_path, {
-            'workflowId': 'install'
+            'workflow_id': 'install'
         })
         try:
             mocks.get_workflow_status = lambda wfid: 'running'
             response = self.post(resource_path, {
-                'workflowId': 'install'
+                'workflow_id': 'install'
             })
             self.assertEqual(response.status_code, 400)
         finally:
@@ -172,12 +172,12 @@ class ExecutionsTestCase(BaseServerTestCase):
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         self.post(resource_path, {
-            'workflowId': 'install'
+            'workflow_id': 'install'
         })
         try:
             mocks.get_workflow_status = lambda wfid: 'running'
             response = self.post(resource_path, {
-                'workflowId': 'install'
+                'workflow_id': 'install'
             }, query_params={'force': 'true'})
             self.assertEqual(response.status_code, 201)
         finally:

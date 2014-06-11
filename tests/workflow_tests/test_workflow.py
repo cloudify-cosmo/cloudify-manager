@@ -22,17 +22,6 @@ from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
 from workflow_tests.testenv import run_search as search
-from workflow_tests.testenv import get_blueprint
-from workflow_tests.testenv import delete_blueprint
-from workflow_tests.testenv import get_deployment
-from workflow_tests.testenv import delete_deployment
-from workflow_tests.testenv import publish_blueprint
-from workflow_tests.testenv import update_execution_status
-from workflow_tests.testenv import get_deployment_executions
-from workflow_tests.testenv import get_execution
-from workflow_tests.testenv import create_rest_client
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestCallError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -43,7 +32,7 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = self.id()
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEqual(blueprint_id, deployment.blueprintId)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         from plugins.cloudmock.tasks import get_machines
         result = self.send_task(get_machines)
@@ -56,7 +45,7 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = self.id()
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEquals(blueprint_id, deployment.blueprintId)
+        self.assertEquals(blueprint_id, deployment.blueprint_id)
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
@@ -152,7 +141,7 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = 'my_new_blueprint'
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEqual(blueprint_id, deployment.blueprintId)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         from plugins.cloudmock.tasks import get_machines
         result = self.send_task(get_machines)
@@ -170,34 +159,35 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = str(uuid.uuid4())
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEqual(blueprint_id, deployment.blueprintId)
-        blueprint = get_blueprint(blueprint_id)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
+        blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, blueprint.id)
-        self.assertTrue(len(blueprint.plan) > 0)
-        self.assertEqual('None', blueprint.source)
+        self.assertTrue(len(blueprint['plan']) > 0)
+        self.assertIsNone(blueprint['source'])
 
     def test_delete_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = publish_blueprint(dsl_path)
+        blueprint_id = self.client.blueprints.upload(dsl_path,
+                                                     str(uuid.uuid4())).id
         # verifying blueprint exists
-        result = get_blueprint(blueprint_id)
+        result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
         # deleting blueprint
-        deleted_bp_id = delete_blueprint(blueprint_id).id
+        deleted_bp_id = self.client.blueprints.delete(blueprint_id).id
         self.assertEqual(blueprint_id, deleted_bp_id)
         # verifying blueprint does no longer exist
         try:
-            get_blueprint(blueprint_id)
+            self.client.blueprints.get(blueprint_id)
             self.fail("Got blueprint {0} successfully even though it "
                       "wasn't expected to exist".format(blueprint_id))
-        except CosmoManagerRestCallError:
+        except CloudifyClientError:
             pass
         # trying to delete a nonexistent blueprint
         try:
-            delete_blueprint(blueprint_id)
+            self.client.blueprints.delete(blueprint_id)
             self.fail("Deleted blueprint {0} successfully even though it "
                       "wasn't expected to exist".format(blueprint_id))
-        except CosmoManagerRestCallError:
+        except CloudifyClientError:
             pass
 
     def test_delete_deployment(self):
@@ -206,20 +196,19 @@ class BasicWorkflowsTest(TestCase):
         deployment_id = str(uuid.uuid4())
 
         def change_execution_status(execution_id, status):
-            update_execution_status(execution_id, status)
+            self.client.executions.update(execution_id, status)
             time.sleep(5)  # waiting for elasticsearch to update...
-            executions = get_deployment_executions(deployment_id)
+            executions = self.client.deployments.list_executions(deployment_id)
             self.assertEqual(status, executions[0].status)
 
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
-        client = create_rest_client()
-        client.publish_blueprint(dsl_path, blueprint_id)
-        client.create_deployment(blueprint_id, deployment_id)
-        delete_deployment(deployment_id, False)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        self.client.deployments.delete(deployment_id, False)
         time.sleep(5)  # waiting for elasticsearch to clear deployment...
-        delete_blueprint(blueprint_id)
+        self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
         _, execution_id = deploy(dsl_path,
@@ -232,7 +221,7 @@ class BasicWorkflowsTest(TestCase):
         change_execution_status(execution_id, 'terminated')
 
         # verifying deployment exists
-        result = get_deployment(deployment_id)
+        result = self.client.deployments.get(deployment_id)
         self.assertEqual(deployment_id, result.id)
 
         # retrieving deployment nodes
@@ -254,12 +243,12 @@ class BasicWorkflowsTest(TestCase):
         # attempting to delete the deployment - should fail because the
         # execution is active
         try:
-            delete_deployment(deployment_id, False)
+            self.client.deployments.delete(deployment_id)
 
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had a running execution"
                       .format(deployment_id))
-        except CosmoManagerRestCallError, e:
+        except CloudifyClientError, e:
             self.assertTrue('running executions' in str(e))
 
         # setting the execution's status to 'terminated' so it won't prevent
@@ -269,33 +258,34 @@ class BasicWorkflowsTest(TestCase):
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
         try:
-            delete_deployment(deployment_id, False)
+            self.client.deployments.delete(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had live nodes and the ignore_live_nodes "
                       "flag was set to False".format(deployment_id))
-        except CosmoManagerRestCallError, e:
+        except CloudifyClientError, e:
             self.assertTrue('live nodes' in str(e))
 
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion
-        deleted_deployment_id = delete_deployment(deployment_id, True).id
+        deleted_deployment_id = self.client.deployments.delete(
+            deployment_id, True).id
         self.assertEqual(deployment_id, deleted_deployment_id)
 
         # verifying deployment does no longer exist
         try:
-            get_deployment(deployment_id)
+            self.client.deployments.get(deployment_id)
             self.fail("Got deployment {0} successfully even though it "
                       "wasn't expected to exist".format(deployment_id))
-        except CosmoManagerRestCallError, e:
+        except CloudifyClientError, e:
             self.assertTrue('not found' in str(e))
 
         # verifying deployment's execution does no longer exist
         try:
-            get_execution(execution_id)
+            self.client.executions.get(execution_id)
             self.fail('execution {0} still exists even though it should have '
                       'been deleted when its deployment was deleted'
                       .format(execution_id))
-        except CosmoManagerRestCallError, e:
+        except CloudifyClientError, e:
             self.assertTrue('not found' in str(e))
 
         # verifying deployment's nodes do no longer exist
@@ -310,10 +300,10 @@ class BasicWorkflowsTest(TestCase):
 
         # trying to delete a nonexistent deployment
         try:
-            delete_deployment(deployment_id)
+            self.client.deployments.delete(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "wasn't expected to exist".format(deployment_id))
-        except CosmoManagerRestCallError, e:
+        except CloudifyClientError, e:
             self.assertTrue('not found' in str(e))
 
     def test_node_state_uninitialized(self):
@@ -321,9 +311,8 @@ class BasicWorkflowsTest(TestCase):
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
-        client = create_rest_client()
-        client.publish_blueprint(dsl_path, blueprint_id)
-        client.create_deployment(blueprint_id, deployment_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
 
         def assert_deployment_nodes_length():
             deployment_nodes = self.client.node_instances.list(
