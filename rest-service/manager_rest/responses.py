@@ -139,6 +139,7 @@ class Node(object):
         'properties': fields.Raw,
         'operations': fields.Raw,
         'plugins': fields.Raw,
+        'plugins_to_install': fields.Raw,
         'relationships': fields.Raw
     }
 
@@ -153,6 +154,7 @@ class Node(object):
         self.properties = kwargs['properties']
         self.operations = kwargs['operations']
         self.plugins = kwargs['plugins']
+        self.plugins_to_install = kwargs['plugins_to_install']
         self.relationships = kwargs['relationships']
 
 
@@ -161,6 +163,9 @@ class NodeInstance(object):
 
     resource_fields = {
         'id': fields.String,
+        'node_id': fields.String,
+        'host_id': fields.String,
+        'relationships': fields.Raw,
         'deployment_id': fields.String,
         'runtime_properties': fields.Raw,
         'version': fields.Raw,
@@ -173,6 +178,9 @@ class NodeInstance(object):
         self.runtime_properties = kwargs['runtime_properties']
         self.version = kwargs['version']
         self.state = kwargs['state']
+        self.node_id = kwargs['node_id']
+        self.relationships = kwargs['relationships']
+        self.host_id = kwargs['host_id']
 
 
 @swagger.model

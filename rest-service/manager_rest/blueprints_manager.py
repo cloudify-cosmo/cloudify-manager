@@ -218,14 +218,27 @@ class BlueprintsManager(object):
 
         self._install_deployment_workers(new_deployment, now)
 
-        for plan_node in new_deployment.plan['nodes']:
-            node_id = plan_node['id']
-            node = models.DeploymentNodeInstance(id=node_id,
-                                                 deployment_id=deployment_id,
-                                                 state='uninitialized',
-                                                 runtime_properties=None,
-                                                 version=None)
-            self.sm.put_node_instance(node)
+        node_instances = new_deployment.plan['node_instances']
+        for node_instance in node_instances:
+            instance_id = node_instance['id']
+            node_id = node_instance['name']
+            relationships = node_instance.get('relationships', [])
+            host_id = node_instance.get('host_id')
+
+            instance = models.DeploymentNodeInstance(
+                id=instance_id,
+                node_id=node_id,
+                host_id=host_id,
+                relationships=relationships,
+                deployment_id=deployment_id,
+                state='uninitialized',
+                runtime_properties=None,
+                version=None)
+            self.sm.put_node_instance(instance)
+
+        self._wait_for_count(expected_count=len(node_instances),
+                             query_method=self.sm.get_node_instances,
+                             deployment_id=deployment_id)
 
         return new_deployment
 
@@ -242,19 +255,26 @@ class BlueprintsManager(object):
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
+                plugins_to_install=raw_node.get('plugins_to_install'),
                 relationships=self._prepare_node_relationships(raw_node)
             ))
 
+        self._wait_for_count(expected_count=len(plan['nodes']),
+                             query_method=self.sm.get_nodes,
+                             deployment_id=deployment_id)
+
     @staticmethod
     def _prepare_node_relationships(raw_node):
-        if 'relationship' not in raw_node:
-            return None
+        if 'relationships' not in raw_node:
+            return []
         prepared_relationships = []
         for raw_relationship in raw_node['relationships']:
             relationship = {
-                'target_node_id': raw_relationship['target_id'],
+                'target_id': raw_relationship['target_id'],
                 'type': raw_relationship['type'],
-                'properties': raw_relationship['properties']
+                'properties': raw_relationship['properties'],
+                'source_operations': raw_relationship['source_operations'],
+                'target_operations': raw_relationship['target_operations'],
             }
             prepared_relationships.append(relationship)
         return prepared_relationships
@@ -380,6 +400,19 @@ class BlueprintsManager(object):
             raise RuntimeError('Failed to uninstall deployment workers for '
                                'deployment {0}'.format(deployment_id))
 
+
+    @staticmethod
+    def _wait_for_count(expected_count, query_method, deployment_id):
+        import time
+        timeout = time.time() + 30
+        # workaround ES eventual consistency
+        # TODO check if there is a count query and do that
+        actual_count = len(query_method(deployment_id))
+        while actual_count < expected_count and time.time() < timeout:
+            time.sleep(1)
+            actual_count = len(query_method(deployment_id))
+        if actual_count < expected_count:
+            raise RuntimeError('Timed out while waiting for nodes count')
 
 
 def teardown_blueprints_manager(exception):

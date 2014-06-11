@@ -3,6 +3,7 @@ cloudify.types: cloudify/types/types.yaml
 cloudify.openstack: cloudify/types/openstack.yaml
 cloudify.bash: cloudify/types/bash.yaml
 cloudify.chef: cloudify/types/chef.yaml
+cloudify.puppet: cloudify/types/puppet.yaml
 
 # workflows
 cloudify.workflows.install: cloudify/workflows/install.radial
