@@ -29,6 +29,7 @@ from cloudify.context import BootstrapContext
 
 @init_worker_installer
 def m(ctx, runner, worker_config, **kwargs):
+    worker_config['distro'] = 'Ubuntu'
     return worker_config
 
 
