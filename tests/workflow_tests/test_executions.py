@@ -16,18 +16,15 @@
 
 __author__ = 'dan'
 
-import time
-
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 from workflow_tests.testenv import (TestCase,
                                     get_resource as resource,
-                                    deploy_application as deploy,
-                                    execute_install)
+                                    deploy_application as deploy)
 
 
 class ExecutionsTest(TestCase):
 
+    # CFY-783
     # TODO: execution cancelling is not yet implemented with new
     #  workflows plugin
     # def test_cancel_execution(self):
@@ -51,26 +48,6 @@ class ExecutionsTest(TestCase):
             self.assertEquals('', deployments_executions[0].error)
 
         self.do_assertions(assertions, timeout=10)
-
-    def test_execute_more_than_one_workflow_fails(self):
-        dsl_path = resource("dsl/sleep_workflow.yaml")
-        deployment, execution_id = deploy(dsl_path,
-                                          wait_for_execution=False)
-        time.sleep(2)
-        self.assertRaises(CloudifyClientError,
-                          execute_install,
-                          deployment.id,
-                          force=False,
-                          wait_for_execution=False)
-
-    def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        dsl_path = resource("dsl/sleep_workflow.yaml")
-        deployment, execution_id = deploy(dsl_path,
-                                          wait_for_execution=False)
-        time.sleep(2)
-        execute_install(deployment.id,
-                        force=True,
-                        wait_for_execution=False)
 
     def test_update_execution_status(self):
         dsl_path = resource("dsl/basic.yaml")
