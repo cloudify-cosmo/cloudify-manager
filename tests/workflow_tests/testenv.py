@@ -1123,9 +1123,9 @@ def deploy_application(dsl_path,
 
     # a workaround for waiting for the workers installation to complete
     def verify_workers_installation_complete():
-        execs = client.list_deployment_executions(deployment_id)
+        execs = client.deployment.list_executions(deployment_id)
         if not execs or execs[0].status != 'terminated' or execs[0] \
-            .workflowId != 'workers_installation':
+            .workflow_id != 'workers_installation':
             raise RuntimeError(
                 "Expected a single execution for workflow "
                 "'workers_installation' with status 'terminated'")
