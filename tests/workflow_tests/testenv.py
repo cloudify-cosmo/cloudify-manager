@@ -1106,8 +1106,6 @@ def undeploy_application(deployment_id, timeout=240):
                                            'uninstall')
     wait_for_execution_to_end(execution, timeout=timeout)
 
-    print '###### execution:', json.dumps(execution, indent=4)
-
     if execution.error and execution.error != 'None':
         raise RuntimeError(
             'Workflow execution failed: {0}'.format(execution.error))
