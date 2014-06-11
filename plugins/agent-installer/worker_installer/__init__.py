@@ -60,7 +60,7 @@ def init_worker_installer(func):
 
 def get_machine_distro(runner):
     return runner.run(
-        'python -c "import platform; print(platform.dist()[0])"').out
+        'python -c "import platform; print(platform.dist()[0])"').stdout
 
 
 def get_machine_ip(ctx):
