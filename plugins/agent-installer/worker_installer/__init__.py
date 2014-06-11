@@ -51,8 +51,14 @@ def init_worker_installer(func):
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
         kwargs['runner'] = FabricRunner(ctx, worker_config)
+        kwargs['distro'] = get_machine_distro(kwargs['runner'])
         return func(*args, **kwargs)
     return wrapper
+
+
+def get_machine_distro(runner):
+    return runner.run(
+        'python -c "import platform; print(platform.dist()[0])"').out
 
 
 def get_machine_ip(ctx):

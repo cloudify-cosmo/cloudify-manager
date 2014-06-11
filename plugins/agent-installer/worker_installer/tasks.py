@@ -39,18 +39,12 @@ DISABLE_REQUIRETTY_SCRIPT_URL =\
 SUPPORTED_DISTROS = ('Ubuntu', 'debian', 'centos')
 
 
-@init_worker_installer
-def get_machine_distro(runner):
-    return runner.run(
-        'python -c "import platform; print(platform.dist()[0])"').out
-
-
-def get_agent_package_url():
+def get_agent_package_url(distro):
     """
     Returns the agent package url the package will be downloaded from.
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           AGENT_PACKAGE_PATH.format(get_machine_distro()))
+                           AGENT_PACKAGE_PATH.format(distro))
 
 
 def get_disable_requiretty_script_url():
@@ -68,9 +62,13 @@ def get_celery_includes_list():
 
 @operation
 @init_worker_installer
-def install(ctx, runner, worker_config, **kwargs):
+def install(ctx, distro, runner, worker_config, **kwargs):
 
-    distro = get_machine_distro()
+    agent_package_url = get_agent_package_url(distro)
+    if distro not in SUPPORTED_DISTROS:
+        ctx.logger.error('distro {} not supported '
+                         'when installing agent'.format(distro))
+        raise RuntimeError('unsupported distribution')
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -90,10 +88,11 @@ def install(ctx, runner, worker_config, **kwargs):
     runner.run('mkdir -p {0}'.format(worker_config['base_dir']))
 
     ctx.logger.debug(
-        'Downloading agent package from: {0}'.format(get_agent_package_url()))
+        'Downloading agent package from: {0}'.format(
+            agent_package_url))
 
     runner.run('wget -T 30 -O {0}/{1}-agent.tar.gz {2}'.format(
-        worker_config['base_dir'], distro, get_agent_package_url()))
+        worker_config['base_dir'], distro, agent_package_url))
 
     runner.run(
         'tar xzvf {0}/{1}-agent.tar.gz --strip=2 -C {2}'.format(
