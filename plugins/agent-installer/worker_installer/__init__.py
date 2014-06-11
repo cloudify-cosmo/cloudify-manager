@@ -51,8 +51,9 @@ def init_worker_installer(func):
         prepare_configuration(ctx, worker_config)
         kwargs['worker_config'] = worker_config
         kwargs['runner'] = FabricRunner(ctx, worker_config)
-        kwargs['worker_config']['distro'] = \
-            get_machine_distro(kwargs['runner'])
+        if not worker_config.get('distro'):
+            kwargs['worker_config']['distro'] = \
+                get_machine_distro(kwargs['runner'])
         return func(*args, **kwargs)
     return wrapper
 
