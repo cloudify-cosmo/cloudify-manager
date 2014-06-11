@@ -18,15 +18,12 @@ __author__ = 'dan'
 
 import time
 
-from cosmo_manager_rest_client.cosmo_manager_rest_client import \
-    CosmoManagerRestCallError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from workflow_tests.testenv import (TestCase,
                                     get_resource as resource,
                                     deploy_application as deploy,
-                                    execute_install,
-                                    wait_for_execution_to_end)
+                                    execute_install)
 
 
 class ExecutionsTest(TestCase):

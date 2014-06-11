@@ -72,13 +72,13 @@ def abort_workflow_service_operation(workflow_service_error):
                   ' full response {1}'.format(
                       workflow_service_error.status_code,
                       workflow_service_error.json),
-          errorCode=manager_exceptions.INTERNAL_SERVER_ERROR_CODE)
+          error_code=manager_exceptions.INTERNAL_SERVER_ERROR_CODE)
 
 
 def abort_error(error):
     abort(error.http_code,
           message='{0}: {1}'.format(error.http_code, str(error)),
-          errorCode=error.error_code)
+          error_code=error.error_code)
 
 
 def verify_json_content_type():

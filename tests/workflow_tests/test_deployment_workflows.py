@@ -18,7 +18,6 @@ __author__ = 'ran'
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import get_deployment_workflows
 
 
 class TestDeploymentWorkflows(TestCase):
