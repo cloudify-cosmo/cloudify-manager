@@ -38,7 +38,7 @@ DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/w
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
 
 
-def _get_custom_agent_package_url():
+def _get_custom_agent_package_url(distro):
     return AGENT_PACKAGE_URL
 
 
