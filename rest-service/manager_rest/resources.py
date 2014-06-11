@@ -949,8 +949,10 @@ class DeploymentsIdExecutions(Resource):
         if not force:
             executions = get_blueprints_manager().get_deployment_executions(
                 deployment_id)
-            running = [e.id for e in executions
-                       if e.status not in ['failed', 'terminated']]
+            running = [
+                e.id for e in executions if
+                get_storage_manager().get_execution(e.id).status
+                not in ['failed', 'terminated']]
             if len(running) > 0:
                 raise manager_exceptions.ExistingRunningExecutionError(
                     'The following executions are currently running for this '
