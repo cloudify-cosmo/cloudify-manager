@@ -1057,15 +1057,6 @@ def run_search(query):
     return client.run_search(query)
 
 
-def publish_blueprint(dsl_path, blueprint_id=None):
-    client = create_rest_client()
-    if not blueprint_id:
-        blueprint_id = str(uuid.uuid4())
-    blueprint_id = client.publish_blueprint(dsl_path,
-                                            blueprint_id).id
-    return blueprint_id
-
-
 def wait_for_execution_to_end(execution, timeout=240):
     client = create_new_rest_client()
     deadline = time.time() + timeout
@@ -1122,43 +1113,6 @@ def undeploy_application(deployment_id, timeout=240):
             'Workflow execution failed: {0}'.format(execution.error))
 
 
-def execute_install(deployment_id,
-                    timeout=240,
-                    force=False,
-                    wait_for_execution=True):
-    client = create_new_rest_client()
-    execution = client.deployments.execute(deployment_id,
-                                           'install',
-                                           force=force)
-    execution = wait_for_execution_to_end(execution, timeout=timeout)
-    if execution.error:
-        raise RuntimeError(
-            'Workflow execution failed: {0}'.format(execution.error))
-
-
-def update_execution_status(execution_id, status, error=None):
-    client = create_rest_client()
-    return client.update_execution_status(execution_id, status, error)
-
-
-def cancel_execution(execution_id, wait_for_termination=False):
-    """
-    Cancels an execution by its id
-    """
-    client = create_rest_client()
-
-    if wait_for_termination:
-        execution = client.cancel_execution(execution_id)
-        endtime = time.time() + 10
-        while execution.status not in \
-                ['terminated', 'failed'] and time.time() < endtime:
-            execution = get_execution(execution_id)
-            time.sleep(1)
-        return execution
-    else:
-        return client.cancel_execution(execution_id)
-
-
 def validate_dsl(blueprint_id, timeout=240):
     """
     A blocking method which validates a dsl from the provided dsl path.
@@ -1168,69 +1122,6 @@ def validate_dsl(blueprint_id, timeout=240):
     if response.status != 'valid':
         raise RuntimeError('Blueprint {0} is not valid (status: {1})'
                            .format(blueprint_id, response.status))
-
-
-def get_execution(execution_id):
-    """
-    Returns the exeuction status
-    """
-    client = create_rest_client()
-    return client.get_execution(execution_id)
-
-
-def get_blueprint(blueprint_id):
-    client = create_rest_client()
-    return client.get_blueprint(blueprint_id)
-
-
-def delete_blueprint(blueprint_id):
-    client = create_rest_client()
-    return client.delete_blueprint(blueprint_id)
-
-
-def get_deployment(deployment_id):
-    client = create_rest_client()
-    return client.get_deployment(deployment_id)
-
-
-def delete_deployment(deployment_id, ignore_live_nodes=False):
-    client = create_rest_client()
-    return client.delete_deployment(deployment_id, ignore_live_nodes)
-
-
-def get_deployment_workflows(deployment_id):
-    client = create_rest_client()
-    return client.list_workflows(deployment_id)
-
-
-def get_deployment_executions(deployment_id):
-    client = create_rest_client()
-    return client.list_deployment_executions(deployment_id)
-
-
-def get_deployment_nodes(deployment_id, get_state=False):
-    client = create_rest_client()
-    deployment_nodes = client.list_deployment_nodes(
-        deployment_id, get_state)
-    return deployment_nodes
-
-
-def get_node_instance(node_instance_id):
-    client = create_new_rest_client()
-    node_instance = client.node_instances.get(node_instance_id)
-    return node_instance
-
-
-def update_node_instance(node_id,
-                         version,
-                         runtime_properties=None,
-                         state=None):
-    client = create_new_rest_client()
-    return client.node_instances.update(
-        node_id,
-        version=version,
-        runtime_properties=runtime_properties,
-        state=state)
 
 
 def post_provider_context(name, provider_context):
@@ -1244,7 +1135,8 @@ def get_provider_context():
 
 
 def is_node_started(node_id):
-    node_instance = get_node_instance(node_id)
+    client = create_new_rest_client()
+    node_instance = client.node_instances.get(node_id)
     return node_instance['state'] == 'started'
 
 
