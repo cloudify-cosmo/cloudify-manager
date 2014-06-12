@@ -80,7 +80,7 @@ def install(ctx, **kwargs):
             ctx.execute_task(
                 task_queue='{0}_workflows'.format(ctx.deployment_id),
                 task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': plugins}))
+                kwargs={'plugins': [{'name': 'default-workflows-plugin'}]}))
 
     sequence.add(
         ctx.execute_task(
