@@ -117,7 +117,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             deployment_id='test',
             properties={
                 'worker_config': {
-                    'disable_requiretty': value
+                    'disable_requiretty': value,
+                    'distro': 'Ubuntu',
                 }
             }
         )

@@ -30,11 +30,14 @@ CELERY_INCLUDES_LIST = [
     AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH
 ]
 
-CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
-CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
+CELERY_CONFIG_FILE = 'celeryd-cloudify.conf.template'
+CELERY_INIT_FILE = 'celeryd-cloudify.init.template'
+DISABLE_REQUIRETTY_FILE = 'agent-disable-requiretty.sh'
+CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
+CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
 DISABLE_REQUIRETTY_SCRIPT_URL =\
-    '/packages/scripts/linux-agent-disable-requiretty.sh'
+    '/packages/scripts/{0}-agent-disable-requiretty.sh'
 
 SUPPORTED_DISTROS = ('Ubuntu', 'debian', 'centos')
 
@@ -47,13 +50,13 @@ def get_agent_package_url(distro):
                            AGENT_PACKAGE_PATH.format(distro))
 
 
-def get_disable_requiretty_script_url():
+def get_disable_requiretty_script_url(distro):
     """
     Returns the disable requiretty script url the script will be downloaded
     from.
     """
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           DISABLE_REQUIRETTY_SCRIPT_URL)
+                           DISABLE_REQUIRETTY_SCRIPT_URL.format(distro))
 
 
 def get_celery_includes_list():
@@ -129,7 +132,8 @@ def install(ctx, runner, worker_config, **kwargs):
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             worker_config['base_dir'])
         runner.run('wget -T 30 -O {0} {1}'.format(
-            disable_requiretty_script, get_disable_requiretty_script_url()))
+            disable_requiretty_script, get_disable_requiretty_script_url(
+                worker_config['distro'])))
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -223,7 +227,8 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
     create_celery_includes_file(ctx, runner, worker_config)
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
-    config_template = env.get_template(CELERY_CONFIG_PATH)
+    config_template = env.get_template(CELERY_CONFIG_PATH.format(
+        worker_config['distro']))
     config_template_values = {
         'includes_file_path': worker_config['includes_file'],
         'celery_base_dir': worker_config['celery_base_dir'],
@@ -243,7 +248,8 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
         'values: {0}'.format(config_template_values))
 
     config = config_template.render(config_template_values)
-    init_template = env.get_template(CELERY_INIT_PATH)
+    init_template = env.get_template(CELERY_INIT_PATH.format(
+        worker_config['distro']))
     init_template_values = {
         'celery_base_dir': worker_config['celery_base_dir'],
         'worker_modifier': worker_config['name']

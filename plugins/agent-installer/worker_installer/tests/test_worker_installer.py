@@ -42,7 +42,7 @@ def _get_custom_agent_package_url(distro):
     return AGENT_PACKAGE_URL
 
 
-def _get_custom_disable_requiretty_script_url():
+def _get_custom_disable_requiretty_script_url(distro):
     return DISABLE_REQUIRETTY_SCRIPT_URL
 
 
