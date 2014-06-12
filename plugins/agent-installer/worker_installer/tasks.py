@@ -30,9 +30,6 @@ CELERY_INCLUDES_LIST = [
     AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH
 ]
 
-CELERY_CONFIG_FILE = 'celeryd-cloudify.conf.template'
-CELERY_INIT_FILE = 'celeryd-cloudify.init.template'
-DISABLE_REQUIRETTY_FILE = 'agent-disable-requiretty.sh'
 CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
