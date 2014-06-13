@@ -17,6 +17,7 @@ __author__ = 'ran'
 
 from cloudify.decorators import workflow
 
+
 @workflow
 def install(ctx, **kwargs):
     pass

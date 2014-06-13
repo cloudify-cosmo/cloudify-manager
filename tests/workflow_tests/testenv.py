@@ -465,8 +465,8 @@ class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
             queues=CELERY_QUEUES_LIST,
             includes=self._build_includes(),
             hostname='cloudify.management',
-            # concurrency=2)
-            concurrency=1)
+            concurrency=2)
+            # concurrency=1)
 
 
 class CeleryTestWorkerProcess(CeleryWorkerProcess):
@@ -838,10 +838,10 @@ class TestEnvironment(object):
             # mock_workflow_plugins overrides workflow_plugin_path for some
             # workflow plugins
             for plugin_path in [plugins_path,
-                                workflow_plugin_path,
-                                mock_workflow_plugins]:
-                                # mock_workflow_plugins,
-                                # workflow_plugin_path]:
+                                # workflow_plugin_path,
+                                # mock_workflow_plugins]:
+                                mock_workflow_plugins,
+                                workflow_plugin_path]:
                 logger.info("Copying %s to %s", plugin_path, app_path)
                 distutils.dir_util.copy_tree(plugin_path, app_path)
 
@@ -1123,14 +1123,15 @@ def deploy_application(dsl_path,
 
     # a workaround for waiting for the workers installation to complete
     def verify_workers_installation_complete():
-        execs = client.deployment.list_executions(deployment_id)
-        if not execs or execs[0].status != 'terminated' or execs[0] \
-            .workflow_id != 'workers_installation':
+        execs = client.deployments.list_executions(deployment_id)
+        if not execs \
+            or execs[0].status != 'terminated' \
+                or execs[0].workflow_id != 'workers_installation':
             raise RuntimeError(
                 "Expected a single execution for workflow "
                 "'workers_installation' with status 'terminated'")
-    TestCase.do_retries(verify_workers_installation_complete)
-    
+    TestCase.do_retries(verify_workers_installation_complete, 15)
+
     execution = client.deployments.execute(deployment_id, 'install')
 
     if wait_for_execution:

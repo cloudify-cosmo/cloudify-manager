@@ -21,10 +21,8 @@ from cloudify.workflows.tasks_graph import TaskDependencyGraph
 
 
 WORKER_PAYLOAD = {
-    'properties': {
-        'worker_config': {
-            'workflows_worker': True
-        }
+    'worker_config': {
+        'workflows_worker': True
     }
 }
 

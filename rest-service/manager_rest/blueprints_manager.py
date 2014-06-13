@@ -292,7 +292,7 @@ class BlueprintsManager(object):
         if not workers_installation_execution:
             raise RuntimeError('Failed to find "workers_installation" '
                                'execution for deployment {0}'.format(
-                               deployment_id))
+                                   deployment_id))
 
         if workers_installation_execution.status == 'terminated':
             return
@@ -393,13 +393,12 @@ class BlueprintsManager(object):
 
         # wait for workers uninstall to complete
         uninstall_workers_task_async_result.get()
-        #verify uninstall completed successfully
+        # verify uninstall completed successfully
         execution = get_storage_manager().get_execution(
             workers_uninstallation_task_id)
         if execution.status != 'terminated':
             raise RuntimeError('Failed to uninstall deployment workers for '
                                'deployment {0}'.format(deployment_id))
-
 
     @staticmethod
     def _wait_for_count(expected_count, query_method, deployment_id):

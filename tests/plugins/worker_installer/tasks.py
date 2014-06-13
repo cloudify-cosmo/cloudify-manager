@@ -34,8 +34,6 @@ def install(ctx, **kwargs):
     data = _get_data()
 
     ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
-    if not _is_workflows_worker(kwargs):
-        data['current_worker_name'] = worker_config["name"]
     data['workers_state'][worker_config["name"]] = [INSTALLED]
     _store_data(data)
 
@@ -91,19 +89,15 @@ def uninstall(ctx, **kwargs):
 
 
 @operation
-def get_current_worker_state(workflows_worker=False, **kwargs):
+def get_worker_state(worker_name, **kwargs):
     data = _get_data()
-    name = 'cloudify.workflows' if workflows_worker else \
-        data['current_worker_name']
-    return data['workers_state'][name]
+    return data['workers_state'][worker_name]
 
 
 def _fix_worker(ctx, **kwargs):
     worker_config = {}
-    if ctx.properties and 'worker_config' in ctx.properties:
-        worker_config = ctx.properties['worker_config']
     if _is_workflows_worker(kwargs):
-        worker_config['name'] = 'cloudify.workflows'
+        worker_config['name'] = '{0}_workflows'.format(ctx.deployment_id)
     elif ctx.node_id is None:
         worker_config['name'] = ctx.deployment_id
     else:
@@ -112,9 +106,11 @@ def _fix_worker(ctx, **kwargs):
 
 
 def _is_workflows_worker(config_container):
-    return 'worker_config' in config_container and 'workflows_worker' in \
-           config_container['worker_config'] and config_container[
-               'worker_config']['workflows_worker']
+    return 'properties' in config_container and 'worker_config' in \
+        config_container['properties'] and 'workflows_worker' in \
+        config_container['properties']['worker_config'] and \
+        config_container['properties']['worker_config'][
+            'workflows_worker']
 
 
 def _get_data():
@@ -130,8 +126,7 @@ def _store_data(data):
 
 def setup_plugin():
     data = {
-        'workers_state': {},
-        'current_worker_name': None
+        'workers_state': {}
     }
     _store_data(data)
 
