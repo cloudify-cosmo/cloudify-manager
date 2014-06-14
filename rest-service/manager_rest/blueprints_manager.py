@@ -342,10 +342,10 @@ class BlueprintsManager(object):
         execute_task(workers_install_task_name,
                      'cloudify.management',
                      workers_installation_task_id,
-                     kwargs=
-                     {'management_plugins_to_install':
-                      deployment.plan['management_plugins_to_install'],
-                      '__cloudify_context': context})
+                     kwargs={
+                         'management_plugins_to_install':
+                         deployment.plan['management_plugins_to_install'],
+                         '__cloudify_context': context})
 
     def _build_context_from_deployment(self, deployment, task_id, wf_id,
                                        task_name):
