@@ -147,8 +147,8 @@ class ManagerRestProcess(object):
             'server:app'
         ]
 
-        logger.info('Starting manager-rest with: {0}'
-            .format(manager_rest_command))
+        logger.info('Starting manager-rest with: {0}'.format(
+            manager_rest_command))
 
         self.process = subprocess.Popen(manager_rest_command,
                                         env=env,
@@ -348,8 +348,8 @@ class CeleryWorkerProcess(object):
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
 
-        logger.info("Starting celery worker with command {0}"
-            .format(celery_command))
+        logger.info("Starting celery worker with command {0}".format(
+            celery_command))
         self._process = subprocess.Popen(celery_command, env=environment)
 
         timeout = 60
@@ -363,19 +363,19 @@ class CeleryWorkerProcess(object):
             if celery_log is not None:
                 logger.error("{0} content:\n{1}".format(
                     self._celery_log_file, celery_log))
-            raise RuntimeError("Failed to start celery {0} worker: {1} "
-                               "- process "
-                               "did not start after {2} seconds"
-                .format(self._name,
-                        self._process.returncode, timeout))
+            raise RuntimeError(
+                "Failed to start celery {0} worker: {1} - process did not "
+                "start after {2} seconds".format(self._name,
+                                                 self._process.returncode,
+                                                 timeout))
 
         os.chdir(prevdir)
         logger.info("Celery worker started [pid=%s]", self._process.pid)
 
     def close(self):
         if self._process:
-            logger.info("Shutting down celery {} worker [pid={}]"
-                .format(self._name, self._process.pid))
+            logger.info("Shutting down celery {} worker [pid={}]".format(
+                self._name, self._process.pid))
             self._process.kill()
 
     def _get_celery_process_ids(self):
@@ -436,9 +436,9 @@ class CeleryWorkerProcess(object):
             if os.path.exists(tasks_path):
                 includes.append("{0}.tasks".format(plugin_dir_name))
             else:
-                logger.warning("Could not find tasks.py file under plugin {0}."
-                               " This plugin will not be loaded!"
-                    .format(plugin_dir_name))
+                logger.warning(
+                    "Could not find tasks.py file under plugin {0}. This "
+                    "plugin will not be loaded!".format(plugin_dir_name))
         return includes
 
 
@@ -515,9 +515,10 @@ class RiemannProcess(object):
         logger.info("Starting riemann server...")
         self.pid = self._find_existing_riemann_process()
         if self.pid:
-            logger.info("Riemann server is already running [pid={0}]"
-                .format(self.pid))
+            logger.info("Riemann server is already running [pid={0}]".format(
+                self.pid))
             return
+
         command = [
             'riemann',
             self._config_path
@@ -532,15 +533,15 @@ class RiemannProcess(object):
         self._detector.start()
         timeout = 60
         if not self._event.wait(timeout):
-            raise RuntimeError("Unable to start riemann process:\n{0} "
-                               "(timed out after {1} seconds)"
-                .format('\n'.join(self._riemann_logs), timeout))
+            raise RuntimeError(
+                "Unable to start riemann process:\n{0} (timed out after "
+                "{1} seconds)".format('\n'.join(self._riemann_logs), timeout))
         logger.info("Riemann server started [pid={0}]".format(self.pid))
 
     def close(self):
         if self.pid:
-            logger.info("Shutting down riemann server [pid={0}]"
-                .format(self.pid))
+            logger.info("Shutting down riemann server [pid={0}]".format(
+                self.pid))
             os.system("kill {0}".format(self.pid))
 
     def _find_existing_riemann_process(self):
@@ -810,8 +811,8 @@ class TestEnvironment(object):
         try:
             TestEnvironmentScope.validate(scope)
 
-            logger.info("Setting up test environment... [scope={0}]"
-                .format(scope))
+            logger.info("Setting up test environment... [scope={0}]".format(
+                scope))
             self._scope = scope
 
             # temp directory
@@ -949,8 +950,8 @@ class TestEnvironment(object):
             raise
 
     def _destroy(self):
-        logger.info("Destroying test environment... [scope={0}]"
-            .format(self._scope))
+        logger.info("Destroying test environment... [scope={0}]".format(
+            self._scope))
         if self._riemann_process:
             self._riemann_process.close()
         if self._elasticsearch_process:
@@ -1019,14 +1020,14 @@ class TestEnvironment(object):
     @staticmethod
     def restart_celery_operations_worker():
         if TestEnvironment._instance and \
-            (TestEnvironment._instance._celery_operations_worker_process):
+                (TestEnvironment._instance._celery_operations_worker_process):
             TestEnvironment._instance._celery_operations_worker_process \
                 .restart()
 
     @staticmethod
     def restart_celery_workflows_worker():
         if TestEnvironment._instance and \
-            (TestEnvironment._instance._celery_workflows_worker_process):
+                (TestEnvironment._instance._celery_workflows_worker_process):
             TestEnvironment._instance._celery_workflows_worker_process \
                 .restart()
 
@@ -1059,8 +1060,8 @@ def get_resource(resource):
     resources_path = path.dirname(resources.__file__)
     resource_path = path.join(resources_path, resource)
     if not path.exists(resource_path):
-        raise RuntimeError("Resource '{0}' not found in: {1}"
-            .format(resource, resource_path))
+        raise RuntimeError("Resource '{0}' not found in: {1}".format(
+            resource, resource_path))
     return resource_path
 
 
@@ -1105,7 +1106,7 @@ def deploy_application(dsl_path,
         execs = client.deployments.list_executions(deployment_id)
         if not execs \
             or execs[0].status != 'terminated' \
-            or execs[0].workflow_id != 'workers_installation':
+                or execs[0].workflow_id != 'workers_installation':
             raise RuntimeError(
                 "Expected a single execution for workflow "
                 "'workers_installation' with status 'terminated'; "
@@ -1143,8 +1144,8 @@ def validate_dsl(blueprint_id, timeout=240):
     client = create_rest_client()
     response = client.validate_blueprint(blueprint_id)
     if response.status != 'valid':
-        raise RuntimeError('Blueprint {0} is not valid (status: {1})'
-            .format(blueprint_id, response.status))
+        raise RuntimeError('Blueprint {0} is not valid (status: {1})'.format(
+            blueprint_id, response.status))
 
 
 def post_provider_context(name, provider_context):
