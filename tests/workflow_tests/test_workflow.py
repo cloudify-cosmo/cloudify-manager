@@ -22,7 +22,6 @@ from workflow_tests.testenv import get_resource as resource
 from workflow_tests.testenv import deploy_application as deploy
 from workflow_tests.testenv import timeout
 from workflow_tests.testenv import run_search as search
-from workflow_tests.testenv import update_execution_status
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -196,7 +195,7 @@ class BasicWorkflowsTest(TestCase):
         deployment_id = str(uuid.uuid4())
 
         def change_execution_status(execution_id, status):
-            update_execution_status(execution_id, status)
+            self.client.executions.update(execution_id, status)
             time.sleep(5)  # waiting for elasticsearch to update...
             executions = self.client.deployments.list_executions(deployment_id)
             self.assertEqual(status, executions[0].status)
