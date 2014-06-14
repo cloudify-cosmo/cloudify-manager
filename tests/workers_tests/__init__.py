@@ -13,24 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
+__author__ = 'ran'
 
 
 from testenv import TestEnvironment
 from testenv import TestEnvironmentScope
 from testenv import create_new_rest_client
-from testenv import do_retries
 import unittest
-import time
 import logging
-
-
-def setUp():
-    TestEnvironment.create()
-
-
-def tearDown():
-    TestEnvironment.destroy()
 
 
 class TestCase(unittest.TestCase):
@@ -40,7 +30,7 @@ class TestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        TestEnvironment.create(TestEnvironmentScope.CLASS)
+        TestEnvironment.create(TestEnvironmentScope.CLASS, False)
 
     @classmethod
     def tearDownClass(cls):
@@ -56,7 +46,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.restart_celery_operations_worker()
         TestEnvironment.restart_celery_workflows_worker()
         TestEnvironment.reset_elasticsearch_data()
+        pass
 
-    @staticmethod
-    def do_assertions(assertions_func, timeout=10):
-        return do_retries(assertions_func, timeout, AssertionError)
+    def create_celery_worker(self, queue):
+        return TestEnvironment.create_celery_worker(queue)

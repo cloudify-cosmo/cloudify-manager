@@ -18,10 +18,11 @@ __author__ = 'dank'
 import uuid
 import time
 
-from testenv import TestCase
+from workers_tests import TestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import wait_for_execution_to_end
+from testenv import send_task
 
 from plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
@@ -64,9 +65,6 @@ class TestWithDeploymentWorker(TestCase):
         super(TestWithDeploymentWorker, self).tearDown()
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
-        f = open('/home/ran/DBG-TEST', 'w', 0)
-        f.write('start...\n')
-
         # start deployment workers
         deployment_worker = self.create_celery_worker(DEPLOYMENT_ID)
         self.addCleanup(deployment_worker.close)
@@ -145,7 +143,6 @@ class TestWithDeploymentWorker(TestCase):
         state = self._get(get_worker_state, queue=MANAGEMENT,
                           args=[DEPLOYMENT_WORKFLOWS_QUEUE])
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
-        f.write('DONE')
 
         # test valid agent worker un-installation order
         # we do not call stop and uninstall on agent workers
@@ -162,4 +159,4 @@ class TestWithDeploymentWorker(TestCase):
         return self.client.node_instances.list(deployment_id=DEPLOYMENT_ID)
 
     def _get(self, task, queue, args=None):
-        return self.send_task(task, queue=queue, args=args).get(timeout=10)
+        return send_task(task, queue=queue, args=args).get(timeout=10)

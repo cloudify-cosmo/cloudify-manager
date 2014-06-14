@@ -18,7 +18,7 @@ __author__ = 'dank'
 from cosmo_manager_rest_client.cosmo_manager_rest_client import \
     CosmoManagerRestCallError
 
-from testenv import TestCase
+from workflow_tests import TestCase
 from testenv import post_provider_context
 from testenv import get_provider_context
 

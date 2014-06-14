@@ -17,11 +17,12 @@ __author__ = 'idanmo'
 
 import uuid
 import time
-from workflow_tests.testenv import TestCase
-from workflow_tests.testenv import get_resource as resource
-from workflow_tests.testenv import deploy_application as deploy
-from workflow_tests.testenv import timeout
-from workflow_tests.testenv import run_search as search
+from workflow_tests import TestCase
+from testenv import get_resource as resource
+from testenv import deploy_application as deploy
+from testenv import timeout
+from testenv import send_task
+from testenv import run_search as search
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -35,7 +36,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = result.get(timeout=10)
 
         self.assertEquals(1, len(machines))
@@ -49,7 +50,7 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state) \
+        states = send_task(testmock_get_state) \
             .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('host_node' in states[0]['id'])
@@ -58,7 +59,7 @@ class BasicWorkflowsTest(TestCase):
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
         from plugins.cloudmock.tasks import set_raise_exception_on_start
-        self.send_task(set_raise_exception_on_start).get(timeout=10)
+        send_task(set_raise_exception_on_start).get(timeout=10)
         dsl_path = resource("dsl/basic.yaml")
         try:
             deploy(dsl_path)
@@ -72,7 +73,7 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = send_task(testmock_get_state).get(timeout=10)
         node_runtime_props = None
         for k, v in states[1]['capabilities'].iteritems():
             if 'host_node' in k:
@@ -93,10 +94,10 @@ class BasicWorkflowsTest(TestCase):
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = send_task(testmock_get_state).get(timeout=10)
         from plugins.testmockoperations.tasks import \
             get_mock_operation_invocations as testmock_get__invocations
-        invocations = self.send_task(testmock_get__invocations).get(timeout=10)
+        invocations = send_task(testmock_get__invocations).get(timeout=10)
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
@@ -109,7 +110,7 @@ class BasicWorkflowsTest(TestCase):
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import \
             get_monitoring_operations_invocation
-        invocations = self.send_task(get_monitoring_operations_invocation)\
+        invocations = send_task(get_monitoring_operations_invocation)\
             .get(timeout=10)
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
@@ -120,7 +121,7 @@ class BasicWorkflowsTest(TestCase):
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import \
             get_resource_operation_invocations as testmock_get_invocations
-        invocations = self.send_task(testmock_get_invocations).get(
+        invocations = send_task(testmock_get_invocations).get(
             timeout=10)
         self.assertEquals(1, len(invocations))
         invocation = invocations[0]
@@ -144,7 +145,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = result.get(timeout=10)
 
         self.assertEquals(1, len(machines))
@@ -198,7 +199,9 @@ class BasicWorkflowsTest(TestCase):
             self.client.executions.update(execution_id, status)
             time.sleep(5)  # waiting for elasticsearch to update...
             executions = self.client.deployments.list_executions(deployment_id)
-            self.assertEqual(status, executions[0].status)
+            updated_execution = next(execution for execution in executions
+                                     if execution.id == execution_id)
+            self.assertEqual(status, updated_execution.status)
 
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
@@ -337,7 +340,7 @@ class BasicWorkflowsTest(TestCase):
                                deployment_id=deployment_id)
 
         from plugins.testmockoperations.tasks import get_node_states
-        node_states = self.send_task(get_node_states).get(timeout=10)
+        node_states = send_task(get_node_states).get(timeout=10)
 
         self.assertEquals(node_states, [
             'creating', 'configuring', 'starting'

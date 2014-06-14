@@ -17,8 +17,8 @@ __author__ = 'idanmo'
 
 import uuid
 
-from workflow_tests.testenv import TestCase
-from workflow_tests.testenv import get_resource as resource
+from workflow_tests import TestCase
+from testenv import get_resource as resource
 
 
 class RestAPITest(TestCase):

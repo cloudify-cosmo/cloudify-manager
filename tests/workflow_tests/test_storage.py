@@ -16,10 +16,10 @@
 __author__ = 'ran'
 
 
-from workflow_tests.testenv import get_resource as resource
-from workflow_tests.testenv import deploy_application as deploy
-from workflow_tests.testenv import TestCase
-from workflow_tests.testenv import create_new_rest_client
+from workflow_tests import TestCase
+from testenv import get_resource as resource
+from testenv import deploy_application as deploy
+from testenv import create_new_rest_client
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 

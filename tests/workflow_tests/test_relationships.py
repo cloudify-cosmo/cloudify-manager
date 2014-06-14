@@ -15,9 +15,10 @@
 
 __author__ = 'dank'
 
-from testenv import TestCase
+from workflow_tests import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
+from testenv import send_task
 
 
 class TestRelationships(TestCase):
@@ -46,13 +47,13 @@ class TestRelationships(TestCase):
             related_id_prefix = 'mock_node_that_connects_to_host'
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = result.get(timeout=10)
         self.assertEquals(1, len(machines))
 
         from plugins.connection_configurer_mock.tasks import get_state \
             as config_get_state
-        result = self.send_task(config_get_state)
+        result = send_task(config_get_state)
 
         state = result.get(timeout=10)[0]
 
@@ -112,8 +113,8 @@ class TestRelationships(TestCase):
             as testmock_get_state
         from plugins.testmockoperations.tasks import get_touched_time \
             as testmock_get_touch_time
-        state = self.send_task(testmock_get_state).get(timeout=10)[0]
-        touched_timestamp = self.send_task(testmock_get_touch_time)\
+        state = send_task(testmock_get_state).get(timeout=10)[0]
+        touched_timestamp = send_task(testmock_get_touch_time)\
             .get(timeout=10)
 
         reachable_timestamp = state['time']
