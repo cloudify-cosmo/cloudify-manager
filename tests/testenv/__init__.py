@@ -27,6 +27,7 @@ import threading
 import re
 import uuid
 import time
+import unittest
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -754,6 +755,35 @@ def start_events_and_logs_polling():
     polling_thread.start()
 
 
+class TestCase(unittest.TestCase):
+    """
+    A test case for cosmo tests.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        TestEnvironment.create(TestEnvironmentScope.CLASS)
+
+    @classmethod
+    def tearDownClass(cls):
+        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
+
+    def setUp(self):
+        self.logger = logging.getLogger(self._testMethodName)
+        self.logger.setLevel(logging.INFO)
+        self.client = create_new_rest_client()
+        TestEnvironment.clean_plugins_tempdir()
+
+    def tearDown(self):
+        TestEnvironment.restart_celery_operations_worker()
+        TestEnvironment.restart_celery_workflows_worker()
+        TestEnvironment.reset_elasticsearch_data()
+
+    @staticmethod
+    def do_assertions(assertions_func, timeout=10):
+        return do_retries(assertions_func, timeout, AssertionError)
+
+
 class TestEnvironment(object):
     """
     Creates the cosmo test environment:
@@ -1078,7 +1108,8 @@ def deploy_application(dsl_path,
             or execs[0].workflow_id != 'workers_installation':
             raise RuntimeError(
                 "Expected a single execution for workflow "
-                "'workers_installation' with status 'terminated'")
+                "'workers_installation' with status 'terminated'; "
+                "Found these executions instead: {0}".format(execs))
     do_retries(verify_workers_installation_complete, 15)
 
     execution = client.deployments.execute(deployment_id, 'install')

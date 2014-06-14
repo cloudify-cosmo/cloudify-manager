@@ -17,12 +17,6 @@ __author__ = 'idanmo'
 
 
 from testenv import TestEnvironment
-from testenv import TestEnvironmentScope
-from testenv import create_new_rest_client
-from testenv import do_retries
-import unittest
-import time
-import logging
 
 
 def setUp():
@@ -31,32 +25,3 @@ def setUp():
 
 def tearDown():
     TestEnvironment.destroy()
-
-
-class TestCase(unittest.TestCase):
-    """
-    A test case for cosmo workflow tests.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        TestEnvironment.create(TestEnvironmentScope.CLASS)
-
-    @classmethod
-    def tearDownClass(cls):
-        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
-
-    def setUp(self):
-        self.logger = logging.getLogger(self._testMethodName)
-        self.logger.setLevel(logging.INFO)
-        self.client = create_new_rest_client()
-        TestEnvironment.clean_plugins_tempdir()
-
-    def tearDown(self):
-        TestEnvironment.restart_celery_operations_worker()
-        TestEnvironment.restart_celery_workflows_worker()
-        TestEnvironment.reset_elasticsearch_data()
-
-    @staticmethod
-    def do_assertions(assertions_func, timeout=10):
-        return do_retries(assertions_func, timeout, AssertionError)

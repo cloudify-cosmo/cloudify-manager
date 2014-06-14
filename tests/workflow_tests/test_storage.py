@@ -16,7 +16,7 @@
 __author__ = 'ran'
 
 
-from workflow_tests import TestCase
+from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import create_new_rest_client

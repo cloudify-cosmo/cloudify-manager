@@ -18,11 +18,12 @@ __author__ = 'dank'
 import uuid
 import time
 
-from workers_tests import TestCase
+from workers_tests import WorkersTestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import wait_for_execution_to_end
 from testenv import send_task
+from testenv import TestEnvironment
 
 from plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
@@ -50,7 +51,7 @@ AFTER_INSTALL_STAGES = [INSTALLED, STARTED, RESTARTED]
 AFTER_UNINSTALL_STAGES = AFTER_INSTALL_STAGES + [STOPPED, UNINSTALLED]
 
 
-class TestWithDeploymentWorker(TestCase):
+class TestWithDeploymentWorker(WorkersTestCase):
 
     def setUp(self):
         super(TestWithDeploymentWorker, self).setUp()
@@ -66,11 +67,12 @@ class TestWithDeploymentWorker(TestCase):
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
         # start deployment workers
-        deployment_worker = self.create_celery_worker(DEPLOYMENT_ID)
+        deployment_worker = TestEnvironment.create_celery_worker(
+            DEPLOYMENT_ID)
         self.addCleanup(deployment_worker.close)
         deployment_worker.start()
 
-        deployment_workflows_worker = self.create_celery_worker(
+        deployment_workflows_worker = TestEnvironment.create_celery_worker(
             DEPLOYMENT_WORKFLOWS_QUEUE)
         self.addCleanup(deployment_workflows_worker.close)
         deployment_workflows_worker.start()
@@ -112,7 +114,7 @@ class TestWithDeploymentWorker(TestCase):
 
         # start agent worker
         node_id = self._list_nodes()[0].id
-        agent_worker = self.create_celery_worker(node_id)
+        agent_worker = TestEnvironment.create_celery_worker(node_id)
         self.addCleanup(agent_worker.close)
         agent_worker.start()
 

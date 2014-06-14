@@ -15,7 +15,7 @@
 
 __author__ = 'idanmo'
 
-from workflow_tests import TestCase
+from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 

@@ -18,35 +18,22 @@ __author__ = 'ran'
 
 from testenv import TestEnvironment
 from testenv import TestEnvironmentScope
-from testenv import create_new_rest_client
-import unittest
-import logging
+from testenv import TestCase
 
 
-class TestCase(unittest.TestCase):
+def setUp():
+    TestEnvironment.create(use_mock_workers_installation=False)
+
+
+def tearDown():
+    TestEnvironment.destroy()
+
+
+class WorkersTestCase(TestCase):
     """
-    A test case for cosmo workflow tests.
+    A test case for cosmo workers tests.
     """
 
     @classmethod
     def setUpClass(cls):
         TestEnvironment.create(TestEnvironmentScope.CLASS, False)
-
-    @classmethod
-    def tearDownClass(cls):
-        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
-
-    def setUp(self):
-        self.logger = logging.getLogger(self._testMethodName)
-        self.logger.setLevel(logging.INFO)
-        self.client = create_new_rest_client()
-        TestEnvironment.clean_plugins_tempdir()
-
-    def tearDown(self):
-        TestEnvironment.restart_celery_operations_worker()
-        TestEnvironment.restart_celery_workflows_worker()
-        TestEnvironment.reset_elasticsearch_data()
-        pass
-
-    def create_celery_worker(self, queue):
-        return TestEnvironment.create_celery_worker(queue)

@@ -17,8 +17,8 @@
 __author__ = 'dan'
 
 
-from workflow_tests import TestCase
-from testenv import (get_resource as resource,
+from testenv import (TestCase,
+                     get_resource as resource,
                      deploy_application as deploy)
 
 

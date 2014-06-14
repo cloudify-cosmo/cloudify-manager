@@ -17,7 +17,7 @@ __author__ = 'idanmo'
 
 import uuid
 import time
-from workflow_tests import TestCase
+from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import timeout
@@ -322,7 +322,7 @@ class BasicWorkflowsTest(TestCase):
                 deployment_id=deployment_id)
             self.assertEqual(1, len(deployment_nodes))
 
-        TestCase.do_assertions(assert_deployment_nodes_length, timeout=30)
+        self.do_assertions(assert_deployment_nodes_length, timeout=30)
 
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment_id)
