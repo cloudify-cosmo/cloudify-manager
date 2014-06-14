@@ -58,10 +58,10 @@ class TestWithDeploymentWorker(TestCase):
         setup_cloudmock()
 
     def tearDown(self):
-        super(TestWithDeploymentWorker, self).tearDown()
-        teardown_plugin_installer()
-        teardown_worker_installer()
         teardown_cloudmock()
+        teardown_worker_installer()
+        teardown_plugin_installer()
+        super(TestWithDeploymentWorker, self).tearDown()
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
         f = open('/home/ran/DBG-TEST', 'w', 0)

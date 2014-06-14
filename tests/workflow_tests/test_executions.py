@@ -42,10 +42,12 @@ class ExecutionsTest(TestCase):
         def assertions():
             deployments_executions = self.client.deployments.list_executions(
                 deployment.id)
-            self.assertEquals(1, len(deployments_executions))
-            self.assertEquals(execution_id, deployments_executions[0].id)
-            self.assertEquals('terminated', deployments_executions[0].status)
-            self.assertEquals('', deployments_executions[0].error)
+            # expecting 2 executions (1 for workers installation and 1
+            # execution of 'install'). Checking the install execution's status
+            self.assertEquals(2, len(deployments_executions))
+            self.assertEquals(execution_id, deployments_executions[1].id)
+            self.assertEquals('terminated', deployments_executions[1].status)
+            self.assertEquals('', deployments_executions[1].error)
 
         self.do_assertions(assertions, timeout=10)
 

@@ -205,6 +205,7 @@ class BasicWorkflowsTest(TestCase):
         # 'uninitialized' state.
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
+        time.sleep(5)  # waiting for elasticsearch to update execution...
         self.client.deployments.delete(deployment_id, False)
         time.sleep(5)  # waiting for elasticsearch to clear deployment...
         self.client.blueprints.delete(blueprint_id)
