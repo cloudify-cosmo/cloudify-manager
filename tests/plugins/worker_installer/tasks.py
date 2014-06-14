@@ -106,11 +106,9 @@ def _fix_worker(ctx, **kwargs):
 
 
 def _is_workflows_worker(config_container):
-    return 'properties' in config_container and 'worker_config' in \
-        config_container['properties'] and 'workflows_worker' in \
-        config_container['properties']['worker_config'] and \
-        config_container['properties']['worker_config'][
-            'workflows_worker']
+    return 'worker_config' in config_container and \
+           'workflows_worker' in config_container['worker_config'] and \
+           config_container['worker_config']['workflows_worker']
 
 
 def _get_data():
