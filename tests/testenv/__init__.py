@@ -1101,7 +1101,7 @@ def deploy_application(dsl_path,
         deployment_id = str(uuid.uuid4())
     deployment = client.deployments.create(blueprint.id, deployment_id)
 
-    do_retries(verify_workers_installation_complete, 15,
+    do_retries(verify_workers_installation_complete, 30,
                deployment_id=deployment_id)
 
     execution = client.deployments.execute(deployment_id, 'install')
