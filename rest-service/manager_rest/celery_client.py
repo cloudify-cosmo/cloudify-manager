@@ -16,6 +16,8 @@
 
 __author__ = 'ran'
 
+from celery import Celery
+from manager_rest import config
 
 TASK_STATE_PENDING = 'PENDING'
 TASK_STATE_STARTED = 'STARTED'
@@ -24,49 +26,52 @@ TASK_STATE_RETRY = 'RETRY'
 TASK_STATE_FAILURE = 'FAILURE'
 
 
-from celery import Celery
-celery = Celery(broker='amqp://',
-                backend='amqp://')
+class CeleryClient(object):
 
-celery.conf.update(
-    CELERY_TASK_SERIALIZER="json"
-)
+    def __init__(self):
+        self.celery = Celery(broker='amqp://', backend='amqp://')
+        self.celery.conf.update(CELERY_TASK_SERIALIZER="json")
+
+    def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
+        """
+            Execute a task
+
+            :param task_name: the task name
+            :param task_queue: the task queue
+            :param task_id: optional id for the task
+            :param kwargs: optional kwargs to be passed to the task
+            :return: the celery task async result
+        """
+
+        return self.celery.send_task(task_name,
+                                     queue=task_queue,
+                                     task_id=task_id,
+                                     kwargs=kwargs)
+
+    def get_task_status(self, task_id):
+        """
+            Gets task's celery status by the task's id
+
+            :param task_id: the task id
+            :return: the task's celery status
+        """
+        async_result = self.celery.AsyncResult(task_id)
+        return async_result.status
+
+    def get_failed_task_error(self, task_id):
+        """
+            Gets a failed task's error by the task's id
+
+            :param task_id: the task id
+            :return: the exception object
+        """
+        async_result = self.celery.AsyncResult(task_id)
+        return async_result.result
 
 
-def execute_task(task_name, task_queue, task_id=None, kwargs=None):
-    """
-        Execute a task
-
-        :param task_name: the task name
-        :param task_queue: the task queue
-        :param task_id: optional id for the task
-        :param kwargs: optional kwargs to be passed to the task
-        :return: the celery task async result
-    """
-
-    return celery.send_task(task_name,
-                            queue=task_queue,
-                            task_id=task_id,
-                            kwargs=kwargs)
-
-
-def get_task_status(task_id):
-    """
-        Gets task's celery status by the task's id
-
-        :param task_id: the task id
-        :return: the task's celery status
-    """
-    async_result = celery.AsyncResult(task_id)
-    return async_result.status
-
-
-def get_failed_task_error(task_id):
-    """
-        Gets a failed task's error by the task's id
-
-        :param task_id: the task id
-        :return: the exception object
-    """
-    async_result = celery.AsyncResult(task_id)
-    return async_result.result
+def celery_client():
+    if config.instance().test_mode:
+        from test.mocks import MockCeleryClient
+        return MockCeleryClient()
+    else:
+        return CeleryClient()

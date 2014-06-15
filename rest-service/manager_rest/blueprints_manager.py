@@ -32,7 +32,9 @@ from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.util import maybe_register_teardown
-from manager_rest import celery_client
+from manager_rest.celery_client import celery_client
+from manager_rest.celery_client import TASK_STATE_FAILURE as \
+    CELERY_TASK_STATE_FAILURE
 
 
 class DslParseException(Exception):
@@ -321,17 +323,17 @@ class BlueprintsManager(object):
             # workers installation failed but not on the workflow level -
             # retrieving the celery task's status for the error message,
             # and the error object from celery if one is available
-            celery_task_status = celery_client.get_task_status(
+            celery_task_status = celery_client().get_task_status(
                 workers_installation_execution.id)
             error_message = \
                 "Can't launch executions since workers for deployment {0}" \
                 " haven't been installed (Execution status is still " \
                 "'pending'). Celery task status is ".format(deployment_id)
-            if celery_task_status != celery_client.TASK_STATE_FAILURE:
+            if celery_task_status != CELERY_TASK_STATE_FAILURE:
                 raise RuntimeError(
                     "{0} {1}".format(error_message, celery_task_status))
             else:
-                celery_error = celery_client.get_failed_task_error(
+                celery_error = celery_client().get_failed_task_error(
                     workers_installation_execution.id)
                 raise RuntimeError(
                     "{0} {1}; Error is of type {2}; Error message: {3}"
@@ -359,7 +361,7 @@ class BlueprintsManager(object):
             error='None')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
-        celery_client.execute_task(
+        celery_client().execute_task(
             workers_install_task_name,
             'cloudify.management',
             workers_installation_task_id,
@@ -406,7 +408,7 @@ class BlueprintsManager(object):
             error='None')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
-        uninstall_workers_task_async_result = celery_client.execute_task(
+        uninstall_workers_task_async_result = celery_client().execute_task(
             workers_uninstall_task_name,
             'cloudify.management',
             workers_uninstallation_task_id,
