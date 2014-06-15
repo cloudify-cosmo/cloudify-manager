@@ -414,7 +414,8 @@ class BlueprintsManager(object):
             kwargs={'__cloudify_context': context})
 
         # wait for workers uninstall to complete
-        uninstall_workers_task_async_result.get()
+        uninstall_workers_task_async_result.get(timeout=300,
+                                                propagate=True)
         # verify uninstall completed successfully
         execution = get_storage_manager().get_execution(
             workers_uninstallation_task_id)
