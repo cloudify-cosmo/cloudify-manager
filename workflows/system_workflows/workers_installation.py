@@ -70,17 +70,12 @@ def install(ctx, **kwargs):
         ctx.execute_task(
             task_queue='cloudify.management',
             task_name='worker_installer.tasks.start',
-            kwargs=WORKER_PAYLOAD))
-
-    if plugins:
-        sequence.add(
-            ctx.send_event('Installing deployment workflows plugins'),
-            ctx.execute_task(
-                task_queue='{0}_workflows'.format(ctx.deployment_id),
-                task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': [{'name': 'default-workflows-plugin'}]}))
-
-    sequence.add(
+            kwargs=WORKER_PAYLOAD),
+        ctx.send_event('Installing deployment workflows plugins'),
+        ctx.execute_task(
+            task_queue='{0}_workflows'.format(ctx.deployment_id),
+            task_name='plugin_installer.tasks.install',
+            kwargs={'plugins': [{'name': 'default-workflows-plugin'}]}),
         ctx.execute_task(
             task_queue='cloudify.management',
             task_name='worker_installer.tasks.restart',
