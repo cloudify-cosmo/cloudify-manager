@@ -79,5 +79,5 @@ class MockCeleryClient(object):
 
 class MockAsyncResult(object):
 
-    def get(self):
+    def get(self, timeout=300, propagate=True):
         return None
