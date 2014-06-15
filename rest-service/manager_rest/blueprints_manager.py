@@ -299,7 +299,7 @@ class BlueprintsManager(object):
         if workers_installation_execution.status == 'terminated':
             # workers installation is complete
             return
-        elif workers_installation_execution.status == 'started':
+        elif workers_installation_execution.status == 'launched':
             # workers installation is still in process
             raise manager_exceptions\
                 .DeploymentWorkersNotYetInstalledError(
