@@ -30,7 +30,7 @@ setup(
               'plugins.plugin_installer',
               'plugins.testmockoperations',
               'plugins.worker_installer',
-              'mock_workflows',
+              # 'mock_workflows',
               # 'mock_workflows.system_workflows'],
               ],
     license='LICENSE',
