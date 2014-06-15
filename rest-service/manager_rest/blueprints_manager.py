@@ -295,13 +295,16 @@ class BlueprintsManager(object):
                                    deployment_id))
 
         if workers_installation_execution.status == 'terminated':
+            # workers installation is complete
             return
         elif workers_installation_execution.status == 'started':
+            # workers installation is still in process
             raise manager_exceptions\
                 .DeploymentWorkersNotYetInstalledError(
                     'Deployment workers are still being installed, '
                     'try again in a minute')
         elif workers_installation_execution.status == 'failed':
+            # workers installation workflow failed
             raise RuntimeError(
                 "Can't launch executions since workers for deployment {0} "
                 'failed to be installed: {1}'.format(
@@ -315,6 +318,9 @@ class BlueprintsManager(object):
             self._verify_deployment_workers_installed_successfully(
                 deployment_id, True)
         else:
+            # workers installation failed but not on the workflow level -
+            # retrieving the celery task's status for the error message,
+            # and the error object from celery if one is available
             celery_task_status = celery_client.get_task_status(
                 workers_installation_execution.id)
             error_message = \
