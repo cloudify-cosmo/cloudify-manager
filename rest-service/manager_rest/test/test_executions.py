@@ -98,7 +98,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
         self.assertEquals('pending', execution['status'])
-        self.assertEquals('None', execution['error'])
+        self.assertEquals('', execution['error'])
         execution = self.patch('/executions/{0}'.format(execution['id']),
                                {'status': 'new-status',
                                 'error': 'some error'}).json
