@@ -17,6 +17,13 @@
 __author__ = 'ran'
 
 
+TASK_STATE_PENDING = 'PENDING'
+TASK_STATE_STARTED = 'STARTED'
+TASK_STATE_SUCCESS = 'SUCCESS'
+TASK_STATE_RETRY = 'RETRY'
+TASK_STATE_FAILURE = 'FAILURE'
+
+
 from celery import Celery
 celery = Celery(broker='amqp://',
                 backend='amqp://')
@@ -41,3 +48,25 @@ def execute_task(task_name, task_queue, task_id=None, kwargs=None):
                             queue=task_queue,
                             task_id=task_id,
                             kwargs=kwargs)
+
+
+def get_task_status(task_id):
+    """
+        Gets task's celery status by the task's id
+
+        :param task_id: the task id
+        :return: the task's celery status
+    """
+    async_result = celery.AsyncResult(task_id)
+    return async_result.status
+
+
+def get_failed_task_error(task_id):
+    """
+        Gets a failed task's error by the task's id
+
+        :param task_id: the task id
+        :return: the exception object
+    """
+    async_result = celery.AsyncResult(task_id)
+    return async_result.result

@@ -24,17 +24,14 @@ from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import wait_for_execution_to_end
 from testenv import send_task
 from testenv import TestEnvironment
+from testenv import do_retries
+from testenv import verify_workers_installation_complete
 
 from plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
     teardown_plugin_file_based_mode as teardown_cloudmock)
-from plugins.plugin_installer.tasks import (
-    setup_plugin as setup_plugin_installer,
-    teardown_plugin as teardown_plugin_installer,
-    get_installed_plugins)
+from plugins.plugin_installer.tasks import get_installed_plugins
 from plugins.worker_installer.tasks import (
-    setup_plugin as setup_worker_installer,
-    teardown_plugin as teardown_worker_installer,
     get_worker_state,
     RESTARTED,
     STARTED,
@@ -55,14 +52,10 @@ class TestWithDeploymentWorker(WorkersTestCase):
 
     def setUp(self):
         super(TestWithDeploymentWorker, self).setUp()
-        setup_plugin_installer()
-        setup_worker_installer()
         setup_cloudmock()
 
     def tearDown(self):
         teardown_cloudmock()
-        teardown_worker_installer()
-        teardown_plugin_installer()
         super(TestWithDeploymentWorker, self).tearDown()
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
@@ -85,11 +78,8 @@ class TestWithDeploymentWorker(WorkersTestCase):
         self.client.deployments.create(blueprint_id, DEPLOYMENT_ID)
 
         # waiting for the deployment workers installation to complete
-        while True:
-            execs = self.client.deployments.list_executions(DEPLOYMENT_ID)
-            if execs and execs[0].status == 'terminated':
-                break
-            time.sleep(1)
+        do_retries(verify_workers_installation_complete, 15,
+                   deployment_id=DEPLOYMENT_ID)
 
         # test plugin installed in deployment operations worker
         deployment_plugins = self._get(get_installed_plugins,

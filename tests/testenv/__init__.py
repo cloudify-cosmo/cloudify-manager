@@ -781,8 +781,8 @@ class TestCase(unittest.TestCase):
         TestEnvironment.reset_elasticsearch_data()
 
     @staticmethod
-    def do_assertions(assertions_func, timeout=10):
-        return do_retries(assertions_func, timeout, AssertionError)
+    def do_assertions(assertions_func, timeout=10, *args, **kwargs):
+        return do_retries(assertions_func, timeout, AssertionError, **kwargs)
 
 
 class TestEnvironment(object):
@@ -1101,17 +1101,8 @@ def deploy_application(dsl_path,
         deployment_id = str(uuid.uuid4())
     deployment = client.deployments.create(blueprint.id, deployment_id)
 
-    # a workaround for waiting for the workers installation to complete
-    def verify_workers_installation_complete():
-        execs = client.deployments.list_executions(deployment_id)
-        if not execs \
-            or execs[0].status != 'terminated' \
-                or execs[0].workflow_id != 'workers_installation':
-            raise RuntimeError(
-                "Expected a single execution for workflow "
-                "'workers_installation' with status 'terminated'; "
-                "Found these executions instead: {0}".format(execs))
-    do_retries(verify_workers_installation_complete, 15)
+    do_retries(verify_workers_installation_complete, 15,
+               deployment_id=deployment_id)
 
     execution = client.deployments.execute(deployment_id, 'install')
 
@@ -1120,6 +1111,19 @@ def deploy_application(dsl_path,
         return deployment, execution.id
 
     return deployment, execution.id
+
+
+def verify_workers_installation_complete(deployment_id):
+    # a workaround for waiting for the workers installation to complete
+    client = create_new_rest_client()
+    execs = client.deployments.list_executions(deployment_id)
+    if not execs \
+        or execs[0].status != 'terminated' \
+            or execs[0].workflow_id != 'workers_installation':
+        raise RuntimeError(
+            "Expected a single execution for workflow "
+            "'workers_installation' with status 'terminated'; "
+            "Found these executions instead: {0}".format(execs))
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -1169,11 +1173,11 @@ class TimeoutException(Exception):
         Exception.__init__(self, args)
 
 
-def do_retries(func, timeout=10, exception_class=BaseException):
+def do_retries(func, timeout=10, exception_class=BaseException, **kwargs):
     deadline = time.time() + timeout
     while True:
         try:
-            func()
+            func(**kwargs)
             break
         except exception_class:
             if time.time() > deadline:

@@ -32,7 +32,7 @@ from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.util import maybe_register_teardown
-from manager_rest.celery_client import execute_task
+from manager_rest import celery_client
 
 
 class DslParseException(Exception):
@@ -303,20 +303,34 @@ class BlueprintsManager(object):
                     'try again in a minute')
         elif workers_installation_execution.status == 'failed':
             raise RuntimeError(
-                'Cant launch executions since workers for deployment {0} '
+                "Can't launch executions since workers for deployment {0} "
                 'failed to be installed: {1}'.format(
                     deployment_id, workers_installation_execution.error))
 
         # status is 'pending'. Waiting for a few seconds and retrying to
         # verify (to avoid eventual consistency issues). If this is already a
         # failed retry, it might mean there was a problem with the Celery task
-        #TODO: check task-received status..
         if not is_retry:
             time.sleep(5)
             self._verify_deployment_workers_installed_successfully(
                 deployment_id, True)
         else:
-            raise RuntimeError('')
+            celery_task_status = celery_client.get_task_status(
+                workers_installation_execution.id)
+            error_message = \
+                "Can't launch executions since workers for deployment {0}" \
+                " haven't been installed (Execution status is still " \
+                "'pending'). Celery task status is ".format(deployment_id)
+            if celery_task_status != celery_client.TASK_STATE_FAILURE:
+                raise RuntimeError(
+                    "{0} {1}".format(error_message, celery_task_status))
+            else:
+                celery_error = celery_client.get_failed_task_error(
+                    workers_installation_execution.id)
+                raise RuntimeError(
+                    "{0} {1}; Error is of type {2}; Error message: {3}"
+                    .format(error_message, celery_task_status,
+                            celery_error.__class__.__name__, celery_error))
 
     def _install_deployment_workers(self, deployment, now):
         workers_installation_task_id = str(uuid.uuid4())
@@ -339,13 +353,14 @@ class BlueprintsManager(object):
             error='None')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
-        execute_task(workers_install_task_name,
-                     'cloudify.management',
-                     workers_installation_task_id,
-                     kwargs={
-                         'management_plugins_to_install':
-                         deployment.plan['management_plugins_to_install'],
-                         '__cloudify_context': context})
+        celery_client.execute_task(
+            workers_install_task_name,
+            'cloudify.management',
+            workers_installation_task_id,
+            kwargs={
+                'management_plugins_to_install':
+                deployment.plan['management_plugins_to_install'],
+                '__cloudify_context': context})
 
     def _build_context_from_deployment(self, deployment, task_id, wf_id,
                                        task_name):
@@ -385,7 +400,7 @@ class BlueprintsManager(object):
             error='None')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
-        uninstall_workers_task_async_result = execute_task(
+        uninstall_workers_task_async_result = celery_client.execute_task(
             workers_uninstall_task_name,
             'cloudify.management',
             workers_uninstallation_task_id,

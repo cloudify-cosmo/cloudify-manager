@@ -19,6 +19,12 @@ __author__ = 'ran'
 from testenv import TestEnvironment
 from testenv import TestEnvironmentScope
 from testenv import TestCase
+from plugins.worker_installer.tasks import (
+    setup_plugin as setup_worker_installer,
+    teardown_plugin as teardown_worker_installer)
+from plugins.plugin_installer.tasks import (
+    setup_plugin as setup_plugin_installer,
+    teardown_plugin as teardown_plugin_installer)
 
 
 def setUp():
@@ -37,3 +43,13 @@ class WorkersTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         TestEnvironment.create(TestEnvironmentScope.CLASS, False)
+
+    def setUp(self):
+        super(WorkersTestCase, self).setUp()
+        setup_plugin_installer()
+        setup_worker_installer()
+
+    def tearDown(self):
+        teardown_worker_installer()
+        teardown_plugin_installer()
+        super(WorkersTestCase, self).tearDown()
