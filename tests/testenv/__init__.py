@@ -864,18 +864,25 @@ class TestEnvironment(object):
 
             app_path = path.join(self._tempdir, "plugins")
             # copying plugins
-            if use_mock_workers_installation:
-                # note that the order matters - mock workflow plugins will
-                # override some of the ones under workflow plugin path
-                all_plugins = [plugins_path,
-                               workflow_plugin_path,
-                               mock_workflow_plugins]
+            if not use_mock_workers_installation:
+                for plugin_path in [plugins_path, workflow_plugin_path]:
+                    logger.info("Copying %s to %s", plugin_path, app_path)
+                    distutils.dir_util.copy_tree(plugin_path, app_path)
             else:
-                all_plugins = [plugins_path,
-                               workflow_plugin_path]
-            for plugin_path in all_plugins:
-                logger.info("Copying %s to %s", plugin_path, app_path)
-                distutils.dir_util.copy_tree(plugin_path, app_path)
+                # copying plugins and mock workflows
+                for plugin_path in [plugins_path, mock_workflow_plugins]:
+                    logger.info("Copying %s to %s", plugin_path, app_path)
+                    distutils.dir_util.copy_tree(plugin_path, app_path)
+                # copying the actual default install/uninstall workflow
+                # plugin manually
+                workflow_plugin_workflows_path = path.join(
+                    workflow_plugin_path, 'workflows')
+                app_workflows_path = path.join(app_path, 'workflows')
+                logger.info("Copying %s to %s",
+                            workflow_plugin_workflows_path,
+                            app_workflows_path)
+                distutils.dir_util.copy_tree(
+                    workflow_plugin_workflows_path, app_workflows_path)
 
             # celery operations worker
             # if using real worker installation workflow then 2 workers are
