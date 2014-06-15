@@ -188,7 +188,6 @@ class BlueprintsManager(object):
         new_execution = models.Execution(
             id=execution_id,
             status=response['state'],
-            internal_workflow_id=response['id'],
             created_at=str(response['created']),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
@@ -201,7 +200,7 @@ class BlueprintsManager(object):
     def cancel_workflow(self, execution_id):
         execution = self.get_execution(execution_id)
         workflow_client().cancel_workflow(
-            execution.internal_workflow_id
+            execution.id
         )
         return execution
 
@@ -353,7 +352,6 @@ class BlueprintsManager(object):
         new_execution = models.Execution(
             id=workers_installation_task_id,
             status='pending',
-            internal_workflow_id=workers_installation_task_id,
             created_at=now,
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
@@ -399,7 +397,6 @@ class BlueprintsManager(object):
         new_execution = models.Execution(
             id=workers_uninstallation_task_id,
             status='pending',
-            internal_workflow_id=workers_uninstallation_task_id,
             created_at=str(datetime.now()),
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
