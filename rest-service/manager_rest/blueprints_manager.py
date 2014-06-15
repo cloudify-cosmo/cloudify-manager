@@ -193,7 +193,7 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,
-            error='None')
+            error='')
 
         get_storage_manager().put_execution(new_execution.id, new_execution)
         return new_execution
@@ -358,7 +358,7 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
             deployment_id=deployment.id,
-            error='None')
+            error='')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         celery_client().execute_task(
@@ -404,7 +404,7 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
             deployment_id=deployment_id,
-            error='None')
+            error='')
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         uninstall_workers_task_async_result = celery_client().execute_task(
