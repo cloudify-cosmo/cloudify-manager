@@ -373,7 +373,6 @@ class BlueprintsManager(object):
     def _build_context_from_deployment(self, deployment, task_id, wf_id,
                                        task_name):
         return {
-            'plan': deployment.plan,
             'task_id': task_id,
             'task_name': task_name,
             'task_target': 'cloudify.management',
