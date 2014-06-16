@@ -59,7 +59,8 @@ def exceptions_handled(func):
                 manager_exceptions.BadParametersError,
                 manager_exceptions.UnsupportedContentTypeError,
                 manager_exceptions.InvalidBlueprintError,
-                manager_exceptions.ExistingRunningExecutionError) as e:
+                manager_exceptions.ExistingRunningExecutionError,
+                manager_exceptions.DeploymentWorkersNotYetInstalledError) as e:
             abort_error(e)
         except WorkflowServiceError, e:
             abort_workflow_service_operation(e)

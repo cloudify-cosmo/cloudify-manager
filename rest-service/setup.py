@@ -37,6 +37,7 @@ setup(
         'bernhard==0.1.0',
         'gunicorn==18.0',
         'PyYAML==3.10',
-        'elasticsearch==1.0.0'
+        'elasticsearch==1.0.0',
+        'celery==3.0.24'
     ]
 )

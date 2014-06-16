@@ -23,7 +23,7 @@ setup(
     version='3.0',
     author='elip',
     author_email='elip@gigaspaces.com',
-    packages=['workflows'],
+    packages=['workflows', 'system_workflows'],
     license='LICENSE',
     description='Default cloudify workflows',
     install_requires=[

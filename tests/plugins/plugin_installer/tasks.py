@@ -16,23 +16,45 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
+import os
+import json
 
 
-NON_EXISTING_OPERATIONS = ['testmockoperations.non_existent']
-
-INSTALLED_PLUGINS = []
+DATA_FILE_PATH = '/tmp/plugin-installer-data.json'
 
 
 @operation
 def install(ctx, plugins, **kwargs):
 
+    installed_plugins = _get_installed_plugins()
+
     for plugin in plugins:
-        global INSTALLED_PLUGINS
         ctx.logger.info("in plugin_installer.install --> "
                         "installing plugin {0}".format(plugin))
-        INSTALLED_PLUGINS.append(plugin['name'])
+        installed_plugins.append(plugin['name'])
+
+    _store_installed_plugins(installed_plugins)
 
 
 @operation
 def get_installed_plugins(**kwargs):
-    return INSTALLED_PLUGINS
+    return _get_installed_plugins()
+
+
+def _get_installed_plugins():
+    with open(DATA_FILE_PATH, 'r') as f:
+        installed_plugins = json.load(f)
+        return installed_plugins
+
+
+def _store_installed_plugins(installed_plugins):
+    with open(DATA_FILE_PATH, 'w') as f:
+        json.dump(installed_plugins, f)
+
+
+def setup_plugin():
+    _store_installed_plugins([])
+
+
+def teardown_plugin():
+    os.remove(DATA_FILE_PATH)

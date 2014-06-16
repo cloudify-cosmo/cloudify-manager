@@ -13,15 +13,16 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
+__author__ = 'ran'
+
+from cloudify.decorators import workflow
 
 
-from testenv import TestEnvironment
+@workflow
+def install(ctx, **kwargs):
+    pass
 
 
-def setUp():
-    TestEnvironment.create()
-
-
-def tearDown():
-    TestEnvironment.destroy()
+@workflow
+def uninstall(ctx, **kwargs):
+    pass
