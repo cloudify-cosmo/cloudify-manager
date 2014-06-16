@@ -17,9 +17,9 @@
 __author__ = 'dan'
 
 
-from workflow_tests.testenv import (TestCase,
-                                    get_resource as resource,
-                                    deploy_application as deploy)
+from testenv import (TestCase,
+                     get_resource as resource,
+                     deploy_application as deploy)
 
 
 class ExecutionsTest(TestCase):
@@ -42,10 +42,16 @@ class ExecutionsTest(TestCase):
         def assertions():
             deployments_executions = self.client.deployments.list_executions(
                 deployment.id)
-            self.assertEquals(1, len(deployments_executions))
-            self.assertEquals(execution_id, deployments_executions[0].id)
-            self.assertEquals('terminated', deployments_executions[0].status)
-            self.assertEquals('', deployments_executions[0].error)
+            # expecting 2 executions (1 for workers installation and 1
+            # execution of 'install'). Checking the install execution's status
+            self.assertEquals(2, len(deployments_executions))
+            self.assertIn(execution_id, [deployments_executions[0].id,
+                                         deployments_executions[1].id])
+            install_execution = \
+                deployments_executions[0] if execution_id == \
+                deployments_executions[0].id else deployments_executions[1]
+            self.assertEquals('terminated', install_execution.status)
+            self.assertEquals('', install_execution.error)
 
         self.do_assertions(assertions, timeout=10)
 

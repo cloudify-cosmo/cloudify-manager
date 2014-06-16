@@ -28,9 +28,12 @@ class ExecutionsTestCase(BaseServerTestCase):
     def test_get_deployment_executions_empty(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
-        get_executions = self.get('/deployments/{0}/executions'
-                                  .format(deployment_response['id'])).json
-        self.assertEquals(len(get_executions), 0)
+        executions = self.get('/deployments/{0}/executions'
+                              .format(deployment_response['id'])).json
+        # expecting 1 execution (workers installation)
+        self.assertEquals(1, len(executions))
+        self.assertEquals('workers_installation',
+                          executions[0]['workflow_id'])
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -95,7 +98,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
         self.assertEquals('pending', execution['status'])
-        self.assertEquals('None', execution['error'])
+        self.assertEquals('', execution['error'])
         execution = self.patch('/executions/{0}'.format(execution['id']),
                                {'status': 'new-status',
                                 'error': 'some error'}).json

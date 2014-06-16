@@ -59,14 +59,13 @@ class Deployment(SerializableObject):
 
 class Execution(SerializableObject):
 
-    fields = {'id', 'status', 'deployment_id', 'internal_workflow_id',
+    fields = {'id', 'status', 'deployment_id',
               'workflow_id', 'blueprint_id', 'created_at', 'error'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
-        self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']

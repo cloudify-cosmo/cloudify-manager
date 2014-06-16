@@ -13,15 +13,4 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
-
-
-from testenv import TestEnvironment
-
-
-def setUp():
-    TestEnvironment.create()
-
-
-def tearDown():
-    TestEnvironment.destroy()
+__author__ = 'ran'

@@ -160,7 +160,6 @@ class FileStorageManager(object):
         updated_execution = Execution(
             id=execution['id'],
             deployment_id=execution['deployment_id'],
-            internal_workflow_id=execution['internal_workflow_id'],
             workflow_id=execution['workflow_id'],
             blueprint_id=execution['blueprint_id'],
             created_at=execution['created_at'],
