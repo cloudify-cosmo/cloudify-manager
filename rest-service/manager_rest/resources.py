@@ -39,7 +39,6 @@ from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 
@@ -62,8 +61,8 @@ def exceptions_handled(func):
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError) as e:
             abort_error(e)
-        except WorkflowServiceError, e:
-            abort_workflow_service_operation(e)
+        # except WorkflowServiceError, e:
+        #     abort_workflow_service_operation(e)
     return wrapper
 
 

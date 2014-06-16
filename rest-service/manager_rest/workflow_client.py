@@ -15,92 +15,52 @@
 
 __author__ = 'dan'
 
-import requests
-import json
-import time
-
 from manager_rest import config
 
-
-class WorkflowServiceError(Exception):
-
-    def __init__(self, status_code, json):
-        self.status_code = status_code
-        self.json = json
+from manager_rest import celery_client
 
 
 class WorkflowClient(object):
 
-    def __init__(self):
-        self.workflow_service_base_uri = \
-            config.instance().workflow_service_base_uri
+    @staticmethod
+    def execute_workflow(name,
+                         workflow,
+                         deployment_id,
+                         blueprint_id,
+                         execution_id):
+        client = celery_client.celery_client()
+        plugin = workflow['plugin']
+        operation = workflow['operation']
+        properties = workflow.get('properties', {})
+        task_name = '{}.{}'.format(plugin, operation)
+        task_id = execution_id
+        # task_queue = '{}_workflows'.format(deployment_id)
+        task_queue = 'cloudify.workflows'
+        kwargs = {
+            '__cloudify_context': {
+                'workflow_id': name,
+                'blueprint_id': blueprint_id,
+                'deployment_id': deployment_id,
+                'execution_id': execution_id
+            }
+        }
+        kwargs.update(properties)
+        client.execute_task(task_name=task_name,
+                            task_queue=task_queue,
+                            task_id=task_id,
+                            kwargs=kwargs)
 
-    def execute_workflow(self, name, workflow, plan, blueprint_id=None,
-                         deployment_id=None, execution_id=None):
-        tags = {}
-        if deployment_id is not None:
-            tags['deployment_id'] = deployment_id  # for workflow events
-        response = requests.post(
-            '{0}/workflows'.format(self.workflow_service_base_uri),
-            json.dumps({
-                'radial': workflow,
-                'fields': {
-                    'plan': plan,
-                    'workflow_id': name,
-                    'blueprint_id': blueprint_id,
-                    'deployment_id': deployment_id,
-                    'execution_id': execution_id
-                },
-                'tags': tags
-            }))
-        if response.status_code != 201:
-            raise WorkflowServiceError(response.status_code, response.json())
-        return response.json()
-
-    def validate_workflows(self, plan):
-        prepare_plan_participant_workflow = '''define validate
-    prepare_plan plan: $plan
-        '''
-        execution_response = self.execute_workflow(
-            'validate', prepare_plan_participant_workflow, plan)
-        response = {'state': 'pending'}
-        # TODO timeout
-        while (response['state'] != 'terminated') and \
-              (response['state'] != 'failed'):
-            response = self.get_workflow_status(execution_response['id'])
-            time.sleep(1)
-        # This is good
-        if response['state'] == 'terminated':
-            return {'status': 'valid'}
-        # This is bad
-        else:
-            return {'status': 'invalid'}
-
+    @staticmethod
     def get_workflow_status(self, workflow_id):
-        response = requests.get(
-            '{0}/workflows/{1}'.format(self.workflow_service_base_uri,
-                                       workflow_id))
-        if response.status_code != 200:
-            raise WorkflowServiceError(response.status_code, response.json())
-        return response.json()
+        raise RuntimeError('get_workflow_status')
 
+    @staticmethod
     def get_workflows_statuses(self, workflows_ids):
-        response = requests.post(
-            '{0}/states'.format(self.workflow_service_base_uri),
-            json.dumps({'workflows_ids': workflows_ids}))
-        if response.status_code != 200:
-            raise WorkflowServiceError(response.status_code, response.json())
-        return response.json()
+        raise RuntimeError('get_workflow_statuses')
 
+    @staticmethod
     def cancel_workflow(self, workflow_id):
-        response = requests.post('{0}/workflows/{1}'.format(
-            self.workflow_service_base_uri, workflow_id
-        ), json.dumps({
-            'action': 'cancel'
-        }))
-        if response.status_code != 201:
-            raise WorkflowServiceError(response.status_code, response.json())
-        return response.json()
+        raise RuntimeError('cancel_workflow')
 
 
 def workflow_client():

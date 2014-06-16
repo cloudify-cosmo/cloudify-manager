@@ -172,23 +172,21 @@ class BlueprintsManager(object):
                 'Workflow {0} does not exist in deployment {1}'.format(
                     workflow_id, deployment_id))
         workflow = deployment.plan['workflows'][workflow_id]
-        plan = deployment.plan
 
         self._verify_deployment_workers_installed_successfully(deployment_id)
 
         execution_id = str(uuid.uuid4())
-        response = workflow_client().execute_workflow(
+        workflow_client().execute_workflow(
             workflow_id,
-            workflow, plan,
+            workflow,
             blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
             execution_id=execution_id)
-        # TODO raise error if there is error in response
 
         new_execution = models.Execution(
             id=execution_id,
-            status=response['state'],
-            created_at=str(response['created']),
+            status='pending',
+            created_at=time.time(),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,
