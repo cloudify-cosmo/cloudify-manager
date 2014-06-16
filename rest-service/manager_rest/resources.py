@@ -113,8 +113,6 @@ def setup_resources(api):
                      '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
-    api.add_resource(BlueprintsIdSource,
-                     '/blueprints/<string:blueprint_id>/source')
     api.add_resource(BlueprintsIdValidate,
                      '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(ExecutionsId,
@@ -382,26 +380,6 @@ class Blueprints(Resource):
         Upload a blueprint
         """
         return BlueprintsUpload().do_request()
-
-
-class BlueprintsIdSource(Resource):
-
-    @swagger.operation(
-        responseClass=responses.BlueprintState,
-        nickname="getBlueprintSource",
-        notes="Returns a blueprint's source (main yaml file)"
-              "  by the blueprint's id."
-    )
-    @marshal_with(responses.BlueprintState.resource_fields)
-    @exceptions_handled
-    def get(self, blueprint_id):
-        """
-        Get blueprint's source (main yaml file) by id
-        """
-        fields = {'id', 'source'}
-        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
-                                                           fields)
-        return responses.BlueprintState(**blueprint.to_dict())
 
 
 class BlueprintsId(Resource):
