@@ -1,3 +1,0 @@
-define install_deployment
-
-    execute_task target: '${deployment_id}_workflows', exec: 'workflows.default.install'
