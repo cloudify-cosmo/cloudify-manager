@@ -264,6 +264,7 @@ class BlueprintsManager(object):
             relationship = {
                 'target_id': raw_relationship['target_id'],
                 'type': raw_relationship['type'],
+                'type_hierarchy': raw_relationship['type_hierarchy'],
                 'properties': raw_relationship['properties'],
                 'source_operations': raw_relationship['source_operations'],
                 'target_operations': raw_relationship['target_operations'],
