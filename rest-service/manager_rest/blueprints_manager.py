@@ -164,7 +164,7 @@ class BlueprintsManager(object):
         return responses.BlueprintValidationStatus(
             blueprint_id=blueprint_id, status=response['status'])
 
-    def execute_workflow(self, deployment_id, workflow_id):
+    def execute_workflow(self, deployment_id, workflow_id, force=False):
         deployment = self.get_deployment(deployment_id)
 
         if workflow_id not in deployment.plan['workflows']:
@@ -175,6 +175,20 @@ class BlueprintsManager(object):
         plan = deployment.plan
 
         self._verify_deployment_workers_installed_successfully(deployment_id)
+
+        # validate no execution is currently in progress
+        if not force:
+            executions = self.get_deployment_executions(deployment_id)
+            running = [
+                e.id for e in executions if
+                get_storage_manager().get_execution(e.id).status
+                not in ['failed', 'terminated']]
+            if len(running) > 0:
+                raise manager_exceptions.ExistingRunningExecutionError(
+                    'The following executions are currently running for this '
+                    'deployment: {0}. To execute this workflow anyway, pass '
+                    '"force=true" as a query parameter to this request'.format(
+                        running))
 
         execution_id = str(uuid.uuid4())
         response = workflow_client().execute_workflow(

@@ -946,24 +946,10 @@ class DeploymentsIdExecutions(Resource):
         args = self._post_args_parser.parse_args()
         force = verify_and_convert_bool('force', args['force'])
 
-        # validate no execution is currently in progress
-        if not force:
-            executions = get_blueprints_manager().get_deployment_executions(
-                deployment_id)
-            running = [
-                e.id for e in executions if
-                get_storage_manager().get_execution(e.id).status
-                not in ['failed', 'terminated']]
-            if len(running) > 0:
-                raise manager_exceptions.ExistingRunningExecutionError(
-                    'The following executions are currently running for this '
-                    'deployment: {0}. To execute this workflow anyway, pass '
-                    '"force=true" as a query parameter to this request'.format(
-                        running))
-
         workflow_id = request.json['workflow_id']
         execution = get_blueprints_manager().execute_workflow(deployment_id,
-                                                              workflow_id)
+                                                              workflow_id,
+                                                              force)
         return responses.Execution(**execution.to_dict()), 201
 
 
