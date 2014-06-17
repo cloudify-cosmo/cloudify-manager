@@ -165,7 +165,7 @@ class ManagerRestProcess(object):
 
     def started(self):
         try:
-            self.client.blueprints.list()
+            self.client.manager.get_status()
             return True
         except BaseException:
             return False

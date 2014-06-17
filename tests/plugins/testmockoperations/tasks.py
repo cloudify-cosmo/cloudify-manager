@@ -18,7 +18,7 @@ from cloudify.decorators import operation
 import tempfile
 import os
 import shutil
-from cloudify.manager import get_new_rest_client
+from cloudify.manager import get_rest_client
 
 state = []
 touched_time = None
@@ -173,7 +173,7 @@ def get_monitoring_operations_invocation(**kwargs):
 
 @operation
 def append_node_state(ctx, **kwargs):
-    client = get_new_rest_client()
+    client = get_rest_client()
     instance = client.node_instances.get(ctx.node_id)
     global node_states
     node_states.append(instance.state)
