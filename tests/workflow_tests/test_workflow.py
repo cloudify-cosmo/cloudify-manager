@@ -23,6 +23,8 @@ from testenv import deploy_application as deploy
 from testenv import timeout
 from testenv import send_task
 from testenv import run_search as search
+from testenv import verify_workers_installation_complete
+from testenv import wait_for_execution_to_end
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -352,3 +354,20 @@ class BasicWorkflowsTest(TestCase):
         node_id = deployment_nodes[0].id
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('started', node_instance.state)
+
+    def test_workflow_properties(self):
+        dsl_path = resource('dsl/workflow_properties.yaml')
+        self.client.blueprints.upload(dsl_path, 'blueprint_id')
+        self.client.deployments.create('blueprint_id', 'deployment_id')
+        self.do_assertions(verify_workers_installation_complete, 30,
+                           deployment_id='deployment_id')
+        execution = self.client.deployments.execute('deployment_id',
+                                                    'execute_operation')
+        wait_for_execution_to_end(execution)
+
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations
+
+        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        self.assertDictEqual(invocations[0], {'test_key': 'test_value'})

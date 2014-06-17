@@ -350,6 +350,7 @@ class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
             includes=["workflows.default",
+                      "mock_workflows.workflows",
                       "plugin_installer.tasks"],
             hostname='cloudify.workflows')
 
