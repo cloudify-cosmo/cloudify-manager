@@ -24,6 +24,7 @@ from testenv import timeout
 from testenv import send_task
 from testenv import run_search as search
 from testenv import verify_workers_installation_complete
+from testenv import do_retries
 from testenv import wait_for_execution_to_end
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -359,8 +360,8 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource('dsl/workflow_properties.yaml')
         self.client.blueprints.upload(dsl_path, 'blueprint_id')
         self.client.deployments.create('blueprint_id', 'deployment_id')
-        self.do_assertions(verify_workers_installation_complete, 30,
-                           deployment_id='deployment_id')
+        do_retries(verify_workers_installation_complete, 30,
+                   deployment_id='deployment_id')
         execution = self.client.deployments.execute('deployment_id',
                                                     'execute_operation')
         wait_for_execution_to_end(execution)

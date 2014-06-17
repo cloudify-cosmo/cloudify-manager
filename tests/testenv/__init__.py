@@ -344,14 +344,15 @@ class CeleryWorkerProcess(object):
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
     def __init__(self, tempdir, plugins_tempdir,
-                 manager_rest_port):
+                 manager_rest_port, use_mock_workers_installation=True):
+        includes = ["workflows.default", "plugin_installer.tasks"]
+        if use_mock_workers_installation:
+            includes.append("mock_workflows.workflows")
         super(CeleryWorkflowsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
-            includes=["workflows.default",
-                      "mock_workflows.workflows",
-                      "plugin_installer.tasks"],
+            includes=includes,
             hostname='cloudify.workflows')
 
 
@@ -801,7 +802,8 @@ class TestEnvironment(object):
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir,
                     self._plugins_tempdir,
-                    MANAGER_REST_PORT)
+                    MANAGER_REST_PORT,
+                    use_mock_workers_installation)
             self._celery_workflows_worker_process.start()
 
             # workaround to update path
