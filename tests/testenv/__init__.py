@@ -1065,11 +1065,6 @@ def get_resource(resource):
     return resource_path
 
 
-def run_search(query):
-    client = create_rest_client()
-    return client.run_search(query)
-
-
 def wait_for_execution_to_end(execution, timeout=240):
     client = create_rest_client()
     deadline = time.time() + timeout
@@ -1123,7 +1118,8 @@ def verify_workers_installation_complete(deployment_id):
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'workers_installation' with status 'terminated'; "
-            "Found these executions instead: {0}".format(execs))
+            "Found these executions instead: {0}".format(
+                json.dumps(execs, indent=2)))
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -1139,27 +1135,6 @@ def undeploy_application(deployment_id, timeout=240):
     if execution.error and execution.error != 'None':
         raise RuntimeError(
             'Workflow execution failed: {0}'.format(execution.error))
-
-
-def validate_dsl(blueprint_id, timeout=240):
-    """
-    A blocking method which validates a dsl from the provided dsl path.
-    """
-    client = create_rest_client()
-    response = client.validate_blueprint(blueprint_id)
-    if response.status != 'valid':
-        raise RuntimeError('Blueprint {0} is not valid (status: {1})'.format(
-            blueprint_id, response.status))
-
-
-def post_provider_context(name, provider_context):
-    client = create_rest_client()
-    return client.post_provider_context(name, provider_context)
-
-
-def get_provider_context():
-    client = create_rest_client()
-    return client.get_provider_context()
 
 
 def is_node_started(node_id):

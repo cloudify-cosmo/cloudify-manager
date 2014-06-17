@@ -22,7 +22,6 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import timeout
 from testenv import send_task
-from testenv import run_search as search
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -149,7 +148,7 @@ class BasicWorkflowsTest(TestCase):
         machines = result.get(timeout=10)
 
         self.assertEquals(1, len(machines))
-        result = search('')
+        result = self.client.search.run_query('')
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
         self.assertEquals(6, len(hits))
