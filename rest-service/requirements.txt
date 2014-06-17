@@ -1,1 +1,1 @@
--e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@feature/CFY-648-workflow-mapping#egg=cloudify-dsl-parser==3.0
+-e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@develop#egg=cloudify-dsl-parser==3.0
