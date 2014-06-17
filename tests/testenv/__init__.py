@@ -39,8 +39,6 @@ import json
 import elasticsearch
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient
 from cloudify_rest_client import CloudifyClient
 
 import plugins
@@ -113,8 +111,7 @@ class ManagerRestProcess(object):
         self.file_server_uploaded_blueprints_folder = \
             file_server_uploaded_blueprints_folder
         self.file_server_resources_uri = file_server_resources_uri
-        self.client = CosmoManagerRestClient('localhost',
-                                             port=port)
+        self.client = CloudifyClient('localhost', port=port)
         self.tempdir = tempdir
 
     def start(self, timeout=10):
@@ -168,7 +165,7 @@ class ManagerRestProcess(object):
 
     def started(self):
         try:
-            self.client.list_blueprints()
+            self.client.manager.get_status()
             return True
         except BaseException:
             return False
@@ -673,7 +670,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
         self.logger.setLevel(logging.INFO)
-        self.client = create_new_rest_client()
+        self.client = create_rest_client()
         TestEnvironment.clean_plugins_tempdir()
 
     def tearDown(self):
@@ -941,10 +938,6 @@ class TestEnvironment(object):
 
 
 def create_rest_client():
-    return CosmoManagerRestClient('localhost', port=MANAGER_REST_PORT)
-
-
-def create_new_rest_client():
     return CloudifyClient('localhost', port=MANAGER_REST_PORT)
 
 
@@ -962,13 +955,8 @@ def get_resource(resource):
     return resource_path
 
 
-def run_search(query):
-    client = create_rest_client()
-    return client.run_search(query)
-
-
 def wait_for_execution_to_end(execution, timeout=240):
-    client = create_new_rest_client()
+    client = create_rest_client()
     deadline = time.time() + timeout
     while execution.status not in ['terminated', 'failed']:
         time.sleep(1)
@@ -990,7 +978,7 @@ def deploy_application(dsl_path,
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = create_new_rest_client()
+    client = create_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
     blueprint = client.blueprints.upload(dsl_path, blueprint_id)
@@ -1012,7 +1000,7 @@ def deploy_application(dsl_path,
 
 def verify_workers_installation_complete(deployment_id):
     # a workaround for waiting for the workers installation to complete
-    client = create_new_rest_client()
+    client = create_rest_client()
     execs = client.deployments.list_executions(deployment_id)
     if not execs \
         or execs[0].status != 'terminated' \
@@ -1020,7 +1008,8 @@ def verify_workers_installation_complete(deployment_id):
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'workers_installation' with status 'terminated'; "
-            "Found these executions instead: {0}".format(execs))
+            "Found these executions instead: {0}".format(
+                json.dumps(execs, indent=2)))
 
 
 def undeploy_application(deployment_id, timeout=240):
@@ -1028,7 +1017,7 @@ def undeploy_application(deployment_id, timeout=240):
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    client = create_new_rest_client()
+    client = create_rest_client()
     execution = client.deployments.execute(deployment_id,
                                            'uninstall')
     wait_for_execution_to_end(execution, timeout=timeout)
@@ -1038,18 +1027,8 @@ def undeploy_application(deployment_id, timeout=240):
             'Workflow execution failed: {0}'.format(execution.error))
 
 
-def post_provider_context(name, provider_context):
-    client = create_rest_client()
-    return client.post_provider_context(name, provider_context)
-
-
-def get_provider_context():
-    client = create_rest_client()
-    return client.get_provider_context()
-
-
 def is_node_started(node_id):
-    client = create_new_rest_client()
+    client = create_rest_client()
     node_instance = client.node_instances.get(node_id)
     return node_instance['state'] == 'started'
 

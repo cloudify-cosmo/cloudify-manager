@@ -19,7 +19,7 @@ __author__ = 'ran'
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import create_new_rest_client
+from testenv import create_rest_client
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -27,7 +27,7 @@ class TestStorage(TestCase):
 
     def test_update_node_bad_version(self):
         deploy(resource("dsl/basic.yaml"))
-        client = create_new_rest_client()
+        client = create_rest_client()
         instance = client.node_instances.list()[0]
         instance = client.node_instances.get(instance.id)  # need the version
 

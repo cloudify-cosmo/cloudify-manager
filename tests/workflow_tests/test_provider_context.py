@@ -15,12 +15,8 @@
 
 __author__ = 'dank'
 
-from cosmo_manager_rest_client.cosmo_manager_rest_client import \
-    CosmoManagerRestCallError
-
+from cloudify_rest_client.exceptions import CloudifyClientError
 from testenv import TestCase
-from testenv import post_provider_context
-from testenv import get_provider_context
 
 
 class TestProviderContext(TestCase):
@@ -31,10 +27,10 @@ class TestProviderContext(TestCase):
             'key1': 'value1',
             'key2': 'value2'
         }
-        post_response = post_provider_context(name, context)
-        self.assertEqual(post_response.status, 'ok')
-        response_context = get_provider_context()
+        post_response = self.client.manager.create_context(name, context)
+        self.assertEqual(post_response['status'], 'ok')
+        response_context = self.client.manager.get_context()
         self.assertEqual(name, response_context['name'])
         self.assertEqual(context, response_context['context'])
-        self.assertRaises(CosmoManagerRestCallError,
-                          post_provider_context, name, context)
+        self.assertRaises(CloudifyClientError,
+                          self.client.manager.create_context, name, context)
