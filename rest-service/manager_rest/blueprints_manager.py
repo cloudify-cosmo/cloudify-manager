@@ -27,7 +27,6 @@ from urllib2 import urlopen
 from flask import g, current_app
 
 from manager_rest import models
-from manager_rest import responses
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
