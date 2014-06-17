@@ -117,6 +117,13 @@ def mock_operation(ctx, **kwargs):
 
 
 @operation
+def mock_operation_from_custom_workflow(key, value, **_):
+    mock_operation_invocation.append({
+        key: value
+    })
+
+
+@operation
 def get_resource_operation(ctx, **kwargs):
     resource_path = ctx.properties['resource_path']
     # trying to retrieve a resource

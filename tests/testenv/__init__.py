@@ -133,6 +133,7 @@ class ManagerRestProcess(object):
 
         env = os.environ.copy()
         env['MANAGER_REST_CONFIG_PATH'] = config_path
+        env['CLOUDIFY_WORKFLOWS_QUEUE'] = CLOUDIFY_WORKFLOWS_QUEUE
 
         python_path = sys.executable
 
@@ -182,108 +183,6 @@ class ManagerRestProcess(object):
         # build way into manager_rest
         return path.join(manager_rest_location,
                          'rest-service/manager_rest')
-
-
-class RuoteServiceProcess(object):
-
-    def __init__(self, tempdir, port=8101, num_of_workers=1):
-        self._pid = None
-        self._port = port
-        self._process = None
-        self._tempdir = tempdir
-        self._num_of_workers = num_of_workers
-
-    def _get_installed_ruby_packages(self):
-        pass
-
-    def _verify_ruby_environment(self):
-        """ Verifies there's a valid Ruby environment.
-        RuntimeError is raised if not
-        """
-        try:
-            subprocess.check_output(['ruby', '--version']).startswith('ruby')
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Failed finding ruby installation")
-
-    def _verify_service_responsiveness(self, timeout=120):
-        import urllib2
-        service_url = "http://localhost:{0}".format(self._port)
-        up = False
-        deadline = time.time() + timeout
-        res = None
-        while time.time() < deadline:
-            try:
-                res = urllib2.urlopen(service_url)
-                up = res.code == 200
-                break
-            except BaseException:
-                pass
-            time.sleep(1)
-        if not up:
-            raise RuntimeError("Ruote service is not responding @ {0} "
-                               "(response: {1})".format(service_url, res))
-
-    def _verify_service_started(self, timeout=30):
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            self._pid = self._get_serice_pid()
-            if self._pid is not None:
-                break
-            time.sleep(1)
-        if self._pid is None:
-            raise RuntimeError("Failed to start ruote service within a {0} "
-                               "seconds timeout".format(timeout))
-
-    def _verify_service_ended(self, timeout=10):
-        pid = self._pid
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            pid = self._get_serice_pid()
-            if pid is None:
-                break
-            time.sleep(1)
-        if pid is not None:
-            raise RuntimeError("Failed to stop ruote service within a {0} "
-                               "seconds timeout".format(timeout))
-
-    def _get_serice_pid(self):
-        from subprocess import CalledProcessError
-        pattern = "\w*\s*(\d*).*"
-        try:
-            output = subprocess.check_output(
-                "ps aux | grep 'unicorn master' | grep -v grep", shell=True)
-            match = re.match(pattern, output)
-            if match:
-                return int(match.group(1))
-        except CalledProcessError:
-            pass
-        return None
-
-    def start(self):
-        startup_script_path = path.realpath(path.join(path.dirname(__file__),
-                                                      '..'))
-        script = path.join(startup_script_path, 'run_ruote_service.sh')
-        command = [script, str(self._port)]
-        env = os.environ.copy()
-        env['RUOTE_STORAGE_DIR_PATH'] = path.join(self._tempdir,
-                                                  'ruote_storage')
-        env['UNICORN_NUMBER_OF_WORKERS'] = str(self._num_of_workers)
-        env['INTEG_TEST_ENV'] = 'true'
-        logger.info("Starting Ruote service with command {0}".format(command))
-        self._process = subprocess.Popen(command,
-                                         cwd=startup_script_path,
-                                         env=env)
-        self._verify_service_started(timeout=60)
-        self._verify_service_responsiveness()
-        logger.info("Ruote service started [pid=%s]", self._pid)
-
-    def close(self):
-        if self._process:
-            self._process.kill()
-        if self._pid:
-            logger.info("Shutting down Ruote service [pid=%s]", self._pid)
-            os.system("kill -9 {0}".format(self._pid))
-            self._verify_service_ended()
 
 
 class CeleryWorkerProcess(object):
@@ -442,13 +341,15 @@ class CeleryWorkerProcess(object):
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
     def __init__(self, tempdir, plugins_tempdir,
-                 manager_rest_port):
+                 manager_rest_port, use_mock_workers_installation=True):
+        includes = ["workflows.default", "plugin_installer.tasks"]
+        if use_mock_workers_installation:
+            includes.append("mock_workflows.workflows")
         super(CeleryWorkflowsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
-            includes=["workflows.default",
-                      "plugin_installer.tasks"],
+            includes=includes,
             hostname='cloudify.workflows')
 
 
@@ -801,7 +702,6 @@ class TestEnvironment(object):
     _tempdir = None
     _plugins_tempdir = None
     _scope = None
-    _ruote_service = None
     _file_server_process = None
 
     def __init__(self, scope, use_mock_workers_installation=True):
@@ -842,7 +742,7 @@ class TestEnvironment(object):
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
                 # package / egg folder
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
-            except:
+            except ImportError:
                 # cloudify-manager/tests/plugins/__init__.py(c)
                 workflow_plugin_path = path.abspath(plugins.__file__)
                 # cloudify-manager/tests/plugins
@@ -899,7 +799,8 @@ class TestEnvironment(object):
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir,
                     self._plugins_tempdir,
-                    MANAGER_REST_PORT)
+                    MANAGER_REST_PORT,
+                    use_mock_workers_installation)
             self._celery_workflows_worker_process.start()
 
             # workaround to update path
@@ -939,15 +840,6 @@ class TestEnvironment(object):
                 self._tempdir)
             self._manager_rest_process.start()
 
-            # ruote service
-            # currently, only a single unicorn worker is supported
-            num_of_unicorn_workers = 1
-            self._ruote_service = RuoteServiceProcess(
-                self._tempdir,
-                num_of_workers=num_of_unicorn_workers)
-
-            self._ruote_service.start()
-
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
@@ -966,8 +858,6 @@ class TestEnvironment(object):
             self._celery_workflows_worker_process.close()
         if self._manager_rest_process:
             self._manager_rest_process.close()
-        if self._ruote_service:
-            self._ruote_service.close()
         if self._file_server_process:
             self._file_server_process.stop()
         if self._tempdir:
