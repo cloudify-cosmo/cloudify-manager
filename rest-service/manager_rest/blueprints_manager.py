@@ -151,19 +151,6 @@ class BlueprintsManager(object):
         self._uninstall_deployment_workers(deployment_id)
         return storage.delete_deployment(deployment_id)
 
-    # currently validation is split to 2 phases: the first
-    # part is during submission (dsl parsing)
-    # second part is during call to validate which simply delegates
-    # the plan to the workflow service
-    # so we can parse all the workflows and see things are ok
-    def validate_blueprint(self, blueprint_id):
-        blueprint = self.get_blueprint(blueprint_id)
-        plan = blueprint.plan
-        response = workflow_client().validate_workflows(plan)
-        # TODO raise error if error
-        return responses.BlueprintValidationStatus(
-            blueprint_id=blueprint_id, status=response['status'])
-
     def execute_workflow(self, deployment_id, workflow_id):
         deployment = self.get_deployment(deployment_id)
 

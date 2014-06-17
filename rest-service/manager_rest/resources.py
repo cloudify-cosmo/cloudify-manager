@@ -114,8 +114,6 @@ def setup_resources(api):
                      '/blueprints/<string:blueprint_id>/archive')
     api.add_resource(BlueprintsIdSource,
                      '/blueprints/<string:blueprint_id>/source')
-    api.add_resource(BlueprintsIdValidate,
-                     '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(ExecutionsId,
                      '/executions/<string:execution_id>')
     api.add_resource(Deployments,
@@ -486,22 +484,6 @@ class BlueprintsId(Resource):
         shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
-
-
-class BlueprintsIdValidate(Resource):
-
-    @swagger.operation(
-        responseClass=responses.BlueprintValidationStatus,
-        nickname="validate",
-        notes="Validates a given blueprint."
-    )
-    @marshal_with(responses.BlueprintValidationStatus.resource_fields)
-    @exceptions_handled
-    def get(self, blueprint_id):
-        """
-        Validate blueprint by id
-        """
-        return get_blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class ExecutionsId(Resource):
