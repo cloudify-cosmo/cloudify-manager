@@ -39,7 +39,6 @@ from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 
@@ -62,8 +61,6 @@ def exceptions_handled(func):
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError) as e:
             abort_error(e)
-        except WorkflowServiceError, e:
-            abort_workflow_service_operation(e)
     return wrapper
 
 
@@ -115,8 +112,6 @@ def setup_resources(api):
                      '/blueprints/<string:blueprint_id>/archive')
     api.add_resource(BlueprintsIdSource,
                      '/blueprints/<string:blueprint_id>/source')
-    api.add_resource(BlueprintsIdValidate,
-                     '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(ExecutionsId,
                      '/executions/<string:execution_id>')
     api.add_resource(Deployments,
@@ -487,22 +482,6 @@ class BlueprintsId(Resource):
         shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
-
-
-class BlueprintsIdValidate(Resource):
-
-    @swagger.operation(
-        responseClass=responses.BlueprintValidationStatus,
-        nickname="validate",
-        notes="Validates a given blueprint."
-    )
-    @marshal_with(responses.BlueprintValidationStatus.resource_fields)
-    @exceptions_handled
-    def get(self, blueprint_id):
-        """
-        Validate blueprint by id
-        """
-        return get_blueprints_manager().validate_blueprint(blueprint_id)
 
 
 class ExecutionsId(Resource):

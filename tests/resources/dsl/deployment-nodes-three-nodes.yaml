@@ -24,8 +24,3 @@ types:
         interfaces:
             mock_interface:
                 - make_reachable: testmockoperations.tasks.make_reachable
-        workflows:
-            create:
-                radial: |
-                    define mock_init
-                        execute_operation operation: 'make_reachable'

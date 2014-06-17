@@ -27,11 +27,6 @@ before_script:
    - python -m SimpleHTTPServer 8000 &
 
 install:
-   - rvm install ruby-2.1.0
-   - rvm use ruby-2.1.0
-   - rvm --default use ruby-2.1.0
-   - gem install bundler
-   - cd workflow-service; bundle install; cd ..
    - sudo pip install virtualenv
    - sudo pip install flake8
 
@@ -70,10 +65,6 @@ script:
    - flake8 workflows/
    - flake8 rest-service/
    - flake8 tests/
-
-   - cd workflow-service
-   - rake
-   - cd ..
 
    - nosetests rest-service/manager_rest/test --nologcapture --nocapture
    - nosetests tests/workflow_tests --nologcapture --nocapture -v

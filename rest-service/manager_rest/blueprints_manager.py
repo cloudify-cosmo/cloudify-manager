@@ -27,7 +27,6 @@ from urllib2 import urlopen
 from flask import g, current_app
 
 from manager_rest import models
-from manager_rest import responses
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
@@ -151,19 +150,6 @@ class BlueprintsManager(object):
         self._uninstall_deployment_workers(deployment_id)
         return storage.delete_deployment(deployment_id)
 
-    # currently validation is split to 2 phases: the first
-    # part is during submission (dsl parsing)
-    # second part is during call to validate which simply delegates
-    # the plan to the workflow service
-    # so we can parse all the workflows and see things are ok
-    def validate_blueprint(self, blueprint_id):
-        blueprint = self.get_blueprint(blueprint_id)
-        plan = blueprint.plan
-        response = workflow_client().validate_workflows(plan)
-        # TODO raise error if error
-        return responses.BlueprintValidationStatus(
-            blueprint_id=blueprint_id, status=response['status'])
-
     def execute_workflow(self, deployment_id, workflow_id, force=False):
         deployment = self.get_deployment(deployment_id)
 
@@ -172,7 +158,6 @@ class BlueprintsManager(object):
                 'Workflow {0} does not exist in deployment {1}'.format(
                     workflow_id, deployment_id))
         workflow = deployment.plan['workflows'][workflow_id]
-        plan = deployment.plan
 
         self._verify_deployment_workers_installed_successfully(deployment_id)
 
@@ -191,18 +176,17 @@ class BlueprintsManager(object):
                         running))
 
         execution_id = str(uuid.uuid4())
-        response = workflow_client().execute_workflow(
+        workflow_client().execute_workflow(
             workflow_id,
-            workflow, plan,
+            workflow,
             blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
             execution_id=execution_id)
-        # TODO raise error if there is error in response
 
         new_execution = models.Execution(
             id=execution_id,
-            status=response['state'],
-            created_at=str(response['created']),
+            status='pending',
+            created_at=str(datetime.now()),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,
@@ -381,6 +365,8 @@ class BlueprintsManager(object):
             kwargs={
                 'management_plugins_to_install':
                 deployment.plan['management_plugins_to_install'],
+                'workflow_plugins_to_install':
+                deployment.plan['workflow_plugins_to_install'],
                 '__cloudify_context': context})
 
     def _build_context_from_deployment(self, deployment, task_id, wf_id,

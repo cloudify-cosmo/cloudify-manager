@@ -15,3 +15,6 @@ blueprint:
                     - start: cloudmock.tasks.start
                     - stop: cloudmock.tasks.stop
                     - delete: cloudmock.tasks.terminate
+
+workflows:
+    custom: workflows.idonotexist.so.do.try.running.me

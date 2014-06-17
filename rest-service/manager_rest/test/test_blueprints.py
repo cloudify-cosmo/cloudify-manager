@@ -113,14 +113,6 @@ class BlueprintsTestCase(BaseServerTestCase):
         resp = self.delete('/blueprints/nonexistent-blueprint')
         self.assertEquals(404, resp.status_code)
 
-    def test_get_blueprints_id_validate(self):
-        post_blueprints_response = self.post_file(
-            *self.post_blueprint_args()).json
-        resource_path = '/blueprints/{0}/validate'.format(
-            post_blueprints_response['id'])
-        validation = self.get(resource_path).json
-        self.assertEqual(validation['status'], 'valid')
-
     def test_zipped_plugin(self):
         self.post_file(*self.post_blueprint_args())
         self.check_if_resource_on_fileserver('hello_world',
