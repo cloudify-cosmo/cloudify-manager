@@ -172,7 +172,7 @@ class BlueprintsManager(object):
         new_execution = models.Execution(
             id=execution_id,
             status='pending',
-            created_at=time.time(),
+            created_at=str(datetime.now()),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,

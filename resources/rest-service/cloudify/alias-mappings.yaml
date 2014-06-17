@@ -5,10 +5,6 @@ cloudify.bash: cloudify/types/bash.yaml
 cloudify.chef: cloudify/types/chef.yaml
 cloudify.puppet: cloudify/types/puppet.yaml
 
-# workflows
-cloudify.workflows.install: cloudify/workflows/install.radial
-cloudify.workflows.uninstall: cloudify/workflows/uninstall.radial
-
 # plugins
 app_module_installer: cloudify/plugins/app_module_installer.yaml
 host_provisioner: cloudify/plugins/host_provisioner.yaml
