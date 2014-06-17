@@ -17,7 +17,6 @@ __author__ = 'dan'
 
 
 from base_test import BaseServerTestCase
-import os
 
 
 class BlueprintsTestCase(BaseServerTestCase):
