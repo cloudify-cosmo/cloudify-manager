@@ -15,9 +15,14 @@
 
 __author__ = 'dan'
 
+import os
+
 from manager_rest import config
 
 from manager_rest.celery_client import celery_client as client
+
+# used by integration tests
+env_workflows_queue = os.environ.get('CLOUDIFY_WORKFLOWS_QUEUE')
 
 
 class WorkflowClient(object):
@@ -29,8 +34,11 @@ class WorkflowClient(object):
                          blueprint_id,
                          execution_id):
         task_name = '{}.{}'.format(workflow['plugin'], workflow['operation'])
-        # task_queue = '{}_workflows'.format(deployment_id)
-        task_queue = 'cloudify.workflows'
+        if env_workflows_queue:
+            # used by integration tests
+            task_queue = env_workflows_queue
+        else:
+            task_queue = '{}_workflows'.format(deployment_id)
         kwargs = workflow.get('properties', {})
         kwargs['__cloudify_context'] = {'workflow_id': name,
                                         'blueprint_id': blueprint_id,

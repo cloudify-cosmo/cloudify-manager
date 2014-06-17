@@ -136,6 +136,7 @@ class ManagerRestProcess(object):
 
         env = os.environ.copy()
         env['MANAGER_REST_CONFIG_PATH'] = config_path
+        env['CLOUDIFY_WORKFLOWS_QUEUE'] = CLOUDIFY_WORKFLOWS_QUEUE
 
         python_path = sys.executable
 
