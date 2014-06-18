@@ -322,6 +322,14 @@ class BlueprintsManager(object):
                 "Can't launch executions since workers for deployment {0} "
                 'failed to be installed: {1}'.format(
                     deployment_id, workers_installation_execution.error))
+        elif workers_installation_execution.status in (
+            models.Execution.CANCELLED, models.Execution.CANCELLING,
+                models.Execution.FORCE_CANCELLING):
+            # workers installation workflow is got cancelled
+            raise RuntimeError(
+                "Can't launch executions since workers for deployment {0} "
+                'installation has been cancelled [status={1}]'.format(
+                    deployment_id, workers_installation_execution.status))
 
         # status is 'pending'. Waiting for a few seconds and retrying to
         # verify (to avoid eventual consistency issues). If this is already a

@@ -20,6 +20,7 @@ __author__ = 'dan'
 from testenv import (TestCase,
                      get_resource as resource,
                      deploy_application as deploy)
+from cloudify_rest_client.executions import Execution
 
 
 class ExecutionsTest(TestCase):
@@ -47,7 +48,7 @@ class ExecutionsTest(TestCase):
             install_execution = \
                 deployments_executions[0] if execution_id == \
                 deployments_executions[0].id else deployments_executions[1]
-            self.assertEquals('terminated', install_execution.status)
+            self.assertEquals(Execution.TERMINATED, install_execution.status)
             self.assertEquals('', install_execution.error)
 
         self.do_assertions(assertions, timeout=10)
@@ -57,7 +58,7 @@ class ExecutionsTest(TestCase):
         _, execution_id = deploy(dsl_path,
                                  wait_for_execution=True)
         execution = self.client.executions.get(execution_id)
-        self.assertEquals('terminated', execution.status)
+        self.assertEquals(Execution.TERMINATED, execution.status)
         execution = self.client.executions.update(execution_id, 'new-status')
         self.assertEquals('new-status', execution.status)
         execution = self.client.executions.update(execution_id,

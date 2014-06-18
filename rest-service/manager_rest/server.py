@@ -112,7 +112,7 @@ def internal_error(e):
         {"message":
          "Internal error occurred in manager REST server - {0}: {1}"
             .format(type(e).__name__, str(e)),
-         "errorCode": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
+         "error_code": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
          "traceback": traceback.format_tb(sys.exc_info()[2])})
     response.status_code = 500
     return response
