@@ -24,16 +24,13 @@ from testenv import (TestCase,
 
 class ExecutionsTest(TestCase):
 
-    # CFY-783
-    # TODO: execution cancelling is not yet implemented with new
-    #  workflows plugin
-    # def test_cancel_execution(self):
-    #     dsl_path = resource("dsl/sleep_workflow.yaml")
-    #     _, execution_id = deploy(dsl_path,
-    #                              wait_for_execution=False)
-    #     execution = self.client.executions.cancel(execution_id)
-    #     wait_for_execution_to_end(execution)
-    #     self.assertEquals('terminated', execution.status)
+    def test_cancel_execution(self):
+        dsl_path = resource("dsl/sleep_workflow.yaml")
+        _, execution_id = deploy(dsl_path,
+                                 wait_for_execution=False)
+        execution = self.client.executions.cancel(execution_id)
+        wait_for_execution_to_end(execution)
+        self.assertEquals('terminated', execution.status)
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")

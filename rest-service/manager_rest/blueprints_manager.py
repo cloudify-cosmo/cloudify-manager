@@ -195,12 +195,11 @@ class BlueprintsManager(object):
         get_storage_manager().put_execution(new_execution.id, new_execution)
         return new_execution
 
-    def cancel_workflow(self, execution_id):
-        execution = self.get_execution(execution_id)
-        workflow_client().cancel_workflow(
-            execution.id
-        )
-        return execution
+    def cancel_workflow(self, execution_id, force=False):
+        new_status = 'cancelling' if not force else 'force-cancelling'
+        get_storage_manager().update_execution_status(
+            execution_id, new_status, '')
+        return self.get_execution(execution_id)
 
     def create_deployment(self, blueprint_id, deployment_id):
         blueprint = self.get_blueprint(blueprint_id)
