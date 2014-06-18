@@ -40,7 +40,7 @@ import elasticsearch
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
 from cloudify_rest_client import CloudifyClient
-
+from cloudify_rest_client.executions import Execution
 import plugins
 import mock_workflows
 
@@ -958,12 +958,12 @@ def get_resource(resource):
 def wait_for_execution_to_end(execution, timeout=240):
     client = create_rest_client()
     deadline = time.time() + timeout
-    while execution.status not in ['terminated', 'failed']:
+    while execution.status not in Execution.END_STATES:
         time.sleep(1)
         execution = client.executions.get(execution.id)
         if time.time() > deadline:
             raise TimeoutException()
-    if execution.status == 'failed':
+    if execution.status == Execution.FAILED:
         raise RuntimeError(
             'Workflow execution failed: {0} [{1}]'.format(execution.error,
                                                           execution.status))
@@ -1003,7 +1003,7 @@ def verify_workers_installation_complete(deployment_id):
     client = create_rest_client()
     execs = client.deployments.list_executions(deployment_id)
     if not execs \
-        or execs[0].status != 'terminated' \
+        or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'workers_installation':
         raise RuntimeError(
             "Expected a single execution for workflow "
