@@ -3,7 +3,14 @@
 
 
 imports:
-    - 'cloudify.types'
+    - cloudify.types
+
+plugins:
+    puppet_plugin:
+        derived_from: cloudify.plugins.agent_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-puppet-plugin/archive/develop.tar.gz
+
 
 types:
     cloudify.types.puppet.middleware_server:

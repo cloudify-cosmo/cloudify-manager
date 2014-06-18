@@ -17,7 +17,6 @@ __author__ = 'dan'
 
 
 from base_test import BaseServerTestCase
-import os
 
 
 class BlueprintsTestCase(BaseServerTestCase):
@@ -66,23 +65,6 @@ class BlueprintsTestCase(BaseServerTestCase):
         post_blueprints_response['source'] = None
         self.assertEquals(post_blueprints_response,
                           get_blueprint_by_id_response)
-
-    def test_get_blueprint_source(self):
-        post_blueprints_response = self.post_file(
-            *self.post_blueprint_args()).json
-        get_blueprint_source_response = self.get(
-            '/blueprints/{0}/source'.format(post_blueprints_response['id']))\
-            .json
-
-        blueprint_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'mock_blueprint',
-            'blueprint.yaml')
-
-        with open(blueprint_path, 'r') as f:
-            dsl_string = f.read()
-        self.assertEquals(dsl_string, get_blueprint_source_response['source'])
-        self.assertEquals(None, get_blueprint_source_response['plan'])
 
     def test_delete_blueprint(self):
         post_blueprints_response = self.post_file(
