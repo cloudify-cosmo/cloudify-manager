@@ -241,9 +241,9 @@ class BasicWorkflowsTest(TestCase):
                                           state='started',
                                           version=node.version)
 
-        # setting the execution's status to 'launched' so it'll prevent the
+        # setting the execution's status to 'started' so it'll prevent the
         # deployment deletion
-        change_execution_status(execution_id, 'launched')
+        change_execution_status(execution_id, 'started')
 
         # attempting to delete the deployment - should fail because the
         # execution is active
