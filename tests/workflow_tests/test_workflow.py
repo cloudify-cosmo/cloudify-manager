@@ -26,6 +26,7 @@ from testenv import verify_workers_installation_complete
 from testenv import do_retries
 from testenv import wait_for_execution_to_end
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.executions import Execution
 
 
 class BasicWorkflowsTest(TestCase):
@@ -223,7 +224,7 @@ class BasicWorkflowsTest(TestCase):
 
         # execution is supposed to be 'terminated' anyway, but verifying it
         # anyway (plus elasticsearch might need time to update..)
-        change_execution_status(execution_id, 'terminated')
+        change_execution_status(execution_id, Execution.TERMINATED)
 
         # verifying deployment exists
         result = self.client.deployments.get(deployment_id)
@@ -243,7 +244,7 @@ class BasicWorkflowsTest(TestCase):
 
         # setting the execution's status to 'started' so it'll prevent the
         # deployment deletion
-        change_execution_status(execution_id, 'started')
+        change_execution_status(execution_id, Execution.STARTED)
 
         # attempting to delete the deployment - should fail because the
         # execution is active
@@ -258,7 +259,7 @@ class BasicWorkflowsTest(TestCase):
 
         # setting the execution's status to 'terminated' so it won't prevent
         #  the deployment deletion
-        change_execution_status(execution_id, 'terminated')
+        change_execution_status(execution_id, Execution.TERMINATED)
 
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
