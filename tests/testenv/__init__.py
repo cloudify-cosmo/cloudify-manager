@@ -958,7 +958,7 @@ def get_resource(resource):
 def wait_for_execution_to_end(execution, timeout=240):
     client = create_rest_client()
     deadline = time.time() + timeout
-    while execution.status not in ['terminated', 'failed']:
+    while execution.status not in ['terminated', 'failed', 'cancelled']:
         time.sleep(1)
         execution = client.executions.get(execution.id)
         if time.time() > deadline:

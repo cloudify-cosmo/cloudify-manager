@@ -59,7 +59,8 @@ def exceptions_handled(func):
                 manager_exceptions.UnsupportedContentTypeError,
                 manager_exceptions.InvalidBlueprintError,
                 manager_exceptions.ExistingRunningExecutionError,
-                manager_exceptions.DeploymentWorkersNotYetInstalledError) as e:
+                manager_exceptions.DeploymentWorkersNotYetInstalledError,
+                manager_exceptions.IllegalActionError) as e:
             abort_error(e)
     return wrapper
 
@@ -482,10 +483,11 @@ class ExecutionsId(Resource):
         responseClass=responses.Execution,
         nickname="modify_state",
         notes="Modifies a running execution state (currently, only cancel"
-              " is supported)",
+              " and force-cancel are supported)",
         parameters=[{'name': 'body',
                      'description': 'json with an action key. '
-                                    'Legal values for action are: [cancel]',
+                                    'Legal values for action are: [cancel,'
+                                    ' force-cancel]',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': requests_schema.ModifyExecutionRequest.__name__,  # NOQA
@@ -505,15 +507,16 @@ class ExecutionsId(Resource):
         verify_parameter_in_request_body('action', request_json)
         action = request.json['action']
 
-        valid_actions = ['cancel']
+        valid_actions = ['cancel', 'force-cancel']
 
         if action not in valid_actions:
             raise manager_exceptions.BadParametersError(
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
 
-        if action == 'cancel':
-            return get_blueprints_manager().cancel_workflow(execution_id), 201
+        if action in ('cancel', 'force-cancel'):
+            return get_blueprints_manager().cancel_workflow(
+                execution_id, action == 'force-cancel'), 201
 
     @swagger.operation(
         responseClass=responses.Execution,

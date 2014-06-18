@@ -22,12 +22,13 @@ BAD_PARAMETERS_ERROR_CODE = 'bad_parameters_error'
 INVALID_BLUEPRINT_ERROR_CODE = 'invalid_blueprint_error'
 EXISTING_RUNNING_EXECUTION_ERROR_CODE = 'existing_running_execution_error'
 UNSUPPORTED_CONTENT_TYPE_ERROR_CODE = 'unsupported_content_type_error'
-NONEXISTENT_WORKFLOW_ERROR_CODE = 'bad_content_type_error'
+NONEXISTENT_WORKFLOW_ERROR_CODE = 'nonexistent_workflow_error'
 CONFLICT_ERROR_CODE = 'conflict_error'
 NOT_FOUND_ERROR_CODE = 'not_found_error'
 DEPENDENT_EXISTS_ERROR_CODE = 'dependent_exists_error'
 DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE = \
     'deployment_workers_not_yet_installed_error'
+ILLEGAL_ACTION_ERROR_CODE = 'illegal_action_error'
 
 
 class ManagerException(Exception):
@@ -91,3 +92,9 @@ class DeploymentWorkersNotYetInstalledError(ManagerException):
         super(DeploymentWorkersNotYetInstalledError, self).__init__(
             400, DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE, *args,
             **kwargs)
+
+
+class IllegalActionError(ManagerException):
+    def __init__(self, *args, **kwargs):
+        super(IllegalActionError, self).__init__(
+            400, ILLEGAL_ACTION_ERROR_CODE, *args, **kwargs)

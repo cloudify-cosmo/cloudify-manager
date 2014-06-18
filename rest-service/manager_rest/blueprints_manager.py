@@ -121,7 +121,7 @@ class BlueprintsManager(object):
 
         # validate there are no running executions for this deployment
         executions = storage.get_deployment_executions(deployment_id)
-        if any(execution.status not in ('terminated', 'failed') for
+        if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
@@ -130,7 +130,7 @@ class BlueprintsManager(object):
                     deployment_id,
                     ','.join([execution.id for execution in
                               executions if execution.status not
-                              in ('terminated', 'failed')])))
+                              in models.Execution.END_STATES])))
 
         if not ignore_live_nodes:
             node_instances = storage.get_node_instances(
@@ -167,7 +167,7 @@ class BlueprintsManager(object):
             running = [
                 e.id for e in executions if
                 get_storage_manager().get_execution(e.id).status
-                not in ['failed', 'terminated']]
+                not in models.Execution.END_STATES]
             if len(running) > 0:
                 raise manager_exceptions.ExistingRunningExecutionError(
                     'The following executions are currently running for this '
@@ -185,7 +185,7 @@ class BlueprintsManager(object):
 
         new_execution = models.Execution(
             id=execution_id,
-            status='pending',
+            status=models.Execution.PENDING,
             created_at=str(datetime.now()),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
@@ -196,7 +196,20 @@ class BlueprintsManager(object):
         return new_execution
 
     def cancel_workflow(self, execution_id, force=False):
-        new_status = 'cancelling' if not force else 'force-cancelling'
+        execution = self.get_execution(execution_id)
+        if execution.status not in (models.Execution.PENDING,
+                                    models.Execution.STARTED) and \
+                (not force or execution.status != models.Execution
+                    .CANCELLING):
+            raise manager_exceptions.IllegalActionError(
+                "Can't {0}cancel execution {1} because it's in status {2}"
+                .format(
+                    'force-' if force else '',
+                    execution_id,
+                    execution.status))
+
+        new_status = models.Execution.CANCELLING if not force \
+            else models.Execution.FORCE_CANCELLING
         get_storage_manager().update_execution_status(
             execution_id, new_status, '')
         return self.get_execution(execution_id)
@@ -293,16 +306,17 @@ class BlueprintsManager(object):
                                'execution for deployment {0}'.format(
                                    deployment_id))
 
-        if workers_installation_execution.status == 'terminated':
+        if workers_installation_execution.status == \
+                models.Execution.TERMINATED:
             # workers installation is complete
             return
-        elif workers_installation_execution.status == 'launched':
+        elif workers_installation_execution.status == models.Execution.STARTED:
             # workers installation is still in process
             raise manager_exceptions\
                 .DeploymentWorkersNotYetInstalledError(
                     'Deployment workers are still being installed, '
                     'try again in a minute')
-        elif workers_installation_execution.status == 'failed':
+        elif workers_installation_execution.status == models.Execution.FAILED:
             # workers installation workflow failed
             raise RuntimeError(
                 "Can't launch executions since workers for deployment {0} "
@@ -325,7 +339,8 @@ class BlueprintsManager(object):
             error_message = \
                 "Can't launch executions since workers for deployment {0}" \
                 " haven't been installed (Execution status is still " \
-                "'pending'). Celery task status is ".format(deployment_id)
+                "'{1}'). Celery task status is ".format(
+                    deployment_id, workers_installation_execution.status)
             if celery_task_status != CELERY_TASK_STATE_FAILURE:
                 raise RuntimeError(
                     "{0} {1}".format(error_message, celery_task_status))
@@ -349,7 +364,7 @@ class BlueprintsManager(object):
 
         new_execution = models.Execution(
             id=workers_installation_task_id,
-            status='pending',
+            status=models.Execution.PENDING,
             created_at=now,
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
@@ -396,7 +411,7 @@ class BlueprintsManager(object):
 
         new_execution = models.Execution(
             id=workers_uninstallation_task_id,
-            status='pending',
+            status=models.Execution.PENDING,
             created_at=str(datetime.now()),
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
@@ -416,7 +431,7 @@ class BlueprintsManager(object):
         # verify uninstall completed successfully
         execution = get_storage_manager().get_execution(
             workers_uninstallation_task_id)
-        if execution.status != 'terminated':
+        if execution.status != models.Execution.TERMINATED:
             raise RuntimeError('Failed to uninstall deployment workers for '
                                'deployment {0}'.format(deployment_id))
 
