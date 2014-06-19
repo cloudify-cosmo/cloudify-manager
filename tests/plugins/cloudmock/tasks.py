@@ -33,6 +33,7 @@ mem_data = {
 
 @operation
 def provision(ctx, **kwargs):
+    raise RuntimeError()
     data = _get_data()
     machines = data['machines']
     ctx.logger.info("cloudmock provision: [node_id=%s, machines=%s]",

@@ -18,6 +18,7 @@ __author__ = 'dank'
 
 from cloudify.decorators import workflow
 from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
+from cloudify.workflows import tasks as workflow_tasks
 
 
 @workflow
@@ -202,7 +203,7 @@ def uninstall(ctx, **kwargs):
 def _set_send_node_event_on_error_handler(task, node_instance, error_message):
     def send_node_event_error_handler(tsk):
         node_instance.send_event(error_message)
-        return True
+        return workflow_tasks.HANDLER_IGNORE
     task.on_failure = send_node_event_error_handler
 
 
@@ -226,7 +227,12 @@ def _wait_for_host_to_start(host_node_instance):
     # this means, that get_state will be re-executed until
     # get_state returns True
     def node_get_state_handler(tsk):
-        return tsk.async_result.get() is False
+        host_started = tsk.async_result.get()
+        if host_started:
+            return workflow_tasks.HANDLER_CONTINUE
+        else:
+            return workflow_tasks.HANDLER_RETRY
+
     task.on_success = node_get_state_handler
     return task
 
