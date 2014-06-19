@@ -18,18 +18,6 @@ __author__ = 'ran'
 
 INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
-BAD_PARAMETERS_ERROR_CODE = 'bad_parameters_error'
-INVALID_BLUEPRINT_ERROR_CODE = 'invalid_blueprint_error'
-EXISTING_RUNNING_EXECUTION_ERROR_CODE = 'existing_running_execution_error'
-UNSUPPORTED_CONTENT_TYPE_ERROR_CODE = 'unsupported_content_type_error'
-NONEXISTENT_WORKFLOW_ERROR_CODE = 'nonexistent_workflow_error'
-CONFLICT_ERROR_CODE = 'conflict_error'
-NOT_FOUND_ERROR_CODE = 'not_found_error'
-DEPENDENT_EXISTS_ERROR_CODE = 'dependent_exists_error'
-DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE = \
-    'deployment_workers_not_yet_installed_error'
-ILLEGAL_ACTION_ERROR_CODE = 'illegal_action_error'
-
 
 class ManagerException(Exception):
     def __init__(self, http_code, error_code, *args, **kwargs):
@@ -39,62 +27,94 @@ class ManagerException(Exception):
 
 
 class ConflictError(ManagerException):
+    CONFLICT_ERROR_CODE = 'conflict_error'
+
     def __init__(self, *args, **kwargs):
         super(ConflictError, self).__init__(
-            409, CONFLICT_ERROR_CODE, *args, **kwargs)
+            409, ConflictError.CONFLICT_ERROR_CODE, *args, **kwargs)
 
 
 class NotFoundError(ManagerException):
+    NOT_FOUND_ERROR_CODE = 'not_found_error'
+
     def __init__(self, *args, **kwargs):
         super(NotFoundError, self).__init__(
-            404, NOT_FOUND_ERROR_CODE, *args, **kwargs)
+            404, NotFoundError.NOT_FOUND_ERROR_CODE, *args, **kwargs)
 
 
 class DependentExistsError(ManagerException):
+    DEPENDENT_EXISTS_ERROR_CODE = 'dependent_exists_error'
+
     def __init__(self, *args, **kwargs):
         super(DependentExistsError, self).__init__(
-            400, DEPENDENT_EXISTS_ERROR_CODE, *args, **kwargs)
+            400, DependentExistsError.DEPENDENT_EXISTS_ERROR_CODE,
+            *args, **kwargs)
 
 
 class NonexistentWorkflowError(ManagerException):
+    NONEXISTENT_WORKFLOW_ERROR_CODE = 'nonexistent_workflow_error'
 
     def __init__(self, *args, **kwargs):
         super(NonexistentWorkflowError, self).__init__(
-            400, NONEXISTENT_WORKFLOW_ERROR_CODE, *args, **kwargs)
-
-
-class UnsupportedContentTypeError(ManagerException):
-    def __init__(self, *args, **kwargs):
-        super(UnsupportedContentTypeError, self).__init__(
-            415, UNSUPPORTED_CONTENT_TYPE_ERROR_CODE, *args, **kwargs)
-
-
-class BadParametersError(ManagerException):
-    def __init__(self, *args, **kwargs):
-        super(BadParametersError, self).__init__(
-            400, BAD_PARAMETERS_ERROR_CODE, *args, **kwargs)
-
-
-class InvalidBlueprintError(ManagerException):
-    def __init__(self, *args, **kwargs):
-        super(InvalidBlueprintError, self).__init__(
-            400, INVALID_BLUEPRINT_ERROR_CODE, *args, **kwargs)
-
-
-class ExistingRunningExecutionError(ManagerException):
-    def __init__(self, *args, **kwargs):
-        super(ExistingRunningExecutionError, self).__init__(
-            400, EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
-
-
-class DeploymentWorkersNotYetInstalledError(ManagerException):
-    def __init__(self, *args, **kwargs):
-        super(DeploymentWorkersNotYetInstalledError, self).__init__(
-            400, DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE, *args,
+            400,
+            NonexistentWorkflowError.NONEXISTENT_WORKFLOW_ERROR_CODE,
+            *args,
             **kwargs)
 
 
+class UnsupportedContentTypeError(ManagerException):
+    UNSUPPORTED_CONTENT_TYPE_ERROR_CODE = 'unsupported_content_type_error'
+
+    def __init__(self, *args, **kwargs):
+        super(UnsupportedContentTypeError, self).__init__(
+            415,
+            UnsupportedContentTypeError.UNSUPPORTED_CONTENT_TYPE_ERROR_CODE,
+            *args,
+            **kwargs)
+
+
+class BadParametersError(ManagerException):
+    BAD_PARAMETERS_ERROR_CODE = 'bad_parameters_error'
+
+    def __init__(self, *args, **kwargs):
+        super(BadParametersError, self).__init__(
+            400, BadParametersError.BAD_PARAMETERS_ERROR_CODE, *args, **kwargs)
+
+
+class InvalidBlueprintError(ManagerException):
+    INVALID_BLUEPRINT_ERROR_CODE = 'invalid_blueprint_error'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidBlueprintError, self).__init__(
+            400, InvalidBlueprintError.INVALID_BLUEPRINT_ERROR_CODE,
+            *args, **kwargs)
+
+
+class ExistingRunningExecutionError(ManagerException):
+    EXISTING_RUNNING_EXECUTION_ERROR_CODE = 'existing_running_execution_error'
+
+    def __init__(self, *args, **kwargs):
+        super(ExistingRunningExecutionError, self).__init__(
+            400, ExistingRunningExecutionError
+            .EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
+
+
+class DeploymentWorkersNotYetInstalledError(ManagerException):
+    DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE = \
+        'deployment_workers_not_yet_installed_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentWorkersNotYetInstalledError, self).__init__(
+            400,
+            DeploymentWorkersNotYetInstalledError
+            .DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE,
+            *args, **kwargs)
+
+
 class IllegalActionError(ManagerException):
+    ILLEGAL_ACTION_ERROR_CODE = 'illegal_action_error'
+
     def __init__(self, *args, **kwargs):
         super(IllegalActionError, self).__init__(
-            400, ILLEGAL_ACTION_ERROR_CODE, *args, **kwargs)
+            400, IllegalActionError.ILLEGAL_ACTION_ERROR_CODE,
+            *args, **kwargs)

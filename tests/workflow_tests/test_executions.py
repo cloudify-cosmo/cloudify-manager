@@ -18,6 +18,7 @@ __author__ = 'dan'
 
 
 from testenv import (TestCase,
+                     wait_for_execution_to_end,
                      get_resource as resource,
                      deploy_application as deploy)
 from cloudify_rest_client.executions import Execution
@@ -31,7 +32,14 @@ class ExecutionsTest(TestCase):
                                  wait_for_execution=False)
         execution = self.client.executions.cancel(execution_id)
         wait_for_execution_to_end(execution)
-        self.assertEquals('terminated', execution.status)
+        self.assertEquals(Execution.CANCELLED, execution.status)
+
+    def test_cancel_on_non_supporting_workflow(self):
+        pass
+    def test_force_cancel_execution(self):
+        pass
+    def test_cancel_execution_and_then_force_cancel(self):
+        pass
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
