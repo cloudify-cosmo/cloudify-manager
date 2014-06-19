@@ -195,7 +195,31 @@ class BlueprintsManager(object):
         get_storage_manager().put_execution(new_execution.id, new_execution)
         return new_execution
 
-    def cancel_workflow(self, execution_id, force=False):
+    def cancel_execution(self, execution_id, force=False):
+        """
+        Cancel an execution by its id
+
+        If force is False (default), this method will request the
+        executed workflow to gracefully terminate. It is up to the workflow
+        to follow up on that request.
+        If force is used, this method will request the abrupt and immediate
+        termination of the executed workflow. This is valid for all
+        workflows, regardless of whether they provide support for graceful
+        termination or not.
+
+        Note that in either case, the execution is not yet cancelled upon
+        returning from the method. Instead, it'll be in a 'cancelling' or
+        'force_cancelling' status (as can be seen in models.Execution). Once
+        the execution is truly stopped, it'll be in 'cancelled status' (unless
+        force was not used and the executed workflow doesn't support
+        graceful termination, in which case it might simply continue
+        regardless and end up with a 'terminated' status)
+
+        :param execution_id: The execution id
+        :param force: A boolean describing whether to force cancellation
+        :return: The updated execution object
+        """
+
         execution = self.get_execution(execution_id)
         if execution.status not in (models.Execution.PENDING,
                                     models.Execution.STARTED) and \

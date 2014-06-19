@@ -515,7 +515,7 @@ class ExecutionsId(Resource):
                     action, valid_actions))
 
         if action in ('cancel', 'force-cancel'):
-            return get_blueprints_manager().cancel_workflow(
+            return get_blueprints_manager().cancel_execution(
                 execution_id, action == 'force-cancel'), 201
 
     @swagger.operation(
