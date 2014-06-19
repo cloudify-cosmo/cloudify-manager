@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from time import time
+import time
 from cloudify.decorators import operation
 import tempfile
 import os
@@ -27,6 +27,7 @@ mock_operation_invocation = []
 node_states = []
 get_resource_operation_invocation = []
 monitoring_operations_invocation = []
+failure_invocation = []
 
 
 @operation
@@ -34,7 +35,7 @@ def make_reachable(ctx, **kwargs):
     global state
     state_info = {
         'id': ctx.node_id,
-        'time': time(),
+        'time': time.time(),
         'capabilities': ctx.capabilities.get_all()
     }
     ctx.logger.info('Appending to state [node_id={0}, state={1}]'
@@ -47,7 +48,7 @@ def make_unreachable(ctx, **kwargs):
     global unreachable_call_order
     unreachable_call_order.append({
         'id': ctx.node_id,
-        'time': time()
+        'time': time.time()
     })
 
 
@@ -63,7 +64,7 @@ def set_property(ctx, **kwargs):
 @operation
 def touch(**kwargs):
     global touched_time
-    touched_time = time()
+    touched_time = time.time()
 
 
 @operation
@@ -187,5 +188,19 @@ def get_node_states(**kwargs):
 
 @operation
 def sleep(ctx, **kwargs):
-    import time
     time.sleep(int(ctx.properties['sleep']))
+
+
+@operation
+def fail(ctx, **_):
+    global failure_invocation
+    failure_invocation.append(time.time())
+    if len(failure_invocation) > ctx.properties['fail_count']:
+        return
+    raise RuntimeError('TEST_EXPECTED_FAIL')
+
+
+@operation
+def get_fail_invocations(**_):
+    global failure_invocation
+    return failure_invocation

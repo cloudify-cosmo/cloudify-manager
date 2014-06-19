@@ -59,12 +59,14 @@ FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 
 PROVIDER_NAME = 'integration_tests'
-PROVIDER_CONTEXT = {'cloudify': {
-    'workflows': {
-        'task_retries': 0,
-        'task_retry_interval': 0
+PROVIDER_CONTEXT = {
+    'cloudify': {
+        'workflows': {
+            'task_retries': 0,
+            'task_retry_interval': 0
+        }
     }
-}}
+}
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
