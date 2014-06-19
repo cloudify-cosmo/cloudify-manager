@@ -37,6 +37,7 @@ import yaml
 import pika
 import json
 import elasticsearch
+import requests
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
 from cloudify_rest_client import CloudifyClient
@@ -848,9 +849,7 @@ class TestEnvironment(object):
                 self._tempdir)
             self._manager_rest_process.start()
 
-            rest = create_rest_client()
-            rest.manager.create_context(PROVIDER_NAME,
-                                        PROVIDER_CONTEXT)
+            restore_provider_context()
 
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
@@ -1082,3 +1081,14 @@ def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         name=task_name,
         args=args,
         queue=queue)
+
+
+def delete_provider_context():
+    requests.delete('http://localhost:9200'
+                    '/cloudify_storage/provider_context/CONTEXT')
+
+
+def restore_provider_context():
+    delete_provider_context()
+    client = create_rest_client()
+    client.manager.create_context(PROVIDER_NAME, PROVIDER_CONTEXT)
