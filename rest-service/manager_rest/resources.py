@@ -500,7 +500,7 @@ class ExecutionsId(Resource):
     @exceptions_handled
     def post(self, execution_id):
         """
-        Apply execution action (cancel) by id
+        Apply execution action (cancel, force-cancel) by id
         """
         verify_json_content_type()
         request_json = request.json
