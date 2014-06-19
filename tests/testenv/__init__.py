@@ -57,6 +57,14 @@ FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 
+PROVIDER_NAME = 'integration_tests'
+PROVIDER_CONTEXT = {'cloudify': {
+    'workflows': {
+        'task_retries': 0,
+        'task_retry_interval': 0
+    }
+}}
+
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
@@ -839,6 +847,10 @@ class TestEnvironment(object):
                 FILE_SERVER_RESOURCES_URI,
                 self._tempdir)
             self._manager_rest_process.start()
+
+            rest = create_rest_client()
+            rest.manager.create_context(PROVIDER_NAME,
+                                        PROVIDER_CONTEXT)
 
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
