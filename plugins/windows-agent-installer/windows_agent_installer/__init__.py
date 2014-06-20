@@ -18,7 +18,7 @@ from functools import wraps
 from cloudify import utils
 from cloudify.context import CloudifyContext
 
-from windows_agent_installer import utils as winrm_utils
+from windows_agent_installer.winrm_runner import WinRMRunner
 
 
 __author__ = 'elip'
@@ -31,40 +31,24 @@ def init_worker_installer(func):
         ctx = utils.find_type_in_kwargs(CloudifyContext, kwargs.values() + list(args))
         if not ctx:
             raise RuntimeError('CloudifyContext not found in invocation args')
-        if ctx.properties and 'worker_config' in ctx.properties:
-            worker_config = ctx.properties['worker_config']
+        if ctx.properties and 'cloudify_agent' in ctx.properties:
+            cloudify_agent = ctx.properties['cloudify_agent']
         else:
-            worker_config = {}
-        prepare_configuration(ctx, worker_config)
-        kwargs['worker_config'] = worker_config
-        kwargs['runner'] = winrm_utils.WinRMRunner(ctx, worker_config)
+            cloudify_agent = {}
+        prepare_configuration(ctx, cloudify_agent)
+        kwargs['cloudify_agent'] = cloudify_agent
+        kwargs['runner'] = WinRMRunner(session_config=cloudify_agent, logger=ctx.logger)
         return func(*args, **kwargs)
     return wrapper
 
 
-def prepare_configuration(ctx, worker_config):
+def prepare_configuration(ctx, cloudify_agent):
 
-    # validations
-
-    if 'user' not in worker_config:
-        raise ValueError('Missing user in worker configuration')
-
-    if 'password' not in worker_config:
-        raise ValueError('Missing password in worker configuration')
-
-    # defaults
-
-    if 'port' not in worker_config:
-        worker_config['port'] = winrm_utils.DEFAULT_WINRM_PORT
-    if 'protocol' not in worker_config:
-        worker_config['protocol'] = winrm_utils.DEFAULT_WINRM_PROTOCOL
-    if 'uri' not in worker_config:
-        worker_config['uri'] = winrm_utils.DEFAULT_WINRM_URI
-    if 'base_dir' not in worker_config:
-        worker_config['base_dir'] = 'C:\Users\{0}'.format(worker_config['user'])
+    if 'base_dir' not in cloudify_agent:
+        cloudify_agent['base_dir'] = 'C:\Users\{0}'.format(cloudify_agent['user'])
 
     # runtime info
 
-    worker_config['name'] = ctx.node_id
-    worker_config['host'] = utils.get_machine_ip(ctx)
+    cloudify_agent['name'] = ctx.node_id
+    cloudify_agent['host'] = utils.get_machine_ip(ctx)
 

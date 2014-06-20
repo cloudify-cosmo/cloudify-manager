@@ -24,7 +24,7 @@ from windows_agent_installer import init_worker_installer
 AGENT_FOLDER_NAME = 'Cloudify'
 
 # This is where we download the agent to.
-AGENT_EXEC_PATH = 'C:\windows-agent.exe'
+AGENT_EXEC_FILE_NAME = 'windows-agent.exe'
 
 # nssm will install celery and use this name to identify the service
 AGENT_SERVICE_NAME = 'CloudifyAgent'
@@ -33,28 +33,31 @@ AGENT_SERVICE_NAME = 'CloudifyAgent'
 AGENT_PACKAGE_PATH = '/packages/agents/windows-agent.exe'
 
 
+
 def get_agent_package_url():
     return '{0}{1}'.format(utils.get_manager_file_server_url(),
                            AGENT_PACKAGE_PATH)
 
 @operation
 @init_worker_installer
-def install(ctx, runner, worker_config, **kwargs):
+def install(ctx, runner, cloudify_agent, **kwargs):
 
     ctx.logger.info('Installing agent {0}'
-                    .format(worker_config['name']))
+                    .format(cloudify_agent['name']))
 
-    runner.download(get_agent_package_url(), AGENT_EXEC_PATH)
+    agent_exec_path = '{0}\{1}'.format(cloudify_agent['base_dir'], AGENT_EXEC_FILE_NAME)
+
+    runner.download(get_agent_package_url(), agent_exec_path)
     ctx.logger.debug('Extracting agent to {0}...'.format())
 
-    runner.run('{0} -o{1} -y'.format(AGENT_EXEC_PATH,
-                                     worker_config['base_dir']))
+    runner.run('{0} -o{1} -y'.format(agent_exec_path,
+                                     cloudify_agent['base_dir']))
 
     # be consistent with linux naming convention
 
-    runtime_agent_path = '{0}\{1}\env'.format(worker_config['base_dir'],
-                                              'cloudify.{0}'.format(worker_config['name']))
-    install_time_agent_path = '{0}\{1}'.format(worker_config['base_dir'], AGENT_FOLDER_NAME)
+    runtime_agent_path = '{0}\{1}\env'.format(cloudify_agent['base_dir'],
+                                              'cloudify.{0}'.format(cloudify_agent['name']))
+    install_time_agent_path = '{0}\{1}'.format(cloudify_agent['base_dir'], AGENT_FOLDER_NAME)
 
     runner.run('Move-Item {0} {1}'.format(install_time_agent_path,
                                           runtime_agent_path))
@@ -64,7 +67,7 @@ def install(ctx, runner, worker_config, **kwargs):
               '--app=cloudify '
               '-Q {1} '
               '-n {1} '
-              .format(utils.get_manager_ip()), worker_config['name'])
+              .format(utils.get_manager_ip()), cloudify_agent['name'])
     runner.run('{0}\scripts\\nssm.exe install {1} {0}\scripts\celeryd.exe {2}'
                .format(runtime_agent_path, AGENT_SERVICE_NAME, params))
     runner.run('sc config {0} start=auto'.format(AGENT_SERVICE_NAME))
@@ -75,20 +78,28 @@ def install(ctx, runner, worker_config, **kwargs):
 
 @operation
 @init_worker_installer
-def start(ctx, runner, worker_config, **kwargs):
+def start(ctx, runner, cloudify_agent, **kwargs):
 
-    ctx.logger.info('Starting agent {0}'
-                    .format(worker_config['name']))
+    ctx.logger.info('Starting agent {0}'.format(cloudify_agent['name']))
 
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
 
 
+
 @operation
 @init_worker_installer
-def restart(ctx, runner, worker_config, session, **kwargs):
+def stop(ctx, runner, cloudify_agent, **kwargs):
 
-    ctx.logger.info('Restarting agent {0}'
-                    .format(worker_config['name']))
+    ctx.logger.info('Starting agent {0}'.format(cloudify_agent['name']))
+
+    runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
+
+
+@operation
+@init_worker_installer
+def restart(ctx, runner, cloudify_agent, **kwargs):
+
+    ctx.logger.info('Restarting agent {0}'.format(cloudify_agent['name']))
 
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
@@ -96,13 +107,12 @@ def restart(ctx, runner, worker_config, session, **kwargs):
 
 @operation
 @init_worker_installer
-def uninstall(ctx, runner, worker_config, **kwargs):
+def uninstall(ctx, runner, cloudify_agent, **kwargs):
 
-    ctx.logger.info('Uninstalling agent {0}'
-                    .format(worker_config['name']))
+    ctx.logger.info('Uninstalling agent {0}'.format(cloudify_agent['name']))
 
-    runtime_agent_path = '{0}\{1}\env'.format(worker_config['base_dir'],
-                                              'cloudify.{0}'.format(worker_config['name']))
+    runtime_agent_path = '{0}\{1}\env'.format(cloudify_agent['base_dir'],
+                                              'cloudify.{0}'.format(cloudify_agent['name']))
 
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
     runner.run('{0} remove {1} confirm'.format('{0}\scripts\\nssm.exe'.format(runtime_agent_path),

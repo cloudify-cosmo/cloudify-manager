@@ -1,6 +1,25 @@
-cosmo-plugin-agent-installer
-============================
+Window Agent Installer
+======================
 
-- Build Status (develop branch) [![Build Status](https://secure.travis-ci.org/CloudifySource/cosmo-plugin-agent-installer.png?branch=develop)](http://travis-ci.org/CloudifySource/cosmo-plugin-agent-installer)
+This is a Cloudify plugin for installing cloudify agents on Windows machines.
 
-cosmo plugin for installing a cosmo agent on a remote or a local machine.
+## Pre-requisites
+
+To use this plugin, WinRM must be properly setup on the destination machine.
+
+      winrm quickconfig
+      winrm s winrm/config/service @{AllowUnencrypted="true";MaxConcurrentOperationsPerUser="4294967295"}
+      winrm s winrm/config/service/auth @{Basic="true"}
+      winrm s winrm/config/winrs @{MaxShellsPerUser="2147483647"}
+
+**API**
+
+- tasks.install: Downloads the agent package do the destination machine and extracts it.
+- tasks.start: Starts the agent as a Windows service.
+- tasks.stop: Stops the service.
+- tasks.restart: Restarts the service.
+- tasks.uninstall: Stops the service and removes any files from the file system.
+
+**Example Usage**
+
+See [Tests](https://github.com/cloudify-cosmo/cloudify-manager/plugins/windows_agent_installer/tests/test_tasks.py)
