@@ -129,11 +129,59 @@ class ExecutionsTestCase(BaseServerTestCase):
     def test_force_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
         resource_path = '/executions/{0}'.format(execution['id'])
-        cancel_response = self.post(resource_path, {
-            'action': 'force-cancel'
-        }).json
+        cancel_response = self.post(
+            resource_path, {'action': 'force-cancel'}).json
         execution['status'] = models.Execution.FORCE_CANCELLING
         self.assertEquals(execution, cancel_response)
+
+    def test_illegal_cancel_on_execution(self):
+        # tests for attempts to cancel an execution which is in a status
+        # that is illegal to call cancel for
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+
+        def attempt_cancel_on_status(new_status,
+                                     force=False,
+                                     expect_failure=True):
+            execution = self.patch(resource_path, {'status': new_status}).json
+            self.assertEquals(new_status, execution['status'])
+
+            action = 'force-cancel' if force else 'cancel'
+            cancel_response = self.post(resource_path, {'action': action})
+            if expect_failure:
+                self.assertEquals(400, cancel_response.status_code)
+                self.assertEquals(
+                    manager_exceptions.IllegalActionError.
+                    ILLEGAL_ACTION_ERROR_CODE,
+                    cancel_response.json['error_code'])
+            else:
+                self.assertEquals(201, cancel_response.status_code)
+                expected_status = models.Execution.FORCE_CANCELLING if force\
+                    else models.Execution.CANCELLING
+                self.assertEquals(expected_status,
+                                  cancel_response.json['status'])
+
+        # end states - can't either cancel or force-cancel
+        attempt_cancel_on_status(models.Execution.TERMINATED)
+        attempt_cancel_on_status(models.Execution.TERMINATED, True)
+        attempt_cancel_on_status(models.Execution.FAILED)
+        attempt_cancel_on_status(models.Execution.FAILED, True)
+        attempt_cancel_on_status(models.Execution.CANCELLED)
+        attempt_cancel_on_status(models.Execution.CANCELLED, True)
+
+        # force-cancelling status - can't either cancel or force-cancel
+        attempt_cancel_on_status(models.Execution.FORCE_CANCELLING)
+        attempt_cancel_on_status(models.Execution.FORCE_CANCELLING, True)
+
+        # cancelling state - can only override with force-cancel
+        attempt_cancel_on_status(models.Execution.CANCELLING)
+        attempt_cancel_on_status(models.Execution.CANCELLING, True, False)
+
+        # pending and started states - can both cancel and force-cancel
+        attempt_cancel_on_status(models.Execution.PENDING, False, False)
+        attempt_cancel_on_status(models.Execution.PENDING, True, False)
+        attempt_cancel_on_status(models.Execution.STARTED, False, False)
+        attempt_cancel_on_status(models.Execution.STARTED, True, False)
 
     def test_cancel_non_existent_execution(self):
         resource_path = '/executions/do_not_exist'
@@ -145,7 +193,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             cancel_response.json['error_code'],
             manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
 
-    def test_cancel_bad_action(self):
+    def test_execution_bad_action(self):
         execution = self.test_get_execution_by_id()
         resource_path = '/executions/{0}'.format(execution['id'])
         cancel_response = self.post(resource_path, {

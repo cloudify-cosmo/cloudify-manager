@@ -29,7 +29,6 @@ def sleep(ctx, **kwargs):
                 'value': None}).apply_async()
 
 
-
 @workflow
 def sleep_with_cancel_support(ctx, **kwargs):
     node_instance = next(next(ctx.nodes).instances)

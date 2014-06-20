@@ -218,6 +218,8 @@ class BlueprintsManager(object):
         :param execution_id: The execution id
         :param force: A boolean describing whether to force cancellation
         :return: The updated execution object
+        :rtype: models.Execution
+        :raises manager_exceptions.IllegalActionError
         """
 
         execution = self.get_execution(execution_id)

@@ -48,7 +48,7 @@ class ExecutionsTest(TestCase):
         execution = self._execute_and_cancel_execution(
             'sleep', False, False)
 
-        # cancel didn't work [unsupported] - use force-cancel instead
+        # cancel didn't work (unsupported) - use force-cancel instead
         execution = self.client.executions.cancel(execution.id, True)
         self.assertEquals(Execution.FORCE_CANCELLING, execution.status)
         wait_for_execution_to_end(execution)
