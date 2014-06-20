@@ -22,4 +22,4 @@ To use this plugin, WinRM must be properly setup on the destination machine.
 
 **Example Usage**
 
-See [Tests](https://github.com/cloudify-cosmo/cloudify-manager/plugins/windows_agent_installer/tests/test_tasks.py)
+See [Tests](https://github.com/cloudify-cosmo/cloudify-manager/plugins/windows_agent_installer/windows_agent_installer/tests/test_tasks.py)
