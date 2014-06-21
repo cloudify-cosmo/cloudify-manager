@@ -17,6 +17,7 @@
 __author__ = 'dan'
 
 import time
+import uuid
 from testenv import (TestCase,
                      wait_for_execution_to_end,
                      do_retries,
@@ -123,12 +124,15 @@ class ExecutionsTest(TestCase):
     def _execute_and_cancel_execution(self, workflow_id, force=False,
                                       wait_for_termination=True, sleep=5):
         dsl_path = resource('dsl/sleep_workflows.yaml')
-        self.client.blueprints.upload(dsl_path, 'blueprint_id')
-        self.client.deployments.create('blueprint_id', 'deployment_id')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
         do_retries(verify_workers_installation_complete, 30,
-                   deployment_id='deployment_id')
+                   deployment_id=deployment_id)
         execution = self.client.deployments.execute(
-            'deployment_id', workflow_id)
+            deployment_id, workflow_id)
         time.sleep(sleep)  # wait for the execution to reach some sleep command
         execution = self.client.executions.cancel(execution.id, force)
         expected_status = Execution.FORCE_CANCELLING if force else \
