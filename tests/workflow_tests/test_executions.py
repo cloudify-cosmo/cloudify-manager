@@ -69,6 +69,17 @@ class ExecutionsTest(TestCase):
         self.assertDictEqual(invocations[0], {'before-sleep': None})
         self.assertDictEqual(invocations[1], {'after-sleep': None})
 
+    def test_cancel_execution_before_it_started(self):
+        execution = self._execute_and_cancel_execution(
+            'sleep_with_cancel_support', False, True, 0)
+        self.assertEquals(Execution.CANCELLED, execution.status)
+
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations
+
+        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        self.assertEqual(0, len(invocations))
+
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
         deployment, execution_id = deploy(dsl_path)
@@ -110,7 +121,7 @@ class ExecutionsTest(TestCase):
         self.assertEquals('', execution.error)
 
     def _execute_and_cancel_execution(self, workflow_id, force=False,
-                                      wait_for_termination=True):
+                                      wait_for_termination=True, sleep=5):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         self.client.blueprints.upload(dsl_path, 'blueprint_id')
         self.client.deployments.create('blueprint_id', 'deployment_id')
@@ -118,7 +129,7 @@ class ExecutionsTest(TestCase):
                    deployment_id='deployment_id')
         execution = self.client.deployments.execute(
             'deployment_id', workflow_id)
-        time.sleep(5)#TODO: solve this concurrency issue another way
+        time.sleep(sleep)  # wait for the execution to reach some sleep command
         execution = self.client.executions.cancel(execution.id, force)
         expected_status = Execution.FORCE_CANCELLING if force else \
             Execution.CANCELLING
