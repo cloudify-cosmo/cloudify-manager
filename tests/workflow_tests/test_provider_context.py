@@ -16,19 +16,18 @@
 __author__ = 'dank'
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from testenv import TestCase
+from testenv import (TestCase,
+                     PROVIDER_NAME,
+                     PROVIDER_CONTEXT)
 
 
 class TestProviderContext(TestCase):
 
     def test_provider_context(self):
-        name = 'test_provider'
-        context = {
-            'key1': 'value1',
-            'key2': 'value2'
-        }
-        post_response = self.client.manager.create_context(name, context)
-        self.assertEqual(post_response['status'], 'ok')
+        # Context is already setup during test bootstrap phase,
+        # we only verify everything was properly saved and accessible
+        name = PROVIDER_NAME
+        context = PROVIDER_CONTEXT
         response_context = self.client.manager.get_context()
         self.assertEqual(name, response_context['name'])
         self.assertEqual(context, response_context['context'])

@@ -18,6 +18,7 @@ __author__ = 'dank'
 
 from cloudify.decorators import workflow
 from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
+from cloudify.workflows import tasks as workflow_tasks
 
 
 @workflow
@@ -202,7 +203,7 @@ def uninstall(ctx, **kwargs):
 def _set_send_node_event_on_error_handler(task, node_instance, error_message):
     def send_node_event_error_handler(tsk):
         node_instance.send_event(error_message)
-        return True
+        return workflow_tasks.HandlerResult.ignore()
     task.on_failure = send_node_event_error_handler
 
 
@@ -226,7 +227,13 @@ def _wait_for_host_to_start(host_node_instance):
     # this means, that get_state will be re-executed until
     # get_state returns True
     def node_get_state_handler(tsk):
-        return tsk.async_result.get() is False
+        host_started = tsk.async_result.get()
+        if host_started:
+            return workflow_tasks.HandlerResult.cont()
+        else:
+            return workflow_tasks.HandlerResult.retry(
+                ignore_total_retries=True)
+
     task.on_success = node_get_state_handler
     return task
 
@@ -240,16 +247,14 @@ def _host_post_start(host_node_instance):
                 'cloudify.interfaces.worker_installer.install'),
             host_node_instance.execute_operation(
                 'cloudify.interfaces.worker_installer.start'),
-            host_node_instance.send_event('Installing plugin')]
-
-        tasks += [
+            host_node_instance.send_event('Installing plugin'),
             host_node_instance.send_event('Installing plugins: {0}'.format(
                 host_node_instance.node.plugins_to_install)),
             host_node_instance.execute_operation(
                 'cloudify.interfaces.plugin_installer.install',
-                kwargs={'plugins': host_node_instance.node.plugins_to_install})
+                kwargs={
+                    'plugins': host_node_instance.node.plugins_to_install}),
+            host_node_instance.execute_operation(
+                'cloudify.interfaces.worker_installer.restart')
         ]
-
-        tasks.append(host_node_instance.execute_operation(
-            'cloudify.interfaces.worker_installer.restart'))
     return tasks
