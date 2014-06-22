@@ -16,16 +16,14 @@
 __author__ = 'dan'
 
 
-from datetime import datetime
 import json
 import time
 import uuid
-import contextlib
 
-from dsl_parser import tasks
-from urllib2 import urlopen
 from flask import g, current_app
 
+from datetime import datetime
+from dsl_parser import tasks
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -81,9 +79,6 @@ class BlueprintsManager(object):
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
-
-            with contextlib.closing(urlopen(dsl_location)) as f:
-                source = f.read()
         except Exception, ex:
             raise DslParseException(*ex.args)
 
@@ -94,8 +89,7 @@ class BlueprintsManager(object):
 
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
-                                              created_at=now, updated_at=now,
-                                              source=source)
+                                              created_at=now, updated_at=now)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -331,6 +325,11 @@ class BlueprintsManager(object):
             raise RuntimeError('Failed to find "workers_installation" '
                                'execution for deployment {0}'.format(
                                    deployment_id))
+
+        # Because of ES eventual consistency, we need to get the execution by
+        # its id in order to make sure the read status is correct.
+        workers_installation_execution = get_storage_manager().get_execution(
+            workers_installation_execution.id)
 
         if workers_installation_execution.status == \
                 models.Execution.TERMINATED:
