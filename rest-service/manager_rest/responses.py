@@ -25,7 +25,6 @@ class BlueprintState(object):
     resource_fields = {
         'id': fields.String,
         'plan': fields.Raw,
-        'source': fields.Raw,
         'created_at': fields.String,
         'updated_at': fields.String
     }
@@ -33,7 +32,6 @@ class BlueprintState(object):
     def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
-        self.source = kwargs['source']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 
