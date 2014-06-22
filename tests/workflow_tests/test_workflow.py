@@ -155,7 +155,7 @@ class BasicWorkflowsTest(TestCase):
         result = self.client.search.run_query('')
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        self.assertEquals(6, len(hits))
+        self.assertEquals(7, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
