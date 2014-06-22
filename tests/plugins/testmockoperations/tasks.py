@@ -28,6 +28,7 @@ node_states = []
 get_resource_operation_invocation = []
 monitoring_operations_invocation = []
 failure_invocation = []
+host_get_state_invocation = []
 
 
 @operation
@@ -206,3 +207,18 @@ def fail(ctx, **_):
 def get_fail_invocations(**_):
     global failure_invocation
     return failure_invocation
+
+
+@operation
+def host_get_state(ctx, **_):
+    global host_get_state_invocation
+    host_get_state_invocation.append(time.time())
+    if len(host_get_state_invocation) <= ctx.properties['false_count']:
+        return False
+    return True
+
+
+@operation
+def get_host_get_state_invocations(**_):
+    global host_get_state_invocation
+    return host_get_state_invocation

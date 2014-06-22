@@ -3,7 +3,7 @@ imports:
     - testmockoperations.yaml
 
 blueprint:
-    name: test_workflow_properties
+    name: test_workflow_retries_2
     nodes:
         -   name: test_node
             type: cloudify.types.base

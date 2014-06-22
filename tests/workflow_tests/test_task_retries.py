@@ -21,6 +21,9 @@ from testenv import get_resource as resource, deploy_application as deploy
 from testenv import delete_provider_context, restore_provider_context
 from testenv import send_task
 
+from plugins.testmockoperations.tasks import (get_fail_invocations,
+                                              get_host_get_state_invocations)
+
 INFINITY = -1
 
 
@@ -43,25 +46,36 @@ class TaskRetriesTest(TestCase):
             blueprint='dsl/workflow_task_retries_1.yaml',
             retries=2,
             retry_interval=3,
-            expected_retries=2)
+            expected_retries=2,
+            invocations_task=get_fail_invocations)
 
     def test_infinite_retries(self):
         self._test_retries_and_retry_interval_impl(
             blueprint='dsl/workflow_task_retries_2.yaml',
-            retries=-1,
+            retries=INFINITY,
             retry_interval=1,
             # see blueprint
-            expected_retries=5)
+            expected_retries=5,
+            invocations_task=get_fail_invocations)
+
+    def test_retries_ignore_total(self):
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/workflow_task_retries_3.yaml',
+            retries=0,
+            retry_interval=0,
+            # see blueprint (get_state does ignores total_retries)
+            expected_retries=3,
+            invocations_task=get_host_get_state_invocations)
 
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
                                               retries,
                                               retry_interval,
-                                              expected_retries):
+                                              expected_retries,
+                                              invocations_task):
         self.configure(retries=retries, retry_interval=retry_interval)
         deploy(resource(blueprint))
-        from plugins.testmockoperations.tasks import get_fail_invocations
-        invocations = send_task(get_fail_invocations).get()
+        invocations = send_task(invocations_task).get()
         self.assertEqual(expected_retries + 1, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(retry_interval,
