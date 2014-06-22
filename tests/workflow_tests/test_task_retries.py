@@ -39,13 +39,30 @@ class TaskRetriesTest(TestCase):
         self.client.manager.create_context(self._testMethodName, context)
 
     def test_retries_and_retry_interval(self):
-        retries = 2
-        retry_interval = 3
-        self.configure(retries=2, retry_interval=3)
-        deploy(resource("dsl/workflow_task_retries_1.yaml"))
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/workflow_task_retries_1.yaml',
+            retries=2,
+            retry_interval=3,
+            expected_retries=2)
+
+    def test_infinite_retries(self):
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/workflow_task_retries_2.yaml',
+            retries=-1,
+            retry_interval=1,
+            # see blueprint
+            expected_retries=5)
+
+    def _test_retries_and_retry_interval_impl(self,
+                                              blueprint,
+                                              retries,
+                                              retry_interval,
+                                              expected_retries):
+        self.configure(retries=retries, retry_interval=retry_interval)
+        deploy(resource(blueprint))
         from plugins.testmockoperations.tasks import get_fail_invocations
         invocations = send_task(get_fail_invocations).get()
-        self.assertEqual(retries + 1, len(invocations))
+        self.assertEqual(expected_retries + 1, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(retry_interval,
                                  invocations[i+1] - invocations[i])
