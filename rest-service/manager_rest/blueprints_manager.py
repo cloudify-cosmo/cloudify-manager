@@ -19,10 +19,9 @@ __author__ = 'dan'
 import json
 import time
 import uuid
-
+from datetime import datetime
 from flask import g, current_app
 
-from datetime import datetime
 from dsl_parser import tasks
 from manager_rest import models
 from manager_rest import manager_exceptions
