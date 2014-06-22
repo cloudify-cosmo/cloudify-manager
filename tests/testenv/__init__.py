@@ -683,6 +683,7 @@ class TestCase(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.client = create_rest_client()
         TestEnvironment.clean_plugins_tempdir()
+        restore_provider_context()
 
     def tearDown(self):
         TestEnvironment.restart_celery_operations_worker()
@@ -850,8 +851,6 @@ class TestEnvironment(object):
                 FILE_SERVER_RESOURCES_URI,
                 self._tempdir)
             self._manager_rest_process.start()
-
-            restore_provider_context()
 
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
