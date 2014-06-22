@@ -203,7 +203,7 @@ def uninstall(ctx, **kwargs):
 def _set_send_node_event_on_error_handler(task, node_instance, error_message):
     def send_node_event_error_handler(tsk):
         node_instance.send_event(error_message)
-        return workflow_tasks.HANDLER_IGNORE
+        return workflow_tasks.HandlerResult.ignore()
     task.on_failure = send_node_event_error_handler
 
 
@@ -229,9 +229,10 @@ def _wait_for_host_to_start(host_node_instance):
     def node_get_state_handler(tsk):
         host_started = tsk.async_result.get()
         if host_started:
-            return workflow_tasks.HANDLER_CONTINUE
+            return workflow_tasks.HandlerResult.cont()
         else:
-            return workflow_tasks.HANDLER_RETRY
+            return workflow_tasks.HandlerResult.retry(
+                ignore_total_retries=True)
 
     task.on_success = node_get_state_handler
     return task
