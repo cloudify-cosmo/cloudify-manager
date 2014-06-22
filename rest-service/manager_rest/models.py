@@ -58,6 +58,16 @@ class Deployment(SerializableObject):
 
 class Execution(SerializableObject):
 
+    TERMINATED = 'terminated'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+    PENDING = 'pending'
+    STARTED = 'started'
+    CANCELLING = 'cancelling'
+    FORCE_CANCELLING = 'force_cancelling'
+
+    END_STATES = [TERMINATED, FAILED, CANCELLED]
+
     fields = {'id', 'status', 'deployment_id',
               'workflow_id', 'blueprint_id', 'created_at', 'error'}
 
