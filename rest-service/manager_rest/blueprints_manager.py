@@ -288,6 +288,11 @@ class BlueprintsManager(object):
                                'execution for deployment {0}'.format(
                                    deployment_id))
 
+        # Because of ES eventual consistency, we need to get the execution by
+        # its id in order to make sure the read status is correct.
+        workers_installation_execution = get_storage_manager().get_execution(
+            workers_installation_execution.id)
+
         if workers_installation_execution.status == 'terminated':
             # workers installation is complete
             return
