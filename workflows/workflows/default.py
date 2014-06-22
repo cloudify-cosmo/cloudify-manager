@@ -107,7 +107,7 @@ def install(ctx, **kwargs):
                 graph.add_dependency(node_set_creating, target_set_started)
                 graph.add_dependency(node_event_creating, target_set_started)
 
-    graph.execute()
+    return graph.execute()
 
 
 @workflow
@@ -196,7 +196,7 @@ def uninstall(ctx, **kwargs):
                 node_set_deleted = set_state_deleted_tasks[instance.id]
                 graph.add_dependency(target_set_stopping, node_set_deleted)
 
-    graph.execute()
+    return graph.execute()
 
 
 def _set_send_node_event_on_error_handler(task, node_instance, error_message):
