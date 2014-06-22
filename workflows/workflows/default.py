@@ -246,16 +246,14 @@ def _host_post_start(host_node_instance):
                 'cloudify.interfaces.worker_installer.install'),
             host_node_instance.execute_operation(
                 'cloudify.interfaces.worker_installer.start'),
-            host_node_instance.send_event('Installing plugin')]
-
-        tasks += [
+            host_node_instance.send_event('Installing plugin'),
             host_node_instance.send_event('Installing plugins: {0}'.format(
                 host_node_instance.node.plugins_to_install)),
             host_node_instance.execute_operation(
                 'cloudify.interfaces.plugin_installer.install',
-                kwargs={'plugins': host_node_instance.node.plugins_to_install})
+                kwargs={
+                    'plugins': host_node_instance.node.plugins_to_install}),
+            host_node_instance.execute_operation(
+                'cloudify.interfaces.worker_installer.restart')
         ]
-
-        tasks.append(host_node_instance.execute_operation(
-            'cloudify.interfaces.worker_installer.restart'))
     return tasks
