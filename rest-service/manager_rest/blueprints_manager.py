@@ -16,16 +16,14 @@
 __author__ = 'dan'
 
 
-from datetime import datetime
 import json
 import time
 import uuid
-import contextlib
 
-from dsl_parser import tasks
-from urllib2 import urlopen
+from datetime import datetime
 from flask import g, current_app
 
+from dsl_parser import tasks
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -81,9 +79,6 @@ class BlueprintsManager(object):
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
-
-            with contextlib.closing(urlopen(dsl_location)) as f:
-                source = f.read()
         except Exception, ex:
             raise DslParseException(*ex.args)
 

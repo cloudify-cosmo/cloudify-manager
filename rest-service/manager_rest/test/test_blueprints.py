@@ -62,7 +62,6 @@ class BlueprintsTestCase(BaseServerTestCase):
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         # setting 'source' field to be None as expected
-        post_blueprints_response['source'] = None
         self.assertEquals(post_blueprints_response,
                           get_blueprint_by_id_response)
 
