@@ -36,11 +36,9 @@ install:
    - source package/linux/env/bin/activate
 
    - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-   - cd cloudify-rest-client; git pull origin feature/CFY-783-add-support-for-cancel-execution; cd ..
    - cd cloudify-rest-client; pip install .; cd ..
      
    - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
-   - cd cloudify-plugins-common; git pull origin feature/CFY-783-add-support-for-cancel-execution; cd ..
    - cd cloudify-plugins-common; pip install .; cd ..
      
    - cd plugins/agent-installer && pip install . && cd ../..
