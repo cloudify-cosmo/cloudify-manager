@@ -87,7 +87,7 @@ def install(ctx, **kwargs):
             task_name='worker_installer.tasks.restart',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
-    graph.execute()
+    return graph.execute()
 
 
 @workflow
@@ -121,4 +121,4 @@ def uninstall(ctx, **kwargs):
             task_name='worker_installer.tasks.uninstall',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
-    graph.execute()
+    return graph.execute()

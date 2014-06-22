@@ -17,10 +17,11 @@ __author__ = 'dan'
 
 from datetime import datetime
 from manager_rest.storage_manager import get_storage_manager
+from manager_rest.models import Execution
 
 
 def get_workflow_status(wfid):
-    return 'terminated'
+    return Execution.TERMINATED
 
 
 class MockWorkflowClient(object):
@@ -45,7 +46,7 @@ class MockCeleryClient(object):
 
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         get_storage_manager().update_execution_status(task_id,
-                                                      'terminated',
+                                                      Execution.TERMINATED,
                                                       '')
         return MockAsyncResult()
 

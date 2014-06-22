@@ -188,7 +188,9 @@ def get_node_states(**kwargs):
 
 @operation
 def sleep(ctx, **kwargs):
-    time.sleep(int(ctx.properties['sleep']))
+    sleep_time = ctx.properties['sleep'] if 'sleep' in ctx.properties \
+        else kwargs['sleep']
+    time.sleep(int(sleep_time))
 
 
 @operation
