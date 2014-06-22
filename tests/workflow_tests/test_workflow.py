@@ -166,7 +166,6 @@ class BasicWorkflowsTest(TestCase):
         blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, blueprint.id)
         self.assertTrue(len(blueprint['plan']) > 0)
-        self.assertIsNone(blueprint['source'])
 
     def test_delete_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
