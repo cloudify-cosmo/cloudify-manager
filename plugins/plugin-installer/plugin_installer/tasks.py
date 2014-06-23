@@ -81,48 +81,12 @@ def uninstall(plugin, __cloudify_id, **kwargs):
     uninstall_celery_plugin(plugin['name'])
 
 
-@operation
-def verify_plugin(worker_id, plugin_name, operation, throw_on_failure,
-                  **kwargs):
-    """
-    Verifies that a plugin and and a specific operation is registered
-    within the celery worker
-    """
-    out = run_command("{0} inspect registered -d {1} --no-color"
-                      .format(get_celery(), worker_id))
-    lines = out.splitlines()
-    registered_operations = []
-    for line in lines:
-        processed_line = line.strip()
-        if processed_line.startswith("*"):
-            task_name = processed_line[1:].strip()
-            if task_name.startswith(plugin_name):
-                registered_operations.append(task_name)
-                if task_name == plugin_name + "." + operation:
-                    return True
-    # Could not locate registered plugin and the specified operation
-    if throw_on_failure:
-        raise RuntimeError(
-            """
-Unable to locate plugin {0} operation {1} in celery registered tasks,
-make sure the plugin has an implementation of
-this operation.
-Registered plugin operation are:
-{2}""".format(plugin_name, operation, registered_operations))
-    else:
-        return False
-
-
 def get_python():
     return get_prefix_for_command("python")
 
 
 def get_pip():
     return get_prefix_for_command("pip")
-
-
-def get_celery():
-    return get_prefix_for_command("celery")
 
 
 def get_prefix_for_command(command):
