@@ -37,6 +37,7 @@ import yaml
 import pika
 import json
 import elasticsearch
+import requests
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
 from cloudify_rest_client import CloudifyClient
@@ -56,6 +57,16 @@ MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
+
+PROVIDER_NAME = 'integration_tests'
+PROVIDER_CONTEXT = {
+    'cloudify': {
+        'workflows': {
+            'task_retries': 0,
+            'task_retry_interval': 0
+        }
+    }
+}
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -672,6 +683,7 @@ class TestCase(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.client = create_rest_client()
         TestEnvironment.clean_plugins_tempdir()
+        restore_provider_context()
 
     def tearDown(self):
         TestEnvironment.restart_celery_operations_worker()
@@ -1070,3 +1082,14 @@ def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         name=task_name,
         args=args,
         queue=queue)
+
+
+def delete_provider_context():
+    requests.delete('http://localhost:9200'
+                    '/cloudify_storage/provider_context/CONTEXT')
+
+
+def restore_provider_context():
+    delete_provider_context()
+    client = create_rest_client()
+    client.manager.create_context(PROVIDER_NAME, PROVIDER_CONTEXT)
