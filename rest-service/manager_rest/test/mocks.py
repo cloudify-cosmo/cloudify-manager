@@ -16,17 +16,20 @@
 __author__ = 'dan'
 
 from datetime import datetime
+from manager_rest.storage_manager import get_storage_manager
+from manager_rest.models import Execution
 
 
 def get_workflow_status(wfid):
-    return 'terminated'
+    return Execution.TERMINATED
 
 
 class MockWorkflowClient(object):
 
-    def execute_workflow(self, name, workflow, plan,
-                         blueprint_id=None, deployment_id=None,
-                         execution_id=None):
+    @staticmethod
+    def execute_workflow(name, workflow,
+                         blueprint_id, deployment_id,
+                         execution_id):
         return {
             'type': 'workflow_state',
             'id': 'yokimura-yoshomati',
@@ -35,27 +38,26 @@ class MockWorkflowClient(object):
             'created': datetime.now()
         }
 
-    def validate_workflows(self, plan):
-        return {
-            'status': 'valid'
-        }
-
-    def get_workflow_status(self, workflow_id):
-        return {
-            'id': workflow_id,
-            'state': 'terminated',
-            'error': None
-        }
-
-    def get_workflows_statuses(self, workflows_ids):
-        return [
-            {
-                'id': wfid,
-                'state': get_workflow_status(wfid),
-                'error': None
-            }
-            for wfid in workflows_ids
-        ]
-
     def cancel_workflow(self, workflow_id):
-        return self.execute_workflow(None, None, None)
+        return self.execute_workflow(None, None, None, None, None)
+
+
+class MockCeleryClient(object):
+
+    def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
+        get_storage_manager().update_execution_status(task_id,
+                                                      Execution.TERMINATED,
+                                                      '')
+        return MockAsyncResult()
+
+    def get_task_status(self, task_id):
+        return 'SUCCESS'
+
+    def get_failed_task_error(self, task_id):
+        return RuntimeError('mock error')
+
+
+class MockAsyncResult(object):
+
+    def get(self, timeout=300, propagate=True):
+        return None

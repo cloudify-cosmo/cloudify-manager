@@ -33,12 +33,11 @@ class SerializableObject(object):
 
 class BlueprintState(SerializableObject):
 
-    fields = {'plan', 'id', 'source', 'created_at', 'updated_at'}
+    fields = {'plan', 'id', 'created_at', 'updated_at'}
 
     def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
-        self.source = kwargs['source']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 
@@ -59,14 +58,23 @@ class Deployment(SerializableObject):
 
 class Execution(SerializableObject):
 
-    fields = {'id', 'status', 'deployment_id', 'internal_workflow_id',
+    TERMINATED = 'terminated'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+    PENDING = 'pending'
+    STARTED = 'started'
+    CANCELLING = 'cancelling'
+    FORCE_CANCELLING = 'force_cancelling'
+
+    END_STATES = [TERMINATED, FAILED, CANCELLED]
+
+    fields = {'id', 'status', 'deployment_id',
               'workflow_id', 'blueprint_id', 'created_at', 'error'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
-        self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
@@ -74,14 +82,50 @@ class Execution(SerializableObject):
 
 
 class DeploymentNode(SerializableObject):
+    """
+    Represents a node in a deployment.
+    """
 
-    fields = {'id', 'runtime_info', 'reachable', 'state_version'}
+    fields = {
+        'id', 'deployment_id', 'blueprint_id', 'type', 'type_hierarchy',
+        'number_of_instances', 'host_id', 'properties',
+        'operations', 'plugins', 'relationships', 'plugins_to_install'
+    }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info']
-        self.reachable = kwargs['reachable']
-        self.state_version = kwargs['state_version']
+        self.deployment_id = kwargs['deployment_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.type = kwargs['type']
+        self.type_hierarchy = kwargs['type_hierarchy']
+        self.number_of_instances = kwargs['number_of_instances']
+        self.host_id = kwargs['host_id']
+        self.properties = kwargs['properties']
+        self.operations = kwargs['operations']
+        self.plugins = kwargs['plugins']
+        self.relationships = kwargs['relationships']
+        self.plugins_to_install = kwargs['plugins_to_install']
+
+
+class DeploymentNodeInstance(SerializableObject):
+    """
+    Represents a node instance in a deployment.
+    """
+
+    fields = {
+        'id', 'deployment_id', 'runtime_properties', 'state', 'version',
+        'relationships', 'node_id', 'host_id'
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.node_id = kwargs['node_id']
+        self.deployment_id = kwargs['deployment_id']
+        self.runtime_properties = kwargs['runtime_properties']
+        self.state = kwargs['state']
+        self.version = kwargs['version']
+        self.relationships = kwargs['relationships']
+        self.host_id = kwargs['host_id']
 
 
 class ProviderContext(SerializableObject):

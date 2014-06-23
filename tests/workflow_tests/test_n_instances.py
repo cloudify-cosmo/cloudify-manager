@@ -18,6 +18,7 @@ __author__ = 'idanmo'
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
+from testenv import send_task
 
 
 class TestMultiInstanceApplication(TestCase):
@@ -27,12 +28,12 @@ class TestMultiInstanceApplication(TestCase):
         deploy(dsl_path)
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = set(result.get(timeout=10))
         self.assertEquals(2, len(machines))
 
         from plugins.testmockoperations.tasks import get_state as get_state
-        apps_state = self.send_task(get_state).get(timeout=10)
+        apps_state = send_task(get_state).get(timeout=10)
         machines_with_apps = set([])
         for app_state in apps_state:
             host_id = app_state['capabilities'].keys()[0]
@@ -44,7 +45,7 @@ class TestMultiInstanceApplication(TestCase):
         deploy(dsl_path)
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = set(result.get(timeout=10))
         self.assertEquals(15, len(machines))
 

@@ -23,6 +23,7 @@ import tempfile
 import uuid
 
 from cloudify.mocks import MockCloudifyContext
+from cloudify.context import BootstrapContext
 
 VAGRANT_MACHINE_IP = "10.0.0.5"
 MANAGER_IP = '10.0.0.1'
@@ -71,5 +72,13 @@ def get_remote_context():
         },
         runtime_properties={
             'ip': '127.0.0.1'
-        }
+        },
+        bootstrap_context=BootstrapContext({
+            'cloudify_agent': {
+                'min_workers': 2,
+                'max_workers': 5,
+                'user': 'john doe',
+                'remote_execution_port': 2222
+            }
+        })
     )

@@ -16,7 +16,10 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
-from cloudify.celery import celery as app
+import os
+import json
+
+DATA_FILE_PATH = '/tmp/agent-installer-data.json'
 
 INSTALLED = "installed"
 STARTED = "started"
@@ -24,85 +27,107 @@ STOPPED = "stopped"
 UNINSTALLED = "uninstalled"
 RESTARTED = "restarted"
 
-workers_state = {}
 
-current_worker_name = None
+@operation
+def install(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
+    data['workers_state'][worker_config["name"]] = [INSTALLED]
+    _store_data(data)
 
 
-def fix_worker(ctx):
+@operation
+def start(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
+    # adding a consumer that handles tasks from a
+    # queue called worker_config["name"]
+    ctx.logger.info("Workers state before change is {0}".format(
+        data['workers_state']))
+    data['workers_state'][worker_config["name"]].append(STARTED)
+    _store_data(data)
+
+
+@operation
+def restart(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Restarting worker {0}".format(worker_config["name"]))
+    data['workers_state'][worker_config["name"]].append(RESTARTED)
+    _store_data(data)
+
+
+@operation
+def stop(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Stopping worker {0}".format(worker_config["name"]))
+    if worker_config["name"] not in data['workers_state']:
+        ctx.logger.debug("No worker. nothing to do.")
+        return
+    data['workers_state'][worker_config["name"]].append(STOPPED)
+    _store_data(data)
+
+
+@operation
+def uninstall(ctx, **kwargs):
+    worker_config = _fix_worker(ctx, **kwargs)
+    data = _get_data()
+
+    ctx.logger.info("Uninstalling worker {0}".format(worker_config["name"]))
+    if worker_config["name"] not in data['workers_state']:
+        ctx.logger.debug("No worker. nothing to do.")
+        return
+    data['workers_state'][worker_config["name"]].append(UNINSTALLED)
+    _store_data(data)
+
+
+@operation
+def get_worker_state(worker_name, **kwargs):
+    data = _get_data()
+    return data['workers_state'][worker_name]
+
+
+def _fix_worker(ctx, **kwargs):
     worker_config = {}
-    if ctx.properties and 'worker_config' in ctx.properties:
-        worker_config = ctx.properties['worker_config']
-    if ctx.node_id is None:
+    if _is_workflows_worker(kwargs):
+        worker_config['name'] = '{0}_workflows'.format(ctx.deployment_id)
+    elif ctx.node_id is None:
         worker_config['name'] = ctx.deployment_id
     else:
         worker_config['name'] = ctx.node_id
     return worker_config
 
 
-@operation
-def install(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
-
-    global current_worker_name
-    global workers_state
-
-    ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
-    current_worker_name = worker_config["name"]
-    workers_state[worker_config["name"]] = [INSTALLED]
+def _is_workflows_worker(config_container):
+    return 'worker_config' in config_container and \
+           'workflows_worker' in config_container['worker_config'] and \
+           config_container['worker_config']['workflows_worker']
 
 
-@operation
-def start(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
-
-    global workers_state
-
-    ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
-    # adding a consumer that handles tasks from a
-    # queue called worker_config["name"]
-    app.control.add_consumer(worker_config["name"], reply=True)
-    ctx.logger.info("Workers state before change is {0}".format(workers_state))
-    workers_state[worker_config["name"]].append(STARTED)
+def _get_data():
+    with open(DATA_FILE_PATH, 'r') as f:
+        data = json.load(f)
+        return data
 
 
-@operation
-def restart(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
-
-    global workers_state
-
-    ctx.logger.info("Restarting worker {0}".format(worker_config["name"]))
-    workers_state[worker_config["name"]].append(RESTARTED)
+def _store_data(data):
+    with open(DATA_FILE_PATH, 'w') as f:
+        json.dump(data, f)
 
 
-@operation
-def stop(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
-
-    global workers_state
-
-    ctx.logger.info("Stopping worker {0}".format(worker_config["name"]))
-    if worker_config["name"] not in workers_state:
-        ctx.logger.debug("No worker. nothing to do.")
-        return
-    app.control.cancel_consumer(worker_config["name"], reply=True)
-    workers_state[worker_config["name"]].append(STOPPED)
+def setup_plugin():
+    data = {
+        'workers_state': {}
+    }
+    _store_data(data)
 
 
-@operation
-def uninstall(ctx, **kwargs):
-    worker_config = fix_worker(ctx)
-
-    global workers_state
-
-    ctx.logger.info("Uninstalling worker {0}".format(worker_config["name"]))
-    if worker_config["name"] not in workers_state:
-        ctx.logger.debug("No worker. nothing to do.")
-        return
-    workers_state[worker_config["name"]].append(UNINSTALLED)
-
-
-@operation
-def get_current_worker_state(**kwargs):
-    return workers_state[current_worker_name]
+def teardown_plugin():
+    os.remove(DATA_FILE_PATH)

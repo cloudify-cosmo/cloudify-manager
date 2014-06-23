@@ -16,12 +16,12 @@
 __author__ = 'idanmo'
 
 
-from testenv import TestEnvironment as env
+from testenv import TestEnvironment
 
 
 def setUp():
-    env.create()
+    TestEnvironment.create()
 
 
 def tearDown():
-    env.destroy()
+    TestEnvironment.destroy()

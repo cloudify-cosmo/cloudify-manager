@@ -3,10 +3,15 @@ imports:
     - "cloudmock.yaml"
 
 plugins:
+    test_management_plugin:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "http://test_management_plugin.zip"
+
     test_plugin:
         derived_from: "cloudify.plugins.agent_plugin"
         properties:
-            url: "http://test_management_plugin.zip"
+            url: "http://test_agent_plugin.zip"
 
 types:
     test_host:
@@ -31,10 +36,4 @@ blueprint:
                     - delete: cloudmock.tasks.terminate
                 cloudify.interfaces.test_lifecycle:
                     - create: test_plugin.tasks.start
-
-workflows:
-    mock_workflow:
-        radial: |
-            define mock_workflow
-                execute_operation operation: 'make_mock_operation'
-
+                    - stop: test_management_plugin.stop

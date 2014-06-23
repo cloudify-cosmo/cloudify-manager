@@ -13,13 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from time import time
+import time
 from cloudify.decorators import operation
 import tempfile
 import os
 import shutil
-from cloudify.manager import get_manager_rest_client
-
+from cloudify.manager import get_rest_client
 
 state = []
 touched_time = None
@@ -27,6 +26,9 @@ unreachable_call_order = []
 mock_operation_invocation = []
 node_states = []
 get_resource_operation_invocation = []
+monitoring_operations_invocation = []
+failure_invocation = []
+host_get_state_invocation = []
 
 
 @operation
@@ -34,7 +36,7 @@ def make_reachable(ctx, **kwargs):
     global state
     state_info = {
         'id': ctx.node_id,
-        'time': time(),
+        'time': time.time(),
         'capabilities': ctx.capabilities.get_all()
     }
     ctx.logger.info('Appending to state [node_id={0}, state={1}]'
@@ -47,12 +49,14 @@ def make_unreachable(ctx, **kwargs):
     global unreachable_call_order
     unreachable_call_order.append({
         'id': ctx.node_id,
-        'time': time()
+        'time': time.time()
     })
 
 
 @operation
-def set_property(property_name, value, ctx, **kwargs):
+def set_property(ctx, **kwargs):
+    property_name = ctx.properties['property_name']
+    value = ctx.properties['value']
     ctx.logger.info('Setting property [{0}={1}] for node: {2}'
                     .format(property_name, value, ctx.node_id))
     ctx.runtime_properties[property_name] = value
@@ -61,7 +65,7 @@ def set_property(property_name, value, ctx, **kwargs):
 @operation
 def touch(**kwargs):
     global touched_time
-    touched_time = time()
+    touched_time = time.time()
 
 
 @operation
@@ -86,17 +90,44 @@ def get_unreachable_call_order(**kwargs):
 
 
 @operation
-def mock_operation(ctx, mockprop, **kwargs):
-    global mock_operation_invocation
-    mock_operation_invocation.append({
+def start_monitor(ctx, **kwargs):
+    global monitoring_operations_invocation
+    monitoring_operations_invocation.append({
         'id': ctx.node_id,
-        'mockprop': mockprop,
-        'kwargs': kwargs
+        'operation': 'start_monitor'
     })
 
 
 @operation
-def get_resource_operation(ctx, resource_path, **kwargs):
+def stop_monitor(ctx, **kwargs):
+    global monitoring_operations_invocation
+    monitoring_operations_invocation.append({
+        'id': ctx.node_id,
+        'operation': 'stop_monitor'
+    })
+
+
+@operation
+def mock_operation(ctx, **kwargs):
+    mockprop = ctx.properties['mockprop']
+    global mock_operation_invocation
+    mock_operation_invocation.append({
+        'id': ctx.node_id,
+        'mockprop': mockprop,
+        'properties': {key: value for (key, value) in ctx.properties.items()}
+    })
+
+
+@operation
+def mock_operation_from_custom_workflow(key, value, **_):
+    mock_operation_invocation.append({
+        key: value
+    })
+
+
+@operation
+def get_resource_operation(ctx, **kwargs):
+    resource_path = ctx.properties['resource_path']
     # trying to retrieve a resource
     res1 = ctx.download_resource(resource_path)
     if not res1:
@@ -138,16 +169,56 @@ def get_mock_operation_invocations(**kwargs):
 
 
 @operation
+def get_monitoring_operations_invocation(**kwargs):
+    return monitoring_operations_invocation
+
+
+@operation
 def append_node_state(ctx, **kwargs):
-    client = get_manager_rest_client()
-    node_state = client.get_node_state(ctx.node_id,
-                                       get_state=True,
-                                       get_runtime_properties=False)
+    client = get_rest_client()
+    instance = client.node_instances.get(ctx.node_id)
     global node_states
-    node_states.append(node_state['state'])
+    node_states.append(instance.state)
 
 
 @operation
 def get_node_states(**kwargs):
     global node_states
     return node_states
+
+
+@operation
+def sleep(ctx, **kwargs):
+    sleep_time = ctx.properties['sleep'] if 'sleep' in ctx.properties \
+        else kwargs['sleep']
+    time.sleep(int(sleep_time))
+
+
+@operation
+def fail(ctx, **_):
+    global failure_invocation
+    failure_invocation.append(time.time())
+    if len(failure_invocation) > ctx.properties['fail_count']:
+        return
+    raise RuntimeError('TEST_EXPECTED_FAIL')
+
+
+@operation
+def get_fail_invocations(**_):
+    global failure_invocation
+    return failure_invocation
+
+
+@operation
+def host_get_state(ctx, **_):
+    global host_get_state_invocation
+    host_get_state_invocation.append(time.time())
+    if len(host_get_state_invocation) <= ctx.properties['false_count']:
+        return False
+    return True
+
+
+@operation
+def get_host_get_state_invocations(**_):
+    global host_get_state_invocation
+    return host_get_state_invocation

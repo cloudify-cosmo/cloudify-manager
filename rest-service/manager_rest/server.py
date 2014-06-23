@@ -29,6 +29,7 @@ from manager_rest import config
 # from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
+from manager_rest import manager_exceptions
 
 
 # app factory
@@ -92,6 +93,12 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'file_server_blueprints_folder' in yaml_conf:
         obj_conf.file_server_blueprints_folder = \
             yaml_conf['file_server_blueprints_folder']
+    if 'file_server_uploaded_blueprints_folder' in yaml_conf:
+        obj_conf.file_server_uploaded_blueprints_folder = \
+            yaml_conf['file_server_uploaded_blueprints_folder']
+    if 'file_server_resources_uri' in yaml_conf:
+        obj_conf.file_server_resources_uri = \
+            yaml_conf['file_server_resources_uri']
     if 'workflow_service_base_uri' in yaml_conf:
         obj_conf.workflow_service_base_uri = \
             yaml_conf['workflow_service_base_uri']
@@ -105,6 +112,7 @@ def internal_error(e):
         {"message":
          "Internal error occurred in manager REST server - {0}: {1}"
             .format(type(e).__name__, str(e)),
+         "error_code": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
          "traceback": traceback.format_tb(sys.exc_info()[2])})
     response.status_code = 500
     return response

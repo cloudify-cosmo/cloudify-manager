@@ -57,7 +57,7 @@ types:
     cloudify.openstack.router:
         derived_from: cloudify.types.router
         properties:
-            - router
+            - router: {}
             - neutron_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
@@ -86,7 +86,7 @@ types:
     cloudify.openstack.floatingip:
         derived_from: cloudify.types.base
         properties:
-            - floatingip
+            - floatingip: {}
             - neutron_config: {}
         interfaces:
              cloudify.interfaces.lifecycle:

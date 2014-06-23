@@ -17,37 +17,29 @@ __author__ = "idanmo"
 
 from setuptools import setup
 
-REST_CLIENT_VERSION = '3.0'
-REST_CLIENT_BRANCH = 'develop'
-REST_CLIENT = 'https://github.com/cloudify-cosmo/cloudify-rest-client' \
-              '/tarball/{0}#egg=cloudify-rest-client-{1}'.format(
-                  REST_CLIENT_BRANCH, REST_CLIENT_VERSION)
-
-PLUGINS_COMMON_VERSION = "3.0"
-PLUGINS_COMMON_BRANCH = "develop"
-PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
-                 "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
-                     PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)
 
 setup(
     name='cloudify-tests',
     version='3.0',
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
-    packages=['plugins'],
+    packages=['plugins',
+              'plugins.cloudmock',
+              'plugins.connection_configurer_mock',
+              'plugins.context_plugin',
+              'plugins.plugin_installer',
+              'plugins.testmockoperations',
+              'plugins.worker_installer',
+              'mock_workflows',
+              'mock_workflows.system_workflows'],
     license='LICENSE',
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common",
-        "cloudify-rest-client",
+        "cloudify-plugins-common==3.0",
+        "cloudify-rest-client==3.0",
         "pika==0.9.13",
         "bernhard==0.1.0",
         'elasticsearch==1.0.0'
-    ],
-    test_requires=[
-        "nose"
-    ],
-    dependency_links=[PLUGINS_COMMON,
-                      REST_CLIENT]
+    ]
 )

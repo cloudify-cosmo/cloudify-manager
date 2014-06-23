@@ -125,5 +125,4 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals('blueprint-id', blueprint_restored.id)
         self.assertEquals(now, blueprint_restored.created_at)
         self.assertEquals(None, blueprint_restored.updated_at)
-        self.assertEquals(None, blueprint_restored.source)
         self.assertEquals(None, blueprint_restored.plan)

@@ -16,37 +16,45 @@
 __author__ = 'idanmo'
 
 from cloudify.decorators import operation
+import os
+import json
 
 
-NON_EXISTING_OPERATIONS = ['testmockoperations.non_existent']
-
-INSTALLED_PLUGINS = []
-
-
-@operation
-def install(ctx, plugin, **kwargs):
-
-    global INSTALLED_PLUGINS
-    ctx.logger.info("in plugin_installer.install --> "
-                    "installing plugin {0}".format(plugin))
-    INSTALLED_PLUGINS.append(plugin['name'])
+DATA_FILE_PATH = '/tmp/plugin-installer-data.json'
 
 
 @operation
-def verify_plugin(ctx, worker_id, plugin_name, operation, throw_on_failure,
-                  **kwargs):
-    full_operation_name = "{0}.{1}".format(plugin_name, operation)
-    is_non_existing = full_operation_name in NON_EXISTING_OPERATIONS
-    if throw_on_failure and is_non_existing:
-        raise RuntimeError("")
-    return not is_non_existing
+def install(ctx, plugins, **kwargs):
 
+    installed_plugins = _get_installed_plugins()
 
-@operation
-def get_arguments(plugin_name, operation, **kwargs):
-    pass
+    for plugin in plugins:
+        ctx.logger.info("in plugin_installer.install --> "
+                        "installing plugin {0}".format(plugin))
+        installed_plugins.append(plugin['name'])
+
+    _store_installed_plugins(installed_plugins)
 
 
 @operation
 def get_installed_plugins(**kwargs):
-    return INSTALLED_PLUGINS
+    return _get_installed_plugins()
+
+
+def _get_installed_plugins():
+    with open(DATA_FILE_PATH, 'r') as f:
+        installed_plugins = json.load(f)
+        return installed_plugins
+
+
+def _store_installed_plugins(installed_plugins):
+    with open(DATA_FILE_PATH, 'w') as f:
+        json.dump(installed_plugins, f)
+
+
+def setup_plugin():
+    _store_installed_plugins([])
+
+
+def teardown_plugin():
+    os.remove(DATA_FILE_PATH)

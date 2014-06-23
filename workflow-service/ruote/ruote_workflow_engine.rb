@@ -19,6 +19,7 @@ require 'ruote-fs'
 require 'json'
 require 'thread'
 require 'pathname'
+require 'rest_client'
 
 require_relative '../participants/all'
 require_relative '../participants/plan_holder'
@@ -78,7 +79,7 @@ class RuoteWorkflowEngine
       fields[key] = value unless fields.has_key? key
     end
     wfid = @dashboard.launch(workflow, fields)
-    wf_state = update_workflow_state(wfid, :pending, tags)
+    wf_state = update_workflow_state(nil, wfid, :pending, tags)
     log_workflow_state(wf_state)
     wf_state
   end
@@ -140,16 +141,18 @@ class RuoteWorkflowEngine
 
   def on_msg(context)
     action = context['action']
-
-    # handle error interception (both parent and sub workflows)
     begin
+
+      # handle error interception (both parent and sub workflows)
       if action == 'error_intercepted' and context.has_key?('fei') and not context['fei'].nil?
+        execution_id = context['msg']['workitem']['fields'][EXECUTION_ID]
         wfid = context['fei']['wfid']
         wf_state = get_workflow_state(wfid)
         if wf_state.state != :failed
           @dashboard.cancel(wfid)
           new_state = :failed
-          wf_state = update_workflow_state(wfid, new_state, nil, context['error'])
+          wf_state = update_workflow_state(execution_id, wfid,
+                                           new_state, nil, context['error']['message'])
           log_workflow_state(wf_state)
         end
       elsif action == 'cancel'
@@ -161,14 +164,14 @@ class RuoteWorkflowEngine
         wf_state = get_workflow_state(wfid)
         if not [:cancelled, :failed].include? wf_state.state
           new_state = :cancelled
-          wf_state = update_workflow_state(wfid, new_state)
+          wf_state = update_workflow_state(nil, wfid, new_state)
           log_workflow_state(wf_state)
         end
         return
 
       # Handle parent workflows (only parent as wfid on context)
       elsif context.has_key?('wfid') and context.has_key?('workitem')
-
+        execution_id = context['workitem']['fields'][EXECUTION_ID]
         workitem = Ruote::Workitem.new(context['workitem'] || {})
         workflow_id = workitem.fields['workflow_id'] || nil
 
@@ -192,7 +195,8 @@ class RuoteWorkflowEngine
         end
 
         unless new_state.nil?
-          wf_state = update_workflow_state(context['wfid'], new_state)
+          wf_state = update_workflow_state(execution_id,
+                                           context['wfid'], new_state)
           log_workflow_state(wf_state)
         end
 
@@ -249,7 +253,7 @@ class RuoteWorkflowEngine
     })
   end
 
-  def update_workflow_state(wfid, state, tags=nil, error=nil)
+  def update_workflow_state(execution_id, wfid, state, tags=nil, error=nil)
     begin
       @mutex.lock
       if state.eql?(:pending)
@@ -264,6 +268,23 @@ class RuoteWorkflowEngine
       elsif state.eql?(:failed)
         wf_state.error = error
       end
+
+      unless execution_id.nil?
+        # updating the storage wf state as well
+        url = URI::escape("http://localhost:8100/executions/#{execution_id}")
+        if state.eql?(:failed)
+          body = JSON.generate({
+                                   :status => wf_state.state,
+                                   :error => error
+                               })
+        else
+          body = JSON.generate({
+                                   :status => wf_state.state
+                               })
+        end
+        RestClient.patch url, body, {:content_type => :json}
+      end
+
       wf_state
     ensure
       @mutex.unlock

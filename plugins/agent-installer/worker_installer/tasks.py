@@ -18,7 +18,7 @@ __author__ = 'elip'
 import os
 import jinja2
 from worker_installer import init_worker_installer
-from worker_installer.utils import is_deployment_worker
+from worker_installer.utils import is_on_management_worker
 from cloudify.decorators import operation
 from cloudify import manager
 from cloudify import utils
@@ -202,7 +202,7 @@ def restart(ctx, runner, worker_config, **kwargs):
 
 
 def get_agent_ip(ctx, worker_config):
-    if is_deployment_worker(ctx):
+    if is_on_management_worker(ctx):
         return utils.get_manager_ip()
     return worker_config['host']
 
@@ -217,11 +217,13 @@ def create_celery_configuration(ctx, runner, worker_config, resource_loader):
         'celery_base_dir': worker_config['celery_base_dir'],
         'worker_modifier': worker_config['name'],
         'management_ip': utils.get_manager_ip(),
-        'broker_ip': '127.0.0.1' if is_deployment_worker(ctx)
+        'broker_ip': '127.0.0.1' if is_on_management_worker(ctx)
         else utils.get_manager_ip(),
         'agent_ip': get_agent_ip(ctx, worker_config),
         'celery_user': worker_config['user'],
-        'celery_group': worker_config['user']
+        'celery_group': worker_config['user'],
+        'worker_autoscale': '{0},{1}'.format(worker_config['max_workers'],
+                                             worker_config['min_workers'])
     }
 
     ctx.logger.debug(
