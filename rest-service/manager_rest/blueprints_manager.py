@@ -143,7 +143,8 @@ class BlueprintsManager(object):
         self._uninstall_deployment_workers(deployment_id)
         return storage.delete_deployment(deployment_id)
 
-    def execute_workflow(self, deployment_id, workflow_id, force=False):
+    def execute_workflow(self, deployment_id, workflow_id,
+                         kwargs=None, force=False):
         deployment = self.get_deployment(deployment_id)
 
         if workflow_id not in deployment.plan['workflows']:
@@ -174,7 +175,8 @@ class BlueprintsManager(object):
             workflow,
             blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
-            execution_id=execution_id)
+            execution_id=execution_id,
+            kwargs=kwargs)
 
         new_execution = models.Execution(
             id=execution_id,

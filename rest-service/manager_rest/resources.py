@@ -873,11 +873,17 @@ class DeploymentsIdExecutions(Resource):
         nickname="execute",
         notes="Executes the provided workflow under the given deployment "
               "context.",
-        parameters=[{'name': 'body',
+        parameters=[{'name': 'workflow_id',
                      'description': 'Workflow execution request',
                      'required': True,
                      'allowMultiple': False,
-                     'dataType': requests_schema.ExecutionRequest.__name__,
+                     'dataType': str,
+                     'paramType': 'body'},
+                    {'name': 'parameters',
+                     'description': 'Parameters for the workflow execution',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'dict',
                      'paramType': 'body'},
                     {'name': 'force',
                      'description': 'Specifies whether to force workflow '
@@ -907,9 +913,17 @@ class DeploymentsIdExecutions(Resource):
         force = verify_and_convert_bool('force', args['force'])
 
         workflow_id = request.json['workflow_id']
+        kwargs = request.json.get('parameters', None)
+
+        if kwargs.__class__ is not dict:
+            raise manager_exceptions.BadParametersError(
+                "request body's 'parameters' field must be a dict but"
+                " is of type {0}".format(kwargs.__class__.__name__))
+
         execution = get_blueprints_manager().execute_workflow(deployment_id,
                                                               workflow_id,
-                                                              force)
+                                                              kwargs=kwargs,
+                                                              force=force)
         return responses.Execution(**execution.to_dict()), 201
 
 

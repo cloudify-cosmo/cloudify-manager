@@ -29,7 +29,7 @@ class MockWorkflowClient(object):
     @staticmethod
     def execute_workflow(name, workflow,
                          blueprint_id, deployment_id,
-                         execution_id):
+                         execution_id, kwargs=None):
         return {
             'type': 'workflow_state',
             'id': 'yokimura-yoshomati',
@@ -37,9 +37,6 @@ class MockWorkflowClient(object):
             'error': None,
             'created': datetime.now()
         }
-
-    def cancel_workflow(self, workflow_id):
-        return self.execute_workflow(None, None, None, None, None)
 
 
 class MockCeleryClient(object):
