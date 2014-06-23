@@ -14,12 +14,13 @@
 #    * limitations under the License.
 
 import time
-from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError
 import tempfile
 import os
 import shutil
+
 from cloudify.manager import get_rest_client
+from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError, RecoverableError
 
 state = []
 touched_time = None
@@ -202,12 +203,16 @@ def fail(ctx, **_):
     if len(failure_invocation) > ctx.properties.get('fail_count', 100000):
         return
 
+    message = 'TEST_EXPECTED_FAIL'
     if ctx.properties.get('non_recoverable'):
-        exc_type = NonRecoverableError
+        exception = NonRecoverableError(message)
+    elif ctx.properties.get('recoverable'):
+        retry_after = ctx.properties['retry_after']
+        exception = RecoverableError(retry_after, message)
     else:
-        exc_type = RuntimeError
+        exception = RuntimeError(message)
 
-    raise exc_type('TEST_EXPECTED_FAIL')
+    raise exception
 
 
 @operation
