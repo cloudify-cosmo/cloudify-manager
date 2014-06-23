@@ -15,6 +15,7 @@
 
 import time
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
 import tempfile
 import os
 import shutil
@@ -198,9 +199,15 @@ def sleep(ctx, **kwargs):
 def fail(ctx, **_):
     global failure_invocation
     failure_invocation.append(time.time())
-    if len(failure_invocation) > ctx.properties['fail_count']:
+    if len(failure_invocation) > ctx.properties.get('fail_count', 100000):
         return
-    raise RuntimeError('TEST_EXPECTED_FAIL')
+
+    if ctx.properties.get('non_recoverable'):
+        exc_type = NonRecoverableError
+    else:
+        exc_type = RuntimeError
+
+    raise exc_type('TEST_EXPECTED_FAIL')
 
 
 @operation
