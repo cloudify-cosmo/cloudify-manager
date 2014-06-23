@@ -64,7 +64,7 @@ NODE_INSTANCE_SCHEMA = {
             'path': 'id'
         },
         'properties': {
-            'runtimeProperties': {
+            'runtime_properties': {
                 'enabled': False
             }
         }

@@ -13,12 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from time import time
+import time
 from cloudify.decorators import operation
 import tempfile
 import os
 import shutil
-from cloudify.manager import get_new_rest_client
+from cloudify.manager import get_rest_client
 
 state = []
 touched_time = None
@@ -27,6 +27,8 @@ mock_operation_invocation = []
 node_states = []
 get_resource_operation_invocation = []
 monitoring_operations_invocation = []
+failure_invocation = []
+host_get_state_invocation = []
 
 
 @operation
@@ -34,7 +36,7 @@ def make_reachable(ctx, **kwargs):
     global state
     state_info = {
         'id': ctx.node_id,
-        'time': time(),
+        'time': time.time(),
         'capabilities': ctx.capabilities.get_all()
     }
     ctx.logger.info('Appending to state [node_id={0}, state={1}]'
@@ -47,7 +49,7 @@ def make_unreachable(ctx, **kwargs):
     global unreachable_call_order
     unreachable_call_order.append({
         'id': ctx.node_id,
-        'time': time()
+        'time': time.time()
     })
 
 
@@ -63,7 +65,7 @@ def set_property(ctx, **kwargs):
 @operation
 def touch(**kwargs):
     global touched_time
-    touched_time = time()
+    touched_time = time.time()
 
 
 @operation
@@ -117,6 +119,13 @@ def mock_operation(ctx, **kwargs):
 
 
 @operation
+def mock_operation_from_custom_workflow(key, value, **_):
+    mock_operation_invocation.append({
+        key: value
+    })
+
+
+@operation
 def get_resource_operation(ctx, **kwargs):
     resource_path = ctx.properties['resource_path']
     # trying to retrieve a resource
@@ -166,7 +175,7 @@ def get_monitoring_operations_invocation(**kwargs):
 
 @operation
 def append_node_state(ctx, **kwargs):
-    client = get_new_rest_client()
+    client = get_rest_client()
     instance = client.node_instances.get(ctx.node_id)
     global node_states
     node_states.append(instance.state)
@@ -180,5 +189,36 @@ def get_node_states(**kwargs):
 
 @operation
 def sleep(ctx, **kwargs):
-    import time
-    time.sleep(int(ctx.properties['sleep']))
+    sleep_time = ctx.properties['sleep'] if 'sleep' in ctx.properties \
+        else kwargs['sleep']
+    time.sleep(int(sleep_time))
+
+
+@operation
+def fail(ctx, **_):
+    global failure_invocation
+    failure_invocation.append(time.time())
+    if len(failure_invocation) > ctx.properties['fail_count']:
+        return
+    raise RuntimeError('TEST_EXPECTED_FAIL')
+
+
+@operation
+def get_fail_invocations(**_):
+    global failure_invocation
+    return failure_invocation
+
+
+@operation
+def host_get_state(ctx, **_):
+    global host_get_state_invocation
+    host_get_state_invocation.append(time.time())
+    if len(host_get_state_invocation) <= ctx.properties['false_count']:
+        return False
+    return True
+
+
+@operation
+def get_host_get_state_invocations(**_):
+    global host_get_state_invocation
+    return host_get_state_invocation

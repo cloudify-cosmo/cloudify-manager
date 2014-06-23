@@ -4,6 +4,7 @@
 imports:
     - 'celery_worker_installer'
     - 'celery_plugin_installer'
+    - 'default_workflows'
 
 ##################################################################################
 # Base type definitions
@@ -25,25 +26,10 @@ types:
                 - start
                 - stop
 
-        workflows:
-            create:
-                ref: cloudify.workflows.node.create
-            configure:
-                ref: cloudify.workflows.node.configure
-            start:
-                ref: cloudify.workflows.node.start
-            stop:
-                ref: cloudify.workflows.node.stop
-            delete:
-                ref: cloudify.workflows.node.delete
-                
-                
     # A tier in a topology
     cloudify.types.tier: 
         derived_from: cloudify.types.base
         
-
-
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
         derived_from: cloudify.types.base
@@ -59,10 +45,7 @@ types:
         properties:
             - install_agent: false
             - worker_config: {}
-        workflows:
-            start:
-                ref: cloudify.workflows.host.start
-                
+
     # A Linux container with or without docker
     cloudify.types.container:
         derived_from: cloudify.types.host
@@ -128,15 +111,6 @@ types:
 relationships:
 
     cloudify.relationships.depends_on:
-        workflows:
-            preconfigure:
-                ref: cloudify.workflows.depends_on_preconfigure
-            postconfigure:
-                ref: cloudify.workflows.depends_on_postconfigure
-            establish:
-                ref: cloudify.workflows.depends_on_establish
-            unlink:
-                ref: cloudify.workflows.depends_on_unlink
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 - preconfigure
@@ -163,10 +137,8 @@ relationships:
 # Workflows
 ##################################################################################
 workflows:
-    install:
-        ref: "cloudify.workflows.install"
-    uninstall:
-        ref: "cloudify.workflows.uninstall"
+    install: workflows.default.install
+    uninstall: workflows.default.uninstall
 
 ##################################################################################
 # Base artifact definitions

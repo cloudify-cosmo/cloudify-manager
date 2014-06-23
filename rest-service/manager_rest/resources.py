@@ -39,7 +39,6 @@ from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.workflow_client import WorkflowServiceError
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 
@@ -59,10 +58,10 @@ def exceptions_handled(func):
                 manager_exceptions.BadParametersError,
                 manager_exceptions.UnsupportedContentTypeError,
                 manager_exceptions.InvalidBlueprintError,
-                manager_exceptions.ExistingRunningExecutionError) as e:
+                manager_exceptions.ExistingRunningExecutionError,
+                manager_exceptions.DeploymentWorkersNotYetInstalledError,
+                manager_exceptions.IllegalActionError) as e:
             abort_error(e)
-        except WorkflowServiceError, e:
-            abort_workflow_service_operation(e)
     return wrapper
 
 
@@ -112,10 +111,6 @@ def setup_resources(api):
                      '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
-    api.add_resource(BlueprintsIdSource,
-                     '/blueprints/<string:blueprint_id>/source')
-    api.add_resource(BlueprintsIdValidate,
-                     '/blueprints/<string:blueprint_id>/validate')
     api.add_resource(ExecutionsId,
                      '/executions/<string:execution_id>')
     api.add_resource(Deployments,
@@ -383,26 +378,6 @@ class Blueprints(Resource):
         return BlueprintsUpload().do_request()
 
 
-class BlueprintsIdSource(Resource):
-
-    @swagger.operation(
-        responseClass=responses.BlueprintState,
-        nickname="getBlueprintSource",
-        notes="Returns a blueprint's source (main yaml file)"
-              "  by the blueprint's id."
-    )
-    @marshal_with(responses.BlueprintState.resource_fields)
-    @exceptions_handled
-    def get(self, blueprint_id):
-        """
-        Get blueprint's source (main yaml file) by id
-        """
-        fields = {'id', 'source'}
-        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
-                                                           fields)
-        return responses.BlueprintState(**blueprint.to_dict())
-
-
 class BlueprintsId(Resource):
 
     @swagger.operation(
@@ -488,22 +463,6 @@ class BlueprintsId(Resource):
         return responses.BlueprintState(**blueprint.to_dict()), 200
 
 
-class BlueprintsIdValidate(Resource):
-
-    @swagger.operation(
-        responseClass=responses.BlueprintValidationStatus,
-        nickname="validate",
-        notes="Validates a given blueprint."
-    )
-    @marshal_with(responses.BlueprintValidationStatus.resource_fields)
-    @exceptions_handled
-    def get(self, blueprint_id):
-        """
-        Validate blueprint by id
-        """
-        return get_blueprints_manager().validate_blueprint(blueprint_id)
-
-
 class ExecutionsId(Resource):
 
     @swagger.operation(
@@ -524,10 +483,11 @@ class ExecutionsId(Resource):
         responseClass=responses.Execution,
         nickname="modify_state",
         notes="Modifies a running execution state (currently, only cancel"
-              " is supported)",
+              " and force-cancel are supported)",
         parameters=[{'name': 'body',
                      'description': 'json with an action key. '
-                                    'Legal values for action are: [cancel]',
+                                    'Legal values for action are: [cancel,'
+                                    ' force-cancel]',
                      'required': True,
                      'allowMultiple': False,
                      'dataType': requests_schema.ModifyExecutionRequest.__name__,  # NOQA
@@ -540,22 +500,23 @@ class ExecutionsId(Resource):
     @exceptions_handled
     def post(self, execution_id):
         """
-        Apply execution action (cancel) by id
+        Apply execution action (cancel, force-cancel) by id
         """
         verify_json_content_type()
         request_json = request.json
         verify_parameter_in_request_body('action', request_json)
         action = request.json['action']
 
-        valid_actions = ['cancel']
+        valid_actions = ['cancel', 'force-cancel']
 
         if action not in valid_actions:
             raise manager_exceptions.BadParametersError(
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
 
-        if action == 'cancel':
-            return get_blueprints_manager().cancel_workflow(execution_id), 201
+        if action in ('cancel', 'force-cancel'):
+            return get_blueprints_manager().cancel_execution(
+                execution_id, action == 'force-cancel'), 201
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -945,24 +906,10 @@ class DeploymentsIdExecutions(Resource):
         args = self._post_args_parser.parse_args()
         force = verify_and_convert_bool('force', args['force'])
 
-        # validate no execution is currently in progress
-        if not force:
-            executions = get_blueprints_manager().get_deployment_executions(
-                deployment_id)
-            running = [
-                e.id for e in executions if
-                get_storage_manager().get_execution(e.id).status
-                not in ['failed', 'terminated']]
-            if len(running) > 0:
-                raise manager_exceptions.ExistingRunningExecutionError(
-                    'The following executions are currently running for this '
-                    'deployment: {0}. To execute this workflow anyway, pass '
-                    '"force=true" as a query parameter to this request'.format(
-                        running))
-
         workflow_id = request.json['workflow_id']
         execution = get_blueprints_manager().execute_workflow(deployment_id,
-                                                              workflow_id)
+                                                              workflow_id,
+                                                              force)
         return responses.Execution(**execution.to_dict()), 201
 
 

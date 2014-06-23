@@ -19,6 +19,7 @@ __author__ = 'ran'
 import mocks
 from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
+from manager_rest import models
 
 
 class ExecutionsTestCase(BaseServerTestCase):
@@ -28,9 +29,12 @@ class ExecutionsTestCase(BaseServerTestCase):
     def test_get_deployment_executions_empty(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
-        get_executions = self.get('/deployments/{0}/executions'
-                                  .format(deployment_response['id'])).json
-        self.assertEquals(len(get_executions), 0)
+        executions = self.get('/deployments/{0}/executions'
+                              .format(deployment_response['id'])).json
+        # expecting 1 execution (workers installation)
+        self.assertEquals(1, len(executions))
+        self.assertEquals('workers_installation',
+                          executions[0]['workflow_id'])
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -66,8 +70,9 @@ class ExecutionsTestCase(BaseServerTestCase):
         resp = self.patch('/executions/{0}'.format(execution['id']), {})
         self.assertEquals(400, resp.status_code)
         self.assertTrue('status' in resp.json['message'])
-        self.assertEquals(resp.json['error_code'],
-                          manager_exceptions.BAD_PARAMETERS_ERROR_CODE)
+        self.assertEquals(
+            resp.json['error_code'],
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
 
     def test_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -95,7 +100,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
         self.assertEquals('pending', execution['status'])
-        self.assertEquals('None', execution['error'])
+        self.assertEquals('', execution['error'])
         execution = self.patch('/executions/{0}'.format(execution['id']),
                                {'status': 'new-status',
                                 'error': 'some error'}).json
@@ -118,7 +123,65 @@ class ExecutionsTestCase(BaseServerTestCase):
         cancel_response = self.post(resource_path, {
             'action': 'cancel'
         }).json
+        execution['status'] = models.Execution.CANCELLING
         self.assertEquals(execution, cancel_response)
+
+    def test_force_cancel_execution_by_id(self):
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+        cancel_response = self.post(
+            resource_path, {'action': 'force-cancel'}).json
+        execution['status'] = models.Execution.FORCE_CANCELLING
+        self.assertEquals(execution, cancel_response)
+
+    def test_illegal_cancel_on_execution(self):
+        # tests for attempts to cancel an execution which is in a status
+        # that is illegal to call cancel for
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+
+        def attempt_cancel_on_status(new_status,
+                                     force=False,
+                                     expect_failure=True):
+            execution = self.patch(resource_path, {'status': new_status}).json
+            self.assertEquals(new_status, execution['status'])
+
+            action = 'force-cancel' if force else 'cancel'
+            cancel_response = self.post(resource_path, {'action': action})
+            if expect_failure:
+                self.assertEquals(400, cancel_response.status_code)
+                self.assertEquals(
+                    manager_exceptions.IllegalActionError.
+                    ILLEGAL_ACTION_ERROR_CODE,
+                    cancel_response.json['error_code'])
+            else:
+                self.assertEquals(201, cancel_response.status_code)
+                expected_status = models.Execution.FORCE_CANCELLING if force\
+                    else models.Execution.CANCELLING
+                self.assertEquals(expected_status,
+                                  cancel_response.json['status'])
+
+        # end states - can't either cancel or force-cancel
+        attempt_cancel_on_status(models.Execution.TERMINATED)
+        attempt_cancel_on_status(models.Execution.TERMINATED, True)
+        attempt_cancel_on_status(models.Execution.FAILED)
+        attempt_cancel_on_status(models.Execution.FAILED, True)
+        attempt_cancel_on_status(models.Execution.CANCELLED)
+        attempt_cancel_on_status(models.Execution.CANCELLED, True)
+
+        # force-cancelling status - can't either cancel or force-cancel
+        attempt_cancel_on_status(models.Execution.FORCE_CANCELLING)
+        attempt_cancel_on_status(models.Execution.FORCE_CANCELLING, True)
+
+        # cancelling state - can only override with force-cancel
+        attempt_cancel_on_status(models.Execution.CANCELLING)
+        attempt_cancel_on_status(models.Execution.CANCELLING, True, False)
+
+        # pending and started states - can both cancel and force-cancel
+        attempt_cancel_on_status(models.Execution.PENDING, False, False)
+        attempt_cancel_on_status(models.Execution.PENDING, True, False)
+        attempt_cancel_on_status(models.Execution.STARTED, False, False)
+        attempt_cancel_on_status(models.Execution.STARTED, True, False)
 
     def test_cancel_non_existent_execution(self):
         resource_path = '/executions/do_not_exist'
@@ -126,18 +189,20 @@ class ExecutionsTestCase(BaseServerTestCase):
             'action': 'cancel'
         })
         self.assertEquals(cancel_response.status_code, 404)
-        self.assertEquals(cancel_response.json['error_code'],
-                          manager_exceptions.NOT_FOUND_ERROR_CODE)
+        self.assertEquals(
+            cancel_response.json['error_code'],
+            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
 
-    def test_cancel_bad_action(self):
+    def test_execution_bad_action(self):
         execution = self.test_get_execution_by_id()
         resource_path = '/executions/{0}'.format(execution['id'])
         cancel_response = self.post(resource_path, {
             'action': 'not_really_cancel'
         })
         self.assertEquals(cancel_response.status_code, 400)
-        self.assertEquals(cancel_response.json['error_code'],
-                          manager_exceptions.BAD_PARAMETERS_ERROR_CODE)
+        self.assertEquals(
+            cancel_response.json['error_code'],
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
 
     def test_cancel_no_action(self):
         execution = self.test_get_execution_by_id()

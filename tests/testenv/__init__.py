@@ -13,9 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
+__author__ = 'ran'
 
-import unittest
 import shutil
 import distutils.core
 import tempfile
@@ -28,6 +27,7 @@ import threading
 import re
 import uuid
 import time
+import unittest
 from os import path
 from functools import wraps
 from multiprocessing import Process
@@ -37,13 +37,13 @@ import yaml
 import pika
 import json
 import elasticsearch
+import requests
 from celery import Celery
 from cloudify.constants import MANAGEMENT_NODE_ID
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient
 from cloudify_rest_client import CloudifyClient
-
+from cloudify_rest_client.executions import Execution
 import plugins
+import mock_workflows
 
 
 CLOUDIFY_MANAGEMENT_QUEUE = MANAGEMENT_NODE_ID
@@ -57,6 +57,16 @@ MANAGER_REST_PORT = 8100
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
+
+PROVIDER_NAME = 'integration_tests'
+PROVIDER_CONTEXT = {
+    'cloudify': {
+        'workflows': {
+            'task_retries': 0,
+            'task_retry_interval': 0
+        }
+    }
+}
 
 root = logging.getLogger()
 ch = logging.StreamHandler(sys.stdout)
@@ -76,7 +86,7 @@ logger.setLevel(logging.DEBUG)
 
 RABBITMQ_POLLING_KEY = 'RABBITMQ_POLLING'
 
-RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ\
+RABBITMQ_POLLING_ENABLED = RABBITMQ_POLLING_KEY not in os.environ \
     or os.environ[RABBITMQ_POLLING_KEY].lower() != 'false'
 
 RABBITMQ_VERBOSE_MESSAGES_KEY = 'RABBITMQ_VERBOSE_MESSAGES'
@@ -112,8 +122,7 @@ class ManagerRestProcess(object):
         self.file_server_uploaded_blueprints_folder = \
             file_server_uploaded_blueprints_folder
         self.file_server_resources_uri = file_server_resources_uri
-        self.client = CosmoManagerRestClient('localhost',
-                                             port=port)
+        self.client = CloudifyClient('localhost', port=port)
         self.tempdir = tempdir
 
     def start(self, timeout=10):
@@ -124,7 +133,7 @@ class ManagerRestProcess(object):
             'file_server_base_uri': self.file_server_base_uri,
             'workflow_service_base_uri': self.workflow_service_base_uri,
             'file_server_uploaded_blueprints_folder':
-            self.file_server_uploaded_blueprints_folder,
+                self.file_server_uploaded_blueprints_folder,
             'file_server_resources_uri': self.file_server_resources_uri,
             'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
@@ -135,19 +144,20 @@ class ManagerRestProcess(object):
 
         env = os.environ.copy()
         env['MANAGER_REST_CONFIG_PATH'] = config_path
+        env['CLOUDIFY_WORKFLOWS_QUEUE'] = CLOUDIFY_WORKFLOWS_QUEUE
 
         python_path = sys.executable
 
         manager_rest_command = [
             '{0}/gunicorn'.format(dirname(python_path)),
-            '-w', '1',
+            '-w', '2',
             '-b', '0.0.0.0:{0}'.format(self.port),
             '--timeout', '300',
             'server:app'
         ]
 
-        logger.info('Starting manager-rest with: {0}'
-                    .format(manager_rest_command))
+        logger.info('Starting manager-rest with: {0}'.format(
+            manager_rest_command))
 
         self.process = subprocess.Popen(manager_rest_command,
                                         env=env,
@@ -166,7 +176,7 @@ class ManagerRestProcess(object):
 
     def started(self):
         try:
-            self.client.list_blueprints()
+            self.client.manager.get_status()
             return True
         except BaseException:
             return False
@@ -186,108 +196,6 @@ class ManagerRestProcess(object):
                          'rest-service/manager_rest')
 
 
-class RuoteServiceProcess(object):
-
-    def __init__(self, tempdir, port=8101, num_of_workers=1):
-        self._pid = None
-        self._port = port
-        self._process = None
-        self._tempdir = tempdir
-        self._num_of_workers = num_of_workers
-
-    def _get_installed_ruby_packages(self):
-        pass
-
-    def _verify_ruby_environment(self):
-        """ Verifies there's a valid Ruby environment.
-        RuntimeError is raised if not
-        """
-        try:
-            subprocess.check_output(['ruby', '--version']).startswith('ruby')
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Failed finding ruby installation")
-
-    def _verify_service_responsiveness(self, timeout=120):
-        import urllib2
-        service_url = "http://localhost:{0}".format(self._port)
-        up = False
-        deadline = time.time() + timeout
-        res = None
-        while time.time() < deadline:
-            try:
-                res = urllib2.urlopen(service_url)
-                up = res.code == 200
-                break
-            except BaseException:
-                pass
-            time.sleep(1)
-        if not up:
-            raise RuntimeError("Ruote service is not responding @ {0} "
-                               "(response: {1})".format(service_url, res))
-
-    def _verify_service_started(self, timeout=30):
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            self._pid = self._get_serice_pid()
-            if self._pid is not None:
-                break
-            time.sleep(1)
-        if self._pid is None:
-            raise RuntimeError("Failed to start ruote service within a {0} "
-                               "seconds timeout".format(timeout))
-
-    def _verify_service_ended(self, timeout=10):
-        pid = self._pid
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            pid = self._get_serice_pid()
-            if pid is None:
-                break
-            time.sleep(1)
-        if pid is not None:
-            raise RuntimeError("Failed to stop ruote service within a {0} "
-                               "seconds timeout".format(timeout))
-
-    def _get_serice_pid(self):
-        from subprocess import CalledProcessError
-        pattern = "\w*\s*(\d*).*"
-        try:
-            output = subprocess.check_output(
-                "ps aux | grep 'unicorn master' | grep -v grep", shell=True)
-            match = re.match(pattern, output)
-            if match:
-                return int(match.group(1))
-        except CalledProcessError:
-            pass
-        return None
-
-    def start(self):
-        startup_script_path = path.realpath(path.join(path.dirname(__file__),
-                                                      '..'))
-        script = path.join(startup_script_path, 'run_ruote_service.sh')
-        command = [script, str(self._port)]
-        env = os.environ.copy()
-        env['RUOTE_STORAGE_DIR_PATH'] = path.join(self._tempdir,
-                                                  'ruote_storage')
-        env['UNICORN_NUMBER_OF_WORKERS'] = str(self._num_of_workers)
-        env['INTEG_TEST_ENV'] = 'true'
-        logger.info("Starting Ruote service with command {0}".format(command))
-        self._process = subprocess.Popen(command,
-                                         cwd=startup_script_path,
-                                         env=env)
-        self._verify_service_started(timeout=60)
-        self._verify_service_responsiveness()
-        logger.info("Ruote service started [pid=%s]", self._pid)
-
-    def close(self):
-        if self._process:
-            self._process.kill()
-        if self._pid:
-            logger.info("Shutting down Ruote service [pid=%s]", self._pid)
-            os.system("kill -9 {0}".format(self._pid))
-            self._verify_service_ended()
-
-
 class CeleryWorkerProcess(object):
     _process = None
 
@@ -298,7 +206,8 @@ class CeleryWorkerProcess(object):
                  name,
                  queues,
                  includes,
-                 hostname):
+                 hostname,
+                 concurrency=1):
         self._name = name
         self._celery_pid_file = path.join(tempdir, "celery-{}.pid".format(
             name))
@@ -310,6 +219,7 @@ class CeleryWorkerProcess(object):
         self._includes = includes
         self._queues = ','.join(queues)
         self._hostname = hostname
+        self._concurrency = concurrency
 
     def start(self):
         python_path = sys.executable
@@ -324,7 +234,7 @@ class CeleryWorkerProcess(object):
             "--logfile={0}".format(self._celery_log_file),
             "--pidfile={0}".format(self._celery_pid_file),
             "--queues={0}".format(self._queues),
-            "--concurrency=1",
+            "--concurrency={0}".format(self._concurrency),
             "--include={0}".format(','.join(self._includes))
         ]
 
@@ -345,8 +255,8 @@ class CeleryWorkerProcess(object):
         environment['AGENT_IP'] = 'localhost'
         environment['VIRTUALENV'] = dirname(dirname(python_path))
 
-        logger.info("Starting celery worker with command {0}"
-                    .format(celery_command))
+        logger.info("Starting celery worker with command {0}".format(
+            celery_command))
         self._process = subprocess.Popen(celery_command, env=environment)
 
         timeout = 60
@@ -360,19 +270,19 @@ class CeleryWorkerProcess(object):
             if celery_log is not None:
                 logger.error("{0} content:\n{1}".format(
                     self._celery_log_file, celery_log))
-            raise RuntimeError("Failed to start celery {0} worker: {1} "
-                               "- process "
-                               "did not start after {2} seconds"
-                               .format(self._name,
-                                       self._process.returncode, timeout))
+            raise RuntimeError(
+                "Failed to start celery {0} worker: {1} - process did not "
+                "start after {2} seconds".format(self._name,
+                                                 self._process.returncode,
+                                                 timeout))
 
         os.chdir(prevdir)
         logger.info("Celery worker started [pid=%s]", self._process.pid)
 
     def close(self):
         if self._process:
-            logger.info("Shutting down celery {} worker [pid={}]"
-                        .format(self._name, self._process.pid))
+            logger.info("Shutting down celery {} worker [pid={}]".format(
+                self._name, self._process.pid))
             self._process.kill()
 
     def _get_celery_process_ids(self):
@@ -389,12 +299,12 @@ class CeleryWorkerProcess(object):
 
     def restart(self):
         """
-        Restarts the single celery worker process.
-        Celery's child process will have a different PID.
+        Restarts the celery worker process.
+        Celery's child processes will have a different PID.
         """
         process_ids = self._get_celery_process_ids()
         for pid in process_ids:
-            # kill celery child process
+            # kill celery child processes
             if pid != str(self._process.pid):
                 logger.info(
                     "Killing celery {} worker [pid={}]".format(
@@ -402,7 +312,7 @@ class CeleryWorkerProcess(object):
                 os.system('kill -9 {0}'.format(pid))
         timeout = time.time() + 30
         # wait until celery master creates a new child
-        while len(self._get_celery_process_ids()) != 2:
+        while len(self._get_celery_process_ids()) != 1+self._concurrency:
             time.sleep(1)
             if time.time() > timeout:
                 raise RuntimeError(
@@ -420,6 +330,9 @@ class CeleryWorkerProcess(object):
     @staticmethod
     def _build_includes():
         includes = []
+        # adding the mock workflow plugin for workers installation
+        includes.append("system_workflows.workers_installation")
+
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path \
             .join(dirname(dirname(abspath(__file__))), "plugins")
@@ -430,34 +343,38 @@ class CeleryWorkerProcess(object):
             if os.path.exists(tasks_path):
                 includes.append("{0}.tasks".format(plugin_dir_name))
             else:
-                logger.warning("Could not find tasks.py file under plugin {0}."
-                               " This plugin will not be loaded!"
-                               .format(plugin_dir_name))
+                logger.warning(
+                    "Could not find tasks.py file under plugin {0}. This "
+                    "plugin will not be loaded!".format(plugin_dir_name))
         return includes
 
 
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
     def __init__(self, tempdir, plugins_tempdir,
-                 manager_rest_port):
+                 manager_rest_port, use_mock_workers_installation=True):
+        includes = ["workflows.default", "plugin_installer.tasks"]
+        if use_mock_workers_installation:
+            includes.append("mock_workflows.workflows")
         super(CeleryWorkflowsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
-            includes=["workflows.default", "plugin_installer.tasks"],
+            includes=includes,
             hostname='cloudify.workflows')
 
 
 class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
 
     def __init__(self, tempdir, plugins_tempdir,
-                 manager_rest_port):
+                 manager_rest_port, concurrency=1):
         super(CeleryOperationsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
             name='operations',
             queues=CELERY_QUEUES_LIST,
             includes=self._build_includes(),
-            hostname='cloudify.management')
+            hostname='cloudify.management',
+            concurrency=concurrency)
 
 
 class CeleryTestWorkerProcess(CeleryWorkerProcess):
@@ -507,9 +424,10 @@ class RiemannProcess(object):
         logger.info("Starting riemann server...")
         self.pid = self._find_existing_riemann_process()
         if self.pid:
-            logger.info("Riemann server is already running [pid={0}]"
-                        .format(self.pid))
+            logger.info("Riemann server is already running [pid={0}]".format(
+                self.pid))
             return
+
         command = [
             'riemann',
             self._config_path
@@ -524,15 +442,15 @@ class RiemannProcess(object):
         self._detector.start()
         timeout = 60
         if not self._event.wait(timeout):
-            raise RuntimeError("Unable to start riemann process:\n{0} "
-                               "(timed out after {1} seconds)"
-                               .format('\n'.join(self._riemann_logs), timeout))
+            raise RuntimeError(
+                "Unable to start riemann process:\n{0} (timed out after "
+                "{1} seconds)".format('\n'.join(self._riemann_logs), timeout))
         logger.info("Riemann server started [pid={0}]".format(self.pid))
 
     def close(self):
         if self.pid:
-            logger.info("Shutting down riemann server [pid={0}]"
-                        .format(self.pid))
+            logger.info("Shutting down riemann server [pid={0}]".format(
+                self.pid))
             os.system("kill {0}".format(self.pid))
 
     def _find_existing_riemann_process(self):
@@ -747,6 +665,36 @@ def start_events_and_logs_polling():
     polling_thread.start()
 
 
+class TestCase(unittest.TestCase):
+    """
+    A test case for cosmo tests.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        TestEnvironment.create(TestEnvironmentScope.CLASS)
+
+    @classmethod
+    def tearDownClass(cls):
+        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
+
+    def setUp(self):
+        self.logger = logging.getLogger(self._testMethodName)
+        self.logger.setLevel(logging.INFO)
+        self.client = create_rest_client()
+        TestEnvironment.clean_plugins_tempdir()
+        restore_provider_context()
+
+    def tearDown(self):
+        TestEnvironment.restart_celery_operations_worker()
+        TestEnvironment.restart_celery_workflows_worker()
+        TestEnvironment.reset_elasticsearch_data()
+
+    @staticmethod
+    def do_assertions(assertions_func, timeout=10, *args, **kwargs):
+        return do_retries(assertions_func, timeout, AssertionError, **kwargs)
+
+
 class TestEnvironment(object):
     """
     Creates the cosmo test environment:
@@ -766,15 +714,14 @@ class TestEnvironment(object):
     _tempdir = None
     _plugins_tempdir = None
     _scope = None
-    _ruote_service = None
     _file_server_process = None
 
-    def __init__(self, scope):
+    def __init__(self, scope, use_mock_workers_installation=True):
         try:
             TestEnvironmentScope.validate(scope)
 
-            logger.info("Setting up test environment... [scope={0}]"
-                        .format(scope))
+            logger.info("Setting up test environment... [scope={0}]".format(
+                scope))
             self._scope = scope
 
             # temp directory
@@ -807,7 +754,7 @@ class TestEnvironment(object):
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
                 # package / egg folder
                 workflow_plugin_path = path.dirname(workflow_plugin_path)
-            except:
+            except ImportError:
                 # cloudify-manager/tests/plugins/__init__.py(c)
                 workflow_plugin_path = path.abspath(plugins.__file__)
                 # cloudify-manager/tests/plugins
@@ -821,17 +768,42 @@ class TestEnvironment(object):
                                                  'workflows')
 
             plugins_path = path.dirname(path.realpath(plugins.__file__))
+            mock_workflow_plugins = path.dirname(path.realpath(
+                mock_workflows.__file__))
+
             app_path = path.join(self._tempdir, "plugins")
-            for plugin_path in [plugins_path, workflow_plugin_path]:
-                logger.info("Copying %s to %s", plugin_path, app_path)
-                distutils.dir_util.copy_tree(plugin_path, app_path)
+            # copying plugins
+            if not use_mock_workers_installation:
+                for plugin_path in [plugins_path, workflow_plugin_path]:
+                    logger.info("Copying %s to %s", plugin_path, app_path)
+                    distutils.dir_util.copy_tree(plugin_path, app_path)
+            else:
+                # copying plugins and mock workflows
+                for plugin_path in [plugins_path, mock_workflow_plugins]:
+                    logger.info("Copying %s to %s", plugin_path, app_path)
+                    distutils.dir_util.copy_tree(plugin_path, app_path)
+                # copying the actual default install/uninstall workflow
+                # plugin manually
+                workflow_plugin_workflows_path = path.join(
+                    workflow_plugin_path, 'workflows')
+                app_workflows_path = path.join(app_path, 'workflows')
+                logger.info("Copying %s to %s",
+                            workflow_plugin_workflows_path,
+                            app_workflows_path)
+                distutils.dir_util.copy_tree(
+                    workflow_plugin_workflows_path, app_workflows_path)
 
             # celery operations worker
+            # if using real worker installation workflow then 2 workers are
+            # needed on the management queue
+            num_of_management_workers = \
+                1 if use_mock_workers_installation else 2
             self._celery_operations_worker_process = \
                 CeleryOperationsWorkerProcess(
                     self._tempdir,
                     self._plugins_tempdir,
-                    MANAGER_REST_PORT)
+                    MANAGER_REST_PORT,
+                    num_of_management_workers)
             self._celery_operations_worker_process.start()
 
             # celery workflows worker
@@ -839,7 +811,8 @@ class TestEnvironment(object):
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir,
                     self._plugins_tempdir,
-                    MANAGER_REST_PORT)
+                    MANAGER_REST_PORT,
+                    use_mock_workers_installation)
             self._celery_workflows_worker_process.start()
 
             # workaround to update path
@@ -879,23 +852,14 @@ class TestEnvironment(object):
                 self._tempdir)
             self._manager_rest_process.start()
 
-            # ruote service
-            # currently, only a single unicorn worker is supported
-            num_of_unicorn_workers = 1
-            self._ruote_service = RuoteServiceProcess(
-                self._tempdir,
-                num_of_workers=num_of_unicorn_workers)
-
-            self._ruote_service.start()
-
         except BaseException as error:
             logger.error("Error in test environment setup: %s", error)
             self._destroy()
             raise
 
     def _destroy(self):
-        logger.info("Destroying test environment... [scope={0}]"
-                    .format(self._scope))
+        logger.info("Destroying test environment... [scope={0}]".format(
+            self._scope))
         if self._riemann_process:
             self._riemann_process.close()
         if self._elasticsearch_process:
@@ -906,8 +870,6 @@ class TestEnvironment(object):
             self._celery_workflows_worker_process.close()
         if self._manager_rest_process:
             self._manager_rest_process.close()
-        if self._ruote_service:
-            self._ruote_service.close()
         if self._file_server_process:
             self._file_server_process.stop()
         if self._tempdir:
@@ -922,13 +884,16 @@ class TestEnvironment(object):
             queue)
 
     @staticmethod
-    def create(scope=TestEnvironmentScope.PACKAGE):
+    def create(scope=TestEnvironmentScope.PACKAGE,
+               use_mock_workers_installation=True):
         """
         Creates the test environment if not already created.
         :param scope: The scope the test environment is created at.
         """
         if not TestEnvironment._instance:
-            TestEnvironment._instance = TestEnvironment(scope)
+            TestEnvironment._instance = TestEnvironment(
+                scope,
+                use_mock_workers_installation)
         return TestEnvironment._instance
 
     @staticmethod
@@ -939,7 +904,7 @@ class TestEnvironment(object):
         :param scope: The scope this method is invoked from.
         """
         if TestEnvironment._instance and \
-           (TestEnvironment._instance._scope == scope):
+                (TestEnvironment._instance._scope == scope):
             TestEnvironment._instance._destroy()
 
     @staticmethod
@@ -961,16 +926,16 @@ class TestEnvironment(object):
     @staticmethod
     def restart_celery_operations_worker():
         if TestEnvironment._instance and \
-           (TestEnvironment._instance._celery_operations_worker_process):
-            TestEnvironment._instance._celery_operations_worker_process\
+                (TestEnvironment._instance._celery_operations_worker_process):
+            TestEnvironment._instance._celery_operations_worker_process \
                 .restart()
 
     @staticmethod
     def restart_celery_workflows_worker():
         if TestEnvironment._instance and \
                 (TestEnvironment._instance._celery_workflows_worker_process):
-                TestEnvironment._instance._celery_workflows_worker_process\
-                    .restart()
+            TestEnvironment._instance._celery_workflows_worker_process \
+                .restart()
 
     @staticmethod
     def reset_elasticsearch_data():
@@ -984,57 +949,7 @@ class TestEnvironment(object):
         shutil.copy(source_path, riemann_config_path)
 
 
-class TestCase(unittest.TestCase):
-    """
-    A test case for cosmo workflow tests.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        TestEnvironment.create(TestEnvironmentScope.CLASS)
-
-    @classmethod
-    def tearDownClass(cls):
-        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
-
-    def setUp(self):
-        self.logger = logging.getLogger(self._testMethodName)
-        self.logger.setLevel(logging.INFO)
-        self.client = create_new_rest_client()
-        TestEnvironment.clean_plugins_tempdir()
-
-    def tearDown(self):
-        TestEnvironment.restart_celery_operations_worker()
-        TestEnvironment.restart_celery_workflows_worker()
-        TestEnvironment.reset_elasticsearch_data()
-
-    def send_task(self, task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
-        task_name = task.name.replace("plugins.", "")
-        return celery.send_task(
-            name=task_name,
-            args=args,
-            queue=queue)
-
-    def do_assertions(self, assertions_func, timeout=10):
-        deadline = time.time() + timeout
-        while True:
-            try:
-                assertions_func()
-                break
-            except AssertionError:
-                if time.time() > deadline:
-                    raise
-                time.sleep(1)
-
-    def create_celery_worker(self, queue):
-        return TestEnvironment.create_celery_worker(queue)
-
-
 def create_rest_client():
-    return CosmoManagerRestClient('localhost', port=MANAGER_REST_PORT)
-
-
-def create_new_rest_client():
     return CloudifyClient('localhost', port=MANAGER_REST_PORT)
 
 
@@ -1047,25 +962,20 @@ def get_resource(resource):
     resources_path = path.dirname(resources.__file__)
     resource_path = path.join(resources_path, resource)
     if not path.exists(resource_path):
-        raise RuntimeError("Resource '{0}' not found in: {1}"
-                           .format(resource, resource_path))
+        raise RuntimeError("Resource '{0}' not found in: {1}".format(
+            resource, resource_path))
     return resource_path
 
 
-def run_search(query):
-    client = create_rest_client()
-    return client.run_search(query)
-
-
 def wait_for_execution_to_end(execution, timeout=240):
-    client = create_new_rest_client()
+    client = create_rest_client()
     deadline = time.time() + timeout
-    while execution.status not in ['terminated', 'failed']:
+    while execution.status not in Execution.END_STATES:
         time.sleep(1)
         execution = client.executions.get(execution.id)
         if time.time() > deadline:
             raise TimeoutException()
-    if execution.status == 'failed':
+    if execution.status == Execution.FAILED:
         raise RuntimeError(
             'Workflow execution failed: {0} [{1}]'.format(execution.error,
                                                           execution.status))
@@ -1080,13 +990,17 @@ def deploy_application(dsl_path,
     """
     A blocking method which deploys an application from the provided dsl path.
     """
-    client = create_new_rest_client()
+    client = create_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
     blueprint = client.blueprints.upload(dsl_path, blueprint_id)
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
     deployment = client.deployments.create(blueprint.id, deployment_id)
+
+    do_retries(verify_workers_installation_complete, 30,
+               deployment_id=deployment_id)
+
     execution = client.deployments.execute(deployment_id, 'install')
 
     if wait_for_execution:
@@ -1096,12 +1010,26 @@ def deploy_application(dsl_path,
     return deployment, execution.id
 
 
+def verify_workers_installation_complete(deployment_id):
+    # a workaround for waiting for the workers installation to complete
+    client = create_rest_client()
+    execs = client.deployments.list_executions(deployment_id)
+    if not execs \
+        or execs[0].status != Execution.TERMINATED \
+            or execs[0].workflow_id != 'workers_installation':
+        raise RuntimeError(
+            "Expected a single execution for workflow "
+            "'workers_installation' with status 'terminated'; "
+            "Found these executions instead: {0}".format(
+                json.dumps(execs, indent=2)))
+
+
 def undeploy_application(deployment_id, timeout=240):
     """
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    client = create_new_rest_client()
+    client = create_rest_client()
     execution = client.deployments.execute(deployment_id,
                                            'uninstall')
     wait_for_execution_to_end(execution, timeout=timeout)
@@ -1111,29 +1039,8 @@ def undeploy_application(deployment_id, timeout=240):
             'Workflow execution failed: {0}'.format(execution.error))
 
 
-def validate_dsl(blueprint_id, timeout=240):
-    """
-    A blocking method which validates a dsl from the provided dsl path.
-    """
-    client = create_rest_client()
-    response = client.validate_blueprint(blueprint_id)
-    if response.status != 'valid':
-        raise RuntimeError('Blueprint {0} is not valid (status: {1})'
-                           .format(blueprint_id, response.status))
-
-
-def post_provider_context(name, provider_context):
-    client = create_rest_client()
-    return client.post_provider_context(name, provider_context)
-
-
-def get_provider_context():
-    client = create_rest_client()
-    return client.get_provider_context()
-
-
 def is_node_started(node_id):
-    client = create_new_rest_client()
+    client = create_rest_client()
     node_instance = client.node_instances.get(node_id)
     return node_instance['state'] == 'started'
 
@@ -1141,6 +1048,18 @@ def is_node_started(node_id):
 class TimeoutException(Exception):
     def __init__(self, *args):
         Exception.__init__(self, args)
+
+
+def do_retries(func, timeout=10, exception_class=BaseException, **kwargs):
+    deadline = time.time() + timeout
+    while True:
+        try:
+            func(**kwargs)
+            break
+        except exception_class:
+            if time.time() > deadline:
+                raise
+            time.sleep(1)
 
 
 def timeout(seconds=60):
@@ -1155,3 +1074,22 @@ def timeout(seconds=60):
                     'test timeout exceeded [timeout={0}'.format(seconds))
         return wraps(func)(wrapper)
     return decorator
+
+
+def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
+    task_name = task.name.replace("plugins.", "")
+    return celery.send_task(
+        name=task_name,
+        args=args,
+        queue=queue)
+
+
+def delete_provider_context():
+    requests.delete('http://localhost:9200'
+                    '/cloudify_storage/provider_context/CONTEXT')
+
+
+def restore_provider_context():
+    delete_provider_context()
+    client = create_rest_client()
+    client.manager.create_context(PROVIDER_NAME, PROVIDER_CONTEXT)

@@ -33,12 +33,11 @@ class SerializableObject(object):
 
 class BlueprintState(SerializableObject):
 
-    fields = {'plan', 'id', 'source', 'created_at', 'updated_at'}
+    fields = {'plan', 'id', 'created_at', 'updated_at'}
 
     def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
-        self.source = kwargs['source']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 
@@ -59,14 +58,23 @@ class Deployment(SerializableObject):
 
 class Execution(SerializableObject):
 
-    fields = {'id', 'status', 'deployment_id', 'internal_workflow_id',
+    TERMINATED = 'terminated'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+    PENDING = 'pending'
+    STARTED = 'started'
+    CANCELLING = 'cancelling'
+    FORCE_CANCELLING = 'force_cancelling'
+
+    END_STATES = [TERMINATED, FAILED, CANCELLED]
+
+    fields = {'id', 'status', 'deployment_id',
               'workflow_id', 'blueprint_id', 'created_at', 'error'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
-        self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']

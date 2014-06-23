@@ -52,8 +52,10 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEqual(400, resp.status_code)
         self.assertTrue('There exist deployments for this blueprint' in
                         resp.json['message'])
-        self.assertEquals(resp.json['error_code'],
-                          manager_exceptions.DEPENDENT_EXISTS_ERROR_CODE)
+        self.assertEquals(
+            resp.json['error_code'],
+            manager_exceptions.DependentExistsError
+                .DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_deployment_already_exists(self):
         (blueprint_id,
@@ -67,7 +69,7 @@ class DeploymentsTestCase(BaseServerTestCase):
                         deployment_response.json['message'])
         self.assertEqual(409, deployment_response.status_code)
         self.assertEqual(deployment_response.json['error_code'],
-                         manager_exceptions.CONFLICT_ERROR_CODE)
+                         manager_exceptions.ConflictError.CONFLICT_ERROR_CODE)
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -119,9 +121,15 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(execution['deployment_id'],
                           deployment_response['id'])
         self.assertIsNotNone(execution['created_at'])
-        get_execution = self.get(resource_path).json
-        self.assertEquals(1, len(get_execution))
-        self.assertEquals(execution, get_execution[0])
+        executions = self.get(resource_path).json
+        # expecting two exectuions - one 'install' and one
+        # 'workers_installation'
+        self.assertEquals(2, len(executions))
+        self.assertIn(execution['id'],
+                      [executions[0]['id'], executions[1]['id']])
+        self.assertIn('workers_installation',
+                      [executions[1]['workflow_id'],
+                       executions[0]['workflow_id']])
 
     def test_executing_nonexisting_workflow(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -133,14 +141,16 @@ class DeploymentsTestCase(BaseServerTestCase):
         })
         self.assertEqual(400, response.status_code)
         self.assertEquals(response.json['error_code'],
-                          manager_exceptions.NONEXISTENT_WORKFLOW_ERROR_CODE)
+                          manager_exceptions.NonexistentWorkflowError
+                          .NONEXISTENT_WORKFLOW_ERROR_CODE)
 
     def test_listing_executions_for_nonexistent_deployment(self):
         resource_path = '/deployments/{0}/executions'.format('doesnotexist')
         response = self.get(resource_path)
         self.assertEqual(404, response.status_code)
-        self.assertEquals(response.json['error_code'],
-                          manager_exceptions.NOT_FOUND_ERROR_CODE)
+        self.assertEquals(
+            response.json['error_code'],
+            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -198,7 +208,8 @@ class DeploymentsTestCase(BaseServerTestCase):
             deployment_id))
         self.assertEquals(400, delete_deployment_response.status_code)
         self.assertEquals(delete_deployment_response.json['error_code'],
-                          manager_exceptions.DEPENDENT_EXISTS_ERROR_CODE)
+                          manager_exceptions.DependentExistsError
+                          .DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_delete_deployment_with_uninitialized_nodes(self):
         # simulates a deletion of a deployment right after its creation
@@ -255,8 +266,9 @@ class DeploymentsTestCase(BaseServerTestCase):
         # trying to delete a nonexistent deployment
         resp = self.delete('/deployments/nonexistent-deployment')
         self.assertEquals(404, resp.status_code)
-        self.assertEquals(resp.json['error_code'],
-                          manager_exceptions.NOT_FOUND_ERROR_CODE)
+        self.assertEquals(
+            resp.json['error_code'],
+            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
 
     def test_get_nodes_of_deployment(self):
 

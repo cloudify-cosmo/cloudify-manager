@@ -23,7 +23,7 @@ from testenv import deploy_application as deploy
 class TestDeploymentWorkflows(TestCase):
 
     def test_deployment_workflows(self):
-        dsl_path = resource("dsl/basic.yaml")
+        dsl_path = resource("dsl/custom_workflow_mapping.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         blueprint_id = deployment.blueprint_id
@@ -31,6 +31,6 @@ class TestDeploymentWorkflows(TestCase):
         self.assertEqual(blueprint_id, workflows.blueprint_id)
         self.assertEqual(deployment_id, workflows.deployment_id)
         self.assertEqual(3, len(workflows.workflows))
-        self.assertEqual('mock_workflow', workflows.workflows[0].name)
+        self.assertEqual('uninstall', workflows.workflows[0].name)
         self.assertEqual('install', workflows.workflows[1].name)
-        self.assertEqual('uninstall', workflows.workflows[2].name)
+        self.assertEqual('custom', workflows.workflows[2].name)

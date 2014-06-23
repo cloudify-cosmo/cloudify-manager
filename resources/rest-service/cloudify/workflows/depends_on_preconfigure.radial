@@ -1,7 +1,0 @@
-define depends_on_preconfigure
-    execute_operation operation: 'cloudify.interfaces.relationship_lifecycle.preconfigure',
-                      relationship: '$v:relationship',
-                      run_on_node: 'source'
-    execute_operation operation: 'cloudify.interfaces.relationship_lifecycle.preconfigure',
-                      relationship: '$v:relationship',
-                      run_on_node: 'target'

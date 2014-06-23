@@ -17,8 +17,8 @@ __author__ = 'idanmo'
 
 import uuid
 
-from workflow_tests.testenv import TestCase
-from workflow_tests.testenv import get_resource as resource
+from testenv import TestCase
+from testenv import get_resource as resource
 
 
 class RestAPITest(TestCase):
@@ -72,3 +72,11 @@ class RestAPITest(TestCase):
         self.assertIsNone(instance.runtime_properties)
         self.assertEqual('uninitialized', instance.state)
         self.assertEqual(1, instance.version)
+
+    def test_blueprints(self):
+        blueprints = self.client.blueprints.list()
+        self.assertEqual(1, len(blueprints))
+        blueprint_id = blueprints[0].id
+        blueprint_by_id = self.client.blueprints.get(blueprint_id)
+        self.assertDictContainsSubset(blueprint_by_id, blueprints[0])
+        self.assertDictContainsSubset(blueprints[0], blueprint_by_id)
