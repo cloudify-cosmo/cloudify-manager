@@ -915,7 +915,7 @@ class DeploymentsIdExecutions(Resource):
         workflow_id = request.json['workflow_id']
         kwargs = request.json.get('parameters', None)
 
-        if kwargs.__class__ is not dict:
+        if kwargs is not None and kwargs.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
                 "request body's 'parameters' field must be a dict but"
                 " is of type {0}".format(kwargs.__class__.__name__))
