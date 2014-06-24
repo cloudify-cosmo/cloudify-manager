@@ -91,23 +91,19 @@ def uninstall(ctx, **kwargs):
     sequence.add(
         ctx.send_event('Stopping deployment operations worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.stop'),
         ctx.send_event('Uninstalling deployment operations worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.uninstall'))
 
     # uninstalling the workflows worker
     sequence.add(
         ctx.send_event('Stopping deployment workflows worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.stop',
             kwargs=WORKFLOWS_WORKER_PAYLOAD),
         ctx.send_event('Uninstall deployment workflows worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.uninstall',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
