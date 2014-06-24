@@ -10,9 +10,6 @@ imports:
 # Base type definitions
 ##################################################################################
 types:
-
-    
-
     # base type for provided cloudify types
     cloudify.types.base:
         interfaces:
@@ -43,7 +40,7 @@ types:
             cloudify.interfaces.host:
                 - get_state
         properties:
-            - install_agent: false
+            - install_agent: true
             - worker_config: {}
 
     # A Linux container with or without docker
