@@ -18,6 +18,7 @@ __author__ = 'dan'
 import os
 
 from manager_rest import config
+from manager_rest import manager_exceptions
 
 from manager_rest.celery_client import celery_client as client
 
@@ -41,10 +42,21 @@ class WorkflowClient(object):
         else:
             task_queue = '{}_workflows'.format(deployment_id)
 
-        workflow_properties = workflow.get('properties', {})
         if not kwargs:
             kwargs = {}
 
+        if 'parameters' in workflow:
+            for param in workflow['parameters']:
+                if type(param) == str:
+                    # parameter without a default value - ensure one was
+                    # provided via kwargs
+                    if param not in kwargs:
+                        raise\
+                            manager_exceptions.MissingExecutionParametersError(
+                                'Workflow {0} must be provided with a "{1}" '
+                                'parameter to execute'.format(name, param))
+
+        workflow_properties = workflow.get('properties', {})
         execution_properties = dict(workflow_properties.items() +
                                     kwargs.items())
 

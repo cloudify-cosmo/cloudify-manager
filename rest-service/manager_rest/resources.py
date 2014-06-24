@@ -60,6 +60,7 @@ def exceptions_handled(func):
                 manager_exceptions.InvalidBlueprintError,
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError,
+                manager_exceptions.MissingExecutionParametersError,
                 manager_exceptions.IllegalActionError) as e:
             abort_error(e)
     return wrapper

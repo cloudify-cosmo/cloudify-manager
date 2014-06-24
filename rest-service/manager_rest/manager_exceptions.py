@@ -118,3 +118,14 @@ class IllegalActionError(ManagerException):
         super(IllegalActionError, self).__init__(
             400, IllegalActionError.ILLEGAL_ACTION_ERROR_CODE,
             *args, **kwargs)
+
+
+class MissingExecutionParametersError(ManagerException):
+    MISSING_EXECUTION_PARAMETERS_ERROR_CODE =\
+        'missing_execution_parameters_error'
+
+    def __init__(self, *args, **kwargs):
+        super(MissingExecutionParametersError, self).__init__(
+            400, MissingExecutionParametersError.
+            MISSING_EXECUTION_PARAMETERS_ERROR_CODE,
+            *args, **kwargs)
