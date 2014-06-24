@@ -18,28 +18,14 @@ __author__ = 'idanmo'
 
 
 import os
-import time
 import tempfile
-from functools import wraps
 from StringIO import StringIO
+
 from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
 
-
-def retry(timeout=60):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-                try:
-                    return func(*args, **kwargs)
-                except Exception:
-                    time.sleep(5)
-            else:
-                return func(*args, **kwargs)
-        return wraps(func)(wrapper)
-    return decorator
+from cloudify.exceptions import NonRecoverableError
 
 
 def is_on_management_worker(ctx):
@@ -59,7 +45,6 @@ class FabricRunner(object):
             self.host_string = '%(user)s@%(host)s:%(port)s' % config
             self.key_filename = config['key']
 
-    @retry(timeout=120)
     def ping(self):
         self.run('echo "ping!"')
 
@@ -99,8 +84,8 @@ class FabricRunner(object):
         directory = "/".join(file_path.split("/")[:-1])
         if self.local:
             if os.path.exists(file_path):
-                raise IOError('Cannot put file, file already '
-                              'exists: {0}'.format(file_path))
+                raise NonRecoverableError('Cannot put file, file already '
+                                          'exists: {0}'.format(file_path))
             if use_sudo:
                 # we need to write a string to a file locally with sudo
                 # use echo for now
@@ -122,8 +107,8 @@ class FabricRunner(object):
                           key_filename=self.key_filename,
                           disable_known_hosts=True):
                 if exists(file_path):
-                    raise IOError('Cannot put file, file already '
-                                  'exists: {0}'.format(file_path))
+                    raise NonRecoverableError('Cannot put file, file already '
+                                              'exists: {0}'.format(file_path))
                 mkdir_command = 'mkdir -p {0}'.format(directory)
                 sudo(mkdir_command) if use_sudo else run(mkdir_command)
                 put(StringIO(content), file_path, use_sudo=use_sudo)

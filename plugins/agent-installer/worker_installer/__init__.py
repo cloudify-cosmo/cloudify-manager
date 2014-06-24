@@ -16,8 +16,11 @@
 __author__ = 'idanmo'
 
 import os
-import cloudify
 from functools import wraps
+
+import cloudify
+from cloudify.exceptions import NonRecoverableError
+
 from worker_installer.utils import (FabricRunner,
                                     is_on_management_worker)
 
@@ -31,7 +34,7 @@ def _find_type_in_kwargs(cls, all_args):
     if not result:
         return None
     if len(result) > 1:
-        raise RuntimeError(
+        raise NonRecoverableError(
             "Expected to find exactly one instance of {0} in "
             "kwargs but found {1}".format(cls, len(result)))
     return result[0]
@@ -43,7 +46,8 @@ def init_worker_installer(func):
         ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
-            raise RuntimeError('CloudifyContext not found in invocation args')
+            raise NonRecoverableError(
+                'CloudifyContext not found in invocation args')
         if ctx.properties and 'worker_config' in ctx.properties:
             worker_config = ctx.properties['worker_config']
         else:
@@ -60,7 +64,7 @@ def get_machine_ip(ctx):
         return ctx.properties['ip']
     if 'ip' in ctx.runtime_properties:
         return ctx.runtime_properties['ip']
-    raise ValueError(
+    raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
         ' for installing agent via ssh.'.format(ctx.node_id))
 
@@ -79,17 +83,18 @@ def _prepare_and_validate_autoscale_params(ctx, config):
     max_workers = config.get('max"workers', DEFAULT_MAX_WORKERS)
 
     if not str(min_workers).isdigit():
-        raise ValueError('min_workers is supposed to be a number '
-                         'but is: {0}'.format(min_workers))
+        raise NonRecoverableError('min_workers is supposed to be a number '
+                                  'but is: {0}'.format(min_workers))
     if not str(max_workers).isdigit():
-        raise ValueError('max_workers is supposed to be a number '
-                         'but is: {0}'.format(max_workers))
+        raise NonRecoverableError('max_workers is supposed to be a number '
+                                  'but is: {0}'.format(max_workers))
     min_workers = int(min_workers)
     max_workers = int(max_workers)
     if int(min_workers) > int(max_workers):
-        raise ValueError('min_workers cannot be greater than max_workers '
-                         '[min_workers={0}, max_workers={1}]'
-                         .format(min_workers, max_workers))
+        raise NonRecoverableError(
+            'min_workers cannot be greater than max_workers '
+            '[min_workers={0}, max_workers={1}]'
+            .format(min_workers, max_workers))
     config['min_workers'] = min_workers
     config['max_workers'] = max_workers
 
@@ -99,7 +104,7 @@ def _set_ssh_key(ctx, config):
         if ctx.bootstrap_context.cloudify_agent.agent_key_path:
             config['key'] = ctx.bootstrap_context.cloudify_agent.agent_key_path
         else:
-            raise ValueError(
+            raise NonRecoverableError(
                 'Missing ssh key path in worker configuration '
                 '[worker_config={0}'.format(config))
 
@@ -109,7 +114,7 @@ def _set_user(ctx, config):
         if ctx.bootstrap_context.cloudify_agent.user:
             config['user'] = ctx.bootstrap_context.cloudify_agent.user
         else:
-            raise ValueError(
+            raise NonRecoverableError(
                 'Missing user in worker configuration '
                 '[worker_config={0}'.format(config))
 
@@ -131,8 +136,9 @@ def prepare_configuration(ctx, worker_config):
         if 'MANAGEMENT_USER' in os.environ:
             worker_config['user'] = os.environ['MANAGEMENT_USER']
         else:
-            raise RuntimeError('Cannot determine user for deployment user:'
-                               'MANAGEMENT_USER is not set')
+            raise NonRecoverableError(
+                'Cannot determine user for deployment user:'
+                'MANAGEMENT_USER is not set')
         workflows_worker = worker_config['workflows_worker']\
             if 'workflows_worker' in worker_config else False
         suffix = '_workflows' if workflows_worker else ''
@@ -168,7 +174,7 @@ def prepare_configuration(ctx, worker_config):
         elif disable_requiretty_value.lower() == 'false':
             disable_requiretty = False
         else:
-            raise ValueError(
+            raise NonRecoverableError(
                 'Value for disable_requiretty property should be true/false '
                 'but is: {0}'.format(disable_requiretty_value))
     worker_config['disable_requiretty'] = disable_requiretty
