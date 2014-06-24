@@ -30,13 +30,7 @@ class MockWorkflowClient(object):
     def execute_workflow(name, workflow,
                          blueprint_id, deployment_id,
                          execution_id, kwargs=None):
-        return {
-            'type': 'workflow_state',
-            'id': 'yokimura-yoshomati',
-            'state': 'pending',
-            'error': None,
-            'created': datetime.now()
-        }
+        return kwargs or dict()
 
 
 class MockCeleryClient(object):

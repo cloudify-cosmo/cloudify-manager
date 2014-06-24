@@ -170,7 +170,7 @@ class BlueprintsManager(object):
                         running))
 
         execution_id = str(uuid.uuid4())
-        workflow_client().execute_workflow(
+        execution_parameters = workflow_client().execute_workflow(
             workflow_id,
             workflow,
             blueprint_id=deployment.blueprint_id,
@@ -185,7 +185,9 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,
-            error='')
+            error='',
+            parameters=self._get_only_user_execution_parameters(
+                execution_parameters))
 
         get_storage_manager().put_execution(new_execution.id, new_execution)
         return new_execution
@@ -395,6 +397,13 @@ class BlueprintsManager(object):
         context = self._build_context_from_deployment(
             deployment, workers_installation_task_id, wf_id,
             workers_install_task_name)
+        kwargs = {
+            'management_plugins_to_install':
+                deployment.plan['management_plugins_to_install'],
+            'workflow_plugins_to_install':
+                deployment.plan['workflow_plugins_to_install'],
+            '__cloudify_context': context
+        }
 
         new_execution = models.Execution(
             id=workers_installation_task_id,
@@ -403,19 +412,15 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
             deployment_id=deployment.id,
-            error='')
+            error='',
+            parameters=self._get_only_user_execution_parameters(kwargs))
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         celery_client().execute_task(
             workers_install_task_name,
             'cloudify.management',
             workers_installation_task_id,
-            kwargs={
-                'management_plugins_to_install':
-                deployment.plan['management_plugins_to_install'],
-                'workflow_plugins_to_install':
-                deployment.plan['workflow_plugins_to_install'],
-                '__cloudify_context': context})
+            kwargs=kwargs)
 
     def _build_context_from_deployment(self, deployment, task_id, wf_id,
                                        task_name):
@@ -442,6 +447,7 @@ class BlueprintsManager(object):
             workers_uninstallation_task_id,
             wf_id,
             workers_uninstall_task_name)
+        kwargs = {'__cloudify_context': context}
 
         new_execution = models.Execution(
             id=workers_uninstallation_task_id,
@@ -450,14 +456,15 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
             deployment_id=deployment_id,
-            error='')
+            error='',
+            parameters=self._get_only_user_execution_parameters(kwargs))
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         uninstall_workers_task_async_result = celery_client().execute_task(
             workers_uninstall_task_name,
             'cloudify.management',
             workers_uninstallation_task_id,
-            kwargs={'__cloudify_context': context})
+            kwargs=kwargs)
 
         # wait for workers uninstall to complete
         uninstall_workers_task_async_result.get(timeout=300,
@@ -468,6 +475,11 @@ class BlueprintsManager(object):
         if execution.status != models.Execution.TERMINATED:
             raise RuntimeError('Failed to uninstall deployment workers for '
                                'deployment {0}'.format(deployment_id))
+
+    def _get_only_user_execution_parameters(self, execution_parameters):
+        return {k: v for k, v in execution_parameters.iteritems()
+                if not k.startswith('__')}
+
 
     @staticmethod
     def _wait_for_count(expected_count, query_method, deployment_id):

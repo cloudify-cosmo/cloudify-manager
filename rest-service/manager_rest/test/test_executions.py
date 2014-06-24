@@ -54,6 +54,20 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return execution
 
+    def test_execute_with_parameters(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        parameters = {'param1': 'val1', 'param2': 'val2'}
+        execution = self.post(resource_path, {
+            'workflow_id': 'install',
+            'parameters': parameters
+        }).json
+        get_execution_resource = '/executions/{0}'.format(execution['id'])
+        execution = self.get(get_execution_resource).json
+        self.assertEqual(parameters, execution['parameters'])
+
     def test_bad_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)

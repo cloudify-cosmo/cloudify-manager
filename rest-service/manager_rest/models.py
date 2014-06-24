@@ -68,8 +68,8 @@ class Execution(SerializableObject):
 
     END_STATES = [TERMINATED, FAILED, CANCELLED]
 
-    fields = {'id', 'status', 'deployment_id',
-              'workflow_id', 'blueprint_id', 'created_at', 'error'}
+    fields = {'id', 'status', 'deployment_id', 'workflow_id', 'blueprint_id',
+              'created_at', 'error', 'parameters'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -79,6 +79,7 @@ class Execution(SerializableObject):
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
+        self.parameters = kwargs['parameters']
 
 
 class DeploymentNode(SerializableObject):

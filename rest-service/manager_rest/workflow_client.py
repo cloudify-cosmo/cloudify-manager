@@ -42,7 +42,13 @@ class WorkflowClient(object):
         else:
             task_queue = '{}_workflows'.format(deployment_id)
 
-        # merge parameters
+        # merge parameters - parameters passed directly to execution request
+        # override workflow parameters from the original plan. any
+        # parameters without a default value in the blueprint must
+        # appear in the execution request parameters.
+        # note that extra parameters in the execution requests (i.e.
+        # parameters not defined in the original workflow plan) will simply
+        # be ignored silently
         execution_parameters = dict()
         workflow_parameters = workflow.get('parameters', [])
         kwargs = kwargs or dict()
@@ -71,6 +77,7 @@ class WorkflowClient(object):
                               task_queue=task_queue,
                               task_id=execution_id,
                               kwargs=execution_parameters)
+        return execution_parameters
 
 
 def workflow_client():

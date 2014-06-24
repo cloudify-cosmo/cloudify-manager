@@ -110,7 +110,8 @@ class Execution(object):
         'deployment_id': fields.String,
         'status': fields.String,
         'error': fields.String,
-        'created_at': fields.String
+        'created_at': fields.String,
+        'parameters': fields.Raw
     }
 
     def __init__(self, **kwargs):
@@ -121,6 +122,7 @@ class Execution(object):
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
+        self.parameters = kwargs['parameters']
 
 
 @swagger.model
