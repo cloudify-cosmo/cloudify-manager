@@ -208,7 +208,7 @@ def fail(ctx, **_):
         exception = NonRecoverableError(message)
     elif ctx.properties.get('recoverable'):
         retry_after = ctx.properties['retry_after']
-        exception = RecoverableError(retry_after, message)
+        exception = RecoverableError(message, retry_after=retry_after)
     else:
         exception = RuntimeError(message)
 
