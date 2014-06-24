@@ -27,6 +27,7 @@ from cloudify.mocks import MockCloudifyContext
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
 
+
 @init_worker_installer
 def m(ctx, runner, worker_config, **kwargs):
     return worker_config
