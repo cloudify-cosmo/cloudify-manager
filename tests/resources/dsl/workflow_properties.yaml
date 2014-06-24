@@ -15,9 +15,9 @@ blueprint:
 workflows:
     execute_operation:
         mapping: mock_workflows.workflows.execute_operation
-        properties:
-            node_id: test_node
-            operation: test_interface.operation
-            properties:
-                key: test_key
-                value: test_value
+        parameters:
+            - node_id: test_node
+            - operation: test_interface.operation
+            - properties:
+                  key: test_key
+                  value: test_value

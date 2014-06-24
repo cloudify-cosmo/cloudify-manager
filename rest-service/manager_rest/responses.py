@@ -74,12 +74,14 @@ class Workflow(object):
 
     resource_fields = {
         'name': fields.String,
-        'created_at': fields.String
+        'created_at': fields.String,
+        'parameters': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.name = kwargs['name']
         self.created_at = kwargs['created_at']
+        self.parameters = kwargs['parameters']
 
 
 @swagger.model

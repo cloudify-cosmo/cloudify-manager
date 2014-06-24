@@ -943,9 +943,10 @@ class DeploymentsIdWorkflows(Resource):
         """
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
-        workflows = [responses.Workflow(name=wf_name, created_at=None) for
-                     wf_name in
-                     deployment_workflows.keys()]
+        workflows = [responses.Workflow(name=wf_name, created_at=None,
+                                        parameters=wf['parameters']) for
+                     wf_name, wf in
+                     deployment_workflows.iteritems()]
 
         return {
             'workflows': workflows,

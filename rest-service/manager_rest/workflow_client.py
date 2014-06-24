@@ -42,25 +42,26 @@ class WorkflowClient(object):
         else:
             task_queue = '{}_workflows'.format(deployment_id)
 
-        if not kwargs:
-            kwargs = {}
+        # merge parameters
+        execution_parameters = dict()
+        workflow_parameters = workflow.get('parameters', [])
+        kwargs = kwargs or dict()
+        for param in workflow_parameters:
+            if type(param) == str:
+                # parameter without a default value - ensure one was
+                # provided via kwargs
+                if param not in kwargs:
+                    raise \
+                        manager_exceptions.MissingExecutionParametersError(
+                            'Workflow {0} must be provided with a "{1}" '
+                            'parameter to execute'.format(name, param))
+                execution_parameters[param] = kwargs[param]
+            else:
+                param_name = param.keys()[0]
+                execution_parameters[param_name] = kwargs[param_name] if \
+                    param_name in kwargs else param[param_name]
 
-        if 'parameters' in workflow:
-            for param in workflow['parameters']:
-                if type(param) == str:
-                    # parameter without a default value - ensure one was
-                    # provided via kwargs
-                    if param not in kwargs:
-                        raise\
-                            manager_exceptions.MissingExecutionParametersError(
-                                'Workflow {0} must be provided with a "{1}" '
-                                'parameter to execute'.format(name, param))
-
-        workflow_properties = workflow.get('properties', {})
-        execution_properties = dict(workflow_properties.items() +
-                                    kwargs.items())
-
-        execution_properties['__cloudify_context'] = {
+        execution_parameters['__cloudify_context'] = {
             'workflow_id': name,
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
@@ -69,7 +70,7 @@ class WorkflowClient(object):
         client().execute_task(task_name=task_name,
                               task_queue=task_queue,
                               task_id=execution_id,
-                              kwargs=execution_properties)
+                              kwargs=execution_parameters)
 
 
 def workflow_client():
