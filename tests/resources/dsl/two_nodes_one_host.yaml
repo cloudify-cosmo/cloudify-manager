@@ -8,6 +8,8 @@ blueprint:
     nodes:
         -   name: "host"
             type: "cloudify.types.host"
+            properties:
+                install_agent: false
             interfaces:
                 cloudify.interfaces.lifecycle:
                     - create: cloudmock.tasks.provision
