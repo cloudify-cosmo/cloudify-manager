@@ -40,11 +40,9 @@ def install(ctx, **kwargs):
     sequence.add(
         ctx.send_event('Installing deployment operations worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.install'),
         ctx.send_event('Starting deployment operations worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.start'))
 
     if management_plugins:
@@ -53,23 +51,18 @@ def install(ctx, **kwargs):
             ctx.execute_task(
                 task_queue=ctx.deployment_id,
                 task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': management_plugins}))
-
-    sequence.add(
-        ctx.execute_task(
-            task_queue='cloudify.management',
-            task_name='worker_installer.tasks.restart'))
+                kwargs={'plugins': management_plugins}),
+            ctx.execute_task(
+                task_name='worker_installer.tasks.restart'))
 
     # installing the workflows worker
     sequence.add(
         ctx.send_event('Installing deployment workflows worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.install',
             kwargs=WORKFLOWS_WORKER_PAYLOAD),
         ctx.send_event('Starting deployment workflows worker'),
         ctx.execute_task(
-            task_queue='cloudify.management',
             task_name='worker_installer.tasks.start',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
@@ -79,13 +72,10 @@ def install(ctx, **kwargs):
             ctx.execute_task(
                 task_queue='{0}_workflows'.format(ctx.deployment_id),
                 task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': workflow_plugins}))
-
-    sequence.add(
-        ctx.execute_task(
-            task_queue='cloudify.management',
-            task_name='worker_installer.tasks.restart',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD))
+                kwargs={'plugins': workflow_plugins}),
+            ctx.execute_task(
+                task_name='worker_installer.tasks.restart',
+                kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     return graph.execute()
 
