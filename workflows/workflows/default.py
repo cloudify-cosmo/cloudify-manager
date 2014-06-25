@@ -25,6 +25,10 @@ from cloudify.workflows import tasks as workflow_tasks
 def install(ctx, **kwargs):
     """Default install workflow"""
 
+    # switch to graph mode (operations on the context return tasks instead of
+    # result instances)
+    ctx.graph_mode()
+
     # instantiate and new graph instance to build install tasks workflow
     graph = TaskDependencyGraph(ctx)
 
@@ -114,6 +118,10 @@ def install(ctx, **kwargs):
 @workflow
 def uninstall(ctx, **kwargs):
     """Default uninstall workflow"""
+
+    # switch to graph mode (operations on the context return tasks instead of
+    # result instances)
+    ctx.graph_mode()
 
     # instantiate a new graph instance to build uninstall tasks workflow
     graph = TaskDependencyGraph(ctx)

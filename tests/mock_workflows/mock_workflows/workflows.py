@@ -57,6 +57,7 @@ def sleep_with_cancel_support(ctx, **kwargs):
 @workflow
 def sleep_with_graph_usage(ctx, **kwargs):
 
+    ctx.graph_mode()
     graph = TaskDependencyGraph(ctx)
 
     sequence = graph.sequence()

@@ -29,6 +29,8 @@ WORKFLOWS_WORKER_PAYLOAD = {
 
 @workflow
 def install(ctx, **kwargs):
+
+    ctx.graph_mode()
     graph = TaskDependencyGraph(ctx)
 
     sequence = graph.sequence()
@@ -83,6 +85,7 @@ def install(ctx, **kwargs):
 @workflow
 def uninstall(ctx, **kwargs):
 
+    ctx.graph_mode()
     graph = TaskDependencyGraph(ctx)
 
     sequence = graph.sequence()
