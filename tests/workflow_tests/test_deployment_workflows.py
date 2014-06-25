@@ -15,9 +15,15 @@
 
 __author__ = 'ran'
 
-from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
+
+import uuid
+from testenv import (TestCase,
+                     wait_for_execution_to_end,
+                     do_retries,
+                     verify_workers_installation_complete,
+                     send_task,
+                     get_resource as resource,
+                     deploy_application as deploy)
 
 
 class TestDeploymentWorkflows(TestCase):
@@ -26,11 +32,51 @@ class TestDeploymentWorkflows(TestCase):
         dsl_path = resource("dsl/custom_workflow_mapping.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        blueprint_id = deployment.blueprint_id
-        workflows = self.client.deployments.list_workflows(deployment_id)
-        self.assertEqual(blueprint_id, workflows.blueprint_id)
-        self.assertEqual(deployment_id, workflows.deployment_id)
-        self.assertEqual(3, len(workflows.workflows))
-        self.assertEqual('uninstall', workflows.workflows[0].name)
-        self.assertEqual('install', workflows.workflows[1].name)
-        self.assertEqual('custom', workflows.workflows[2].name)
+        workflows = self.client.deployments.get(deployment_id).workflows
+        self.assertEqual(3, len(workflows))
+        self.assertEqual('uninstall', workflows[0].name)
+        self.assertEqual('install', workflows[1].name)
+        self.assertEqual('custom', workflows[2].name)
+
+    def test_workflow_parameters_pass_from_blueprint(self):
+        dsl_path = resource('dsl/workflow_parameters.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        do_retries(verify_workers_installation_complete, 30,
+                   deployment_id=deployment_id)
+        execution = self.client.deployments.execute(deployment_id,
+                                                    'execute_operation')
+        wait_for_execution_to_end(execution)
+
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations
+
+        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        self.assertDictEqual(invocations[0], {'test_key': 'test_value'})
+
+    def test_get_workflow_parameters(self):
+        dsl_path = resource('dsl/workflow_parameters.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+
+        workflows = self.client.deployments.get(deployment_id).workflows
+        execute_op_workflow = next(wf for wf in workflows if
+                                   wf.name == 'another_execute_operation')
+        expected_params = [
+            {u'node_id': u'test_node'},
+            u'operation',
+            {
+                u'properties': {
+                    u'key': u'test_key',
+                    u'value': u'test_value'
+                }
+            }
+        ]
+        self.assertEqual(expected_params, execute_op_workflow.parameters)

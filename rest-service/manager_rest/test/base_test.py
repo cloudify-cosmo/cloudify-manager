@@ -123,7 +123,7 @@ class BaseServerTestCase(unittest.TestCase):
         except urllib2.HTTPError:
             return False
 
-    def post_blueprint_args(self, convention=False, blueprint_id=None):
+    def post_blueprint_args(self, blueprint_file_name=None, blueprint_id=None):
         def make_tarfile(output_filename, source_dir):
             with tarfile.open(output_filename, "w:gz") as tar:
                 tar.add(source_dir, arcname=os.path.basename(source_dir))
@@ -143,18 +143,20 @@ class BaseServerTestCase(unittest.TestCase):
         result = [
             resource_path,
             tar_mock_blueprint(),
-            ]
+        ]
 
-        if not convention:
-            data = {'application_file_name': 'blueprint.yaml'}
+        if blueprint_file_name:
+            data = {'application_file_name': blueprint_file_name}
         else:
             data = {}
 
         result.append(data)
         return result
 
-    def put_test_deployment(self, deployment_id='deployment'):
-        blueprint_response = self.post_file(*self.post_blueprint_args()).json
+    def put_test_deployment(self, deployment_id='deployment',
+                            blueprint_file_name=None):
+        blueprint_response = self.post_file(
+            *self.post_blueprint_args(blueprint_file_name)).json
         blueprint_id = blueprint_response['id']
         # Execute post deployment
         deployment_response = self.put(

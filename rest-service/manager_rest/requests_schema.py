@@ -23,7 +23,8 @@ from flask_restful_swagger import swagger
 class ExecutionRequest(object):
 
     resource_fields = {
-        'workflowId': fields.String,
+        'workflow_id': fields.String,
+        'parameters': fields.Raw
     }
 
 
@@ -31,7 +32,7 @@ class ExecutionRequest(object):
 class DeploymentRequest(object):
 
     resource_fields = {
-        'blueprintId': fields.String,
+        'blueprint_id': fields.String,
     }
 
 
