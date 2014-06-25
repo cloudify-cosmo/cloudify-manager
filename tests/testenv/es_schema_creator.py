@@ -36,6 +36,9 @@ DEPLOYMENT_SCHEMA = {
         'properties': {
             'plan': {
                 'enabled': False
+            },
+            'workflows': {
+                'enabled': False
             }
         }
     }

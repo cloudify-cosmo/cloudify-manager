@@ -247,11 +247,13 @@ class BlueprintsManager(object):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
+        deployment_loaded_plan = json.loads(deployment_json_plan)
 
         now = str(datetime.now())
         new_deployment = models.Deployment(
-            id=deployment_id, plan=json.loads(deployment_json_plan),
-            blueprint_id=blueprint_id, created_at=now, updated_at=now)
+            id=deployment_id, plan=deployment_loaded_plan,
+            blueprint_id=blueprint_id, created_at=now, updated_at=now,
+            workflows=deployment_loaded_plan['workflows'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)

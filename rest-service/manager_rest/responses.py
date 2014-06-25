@@ -50,26 +50,6 @@ class BlueprintValidationStatus(object):
 
 
 @swagger.model
-class Deployment(object):
-
-    resource_fields = {
-        'id': fields.String,
-        'created_at': fields.String,
-        'updated_at': fields.String,
-        'blueprint_id': fields.String,
-        'plan': fields.Raw,
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.permalink = kwargs['permalink']
-        self.created_at = kwargs['created_at']
-        self.updated_at = kwargs['updated_at']
-        self.blueprint_id = kwargs['blueprint_id']
-        self.plan = kwargs['plan']
-
-
-@swagger.model
 class Workflow(object):
 
     resource_fields = {
@@ -86,18 +66,25 @@ class Workflow(object):
 
 @swagger.model
 @swagger.nested(workflows=Workflow.__name__)
-class Workflows(object):
+class Deployment(object):
 
     resource_fields = {
-        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
+        'id': fields.String,
+        'created_at': fields.String,
+        'updated_at': fields.String,
         'blueprint_id': fields.String,
-        'deployment_id': fields.String
+        'plan': fields.Raw,
+        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
     }
 
     def __init__(self, **kwargs):
-        self.workflows = kwargs['workflows']
+        self.id = kwargs['id']
+        self.permalink = kwargs['permalink']
+        self.created_at = kwargs['created_at']
+        self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
-        self.deployment_id = kwargs['deployment_id']
+        self.plan = kwargs['plan']
+        self.workflows = kwargs['workflows']
 
 
 @swagger.model
