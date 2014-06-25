@@ -307,7 +307,7 @@ class BlueprintsManager(object):
 
     @staticmethod
     def _merge_and_validate_execution_parameters(workflow, workflow_name,
-                                                 execution_parameters):
+                                                 execution_parameters=None):
         # merge parameters - parameters passed directly to execution request
         # override workflow parameters from the original plan. any
         # parameters without a default value in the blueprint must
