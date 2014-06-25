@@ -56,8 +56,9 @@ install:
    - cd cloudify-rest-client; pip install .; cd ..
    - cd cloudify-plugins-common; pip install .; cd ..
 
-   - pip install https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/feature/CFY-647-add-support-for-passing-params-to-workflows.zip
    - cd rest-service && pip install . -r requirements.txt && cd ..
+   - pip uninstall cloudify-dsl-parser -y
+   - pip install https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/feature/CFY-647-add-support-for-passing-params-to-workflows.zip
    - cd workflows && pip install . && cd ..
    - cd tests && pip install . && cd ..
 
