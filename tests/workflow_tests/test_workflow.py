@@ -22,9 +22,6 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import timeout
 from testenv import send_task
-from testenv import verify_workers_installation_complete
-from testenv import do_retries
-from testenv import wait_for_execution_to_end
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 

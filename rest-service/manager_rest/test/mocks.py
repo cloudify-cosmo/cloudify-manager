@@ -15,7 +15,6 @@
 
 __author__ = 'dan'
 
-from datetime import datetime
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.models import Execution
 

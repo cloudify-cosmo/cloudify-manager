@@ -937,8 +937,8 @@ class DeploymentsIdWorkflows(Resource):
         deployment_workflows = deployment.plan['workflows']
         workflows = [responses.Workflow(
             name=wf_name, created_at=None, parameters=wf.get(
-                'parameters', [])) for wf_name, wf in
-                    deployment_workflows.iteritems()]
+                'parameters', [])) for wf_name, wf
+            in deployment_workflows.iteritems()]
 
         return {
             'workflows': workflows,

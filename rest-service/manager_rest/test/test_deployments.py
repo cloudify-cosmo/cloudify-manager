@@ -173,14 +173,14 @@ class DeploymentsTestCase(BaseServerTestCase):
         parameters = [
             {'optional_param': 'test_default_value'},
             'mandatory_param',
-            {'nested_param':
-                 {
+            {
+                'nested_param': {
                     'key': 'test_key',
                     'value': 'test_value'
-                 }
+                }
             }
         ]
-        self.assertEquals(parameters , workflows['workflows'][0]['parameters'])
+        self.assertEquals(parameters, workflows['workflows'][0]['parameters'])
 
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,

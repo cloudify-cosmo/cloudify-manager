@@ -16,7 +16,6 @@
 __author__ = 'ran'
 
 
-import mocks
 from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
 from manager_rest import models

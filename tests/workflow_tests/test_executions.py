@@ -128,11 +128,11 @@ class ExecutionsTest(TestCase):
         expected_params = [
             {'node_id': 'test_node'},
             'operation',
-            {'properties':
-                 {
-                     'key': 'test_key',
-                     'value': 'test_value'
-                 }
+            {
+                'properties': {
+                    'key': 'test_key',
+                    'value': 'test_value'
+                }
             }
         ]
         self.assertEqual(expected_params, execute_op_workflow.parameters)

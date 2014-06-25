@@ -16,9 +16,6 @@
 __author__ = 'dan'
 
 import os
-
-from manager_rest import manager_exceptions
-
 from manager_rest.celery_client import celery_client as client
 
 # used by integration tests

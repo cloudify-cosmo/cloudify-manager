@@ -519,7 +519,6 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
-
     @staticmethod
     def _wait_for_count(expected_count, query_method, deployment_id):
         import time
