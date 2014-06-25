@@ -1,8 +1,0 @@
-define remove_deployment_worker
-    log message: 'stopping worker for deployment ${deployment_id}'
-    event event: { "stage" => "Stopping management worker" }
-    execute_task target: 'cloudify.management', exec: "worker_installer.tasks.stop"
-
-    log message: 'uninstalling worker for deployment ${deployment_id}'
-    event event: { "stage" => "Uninstalling management worker" }
-    execute_task target: 'cloudify.management', exec: "worker_installer.tasks.uninstall"

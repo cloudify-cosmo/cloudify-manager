@@ -1,9 +1,0 @@
-define execute_relationships_workflow
-    plan_helper do: 'get_node_relationships', to_f: '_relationships'
-    iterator on: '$f:_relationships', to_v: 'relationship'
-        log message: 'executing workflow: ${v:workflow} for relationship: ${v:relationship}'
-        set 'v:flow': "$v:relationship.workflows.${v:workflow}"
-        flow relationship: '$v:relationship'
-        unset 'v:flow'
-    unset 'v:relationship'
-    unset 'f:_relationships'

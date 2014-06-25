@@ -108,7 +108,6 @@ class ManagerRestProcess(object):
                  port,
                  file_server_dir,
                  file_server_base_uri,
-                 workflow_service_base_uri,
                  file_server_blueprints_folder,
                  file_server_uploaded_blueprints_folder,
                  file_server_resources_uri,
@@ -117,7 +116,6 @@ class ManagerRestProcess(object):
         self.port = port
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
-        self.workflow_service_base_uri = workflow_service_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
         self.file_server_uploaded_blueprints_folder = \
             file_server_uploaded_blueprints_folder
@@ -131,7 +129,6 @@ class ManagerRestProcess(object):
         configuration = {
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
-            'workflow_service_base_uri': self.workflow_service_base_uri,
             'file_server_uploaded_blueprints_folder':
                 self.file_server_uploaded_blueprints_folder,
             'file_server_resources_uri': self.file_server_resources_uri,
@@ -840,12 +837,10 @@ class TestEnvironment(object):
 
             # manager rest
             file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
-            worker_service_base_uri = 'http://localhost:8101'
             self._manager_rest_process = ManagerRestProcess(
                 MANAGER_REST_PORT,
                 fileserver_dir,
                 file_server_base_uri,
-                worker_service_base_uri,
                 FILE_SERVER_BLUEPRINTS_FOLDER,
                 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                 FILE_SERVER_RESOURCES_URI,

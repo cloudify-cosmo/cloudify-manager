@@ -3,7 +3,7 @@ Cosmo Workflows
 
 ## Goal
 
-The purpose of this project is to test cosmo workflows (ruote) started by cosmo's `orchestrator` component.
+The purpose of this project is to test cosmo workflows logic.
 The tests are written in python and the test environment starts a celery worker and a riemann server before running the tests.
 
 For a test example see: `workflow_tests/test_workflow.py`
@@ -14,7 +14,6 @@ For a test example see: `workflow_tests/test_workflow.py`
 * Python 2.7 runtime.
 * A running rabbitmq server.
 * Riemann server installed (riemann executable available in path).
-* cosmo.jar available in ../orchestrator/target (built using mvn package -Pall in orchestrator).
 
 
 ## Installation
