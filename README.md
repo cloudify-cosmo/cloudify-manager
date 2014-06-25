@@ -1,10 +1,10 @@
 ## Cloudify Cosmo Manager
 
-Cosmo is the code name for the new release of Cloudify (version 3.0). Cloudify is an open soruce tool for deploying, managing and scaling applications on the cloud. 
-This repo contains the source code for the Cloudify Cosmo management server. 
-To install Cloudify 3.0 refer the [README file of the Cloudify CLI project](https://github.com/cloudify-cosmo/cloudify-cli/blob/develop/README.md). 
+Cosmo is the code name for the new release of Cloudify (version 3.0). Cloudify is an open soruce tool for deploying, managing and scaling applications on the cloud.
+This repo contains the source code for the Cloudify Cosmo management server.
+To install Cloudify 3.0 refer the [README file of the Cloudify CLI project](https://github.com/cloudify-cosmo/cloudify-cli/blob/develop/README.md).
 
-Fuller documentation for the new Cosmo architecture will be available soon at [The CloudifySource web site](http://www.cloudifysource.org). 
+Fuller documentation for the new Cosmo architecture will be available soon at [The CloudifySource web site](http://www.cloudifysource.org).
 
 
 ## Contribute to Cloudify ##
@@ -30,7 +30,6 @@ Make sure you have the following dependencies installed:
 * git.
 * Python 2.7 + pip.
 * OpenJDK-7.
-* Ruby 2.1.0.
 * Bundler.
 * RabbitMQ.
     * Make sure you have a default configured RabbitMQ server running after installing it.
@@ -79,23 +78,6 @@ sudo virtualenv <env_folder>
 source <env_folder>/bin/activate
 ```
 
-### Ruby 2.1.0 ###
-
-#### Install Using rvm ####
-- Install rvm as described [here](http://rvm.io/).
-- Install Ruby 2.1.0 using rvm:
-
-```
-# install (this might take some time)
-rvm install ruby-2.1.0
-
-# use
-rvm use ruby-2.1.0
-
-# install bundler
-gem install bundler
-```
-
 ### RabbitMQ ###
 Installation instructions for Ubuntu can be found [here](http://www.rabbitmq.com/install-debian.html).
 
@@ -114,15 +96,15 @@ sudo dpkg -i <riemann_deb_file>
 
 ### Elasticsearch ###
 deb file can be downloaded from: http://www.elasticsearch.org/download
-e.g.:  
-`wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb`  
+e.g.:
+`wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb`
 `sudo dpkg -i elasticsearch-1.0.1.deb`
 
-Path variable must include elasticsearch's bin directory, e.g.:    
+Path variable must include elasticsearch's bin directory, e.g.:
 `export PATH=$PATH:/usr/share/elasticsearch/bin`
 
-You might need to set write permissions for elasticsearch's data folder:  
-`sudo mkdir -p /usr/share/elasticsearch/data`  
+You might need to set write permissions for elasticsearch's data folder:
+`sudo mkdir -p /usr/share/elasticsearch/data`
 `sudo chmod 777 /usr/share/elasticsearch/data`
 
 
@@ -151,15 +133,6 @@ cd cloudify-manager
 git checkout develop
 ```
 
-### Install workflow-service Project Dependencies ###
-
-Workflow service is a Sinatra Ruby project which runs on Ruby 2.1.0.
-We use `bundler` for installing its dependencies:
-```
-# in cloudify-manager folder
-cd workflow-service
-bundle install
-```
 
 ## Install rest-service Project Dependencies ##
 
