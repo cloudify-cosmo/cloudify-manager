@@ -17,11 +17,14 @@ __author__ = 'elip'
 
 import os
 import jinja2
-from worker_installer import init_worker_installer
-from worker_installer.utils import is_on_management_worker
+
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
 from cloudify import manager
 from cloudify import utils
+
+from worker_installer import init_worker_installer
+from worker_installer.utils import is_on_management_worker
 
 
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
@@ -283,5 +286,5 @@ def _verify_no_celery_error(runner, worker_config):
     if runner.exists(celery_error_out):
         output = runner.get(celery_error_out)
         runner.run('rm {0}'.format(celery_error_out))
-        raise RuntimeError(
+        raise NonRecoverableError(
             'Celery worker failed to start:\n{0}'.format(output))
