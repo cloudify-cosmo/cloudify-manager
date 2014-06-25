@@ -36,6 +36,7 @@ install:
    - source package/linux/env/bin/activate
 
    - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - cd cloudify-rest-client; git pull origin feature/CFY-647-add-support-for-passing-params-to-workflows; cd ..
    - cd cloudify-rest-client; pip install .; cd ..
 
    - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
@@ -55,6 +56,7 @@ install:
    - cd cloudify-rest-client; pip install .; cd ..
    - cd cloudify-plugins-common; pip install .; cd ..
 
+   - pip install https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/feature/CFY-647-add-support-for-passing-params-to-workflows.zip
    - cd rest-service && pip install . -r requirements.txt && cd ..
    - cd workflows && pip install . && cd ..
    - cd tests && pip install . && cd ..
