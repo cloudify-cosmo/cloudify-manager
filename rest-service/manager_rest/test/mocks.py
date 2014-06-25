@@ -20,19 +20,6 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.models import Execution
 
 
-def get_workflow_status(wfid):
-    return Execution.TERMINATED
-
-
-class MockWorkflowClient(object):
-
-    @staticmethod
-    def execute_workflow(name, workflow,
-                         blueprint_id, deployment_id,
-                         execution_id, kwargs=None):
-        return kwargs or dict()
-
-
 class MockCeleryClient(object):
 
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):

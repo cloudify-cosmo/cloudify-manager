@@ -46,7 +46,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         get_execution = self.get(get_execution_resource).json
-        self.assertEquals(get_execution['status'], 'pending')
+        self.assertEquals(get_execution['status'], 'terminated')
         self.assertEquals(get_execution['blueprint_id'], blueprint_id)
         self.assertEquals(get_execution['deployment_id'],
                           deployment_response['id'])
@@ -54,7 +54,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return execution
 
-    def test_execute_with_parameters(self):
+    def test_execute_with_extra_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
@@ -66,7 +66,144 @@ class ExecutionsTestCase(BaseServerTestCase):
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
-        self.assertEqual(parameters, execution['parameters'])
+        # expecting an empty parameters dictionary since the parameters were
+        #  never defined in the blueprint
+        self.assertEqual(dict(), execution['parameters'])
+
+    def test_get_execution_parameters(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        parameters = {'mandatory_param': 'value'}
+        execution = self.post(resource_path, {
+            'workflow_id': 'mock_workflow',
+            'parameters': parameters
+        }).json
+        get_execution_resource = '/executions/{0}'.format(execution['id'])
+        execution = self.get(get_execution_resource).json
+        expected_executions_params = {
+            'mandatory_param': 'value',
+            'optional_param': 'test_default_value',
+            'nested_param': {
+                'key': 'test_key',
+                'value': 'test_value'
+            }
+        }
+        self.assertEqual(expected_executions_params, execution['parameters'])
+
+    def test_execution_parameters_override_over_workflow_parameters(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        # overriding 'optional_param' with a value of a different type
+        parameters = {'mandatory_param': 'value',
+                      'optional_param': {'overridden_value': 'obj'}}
+        execution = self.post(resource_path, {
+            'workflow_id': 'mock_workflow',
+            'parameters': parameters
+        }).json
+        get_execution_resource = '/executions/{0}'.format(execution['id'])
+        execution = self.get(get_execution_resource).json
+        expected_executions_params = {
+            'mandatory_param': 'value',
+            'optional_param': {'overridden_value': 'obj'},
+            'nested_param': {
+                'key': 'test_key',
+                'value': 'test_value'
+            }
+        }
+        self.assertEqual(expected_executions_params, execution['parameters'])
+
+    def test_execution_parameters_override_no_recursive_merge(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        # overriding one of 'nested_param' subfields
+        parameters = {'mandatory_param': 'value',
+                      'nested_param': {'key': 'overridden_value'}}
+        execution = self.post(resource_path, {
+            'workflow_id': 'mock_workflow',
+            'parameters': parameters
+        }).json
+        get_execution_resource = '/executions/{0}'.format(execution['id'])
+        execution = self.get(get_execution_resource).json
+        # expecting 'nested_param' to only have the one subfield - there's
+        # no recursive merge for parameters, so the second key ('value')
+        # should no longer appear
+        expected_executions_params = {
+            'mandatory_param': 'value',
+            'optional_param': 'test_default_value',
+            'nested_param': {
+                'key': 'overridden_value'
+            }
+        }
+        self.assertEqual(expected_executions_params, execution['parameters'])
+
+    def test_missing_execution_parameters(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        parameters = {'optional_param': 'some_value'}
+        response = self.post(resource_path, {
+            'workflow_id': 'mock_workflow',
+            'parameters': parameters
+        })
+        self.assertEquals(400, response.status_code)
+        self.assertEquals(
+            response.json['error_code'],
+            manager_exceptions.MissingExecutionParametersError.
+            MISSING_EXECUTION_PARAMETERS_ERROR_CODE)
+
+    def test_bad_execution_parameters(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        parameters = 'not_a_dictionary'
+        response = self.post(resource_path, {
+            'workflow_id': 'mock_workflow',
+            'parameters': parameters
+        })
+        self.assertEquals(400, response.status_code)
+        self.assertEquals(
+            response.json['error_code'],
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
+
+        parameters = '[still_not_a_dictionary]'
+        response = self.post(resource_path, {
+            'workflow_id': 'mock_workflow',
+            'parameters': parameters
+        })
+        self.assertEquals(400, response.status_code)
+        self.assertEquals(
+            response.json['error_code'],
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
+
+    def test_passing_parameters_parameter_to_execute(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
+
+        # passing a None parameters value to the execution
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        parameters = None
+        response = self.post(resource_path, {
+            'workflow_id': 'install',
+            'parameters': parameters
+        })
+        self.assertEquals(201, response.status_code)
+        get_execution_resource = '/executions/{0}'.format(response.json['id'])
+        execution = self.get(get_execution_resource).json
+        self.assertEquals('terminated', execution['status'])
 
     def test_bad_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -78,7 +215,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
-        self.assertEquals('pending', execution['status'])
+        self.assertEquals('terminated', execution['status'])
         # making a bad update request - not passing the required 'status'
         # parameter
         resp = self.patch('/executions/{0}'.format(execution['id']), {})
@@ -98,10 +235,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
-        self.assertEquals('pending', execution['status'])
-        execution = self.patch('/executions/{0}'.format(execution['id']),
-                               {'status': 'new-status'}).json
-        self.assertEquals('new-status', execution['status'])
+        self.assertEquals('terminated', execution['status'])
+        self._modify_execution_status(execution['id'], 'new_status')
 
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -113,7 +248,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         }).json
         get_execution_resource = '/executions/{0}'.format(execution['id'])
         execution = self.get(get_execution_resource).json
-        self.assertEquals('pending', execution['status'])
+        self.assertEquals('terminated', execution['status'])
         self.assertEquals('', execution['error'])
         execution = self.patch('/executions/{0}'.format(execution['id']),
                                {'status': 'new-status',
@@ -122,9 +257,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals('some error', execution['error'])
         # verifying that updating only the status field also resets the
         # error field to an empty string
-        execution = self.patch('/executions/{0}'.format(execution['id']),
-                               {'status': 'final-status'}).json
-        self.assertEquals('final-status', execution['status'])
+        execution = self._modify_execution_status(execution['id'],
+                                                  'final-status')
         self.assertEquals('', execution['error'])
 
     def test_update_nonexistent_execution(self):
@@ -133,7 +267,11 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
+        # modifying execution status back to 'pending' to 'cancel' will be a
+        #  legal action
         resource_path = '/executions/{0}'.format(execution['id'])
+        execution = self._modify_execution_status(execution['id'], 'pending')
+
         cancel_response = self.post(resource_path, {
             'action': 'cancel'
         }).json
@@ -142,7 +280,11 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_force_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
+        # modifying execution status back to 'pending' to 'cancel' will be a
+        #  legal action
         resource_path = '/executions/{0}'.format(execution['id'])
+        execution = self._modify_execution_status(execution['id'], 'pending')
+
         cancel_response = self.post(
             resource_path, {'action': 'force-cancel'}).json
         execution['status'] = models.Execution.FORCE_CANCELLING
@@ -157,8 +299,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         def attempt_cancel_on_status(new_status,
                                      force=False,
                                      expect_failure=True):
-            execution = self.patch(resource_path, {'status': new_status}).json
-            self.assertEquals(new_status, execution['status'])
+            self._modify_execution_status(execution['id'], new_status)
 
             action = 'force-cancel' if force else 'cancel'
             cancel_response = self.post(resource_path, {'action': action})
@@ -227,42 +368,34 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals(cancel_response.status_code, 400)
 
     def test_execute_more_than_one_workflow_fails(self):
-        previous_method = mocks.get_workflow_status
-
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
-            'workflow_id': 'install'
-        })
-        try:
-            mocks.get_workflow_status = lambda wfid: 'running'
-            response = self.post(resource_path, {
-                'workflow_id': 'install'
-            })
-            self.assertEqual(response.status_code, 400)
-        finally:
-            mocks.get_workflow_status = previous_method
+        self._test_execute_more_than_one_workflow(False, 400)
 
     def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        previous_method = mocks.get_workflow_status
+        self._test_execute_more_than_one_workflow(True, 201)
 
+    def _test_execute_more_than_one_workflow(self, is_use_force,
+                                             expected_status_code):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        self.post(resource_path, {
+        execution = self.post(resource_path, {
             'workflow_id': 'install'
-        })
-        try:
-            mocks.get_workflow_status = lambda wfid: 'running'
-            response = self.post(resource_path, {
-                'workflow_id': 'install'
-            }, query_params={'force': 'true'})
-            self.assertEqual(response.status_code, 201)
-        finally:
-            mocks.get_workflow_status = previous_method
+        }).json
+
+        self._modify_execution_status(execution['id'], 'pending')
+
+        response = self.post(resource_path, {
+            'workflow_id': 'install'
+        }, query_params={'force': is_use_force})
+        self.assertEqual(expected_status_code, response.status_code)
 
     def test_get_non_existent_execution(self):
         resource_path = '/executions/idonotexist'
         response = self.get(resource_path)
         self.assertEqual(response.status_code, 404)
+
+    def _modify_execution_status(self, execution_id, new_status):
+        resource_path = '/executions/{0}'.format(execution_id)
+        execution = self.patch(resource_path, {'status': new_status}).json
+        self.assertEquals(new_status, execution['status'])
+        return execution

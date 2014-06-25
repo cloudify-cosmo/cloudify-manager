@@ -17,7 +17,6 @@ __author__ = 'dan'
 
 import os
 
-from manager_rest import config
 from manager_rest import manager_exceptions
 
 from manager_rest.celery_client import celery_client as client
@@ -31,10 +30,10 @@ class WorkflowClient(object):
     @staticmethod
     def execute_workflow(name,
                          workflow,
-                         deployment_id,
                          blueprint_id,
+                         deployment_id,
                          execution_id,
-                         kwargs=None):
+                         execution_parameters=None):
         task_name = '{}.{}'.format(workflow['plugin'], workflow['operation'])
         if env_workflows_queue:
             # used by integration tests
@@ -42,47 +41,18 @@ class WorkflowClient(object):
         else:
             task_queue = '{}_workflows'.format(deployment_id)
 
-        # merge parameters - parameters passed directly to execution request
-        # override workflow parameters from the original plan. any
-        # parameters without a default value in the blueprint must
-        # appear in the execution request parameters.
-        # note that extra parameters in the execution requests (i.e.
-        # parameters not defined in the original workflow plan) will simply
-        # be ignored silently
-        execution_parameters = dict()
-        workflow_parameters = workflow.get('parameters', [])
-        kwargs = kwargs or dict()
-        for param in workflow_parameters:
-            if type(param) == str:
-                # parameter without a default value - ensure one was
-                # provided via kwargs
-                if param not in kwargs:
-                    raise \
-                        manager_exceptions.MissingExecutionParametersError(
-                            'Workflow {0} must be provided with a "{1}" '
-                            'parameter to execute'.format(name, param))
-                execution_parameters[param] = kwargs[param]
-            else:
-                param_name = param.keys()[0]
-                execution_parameters[param_name] = kwargs[param_name] if \
-                    param_name in kwargs else param[param_name]
-
         execution_parameters['__cloudify_context'] = {
             'workflow_id': name,
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
             'execution_id': execution_id
         }
+
         client().execute_task(task_name=task_name,
                               task_queue=task_queue,
                               task_id=execution_id,
                               kwargs=execution_parameters)
-        return execution_parameters
 
 
 def workflow_client():
-    if config.instance().test_mode:
-        from test.mocks import MockWorkflowClient
-        return MockWorkflowClient()
-    else:
-        return WorkflowClient()
+    return WorkflowClient()

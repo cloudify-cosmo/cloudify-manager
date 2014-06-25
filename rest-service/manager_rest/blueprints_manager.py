@@ -144,7 +144,7 @@ class BlueprintsManager(object):
         return storage.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
-                         kwargs=None, force=False):
+                         parameters=None, force=False):
         deployment = self.get_deployment(deployment_id)
 
         if workflow_id not in deployment.plan['workflows']:
@@ -169,14 +169,11 @@ class BlueprintsManager(object):
                     '"force=true" as a query parameter to this request'.format(
                         running))
 
+        execution_parameters = \
+            BlueprintsManager._merge_and_validate_execution_parameters(
+                workflow, workflow_id, parameters)
+
         execution_id = str(uuid.uuid4())
-        execution_parameters = workflow_client().execute_workflow(
-            workflow_id,
-            workflow,
-            blueprint_id=deployment.blueprint_id,
-            deployment_id=deployment_id,
-            execution_id=execution_id,
-            kwargs=kwargs)
 
         new_execution = models.Execution(
             id=execution_id,
@@ -190,6 +187,15 @@ class BlueprintsManager(object):
                 execution_parameters))
 
         get_storage_manager().put_execution(new_execution.id, new_execution)
+
+        workflow_client().execute_workflow(
+            workflow_id,
+            workflow,
+            blueprint_id=deployment.blueprint_id,
+            deployment_id=deployment_id,
+            execution_id=execution_id,
+            execution_parameters=execution_parameters)
+
         return new_execution
 
     def cancel_execution(self, execution_id, force=False):
@@ -296,6 +302,39 @@ class BlueprintsManager(object):
         self._wait_for_count(expected_count=len(plan['nodes']),
                              query_method=self.sm.get_nodes,
                              deployment_id=deployment_id)
+
+    @staticmethod
+    def _merge_and_validate_execution_parameters(workflow, workflow_name,
+                                                 execution_parameters):
+        # merge parameters - parameters passed directly to execution request
+        # override workflow parameters from the original plan. any
+        # parameters without a default value in the blueprint must
+        # appear in the execution request parameters.
+        # note that extra parameters in the execution requests (i.e.
+        # parameters not defined in the original workflow plan) will simply
+        # be ignored silently
+        merged_execution_parameters = dict()
+        workflow_parameters = workflow.get('parameters', [])
+        execution_parameters = execution_parameters or dict()
+        for param in workflow_parameters:
+            if isinstance(param, basestring):
+                # parameter without a default value - ensure one was
+                # provided via parameters
+                if param not in execution_parameters:
+                    raise \
+                        manager_exceptions.MissingExecutionParametersError(
+                            'Workflow {0} must be provided with a "{1}" '
+                            'parameter to execute'.format(workflow_name,
+                                                          param))
+                merged_execution_parameters[param] = \
+                    execution_parameters[param]
+            else:
+                param_name = param.keys()[0]
+                merged_execution_parameters[param_name] = \
+                    execution_parameters[param_name] if \
+                    param_name in execution_parameters else param[param_name]
+
+        return merged_execution_parameters
 
     @staticmethod
     def _prepare_node_relationships(raw_node):

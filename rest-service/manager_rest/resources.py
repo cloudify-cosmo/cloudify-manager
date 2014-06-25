@@ -908,17 +908,15 @@ class DeploymentsIdExecutions(Resource):
         force = verify_and_convert_bool('force', args['force'])
 
         workflow_id = request.json['workflow_id']
-        kwargs = request.json.get('parameters', None)
+        parameters = request.json.get('parameters', None)
 
-        if kwargs is not None and kwargs.__class__ is not dict:
+        if parameters is not None and parameters.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
                 "request body's 'parameters' field must be a dict but"
-                " is of type {0}".format(kwargs.__class__.__name__))
+                " is of type {0}".format(parameters.__class__.__name__))
 
-        execution = get_blueprints_manager().execute_workflow(deployment_id,
-                                                              workflow_id,
-                                                              kwargs=kwargs,
-                                                              force=force)
+        execution = get_blueprints_manager().execute_workflow(
+            deployment_id, workflow_id, parameters=parameters, force=force)
         return responses.Execution(**execution.to_dict()), 201
 
 
@@ -937,10 +935,10 @@ class DeploymentsIdWorkflows(Resource):
         """
         deployment = get_blueprints_manager().get_deployment(deployment_id)
         deployment_workflows = deployment.plan['workflows']
-        workflows = [responses.Workflow(name=wf_name, created_at=None,
-                                        parameters=wf['parameters']) for
-                     wf_name, wf in
-                     deployment_workflows.iteritems()]
+        workflows = [responses.Workflow(
+            name=wf_name, created_at=None, parameters=wf.get(
+                'parameters', [])) for wf_name, wf in
+                    deployment_workflows.iteritems()]
 
         return {
             'workflows': workflows,

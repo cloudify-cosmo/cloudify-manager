@@ -101,6 +101,85 @@ class ExecutionsTest(TestCase):
 
         self.do_assertions(assertions, timeout=10)
 
+    def test_workflow_parameters(self):
+        dsl_path = resource('dsl/workflow_parameters.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        do_retries(verify_workers_installation_complete, 30,
+                   deployment_id=deployment_id)
+        execution = self.client.deployments.execute(deployment_id,
+                                                    'execute_operation')
+        wait_for_execution_to_end(execution)
+
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations
+
+        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        self.assertDictEqual(invocations[0], {'test_key': 'test_value'})
+
+        # testing get deployment's workflows API - checking for parameters
+        workflows = self.client.deployments.list_workflows(deployment_id)
+        execute_op_workflow = next(wf for wf in workflows.workflows if
+                                   wf.name == 'execute_operation')
+        expected_params = [
+            {'node_id': 'test_node'},
+            'operation',
+            {'properties':
+                 {
+                     'key': 'test_key',
+                     'value': 'test_value'
+                 }
+            }
+        ]
+        self.assertEqual(expected_params, execute_op_workflow.parameters)
+
+    def test_execution_parameters(self):
+        dsl_path = resource('dsl/workflow_parameters.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        do_retries(verify_workers_installation_complete, 30,
+                   deployment_id=deployment_id)
+        execution_parameters = {
+            'operation': 'test_interface.operation',
+            'properties': {
+                'key': 'different-key',
+                'value': 'different-value'
+            },
+            'extra-property': "doesn't matter"
+        }
+        execution = self.client.deployments.execute(
+            deployment_id, 'another_execute_operation',
+            parameters=execution_parameters)
+        wait_for_execution_to_end(execution)
+
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations
+
+        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        self.assertDictEqual(invocations[0],
+                             {'different-key': 'different-value'})
+
+        # checking for execution parameters - expecting there to be a merge
+        # with overrides with workflow parameters. 'extra-property' is not
+        # expected to appear as it is not defined in the blueprint
+        expected_params = {
+            'node_id': 'test_node',
+            'operation': 'test_interface.operation',
+            'properties': {
+                'key': 'different-key',
+                'value': 'different-value'
+            }
+        }
+        self.assertEqual(expected_params, execution.parameters)
+
     def test_update_execution_status(self):
         dsl_path = resource("dsl/basic.yaml")
         _, execution_id = deploy(dsl_path,
