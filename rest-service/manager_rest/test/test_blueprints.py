@@ -52,7 +52,7 @@ class BlueprintsTestCase(BaseServerTestCase):
 
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.post_file(
-            *self.post_blueprint_args(convention=True)).json
+            *self.post_blueprint_args('blueprint_with_workflows.yaml')).json
         self.assertEquals('hello_world',
                           post_blueprints_response['id'])
 

@@ -143,7 +143,8 @@ class BlueprintsManager(object):
         self._uninstall_deployment_workers(deployment_id)
         return storage.delete_deployment(deployment_id)
 
-    def execute_workflow(self, deployment_id, workflow_id, force=False):
+    def execute_workflow(self, deployment_id, workflow_id,
+                         parameters=None, force=False):
         deployment = self.get_deployment(deployment_id)
 
         if workflow_id not in deployment.plan['workflows']:
@@ -168,13 +169,11 @@ class BlueprintsManager(object):
                     '"force=true" as a query parameter to this request'.format(
                         running))
 
+        execution_parameters = \
+            BlueprintsManager._merge_and_validate_execution_parameters(
+                workflow, workflow_id, parameters)
+
         execution_id = str(uuid.uuid4())
-        workflow_client().execute_workflow(
-            workflow_id,
-            workflow,
-            blueprint_id=deployment.blueprint_id,
-            deployment_id=deployment_id,
-            execution_id=execution_id)
 
         new_execution = models.Execution(
             id=execution_id,
@@ -183,9 +182,20 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,
-            error='')
+            error='',
+            parameters=self._get_only_user_execution_parameters(
+                execution_parameters))
 
         get_storage_manager().put_execution(new_execution.id, new_execution)
+
+        workflow_client().execute_workflow(
+            workflow_id,
+            workflow,
+            blueprint_id=deployment.blueprint_id,
+            deployment_id=deployment_id,
+            execution_id=execution_id,
+            execution_parameters=execution_parameters)
+
         return new_execution
 
     def cancel_execution(self, execution_id, force=False):
@@ -237,11 +247,13 @@ class BlueprintsManager(object):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
+        deployment_loaded_plan = json.loads(deployment_json_plan)
 
         now = str(datetime.now())
         new_deployment = models.Deployment(
-            id=deployment_id, plan=json.loads(deployment_json_plan),
-            blueprint_id=blueprint_id, created_at=now, updated_at=now)
+            id=deployment_id, plan=deployment_loaded_plan,
+            blueprint_id=blueprint_id, created_at=now, updated_at=now,
+            workflows=deployment_loaded_plan['workflows'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)
@@ -292,6 +304,39 @@ class BlueprintsManager(object):
         self._wait_for_count(expected_count=len(plan['nodes']),
                              query_method=self.sm.get_nodes,
                              deployment_id=deployment_id)
+
+    @staticmethod
+    def _merge_and_validate_execution_parameters(workflow, workflow_name,
+                                                 execution_parameters=None):
+        # merge parameters - parameters passed directly to execution request
+        # override workflow parameters from the original plan. any
+        # parameters without a default value in the blueprint must
+        # appear in the execution request parameters.
+        # note that extra parameters in the execution requests (i.e.
+        # parameters not defined in the original workflow plan) will simply
+        # be ignored silently
+        merged_execution_parameters = dict()
+        workflow_parameters = workflow.get('parameters', [])
+        execution_parameters = execution_parameters or dict()
+        for param in workflow_parameters:
+            if isinstance(param, basestring):
+                # parameter without a default value - ensure one was
+                # provided via parameters
+                if param not in execution_parameters:
+                    raise \
+                        manager_exceptions.MissingExecutionParametersError(
+                            'Workflow {0} must be provided with a "{1}" '
+                            'parameter to execute'.format(workflow_name,
+                                                          param))
+                merged_execution_parameters[param] = \
+                    execution_parameters[param]
+            else:
+                param_name = param.keys()[0]
+                merged_execution_parameters[param_name] = \
+                    execution_parameters[param_name] if \
+                    param_name in execution_parameters else param[param_name]
+
+        return merged_execution_parameters
 
     @staticmethod
     def _prepare_node_relationships(raw_node):
@@ -393,6 +438,13 @@ class BlueprintsManager(object):
         context = self._build_context_from_deployment(
             deployment, workers_installation_task_id, wf_id,
             workers_install_task_name)
+        kwargs = {
+            'management_plugins_to_install':
+                deployment.plan['management_plugins_to_install'],
+            'workflow_plugins_to_install':
+                deployment.plan['workflow_plugins_to_install'],
+            '__cloudify_context': context
+        }
 
         new_execution = models.Execution(
             id=workers_installation_task_id,
@@ -401,19 +453,15 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
             deployment_id=deployment.id,
-            error='')
+            error='',
+            parameters=self._get_only_user_execution_parameters(kwargs))
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         celery_client().execute_task(
             workers_install_task_name,
             'cloudify.management',
             workers_installation_task_id,
-            kwargs={
-                'management_plugins_to_install':
-                deployment.plan['management_plugins_to_install'],
-                'workflow_plugins_to_install':
-                deployment.plan['workflow_plugins_to_install'],
-                '__cloudify_context': context})
+            kwargs=kwargs)
 
     def _build_context_from_deployment(self, deployment, task_id, wf_id,
                                        task_name):
@@ -440,6 +488,7 @@ class BlueprintsManager(object):
             workers_uninstallation_task_id,
             wf_id,
             workers_uninstall_task_name)
+        kwargs = {'__cloudify_context': context}
 
         new_execution = models.Execution(
             id=workers_uninstallation_task_id,
@@ -448,14 +497,15 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             workflow_id=wf_id,
             deployment_id=deployment_id,
-            error='')
+            error='',
+            parameters=self._get_only_user_execution_parameters(kwargs))
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         uninstall_workers_task_async_result = celery_client().execute_task(
             workers_uninstall_task_name,
             'cloudify.management',
             workers_uninstallation_task_id,
-            kwargs={'__cloudify_context': context})
+            kwargs=kwargs)
 
         # wait for workers uninstall to complete
         uninstall_workers_task_async_result.get(timeout=300,
@@ -466,6 +516,10 @@ class BlueprintsManager(object):
         if execution.status != models.Execution.TERMINATED:
             raise RuntimeError('Failed to uninstall deployment workers for '
                                'deployment {0}'.format(deployment_id))
+
+    def _get_only_user_execution_parameters(self, execution_parameters):
+        return {k: v for k, v in execution_parameters.iteritems()
+                if not k.startswith('__')}
 
     @staticmethod
     def _wait_for_count(expected_count, query_method, deployment_id):

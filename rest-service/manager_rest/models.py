@@ -45,7 +45,7 @@ class BlueprintState(SerializableObject):
 class Deployment(SerializableObject):
 
     fields = {'id', 'created_at', 'updated_at', 'blueprint_id', 'plan',
-              'permalink'}
+              'workflows', 'permalink'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -53,6 +53,7 @@ class Deployment(SerializableObject):
         self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
+        self.workflows = kwargs['workflows']
         self.permalink = None  # TODO: implement
 
 
@@ -68,8 +69,8 @@ class Execution(SerializableObject):
 
     END_STATES = [TERMINATED, FAILED, CANCELLED]
 
-    fields = {'id', 'status', 'deployment_id',
-              'workflow_id', 'blueprint_id', 'created_at', 'error'}
+    fields = {'id', 'status', 'deployment_id', 'workflow_id', 'blueprint_id',
+              'created_at', 'error', 'parameters'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -79,6 +80,7 @@ class Execution(SerializableObject):
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
+        self.parameters = kwargs['parameters']
 
 
 class DeploymentNode(SerializableObject):

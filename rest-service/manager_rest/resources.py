@@ -60,6 +60,7 @@ def exceptions_handled(func):
                 manager_exceptions.InvalidBlueprintError,
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError,
+                manager_exceptions.MissingExecutionParametersError,
                 manager_exceptions.IllegalActionError) as e:
             abort_error(e)
     return wrapper
@@ -101,6 +102,18 @@ def verify_and_convert_bool(attribute_name, str_bool):
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
+def _replace_workflows_field_for_deployment_response(deployment_dict):
+    deployment_workflows = deployment_dict['workflows']
+
+    workflows = [responses.Workflow(
+        name=wf_name, created_at=None, parameters=wf.get(
+            'parameters', [])) for wf_name, wf
+        in deployment_workflows.iteritems()]
+
+    deployment_dict['workflows'] = workflows
+    return deployment_dict
+
+
 def setup_resources(api):
     api = swagger.docs(api,
                        apiVersion='0.1',
@@ -119,8 +132,6 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdExecutions,
                      '/deployments/<string:deployment_id>/executions')
-    api.add_resource(DeploymentsIdWorkflows,
-                     '/deployments/<string:deployment_id>/workflows')
     api.add_resource(Nodes,
                      '/nodes')
     api.add_resource(NodeInstances,
@@ -570,9 +581,11 @@ class Deployments(Resource):
         """
         List deployments
         """
-        return [marshal(responses.Deployment(**deployment.to_dict()),
-                        responses.Deployment.resource_fields) for
-                deployment in get_blueprints_manager().deployments_list()]
+        return [marshal(responses.Deployment(
+            **_replace_workflows_field_for_deployment_response(
+                deployment.to_dict())),
+            responses.Deployment.resource_fields) for
+            deployment in get_blueprints_manager().deployments_list()]
 
 
 class DeploymentsId(Resource):
@@ -594,7 +607,9 @@ class DeploymentsId(Resource):
         Get deployment by id
         """
         deployment = get_blueprints_manager().get_deployment(deployment_id)
-        return responses.Deployment(**deployment.to_dict())
+        return responses.Deployment(
+            **_replace_workflows_field_for_deployment_response(
+                deployment.to_dict()))
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -620,8 +635,11 @@ class DeploymentsId(Resource):
         request_json = request.json
         verify_parameter_in_request_body('blueprint_id', request_json)
         blueprint_id = request.json['blueprint_id']
-        return get_blueprints_manager().create_deployment(blueprint_id,
-                                                          deployment_id), 201
+        deployment = get_blueprints_manager().create_deployment(
+            blueprint_id, deployment_id)
+        return responses.Deployment(
+            **_replace_workflows_field_for_deployment_response(
+                deployment.to_dict())), 201
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -650,6 +668,8 @@ class DeploymentsId(Resource):
 
         deployment = get_blueprints_manager().delete_deployment(
             deployment_id, ignore_live_nodes)
+        # not using '_replace_workflows_field_for_deployment_response'
+        # method since the object returned only contains the deployment's id
         return responses.Deployment(**deployment.to_dict()), 200
 
 
@@ -907,36 +927,16 @@ class DeploymentsIdExecutions(Resource):
         force = verify_and_convert_bool('force', args['force'])
 
         workflow_id = request.json['workflow_id']
-        execution = get_blueprints_manager().execute_workflow(deployment_id,
-                                                              workflow_id,
-                                                              force)
+        parameters = request.json.get('parameters', None)
+
+        if parameters is not None and parameters.__class__ is not dict:
+            raise manager_exceptions.BadParametersError(
+                "request body's 'parameters' field must be a dict but"
+                " is of type {0}".format(parameters.__class__.__name__))
+
+        execution = get_blueprints_manager().execute_workflow(
+            deployment_id, workflow_id, parameters=parameters, force=force)
         return responses.Execution(**execution.to_dict()), 201
-
-
-class DeploymentsIdWorkflows(Resource):
-
-    @swagger.operation(
-        responseClass='Workflows',
-        nickname="workflows",
-        notes="Returns a list of workflows related to the provided deployment."
-    )
-    @marshal_with(responses.Workflows.resource_fields)
-    @exceptions_handled
-    def get(self, deployment_id):
-        """
-        List deployment workflows
-        """
-        deployment = get_blueprints_manager().get_deployment(deployment_id)
-        deployment_workflows = deployment.plan['workflows']
-        workflows = [responses.Workflow(name=wf_name, created_at=None) for
-                     wf_name in
-                     deployment_workflows.keys()]
-
-        return {
-            'workflows': workflows,
-            'blueprint_id': deployment.blueprint_id,
-            'deployment_id': deployment.id
-        }
 
 
 def _query_elastic_search(index=None, doc_type=None, body=None):
@@ -1037,7 +1037,6 @@ class Status(Resource):
         """
         job_list = {'rsyslog': 'Syslog',
                     'manager': 'Cloudify Manager',
-                    'workflow': 'Workflow Service',
                     'riemann': 'Riemann',
                     'rabbitmq-server': 'RabbitMQ',
                     'celeryd-cloudify-management': 'Celery Managment',

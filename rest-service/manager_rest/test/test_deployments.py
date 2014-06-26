@@ -154,17 +154,31 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_test_deployment(
+             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
-        resource_path = '/deployments/{0}/workflows'.format(deployment_id)
-        workflows = self.get(resource_path).json
-        self.assertEquals(workflows['blueprint_id'], blueprint_id)
-        self.assertEquals(workflows['deployment_id'], deployment_id)
-        self.assertEquals(2, len(workflows['workflows']))
-        self.assertEquals(workflows['workflows'][0]['name'], 'install')
-        self.assertTrue('created_at' in workflows['workflows'][0])
-        self.assertEquals(workflows['workflows'][1]['name'], 'uninstall')
-        self.assertTrue('created_at' in workflows['workflows'][1])
+        resource_path = '/deployments/{0}'.format(deployment_id)
+        workflows = self.get(resource_path).json['workflows']
+        self.assertEquals(3, len(workflows))
+        self.assertEquals(workflows[1]['name'], 'install')
+        self.assertTrue('created_at' in workflows[1])
+        self.assertEquals([], workflows[1]['parameters'])
+        self.assertEquals(workflows[2]['name'], 'uninstall')
+        self.assertTrue('created_at' in workflows[2])
+        self.assertEquals([], workflows[2]['parameters'])
+        self.assertEquals(workflows[0]['name'], 'mock_workflow')
+        self.assertTrue('created_at' in workflows[0])
+        parameters = [
+            {'optional_param': 'test_default_value'},
+            'mandatory_param',
+            {
+                'nested_param': {
+                    'key': 'test_key',
+                    'value': 'test_value'
+                }
+            }
+        ]
+        self.assertEquals(parameters, workflows[0]['parameters'])
 
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,
