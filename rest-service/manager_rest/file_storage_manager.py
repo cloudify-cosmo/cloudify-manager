@@ -156,16 +156,10 @@ class FileStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Execution {0} not found".format(execution_id))
 
-        execution = data[EXECUTIONS][execution_id].to_dict()
-        updated_execution = Execution(
-            id=execution['id'],
-            deployment_id=execution['deployment_id'],
-            workflow_id=execution['workflow_id'],
-            blueprint_id=execution['blueprint_id'],
-            created_at=execution['created_at'],
-            status=status,
-            error=error)
-        data[EXECUTIONS][execution_id] = updated_execution
+        execution = data[EXECUTIONS][execution_id]
+        execution.status = status
+        execution.error = error
+        data[EXECUTIONS][execution_id] = execution
         self._dump_data(data)
 
     def update_node_instance(self, node):

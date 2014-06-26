@@ -50,6 +50,22 @@ class BlueprintValidationStatus(object):
 
 
 @swagger.model
+class Workflow(object):
+
+    resource_fields = {
+        'name': fields.String,
+        'created_at': fields.String,
+        'parameters': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.name = kwargs['name']
+        self.created_at = kwargs['created_at']
+        self.parameters = kwargs['parameters']
+
+
+@swagger.model
+@swagger.nested(workflows=Workflow.__name__)
 class Deployment(object):
 
     resource_fields = {
@@ -58,6 +74,7 @@ class Deployment(object):
         'updated_at': fields.String,
         'blueprint_id': fields.String,
         'plan': fields.Raw,
+        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
     }
 
     def __init__(self, **kwargs):
@@ -67,35 +84,7 @@ class Deployment(object):
         self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
         self.plan = kwargs['plan']
-
-
-@swagger.model
-class Workflow(object):
-
-    resource_fields = {
-        'name': fields.String,
-        'created_at': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.name = kwargs['name']
-        self.created_at = kwargs['created_at']
-
-
-@swagger.model
-@swagger.nested(workflows=Workflow.__name__)
-class Workflows(object):
-
-    resource_fields = {
-        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
-        'blueprint_id': fields.String,
-        'deployment_id': fields.String
-    }
-
-    def __init__(self, **kwargs):
         self.workflows = kwargs['workflows']
-        self.blueprint_id = kwargs['blueprint_id']
-        self.deployment_id = kwargs['deployment_id']
 
 
 @swagger.model
@@ -108,7 +97,8 @@ class Execution(object):
         'deployment_id': fields.String,
         'status': fields.String,
         'error': fields.String,
-        'created_at': fields.String
+        'created_at': fields.String,
+        'parameters': fields.Raw
     }
 
     def __init__(self, **kwargs):
@@ -119,6 +109,7 @@ class Execution(object):
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
+        self.parameters = kwargs['parameters']
 
 
 @swagger.model
