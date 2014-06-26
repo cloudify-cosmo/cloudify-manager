@@ -9,10 +9,10 @@ blueprint:
         -   name: test_node
             type: cloudify.types.base
             interfaces:
-                test_interface:
-                    - operation: testmockoperations.tasks.mock_operation_from_custom_workflow
+                test:
+                    - op: testmockoperations.tasks.mock_operation_from_custom_workflow
 
 workflows:
     custom1:
-        mapping: mock_workflows.workflows.execute_operation
-        parameters: []
+        mapping: mock_workflows.workflows.workflow_api_test
+        parameters: [key, value]

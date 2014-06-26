@@ -10,32 +10,32 @@ def execute_operation(ctx, operation, properties, node_id, **_):
     node_instance = list(ctx.get_node(node_id).instances)[0]
     node_instance.execute_operation(
         operation=operation,
-        kwargs=properties).apply_async().get()
+        kwargs=properties).get()
 
 
 @workflow
 def sleep(ctx, **kwargs):
-    node_instance = next(next(ctx.nodes).instances)
+    node_instance = get_instance(ctx)
 
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'before-sleep',
-                'value': None}).apply_async()
+                'value': None})
     time.sleep(10)
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'after-sleep',
-                'value': None}).apply_async()
+                'value': None})
 
 
 @workflow
 def sleep_with_cancel_support(ctx, **kwargs):
-    node_instance = next(next(ctx.nodes).instances)
+    node_instance = get_instance(ctx)
 
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'before-sleep',
-                'value': None}).apply_async()
+                'value': None})
 
     is_cancelled = False
     for i in range(10):
@@ -50,7 +50,7 @@ def sleep_with_cancel_support(ctx, **kwargs):
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'after-sleep',
-                'value': None}).apply_async()
+                'value': None})
 
 
 @workflow
@@ -59,7 +59,7 @@ def sleep_with_graph_usage(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    node_instance = next(next(ctx.nodes).instances)
+    node_instance = get_instance(ctx)
 
     sequence.add(
         node_instance.execute_operation(
@@ -75,3 +75,14 @@ def sleep_with_graph_usage(ctx, **kwargs):
                     'value': None}))
 
     return graph.execute()
+
+
+@workflow
+def workflow_api_test(ctx, key, value, **kwargs):
+    instance = get_instance(ctx)
+    instance.set_state('test_state', runtime_properties={key: value})
+    instance.execute_operation('test.op', kwargs={'key': key, 'value': value})
+
+
+def get_instance(ctx):
+    return next(next(ctx.nodes).instances)

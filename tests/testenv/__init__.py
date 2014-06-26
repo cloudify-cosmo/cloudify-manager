@@ -1019,8 +1019,7 @@ def deploy_and_execute_workflow(dsl_path,
                                            parameters=parameters or {})
 
     if wait_for_execution:
-        execution = wait_for_execution_to_end(execution, timeout=timeout)
-        return deployment, execution.id
+        wait_for_execution_to_end(execution, timeout=timeout)
 
     return deployment, execution.id
 
