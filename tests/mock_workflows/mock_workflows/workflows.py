@@ -3,7 +3,6 @@ __author__ = 'dan'
 import time
 from cloudify.decorators import workflow
 from cloudify.workflows import api
-from cloudify.workflows.tasks_graph import TaskDependencyGraph
 
 
 @workflow
@@ -57,9 +56,7 @@ def sleep_with_cancel_support(ctx, **kwargs):
 @workflow
 def sleep_with_graph_usage(ctx, **kwargs):
 
-    ctx.graph_mode()
-    graph = TaskDependencyGraph(ctx)
-
+    graph = ctx.graph_mode()
     sequence = graph.sequence()
 
     node_instance = next(next(ctx.nodes).instances)
