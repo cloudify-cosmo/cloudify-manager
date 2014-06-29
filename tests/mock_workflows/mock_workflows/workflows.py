@@ -78,10 +78,24 @@ def sleep_with_graph_usage(ctx, **kwargs):
 
 
 @workflow
-def workflow_api_test(ctx, key, value, **kwargs):
+def test_simple(ctx, key, value, **_):
     instance = get_instance(ctx)
-    instance.set_state('test_state', runtime_properties={key: value})
-    instance.execute_operation('test.op', kwargs={'key': key, 'value': value})
+    instance.set_state('test_state',
+                       runtime_properties={key: value}).get()
+    instance.execute_operation('test.op1',
+                               kwargs={'key': key, 'value': value}).get()
+
+
+@workflow
+def test_fail_remote_task(ctx, **_):
+    instance = get_instance(ctx)
+    instance.execute_operation('test.op2').get()
+
+
+@workflow
+def test_fail_local_task(ctx, **_):
+    instance = get_instance(ctx)
+    instance.execute_operation('test.op2').get()
 
 
 def get_instance(ctx):

@@ -19,19 +19,34 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_and_execute_workflow as deploy
 from testenv import send_task
-from plugins.testmockoperations.tasks import get_mock_operation_invocations
+from plugins.testmockoperations.tasks import (get_mock_operation_invocations,
+                                              get_fail_invocations)
+
+from testenv import delete_provider_context, restore_provider_context
 
 
 class WorkflowsAPITest(TestCase):
 
-    def test(self):
+    def setUp(self):
+        super(WorkflowsAPITest, self).setUp()
+        delete_provider_context()
+        context = {'cloudify': {'workflows': {
+            'task_retries': -1,
+            'task_retry_interval': 0
+        }}}
+        self.client.manager.create_context(self._testMethodName, context)
+        self.addCleanup(restore_provider_context)
+
+    def test_simple(self):
         parameters = {
             'key': 'key1',
             'value': 'value1'
         }
-        result_dict = {'key1': 'value1'}
+        result_dict = {
+            'key1': 'value1'
+        }
         deployment, _ = deploy(resource('dsl/workflow_api.yaml'),
-                               'custom1',
+                               self._testMethodName,
                                parameters=parameters)
 
         # testing workflow remote task
@@ -45,3 +60,19 @@ class WorkflowsAPITest(TestCase):
         instance = self.client.node_instances.get(instance.id)
         self.assertEqual('test_state', instance.state)
         self.assertDictEqual(result_dict, instance.runtime_properties)
+
+    def test_fail_remote_task(self):
+        deployment, _ = deploy(resource('dsl/workflow_api.yaml'),
+                               self._testMethodName)
+
+        # testing workflow remote task
+        invocation = send_task(get_fail_invocations).get()
+        self.assertEqual(3, len(invocation))
+
+    def test_fail_local_task(self):
+        deployment, _ = deploy(resource('dsl/workflow_api.yaml'),
+                               self._testMethodName)
+
+        # testing workflow remote task
+        invocation = send_task(get_fail_invocations).get()
+        self.assertEqual(3, len(invocation))

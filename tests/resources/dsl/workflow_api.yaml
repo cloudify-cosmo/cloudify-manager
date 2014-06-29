@@ -10,9 +10,19 @@ blueprint:
             type: cloudify.types.base
             interfaces:
                 test:
-                    - op: testmockoperations.tasks.mock_operation_from_custom_workflow
+                    - op1: testmockoperations.tasks.mock_operation_from_custom_workflow
+                    - op2:
+                        mapping: testmockoperations.tasks.fail
+                        properties:
+                            fail_count: 2
 
 workflows:
-    custom1:
-        mapping: mock_workflows.workflows.workflow_api_test
+    test_simple:
+        mapping: mock_workflows.workflows.test_simple
         parameters: [key, value]
+    test_fail_remote_task:
+        mapping: mock_workflows.workflows.test_fail_remote_task
+        parameters: [{stub: stub}]
+    test_fail_local_task:
+        mapping: mock_workflows.workflows.test_fail_local_task
+        parameters: [{stub: stub}]
