@@ -861,13 +861,6 @@ class NodeInstancesId(Resource):
 
 class DeploymentsIdExecutions(Resource):
 
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-
-        self._post_args_parser = reqparse.RequestParser()
-        self._post_args_parser.add_argument('force', type=str,
-                                            default='false', location='args')
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
@@ -898,17 +891,7 @@ class DeploymentsIdExecutions(Resource):
                      'required': True,
                      'allowMultiple': False,
                      'dataType': requests_schema.ExecutionRequest.__name__,
-                     'paramType': 'body'},
-                    {'name': 'force',
-                     'description': 'Specifies whether to force workflow '
-                                    'execution even if there is an ongoing '
-                                    'workflow executing for the same '
-                                    'deployment',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'boolean',
-                     'defaultValue': False,
-                     'paramType': 'query'}],
+                     'paramType': 'body'}],
         consumes=[
             "application/json"
         ]
@@ -923,8 +906,8 @@ class DeploymentsIdExecutions(Resource):
         request_json = request.json
         verify_parameter_in_request_body('workflow_id', request_json)
 
-        args = self._post_args_parser.parse_args()
-        force = verify_and_convert_bool('force', args['force'])
+        force = verify_and_convert_bool('force',
+                                        request_json.get('force', 'false'))
 
         workflow_id = request.json['workflow_id']
         parameters = request.json.get('parameters', None)
