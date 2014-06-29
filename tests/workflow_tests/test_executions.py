@@ -120,7 +120,8 @@ class ExecutionsTest(TestCase):
         }
         execution = self.client.deployments.execute(
             deployment_id, 'another_execute_operation',
-            parameters=execution_parameters)
+            parameters=execution_parameters,
+            allow_custom_parameters=True)
         wait_for_execution_to_end(execution)
 
         from plugins.testmockoperations.tasks import \
@@ -132,15 +133,15 @@ class ExecutionsTest(TestCase):
                              {'different-key': 'different-value'})
 
         # checking for execution parameters - expecting there to be a merge
-        # with overrides with workflow parameters. 'extra-property' is not
-        # expected to appear as it is not defined in the blueprint
+        # with overrides with workflow parameters.
         expected_params = {
             'node_id': 'test_node',
             'operation': 'test_interface.operation',
             'properties': {
                 'key': 'different-key',
                 'value': 'different-value'
-            }
+            },
+            'extra-property': "doesn't matter"
         }
         self.assertEqual(expected_params, execution.parameters)
 

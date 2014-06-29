@@ -36,6 +36,7 @@ install:
    - source package/linux/env/bin/activate
 
    - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - cd cloudify-rest-client; git pull origin feature/CFY-849-add-parameter-for-specifying-if-custom-parameters-to-execution-is-allowed; cd ..
    - cd cloudify-rest-client; pip install .; cd ..
 
    - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1

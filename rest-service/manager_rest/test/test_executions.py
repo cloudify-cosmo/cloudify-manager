@@ -53,21 +53,42 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return execution
 
-    def test_execute_with_extra_parameters(self):
+    def test_execute_with_custom_parameters(self):
+        # note that this test also tests for passing custom parameters for an
+        #  execution of a workflow which doesn't have any workflow parameters
+
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'param1': 'val1', 'param2': 'val2'}
-        execution = self.post(resource_path, {
+        response = self.post(resource_path, {
+            'workflow_id': 'install',
+            'parameters': parameters,
+            'allow_custom_parameters': True
+        })
+        self.assertEquals(201, response.status_code)
+        execution = response.json
+        self.assertEqual(parameters, execution['parameters'])
+
+    def test_execute_with_custom_parameters_not_allowed(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+
+        resource_path = '/deployments/{0}/executions'.format(deployment_id)
+        parameters = {'param1': 'val1', 'param2': 'val2'}
+        resp = self.post(resource_path, {
             'workflow_id': 'install',
             'parameters': parameters
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
-        # expecting an empty parameters dictionary since the parameters were
-        #  never defined in the blueprint
-        self.assertEqual(dict(), execution['parameters'])
+        })
+        self.assertEquals(400, resp.status_code)
+        self.assertEquals(
+            resp.json['error_code'],
+            manager_exceptions.IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE)
+        # ensure all custom parameters are mentioned in the error message
+        self.assertIn('param1', resp.json['message'])
+        self.assertIn('param2', resp.json['message'])
 
     def test_get_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -75,7 +96,8 @@ class ExecutionsTestCase(BaseServerTestCase):
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        parameters = {'mandatory_param': 'value'}
+        parameters = {'mandatory_param': 'value',
+                      'mandatory_param2': 'value2'}
         execution = self.post(resource_path, {
             'workflow_id': 'mock_workflow',
             'parameters': parameters
@@ -84,6 +106,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.get(get_execution_resource).json
         expected_executions_params = {
             'mandatory_param': 'value',
+            'mandatory_param2': 'value2',
             'optional_param': 'test_default_value',
             'nested_param': {
                 'key': 'test_key',
@@ -100,6 +123,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         # overriding 'optional_param' with a value of a different type
         parameters = {'mandatory_param': 'value',
+                      'mandatory_param2': 'value2',
                       'optional_param': {'overridden_value': 'obj'}}
         execution = self.post(resource_path, {
             'workflow_id': 'mock_workflow',
@@ -109,6 +133,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.get(get_execution_resource).json
         expected_executions_params = {
             'mandatory_param': 'value',
+            'mandatory_param2': 'value2',
             'optional_param': {'overridden_value': 'obj'},
             'nested_param': {
                 'key': 'test_key',
@@ -125,6 +150,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         # overriding one of 'nested_param' subfields
         parameters = {'mandatory_param': 'value',
+                      'mandatory_param2': 'value2',
                       'nested_param': {'key': 'overridden_value'}}
         execution = self.post(resource_path, {
             'workflow_id': 'mock_workflow',
@@ -137,6 +163,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         # should no longer appear
         expected_executions_params = {
             'mandatory_param': 'value',
+            'mandatory_param2': 'value2',
             'optional_param': 'test_default_value',
             'nested_param': {
                 'key': 'overridden_value'
@@ -158,8 +185,11 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals(400, response.status_code)
         self.assertEquals(
             response.json['error_code'],
-            manager_exceptions.MissingExecutionParametersError.
-            MISSING_EXECUTION_PARAMETERS_ERROR_CODE)
+            manager_exceptions.IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE)
+        # ensure all missing mandatory parameters are mentioned in message
+        self.assertIn('mandatory_param', response.json['message'])
+        self.assertIn('mandatory_param2', response.json['message'])
 
     def test_bad_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,

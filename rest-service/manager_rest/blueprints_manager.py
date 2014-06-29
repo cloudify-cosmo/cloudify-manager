@@ -144,7 +144,8 @@ class BlueprintsManager(object):
         return storage.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
-                         parameters=None, force=False):
+                         parameters=None,
+                         allow_custom_parameters=False, force=False):
         deployment = self.get_deployment(deployment_id)
 
         if workflow_id not in deployment.plan['workflows']:
@@ -171,7 +172,7 @@ class BlueprintsManager(object):
 
         execution_parameters = \
             BlueprintsManager._merge_and_validate_execution_parameters(
-                workflow, workflow_id, parameters)
+                workflow, workflow_id, parameters, allow_custom_parameters)
 
         execution_id = str(uuid.uuid4())
 
@@ -306,36 +307,62 @@ class BlueprintsManager(object):
                              deployment_id=deployment_id)
 
     @staticmethod
-    def _merge_and_validate_execution_parameters(workflow, workflow_name,
-                                                 execution_parameters=None):
-        # merge parameters - parameters passed directly to execution request
-        # override workflow parameters from the original plan. any
-        # parameters without a default value in the blueprint must
-        # appear in the execution request parameters.
-        # note that extra parameters in the execution requests (i.e.
-        # parameters not defined in the original workflow plan) will simply
-        # be ignored silently
+    def _merge_and_validate_execution_parameters(
+            workflow, workflow_name, execution_parameters=None,
+            allow_custom_parameters=False):
+        """
+        merge parameters - parameters passed directly to execution request
+        override workflow parameters from the original plan. any
+        parameters without a default value in the blueprint must
+        appear in the execution request parameters.
+        Custom parameters will be passed to the workflow as well if allowed;
+        Otherwise, an exception will be raised if such parameters are passed.
+        """
+
         merged_execution_parameters = dict()
         workflow_parameters = workflow.get('parameters', [])
         execution_parameters = execution_parameters or dict()
+
+        workflow_parameters_names = set()
+        missing_mandatory_parameters = set()
+
         for param in workflow_parameters:
             if isinstance(param, basestring):
+                workflow_parameters_names.add(param)
                 # parameter without a default value - ensure one was
-                # provided via parameters
+                # provided via execution parameters
                 if param not in execution_parameters:
-                    raise \
-                        manager_exceptions.MissingExecutionParametersError(
-                            'Workflow {0} must be provided with a "{1}" '
-                            'parameter to execute'.format(workflow_name,
-                                                          param))
+                    missing_mandatory_parameters.add(param)
+                    continue
+
                 merged_execution_parameters[param] = \
                     execution_parameters[param]
             else:
                 param_name = param.keys()[0]
+                workflow_parameters_names.add(param_name)
                 merged_execution_parameters[param_name] = \
                     execution_parameters[param_name] if \
                     param_name in execution_parameters else param[param_name]
 
+        if missing_mandatory_parameters:
+            raise \
+                manager_exceptions.IllegalExecutionParametersError(
+                    'Workflow "{0}" must be provided with the following '
+                    'parameters to execute: {1}'.format(
+                        workflow_name, ','.join(missing_mandatory_parameters)))
+
+        custom_parameters = {k: v for k, v in execution_parameters.iteritems()
+                             if k not in workflow_parameters_names}
+
+        if not allow_custom_parameters and custom_parameters:
+            raise \
+                manager_exceptions.IllegalExecutionParametersError(
+                    'Workflow "{0}" does not have the following parameters '
+                    'declared: {1}. Remove these parameters or use '
+                    'the flag for allowing custom parameters'
+                    .format(workflow_name, ','.join(custom_parameters.keys())))
+
+        merged_execution_parameters.update(custom_parameters)
         return merged_execution_parameters
 
     @staticmethod
