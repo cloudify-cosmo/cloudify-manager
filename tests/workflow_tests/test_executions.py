@@ -72,7 +72,7 @@ class ExecutionsTest(TestCase):
 
     def test_cancel_execution_before_it_started(self):
         execution = self._execute_and_cancel_execution(
-            'sleep_with_cancel_support', False, True, 0)
+            'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
 
         from plugins.testmockoperations.tasks import \
@@ -166,7 +166,8 @@ class ExecutionsTest(TestCase):
         self.assertEquals('', execution.error)
 
     def _execute_and_cancel_execution(self, workflow_id, force=False,
-                                      wait_for_termination=True, sleep=5):
+                                      wait_for_termination=True,
+                                      is_wait_for_asleep_node=True):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
@@ -177,7 +178,19 @@ class ExecutionsTest(TestCase):
                    deployment_id=deployment_id)
         execution = self.client.deployments.execute(
             deployment_id, workflow_id)
-        time.sleep(sleep)  # wait for the execution to reach some sleep command
+
+        node_inst_id = self.client.node_instances.list(deployment_id)[0].id
+
+        if is_wait_for_asleep_node:
+            for retry in range(30):
+                if self.client.node_instances.get(
+                        node_inst_id).state == 'asleep':
+                    break
+                time.sleep(1)
+            else:
+                raise RuntimeError("Execution was expected to go"
+                                   " into 'sleeping' status")
+
         execution = self.client.executions.cancel(execution.id, force)
         expected_status = Execution.FORCE_CANCELLING if force else \
             Execution.CANCELLING
