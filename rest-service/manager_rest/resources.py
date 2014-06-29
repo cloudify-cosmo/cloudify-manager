@@ -60,7 +60,7 @@ def exceptions_handled(func):
                 manager_exceptions.InvalidBlueprintError,
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError,
-                manager_exceptions.MissingExecutionParametersError,
+                manager_exceptions.IllegalExecutionParametersError,
                 manager_exceptions.IllegalActionError) as e:
             abort_error(e)
     return wrapper
@@ -861,6 +861,13 @@ class NodeInstancesId(Resource):
 
 class DeploymentsIdExecutions(Resource):
 
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+
+        self._post_args_parser = reqparse.RequestParser()
+        self._post_args_parser.add_argument('force', type=str,
+                                            default='false', location='args')
+
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
@@ -905,9 +912,13 @@ class DeploymentsIdExecutions(Resource):
         verify_json_content_type()
         request_json = request.json
         verify_parameter_in_request_body('workflow_id', request_json)
-
-        force = verify_and_convert_bool('force',
-                                        request_json.get('force', 'false'))
+                
+        allow_custom_parameters = verify_and_convert_bool(
+            'allow_custom_parameters',
+            request_json.get('allow_custom_parameters', 'false'))
+        force = verify_and_convert_bool(
+            'force',
+            request_json.get('force', 'false'))
 
         workflow_id = request.json['workflow_id']
         parameters = request.json.get('parameters', None)
@@ -918,7 +929,8 @@ class DeploymentsIdExecutions(Resource):
                 " is of type {0}".format(parameters.__class__.__name__))
 
         execution = get_blueprints_manager().execute_workflow(
-            deployment_id, workflow_id, parameters=parameters, force=force)
+            deployment_id, workflow_id, parameters=parameters,
+            allow_custom_parameters=allow_custom_parameters, force=force)
         return responses.Execution(**execution.to_dict()), 201
 
 
