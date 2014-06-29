@@ -25,7 +25,8 @@ class ExecutionRequest(object):
     resource_fields = {
         'workflow_id': fields.String,
         'parameters': fields.Raw,
-        'allow_custom_parameters': fields.Boolean
+        'allow_custom_parameters': fields.Boolean,
+        'force': fields.Boolean
     }
 
 

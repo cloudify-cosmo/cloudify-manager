@@ -414,8 +414,9 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._modify_execution_status(execution['id'], 'pending')
 
         response = self.post(resource_path, {
-            'workflow_id': 'install'
-        }, query_params={'force': is_use_force})
+            'workflow_id': 'install',
+            'force': str(is_use_force).lower()
+        })
         self.assertEqual(expected_status_code, response.status_code)
 
     def test_get_non_existent_execution(self):
