@@ -116,7 +116,7 @@ class ExecutionsTest(TestCase):
                 'key': 'different-key',
                 'value': 'different-value'
             },
-            'extra-property': "doesn't matter"
+            'custom-parameter': "doesn't matter"
         }
         execution = self.client.deployments.execute(
             deployment_id, 'another_execute_operation',
@@ -141,7 +141,7 @@ class ExecutionsTest(TestCase):
                 'key': 'different-key',
                 'value': 'different-value'
             },
-            'extra-property': "doesn't matter"
+            'custom-parameter': "doesn't matter"
         }
         self.assertEqual(expected_params, execution.parameters)
 

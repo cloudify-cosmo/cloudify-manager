@@ -65,7 +65,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         response = self.post(resource_path, {
             'workflow_id': 'install',
             'parameters': parameters,
-            'allow_custom_parameters': True
+            'allow_custom_parameters': 'true'
         })
         self.assertEquals(201, response.status_code)
         execution = response.json
