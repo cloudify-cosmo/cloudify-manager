@@ -861,13 +861,6 @@ class NodeInstancesId(Resource):
 
 class DeploymentsIdExecutions(Resource):
 
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-
-        self._post_args_parser = reqparse.RequestParser()
-        self._post_args_parser.add_argument('force', type=str,
-                                            default='false', location='args')
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
