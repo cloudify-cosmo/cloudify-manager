@@ -31,7 +31,7 @@ class WorkflowsAPITest(TestCase):
         super(WorkflowsAPITest, self).setUp()
         delete_provider_context()
         context = {'cloudify': {'workflows': {
-            'task_retries': -1,
+            'task_retries': 50,  # not too big, not too small either.
             'task_retry_interval': 0
         }}}
         self.client.manager.create_context(self._testMethodName, context)
