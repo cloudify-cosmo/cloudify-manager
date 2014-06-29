@@ -18,7 +18,7 @@ To use this plugin, WinRM must be properly setup on the destination machine.
 - tasks.start: Starts the agent as a Windows service.
 - tasks.stop: Stops the service.
 - tasks.restart: Restarts the service.
-- tasks.uninstall: Stops the service and removes any files from the file system.
+- tasks.uninstall: Removes the service and any files from the file system.
 
 **Example Usage**
 

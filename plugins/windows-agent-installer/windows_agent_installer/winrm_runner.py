@@ -12,12 +12,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import logging
-import sys
 
 __author__ = 'elip'
 
+import logging
+import sys
 import winrm
+from cloudify.exceptions import CommandExecutionException
 
 DEFAULT_WINRM_PORT = '5985'
 DEFAULT_WINRM_URI = 'wsman'
@@ -92,7 +93,8 @@ class WinRMRunner(object):
                 error = WinRMExecutionException(
                     command=command,
                     code=res.status_code,
-                    message=res.std_err)
+                    error=res.std_err,
+                    output=res.std_out)
                 self.logger.error(error)
                 if exit_on_failure:
                     raise error
@@ -103,30 +105,68 @@ class WinRMRunner(object):
         return response
 
     def download(self, url, output_path):
-        self.logger.debug('Downloading {0}...'.format(url))
         return self.run(
             '''@powershell -Command "(new-object System.Net.WebClient).Downloadfile('{0}','{1}')"'''  # NOQA
             .format(url, output_path))
 
+    def move(self, src, dest, create_missing_directories=False):
 
-class WinRMExecutionException(Exception):
+        '''
+        Moves item at <src> to <dest>. Does not create missing directories.
+
+        :param src: Path to the source item.
+        :param dest: Path to the destination item.
+        :return: An execution 'response' instance.
+        '''
+
+        return self.run(
+            '''@powershell -Command "Move-Item {0} {1}"'''  # NOQA
+            .format(src, dest))
+
+    def copy(self, src, dest, create_missing_directories=False):
+
+        '''
+        Copies item at <src> to <dest>. Does not create missing directories.
+
+        :param src: Path to the source item.
+        :param dest: Path to the destination item.
+        :param create_missing_directories: True to create any missing directories in the destination path.
+        :return: An execution 'response' instance.
+        '''
+
+        if create_missing_directories:
+            return self.run(
+                '''@powershell -Command "Copy-Item -Recurse -Force {0} {1}"'''  # NOQA
+                .format(src, dest))
+        return self.run(
+            '''@powershell -Command "Copy-Item -Recurse {0} {1}"'''  # NOQA
+            .format(src, dest))
+
+    def exists(self, path):
+        response = self.run(
+            '''@powershell -Command "Test-Path {0}"'''  # NOQA
+            .format(path))
+        return response.std_out == 'True\r\n'
+
+    def delete(self, path):
+        return self.run(
+            '''@powershell -Command "Remove-Item -Recurse -Force {0}"'''  # NOQA
+            .format(path))
+
+    def new_dir(self, path):
+        return self.run(
+            '''@powershell -Command "New-Item {0}" -type directory'''  # NOQA
+            .format(path))
+
+    def new_file(self, path):
+        return self.run(
+            '''@powershell -Command "New-Item {0}" -type file'''  # NOQA
+            .format(path))
+
+
+class WinRMExecutionException(CommandExecutionException):
 
     """
-    Indicates a failure to execute a command over WinRM
-
-    'command' - The command that was executed
-    'code' - The error code from the execution.
-    'message' - The error from the execution
+    Indicates a failure to execute a command over WinRM.
 
     """
-
-    def __init__(self, command, message, code):
-        self.command = command
-        self.message = message
-        self.code = code
-        Exception.__init__(self, self.__str__())
-
-    def __str__(self):
-        return "Failed executing command: {0}\nError code: {1}\nError message: {2}"\
-               .format(self.command, self.code, self.message)
-

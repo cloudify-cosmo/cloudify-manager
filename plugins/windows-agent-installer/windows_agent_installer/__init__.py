@@ -44,9 +44,6 @@ def init_worker_installer(func):
 
 def prepare_configuration(ctx, cloudify_agent):
 
-    if 'base_dir' not in cloudify_agent:
-        cloudify_agent['base_dir'] = 'C:\Users\{0}'.format(cloudify_agent['user'])
-
     # runtime info
 
     cloudify_agent['name'] = ctx.node_id
