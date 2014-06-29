@@ -60,7 +60,7 @@ def exceptions_handled(func):
                 manager_exceptions.InvalidBlueprintError,
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError,
-                manager_exceptions.MissingExecutionParametersError,
+                manager_exceptions.IllegalExecutionParametersError,
                 manager_exceptions.IllegalActionError) as e:
             abort_error(e)
     return wrapper
@@ -866,7 +866,7 @@ class DeploymentsIdExecutions(Resource):
 
         self._post_args_parser = reqparse.RequestParser()
         self._post_args_parser.add_argument('force', type=str,
-                                            default='false', location='args')
+                                            default='false')
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
@@ -925,6 +925,9 @@ class DeploymentsIdExecutions(Resource):
 
         args = self._post_args_parser.parse_args()
         force = verify_and_convert_bool('force', args['force'])
+        allow_custom_parameters = verify_and_convert_bool(
+            'allow_custom_parameters',
+            request_json.get('allow_custom_parameters', 'false'))
 
         workflow_id = request.json['workflow_id']
         parameters = request.json.get('parameters', None)
@@ -935,7 +938,8 @@ class DeploymentsIdExecutions(Resource):
                 " is of type {0}".format(parameters.__class__.__name__))
 
         execution = get_blueprints_manager().execute_workflow(
-            deployment_id, workflow_id, parameters=parameters, force=force)
+            deployment_id, workflow_id, parameters=parameters,
+            allow_custom_parameters=allow_custom_parameters, force=force)
         return responses.Execution(**execution.to_dict()), 201
 
 
