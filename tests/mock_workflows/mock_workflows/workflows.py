@@ -78,35 +78,44 @@ def sleep_with_graph_usage(ctx, **kwargs):
 
 
 @workflow
-def test_simple(ctx, key, value, **_):
+def test_simple(ctx, do_get, key, value, **_):
     instance = get_instance(ctx)
-    instance.set_state('test_state',
-                       runtime_properties={key: value}).get()
-    instance.execute_operation('test.op1',
-                               kwargs={'key': key, 'value': value}).get()
+    set_state_result = instance.set_state(
+        'test_state', runtime_properties={key: value})
+    if do_get:
+        set_state_result.get()
+    execute_operation_result = instance.execute_operation(
+        'test.op1',
+        kwargs={'key': key, 'value': value})
+    if do_get:
+        execute_operation_result.get()
 
 
 @workflow
-def test_fail_remote_task_eventual_success(ctx, **_):
-    get_instance(ctx).execute_operation('test.op2').get()
+def test_fail_remote_task_eventual_success(ctx, do_get, **_):
+    result = get_instance(ctx).execute_operation('test.op2')
+    if do_get:
+        result.get()
 
 
 @workflow
-def test_fail_remote_task_eventual_failure(ctx, **_):
-    get_instance(ctx).execute_operation('test.op3').get()
+def test_fail_remote_task_eventual_failure(ctx, do_get, **_):
+    result = get_instance(ctx).execute_operation('test.op3')
+    if do_get:
+        result.get()
 
 
 @workflow
-def test_fail_local_task_eventual_success(ctx, **_):
-    test_fail_local_task(ctx, should_fail=False)
+def test_fail_local_task_eventual_success(ctx, do_get, **_):
+    test_fail_local_task(ctx, should_fail=False, do_get=do_get)
 
 
 @workflow
-def test_fail_local_task_eventual_failure(ctx, **_):
-    test_fail_local_task(ctx, should_fail=True)
+def test_fail_local_task_eventual_failure(ctx, do_get, **_):
+    test_fail_local_task(ctx, should_fail=True, do_get=do_get)
 
 
-def test_fail_local_task(ctx, should_fail):
+def test_fail_local_task(ctx, should_fail, do_get):
     state = []
 
     # mock local task
@@ -120,23 +129,27 @@ def test_fail_local_task(ctx, should_fail):
 
     # execute the task (with retries)
     try:
-        ctx.local_task(fail).get()
+        result = ctx.local_task(fail)
+        if do_get:
+            result.get()
     except:
         if should_fail:
             pass
         else:
             raise
     else:
-        if should_fail:
+        if do_get and should_fail:
             raise RuntimeError('Task should have failed')
 
     # make assertions
-    if len(state) != 3:
-        raise RuntimeError('Expected 3 invocations, got {}'.format(len(state)))
-    for i in range(len(state) - 1):
-        if state[i+1] - state[i] < 1:
-            raise RuntimeError('Expected at least 1 second between each '
-                               'invocation')
+    if do_get:
+        if len(state) != 3:
+            raise RuntimeError('Expected 3 invocations, got {}'
+                               .format(len(state)))
+        for i in range(len(state) - 1):
+            if state[i+1] - state[i] < 1:
+                raise RuntimeError('Expected at least 1 second between each '
+                                   'invocation')
 
 
 def get_instance(ctx):

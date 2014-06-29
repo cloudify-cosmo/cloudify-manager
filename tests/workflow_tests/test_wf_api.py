@@ -29,6 +29,7 @@ class WorkflowsAPITest(TestCase):
 
     def setUp(self):
         super(WorkflowsAPITest, self).setUp()
+        self.do_get = True
         delete_provider_context()
         context = {'cloudify': {'workflows': {
             'task_retries': 2,
@@ -39,6 +40,7 @@ class WorkflowsAPITest(TestCase):
 
     def test_simple(self):
         parameters = {
+            'do_get': self.do_get,
             'key': 'key1',
             'value': 'value1'
         }
@@ -62,7 +64,8 @@ class WorkflowsAPITest(TestCase):
         self.assertDictEqual(result_dict, instance.runtime_properties)
 
     def test_fail_remote_task_eventual_success(self):
-        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName)
+        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+               parameters={'do_get': self.do_get})
 
         # testing workflow remote task
         invocations = send_task(get_fail_invocations).get()
@@ -73,7 +76,8 @@ class WorkflowsAPITest(TestCase):
     def test_fail_remote_task_eventual_failure(self):
         self.assertRaises(RuntimeError, deploy,
                           resource('dsl/workflow_api.yaml'),
-                          self._testMethodName)
+                          self._testMethodName,
+                          parameters={'do_get': self.do_get})
 
         # testing workflow remote task
         invocations = send_task(get_fail_invocations).get()
@@ -82,7 +86,16 @@ class WorkflowsAPITest(TestCase):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])
 
     def test_fail_local_task_eventual_success(self):
-        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName)
+        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+               parameters={'do_get': self.do_get})
 
     def test_fail_local_task_eventual_failure(self):
-        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName)
+        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+               parameters={'do_get': self.do_get})
+
+
+class WorkflowsAPITestNoGet(WorkflowsAPITest):
+
+    def setUp(self):
+        super(WorkflowsAPITestNoGet, self).setUp()
+        self.do_get = False
