@@ -88,14 +88,55 @@ def test_simple(ctx, key, value, **_):
 
 @workflow
 def test_fail_remote_task_eventual_success(ctx, **_):
-    instance = get_instance(ctx)
-    instance.execute_operation('test.op2').get()
+    get_instance(ctx).execute_operation('test.op2').get()
 
 
 @workflow
 def test_fail_remote_task_eventual_failure(ctx, **_):
-    instance = get_instance(ctx)
-    instance.execute_operation('test.op3').get()
+    get_instance(ctx).execute_operation('test.op3').get()
+
+
+@workflow
+def test_fail_local_task_eventual_success(ctx, **_):
+    test_fail_local_task(ctx, should_fail=False)
+
+
+@workflow
+def test_fail_local_task_eventual_failure(ctx, **_):
+    test_fail_local_task(ctx, should_fail=True)
+
+
+def test_fail_local_task(ctx, should_fail):
+    state = []
+
+    # mock local task
+    def fail():
+        state.append(time.time())
+        # only fail twice, succeed on the third attempt
+        # (unless should_fail=True)
+        if len(state) == 3 and not should_fail:
+            return
+        raise RuntimeError('FAIL')
+
+    # execute the task (with retries)
+    try:
+        ctx.local_task(fail).get()
+    except:
+        if should_fail:
+            pass
+        else:
+            raise
+    else:
+        if should_fail:
+            raise RuntimeError('Task should have failed')
+
+    # make assertions
+    if len(state) != 3:
+        raise RuntimeError('Expected 3 invocations, got {}'.format(len(state)))
+    for i in range(len(state) - 1):
+        if state[i+1] - state[i] < 1:
+            raise RuntimeError('Expected at least 1 second between each '
+                               'invocation')
 
 
 def get_instance(ctx):

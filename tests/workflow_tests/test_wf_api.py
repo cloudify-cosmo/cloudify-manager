@@ -81,12 +81,8 @@ class WorkflowsAPITest(TestCase):
         for i in range(len(invocations) - 1):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])
 
-    def test_fail_local_task(self):
-        deployment, _ = deploy(resource('dsl/workflow_api.yaml'),
-                               self._testMethodName)
+    def test_fail_local_task_eventual_success(self):
+        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName)
 
-        # testing workflow remote task
-        invocations = send_task(get_fail_invocations).get()
-        self.assertEqual(3, len(invocations))
-        for i in range(len(invocations) - 1):
-            self.assertLessEqual(1, invocations[i+1] - invocations[i])
+    def test_fail_local_task_eventual_failure(self):
+        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName)

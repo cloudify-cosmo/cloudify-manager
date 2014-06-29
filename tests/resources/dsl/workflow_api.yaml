@@ -30,6 +30,9 @@ workflows:
     test_fail_remote_task_eventual_failure:
         mapping: mock_workflows.workflows.test_fail_remote_task_eventual_failure
         parameters: [{stub: stub}]
-    test_fail_local_task:
-        mapping: mock_workflows.workflows.test_fail_local_task
+    test_fail_local_task_eventual_success:
+        mapping: mock_workflows.workflows.test_fail_local_task_eventual_success
+        parameters: [{stub: stub}]
+    test_fail_local_task_eventual_failure:
+        mapping: mock_workflows.workflows.test_fail_local_task_eventual_failure
         parameters: [{stub: stub}]
