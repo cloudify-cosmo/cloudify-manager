@@ -171,6 +171,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         parameters = [
             {'optional_param': 'test_default_value'},
             'mandatory_param',
+            'mandatory_param2',
             {
                 'nested_param': {
                     'key': 'test_key',
