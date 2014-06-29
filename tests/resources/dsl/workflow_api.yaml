@@ -15,13 +15,20 @@ blueprint:
                         mapping: testmockoperations.tasks.fail
                         properties:
                             fail_count: 2
+                    - op3:
+                        mapping: testmockoperations.tasks.fail
+                        properties:
+                            fail_count: 3
 
 workflows:
     test_simple:
         mapping: mock_workflows.workflows.test_simple
         parameters: [key, value]
-    test_fail_remote_task:
-        mapping: mock_workflows.workflows.test_fail_remote_task
+    test_fail_remote_task_eventual_success:
+        mapping: mock_workflows.workflows.test_fail_remote_task_eventual_success
+        parameters: [{stub: stub}]
+    test_fail_remote_task_eventual_failure:
+        mapping: mock_workflows.workflows.test_fail_remote_task_eventual_failure
         parameters: [{stub: stub}]
     test_fail_local_task:
         mapping: mock_workflows.workflows.test_fail_local_task

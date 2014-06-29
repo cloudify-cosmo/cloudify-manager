@@ -87,15 +87,15 @@ def test_simple(ctx, key, value, **_):
 
 
 @workflow
-def test_fail_remote_task(ctx, **_):
+def test_fail_remote_task_eventual_success(ctx, **_):
     instance = get_instance(ctx)
     instance.execute_operation('test.op2').get()
 
 
 @workflow
-def test_fail_local_task(ctx, **_):
+def test_fail_remote_task_eventual_failure(ctx, **_):
     instance = get_instance(ctx)
-    instance.execute_operation('test.op2').get()
+    instance.execute_operation('test.op3').get()
 
 
 def get_instance(ctx):
