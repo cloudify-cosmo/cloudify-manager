@@ -57,19 +57,6 @@ class ExecutionsTest(TestCase):
 
         self._assert_execution_cancelled(execution)
 
-    def test_cancel_on_non_supporting_workflow(self):
-        execution = self._execute_and_cancel_execution(
-            'sleep')
-        self.assertEquals(Execution.TERMINATED, execution.status)
-
-        from plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
-        self.assertEqual(2, len(invocations))
-        self.assertDictEqual(invocations[0], {'before-sleep': None})
-        self.assertDictEqual(invocations[1], {'after-sleep': None})
-
     def test_cancel_execution_before_it_started(self):
         execution = self._execute_and_cancel_execution(
             'sleep_with_cancel_support', False, True, False)

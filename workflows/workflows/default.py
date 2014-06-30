@@ -17,7 +17,7 @@ __author__ = 'dank'
 
 
 from cloudify.decorators import workflow
-from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
+from cloudify.workflows.tasks_graph import forkjoin
 from cloudify.workflows import tasks as workflow_tasks
 
 
@@ -25,8 +25,9 @@ from cloudify.workflows import tasks as workflow_tasks
 def install(ctx, **kwargs):
     """Default install workflow"""
 
-    # instantiate and new graph instance to build install tasks workflow
-    graph = TaskDependencyGraph(ctx)
+    # switch to graph mode (operations on the context return tasks instead of
+    # result instances)
+    graph = ctx.graph_mode()
 
     # We need reference to the create event/state tasks and the started
     # task so we can later create a proper dependency between nodes and
@@ -115,8 +116,9 @@ def install(ctx, **kwargs):
 def uninstall(ctx, **kwargs):
     """Default uninstall workflow"""
 
-    # instantiate a new graph instance to build uninstall tasks workflow
-    graph = TaskDependencyGraph(ctx)
+    # switch to graph mode (operations on the context return tasks instead of
+    # result instances)
+    graph = ctx.graph_mode()
 
     set_state_stopping_tasks = {}
     set_state_deleted_tasks = {}
