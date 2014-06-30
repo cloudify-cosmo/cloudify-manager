@@ -133,7 +133,7 @@ class WinRMRunnerTest(unittest.TestCase):
 
         response = self.runner.run('echo Hello!')
         self.assertEqual('Hello!\r\n', response.std_out)
-        self.assertEqual(0, response.status_code)
+        self.assertEqual(0, response.return_code)
         self.assertEqual('', response.std_err)
 
 
@@ -152,7 +152,7 @@ class WinRMRunnerTest(unittest.TestCase):
         response = self.runner.download(
             url=TEST_FILE_DOWNLOAD_URL,
             output_path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
-        self.assertEqual(0, response.status_code)
+        self.assertEqual(0, response.return_code)
         self.assertEqual('', response.std_err)
         self.assertTrue(self.runner.exists(path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
 
