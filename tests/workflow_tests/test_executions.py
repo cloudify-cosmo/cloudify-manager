@@ -72,7 +72,7 @@ class ExecutionsTest(TestCase):
 
     def test_cancel_execution_before_it_started(self):
         execution = self._execute_and_cancel_execution(
-            'sleep_with_cancel_support', False, True, 0)
+            'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
 
         from plugins.testmockoperations.tasks import \
@@ -116,11 +116,12 @@ class ExecutionsTest(TestCase):
                 'key': 'different-key',
                 'value': 'different-value'
             },
-            'extra-property': "doesn't matter"
+            'custom-parameter': "doesn't matter"
         }
         execution = self.client.deployments.execute(
             deployment_id, 'another_execute_operation',
-            parameters=execution_parameters)
+            parameters=execution_parameters,
+            allow_custom_parameters=True)
         wait_for_execution_to_end(execution)
 
         from plugins.testmockoperations.tasks import \
@@ -132,15 +133,15 @@ class ExecutionsTest(TestCase):
                              {'different-key': 'different-value'})
 
         # checking for execution parameters - expecting there to be a merge
-        # with overrides with workflow parameters. 'extra-property' is not
-        # expected to appear as it is not defined in the blueprint
+        # with overrides with workflow parameters.
         expected_params = {
             'node_id': 'test_node',
             'operation': 'test_interface.operation',
             'properties': {
                 'key': 'different-key',
                 'value': 'different-value'
-            }
+            },
+            'custom-parameter': "doesn't matter"
         }
         self.assertEqual(expected_params, execution.parameters)
 
@@ -165,7 +166,8 @@ class ExecutionsTest(TestCase):
         self.assertEquals('', execution.error)
 
     def _execute_and_cancel_execution(self, workflow_id, force=False,
-                                      wait_for_termination=True, sleep=5):
+                                      wait_for_termination=True,
+                                      is_wait_for_asleep_node=True):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
@@ -176,7 +178,19 @@ class ExecutionsTest(TestCase):
                    deployment_id=deployment_id)
         execution = self.client.deployments.execute(
             deployment_id, workflow_id)
-        time.sleep(sleep)  # wait for the execution to reach some sleep command
+
+        node_inst_id = self.client.node_instances.list(deployment_id)[0].id
+
+        if is_wait_for_asleep_node:
+            for retry in range(30):
+                if self.client.node_instances.get(
+                        node_inst_id).state == 'asleep':
+                    break
+                time.sleep(1)
+            else:
+                raise RuntimeError("Execution was expected to go"
+                                   " into 'sleeping' status")
+
         execution = self.client.executions.cancel(execution.id, force)
         expected_status = Execution.FORCE_CANCELLING if force else \
             Execution.CANCELLING

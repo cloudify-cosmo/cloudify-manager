@@ -1,3 +1,19 @@
+########
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
+
 __author__ = 'dan'
 
 import time
@@ -21,6 +37,7 @@ def sleep(ctx, **kwargs):
         'test_interface.operation',
         kwargs={'key': 'before-sleep',
                 'value': None})
+    node_instance.set_state('asleep')
     time.sleep(10)
     node_instance.execute_operation(
         'test_interface.operation',
@@ -37,6 +54,7 @@ def sleep_with_cancel_support(ctx, **kwargs):
         kwargs={'key': 'before-sleep',
                 'value': None})
 
+    node_instance.set_state('asleep')
     is_cancelled = False
     for i in range(10):
         if api.has_cancel_request():
@@ -66,6 +84,7 @@ def sleep_with_graph_usage(ctx, **kwargs):
             'test_interface.operation',
             kwargs={'key': 'before-sleep',
                     'value': None}),
+        node_instance.set_state('asleep'),
         node_instance.execute_operation(
             'test_interface.sleep_operation',
             kwargs={'sleep': '10'}),
