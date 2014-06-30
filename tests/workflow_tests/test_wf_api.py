@@ -90,8 +90,15 @@ class WorkflowsAPITest(TestCase):
                parameters={'do_get': self.do_get})
 
     def test_fail_local_task_eventual_failure(self):
-        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
-               parameters={'do_get': self.do_get})
+        if self.do_get:
+            deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+                   parameters={'do_get': self.do_get})
+        else:
+            self.assertRaises(RuntimeError,
+                              deploy,
+                              resource('dsl/workflow_api.yaml'),
+                              self._testMethodName,
+                              parameters={'do_get': self.do_get})
 
 
 class WorkflowsAPITestNoGet(WorkflowsAPITest):
