@@ -127,6 +127,12 @@ def test_cancel_on_task_retry_interval(ctx, do_get, **_):
 
 
 @workflow
+def test_illegal_non_graph_to_graph_mode(ctx, **_):
+    ctx.send_event('sending event')
+    ctx.graph_mode()
+
+
+@workflow
 def test_fail_remote_task_eventual_success(ctx, do_get, **_):
     result = get_instance(ctx).execute_operation('test.op2')
     if do_get:

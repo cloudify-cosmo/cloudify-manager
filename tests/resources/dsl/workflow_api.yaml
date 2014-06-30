@@ -44,3 +44,6 @@ workflows:
     test_cancel_on_task_retry_interval:
         mapping: mock_workflows.workflows.test_cancel_on_task_retry_interval
         parameters: [do_get]
+    test_illegal_non_graph_to_graph_mode:
+        mapping: mock_workflows.workflows.test_illegal_non_graph_to_graph_mode
+        parameters: [{stub: stub}]

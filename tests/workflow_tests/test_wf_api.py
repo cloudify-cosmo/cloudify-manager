@@ -122,6 +122,14 @@ class WorkflowsAPITest(TestCase):
         self.client.executions.cancel(eid)
         self.wait_for_execution_status(eid, status=Execution.CANCELLED)
 
+    def test_illegal_non_graph_to_graph_mode(self):
+        if not self.do_get:
+            # no need to run twice
+            return
+        self.assertRaises(RuntimeError, deploy,
+                          resource('dsl/workflow_api.yaml'),
+                          self._testMethodName)
+
     def wait_for_execution_status(self, execution_id, status, timeout=30):
         def assertion():
             self.assertEqual(status,
