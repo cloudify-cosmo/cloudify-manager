@@ -15,8 +15,6 @@
 
 __author__ = 'dank'
 
-import time
-
 from cloudify_rest_client.executions import Execution
 
 from testenv import TestCase
