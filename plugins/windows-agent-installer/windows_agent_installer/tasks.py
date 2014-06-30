@@ -12,9 +12,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import time
 
 from cloudify.decorators import operation
 from cloudify import utils
+from cloudify.exceptions import TimeoutException
 
 from windows_agent_installer import init_worker_installer
 
@@ -38,6 +40,10 @@ RUNTIME_AGENT_PATH = 'C:\CloudifyAgent'
 
 # Agent includes list, Mandatory
 AGENT_INCLUDES = 'plugin_installer.tasks'
+
+# Defaults timeouts.
+DEFAULT_SERVICE_START_TIMEOUT = 10
+DEFAULT_SERVICE_STOP_TIMEOUT = 10
 
 
 def get_agent_package_url():
@@ -111,11 +117,10 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
 
-    import time
-    # Sleep to make sure the service is really up.
-    # TODO - Use 'sc query CloudifyAgent' to check the status of the service
-    time.sleep(5)
-
+    ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
+    _wait_for_service_status(runner, AGENT_SERVICE_NAME, 'RUNNING',
+        cloudify_agent['service_start_timeout'] if 'service_start_timeout' in cloudify_agent
+        else DEFAULT_SERVICE_START_TIMEOUT)
 
 
 
@@ -138,11 +143,10 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
 
-    import time
-    # Sleep to make sure the service is really shutdown.
-    # TODO - Use 'sc query CloudifyAgent' to check the status of the service
-    time.sleep(5)
-
+    ctx.logger.info('Waiting for {0} to stop...'.format(AGENT_SERVICE_NAME))
+    _wait_for_service_status(runner, AGENT_SERVICE_NAME, 'STOPPED',
+        cloudify_agent['service_stop_timeout'] if 'service_stop_timeout' in cloudify_agent
+        else DEFAULT_SERVICE_STOP_TIMEOUT)
 
 @operation
 @init_worker_installer
@@ -151,6 +155,9 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
     '''
 
     Restarts the cloudify agent service on the machine.
+
+        1. Stop the service.
+        2. Start the service.
 
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
@@ -172,6 +179,10 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     Uninstalls the cloudify agent service from the machine.
 
+        1. Remove the service from the registry.
+        2. Delete related files..
+
+
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
@@ -186,3 +197,17 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     runner.delete(path=RUNTIME_AGENT_PATH)
     runner.delete(path='C:\\{0}'.format(AGENT_EXEC_FILE_NAME))
+
+
+def _wait_for_service_status(runner, service_name, desired_status, timeout_in_seconds):
+
+    end_time = time.time() + timeout_in_seconds
+
+    while end_time > time.time():
+
+        response = runner.run('sc query {0}'.format(service_name))
+        if desired_status in response.std_out:
+            return
+        time.sleep(1)
+    raise TimeoutException("Service {0} did not reach state {1} in {2} seconds"
+                           .format(service_name, desired_status, timeout_in_seconds))
