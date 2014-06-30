@@ -12,6 +12,8 @@ To use this plugin, WinRM must be properly setup on the destination machine.
       winrm s winrm/config/service/auth @{Basic="true"}
       winrm s winrm/config/winrs @{MaxShellsPerUser="2147483647"}
 
+In addition, Python 2.7 must be installed on the machine.
+
 **API**
 
 - tasks.install: Downloads the agent package do the destination machine and extracts it.
@@ -23,3 +25,5 @@ To use this plugin, WinRM must be properly setup on the destination machine.
 **Example Usage**
 
 See [Tests](https://github.com/cloudify-cosmo/cloudify-manager/plugins/windows_agent_installer/windows_agent_installer/tests/test_tasks.py)
+
+
