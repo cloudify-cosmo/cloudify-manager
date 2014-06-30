@@ -111,6 +111,12 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
 
+    import time
+    # Sleep to make sure the service is really up.
+    # TODO - Use 'sc query CloudifyAgent' to check the status of the service
+    time.sleep(5)
+
+
 
 
 @operation
