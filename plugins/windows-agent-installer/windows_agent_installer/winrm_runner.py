@@ -19,6 +19,7 @@ import logging
 import sys
 import winrm
 from cloudify.exceptions import CommandExecutionException
+from cloudify.utils import CommandExecutionResponse
 
 DEFAULT_WINRM_PORT = '5985'
 DEFAULT_WINRM_URI = 'wsman'
@@ -102,7 +103,10 @@ class WinRMRunner(object):
         self.logger.debug('[{0}] run: {1}'.format(self.session_config['host'], command))
         response = self.session.run_cmd(command)
         _chk(response)
-        return response
+        return CommandExecutionResponse(command=command,
+                                        std_err=response.std_err,
+                                        std_out=response.std_out,
+                                        return_code=response.status_code)
 
     def download(self, url, output_path):
         return self.run(
