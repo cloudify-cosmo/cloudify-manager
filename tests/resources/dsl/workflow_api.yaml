@@ -19,6 +19,8 @@ blueprint:
                         mapping: testmockoperations.tasks.fail
                         properties:
                             fail_count: 3
+                    - sleep: testmockoperations.tasks.sleep
+                    - fail: testmockoperations.tasks.fail
 
 workflows:
     test_simple:
@@ -35,4 +37,10 @@ workflows:
         parameters: [do_get]
     test_fail_local_task_eventual_failure:
         mapping: mock_workflows.workflows.test_fail_local_task_eventual_failure
+        parameters: [do_get]
+    test_cancel_on_wait_for_task_termination:
+        mapping: mock_workflows.workflows.test_cancel_on_wait_for_task_termination
+        parameters: [do_get]
+    test_cancel_on_task_retry_interval:
+        mapping: mock_workflows.workflows.test_cancel_on_task_retry_interval
         parameters: [do_get]

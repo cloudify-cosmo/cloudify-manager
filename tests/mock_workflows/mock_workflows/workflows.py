@@ -111,6 +111,22 @@ def test_simple(ctx, do_get, key, value, **_):
 
 
 @workflow
+def test_cancel_on_wait_for_task_termination(ctx, do_get, **_):
+    instance = get_instance(ctx)
+    result = instance.execute_operation('test.sleep', kwargs={'sleep': 100000})
+    if do_get:
+        result.get()
+
+
+@workflow
+def test_cancel_on_task_retry_interval(ctx, do_get, **_):
+    instance = get_instance(ctx)
+    result = instance.execute_operation('test.fail')
+    if do_get:
+        result.get()
+
+
+@workflow
 def test_fail_remote_task_eventual_success(ctx, do_get, **_):
     result = get_instance(ctx).execute_operation('test.op2')
     if do_get:

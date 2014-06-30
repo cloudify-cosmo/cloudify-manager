@@ -15,6 +15,10 @@
 
 __author__ = 'dank'
 
+import time
+
+from cloudify_rest_client.executions import Execution
+
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_and_execute_workflow as deploy
@@ -30,13 +34,16 @@ class WorkflowsAPITest(TestCase):
     def setUp(self):
         super(WorkflowsAPITest, self).setUp()
         self.do_get = True
+        self.configure(retries=2, interval=1)
+        self.addCleanup(restore_provider_context)
+
+    def configure(self, retries, interval):
         delete_provider_context()
         context = {'cloudify': {'workflows': {
-            'task_retries': 2,
-            'task_retry_interval': 1
+            'task_retries': retries,
+            'task_retry_interval': interval
         }}}
         self.client.manager.create_context(self._testMethodName, context)
-        self.addCleanup(restore_provider_context)
 
     def test_simple(self):
         parameters = {
@@ -99,6 +106,29 @@ class WorkflowsAPITest(TestCase):
                               resource('dsl/workflow_api.yaml'),
                               self._testMethodName,
                               parameters={'do_get': self.do_get})
+
+    def test_cancel_on_wait_for_task_termination(self):
+        _, eid = deploy(
+            resource('dsl/workflow_api.yaml'), self._testMethodName,
+            parameters={'do_get': self.do_get}, wait_for_execution=False)
+        self.wait_for_execution_status(eid, status=Execution.STARTED)
+        self.client.executions.cancel(eid)
+        self.wait_for_execution_status(eid, status=Execution.CANCELLED)
+
+    def test_cancel_on_task_retry_interval(self):
+        self.configure(retries=2, interval=1000000)
+        _, eid = deploy(
+            resource('dsl/workflow_api.yaml'), self._testMethodName,
+            parameters={'do_get': self.do_get}, wait_for_execution=False)
+        self.wait_for_execution_status(eid, status=Execution.STARTED)
+        self.client.executions.cancel(eid)
+        self.wait_for_execution_status(eid, status=Execution.CANCELLED)
+
+    def wait_for_execution_status(self, execution_id, status, timeout=30):
+        def assertion():
+            self.assertEqual(status,
+                             self.client.executions.get(execution_id).status)
+        self.do_assertions(assertion, timeout=timeout)
 
 
 class WorkflowsAPITestNoGet(WorkflowsAPITest):
