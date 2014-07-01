@@ -25,6 +25,7 @@ from worker_installer.tasks import create_celery_configuration
 from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
 from cloudify.context import BootstrapContext
+from cloudify.exceptions import NonRecoverableError
 
 
 @init_worker_installer
@@ -48,14 +49,14 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         ctx = MockCloudifyContext(node_id='node',
                                   properties={'worker_config': {
                                       'distro': 'Ubuntu', }})
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
                                       'worker_config': {
                                           'distro': 'Ubuntu', },
                                       'ip': '192.168.0.1'
                                   })
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
                                       'worker_config': {
@@ -63,7 +64,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                           'distro': 'Ubuntu', },
                                       'ip': '192.168.0.1'
                                   })
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
                                       'worker_config': {
@@ -123,7 +124,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             }
         )
         if should_raise_exception:
-            self.assertRaises(ValueError, m, ctx)
+            self.assertRaises(NonRecoverableError, m, ctx)
         else:
             conf = m(ctx)
             self.assertEqual(expected, conf['disable_requiretty'])
@@ -185,7 +186,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 }
             }
         )
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(
             deployment_id='test',
             node_id=node_id,
@@ -202,7 +203,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 }
             }
         )
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
 
     def test_autoscale_from_bootstrap_context(self):
         node_id = 'node_id'

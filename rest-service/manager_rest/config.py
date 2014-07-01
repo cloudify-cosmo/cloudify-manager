@@ -21,7 +21,6 @@ class Config(object):
     def __init__(self):
         self._file_server_root = None
         self._file_server_base_uri = None
-        self._workflow_service_base_uri = None
         self._file_server_blueprints_folder = None
         self._file_server_uploaded_blueprints_folder = None
         self._file_server_resources_uri = None
@@ -66,14 +65,6 @@ class Config(object):
     @file_server_resources_uri.setter
     def file_server_resources_uri(self, value):
         self._file_server_resources_uri = value
-
-    @property
-    def workflow_service_base_uri(self):
-        return self._workflow_service_base_uri
-
-    @workflow_service_base_uri.setter
-    def workflow_service_base_uri(self, value):
-        self._workflow_service_base_uri = value
 
     @property
     def test_mode(self):

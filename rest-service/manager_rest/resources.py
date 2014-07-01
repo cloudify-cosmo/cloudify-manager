@@ -1037,7 +1037,6 @@ class Status(Resource):
         """
         job_list = {'rsyslog': 'Syslog',
                     'manager': 'Cloudify Manager',
-                    'workflow': 'Workflow Service',
                     'riemann': 'Riemann',
                     'rabbitmq-server': 'RabbitMQ',
                     'celeryd-cloudify-management': 'Celery Managment',
