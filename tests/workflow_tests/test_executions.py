@@ -57,22 +57,9 @@ class ExecutionsTest(TestCase):
 
         self._assert_execution_cancelled(execution)
 
-    def test_cancel_on_non_supporting_workflow(self):
-        execution = self._execute_and_cancel_execution(
-            'sleep')
-        self.assertEquals(Execution.TERMINATED, execution.status)
-
-        from plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
-        self.assertEqual(2, len(invocations))
-        self.assertDictEqual(invocations[0], {'before-sleep': None})
-        self.assertDictEqual(invocations[1], {'after-sleep': None})
-
     def test_cancel_execution_before_it_started(self):
         execution = self._execute_and_cancel_execution(
-            'sleep_with_cancel_support', False, True, 0)
+            'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
 
         from plugins.testmockoperations.tasks import \
@@ -101,6 +88,50 @@ class ExecutionsTest(TestCase):
 
         self.do_assertions(assertions, timeout=10)
 
+    def test_execution_parameters(self):
+        dsl_path = resource('dsl/workflow_parameters.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        do_retries(verify_workers_installation_complete, 30,
+                   deployment_id=deployment_id)
+        execution_parameters = {
+            'operation': 'test_interface.operation',
+            'properties': {
+                'key': 'different-key',
+                'value': 'different-value'
+            },
+            'custom-parameter': "doesn't matter"
+        }
+        execution = self.client.deployments.execute(
+            deployment_id, 'another_execute_operation',
+            parameters=execution_parameters,
+            allow_custom_parameters=True)
+        wait_for_execution_to_end(execution)
+
+        from plugins.testmockoperations.tasks import \
+            get_mock_operation_invocations
+
+        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        self.assertDictEqual(invocations[0],
+                             {'different-key': 'different-value'})
+
+        # checking for execution parameters - expecting there to be a merge
+        # with overrides with workflow parameters.
+        expected_params = {
+            'node_id': 'test_node',
+            'operation': 'test_interface.operation',
+            'properties': {
+                'key': 'different-key',
+                'value': 'different-value'
+            },
+            'custom-parameter': "doesn't matter"
+        }
+        self.assertEqual(expected_params, execution.parameters)
+
     def test_update_execution_status(self):
         dsl_path = resource("dsl/basic.yaml")
         _, execution_id = deploy(dsl_path,
@@ -122,7 +153,8 @@ class ExecutionsTest(TestCase):
         self.assertEquals('', execution.error)
 
     def _execute_and_cancel_execution(self, workflow_id, force=False,
-                                      wait_for_termination=True, sleep=5):
+                                      wait_for_termination=True,
+                                      is_wait_for_asleep_node=True):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
@@ -133,7 +165,19 @@ class ExecutionsTest(TestCase):
                    deployment_id=deployment_id)
         execution = self.client.deployments.execute(
             deployment_id, workflow_id)
-        time.sleep(sleep)  # wait for the execution to reach some sleep command
+
+        node_inst_id = self.client.node_instances.list(deployment_id)[0].id
+
+        if is_wait_for_asleep_node:
+            for retry in range(30):
+                if self.client.node_instances.get(
+                        node_inst_id).state == 'asleep':
+                    break
+                time.sleep(1)
+            else:
+                raise RuntimeError("Execution was expected to go"
+                                   " into 'sleeping' status")
+
         execution = self.client.executions.cancel(execution.id, force)
         expected_status = Execution.FORCE_CANCELLING if force else \
             Execution.CANCELLING

@@ -15,31 +15,8 @@
 
 __author__ = 'dan'
 
-from datetime import datetime
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.models import Execution
-
-
-def get_workflow_status(wfid):
-    return Execution.TERMINATED
-
-
-class MockWorkflowClient(object):
-
-    @staticmethod
-    def execute_workflow(name, workflow,
-                         blueprint_id, deployment_id,
-                         execution_id):
-        return {
-            'type': 'workflow_state',
-            'id': 'yokimura-yoshomati',
-            'state': 'pending',
-            'error': None,
-            'created': datetime.now()
-        }
-
-    def cancel_workflow(self, workflow_id):
-        return self.execute_workflow(None, None, None, None, None)
 
 
 class MockCeleryClient(object):

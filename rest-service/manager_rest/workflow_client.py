@@ -16,9 +16,6 @@
 __author__ = 'dan'
 
 import os
-
-from manager_rest import config
-
 from manager_rest.celery_client import celery_client as client
 
 # used by integration tests
@@ -30,33 +27,29 @@ class WorkflowClient(object):
     @staticmethod
     def execute_workflow(name,
                          workflow,
-                         deployment_id,
                          blueprint_id,
-                         execution_id):
+                         deployment_id,
+                         execution_id,
+                         execution_parameters=None):
         task_name = '{}.{}'.format(workflow['plugin'], workflow['operation'])
         if env_workflows_queue:
             # used by integration tests
             task_queue = env_workflows_queue
         else:
             task_queue = '{}_workflows'.format(deployment_id)
-        kwargs = workflow.get('properties', {})
-        kwargs['__cloudify_context'] = {'workflow_id': name,
-                                        'blueprint_id': blueprint_id,
-                                        'deployment_id': deployment_id,
-                                        'execution_id': execution_id}
+
+        execution_parameters['__cloudify_context'] = {
+            'workflow_id': name,
+            'blueprint_id': blueprint_id,
+            'deployment_id': deployment_id,
+            'execution_id': execution_id
+        }
+
         client().execute_task(task_name=task_name,
                               task_queue=task_queue,
                               task_id=execution_id,
-                              kwargs=kwargs)
-
-    @staticmethod
-    def cancel_workflow(self, workflow_id):
-        raise RuntimeError('cancel_workflow')
+                              kwargs=execution_parameters)
 
 
 def workflow_client():
-    if config.instance().test_mode:
-        from test.mocks import MockWorkflowClient
-        return MockWorkflowClient()
-    else:
-        return WorkflowClient()
+    return WorkflowClient()

@@ -118,3 +118,14 @@ class IllegalActionError(ManagerException):
         super(IllegalActionError, self).__init__(
             400, IllegalActionError.ILLEGAL_ACTION_ERROR_CODE,
             *args, **kwargs)
+
+
+class IllegalExecutionParametersError(ManagerException):
+    ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE =\
+        'illegal_execution_parameters_error'
+
+    def __init__(self, *args, **kwargs):
+        super(IllegalExecutionParametersError, self).__init__(
+            400, IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+            *args, **kwargs)

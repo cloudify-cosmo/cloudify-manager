@@ -17,7 +17,6 @@ __author__ = 'ran'
 
 
 from cloudify.decorators import workflow
-from cloudify.workflows.tasks_graph import TaskDependencyGraph
 
 
 WORKFLOWS_WORKER_PAYLOAD = {
@@ -29,8 +28,8 @@ WORKFLOWS_WORKER_PAYLOAD = {
 
 @workflow
 def install(ctx, **kwargs):
-    graph = TaskDependencyGraph(ctx)
 
+    graph = ctx.graph_mode()
     sequence = graph.sequence()
 
     management_plugins = kwargs['management_plugins_to_install']
@@ -83,8 +82,7 @@ def install(ctx, **kwargs):
 @workflow
 def uninstall(ctx, **kwargs):
 
-    graph = TaskDependencyGraph(ctx)
-
+    graph = ctx.graph_mode()
     sequence = graph.sequence()
 
     # uninstalling the operations worker
