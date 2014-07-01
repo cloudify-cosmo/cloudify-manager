@@ -134,12 +134,6 @@ def verify_and_convert_bool(attribute_name, str_bool):
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
-def _get_fields_to_include(default_fields=None):
-    if '_include' in request.args and request.args['_include']:
-        return set(request.args['_include'].split(','))
-    return default_fields
-
-
 def _replace_workflows_field_for_deployment_response(deployment_dict):
     deployment_workflows = deployment_dict['workflows']
     if deployment_workflows is not None:
@@ -620,7 +614,8 @@ class Deployments(Resource):
         """
         List deployments
         """
-        deployments = get_blueprints_manager().deployments_list(include=_include)
+        deployments = get_blueprints_manager().deployments_list(
+            include=_include)
         return [
             responses.Deployment(
                 **_replace_workflows_field_for_deployment_response(
