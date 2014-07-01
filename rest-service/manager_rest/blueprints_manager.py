@@ -148,11 +148,11 @@ class BlueprintsManager(object):
                          allow_custom_parameters=False, force=False):
         deployment = self.get_deployment(deployment_id)
 
-        if workflow_id not in deployment.plan['workflows']:
+        if workflow_id not in deployment.workflows:
             raise manager_exceptions.NonexistentWorkflowError(
                 'Workflow {0} does not exist in deployment {1}'.format(
                     workflow_id, deployment_id))
-        workflow = deployment.plan['workflows'][workflow_id]
+        workflow = deployment.workflows[workflow_id]
 
         self._verify_deployment_workers_installed_successfully(deployment_id)
 
