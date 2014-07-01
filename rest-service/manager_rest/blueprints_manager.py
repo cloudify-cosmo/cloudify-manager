@@ -248,20 +248,20 @@ class BlueprintsManager(object):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         deployment_json_plan = tasks.prepare_deployment_plan(plan)
-        deployment_loaded_plan = json.loads(deployment_json_plan)
+        deployment_plan = json.loads(deployment_json_plan)
 
         now = str(datetime.now())
         new_deployment = models.Deployment(
-            id=deployment_id, plan=deployment_loaded_plan,
+            id=deployment_id,
             blueprint_id=blueprint_id, created_at=now, updated_at=now,
-            workflows=deployment_loaded_plan['workflows'])
+            workflows=deployment_plan['workflows'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)
 
-        self._install_deployment_workers(new_deployment, now)
+        self._install_deployment_workers(new_deployment, deployment_plan, now)
 
-        node_instances = new_deployment.plan['node_instances']
+        node_instances = deployment_plan['node_instances']
         for node_instance in node_instances:
             instance_id = node_instance['id']
             node_id = node_instance['name']
@@ -456,7 +456,10 @@ class BlueprintsManager(object):
                     .format(error_message, celery_task_status,
                             celery_error.__class__.__name__, celery_error))
 
-    def _install_deployment_workers(self, deployment, now):
+    def _install_deployment_workers(self,
+                                    deployment,
+                                    deployment_plan,
+                                    now):
         workers_installation_task_id = str(uuid.uuid4())
         wf_id = 'workers_installation'
         workers_install_task_name = \
@@ -466,10 +469,10 @@ class BlueprintsManager(object):
             deployment, workers_installation_task_id, wf_id,
             workers_install_task_name)
         kwargs = {
-            'management_plugins_to_install':
-                deployment.plan['management_plugins_to_install'],
-            'workflow_plugins_to_install':
-                deployment.plan['workflow_plugins_to_install'],
+            'management_plugins_to_install': deployment_plan[
+                'management_plugins_to_install'],
+            'workflow_plugins_to_install': deployment_plan[
+                'workflow_plugins_to_install'],
             '__cloudify_context': context
         }
 
