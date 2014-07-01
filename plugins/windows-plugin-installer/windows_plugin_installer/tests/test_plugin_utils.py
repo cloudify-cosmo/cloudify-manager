@@ -29,21 +29,21 @@ class PluginUtilsTest(unittest.TestCase):
 
     def test_extract_plugin_name_from_remote_url(self):
 
-        from plugin_installer.plugin_utils import extract_plugin_name
+        from windows_plugin_installer.plugin_utils import extract_plugin_name
 
         plugin_url = 'https://github.com/cloudify-cosmo/cloudify-bash-plugin/archive/develop.zip'
         self.assertEqual('cloudify-bash-plugin', extract_plugin_name(plugin_url))
 
     def test_extract_plugin_name_from_local_folder(self):
 
-        from plugin_installer.plugin_utils import extract_plugin_name
-        from plugin_installer.tests import resources
+        from windows_plugin_installer.plugin_utils import extract_plugin_name
+        from windows_plugin_installer.tests import resources
         plugin_url = '{0}\mock-plugin'.format(os.path.dirname(resources.__file__))
         self.assertEqual('mock-plugin', extract_plugin_name(plugin_url))
 
     def test_extract_module_paths(self):
 
-        from plugin_installer.plugin_utils import extract_module_paths
+        from windows_plugin_installer.plugin_utils import extract_module_paths
         print extract_module_paths('requests')
 
 

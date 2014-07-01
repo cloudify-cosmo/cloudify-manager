@@ -47,5 +47,15 @@ def prepare_configuration(ctx, cloudify_agent):
     # runtime info
 
     cloudify_agent['name'] = ctx.node_id
-    cloudify_agent['host'] = utils.get_machine_ip(ctx)
+    cloudify_agent['host'] = get_machine_ip(ctx)
+
+def get_machine_ip(ctx):
+    if 'ip' in ctx.properties:
+        return ctx.properties['ip']  # priority for statically specifying ip.
+    if 'ip' in ctx.runtime_properties:
+        return ctx.runtime_properties['ip']
+    raise ValueError('ip property is not set for node: {0}. '
+                     'This is mandatory for installing an agent remotely'
+    .format(ctx.node_id))
+
 
