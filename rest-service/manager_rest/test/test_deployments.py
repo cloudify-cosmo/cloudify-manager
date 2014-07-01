@@ -38,10 +38,6 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(blueprint_id, deployment_response['blueprint_id'])
         self.assertIsNotNone(deployment_response['created_at'])
         self.assertIsNotNone(deployment_response['updated_at'])
-        typed_blueprint_plan = blueprint_response['plan']
-        typed_deployment_plan = deployment_response['plan']
-        self.assertEquals(typed_blueprint_plan['name'],
-                          typed_deployment_plan['name'])
 
     def test_delete_blueprint_which_has_deployments(self):
         (blueprint_id,
@@ -86,8 +82,6 @@ class DeploymentsTestCase(BaseServerTestCase):
                           single_deployment['created_at'])
         self.assertEquals(deployment_response['created_at'],
                           single_deployment['updated_at'])
-        self.assertEquals(deployment_response['plan'],
-                          single_deployment['plan'])
 
     def test_get(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -105,8 +99,6 @@ class DeploymentsTestCase(BaseServerTestCase):
                           single_deployment['created_at'])
         self.assertEquals(deployment_response['created_at'],
                           single_deployment['updated_at'])
-        self.assertEquals(deployment_response['plan'],
-                          single_deployment['plan'])
 
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
