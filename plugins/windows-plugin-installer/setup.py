@@ -13,7 +13,7 @@ setup(
     version='3.0',
     author='elip',
     author_email='elip@gigaspaces.com',
-    packages=['plugin_installer'],
+    packages=['windows_plugin_installer'],
     license='LICENSE',
     description='Plugin for installing plugins into an existing celery windows worker',
     zip_safe=False,
