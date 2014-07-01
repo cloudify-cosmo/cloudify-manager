@@ -73,7 +73,6 @@ class Deployment(object):
         'created_at': fields.String,
         'updated_at': fields.String,
         'blueprint_id': fields.String,
-        'plan': fields.Raw,
         'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
     }
 
@@ -83,7 +82,6 @@ class Deployment(object):
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
-        self.plan = kwargs['plan']
         self.workflows = kwargs['workflows']
 
 
