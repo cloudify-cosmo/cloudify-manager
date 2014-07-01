@@ -42,17 +42,21 @@ class ESStorageManager(object):
     def _get_es_conn(self):
         return Elasticsearch()
 
-    def _list_docs(self, doc_type, model_class, query=None):
+    def _list_docs(self, doc_type, model_class, query=None, fields=None):
+        include = list(fields) if fields else True
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
                                                    doc_type=doc_type,
                                                    size=DEFAULT_SEARCH_SIZE,
-                                                   body=query)
+                                                   body=query,
+                                                   _source=include)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
+
         # ES doesn't return _version if using its search API.
         if doc_type == NODE_INSTANCE_TYPE:
-            return map(
-                lambda doc: model_class(version=None, **doc), docs)
-        return map(lambda doc: model_class(**doc), docs)
+            for doc in docs:
+                doc['version'] = None
+        return [self._fill_missing_fields_and_deserialize(doc, model_class)
+                for doc in docs]
 
     def _get_doc(self, doc_type, doc_id, fields=None):
         try:
@@ -139,10 +143,11 @@ class ESStorageManager(object):
             }
         }
 
-    def node_instances_list(self):
+    def node_instances_list(self, include=None):
         search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
                                                    doc_type=NODE_INSTANCE_TYPE,
-                                                   size=DEFAULT_SEARCH_SIZE)
+                                                   size=DEFAULT_SEARCH_SIZE,
+                                                   _source=include or True)
         docs_with_versions = \
             map(lambda hit: (hit['_source'], hit['_version']),
                 search_result['hits']['hits'])
@@ -151,56 +156,70 @@ class ESStorageManager(object):
                 version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
-    def blueprints_list(self):
-        return self._list_docs(BLUEPRINT_TYPE, BlueprintState)
+    def blueprints_list(self, include=None):
+        return self._list_docs(BLUEPRINT_TYPE, BlueprintState, fields=include)
 
-    def deployments_list(self):
-        return self._list_docs(DEPLOYMENT_TYPE, Deployment)
+    def deployments_list(self, include=None):
+        return self._list_docs(DEPLOYMENT_TYPE, Deployment, fields=include)
 
-    def executions_list(self):
-        return self._list_docs(EXECUTION_TYPE, Execution)
+    def executions_list(self, include=None):
+        return self._list_docs(EXECUTION_TYPE, Execution, fields=include)
 
-    def get_blueprint_deployments(self, blueprint_id):
+    def get_blueprint_deployments(self, blueprint_id, include=None):
         return self._list_docs(DEPLOYMENT_TYPE, Deployment,
                                self._build_field_value_filter(
-                                   'blueprint_id', blueprint_id))
+                                   'blueprint_id', blueprint_id),
+                               fields=include)
 
-    def get_deployment_executions(self, deployment_id):
+    def get_deployment_executions(self, deployment_id, include=None):
         return self._list_docs(EXECUTION_TYPE, Execution,
                                self._build_field_value_filter(
-                                   'deployment_id', deployment_id))
+                                   'deployment_id', deployment_id),
+                               fields=include)
 
-    def get_node_instance(self, node_instance_id):
-        doc = self._get_doc(NODE_INSTANCE_TYPE, node_instance_id)
+    def get_node_instance(self, node_instance_id, include=None):
+        doc = self._get_doc(NODE_INSTANCE_TYPE,
+                            node_instance_id,
+                            fields=include)
         node = DeploymentNodeInstance(version=doc['_version'],
                                       **doc['_source'])
         return node
 
-    def get_node_instances(self, deployment_id):
+    def get_node_instances(self, deployment_id, include=None):
         query = None
         if deployment_id:
             query = {'query': {'term': {'deployment_id': deployment_id}}}
         return self._list_docs(NODE_INSTANCE_TYPE,
                                DeploymentNodeInstance,
-                               query)
+                               query=query,
+                               fields=include)
 
-    def get_nodes(self, deployment_id=None):
+    def get_nodes(self, deployment_id=None, include=None):
         query = None
         if deployment_id:
             query = {'query': {'term': {'deployment_id': deployment_id}}}
-        return self._list_docs(NODE_TYPE, DeploymentNode, query)
+        return self._list_docs(NODE_TYPE,
+                               DeploymentNode,
+                               query=query,
+                               fields=include)
 
-    def get_blueprint(self, blueprint_id, fields=None):
-        return self._get_doc_and_deserialize(BLUEPRINT_TYPE, blueprint_id,
-                                             BlueprintState, fields)
+    def get_blueprint(self, blueprint_id, include=None):
+        return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
+                                             blueprint_id,
+                                             BlueprintState,
+                                             fields=include)
 
-    def get_deployment(self, deployment_id, fields=None):
-        return self._get_doc_and_deserialize(DEPLOYMENT_TYPE, deployment_id,
-                                             Deployment, fields)
+    def get_deployment(self, deployment_id, include=None):
+        return self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
+                                             deployment_id,
+                                             Deployment,
+                                             fields=include)
 
-    def get_execution(self, execution_id):
-        return self._get_doc_and_deserialize(EXECUTION_TYPE, execution_id,
-                                             Execution)
+    def get_execution(self, execution_id, include=None):
+        return self._get_doc_and_deserialize(EXECUTION_TYPE,
+                                             execution_id,
+                                             Execution,
+                                             fields=include)
 
     def put_blueprint(self, blueprint_id, blueprint):
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
@@ -292,10 +311,11 @@ class ESStorageManager(object):
                                     PROVIDER_CONTEXT_ID,
                                     doc_data)
 
-    def get_provider_context(self):
+    def get_provider_context(self, fields=None):
         return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
                                              PROVIDER_CONTEXT_ID,
-                                             ProviderContext)
+                                             ProviderContext,
+                                             fields=fields)
 
 
 def create():

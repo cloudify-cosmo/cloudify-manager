@@ -29,8 +29,9 @@ from os import path
 import elasticsearch
 from flask import request
 from flask import make_response
-from flask.ext.restful import Resource, abort, marshal_with, marshal, reqparse
+from flask.ext.restful import Resource, abort, marshal, reqparse
 from flask_restful_swagger import swagger
+from flask.ext.restful.utils import unpack
 
 from manager_rest import config
 from manager_rest import models
@@ -64,6 +65,37 @@ def exceptions_handled(func):
                 manager_exceptions.IllegalActionError) as e:
             abort_error(e)
     return wrapper
+
+
+def _get_fields_to_include(default_fields=None):
+    if '_include' in request.args and request.args['_include']:
+        return set(request.args['_include'].split(','))
+    return default_fields
+
+
+class marshal_with(object):
+    def __init__(self, fields):
+        """
+        :param fields: Model resource fields to marshal result according to.
+        """
+        self.fields = fields
+
+    def __call__(self, f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            include = _get_fields_to_include()
+            if include:
+                kwargs['_include'] = include
+                self.fields = {
+                    k: v for k, v in self.fields.items() if k in include
+                }
+            response = f(*args, **kwargs)
+            if isinstance(response, tuple):
+                data, code, headers = unpack(response)
+                return marshal(data, self.fields), code, headers
+            else:
+                return marshal(response, self.fields)
+        return wrapper
 
 
 def abort_workflow_service_operation(workflow_service_error):
@@ -102,15 +134,21 @@ def verify_and_convert_bool(attribute_name, str_bool):
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
+def _get_fields_to_include(default_fields=None):
+    if '_include' in request.args and request.args['_include']:
+        return set(request.args['_include'].split(','))
+    return default_fields
+
+
 def _replace_workflows_field_for_deployment_response(deployment_dict):
     deployment_workflows = deployment_dict['workflows']
+    if deployment_workflows is not None:
+        workflows = [responses.Workflow(
+            name=wf_name, created_at=None, parameters=wf.get(
+                'parameters', [])) for wf_name, wf
+            in deployment_workflows.iteritems()]
 
-    workflows = [responses.Workflow(
-        name=wf_name, created_at=None, parameters=wf.get(
-            'parameters', [])) for wf_name, wf
-        in deployment_workflows.iteritems()]
-
-    deployment_dict['workflows'] = workflows
+        deployment_dict['workflows'] = workflows
     return deployment_dict
 
 
@@ -345,13 +383,12 @@ class Blueprints(Resource):
         nickname="list",
         notes="Returns a list a submitted blueprints."
     )
-    def get(self):
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def get(self, _include=None):
         """
         List uploaded blueprints
         """
-        return [marshal(blueprint,
-                        responses.BlueprintState.resource_fields) for
-                blueprint in get_blueprints_manager().blueprints_list()]
+        return get_blueprints_manager().blueprints_list(_include)
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -398,13 +435,12 @@ class BlueprintsId(Resource):
     )
     @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
-    def get(self, blueprint_id):
+    def get(self, blueprint_id, _include=None):
         """
         Get blueprint by id
         """
-        fields = {'id', 'plan', 'created_at', 'updated_at'}
         blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
-                                                           fields)
+                                                           _include)
         return responses.BlueprintState(**blueprint.to_dict())
 
     @swagger.operation(
@@ -483,11 +519,12 @@ class ExecutionsId(Resource):
     )
     @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
-    def get(self, execution_id):
+    def get(self, execution_id, _include=None):
         """
         Get execution by id
         """
-        execution = get_blueprints_manager().get_execution(execution_id)
+        execution = get_blueprints_manager().get_execution(execution_id,
+                                                           include=_include)
         return responses.Execution(**execution.to_dict())
 
     @swagger.operation(
@@ -577,15 +614,19 @@ class Deployments(Resource):
         nickname="list",
         notes="Returns a list existing deployments."
     )
-    def get(self):
+    @marshal_with(responses.Deployment.resource_fields)
+    @exceptions_handled
+    def get(self, _include=None):
         """
         List deployments
         """
-        return [marshal(responses.Deployment(
-            **_replace_workflows_field_for_deployment_response(
-                deployment.to_dict())),
-            responses.Deployment.resource_fields) for
-            deployment in get_blueprints_manager().deployments_list()]
+        deployments = get_blueprints_manager().deployments_list(include=_include)
+        return [
+            responses.Deployment(
+                **_replace_workflows_field_for_deployment_response(
+                    d.to_dict()))
+            for d in deployments
+        ]
 
 
 class DeploymentsId(Resource):
@@ -602,11 +643,12 @@ class DeploymentsId(Resource):
     )
     @marshal_with(responses.Deployment.resource_fields)
     @exceptions_handled
-    def get(self, deployment_id):
+    def get(self, deployment_id, _include=None):
         """
         Get deployment by id
         """
-        deployment = get_blueprints_manager().get_deployment(deployment_id)
+        deployment = get_blueprints_manager().get_deployment(deployment_id,
+                                                             include=_include)
         return responses.Deployment(
             **_replace_workflows_field_for_deployment_response(
                 deployment.to_dict()))
@@ -693,17 +735,17 @@ class Nodes(Resource):
                      'dataType': 'string',
                      'paramType': 'query'}]
     )
+    @marshal_with(responses.Node.resource_fields)
     @exceptions_handled
-    def get(self):
+    def get(self, _include=None):
         """
         List nodes
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
-        nodes = get_storage_manager().get_nodes(deployment_id)
-        return [marshal(
-            responses.Node(**node.to_dict()),
-            responses.Node.resource_fields) for node in nodes]
+        nodes = get_storage_manager().get_nodes(deployment_id,
+                                                include=_include)
+        return [responses.Node(**node.to_dict()) for node in nodes]
 
 
 class NodeInstances(Resource):
@@ -727,18 +769,17 @@ class NodeInstances(Resource):
                      'dataType': 'string',
                      'paramType': 'query'}]
     )
+    @marshal_with(responses.NodeInstance.resource_fields)
     @exceptions_handled
-    def get(self):
+    def get(self, _include=None):
         """
         List node instances
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
-        nodes = get_storage_manager().get_node_instances(deployment_id)
-        return [marshal(
-            responses.NodeInstance(**node.to_dict()),
-            responses.NodeInstance.resource_fields)
-            for node in nodes]
+        nodes = get_storage_manager().get_node_instances(deployment_id,
+                                                         include=_include)
+        return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
 
 class NodeInstancesId(Resource):
@@ -765,12 +806,12 @@ class NodeInstancesId(Resource):
     )
     @marshal_with(responses.NodeInstance.resource_fields)
     @exceptions_handled
-    def get(self, node_instance_id):
+    def get(self, node_instance_id, _include=None):
         """
         Get node instance by id
         """
-        get_storage_manager().get_node_instance(node_instance_id)
-        instance = get_storage_manager().get_node_instance(node_instance_id)
+        instance = get_storage_manager().get_node_instance(node_instance_id,
+                                                           include=_include)
         return responses.NodeInstance(
             id=node_instance_id,
             node_id=instance.node_id,
@@ -866,20 +907,16 @@ class DeploymentsIdExecutions(Resource):
         nickname="list",
         notes="Returns a list of executions for the provided deployment."
     )
+    @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
-    def get(self, deployment_id):
+    def get(self, deployment_id, _include=None):
         """
         List deployment executions
         """
-
-        get_storage_manager().get_deployment(deployment_id, fields=['id'])
-
+        get_storage_manager().get_deployment(deployment_id, include=['id'])
         executions = get_blueprints_manager().get_deployment_executions(
-            deployment_id)
-
-        return [marshal(responses.Execution(**execution.to_dict()),
-                        responses.Execution.resource_fields) for execution
-                in executions]
+            deployment_id, include=_include)
+        return [responses.Execution(**e.to_dict()) for e in executions]
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -1053,11 +1090,11 @@ class ProviderContext(Resource):
     )
     @marshal_with(responses.ProviderContext.resource_fields)
     @exceptions_handled
-    def get(self):
+    def get(self, _include=None):
         """
         Get provider context
         """
-        context = get_storage_manager().get_provider_context()
+        context = get_storage_manager().get_provider_context(include=_include)
         return responses.ProviderContext(**context.to_dict())
 
     @swagger.operation(
