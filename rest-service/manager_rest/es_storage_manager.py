@@ -311,11 +311,11 @@ class ESStorageManager(object):
                                     PROVIDER_CONTEXT_ID,
                                     doc_data)
 
-    def get_provider_context(self, fields=None):
+    def get_provider_context(self, include=None):
         return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
                                              PROVIDER_CONTEXT_ID,
                                              ProviderContext,
-                                             fields=fields)
+                                             fields=include)
 
 
 def create():
