@@ -155,8 +155,10 @@ def uninstall(ctx, **kwargs):
             sequence = graph.sequence()
 
             sequence.add(set_state_stopping_tasks[instance.id],
-                         instance.send_event('Stopping node'),
-                         stop_node_tasks[instance.id],
+                         instance.send_event('Stopping node'))
+            if _is_host_node(instance):
+                sequence.add(*_host_pre_stop(instance))
+            sequence.add(stop_node_tasks[instance.id],
                          instance.set_state('stopped'),
                          forkjoin(*_relationship_operations(
                              instance,
@@ -259,4 +261,24 @@ def _host_post_start(host_node_instance):
             host_node_instance.execute_operation(
                 'cloudify.interfaces.worker_installer.restart')
         ]
+    return tasks
+
+
+def _host_pre_stop(host_node_instance):
+    tasks = []
+    if host_node_instance.node.properties['install_agent'] is True:
+        tasks += [
+            host_node_instance.send_event('Uninstalling worker'),
+            host_node_instance.execute_operation(
+                'cloudify.interfaces.worker_installer.stop'),
+            host_node_instance.execute_operation(
+                'cloudify.interfaces.worker_installer.uninstall')
+        ]
+
+    for task in tasks:
+        if task.is_remote():
+            _set_send_node_event_on_error_handler(
+                task, host_node_instance,
+                'Error occurred while uninstalling worker - ignoring...')
+
     return tasks
