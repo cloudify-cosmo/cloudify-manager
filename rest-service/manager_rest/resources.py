@@ -41,7 +41,7 @@ from manager_rest import manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
-
+from manager_rest import get_version_data
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -142,6 +142,7 @@ def setup_resources(api):
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
     api.add_resource(ProviderContext, '/provider/context')
+    api.add_resource(Version, '/version')
 
 
 class BlueprintsUpload(object):
@@ -1088,3 +1089,19 @@ class ProviderContext(Resource):
                                          context=request.json['context'])
         get_storage_manager().put_provider_context(context)
         return responses.ProviderContextPostStatus(status='ok'), 201
+
+
+class Version(Resource):
+
+    @swagger.operation(
+        responseClass=responses.Version,
+        nickname="version",
+        notes="Returns version information for this rest service"
+    )
+    @marshal_with(responses.Version.resource_fields)
+    @exceptions_handled
+    def get(self):
+        """
+        Get version information
+        """
+        return responses.Version(**get_version_data())

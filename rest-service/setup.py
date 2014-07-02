@@ -17,10 +17,11 @@ __author__ = 'dank'
 
 from setuptools import setup
 
+from manager_rest import get_version
 
 setup(
     name='cloudify-rest-service',
-    version='3.0',
+    version=get_version(),
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
     packages=['manager_rest'],
