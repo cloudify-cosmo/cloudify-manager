@@ -35,7 +35,8 @@ install:
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
 
-   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+     #- git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client
    - git checkout feature/CFY-854-include-query-param
    - cd cloudify-rest-client; pip install .; cd ..
 
