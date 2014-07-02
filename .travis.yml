@@ -36,7 +36,7 @@ install:
    - source package/linux/env/bin/activate
 
    - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-   - git checkeout feature/CFY-854-include-query-param
+   - git checkout feature/CFY-854-include-query-param
    - cd cloudify-rest-client; pip install .; cd ..
 
    - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
