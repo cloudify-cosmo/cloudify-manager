@@ -129,3 +129,15 @@ class IllegalExecutionParametersError(ManagerException):
             400, IllegalExecutionParametersError.
             ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
             *args, **kwargs)
+
+
+class NoSuchIncludeFieldError(ManagerException):
+    NO_SUCH_INCLUDE_FIELD_ERROR = 'no_such_include_field_error'
+
+    def __init__(self, *args, **kwargs):
+        super(NoSuchIncludeFieldError, self).__init__(
+            400,
+            NoSuchIncludeFieldError.NO_SUCH_INCLUDE_FIELD_ERROR,
+            *args,
+            **kwargs
+        )

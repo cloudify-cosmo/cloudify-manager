@@ -49,16 +49,23 @@ class MockHTTPClient(HTTPClient):
                    params=None,
                    expected_status_code=200):
         if 'get' in requests_method.__name__:
-            return json.loads(self.app.get(uri).data)
-        if 'put' in requests_method.__name__:
-            return json.loads(self.app.put(uri,
-                                           content_type='application/json',
-                                           data=json.dumps(data)).data)
-        if 'post' in requests_method.__name__:
-            return json.loads(self.app.post(uri,
-                                            content_type='application/json',
-                                            data=json.dumps(data)).data)
-        raise NotImplemented()
+            response = self.app.get(uri)
+        elif 'put' in requests_method.__name__:
+            response = self.app.put(uri,
+                                    content_type='application/json',
+                                    data=json.dumps(data))
+        elif 'post' in requests_method.__name__:
+            response = self.app.post(uri,
+                                     content_type='application/json',
+                                     data=json.dumps(data))
+        else:
+            raise NotImplemented()
+        if response.status_code != expected_status_code:
+            response.content = response.data
+            response.json = lambda: json.loads(response.data)
+            self._raise_client_error(response, uri)
+
+        return json.loads(response.data)
 
 
 class BaseServerTestCase(unittest.TestCase):
