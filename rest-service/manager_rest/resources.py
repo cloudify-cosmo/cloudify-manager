@@ -83,18 +83,19 @@ class marshal_with(object):
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
+            fields = self.fields
             include = _get_fields_to_include()
             if include:
                 kwargs['_include'] = include
-                self.fields = {
+                fields = {
                     k: v for k, v in self.fields.items() if k in include
                 }
             response = f(*args, **kwargs)
             if isinstance(response, tuple):
                 data, code, headers = unpack(response)
-                return marshal(data, self.fields), code, headers
+                return marshal(data, fields), code, headers
             else:
-                return marshal(response, self.fields)
+                return marshal(response, fields)
         return wrapper
 
 
