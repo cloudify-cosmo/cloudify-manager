@@ -22,14 +22,43 @@ import urllib2
 import tempfile
 import os
 import tarfile
+
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
+from cloudify_rest_client import CloudifyClient
+from cloudify_rest_client.client import HTTPClient
+
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
+
+
+class MockHTTPClient(HTTPClient):
+
+    def __init__(self, app):
+        super(MockHTTPClient, self).__init__('localhost')
+        self.app = app
+
+    def do_request(self,
+                   requests_method,
+                   uri,
+                   data=None,
+                   params=None,
+                   expected_status_code=200):
+        if 'get' in requests_method.__name__:
+            return json.loads(self.app.get(uri).data)
+        if 'put' in requests_method.__name__:
+            return json.loads(self.app.put(uri,
+                                           content_type='application/json',
+                                           data=json.dumps(data)).data)
+        if 'post' in requests_method.__name__:
+            return json.loads(self.app.post(uri,
+                                            content_type='application/json',
+                                            data=json.dumps(data)).data)
+        raise NotImplemented()
 
 
 class BaseServerTestCase(unittest.TestCase):
@@ -45,6 +74,14 @@ class BaseServerTestCase(unittest.TestCase):
         server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
+        self.client = CloudifyClient('localhost')
+        mock_http_client = MockHTTPClient(self.app)
+        self.client.blueprints.api = mock_http_client
+        self.client.deployments.api = mock_http_client
+        self.client.executions.api = mock_http_client
+        self.client.nodes.api = mock_http_client
+        self.client.node_instances.api = mock_http_client
+        self.client.manager.api = mock_http_client
 
     def tearDown(self):
         self.file_server.stop()

@@ -120,7 +120,7 @@ class FileStorageManager(object):
     def get_node_instances(self, deployment_id, **_):
         instances = [
             x for x in self._load_data()[NODE_INSTANCES].values()
-            if x.deployment_id == deployment_id]
+            if not deployment_id or x.deployment_id == deployment_id]
         return instances
 
     def get_nodes(self, deployment_id=None, **_):
