@@ -73,6 +73,7 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('value',
                          response.json['runtime_properties']['new_key'])
         response = self.get('/node-instances/1234')
+
         self.assertEqual(200, response.status_code)
         self.assertEqual(2, len(response.json['runtime_properties']))
         self.assertEqual('new_value',

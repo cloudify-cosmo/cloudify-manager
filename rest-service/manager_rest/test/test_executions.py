@@ -27,7 +27,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_get_deployment_executions_empty(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         executions = self.get('/deployments/{0}/executions'
                               .format(deployment_response['id'])).json
         # expecting 1 execution (workers installation)
@@ -37,7 +37,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -58,7 +58,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         #  execution of a workflow which doesn't have any workflow parameters
 
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'param1': 'val1', 'param2': 'val2'}
@@ -73,7 +73,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_execute_with_custom_parameters_not_allowed(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'param1': 'val1', 'param2': 'val2'}
@@ -92,7 +92,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_get_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
@@ -117,7 +117,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_execution_parameters_override_over_workflow_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
@@ -144,7 +144,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_execution_parameters_override_no_recursive_merge(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
@@ -173,7 +173,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_missing_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
@@ -193,7 +193,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_bad_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
@@ -219,7 +219,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_passing_parameters_parameter_to_execute(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         # passing a None parameters value to the execution
@@ -236,7 +236,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_bad_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -256,7 +256,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -269,7 +269,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -405,7 +405,7 @@ class ExecutionsTestCase(BaseServerTestCase):
     def _test_execute_more_than_one_workflow(self, is_use_force,
                                              expected_status_code):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
             'workflow_id': 'install'

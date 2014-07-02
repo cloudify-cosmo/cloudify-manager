@@ -49,26 +49,27 @@ class BlueprintsManager(object):
     def sm(self):
         return get_storage_manager()
 
-    def blueprints_list(self):
-        return self.sm.blueprints_list()
+    def blueprints_list(self, include=None):
+        return self.sm.blueprints_list(include=include)
 
-    def deployments_list(self):
-        return self.sm.deployments_list()
+    def deployments_list(self, include=None):
+        return self.sm.deployments_list(include=include)
 
-    def executions_list(self):
-        return self.sm.executions_list()
+    def executions_list(self, include=None):
+        return self.sm.executions_list(include=include)
 
-    def get_blueprint(self, blueprint_id, fields=None):
-        return self.sm.get_blueprint(blueprint_id, fields)
+    def get_blueprint(self, blueprint_id, include=None):
+        return self.sm.get_blueprint(blueprint_id, include=include)
 
-    def get_deployment(self, deployment_id):
-        return self.sm.get_deployment(deployment_id)
+    def get_deployment(self, deployment_id, include=None):
+        return self.sm.get_deployment(deployment_id, include=include)
 
-    def get_execution(self, execution_id):
-        return self.sm.get_execution(execution_id)
+    def get_execution(self, execution_id, include=None):
+        return self.sm.get_execution(execution_id, include=include)
 
-    def get_deployment_executions(self, deployment_id):
-        return self.sm.get_deployment_executions(deployment_id)
+    def get_deployment_executions(self, deployment_id, include=None):
+        return self.sm.get_deployment_executions(deployment_id,
+                                                 include=include)
 
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution

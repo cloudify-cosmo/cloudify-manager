@@ -32,7 +32,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         self.assertEquals(deployment_id, self.DEPLOYMENT_ID)
         self.assertEquals(blueprint_id, deployment_response['blueprint_id'])
@@ -43,7 +43,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         resp = self.delete('/blueprints/{0}'.format(blueprint_id))
         self.assertEqual(400, resp.status_code)
         self.assertTrue('There exist deployments for this blueprint' in
@@ -57,7 +57,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id,
          deployment_id,
          blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         deployment_response = self.put(
             '/deployments/{0}'.format(self.DEPLOYMENT_ID),
             {'blueprint_id': blueprint_id})
@@ -69,7 +69,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         single_deployment = self.get('/deployments/{0}'
                                      .format(deployment_id)).json
@@ -85,7 +85,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         get_deployments_response = self.get('/deployments').json
         self.assertEquals(1, len(get_deployments_response))
@@ -102,7 +102,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         execution = self.post(resource_path, {
@@ -125,7 +125,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_executing_nonexisting_workflow(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/deployments/{0}/executions'.format(deployment_id)
         response = self.post(resource_path, {
@@ -146,7 +146,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(
+         deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         resource_path = '/deployments/{0}'.format(deployment_id)
@@ -175,7 +175,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/node-instances?deployment_id={0}'.format(
             deployment_id)
@@ -195,7 +195,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_delete_deployment_with_live_nodes_without_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         # modifying a node's state so there'll be a node in a state other
         # than 'uninitialized'
@@ -232,7 +232,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def _test_delete_deployment_with_nodes_in_certain_state(self, state):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/node-instances?deployment_id={0}'.format(
             deployment_id)
@@ -258,7 +258,7 @@ class DeploymentsTestCase(BaseServerTestCase):
 
     def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         delete_deployment_response = self.delete(
             '/deployments/{0}'.format(deployment_id),
@@ -280,7 +280,7 @@ class DeploymentsTestCase(BaseServerTestCase):
     def test_get_nodes_of_deployment(self):
 
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_test_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         resource_path = '/node-instances?deployment_id={0}'.format(
             deployment_id)

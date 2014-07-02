@@ -1,1 +1,0 @@
-python-vagrant>=0.3.1
