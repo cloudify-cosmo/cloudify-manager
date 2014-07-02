@@ -67,10 +67,10 @@ def exceptions_handled(func):
     return wrapper
 
 
-def _get_fields_to_include(default_fields=None):
+def _get_fields_to_include():
     if '_include' in request.args and request.args['_include']:
         return set(request.args['_include'].split(','))
-    return default_fields
+    return None
 
 
 class marshal_with(object):

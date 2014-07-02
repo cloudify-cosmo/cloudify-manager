@@ -15,6 +15,8 @@
 
 __author__ = 'idanmo'
 
+import uuid
+
 from base_test import BaseServerTestCase
 
 
@@ -22,7 +24,8 @@ class IncludeQueryParamTests(BaseServerTestCase):
 
     def setUp(self):
         super(IncludeQueryParamTests, self).setUp()
-        self.put_test_deployment(blueprint_file_name='blueprint.yaml')
+        self.put_deployment(deployment_id=str(uuid.uuid4()),
+                            blueprint_file_name='blueprint.yaml')
         self.client.manager.create_context('test', {'hello': 'world'})
 
     def test_blueprints(self):
@@ -82,5 +85,5 @@ class IncludeQueryParamTests(BaseServerTestCase):
         self.assertTrue(instance_id, response.id)
 
     def test_provider_context(self):
-        response = self.client.manager.get_context()
-        print response
+        response = self.client.manager.get_context(_include=['name'])
+        self.assertEqual(1, len(response))
