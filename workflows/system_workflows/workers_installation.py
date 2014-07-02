@@ -85,17 +85,16 @@ def uninstall(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    # uninstalling the operations worker
     sequence.add(
+        # uninstalling the operations worker
         ctx.send_event('Stopping deployment operations worker'),
         ctx.execute_task(
             task_name='worker_installer.tasks.stop'),
         ctx.send_event('Uninstalling deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.uninstall'))
+            task_name='worker_installer.tasks.uninstall'),
 
-    # uninstalling the workflows worker
-    sequence.add(
+        # uninstalling the workflows worker
         ctx.send_event('Stopping deployment workflows worker'),
         ctx.execute_task(
             task_name='worker_installer.tasks.stop',

@@ -137,10 +137,9 @@ class TestWithDeploymentWorker(WorkersTestCase):
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
         # test valid agent worker un-installation order
-        # we do not call stop and uninstall on agent workers
-        # state = self._get(get_worker_state, queue=DEPLOYMENT,
-        #                   args=[node_id])
-        # self.assertEquals(state, AFTER_UNINSTALL_STAGES)
+        state = self._get(get_worker_state, queue=DEPLOYMENT_ID,
+                          args=[node_id])
+        self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
     def _execute(self, workflow):
         execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
