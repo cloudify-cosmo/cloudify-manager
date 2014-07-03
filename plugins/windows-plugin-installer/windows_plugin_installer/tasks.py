@@ -17,7 +17,7 @@ import sys
 
 from cloudify.decorators import operation
 from cloudify.utils import get_manager_ip, LocalCommandRunner
-from plugin_installer import plugin_utils
+from windows_plugin_installer import plugin_utils
 
 # Hard coded path for now - agents are always installed to this path.
 NSSM_PATH = 'C:\CloudifyAgent\\nssm\\nssm.exe'
@@ -25,7 +25,7 @@ NSSM_PATH = 'C:\CloudifyAgent\\nssm\\nssm.exe'
 # Key for retrieving the parameters of a windows service.
 APP_PARAMETER_PARAMETER = 'AppParameters'
 
-def _update_includes(module_paths):
+def  _update_includes(module_paths):
 
     runner = LocalCommandRunner()
     app_parameters = runner.run('cmd /c "{0} get CloudifyAgent AppParameters').std_out
@@ -87,12 +87,11 @@ def install_celery_plugin(plugin_url):
     :return:
     '''
 
+    command = 'cmd /c "{0}\Scripts\pip.exe install --process-dependency-links {1}"'.format(sys.prefix, plugin_url)
+    LocalCommandRunner().run(command)
+
     plugin_name = plugin_utils.extract_plugin_name(plugin_url)
 
     module_paths = plugin_utils.extract_module_paths(plugin_name)
 
-    command = 'cmd /c "{0}\Scripts\pip.exe install --process-dependency-links {1}"'.format(sys.prefix, plugin_url)
-    LocalCommandRunner().run(command)
-
-    # TODO add includes handling
     _update_includes(module_paths)

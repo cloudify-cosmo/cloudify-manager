@@ -17,8 +17,8 @@ import time
 from cloudify.decorators import operation
 from cloudify import utils
 from cloudify.exceptions import TimeoutException
-
 from windows_agent_installer import init_worker_installer
+from windows_agent_installer import *
 
 
 # This is the folder under which the agent is extracted to inside the current directory.
@@ -41,14 +41,11 @@ RUNTIME_AGENT_PATH = 'C:\CloudifyAgent'
 # Agent includes list, Mandatory
 AGENT_INCLUDES = 'plugin_installer.tasks'
 
-# Defaults timeouts.
-DEFAULT_SERVICE_START_TIMEOUT = 10
-DEFAULT_SERVICE_STOP_TIMEOUT = 10
-
 
 def get_agent_package_url():
-    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           AGENT_PACKAGE_PATH)
+    return 'https://dl.dropboxusercontent.com/u/3588656/CloudifyAgent.exe'
+#    return '{0}{1}'.format(utils.get_manager_file_server_url(),
+#                           AGENT_PACKAGE_PATH)
 
 def get_manager_ip():
     return utils.get_manager_ip()
@@ -87,14 +84,22 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               '--events '
               '--app=cloudify '
               '-Q {1} '
-              '-n {1} '
+              '-n celery.{1} '
               '--logfile={2}\celery.log '
               '--pidfile={2}\celery.pid '
-              .format(get_manager_ip(), cloudify_agent['name'], RUNTIME_AGENT_PATH))
+              '--autoscale={3},{4}'
+              .format(get_manager_ip(),
+                      cloudify_agent['name'],
+                      RUNTIME_AGENT_PATH,
+                      cloudify_agent[MIN_WORKERS_KEY],
+                      cloudify_agent[MAX_WORKERS_KEY]))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
     runner.run('sc config {0} start= auto'.format(AGENT_SERVICE_NAME))
-    runner.run('sc failure {0} reset= 60 actions= restart/5000'.format(AGENT_SERVICE_NAME))
+    runner.run('sc failure {0} reset= {1} actions= restart/{2}'
+               .format(AGENT_SERVICE_NAME,
+                       cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+                       cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY]))
 
     return True
 
@@ -118,9 +123,8 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
 
     ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
-    _wait_for_service_status(runner, AGENT_SERVICE_NAME, 'RUNNING',
-        cloudify_agent['service_start_timeout'] if 'service_start_timeout' in cloudify_agent
-        else DEFAULT_SERVICE_START_TIMEOUT)
+    _wait_for_service_status(runner, cloudify_agent, AGENT_SERVICE_NAME, 'RUNNING',
+        cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY])
 
 
 
@@ -144,9 +148,8 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
 
     ctx.logger.info('Waiting for {0} to stop...'.format(AGENT_SERVICE_NAME))
-    _wait_for_service_status(runner, AGENT_SERVICE_NAME, 'STOPPED',
-        cloudify_agent['service_stop_timeout'] if 'service_stop_timeout' in cloudify_agent
-        else DEFAULT_SERVICE_STOP_TIMEOUT)
+    _wait_for_service_status(runner, cloudify_agent, AGENT_SERVICE_NAME, 'STOPPED',
+        cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY])
 
 @operation
 @init_worker_installer
@@ -167,8 +170,8 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     ctx.logger.info('Restarting agent {0}'.format(cloudify_agent['name']))
 
-    runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
-    runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
+    stop(ctx=ctx, runner=runner, cloudify_agent=cloudify_agent)
+    start(ctx=ctx, runner=runner, cloudify_agent=cloudify_agent)
 
 
 @operation
@@ -199,15 +202,26 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.delete(path='C:\\{0}'.format(AGENT_EXEC_FILE_NAME))
 
 
-def _wait_for_service_status(runner, service_name, desired_status, timeout_in_seconds):
+def _wait_for_service_status(runner,
+                             cloudify_agent,
+                             service_name,
+                             desired_status,
+                             timeout_in_seconds):
 
     end_time = time.time() + timeout_in_seconds
+
+    successful_consecutive_queries = 0
 
     while end_time > time.time():
 
         response = runner.run('sc query {0}'.format(service_name))
         if desired_status in response.std_out:
-            return
-        time.sleep(1)
+            successful_consecutive_queries += 1
+            if successful_consecutive_queries == cloudify_agent['service'][
+                SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
+                return
+        else:
+            successful_consecutive_queries = 0
+        time.sleep(cloudify_agent['service'][SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
     raise TimeoutException("Service {0} did not reach state {1} in {2} seconds"
                            .format(service_name, desired_status, timeout_in_seconds))

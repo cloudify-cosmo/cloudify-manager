@@ -40,10 +40,3 @@ class PluginUtilsTest(unittest.TestCase):
         from windows_plugin_installer.tests import resources
         plugin_url = '{0}\mock-plugin'.format(os.path.dirname(resources.__file__))
         self.assertEqual('mock-plugin', extract_plugin_name(plugin_url))
-
-    def test_extract_module_paths(self):
-
-        from windows_plugin_installer.plugin_utils import extract_module_paths
-        print extract_module_paths('requests')
-
-

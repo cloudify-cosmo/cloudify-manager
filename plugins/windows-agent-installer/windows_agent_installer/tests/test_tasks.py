@@ -87,6 +87,9 @@ class TestTasks(unittest.TestCase):
         # Assert agent has necessary includes
         self.assertTrue(AGENT_INCLUDES in response.std_out)
 
+        # Restart the service
+        tasks.restart(ctx=self.ctx)
+
         # Stop the service
         tasks.stop(ctx=self.ctx)
 

@@ -43,7 +43,6 @@ def extract_plugin_name(plugin_url):
                                download_dir=None,
                                only_download=False)
         os.chdir(plugin_dir)
-
         return LocalCommandRunner().run('cmd.exe /c "{0} {1} {2}"'.format(
             sys.executable,
             path.join(path.dirname(__file__), 'extract_package_name.py'),

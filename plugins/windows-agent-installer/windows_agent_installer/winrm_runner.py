@@ -89,7 +89,7 @@ class WinRMRunner(object):
 
         def _chk(res):
             if res.status_code == 0:
-                self.logger.debug('[{0}] out: {1}'.format(self.session_config['host'], res.std_out))
+                self.logger.info('[{0}] out: {1}'.format(self.session_config['host'], res.std_out))
             else:
                 error = WinRMExecutionException(
                     command=command,
@@ -100,7 +100,7 @@ class WinRMRunner(object):
                 if exit_on_failure:
                     raise error
 
-        self.logger.debug('[{0}] run: {1}'.format(self.session_config['host'], command))
+        self.logger.info('[{0}] run: {1}'.format(self.session_config['host'], command))
         response = self.session.run_cmd(command)
         _chk(response)
         return CommandExecutionResponse(command=command,
