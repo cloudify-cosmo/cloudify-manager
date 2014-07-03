@@ -53,7 +53,7 @@ def init_worker_installer(func):
         else:
             agent_config = kwargs.get('cloudify_agent', {})
         prepare_configuration(ctx, agent_config)
-        kwargs['cloudify_agent'] = agent_config
+        kwargs['agent_config'] = agent_config
         kwargs['runner'] = FabricRunner(ctx, agent_config)
         return func(*args, **kwargs)
     return wrapper
