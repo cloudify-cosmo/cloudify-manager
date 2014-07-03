@@ -36,7 +36,7 @@ class IncludeQueryParamTests(BaseServerTestCase):
             self.assertTrue('id' in b)
         self.assertRaises(
             NoSuchIncludeFieldError,
-            lambda: self.client.blueprints.list(_include=['hello']))
+            lambda: self.client.blueprints.list(_include=['hello', 'world']))
         blueprint_id = self.client.blueprints.list()[0].id
         response = self.client.blueprints.get(blueprint_id,
                                               _include=['id', 'created_at'])
@@ -78,7 +78,7 @@ class IncludeQueryParamTests(BaseServerTestCase):
         self.assertRaises(
             NoSuchIncludeFieldError,
             lambda: self.client.executions.list(deployment_id,
-                                                _include=['hello']))
+                                                _include=['hello', 'world']))
         response = self.client.executions.get(execution_id,
                                               _include=['id', 'status'])
         self.assertEqual(2, len(response))

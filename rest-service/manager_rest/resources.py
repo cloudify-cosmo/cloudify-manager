@@ -68,10 +68,25 @@ def exceptions_handled(func):
     return wrapper
 
 
-def _get_fields_to_include():
+def _get_fields_to_include(model_fields):
     if '_include' in request.args and request.args['_include']:
-        return set(request.args['_include'].split(','))
-    return None
+        include = set(request.args['_include'].split(','))
+        include_fields = {}
+        illegal_fields = None
+        for field in include:
+            if field not in model_fields:
+                if not illegal_fields:
+                    illegal_fields = []
+                illegal_fields.append(field)
+                continue
+            include_fields[field] = model_fields[field]
+        if illegal_fields:
+            raise manager_exceptions.NoSuchIncludeFieldError(
+                'Illegal include fields: [{}] - available fields: '
+                '[{}]'.format(', '.join(illegal_fields),
+                              ', '.join(model_fields.keys())))
+        return include_fields
+    return model_fields
 
 
 class marshal_with(object):
@@ -84,24 +99,13 @@ class marshal_with(object):
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            fields = self.fields
-            include = _get_fields_to_include()
-            if include:
-                kwargs['_include'] = include
-                fields = {}
-                for field in include:
-                    if field not in self.fields:
-                        raise manager_exceptions.NoSuchIncludeFieldError(
-                            'Illegal include field: {} - available fields: '
-                            '[{}]'.format(field,
-                                          ', '.join(self.fields.keys())))
-                    fields[field] = self.fields[field]
+            include = _get_fields_to_include(self.fields)
             response = f(*args, **kwargs)
             if isinstance(response, tuple):
                 data, code, headers = unpack(response)
-                return marshal(data, fields), code, headers
+                return marshal(data, include), code, headers
             else:
-                return marshal(response, fields)
+                return marshal(response, include)
         return wrapper
 
 
