@@ -29,8 +29,8 @@ from cloudify.exceptions import NonRecoverableError
 
 
 @init_worker_installer
-def m(ctx, runner, cloudify_agent, **kwargs):
-    return cloudify_agent
+def m(ctx, runner, agent_config, **kwargs):
+    return agent_config
 
 
 class CeleryWorkerConfigurationTest(unittest.TestCase):
