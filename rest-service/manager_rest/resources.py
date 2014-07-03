@@ -1142,8 +1142,8 @@ class Version(Resource):
         nickname="version",
         notes="Returns version information for this rest service"
     )
-    @marshal_with(responses.Version.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Version.resource_fields)
     def get(self):
         """
         Get version information
