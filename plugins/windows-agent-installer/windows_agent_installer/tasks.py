@@ -23,7 +23,6 @@ from windows_agent_installer import *
 
 # This is the folder under which the agent is extracted to inside the current directory.
 # It is set in the packaging process so it must be hardcoded here.
-
 AGENT_FOLDER_NAME = 'CloudifyAgent'
 
 # This is where we download the agent to.
@@ -39,13 +38,12 @@ AGENT_PACKAGE_PATH = '/packages/agents/CloudifyWindowsAgent.exe'
 RUNTIME_AGENT_PATH = 'C:\CloudifyAgent'
 
 # Agent includes list, Mandatory
-AGENT_INCLUDES = 'plugin_installer.tasks'
+AGENT_INCLUDES = 'windows_plugin_installer.tasks'
 
 
 def get_agent_package_url():
-    return 'https://dl.dropboxusercontent.com/u/3588656/CloudifyAgent.exe'
-#    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-#                           AGENT_PACKAGE_PATH)
+    return '{0}{1}'.format(utils.get_manager_file_server_url(),
+                           AGENT_PACKAGE_PATH)
 
 def get_manager_ip():
     return utils.get_manager_ip()
@@ -77,10 +75,9 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.download(get_agent_package_url(), agent_exec_path)
     ctx.logger.debug('Extracting agent to C:\\ ...')
 
-    runner.run('{0} -o{1} -y'.format(agent_exec_path, 'C:\\'))
+    runner.run('{0} -o{1} -y'.format(agent_exec_path, RUNTIME_AGENT_PATH))
 
     params = ('--broker=amqp://guest:guest@{0}:5672// '
-              '--include=plugin_installer.tasks '
               '--events '
               '--app=cloudify '
               '-Q {1} '
@@ -88,11 +85,13 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               '--logfile={2}\celery.log '
               '--pidfile={2}\celery.pid '
               '--autoscale={3},{4}'
+              '--include={5} '
               .format(get_manager_ip(),
                       cloudify_agent['name'],
                       RUNTIME_AGENT_PATH,
                       cloudify_agent[MIN_WORKERS_KEY],
-                      cloudify_agent[MAX_WORKERS_KEY]))
+                      cloudify_agent[MAX_WORKERS_KEY],
+                      AGENT_INCLUDES))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
     runner.run('sc config {0} start= auto'.format(AGENT_SERVICE_NAME))
@@ -100,8 +99,6 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                .format(AGENT_SERVICE_NAME,
                        cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
                        cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY]))
-
-    return True
 
 
 @operation
