@@ -62,15 +62,31 @@ def exceptions_handled(func):
                 manager_exceptions.ExistingRunningExecutionError,
                 manager_exceptions.DeploymentWorkersNotYetInstalledError,
                 manager_exceptions.IllegalExecutionParametersError,
-                manager_exceptions.IllegalActionError) as e:
+                manager_exceptions.IllegalActionError,
+                manager_exceptions.NoSuchIncludeFieldError) as e:
             abort_error(e)
     return wrapper
 
 
-def _get_fields_to_include():
+def _get_fields_to_include(model_fields):
     if '_include' in request.args and request.args['_include']:
-        return set(request.args['_include'].split(','))
-    return None
+        include = set(request.args['_include'].split(','))
+        include_fields = {}
+        illegal_fields = None
+        for field in include:
+            if field not in model_fields:
+                if not illegal_fields:
+                    illegal_fields = []
+                illegal_fields.append(field)
+                continue
+            include_fields[field] = model_fields[field]
+        if illegal_fields:
+            raise manager_exceptions.NoSuchIncludeFieldError(
+                'Illegal include fields: [{}] - available fields: '
+                '[{}]'.format(', '.join(illegal_fields),
+                              ', '.join(model_fields.keys())))
+        return include_fields
+    return model_fields
 
 
 class marshal_with(object):
@@ -83,19 +99,13 @@ class marshal_with(object):
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            fields = self.fields
-            include = _get_fields_to_include()
-            if include:
-                kwargs['_include'] = include
-                fields = {
-                    k: v for k, v in self.fields.items() if k in include
-                }
+            include = _get_fields_to_include(self.fields)
             response = f(*args, **kwargs)
             if isinstance(response, tuple):
                 data, code, headers = unpack(response)
-                return marshal(data, fields), code, headers
+                return marshal(data, include), code, headers
             else:
-                return marshal(response, fields)
+                return marshal(response, include)
         return wrapper
 
 
@@ -374,18 +384,6 @@ class BlueprintsIdArchive(Resource):
 class Blueprints(Resource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
-        nickname="list",
-        notes="Returns a list a submitted blueprints."
-    )
-    @marshal_with(responses.BlueprintState.resource_fields)
-    def get(self, _include=None):
-        """
-        List uploaded blueprints
-        """
-        return get_blueprints_manager().blueprints_list(_include)
-
-    @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="upload",
         notes="Submitted blueprint should be a tar "
@@ -412,13 +410,26 @@ class Blueprints(Resource):
         ]
 
     )
-    @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.BlueprintState.resource_fields)
     def post(self):
         """
         Upload a blueprint
         """
         return BlueprintsUpload().do_request()
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        nickname="list",
+        notes="Returns a list a submitted blueprints."
+    )
+    @exceptions_handled
+    @marshal_with(responses.BlueprintState.resource_fields)
+    def get(self, _include=None):
+        """
+        List uploaded blueprints
+        """
+        return get_blueprints_manager().blueprints_list(_include)
 
 
 class BlueprintsId(Resource):
@@ -428,8 +439,8 @@ class BlueprintsId(Resource):
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
-    @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.BlueprintState.resource_fields)
     def get(self, blueprint_id, _include=None):
         """
         Get blueprint by id
@@ -465,8 +476,8 @@ class BlueprintsId(Resource):
         ]
 
     )
-    @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.BlueprintState.resource_fields)
     def put(self, blueprint_id):
         """
         Upload a blueprint (id specified)
@@ -478,8 +489,8 @@ class BlueprintsId(Resource):
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
-    @marshal_with(responses.BlueprintState.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.BlueprintState.resource_fields)
     def delete(self, blueprint_id):
         """
         Delete blueprint by id
@@ -512,8 +523,8 @@ class ExecutionsId(Resource):
         nickname="getById",
         notes="Returns the execution state by its id.",
     )
-    @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
     def get(self, execution_id, _include=None):
         """
         Get execution by id
@@ -539,8 +550,8 @@ class ExecutionsId(Resource):
             "application/json"
         ]
     )
-    @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
     def post(self, execution_id):
         """
         Apply execution action (cancel, force-cancel) by id
@@ -583,8 +594,8 @@ class ExecutionsId(Resource):
             "application/json"
         ]
     )
-    @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
     def patch(self, execution_id):
         """
         Update execution status by id
@@ -609,8 +620,8 @@ class Deployments(Resource):
         nickname="list",
         notes="Returns a list existing deployments."
     )
-    @marshal_with(responses.Deployment.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Deployment.resource_fields)
     def get(self, _include=None):
         """
         List deployments
@@ -637,8 +648,8 @@ class DeploymentsId(Resource):
         nickname="getById",
         notes="Returns a deployment by its id."
     )
-    @marshal_with(responses.Deployment.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Deployment.resource_fields)
     def get(self, deployment_id, _include=None):
         """
         Get deployment by id
@@ -663,8 +674,8 @@ class DeploymentsId(Resource):
             "application/json"
         ]
     )
-    @marshal_with(responses.Deployment.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Deployment.resource_fields)
     def put(self, deployment_id):
         """
         Create a deployment
@@ -693,8 +704,8 @@ class DeploymentsId(Resource):
                      'defaultValue': False,
                      'paramType': 'query'}]
     )
-    @marshal_with(responses.Deployment.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Deployment.resource_fields)
     def delete(self, deployment_id):
         """
         Delete deployment by id
@@ -731,8 +742,8 @@ class Nodes(Resource):
                      'dataType': 'string',
                      'paramType': 'query'}]
     )
-    @marshal_with(responses.Node.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Node.resource_fields)
     def get(self, _include=None):
         """
         List nodes
@@ -765,8 +776,8 @@ class NodeInstances(Resource):
                      'dataType': 'string',
                      'paramType': 'query'}]
     )
-    @marshal_with(responses.NodeInstance.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.NodeInstance.resource_fields)
     def get(self, _include=None):
         """
         List node instances
@@ -800,8 +811,8 @@ class NodeInstancesId(Resource):
                      'defaultValue': True,
                      'paramType': 'query'}]
     )
-    @marshal_with(responses.NodeInstance.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.NodeInstance.resource_fields)
     def get(self, node_instance_id, _include=None):
         """
         Get node instance by id
@@ -856,8 +867,8 @@ class NodeInstancesId(Resource):
                      'paramType': 'body'}],
         consumes=["application/json"]
     )
-    @marshal_with(responses.NodeInstance.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.NodeInstance.resource_fields)
     def patch(self, node_instance_id):
         """
         Update node instance by id
@@ -903,8 +914,8 @@ class DeploymentsIdExecutions(Resource):
         nickname="list",
         notes="Returns a list of executions for the provided deployment."
     )
-    @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
     def get(self, deployment_id, _include=None):
         """
         List deployment executions
@@ -929,8 +940,8 @@ class DeploymentsIdExecutions(Resource):
             "application/json"
         ]
     )
-    @marshal_with(responses.Execution.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
     def post(self, deployment_id):
         """
         Execute a workflow
@@ -1050,8 +1061,8 @@ class Status(Resource):
         nickname="status",
         notes="Returns state of running system services"
     )
-    @marshal_with(responses.Status.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.Status.resource_fields)
     def get(self):
         """
         Get the status of running system services
@@ -1084,8 +1095,8 @@ class ProviderContext(Resource):
         nickname="getContext",
         notes="Get the provider context"
     )
-    @marshal_with(responses.ProviderContext.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.ProviderContext.resource_fields)
     def get(self, _include=None):
         """
         Get provider context
@@ -1107,8 +1118,8 @@ class ProviderContext(Resource):
             "application/json"
         ]
     )
-    @marshal_with(responses.ProviderContextPostStatus.resource_fields)
     @exceptions_handled
+    @marshal_with(responses.ProviderContextPostStatus.resource_fields)
     def post(self):
         """
         Create provider context
