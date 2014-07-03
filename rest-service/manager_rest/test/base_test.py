@@ -42,6 +42,14 @@ class MockHTTPClient(HTTPClient):
         super(MockHTTPClient, self).__init__('localhost')
         self.app = app
 
+    @staticmethod
+    def _build_url(resource_path, query_params):
+        query_string = ''
+        if query_params and len(query_params) > 0:
+            query_string += '&' + urllib.urlencode(query_params)
+            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
+        return resource_path
+
     def do_request(self,
                    requests_method,
                    uri,
@@ -49,16 +57,24 @@ class MockHTTPClient(HTTPClient):
                    params=None,
                    expected_status_code=200):
         if 'get' in requests_method.__name__:
-            return json.loads(self.app.get(uri).data)
-        if 'put' in requests_method.__name__:
-            return json.loads(self.app.put(uri,
-                                           content_type='application/json',
-                                           data=json.dumps(data)).data)
-        if 'post' in requests_method.__name__:
-            return json.loads(self.app.post(uri,
-                                            content_type='application/json',
-                                            data=json.dumps(data)).data)
-        raise NotImplemented()
+            response = self.app.get(self._build_url(uri, params))
+
+        elif 'put' in requests_method.__name__:
+            response = self.app.put(self._build_url(uri, params),
+                                    content_type='application/json',
+                                    data=json.dumps(data))
+        elif 'post' in requests_method.__name__:
+            response = self.app.post(self._build_url(uri, params),
+                                     content_type='application/json',
+                                     data=json.dumps(data))
+        else:
+            raise NotImplemented()
+        if response.status_code != expected_status_code:
+            response.content = response.data
+            response.json = lambda: json.loads(response.data)
+            self._raise_client_error(response, uri)
+
+        return json.loads(response.data)
 
 
 class BaseServerTestCase(unittest.TestCase):

@@ -43,7 +43,7 @@ types:
                 - get_state
         properties:
             - install_agent: true
-            - worker_config: {}
+            - cloudify_agent: {}
 
     # A Linux container with or without docker
     cloudify.types.container:

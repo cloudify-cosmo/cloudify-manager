@@ -48,7 +48,7 @@ def get_local_context():
     return MockCloudifyContext(
         deployment_id=deployment_id,
         properties={
-            'worker_config': {
+            'cloudify_agent': {
                 'disable_requiretty': False
             }
         },
@@ -63,7 +63,7 @@ def get_remote_context():
     return MockCloudifyContext(
         node_id=node_id,
         properties={
-            'worker_config': {
+            'cloudify_agent': {
                 'user': 'vagrant',
                 'host': VAGRANT_MACHINE_IP,
                 'key': '~/.vagrant.d/insecure_private_key',

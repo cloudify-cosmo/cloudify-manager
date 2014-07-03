@@ -37,9 +37,9 @@ def is_on_management_worker(ctx):
 
 class FabricRunner(object):
 
-    def __init__(self, ctx, worker_config=None):
+    def __init__(self, ctx, agent_config=None):
         self.ctx = ctx
-        config = worker_config or {}
+        config = agent_config or {}
         self.local = is_on_management_worker(ctx)
         if not self.local:
             self.host_string = '%(user)s@%(host)s:%(port)s' % config

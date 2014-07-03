@@ -215,7 +215,7 @@ class BlueprintsManager(object):
         Note that in either case, the execution is not yet cancelled upon
         returning from the method. Instead, it'll be in a 'cancelling' or
         'force_cancelling' status (as can be seen in models.Execution). Once
-        the execution is truly stopped, it'll be in 'cancelled status' (unless
+        the execution is truly stopped, it'll be in 'cancelled' status (unless
         force was not used and the executed workflow doesn't support
         graceful termination, in which case it might simply continue
         regardless and end up with a 'terminated' status)
