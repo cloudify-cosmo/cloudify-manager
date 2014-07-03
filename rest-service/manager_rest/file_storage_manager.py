@@ -106,24 +106,24 @@ class FileStorageManager(object):
                     .iteritems()}
             json.dump(serialized_data, f)
 
-    def node_instances_list(self):
+    def node_instances_list(self, **_):
         data = self._load_data()
         return data[NODE_INSTANCES].values()
 
-    def get_node_instance(self, node_id):
+    def get_node_instance(self, node_id, **_):
         data = self._load_data()
         if node_id in data[NODE_INSTANCES]:
             return data[NODE_INSTANCES][node_id]
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def get_node_instances(self, deployment_id):
+    def get_node_instances(self, deployment_id, **_):
         instances = [
             x for x in self._load_data()[NODE_INSTANCES].values()
-            if x.deployment_id == deployment_id]
+            if not deployment_id or x.deployment_id == deployment_id]
         return instances
 
-    def get_nodes(self, deployment_id=None):
+    def get_nodes(self, deployment_id=None, **_):
         nodes = [
             x for x in self._load_data()[NODES].values()
             if deployment_id is None or x.deployment_id == deployment_id
@@ -186,53 +186,53 @@ class FileStorageManager(object):
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
-    def blueprints_list(self):
+    def blueprints_list(self, **_):
         data = self._load_data()
         return data[BLUEPRINTS].values()
 
-    def deployments_list(self):
+    def deployments_list(self, **_):
         data = self._load_data()
         return data[DEPLOYMENTS].values()
 
-    def executions_list(self):
+    def executions_list(self, **_):
         data = self._load_data()
         return data[EXECUTIONS].values()
 
-    def get_blueprint_deployments(self, blueprint_id):
+    def get_blueprint_deployments(self, blueprint_id, **_):
         deployments = self.deployments_list()
         return [deployment for deployment in deployments
                 if deployment.blueprint_id == blueprint_id]
 
-    def get_deployment_executions(self, deployment_id):
+    def get_deployment_executions(self, deployment_id, **_):
         executions = self.executions_list()
         return [execution for execution in executions if execution
                 .deployment_id == deployment_id]
 
-    def get_blueprint(self, blueprint_id, fields=None):
+    def get_blueprint(self, blueprint_id, include=None):
         data = self._load_data()
         if blueprint_id in data[BLUEPRINTS]:
             bp = data[BLUEPRINTS][blueprint_id]
-            if fields:
+            if include:
                 for field in BlueprintState.fields:
-                    if field not in fields:
+                    if field not in include:
                         setattr(bp, field, None)
             return bp
         raise manager_exceptions.NotFoundError(
             "Blueprint {0} not found".format(blueprint_id))
 
-    def get_deployment(self, deployment_id, fields=None):
+    def get_deployment(self, deployment_id, include=None):
         data = self._load_data()
         if deployment_id in data[DEPLOYMENTS]:
             dep = data[DEPLOYMENTS][deployment_id]
-            if fields:
+            if include:
                 for field in Deployment.fields:
-                    if field not in fields:
+                    if field not in include:
                         setattr(dep, field, None)
             return dep
         raise manager_exceptions.NotFoundError(
             "Deployment {0} not found".format(deployment_id))
 
-    def get_execution(self, execution_id):
+    def get_execution(self, execution_id, **_):
         data = self._load_data()
         if execution_id in data[EXECUTIONS]:
             return data[EXECUTIONS][execution_id]
@@ -305,7 +305,7 @@ class FileStorageManager(object):
         data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID] = provider_context
         self._dump_data(data)
 
-    def get_provider_context(self):
+    def get_provider_context(self, **_):
         data = self._load_data()
         if PROVIDER_CONTEXT_ID in data[PROVIDER_CONTEXT]:
             return data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID]
