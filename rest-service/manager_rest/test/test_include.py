@@ -90,7 +90,9 @@ class IncludeQueryParamTests(BaseServerTestCase):
                                                _include=['hello']))
 
     def test_nodes(self):
-        response = self.client.nodes.list(_include=['id', 'properties'])
+        deployment_id = self.client.deployments.list()[0].id
+        response = self.client.nodes.list(deployment_id=deployment_id,
+                                          _include=['id', 'properties'])
         for n in response:
             self.assertEqual(2, len(n))
             self.assertTrue('id' in n)

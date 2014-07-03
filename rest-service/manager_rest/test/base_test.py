@@ -42,6 +42,14 @@ class MockHTTPClient(HTTPClient):
         super(MockHTTPClient, self).__init__('localhost')
         self.app = app
 
+    @staticmethod
+    def _build_url(resource_path, query_params):
+        query_string = ''
+        if query_params and len(query_params) > 0:
+            query_string += '&' + urllib.urlencode(query_params)
+            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
+        return resource_path
+
     def do_request(self,
                    requests_method,
                    uri,
@@ -49,13 +57,14 @@ class MockHTTPClient(HTTPClient):
                    params=None,
                    expected_status_code=200):
         if 'get' in requests_method.__name__:
-            response = self.app.get(uri)
+            response = self.app.get(self._build_url(uri, params))
+
         elif 'put' in requests_method.__name__:
-            response = self.app.put(uri,
+            response = self.app.put(self._build_url(uri, params),
                                     content_type='application/json',
                                     data=json.dumps(data))
         elif 'post' in requests_method.__name__:
-            response = self.app.post(uri,
+            response = self.app.post(self._build_url(uri, params),
                                      content_type='application/json',
                                      data=json.dumps(data))
         else:
