@@ -18,12 +18,11 @@ __author__ = 'dan'
 
 from manager_rest import get_version_data
 
-
 from base_test import BaseServerTestCase
 
 
 class VersionTestCase(BaseServerTestCase):
 
     def test_get_version(self):
-        result = self.get('/version').json
-        self.assertDictEqual(result, get_version_data())
+        self.assertDictEqual(self.client.manager.get_version(),
+                             get_version_data())
