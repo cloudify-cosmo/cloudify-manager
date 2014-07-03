@@ -20,7 +20,7 @@ from cloudify.decorators import workflow
 
 
 WORKFLOWS_WORKER_PAYLOAD = {
-    'worker_config': {
+    'cloudify_agent': {
         'workflows_worker': True
     }
 }

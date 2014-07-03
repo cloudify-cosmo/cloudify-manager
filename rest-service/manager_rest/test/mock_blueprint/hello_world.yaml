@@ -13,7 +13,7 @@ types:
     openstack_host:
         derived_from: cloudify.types.host
         properties:
-            -   worker_config:
+            -   cloudify_agent:
                     user: ubuntu
                     port: 22
                     key: ~/.ssh/cloudify-agents.pem
