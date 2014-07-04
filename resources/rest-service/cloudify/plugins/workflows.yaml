@@ -1,7 +1,4 @@
 
-imports:
-    - "cloudify.types"
-
 plugins:
     workflows:
         derived_from: "cloudify.plugins.manager_plugin"
