@@ -203,3 +203,20 @@ class ProviderContext(object):
     def __init__(self, **kwargs):
         self.context = kwargs['context']
         self.name = kwargs['name']
+
+
+@swagger.model
+class Version(object):
+
+    resource_fields = {
+        'version': fields.String,
+        'build': fields.String,
+        'date': fields.String,
+        'commit': fields.String,
+    }
+
+    def __init__(self, **kwargs):
+        self.version = kwargs['version']
+        self.build = kwargs['build']
+        self.date = kwargs['date']
+        self.commit = kwargs['commit']
