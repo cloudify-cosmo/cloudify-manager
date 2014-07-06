@@ -17,7 +17,7 @@ __author__ = 'dank'
 
 
 from cloudify.decorators import workflow
-from cloudify.workflows.tasks_graph import TaskDependencyGraph, forkjoin
+from cloudify.workflows.tasks_graph import forkjoin
 from cloudify.workflows import tasks as workflow_tasks
 
 
@@ -25,8 +25,9 @@ from cloudify.workflows import tasks as workflow_tasks
 def install(ctx, **kwargs):
     """Default install workflow"""
 
-    # instantiate and new graph instance to build install tasks workflow
-    graph = TaskDependencyGraph(ctx)
+    # switch to graph mode (operations on the context return tasks instead of
+    # result instances)
+    graph = ctx.graph_mode()
 
     # We need reference to the create event/state tasks and the started
     # task so we can later create a proper dependency between nodes and
@@ -115,8 +116,9 @@ def install(ctx, **kwargs):
 def uninstall(ctx, **kwargs):
     """Default uninstall workflow"""
 
-    # instantiate a new graph instance to build uninstall tasks workflow
-    graph = TaskDependencyGraph(ctx)
+    # switch to graph mode (operations on the context return tasks instead of
+    # result instances)
+    graph = ctx.graph_mode()
 
     set_state_stopping_tasks = {}
     set_state_deleted_tasks = {}
@@ -153,8 +155,10 @@ def uninstall(ctx, **kwargs):
             sequence = graph.sequence()
 
             sequence.add(set_state_stopping_tasks[instance.id],
-                         instance.send_event('Stopping node'),
-                         stop_node_tasks[instance.id],
+                         instance.send_event('Stopping node'))
+            if _is_host_node(instance):
+                sequence.add(*_host_pre_stop(instance))
+            sequence.add(stop_node_tasks[instance.id],
                          instance.set_state('stopped'),
                          forkjoin(*_relationship_operations(
                              instance,
@@ -257,4 +261,24 @@ def _host_post_start(host_node_instance):
             host_node_instance.execute_operation(
                 'cloudify.interfaces.worker_installer.restart')
         ]
+    return tasks
+
+
+def _host_pre_stop(host_node_instance):
+    tasks = []
+    if host_node_instance.node.properties['install_agent'] is True:
+        tasks += [
+            host_node_instance.send_event('Uninstalling worker'),
+            host_node_instance.execute_operation(
+                'cloudify.interfaces.worker_installer.stop'),
+            host_node_instance.execute_operation(
+                'cloudify.interfaces.worker_installer.uninstall')
+        ]
+
+    for task in tasks:
+        if task.is_remote():
+            _set_send_node_event_on_error_handler(
+                task, host_node_instance,
+                'Error occurred while uninstalling worker - ignoring...')
+
     return tasks

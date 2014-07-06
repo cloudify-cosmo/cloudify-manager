@@ -120,12 +120,24 @@ class IllegalActionError(ManagerException):
             *args, **kwargs)
 
 
-class MissingExecutionParametersError(ManagerException):
-    MISSING_EXECUTION_PARAMETERS_ERROR_CODE =\
-        'missing_execution_parameters_error'
+class IllegalExecutionParametersError(ManagerException):
+    ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE =\
+        'illegal_execution_parameters_error'
 
     def __init__(self, *args, **kwargs):
-        super(MissingExecutionParametersError, self).__init__(
-            400, MissingExecutionParametersError.
-            MISSING_EXECUTION_PARAMETERS_ERROR_CODE,
+        super(IllegalExecutionParametersError, self).__init__(
+            400, IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
             *args, **kwargs)
+
+
+class NoSuchIncludeFieldError(ManagerException):
+    NO_SUCH_INCLUDE_FIELD_ERROR = 'no_such_include_field_error'
+
+    def __init__(self, *args, **kwargs):
+        super(NoSuchIncludeFieldError, self).__init__(
+            400,
+            NoSuchIncludeFieldError.NO_SUCH_INCLUDE_FIELD_ERROR,
+            *args,
+            **kwargs
+        )

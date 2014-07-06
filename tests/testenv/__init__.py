@@ -985,6 +985,25 @@ def deploy_application(dsl_path,
     """
     A blocking method which deploys an application from the provided dsl path.
     """
+    return deploy_and_execute_workflow(dsl_path=dsl_path,
+                                       workflow_name='install',
+                                       timeout=timeout,
+                                       blueprint_id=blueprint_id,
+                                       deployment_id=deployment_id,
+                                       wait_for_execution=wait_for_execution)
+
+
+def deploy_and_execute_workflow(dsl_path,
+                                workflow_name,
+                                timeout=240,
+                                blueprint_id=None,
+                                deployment_id=None,
+                                wait_for_execution=True,
+                                parameters=None):
+    """
+    A blocking method which deploys an application from the provided dsl path.
+    and runs the requested workflows
+    """
     client = create_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
@@ -996,11 +1015,11 @@ def deploy_application(dsl_path,
     do_retries(verify_workers_installation_complete, 30,
                deployment_id=deployment_id)
 
-    execution = client.deployments.execute(deployment_id, 'install')
+    execution = client.deployments.execute(deployment_id, workflow_name,
+                                           parameters=parameters or {})
 
     if wait_for_execution:
-        execution = wait_for_execution_to_end(execution, timeout=timeout)
-        return deployment, execution.id
+        wait_for_execution_to_end(execution, timeout=timeout)
 
     return deployment, execution.id
 

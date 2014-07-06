@@ -22,14 +22,59 @@ import urllib2
 import tempfile
 import os
 import tarfile
+
 from manager_rest import server, util, config, storage_manager
 from manager_rest.file_server import FileServer
+from cloudify_rest_client import CloudifyClient
+from cloudify_rest_client.client import HTTPClient
+
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
+
+
+class MockHTTPClient(HTTPClient):
+
+    def __init__(self, app):
+        super(MockHTTPClient, self).__init__('localhost')
+        self.app = app
+
+    @staticmethod
+    def _build_url(resource_path, query_params):
+        query_string = ''
+        if query_params and len(query_params) > 0:
+            query_string += '&' + urllib.urlencode(query_params)
+            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
+        return resource_path
+
+    def do_request(self,
+                   requests_method,
+                   uri,
+                   data=None,
+                   params=None,
+                   expected_status_code=200):
+        if 'get' in requests_method.__name__:
+            response = self.app.get(self._build_url(uri, params))
+
+        elif 'put' in requests_method.__name__:
+            response = self.app.put(self._build_url(uri, params),
+                                    content_type='application/json',
+                                    data=json.dumps(data))
+        elif 'post' in requests_method.__name__:
+            response = self.app.post(self._build_url(uri, params),
+                                     content_type='application/json',
+                                     data=json.dumps(data))
+        else:
+            raise NotImplemented()
+        if response.status_code != expected_status_code:
+            response.content = response.data
+            response.json = lambda: json.loads(response.data)
+            self._raise_client_error(response, uri)
+
+        return json.loads(response.data)
 
 
 class BaseServerTestCase(unittest.TestCase):
@@ -45,6 +90,14 @@ class BaseServerTestCase(unittest.TestCase):
         server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
+        self.client = CloudifyClient('localhost')
+        mock_http_client = MockHTTPClient(self.app)
+        self.client.blueprints.api = mock_http_client
+        self.client.deployments.api = mock_http_client
+        self.client.executions.api = mock_http_client
+        self.client.nodes.api = mock_http_client
+        self.client.node_instances.api = mock_http_client
+        self.client.manager.api = mock_http_client
 
     def tearDown(self):
         self.file_server.stop()
@@ -153,17 +206,21 @@ class BaseServerTestCase(unittest.TestCase):
         result.append(data)
         return result
 
-    def put_test_deployment(self, deployment_id='deployment',
-                            blueprint_file_name=None):
+    def put_deployment(self, deployment_id='deployment',
+                       blueprint_file_name=None):
         blueprint_response = self.post_file(
             *self.post_blueprint_args(blueprint_file_name)).json
-        blueprint_id = blueprint_response['id']
-        # Execute post deployment
-        deployment_response = self.put(
-            '/deployments/{0}'.format(deployment_id),
-            {'blueprint_id': blueprint_id}).json
-        return (blueprint_id, deployment_response['id'], blueprint_response,
-                deployment_response)
+        try:
+            blueprint_id = blueprint_response['id']
+            # Execute post deployment
+            deployment_response = self.put(
+                '/deployments/{0}'.format(deployment_id),
+                {'blueprint_id': blueprint_id}).json
+            return (blueprint_id, deployment_response['id'],
+                    blueprint_response,
+                    deployment_response)
+        except:
+            raise RuntimeError(blueprint_response)
 
     def _build_url(self, resource_path, query_params):
         query_string = ''

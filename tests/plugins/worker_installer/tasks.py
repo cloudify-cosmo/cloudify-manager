@@ -30,61 +30,61 @@ RESTARTED = "restarted"
 
 @operation
 def install(ctx, **kwargs):
-    worker_config = _fix_worker(ctx, **kwargs)
+    agent_config = _fix_worker(ctx, **kwargs)
     data = _get_data()
 
-    ctx.logger.info("Installing worker {0}".format(worker_config["name"]))
-    data['workers_state'][worker_config["name"]] = [INSTALLED]
+    ctx.logger.info("Installing worker {0}".format(agent_config["name"]))
+    data['workers_state'][agent_config["name"]] = [INSTALLED]
     _store_data(data)
 
 
 @operation
 def start(ctx, **kwargs):
-    worker_config = _fix_worker(ctx, **kwargs)
+    agent_config = _fix_worker(ctx, **kwargs)
     data = _get_data()
 
-    ctx.logger.info("Starting worker {0}".format(worker_config["name"]))
+    ctx.logger.info("Starting worker {0}".format(agent_config["name"]))
     # adding a consumer that handles tasks from a
-    # queue called worker_config["name"]
+    # queue called agent_config["name"]
     ctx.logger.info("Workers state before change is {0}".format(
         data['workers_state']))
-    data['workers_state'][worker_config["name"]].append(STARTED)
+    data['workers_state'][agent_config["name"]].append(STARTED)
     _store_data(data)
 
 
 @operation
 def restart(ctx, **kwargs):
-    worker_config = _fix_worker(ctx, **kwargs)
+    agent_config = _fix_worker(ctx, **kwargs)
     data = _get_data()
 
-    ctx.logger.info("Restarting worker {0}".format(worker_config["name"]))
-    data['workers_state'][worker_config["name"]].append(RESTARTED)
+    ctx.logger.info("Restarting worker {0}".format(agent_config["name"]))
+    data['workers_state'][agent_config["name"]].append(RESTARTED)
     _store_data(data)
 
 
 @operation
 def stop(ctx, **kwargs):
-    worker_config = _fix_worker(ctx, **kwargs)
+    agent_config = _fix_worker(ctx, **kwargs)
     data = _get_data()
 
-    ctx.logger.info("Stopping worker {0}".format(worker_config["name"]))
-    if worker_config["name"] not in data['workers_state']:
+    ctx.logger.info("Stopping worker {0}".format(agent_config["name"]))
+    if agent_config["name"] not in data['workers_state']:
         ctx.logger.debug("No worker. nothing to do.")
         return
-    data['workers_state'][worker_config["name"]].append(STOPPED)
+    data['workers_state'][agent_config["name"]].append(STOPPED)
     _store_data(data)
 
 
 @operation
 def uninstall(ctx, **kwargs):
-    worker_config = _fix_worker(ctx, **kwargs)
+    agent_config = _fix_worker(ctx, **kwargs)
     data = _get_data()
 
-    ctx.logger.info("Uninstalling worker {0}".format(worker_config["name"]))
-    if worker_config["name"] not in data['workers_state']:
+    ctx.logger.info("Uninstalling worker {0}".format(agent_config["name"]))
+    if agent_config["name"] not in data['workers_state']:
         ctx.logger.debug("No worker. nothing to do.")
         return
-    data['workers_state'][worker_config["name"]].append(UNINSTALLED)
+    data['workers_state'][agent_config["name"]].append(UNINSTALLED)
     _store_data(data)
 
 
@@ -95,20 +95,20 @@ def get_worker_state(worker_name, **kwargs):
 
 
 def _fix_worker(ctx, **kwargs):
-    worker_config = {}
+    agent_config = {}
     if _is_workflows_worker(kwargs):
-        worker_config['name'] = '{0}_workflows'.format(ctx.deployment_id)
+        agent_config['name'] = '{0}_workflows'.format(ctx.deployment_id)
     elif ctx.node_id is None:
-        worker_config['name'] = ctx.deployment_id
+        agent_config['name'] = ctx.deployment_id
     else:
-        worker_config['name'] = ctx.node_id
-    return worker_config
+        agent_config['name'] = ctx.node_id
+    return agent_config
 
 
 def _is_workflows_worker(config_container):
-    return 'worker_config' in config_container and \
-           'workflows_worker' in config_container['worker_config'] and \
-           config_container['worker_config']['workflows_worker']
+    return 'cloudify_agent' in config_container and \
+           'workflows_worker' in config_container['cloudify_agent'] and \
+           config_container['cloudify_agent']['workflows_worker']
 
 
 def _get_data():

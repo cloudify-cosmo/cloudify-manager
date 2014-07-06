@@ -197,10 +197,13 @@ def sleep(ctx, **kwargs):
 
 
 @operation
-def fail(ctx, **_):
+def fail(ctx, **kwargs):
+    fail_count = ctx.properties.get('fail_count',
+                                    kwargs.get('fail_count',
+                                               1000000))
     global failure_invocation
     failure_invocation.append(time.time())
-    if len(failure_invocation) > ctx.properties.get('fail_count', 100000):
+    if len(failure_invocation) > fail_count:
         return
 
     message = 'TEST_EXPECTED_FAIL'

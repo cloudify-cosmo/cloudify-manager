@@ -1,7 +1,4 @@
 
-imports:
-    - "cloudify.types"
-
 plugins:
     worker_installer:
         derived_from: "cloudify.plugins.manager_plugin"
