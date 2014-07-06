@@ -19,9 +19,12 @@ __author__ = 'elip'
 import unittest
 import os
 
+from nose.tools import nottest
+
 from cloudify.constants import LOCAL_IP_KEY
 
 
+@nottest
 class PluginUtilsTest(unittest.TestCase):
 
     @classmethod
