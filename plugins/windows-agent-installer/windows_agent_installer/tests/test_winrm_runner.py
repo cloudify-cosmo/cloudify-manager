@@ -22,10 +22,12 @@ __author__ = 'elip'
 import unittest
 from windows_agent_installer import winrm_runner
 from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
+from nose.tools import nottest
 
 
 TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/develop.zip'
 
+@nottest
 class WinRMRunnerTest(unittest.TestCase):
 
     """
@@ -244,3 +246,8 @@ class WinRMRunnerTest(unittest.TestCase):
         # Assert new directory exists and contains the file
         self.assertTrue(self.runner.exists(path='{0}\q\e'.format(TEST_WORKING_DIRECTORY)))
         self.assertTrue(self.runner.exists(path='{0}\q\e\k.txt'.format(TEST_WORKING_DIRECTORY)))
+
+    def test_service_state(self):
+
+        state = self.runner.service_state('WinRM')
+        self.assertEqual(state, 'Running')

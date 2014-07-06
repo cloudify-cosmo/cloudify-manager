@@ -59,7 +59,7 @@ def init_worker_installer(func):
             cloudify_agent = {}
         prepare_configuration(ctx, cloudify_agent)
         kwargs['cloudify_agent'] = cloudify_agent
-        kwargs['runner'] = WinRMRunner(session_config=cloudify_agent, logger=ctx.logger)
+        kwargs['runner'] = WinRMRunner(session_config=cloudify_agent.copy(), logger=ctx.logger)
         return func(*args, **kwargs)
     return wrapper
 
@@ -140,7 +140,7 @@ def set_autoscale_parameters(bootstrap_context, cloudify_agent):
         raise NonRecoverableError(
             '{0} cannot be greater than {2} '
             '[{0}={1}, {2}={3}]'
-            .format(MIN_WORKERS_KEY, min_workers, MAX_WORKERS_KEY, max_workers))
+            .format(MIN_WORKERS_KEY, min_workers, max_workers, MAX_WORKERS_KEY))
     cloudify_agent[MIN_WORKERS_KEY] = min_workers
     cloudify_agent[MAX_WORKERS_KEY] = max_workers
 
@@ -160,6 +160,6 @@ def _get_machine_ip(ctx):
         return ctx.properties['ip']  # priority for statically specifying ip.
     if 'ip' in ctx.runtime_properties:
         return ctx.runtime_properties['ip']
-    raise ValueError('ip property is not set for node: {0}. '
+    raise NonRecoverableError('ip property is not set for node: {0}. '
                      'This is mandatory for installing an agent remotely'
                      .format(ctx.node_id))

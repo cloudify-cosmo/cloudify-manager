@@ -16,13 +16,16 @@
 
 __author__ = 'elip'
 
-
 import unittest
 import os
+
+from nose.tools import nottest
+
 from cloudify.mocks import MockCloudifyContext
 from windows_agent_installer import tasks
 from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 from windows_agent_installer.tasks import AGENT_INCLUDES
+
 
 PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/CloudifyAgent.exe'
 
@@ -30,7 +33,7 @@ PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/CloudifyAgent.exe'
 tasks.get_agent_package_url = lambda : PACKAGE_URL
 tasks.get_manager_ip = lambda : '127.0.0.1'
 
-
+@nottest
 class TestTasks(unittest.TestCase):
 
     """

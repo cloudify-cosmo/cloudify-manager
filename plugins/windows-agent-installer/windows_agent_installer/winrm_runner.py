@@ -15,30 +15,14 @@
 
 __author__ = 'elip'
 
-import logging
-import sys
 import winrm
 from cloudify.exceptions import CommandExecutionException
 from cloudify.utils import CommandExecutionResponse
+from cloudify.utils import setup_default_logger
 
 DEFAULT_WINRM_PORT = '5985'
 DEFAULT_WINRM_URI = 'wsman'
 DEFAULT_WINRM_PROTOCOL = 'http'
-
-def setup_default_logger():
-    root = logging.getLogger()
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
-                                      '[%(name)s] %(message)s', datefmt='%H:%M:%S')
-    ch.setFormatter(formatter)
-    # clear all other handlers
-    for handler in root.handlers:
-        root.removeHandler(handler)
-    root.addHandler(ch)
-    logger = logging.getLogger('WinRMExecutor')
-    logger.setLevel(logging.DEBUG)
-    return logger
 
 def defaults(session_config):
 
@@ -62,7 +46,7 @@ def validate(session_config):
 
 class WinRMRunner(object):
 
-    def __init__(self, session_config, logger=setup_default_logger()):
+    def __init__(self, session_config, logger=setup_default_logger('WinRMRunner')):
 
         # Validations - [host, user, password]
         validate(session_config)
@@ -89,7 +73,7 @@ class WinRMRunner(object):
 
         def _chk(res):
             if res.status_code == 0:
-                self.logger.info('[{0}] out: {1}'.format(self.session_config['host'], res.std_out))
+                self.logger.debug('[{0}] out: {1}'.format(self.session_config['host'], res.std_out))
             else:
                 error = WinRMExecutionException(
                     command=command,
@@ -100,6 +84,7 @@ class WinRMRunner(object):
                 if exit_on_failure:
                     raise error
 
+
         self.logger.info('[{0}] run: {1}'.format(self.session_config['host'], command))
         response = self.session.run_cmd(command)
         _chk(response)
@@ -107,6 +92,9 @@ class WinRMRunner(object):
                                         std_err=response.std_err,
                                         std_out=response.std_out,
                                         return_code=response.status_code)
+
+    def ping(self):
+        return self.run('echo Testing Session')
 
     def download(self, url, output_path):
         return self.run(
@@ -159,13 +147,20 @@ class WinRMRunner(object):
 
     def new_dir(self, path):
         return self.run(
-            '''@powershell -Command "New-Item {0}" -type directory'''  # NOQA
+            '''@powershell -Command "New-Item {0} -type directory"'''  # NOQA
             .format(path))
 
     def new_file(self, path):
         return self.run(
-            '''@powershell -Command "New-Item {0}" -type file'''  # NOQA
+            '''@powershell -Command "New-Item {0} -type file"'''  # NOQA
             .format(path))
+
+    def service_state(self, service_name):
+        response = self.run(
+            '''@powershell -Command "(Get-Service -Name {0}).Status"'''  # NOQA
+            .format(service_name))
+        return response.std_out.strip()
+
 
 
 class WinRMExecutionException(CommandExecutionException):

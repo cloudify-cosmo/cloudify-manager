@@ -21,8 +21,10 @@ from windows_agent_installer import init_worker_installer
 from windows_agent_installer import *
 
 
-# This is the folder under which the agent is extracted to inside the current directory.
-# It is set in the packaging process so it must be hardcoded here.
+# This is the folder under which the agent is
+# extracted to inside the current directory.
+# It is set in the packaging process so it
+# must be hardcoded here.
 AGENT_FOLDER_NAME = 'CloudifyAgent'
 
 # This is where we download the agent to.
@@ -31,10 +33,12 @@ AGENT_EXEC_FILE_NAME = 'CloudifyAgent.exe'
 # nssm will install celery and use this name to identify the service
 AGENT_SERVICE_NAME = 'CloudifyAgent'
 
-# location of the agent package on the management machine, relative to the file server root.
+# location of the agent package on the management machine,
+# relative to the file server root.
 AGENT_PACKAGE_PATH = '/packages/agents/CloudifyWindowsAgent.exe'
 
-# Path to the agent. We are using global (not user based) paths because of virtualenv relocation issues on windows.
+# Path to the agent. We are using global (not user based) paths
+# because of virtualenv relocation issues on windows.
 RUNTIME_AGENT_PATH = 'C:\CloudifyAgent'
 
 # Agent includes list, Mandatory
@@ -84,7 +88,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               '-n celery.{1} '
               '--logfile={2}\celery.log '
               '--pidfile={2}\celery.pid '
-              '--autoscale={3},{4}'
+              '--autoscale={3},{4} '
               '--include={5} '
               .format(get_manager_ip(),
                       cloudify_agent['name'],
@@ -120,8 +124,12 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
 
     ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
-    _wait_for_service_status(runner, cloudify_agent, AGENT_SERVICE_NAME, 'RUNNING',
-        cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY])
+
+    _wait_for_service_status(runner,
+                             cloudify_agent,
+                             AGENT_SERVICE_NAME,
+                             'Running',
+                             cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY])
 
 
 
@@ -145,8 +153,12 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
 
     ctx.logger.info('Waiting for {0} to stop...'.format(AGENT_SERVICE_NAME))
-    _wait_for_service_status(runner, cloudify_agent, AGENT_SERVICE_NAME, 'STOPPED',
-        cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY])
+
+    _wait_for_service_status(runner,
+                             cloudify_agent,
+                             AGENT_SERVICE_NAME,
+                             'Stopped',
+                             cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY])
 
 @operation
 @init_worker_installer
@@ -192,8 +204,9 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     ctx.logger.info('Uninstalling agent {0}'.format(cloudify_agent['name']))
 
-    runner.run('{0} remove {1} confirm'.format('{0}\\nssm\\nssm.exe'.format(RUNTIME_AGENT_PATH),
-                                               AGENT_SERVICE_NAME))
+    runner.run('{0} remove {1} confirm'.format('{0}\\nssm\\nssm.exe'
+                                               .format(RUNTIME_AGENT_PATH),
+                                                       AGENT_SERVICE_NAME))
 
     runner.delete(path=RUNTIME_AGENT_PATH)
     runner.delete(path='C:\\{0}'.format(AGENT_EXEC_FILE_NAME))
@@ -211,8 +224,8 @@ def _wait_for_service_status(runner,
 
     while end_time > time.time():
 
-        response = runner.run('sc query {0}'.format(service_name))
-        if desired_status in response.std_out:
+        service_state = runner.service_state(service_name)
+        if desired_status.lower() == service_state.lower():
             successful_consecutive_queries += 1
             if successful_consecutive_queries == cloudify_agent['service'][
                 SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
