@@ -35,7 +35,7 @@ from windows_agent_installer import MIN_WORKERS_KEY, \
 
 class InitTest(unittest.TestCase):
 
-    def test_set_service_configuration_parameters_with_empty_service(self):  #NOQA
+    def test_set_service_configuration_parameters_with_empty_service(self):  # NOQA
 
         # cloudify agent does not contain any service configuration parameters.
         # this means all parameters should be the default ones.
@@ -66,7 +66,7 @@ class InitTest(unittest.TestCase):
             [SERVICE_FAILURE_RESTART_DELAY_KEY],
             5000)
 
-    def test_set_service_configuration_parameters_with_full_service(self):  #NOQA
+    def test_set_service_configuration_parameters_with_full_service(self):  # NOQA
 
         cloudify_agent = {'service': {
             SERVICE_FAILURE_RESET_TIMEOUT_KEY: 1,
@@ -110,8 +110,8 @@ class InitTest(unittest.TestCase):
         }}
         try:
             set_service_configuration_parameters(cloudify_agent)
-            self.fail('Expected NonRecoverableError since {0} is not a number'.format(
-                SERVICE_FAILURE_RESET_TIMEOUT_KEY))
+            self.fail('Expected NonRecoverableError since {0} is not a number'
+                      .format(SERVICE_FAILURE_RESET_TIMEOUT_KEY))
         except NonRecoverableError:
             pass
 
