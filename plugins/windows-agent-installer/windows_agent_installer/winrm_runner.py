@@ -128,7 +128,8 @@ class WinRMRunner(object):
 
         :param src: Path to the source item.
         :param dest: Path to the destination item.
-        :param create_missing_directories: True to create any missing directories in the destination path.
+        :param create_missing_directories: True to create any missing
+                                           directories in the destination path.
         :return: An execution 'response' instance.
         '''
 

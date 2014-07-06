@@ -27,15 +27,18 @@ MIN_WORKERS_KEY = 'min_workers'
 MAX_WORKERS_KEY = 'max_workers'
 SERVICE_START_TIMEOUT_KEY = 'start_timeout'
 SERVICE_STOP_TIMEOUT_KEY = 'stop_timeout'
-SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY = 'status_transition_sleep_interval'
-SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY = 'successful_consecutive_status_queries_count'
+SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY = \
+    'status_transition_sleep_interval'
+SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY = \
+    'successful_consecutive_status_queries_count'
 SERVICE_FAILURE_RESET_TIMEOUT_KEY = 'failure_reset_timeout'
 SERVICE_FAILURE_RESTART_DELAY_KEY = 'failure_restart_delay'
 
 
 def init_worker_installer(func):
     '''
-    Decorator for injecting a 'runner' and a 'cloudify_agent' into the function's invocation parameters.
+    Decorator for injecting a 'runner' and a 'cloudify_agent'
+    into the function's invocation parameters.
 
     The 'runner' parameter is an instance of a
     WinRMRunner for executing remote commands on a windows machine.
@@ -95,7 +98,8 @@ def set_bootstrap_context_parameters(bootstrap_context, cloudify_agent):
         2. Parameter in the bootstrap context.
         3. default value.
 
-    :param ctx: The bootstrap context from the 'cloudify' section in the cloudify-config.yaml
+    :param ctx: The bootstrap context from the 'cloudify'
+                section in the cloudify-config.yaml
     :param cloudify_agent: Cloudify agent configuration dictionary.
     :return:
     '''
