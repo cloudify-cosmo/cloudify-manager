@@ -18,9 +18,13 @@ from cloudify.decorators import operation
 from cloudify import utils
 from cloudify.exceptions import TimeoutException
 from windows_agent_installer import init_worker_installer
-from windows_agent_installer import SERVICE_FAILURE_RESTART_DELAY_KEY, SERVICE_START_TIMEOUT_KEY, \
-    SERVICE_STOP_TIMEOUT_KEY, SERVICE_FAILURE_RESET_TIMEOUT_KEY, SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY, \
-    SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY, MAX_WORKERS_KEY, MIN_WORKERS_KEY
+from windows_agent_installer import SERVICE_FAILURE_RESTART_DELAY_KEY, \
+    SERVICE_START_TIMEOUT_KEY, \
+    SERVICE_STOP_TIMEOUT_KEY, SERVICE_FAILURE_RESET_TIMEOUT_KEY, \
+    SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY, \
+    SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY, \
+    MAX_WORKERS_KEY, \
+    MIN_WORKERS_KEY
 
 
 # This is the folder under which the agent is
@@ -233,7 +237,8 @@ def _wait_for_service_status(runner,
         else:
             successful_consecutive_queries = 0
         time.sleep(
-            cloudify_agent['service'][SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
+            cloudify_agent['service']
+            [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
     raise TimeoutException(
         "Service {0} did not reach state {1} in {2} seconds" .format(
             service_name,

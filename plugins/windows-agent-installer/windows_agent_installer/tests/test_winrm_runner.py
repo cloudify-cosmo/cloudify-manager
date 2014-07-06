@@ -148,8 +148,8 @@ class WinRMRunnerTest(unittest.TestCase):
 
     def test_run_error(self):
 
-        from windows_agent_installer.winrm_runner \
-        import WinRMExecutionException
+        from windows_agent_installer.winrm_runner import \
+            WinRMExecutionException
         try:
             self.runner.run('Bad command')
             self.fail('Expected WinRMExecutionException due to bad command')

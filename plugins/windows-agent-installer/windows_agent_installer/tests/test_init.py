@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 from cloudify.context import BootstrapContext
+from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 
 __author__ = 'elip'
@@ -20,12 +21,21 @@ __author__ = 'elip'
 
 import unittest
 
-from windows_agent_installer import *
+from windows_agent_installer import MIN_WORKERS_KEY, \
+    MAX_WORKERS_KEY, SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY, \
+    SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY, \
+    SERVICE_FAILURE_RESET_TIMEOUT_KEY, \
+    SERVICE_FAILURE_RESTART_DELAY_KEY, \
+    SERVICE_START_TIMEOUT_KEY, \
+    SERVICE_STOP_TIMEOUT_KEY, \
+    set_service_configuration_parameters, \
+    set_autoscale_parameters, \
+    set_bootstrap_context_parameters
 
 
 class InitTest(unittest.TestCase):
 
-    def test_set_service_configuration_parameters_with_empty_service(self):
+    def test_set_service_configuration_parameters_with_empty_service(self):  #NOQA
 
         # cloudify agent does not contain any service configuration parameters.
         # this means all parameters should be the default ones.
@@ -56,7 +66,7 @@ class InitTest(unittest.TestCase):
             [SERVICE_FAILURE_RESTART_DELAY_KEY],
             5000)
 
-    def test_set_service_configuration_parameters_with_full_service(self):
+    def test_set_service_configuration_parameters_with_full_service(self):  #NOQA
 
         cloudify_agent = {'service': {
             SERVICE_FAILURE_RESET_TIMEOUT_KEY: 1,
@@ -93,7 +103,7 @@ class InitTest(unittest.TestCase):
             [SERVICE_FAILURE_RESTART_DELAY_KEY],
             1)
 
-    def test_set_service_configuration_parameters_digit_validation(self): # NOQA
+    def test_set_service_configuration_parameters_digit_validation(self):  # NOQA
 
         cloudify_agent = {'service': {
             SERVICE_FAILURE_RESET_TIMEOUT_KEY: "Hello"
@@ -105,7 +115,7 @@ class InitTest(unittest.TestCase):
         except NonRecoverableError:
             pass
 
-    def test_set_autoscale_parameters_with_empty_bootstrap_context_and_no_parameters(self): # NOQA
+    def test_set_autoscale_parameters_with_empty_bootstrap_context_and_no_parameters(self):  # NOQA
 
         # Default values should be populated.
 
@@ -117,7 +127,7 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 5)
         self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 2)
 
-    def test_set_autoscale_parameters_with_bootstrap_context_and_no_parameters(self): # NOQA
+    def test_set_autoscale_parameters_with_bootstrap_context_and_no_parameters(self):  # NOQA
 
         # Bootstrap context values should be populated.
 
@@ -133,7 +143,7 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 10)
         self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 5)
 
-    def test_set_autoscale_parameters_with_bootstrap_context_and_parameters(self): # NOQA
+    def test_set_autoscale_parameters_with_bootstrap_context_and_parameters(self):  # NOQA
 
         # Cloudify agent configuration parameters should be populated.
         cloudify_agent = {
@@ -144,7 +154,7 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 10)
         self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 5)
 
-    def test_set_autoscale_parameters_validate_max_bigger_than_min(self): #NOQA
+    def test_set_autoscale_parameters_validate_max_bigger_than_min(self):  # NOQA
 
         # Cloudify agent configuration parameters should be populated.
         cloudify_agent = {
