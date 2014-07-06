@@ -61,7 +61,9 @@ install:
 
 script:
    - flake8 plugins/agent-installer/
-   - flake8 plugins/plugin-installer/
+   - flake8 plugins/windows-agent-installer/
+   - flake8 plugins/plugin-installer/   
+   - flake8 plugins/windows-plugin-installer/   
    - flake8 workflows/
    - flake8 rest-service/
    - flake8 tests/
@@ -70,12 +72,15 @@ script:
    - nosetests tests/workflow_tests --nologcapture --nocapture -v
    - nosetests tests/workers_tests --nologcapture --nocapture -v
    - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
+   - nosetests plugins/windows-plugin-installer/windows_plugin_installer/tests --nologcapture --nocapture
+   - nosetests plugins/windows-agent-installer/windows_agent_installer/tests --nologcapture --nocapture
 
    - echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
-   - cd ..
+   - cd ..   
+   
 
 notifications:
   flowdock: 1563c50664ffcb851c73e5588ec241a5
