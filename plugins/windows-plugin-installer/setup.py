@@ -15,7 +15,8 @@ setup(
     author_email='elip@gigaspaces.com',
     packages=['windows_plugin_installer'],
     license='LICENSE',
-    description='Plugin for installing plugins into an existing celery windows worker',
+    description='Plugin for installing plugins into an '
+                'existing celery windows worker',
     zip_safe=False,
     install_requires=[
         "cloudify-plugins-common"

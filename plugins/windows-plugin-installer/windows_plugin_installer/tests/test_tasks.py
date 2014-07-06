@@ -30,7 +30,9 @@ class TasksTest(unittest.TestCase):
                          '--pidfile=C:\CloudifyAgent\celery.pid'
 
         from windows_plugin_installer.tasks import add_module_paths_to_includes
-        new_app_parameters = add_module_paths_to_includes('mock_plugin.tasks', app_parameters)
+        new_app_parameters = add_module_paths_to_includes(
+            'mock_plugin.tasks',
+            app_parameters)
 
         expected_app_parameters = '--broker=amqp://guest:guest@127.0.0.1:5672// '\
                                   '--include=plugin_installer.tasks,mock_plugin.tasks --events '\

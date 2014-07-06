@@ -52,13 +52,17 @@ def extract_plugin_name(plugin_url):
         if fetch_plugin_from_pip_by_url:
             shutil.rmtree(plugin_dir)
 
+
 def extract_module_paths(module_name):
 
     module_paths = []
-    files = LocalCommandRunner().run('cmd /c "{0}\Scripts\pip.exe show -f {1}"'
-                                     .format(sys.prefix, module_name)).std_out.splitlines()
+    files = LocalCommandRunner()\
+        .run('cmd /c "{0}\Scripts\pip.exe show -f {1}"'
+             .format(sys.prefix, module_name)).std_out.splitlines()
     for module in files:
         if module.endswith(".py") and "__init__" not in module:
             # the files paths are relative to the package __init__.py file.
-            module_paths.append(module.replace("../", "").replace("/", ".").replace(".py", "").strip())
+            module_paths.append(
+                module.replace("../", "").replace("/", ".").replace(".py", "")
+                .strip())
     return module_paths
