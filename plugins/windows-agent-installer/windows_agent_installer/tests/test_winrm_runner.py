@@ -25,7 +25,8 @@ from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 from nose.tools import nottest
 
 
-TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/develop.zip'
+TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo' \
+                         '/cloudify-dsl-parser/archive/develop.zip'
 
 
 @nottest
@@ -35,7 +36,8 @@ class WinRMRunnerTest(unittest.TestCase):
     Test cases for WinRM execution functionality.
     These tests run PowerShell commands remotely on a WinRM enabled server.
 
-    An existing server must be setup, set the 'TEST_MACHINE_IP' environment variable to the server IP.
+    An existing server must be setup, set the
+    'TEST_MACHINE_IP' environment variable to the server IP.
     Otherwise, an exception will be raised.
 
     """
@@ -146,7 +148,8 @@ class WinRMRunnerTest(unittest.TestCase):
 
     def test_run_error(self):
 
-        from windows_agent_installer.winrm_runner import WinRMExecutionException
+        from windows_agent_installer.winrm_runner \
+        import WinRMExecutionException
         try:
             self.runner.run('Bad command')
             self.fail('Expected WinRMExecutionException due to bad command')

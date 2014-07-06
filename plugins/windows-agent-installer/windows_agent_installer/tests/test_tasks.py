@@ -41,10 +41,12 @@ class TestTasks(unittest.TestCase):
     Test cases for the worker installer functionality..
     These tests run PowerShell commands remotely on a WinRM enabled server.
 
-    An existing server must be setup, set the 'TEST_MACHINE_IP' environment variable to the server IP.
+    An existing server must be setup, set the
+    'TEST_MACHINE_IP' environment variable to the server IP.
     Otherwise, an exception will be raised.
 
-    Note : These tests require a machine with RabbitMQ running for the celery worker to start properly.
+    Note : These tests require a machine with RabbitMQ
+    running for the celery worker to start properly.
 
     """
 
@@ -88,7 +90,8 @@ class TestTasks(unittest.TestCase):
         from windows_agent_installer.tasks import AGENT_EXEC_FILE_NAME
         runner = WinRMRunner(session_config=_create_session())
         response = runner.run(
-            '{0}\Scripts\celery.exe inspect registered'.format(RUNTIME_AGENT_PATH))
+            '{0}\Scripts\celery.exe inspect registered'
+            .format(RUNTIME_AGENT_PATH))
 
         # Assert agent has necessary includes
         self.assertTrue(AGENT_INCLUDES in response.std_out)
