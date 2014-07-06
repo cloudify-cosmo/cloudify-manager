@@ -30,8 +30,9 @@ from windows_agent_installer.tasks import AGENT_INCLUDES
 PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/CloudifyAgent.exe'
 
 # Configure mocks
-tasks.get_agent_package_url = lambda : PACKAGE_URL
-tasks.get_manager_ip = lambda : '127.0.0.1'
+tasks.get_agent_package_url = lambda: PACKAGE_URL
+tasks.get_manager_ip = lambda: '127.0.0.1'
+
 
 @nottest
 class TestTasks(unittest.TestCase):
@@ -66,7 +67,9 @@ class TestTasks(unittest.TestCase):
             'cloudify_agent': cloudify_agent
         }
 
-        cls.ctx = MockCloudifyContext(properties=properties, node_id='test-node-id')
+        cls.ctx = MockCloudifyContext(
+            properties=properties,
+            node_id='test-node-id')
 
     def test_full_lifecycle(self):
         tasks.install(ctx=self.ctx)
@@ -79,13 +82,13 @@ class TestTasks(unittest.TestCase):
                 'password': '1408Rokk'
             }
 
-
         # Retrieve registered plugins
         from windows_agent_installer.winrm_runner import WinRMRunner
         from windows_agent_installer.tasks import RUNTIME_AGENT_PATH
         from windows_agent_installer.tasks import AGENT_EXEC_FILE_NAME
         runner = WinRMRunner(session_config=_create_session())
-        response = runner.run('{0}\Scripts\celery.exe inspect registered'.format(RUNTIME_AGENT_PATH))
+        response = runner.run(
+            '{0}\Scripts\celery.exe inspect registered'.format(RUNTIME_AGENT_PATH))
 
         # Assert agent has necessary includes
         self.assertTrue(AGENT_INCLUDES in response.std_out)
@@ -101,4 +104,6 @@ class TestTasks(unittest.TestCase):
 
         # Assert files are gone
         self.assertFalse(runner.exists(path=RUNTIME_AGENT_PATH))
-        self.assertFalse(runner.exists(path='C:\{0}'.format(AGENT_EXEC_FILE_NAME)))
+        self.assertFalse(
+            runner.exists(
+                path='C:\{0}'.format(AGENT_EXEC_FILE_NAME)))

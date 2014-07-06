@@ -27,6 +27,7 @@ from nose.tools import nottest
 
 TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/develop.zip'
 
+
 @nottest
 class WinRMRunnerTest(unittest.TestCase):
 
@@ -71,7 +72,6 @@ class WinRMRunnerTest(unittest.TestCase):
             'password': '1408Rokk'
         }
 
-
     def test_defaults(self):
 
         session_config = {
@@ -82,9 +82,15 @@ class WinRMRunnerTest(unittest.TestCase):
 
         from windows_agent_installer.winrm_runner import defaults
         defaults(session_config)
-        self.assertEquals(session_config['protocol'], winrm_runner.DEFAULT_WINRM_PROTOCOL)
-        self.assertEquals(session_config['uri'], winrm_runner.DEFAULT_WINRM_URI)
-        self.assertEquals(session_config['port'], winrm_runner.DEFAULT_WINRM_PORT)
+        self.assertEquals(
+            session_config['protocol'],
+            winrm_runner.DEFAULT_WINRM_PROTOCOL)
+        self.assertEquals(
+            session_config['uri'],
+            winrm_runner.DEFAULT_WINRM_URI)
+        self.assertEquals(
+            session_config['port'],
+            winrm_runner.DEFAULT_WINRM_PORT)
 
     def test_validate_host(self):
 
@@ -138,7 +144,6 @@ class WinRMRunnerTest(unittest.TestCase):
         self.assertEqual(0, response.return_code)
         self.assertEqual('', response.std_err)
 
-
     def test_run_error(self):
 
         from windows_agent_installer.winrm_runner import WinRMExecutionException
@@ -148,7 +153,6 @@ class WinRMRunnerTest(unittest.TestCase):
         except WinRMExecutionException as e:
             self.assertEqual(1, e.code)
 
-
     def test_download(self):
 
         response = self.runner.download(
@@ -156,68 +160,93 @@ class WinRMRunnerTest(unittest.TestCase):
             output_path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
         self.assertEqual(0, response.return_code)
         self.assertEqual('', response.std_err)
-        self.assertTrue(self.runner.exists(path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
 
     def test_exists(self):
 
         # Assert does not exists.
-        self.assertFalse(self.runner.exists('{0}\k'.format(TEST_WORKING_DIRECTORY)))
+        self.assertFalse(
+            self.runner.exists(
+                '{0}\k'.format(TEST_WORKING_DIRECTORY)))
 
         # Create the dir
         self.runner.new_dir(path='{0}\k'.format(TEST_WORKING_DIRECTORY))
 
         # Assert does exist.
-        self.assertTrue(self.runner.exists(path='{0}\k'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\k'.format(TEST_WORKING_DIRECTORY)))
 
     def test_move(self):
 
         # Download the file.
-        self.runner.download(TEST_FILE_DOWNLOAD_URL, '{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
+        self.runner.download(
+            TEST_FILE_DOWNLOAD_URL,
+            '{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
 
         # Move it.
         self.runner.move(src='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY),
                          dest='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY))
 
         # Assert
-        self.assertTrue(self.runner.exists(path='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY)))
-        self.assertFalse(self.runner.exists(path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY)))
+        self.assertFalse(
+            self.runner.exists(
+                path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
 
     def test_delete(self):
 
         # Download the file.
-        self.runner.download(url=TEST_FILE_DOWNLOAD_URL,
-                             output_path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
+        self.runner.download(
+            url=TEST_FILE_DOWNLOAD_URL,
+            output_path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
 
         # Assert file exists.
-        self.assertTrue(self.runner.exists(path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
 
         # Delete it.
         self.runner.delete('{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
 
         # Assert file does not exist.
-        self.assertFalse(self.runner.exists('{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
+        self.assertFalse(
+            self.runner.exists(
+                '{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
 
     def test_new_file(self):
 
         # Assert file does not exists
-        self.assertFalse(self.runner.exists(path='{0}\k.txt'.format(TEST_WORKING_DIRECTORY)))
+        self.assertFalse(
+            self.runner.exists(
+                path='{0}\k.txt'.format(TEST_WORKING_DIRECTORY)))
 
         # Create the file
         self.runner.new_file(path='{0}\k.txt'.format(TEST_WORKING_DIRECTORY))
 
         # Assert file exists
-        self.assertTrue(self.runner.exists(path='{0}\k.txt'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\k.txt'.format(TEST_WORKING_DIRECTORY)))
 
     def test_new_dir(self):
 
         # Assert folder does not exists
-        self.assertFalse(self.runner.exists(path='{0}\k'.format(TEST_WORKING_DIRECTORY)))
+        self.assertFalse(
+            self.runner.exists(
+                path='{0}\k'.format(TEST_WORKING_DIRECTORY)))
 
         # Create the folder
         self.runner.new_dir(path='{0}\k'.format(TEST_WORKING_DIRECTORY))
 
         # Assert folder exists
-        self.assertTrue(self.runner.exists(path='{0}\k'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\k'.format(TEST_WORKING_DIRECTORY)))
 
     def test_copy(self):
 
@@ -226,11 +255,17 @@ class WinRMRunnerTest(unittest.TestCase):
         self.runner.new_file(path='{0}\k\k.txt'.format(TEST_WORKING_DIRECTORY))
 
         # Copy the entire directory to a new one
-        self.runner.copy(src='{0}\k'.format(TEST_WORKING_DIRECTORY), dest='{0}\e'.format(TEST_WORKING_DIRECTORY))
+        self.runner.copy(
+            src='{0}\k'.format(TEST_WORKING_DIRECTORY),
+            dest='{0}\e'.format(TEST_WORKING_DIRECTORY))
 
         # Assert new directory exists and contains the file
-        self.assertTrue(self.runner.exists(path='{0}\e'.format(TEST_WORKING_DIRECTORY)))
-        self.assertTrue(self.runner.exists(path='{0}\e\k.txt'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\e'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\e\k.txt'.format(TEST_WORKING_DIRECTORY)))
 
     def test_copy_create_missing_directories(self):
 
@@ -244,8 +279,12 @@ class WinRMRunnerTest(unittest.TestCase):
                          create_missing_directories=True)
 
         # Assert new directory exists and contains the file
-        self.assertTrue(self.runner.exists(path='{0}\q\e'.format(TEST_WORKING_DIRECTORY)))
-        self.assertTrue(self.runner.exists(path='{0}\q\e\k.txt'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\q\e'.format(TEST_WORKING_DIRECTORY)))
+        self.assertTrue(
+            self.runner.exists(
+                path='{0}\q\e\k.txt'.format(TEST_WORKING_DIRECTORY)))
 
     def test_service_state(self):
 

@@ -24,6 +24,7 @@ DEFAULT_WINRM_PORT = '5985'
 DEFAULT_WINRM_URI = 'wsman'
 DEFAULT_WINRM_PROTOCOL = 'http'
 
+
 def defaults(session_config):
 
     if 'protocol' not in session_config:
@@ -46,18 +47,20 @@ def validate(session_config):
 
 class WinRMRunner(object):
 
-    def __init__(self, session_config, logger=setup_default_logger('WinRMRunner')):
+    def __init__(
+            self,
+            session_config,
+            logger=setup_default_logger('WinRMRunner')):
 
         # Validations - [host, user, password]
         validate(session_config)
 
         # Defaults - [protocol, uri, port]
-        defaults(session_config)# Validations - [host, user, password]
+        defaults(session_config)  # Validations - [host, user, password]
 
         self.session_config = session_config
         self.session = self._create_session()
         self.logger = logger
-
 
     def _create_session(self):
 
@@ -73,7 +76,10 @@ class WinRMRunner(object):
 
         def _chk(res):
             if res.status_code == 0:
-                self.logger.debug('[{0}] out: {1}'.format(self.session_config['host'], res.std_out))
+                self.logger.debug(
+                    '[{0}] out: {1}'.format(
+                        self.session_config['host'],
+                        res.std_out))
             else:
                 error = WinRMExecutionException(
                     command=command,
@@ -84,8 +90,10 @@ class WinRMRunner(object):
                 if exit_on_failure:
                     raise error
 
-
-        self.logger.info('[{0}] run: {1}'.format(self.session_config['host'], command))
+        self.logger.info(
+            '[{0}] run: {1}'.format(
+                self.session_config['host'],
+                command))
         response = self.session.run_cmd(command)
         _chk(response)
         return CommandExecutionResponse(command=command,
@@ -102,7 +110,6 @@ class WinRMRunner(object):
             .format(url, output_path))
 
     def move(self, src, dest, create_missing_directories=False):
-
         '''
         Moves item at <src> to <dest>. Does not create missing directories.
 
@@ -116,7 +123,6 @@ class WinRMRunner(object):
             .format(src, dest))
 
     def copy(self, src, dest, create_missing_directories=False):
-
         '''
         Copies item at <src> to <dest>. Does not create missing directories.
 
@@ -160,7 +166,6 @@ class WinRMRunner(object):
             '''@powershell -Command "(Get-Service -Name {0}).Status"'''  # NOQA
             .format(service_name))
         return response.std_out.strip()
-
 
 
 class WinRMExecutionException(CommandExecutionException):

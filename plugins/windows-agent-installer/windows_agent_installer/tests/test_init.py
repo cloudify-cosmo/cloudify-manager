@@ -31,12 +31,24 @@ class InitTest(unittest.TestCase):
         # this means all parameters should be the default ones.
         cloudify_agent = {}
         set_service_configuration_parameters(cloudify_agent)
-        self.assertEqual(cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY], 60)
-        self.assertEqual(cloudify_agent['service'][SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY], 5)
-        self.assertEqual(cloudify_agent['service'][SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY], 3)
-        self.assertEqual(cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY], 30)
-        self.assertEqual(cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY], 30)
-        self.assertEqual(cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY], 5000)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+            60)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY],
+            5)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY],
+            3)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY],
+            30)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY],
+            30)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY],
+            5000)
 
     def test_set_service_configuration_parameters_with_full_service(self):
 
@@ -50,25 +62,39 @@ class InitTest(unittest.TestCase):
         }}
         set_service_configuration_parameters(cloudify_agent)
 
-        self.assertEqual(cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY], 1)
-        self.assertEqual(cloudify_agent['service'][SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY], 1)
-        self.assertEqual(cloudify_agent['service'][SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY], 1)
-        self.assertEqual(cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY], 1)
-        self.assertEqual(cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY], 1)
-        self.assertEqual(cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY], 1)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+            1)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY],
+            1)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY],
+            1)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY],
+            1)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY],
+            1)
+        self.assertEqual(
+            cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY],
+            1)
 
     def test_set_service_configuration_parameters_digit_validation(self):
 
-        cloudify_agent = {'service':{
+        cloudify_agent = {'service': {
             SERVICE_FAILURE_RESET_TIMEOUT_KEY: "Hello"
         }}
         try:
             set_service_configuration_parameters(cloudify_agent)
-            self.fail('Expected NonRecoverableError since {0} is not a number'.format(SERVICE_FAILURE_RESET_TIMEOUT_KEY))
+            self.fail('Expected NonRecoverableError since {0} is not a number'.format(
+                SERVICE_FAILURE_RESET_TIMEOUT_KEY))
         except NonRecoverableError:
             pass
 
-    def test_set_autoscale_parameters_with_empty_bootstrap_context_and_no_parameters(self):
+    def test_set_autoscale_parameters_with_empty_bootstrap_context_and_no_parameters(
+            self):
 
         # Default values should be populated.
 
@@ -78,7 +104,8 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 5)
         self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 2)
 
-    def test_set_autoscale_parameters_with_bootstrap_context_and_no_parameters(self):
+    def test_set_autoscale_parameters_with_bootstrap_context_and_no_parameters(
+            self):
 
         # Bootstrap context values should be populated.
 
@@ -92,7 +119,8 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 10)
         self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 5)
 
-    def test_set_autoscale_parameters_with_bootstrap_context_and_parameters(self):
+    def test_set_autoscale_parameters_with_bootstrap_context_and_parameters(
+            self):
 
         # Cloudify agent configuration parameters should be populated.
         cloudify_agent = {

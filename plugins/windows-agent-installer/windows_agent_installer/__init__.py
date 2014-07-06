@@ -34,7 +34,6 @@ SERVICE_FAILURE_RESTART_DELAY_KEY = 'failure_restart_delay'
 
 
 def init_worker_installer(func):
-
     '''
     Decorator for injecting a 'runner' and a 'cloudify_agent' into the function's invocation parameters.
 
@@ -50,7 +49,10 @@ def init_worker_installer(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        ctx = utils.find_type_in_kwargs(CloudifyContext, kwargs.values() + list(args))
+        ctx = utils.find_type_in_kwargs(
+            CloudifyContext,
+            kwargs.values() +
+            list(args))
         if not ctx:
             raise RuntimeError('CloudifyContext not found in invocation args')
         if ctx.properties and 'cloudify_agent' in ctx.properties:
@@ -59,13 +61,14 @@ def init_worker_installer(func):
             cloudify_agent = {}
         prepare_configuration(ctx, cloudify_agent)
         kwargs['cloudify_agent'] = cloudify_agent
-        kwargs['runner'] = WinRMRunner(session_config=cloudify_agent.copy(), logger=ctx.logger)
+        kwargs['runner'] = WinRMRunner(
+            session_config=cloudify_agent.copy(),
+            logger=ctx.logger)
         return func(*args, **kwargs)
     return wrapper
 
 
 def prepare_configuration(ctx, cloudify_agent):
-
     '''
     Sets default and runtime values to the cloudify_agent.
     Also performs validation on these values.
@@ -78,14 +81,12 @@ def prepare_configuration(ctx, cloudify_agent):
     set_bootstrap_context_parameters(ctx.bootstrap_context, cloudify_agent)
     set_service_configuration_parameters(cloudify_agent)
 
-
     # runtime info
     cloudify_agent['name'] = ctx.node_id
     cloudify_agent['host'] = _get_machine_ip(ctx)
 
 
 def set_bootstrap_context_parameters(bootstrap_context, cloudify_agent):
-
     '''
     Sets parameters that were passed during the bootstrap process.
     The semantics should always be:
@@ -100,6 +101,7 @@ def set_bootstrap_context_parameters(bootstrap_context, cloudify_agent):
     '''
     set_autoscale_parameters(bootstrap_context, cloudify_agent)
 
+
 def set_service_configuration_parameters(cloudify_agent):
 
     # defaults
@@ -108,25 +110,39 @@ def set_service_configuration_parameters(cloudify_agent):
 
     _set_default(cloudify_agent['service'], SERVICE_START_TIMEOUT_KEY, 30)
     _set_default(cloudify_agent['service'], SERVICE_STOP_TIMEOUT_KEY, 30)
-    _set_default(cloudify_agent['service'], SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY, 5)
-    _set_default(cloudify_agent['service'], SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY, 3)
-    _set_default(cloudify_agent['service'], SERVICE_FAILURE_RESET_TIMEOUT_KEY, 60)
-    _set_default(cloudify_agent['service'], SERVICE_FAILURE_RESTART_DELAY_KEY, 5000)
+    _set_default(
+        cloudify_agent['service'],
+        SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY,
+        5)
+    _set_default(
+        cloudify_agent['service'],
+        SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY,
+        3)
+    _set_default(
+        cloudify_agent['service'],
+        SERVICE_FAILURE_RESET_TIMEOUT_KEY,
+        60)
+    _set_default(
+        cloudify_agent['service'],
+        SERVICE_FAILURE_RESTART_DELAY_KEY,
+        5000)
 
     # validations
     for key in cloudify_agent['service'].iterkeys():
-        _validate_digit('cloudify_agent.service.{0}'.format(key), cloudify_agent['service'][key])
+        _validate_digit(
+            'cloudify_agent.service.{0}'.format(key),
+            cloudify_agent['service'][key])
 
 
 def set_autoscale_parameters(bootstrap_context, cloudify_agent):
     if MIN_WORKERS_KEY not in cloudify_agent and\
        bootstrap_context.cloudify_agent.min_workers:
         cloudify_agent[MIN_WORKERS_KEY] =\
-        bootstrap_context.cloudify_agent.min_workers
+            bootstrap_context.cloudify_agent.min_workers
     if MAX_WORKERS_KEY not in cloudify_agent and\
        bootstrap_context.cloudify_agent.max_workers:
         cloudify_agent[MAX_WORKERS_KEY] =\
-        bootstrap_context.cloudify_agent.max_workers
+            bootstrap_context.cloudify_agent.max_workers
 
     min_workers = cloudify_agent.get(MIN_WORKERS_KEY, 2)
     max_workers = cloudify_agent.get(MAX_WORKERS_KEY, 5)
@@ -139,8 +155,11 @@ def set_autoscale_parameters(bootstrap_context, cloudify_agent):
     if int(min_workers) > int(max_workers):
         raise NonRecoverableError(
             '{0} cannot be greater than {2} '
-            '[{0}={1}, {2}={3}]'
-            .format(MIN_WORKERS_KEY, min_workers, max_workers, MAX_WORKERS_KEY))
+            '[{0}={1}, {2}={3}]' .format(
+                MIN_WORKERS_KEY,
+                min_workers,
+                max_workers,
+                MAX_WORKERS_KEY))
     cloudify_agent[MIN_WORKERS_KEY] = min_workers
     cloudify_agent[MAX_WORKERS_KEY] = max_workers
 
@@ -149,6 +168,7 @@ def _validate_digit(name, value):
     if not str(value).isdigit():
         raise NonRecoverableError('{0} is supposed to be a number '
                                   'but is: {1}'.format(name, value))
+
 
 def _set_default(dict, key, value):
     if key not in dict:
@@ -160,6 +180,7 @@ def _get_machine_ip(ctx):
         return ctx.properties['ip']  # priority for statically specifying ip.
     if 'ip' in ctx.runtime_properties:
         return ctx.runtime_properties['ip']
-    raise NonRecoverableError('ip property is not set for node: {0}. '
-                     'This is mandatory for installing an agent remotely'
-                     .format(ctx.node_id))
+    raise NonRecoverableError(
+        'ip property is not set for node: {0}. '
+        'This is mandatory for installing an agent remotely' .format(
+            ctx.node_id))
