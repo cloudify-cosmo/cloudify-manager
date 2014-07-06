@@ -46,8 +46,8 @@ def get_agent_package_url(distro):
     """
     Returns the agent package url the package will be downloaded from.
     """
-    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           AGENT_PACKAGE_PATH.format(distro))
+    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
+                            AGENT_PACKAGE_PATH.format(distro))
 
 
 def get_disable_requiretty_script_url(distro):
@@ -55,8 +55,8 @@ def get_disable_requiretty_script_url(distro):
     Returns the disable requiretty script url the script will be downloaded
     from.
     """
-    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           DISABLE_REQUIRETTY_SCRIPT_URL.format(distro))
+    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
+                            DISABLE_REQUIRETTY_SCRIPT_URL.format(distro))
 
 
 def get_celery_includes_list():
