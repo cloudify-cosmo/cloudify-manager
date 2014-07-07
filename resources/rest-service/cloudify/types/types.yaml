@@ -1,12 +1,4 @@
 ##################################################################################
-# Auto imported:
-##################################################################################
-imports:
-    - 'celery_worker_installer'
-    - 'celery_plugin_installer'
-    - 'default_workflows'
-
-##################################################################################
 # Base type definitions
 ##################################################################################
 types:
@@ -34,6 +26,8 @@ types:
             cloudify.interfaces.worker_installer:
                 - install: worker_installer.tasks.install
                 - start: worker_installer.tasks.start
+                - stop: worker_installer.tasks.stop
+                - uninstall: worker_installer.tasks.uninstall
                 - restart: worker_installer.tasks.restart
             cloudify.interfaces.plugin_installer:
                 - install: plugin_installer.tasks.install
@@ -41,7 +35,7 @@ types:
                 - get_state
         properties:
             - install_agent: true
-            - worker_config: {}
+            - cloudify_agent: {}
 
     # A Linux container with or without docker
     cloudify.types.container:
@@ -156,3 +150,18 @@ plugins:
     # Worker plugin artifact - runs on a dedicated worker for the deployment
     cloudify.plugins.manager_plugin:
         derived_from: "cloudify.plugins.plugin"
+
+    worker_installer:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: worker_installer.zip
+
+    plugin_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            url: plugin_installer.zip
+
+    workflows:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: workflows.zip

@@ -29,8 +29,8 @@ from cloudify.exceptions import NonRecoverableError
 
 
 @init_worker_installer
-def m(ctx, runner, worker_config, **kwargs):
-    return worker_config
+def m(ctx, runner, agent_config, **kwargs):
+    return agent_config
 
 
 class CeleryWorkerConfigurationTest(unittest.TestCase):
@@ -47,27 +47,26 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
 
     def test_vm_config_validation(self):
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={'worker_config': {
+                                  properties={'cloudify_agent': {
                                       'distro': 'Ubuntu', }})
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={
-                                      'worker_config': {
-                                          'distro': 'Ubuntu', },
+                                  properties={'cloudify_agent': {
+                                      'distro': 'Ubuntu'},
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
-                                      'worker_config': {
-                                          'user': 'user',
-                                          'distro': 'Ubuntu', },
+                                      'cloudify_agent': {
+                                          'distro': 'Ubuntu',
+                                          'user': 'user'},
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
-                                      'worker_config': {
+                                      'cloudify_agent': {
                                           'user': 'user',
                                           'key': 'key.pem',
                                           'distro': 'Ubuntu',
@@ -76,7 +75,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                   })
         m(ctx)
 
-    def test_worker_config(self):
+    def test_agent_config(self):
         node_id = 'node_id'
         ctx = MockCloudifyContext(
             deployment_id='test',
@@ -85,7 +84,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
                     'distro': 'Ubuntu',
@@ -117,7 +116,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         ctx = MockCloudifyContext(
             deployment_id='test',
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'disable_requiretty': value,
                     'distro': 'Ubuntu',
                 }
@@ -138,7 +137,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
                     'distro': 'Ubuntu',
@@ -155,7 +154,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 2,
@@ -177,7 +176,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 10,
@@ -194,7 +193,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 'aaa',
@@ -214,7 +213,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
                     'distro': 'Ubuntu',
@@ -240,7 +239,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
                     'distro': 'Ubuntu',
                 }
@@ -303,11 +302,11 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         conf = m(ctx)
         self.assertEqual(conf['port'], 2222)
 
-    def test_workflows_worker_config(self):
+    def test_workflows_agent_config(self):
         ctx = MockCloudifyContext(
             deployment_id='test',
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'workflows_worker': 'true',
                     'distro': 'Ubuntu',
                 }
@@ -351,13 +350,13 @@ class ConfigurationCreationTest(unittest.TestCase):
 
     def test_prepare_configuration(self):
         ctx = MockCloudifyContext(deployment_id='deployment_id')
-        worker_config = m(ctx)
+        agent_config = m(ctx)
         runner = MockFabricRunner()
         create_celery_configuration(ctx,
                                     runner,
-                                    worker_config,
+                                    agent_config,
                                     self.get_resource)
         self.assertEquals(3, len(runner.put_files))
-        self.assertTrue(worker_config['init_file'] in runner.put_files)
-        self.assertTrue(worker_config['config_file'] in runner.put_files)
-        self.assertTrue(worker_config['includes_file'] in runner.put_files)
+        self.assertTrue(agent_config['init_file'] in runner.put_files)
+        self.assertTrue(agent_config['config_file'] in runner.put_files)
+        self.assertTrue(agent_config['includes_file'] in runner.put_files)

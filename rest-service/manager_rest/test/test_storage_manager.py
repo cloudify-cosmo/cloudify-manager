@@ -99,12 +99,11 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 workflows={})
 
         serialized_dep = dep.to_dict()
-        self.assertEquals(7, len(serialized_dep))
+        self.assertEquals(6, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
         self.assertEquals(dep.blueprint_id, serialized_dep['blueprint_id'])
-        self.assertEquals(dep.plan, serialized_dep['plan'])
         self.assertEquals(dep.permalink, serialized_dep['permalink'])
 
         deserialized_dep = models.Deployment(**serialized_dep)
@@ -112,7 +111,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(dep.created_at, deserialized_dep.created_at)
         self.assertEquals(dep.updated_at, deserialized_dep.updated_at)
         self.assertEquals(dep.blueprint_id, deserialized_dep.blueprint_id)
-        self.assertEquals(dep.plan, deserialized_dep.plan)
         self.assertEquals(dep.permalink, deserialized_dep.permalink)
 
     def test_fields_query(self):
