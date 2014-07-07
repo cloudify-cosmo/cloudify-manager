@@ -15,11 +15,13 @@
 
 __author__ = 'elip'
 
+import time
 import os
 import jinja2
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
+from cloudify.celery import celery as celery_client
 from cloudify import manager
 from cloudify import utils
 
@@ -191,7 +193,7 @@ def start(ctx, runner, agent_config, **kwargs):
 
     runner.run("sudo service celeryd-{0} start".format(agent_config["name"]))
 
-    _verify_no_celery_error(runner, agent_config)
+    _wait_for_started(runner, agent_config)
 
 
 @operation
@@ -273,7 +275,7 @@ def worker_exists(runner, agent_config):
 def restart_celery_worker(runner, agent_config):
     runner.run("sudo service celeryd-{0} restart".format(
         agent_config['name']))
-    _verify_no_celery_error(runner, agent_config)
+    _wait_for_started(runner, agent_config)
 
 
 def _verify_no_celery_error(runner, agent_config):
@@ -288,3 +290,17 @@ def _verify_no_celery_error(runner, agent_config):
         runner.run('rm {0}'.format(celery_error_out))
         raise NonRecoverableError(
             'Celery worker failed to start:\n{0}'.format(output))
+
+
+def _wait_for_started(runner, agent_config):
+    _verify_no_celery_error(runner, agent_config)
+    worker_name = 'celery.{}'.format(agent_config['name'])
+    inspect = celery_client.control.inspect(destination=[worker_name])
+    timeout = time.time() + agent_config['wait_started_timeout']
+    interval = agent_config['wait_started_interval']
+    while time.time() < timeout:
+        stats = (inspect.stats() or {}).get(worker_name)
+        if stats:
+            return
+        time.sleep(interval)
+    raise NonRecoverableError('Failed starting agent')
