@@ -41,6 +41,6 @@ NOTE : The values stated here are just the default values, you can override them
 
 **Example Usage**
 
-See [Tests](https://github.com/cloudify-cosmo/cloudify-manager/plugins/windows_agent_installer/windows_agent_installer/tests/test_tasks.py)
+See [Tests](windows_agent_installer/tests/test_tasks.py)
 
 
