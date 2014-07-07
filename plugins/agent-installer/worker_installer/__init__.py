@@ -27,6 +27,8 @@ from worker_installer.utils import (FabricRunner,
 DEFAULT_MIN_WORKERS = 2
 DEFAULT_MAX_WORKERS = 5
 DEFAULT_REMOTE_EXECUTION_PORT = 22
+DEFAULT_WAIT_STARTED_TIMEOUT = 15
+DEFAULT_WAIT_STARTED_INTERVAL = 1
 
 
 def _find_type_in_kwargs(cls, all_args):
@@ -128,6 +130,13 @@ def _set_remote_execution_port(ctx, config):
             config['port'] = DEFAULT_REMOTE_EXECUTION_PORT
 
 
+def _set_wait_started_config(config):
+    if 'wait_started_timeout' not in config:
+        config['wait_started_timeout'] = DEFAULT_WAIT_STARTED_TIMEOUT
+    if 'wait_started_interval' not in config:
+        config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
+
+
 def prepare_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
@@ -150,6 +159,8 @@ def prepare_configuration(ctx, agent_config):
         _set_user(ctx, agent_config)
         _set_remote_execution_port(ctx, agent_config)
         agent_config['name'] = ctx.node_id
+
+    _set_wait_started_config(agent_config)
 
     home_dir = "/home/" + agent_config['user'] \
         if agent_config['user'] != 'root' else '/root'
