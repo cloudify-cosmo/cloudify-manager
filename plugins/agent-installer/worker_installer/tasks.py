@@ -303,4 +303,5 @@ def _wait_for_started(runner, agent_config):
         if stats:
             return
         time.sleep(interval)
+    _verify_no_celery_error(runner, agent_config)
     raise NonRecoverableError('Failed starting agent')
