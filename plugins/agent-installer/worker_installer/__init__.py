@@ -51,20 +51,13 @@ def init_worker_installer(func):
         if ctx.properties and 'cloudify_agent' in ctx.properties:
             agent_config = ctx.properties['cloudify_agent']
         else:
-<<<<<<< HEAD
-            worker_config = kwargs.get('worker_config', {})
-        prepare_configuration(ctx, worker_config)
-        kwargs['worker_config'] = worker_config
-        kwargs['runner'] = FabricRunner(ctx, worker_config)
-        if not worker_config.get('distro'):
-            kwargs['worker_config']['distro'] = \
-                get_machine_distro(kwargs['runner'])
-=======
             agent_config = kwargs.get('cloudify_agent', {})
         prepare_configuration(ctx, agent_config)
         kwargs['agent_config'] = agent_config
         kwargs['runner'] = FabricRunner(ctx, agent_config)
->>>>>>> develop
+        if not agent_config.get('distro'):
+            kwargs['agent_config']['distro'] = \
+                get_machine_distro(kwargs['runner'])
         return func(*args, **kwargs)
     return wrapper
 
