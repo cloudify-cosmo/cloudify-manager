@@ -296,7 +296,8 @@ def _wait_for_started(runner, agent_config):
     _verify_no_celery_error(runner, agent_config)
     worker_name = 'celery.{}'.format(agent_config['name'])
     inspect = celery_client.control.inspect(destination=[worker_name])
-    timeout = time.time() + agent_config['wait_started_timeout']
+    wait_started_timeout = agent_config['wait_started_timeout']
+    timeout = time.time() + wait_started_timeout
     interval = agent_config['wait_started_interval']
     while time.time() < timeout:
         stats = (inspect.stats() or {}).get(worker_name)
@@ -304,4 +305,5 @@ def _wait_for_started(runner, agent_config):
             return
         time.sleep(interval)
     _verify_no_celery_error(runner, agent_config)
-    raise NonRecoverableError('Failed starting agent')
+    raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
+                              .format(wait_started_timeout))
