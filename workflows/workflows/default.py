@@ -237,8 +237,8 @@ def _wait_for_host_to_start(host_node_instance):
         else:
             return workflow_tasks.HandlerResult.retry(
                 ignore_total_retries=True)
-
-    task.on_success = node_get_state_handler
+    if not task.is_nop():
+        task.on_success = node_get_state_handler
     return task
 
 
