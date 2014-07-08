@@ -36,6 +36,7 @@ types:
         properties:
             - install_agent: true
             - cloudify_agent: {}
+            - ip: ''
 
     # A Linux container with or without docker
     cloudify.types.container:

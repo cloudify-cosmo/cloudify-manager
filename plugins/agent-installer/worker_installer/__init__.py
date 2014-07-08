@@ -70,7 +70,7 @@ def get_machine_distro(runner):
 
 
 def get_machine_ip(ctx):
-    if 'ip' in ctx.properties:
+    if ctx.properties.get('ip'):
         return ctx.properties['ip']
     if 'ip' in ctx.runtime_properties:
         return ctx.runtime_properties['ip']
@@ -90,7 +90,7 @@ def _prepare_and_validate_autoscale_params(ctx, config):
             ctx.bootstrap_context.cloudify_agent.max_workers
 
     min_workers = config.get('min_workers', DEFAULT_MIN_WORKERS)
-    max_workers = config.get('max"workers', DEFAULT_MAX_WORKERS)
+    max_workers = config.get('max_workers', DEFAULT_MAX_WORKERS)
 
     if not str(min_workers).isdigit():
         raise NonRecoverableError('min_workers is supposed to be a number '
