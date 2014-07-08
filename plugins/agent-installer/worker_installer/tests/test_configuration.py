@@ -343,9 +343,9 @@ class ConfigurationCreationTest(unittest.TestCase):
 
     def get_resource(self, resource_name):
         if CELERY_INIT_PATH in resource_name:
-            return self.read_file('celeryd-cloudify.init.jinja2')
+            return self.read_file('Ubuntu-celeryd-cloudify.init.jinja2')
         elif CELERY_CONFIG_PATH in resource_name:
-            return self.read_file('celeryd-cloudify.conf.jinja2')
+            return self.read_file('Ubuntu-celeryd-cloudify.conf.jinja2')
         return None
 
     def test_prepare_configuration(self):
