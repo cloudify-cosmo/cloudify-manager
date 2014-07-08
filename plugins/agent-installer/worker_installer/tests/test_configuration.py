@@ -262,7 +262,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'distro': 'Ubuntu',
                 },
             },
@@ -286,7 +286,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'distro': 'Ubuntu',
                 },
             },
