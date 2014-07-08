@@ -44,7 +44,7 @@ install:
    - cd plugins/agent-installer && pip install . && cd ../..
    - cd plugins/plugin-installer && pip install . && cd ../..
    - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
-   - tar czf agent.tar.gz package
+   - tar czf Ubuntu-agent.tar.gz package
    - rm -rf package
 
    - virtualenv ~/env
@@ -61,13 +61,13 @@ install:
 
 script:
    - flake8 plugins/agent-installer/
-   - flake8 plugins/plugin-installer/
-   - flake8 workflows/
-   - flake8 rest-service/
-   - flake8 tests/
+   # - flake8 plugins/plugin-installer/
+   # - flake8 workflows/
+   # - flake8 rest-service/
+   # - flake8 tests/
 
-   - nosetests rest-service/manager_rest/test --nologcapture --nocapture
-   - nosetests tests/workflow_tests --nologcapture --nocapture -v
+   # - nosetests rest-service/manager_rest/test --nologcapture --nocapture
+   # - nosetests tests/workflow_tests --nologcapture --nocapture -v
    - nosetests tests/workers_tests --nologcapture --nocapture -v
    - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
 
