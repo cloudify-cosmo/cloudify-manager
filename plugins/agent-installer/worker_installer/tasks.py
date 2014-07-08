@@ -35,28 +35,30 @@ CELERY_INCLUDES_LIST = [
     AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH
 ]
 
-CELERY_CONFIG_PATH = '/packages/templates/celeryd-cloudify.conf.template'
-CELERY_INIT_PATH = '/packages/templates/celeryd-cloudify.init.template'
-AGENT_PACKAGE_PATH = '/packages/agents/linux-agent.tar.gz'
+CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
+CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
+AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
 DISABLE_REQUIRETTY_SCRIPT_URL =\
-    '/packages/scripts/linux-agent-disable-requiretty.sh'
+    '/packages/scripts/{0}-agent-disable-requiretty.sh'
+
+SUPPORTED_DISTROS = ('Ubuntu', 'debian', 'centos')
 
 
-def get_agent_package_url():
+def get_agent_package_url(distro):
     """
     Returns the agent package url the package will be downloaded from.
     """
-    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           AGENT_PACKAGE_PATH)
+    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
+                            AGENT_PACKAGE_PATH.format(distro))
 
 
-def get_disable_requiretty_script_url():
+def get_disable_requiretty_script_url(distro):
     """
     Returns the disable requiretty script url the script will be downloaded
     from.
     """
-    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           DISABLE_REQUIRETTY_SCRIPT_URL)
+    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
+                            DISABLE_REQUIRETTY_SCRIPT_URL.format(distro))
 
 
 def get_celery_includes_list():
@@ -66,6 +68,13 @@ def get_celery_includes_list():
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
+
+    if agent_config['distro'] not in SUPPORTED_DISTROS:
+        ctx.logger.error('distro {} not supported '
+                         'when installing agent'.format(
+                             agent_config['distro']))
+        raise RuntimeError('unsupported distribution')
+    agent_package_url = get_agent_package_url(agent_config['distro'])
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -85,14 +94,16 @@ def install(ctx, runner, agent_config, **kwargs):
     runner.run('mkdir -p {0}'.format(agent_config['base_dir']))
 
     ctx.logger.debug(
-        'Downloading agent package from: {0}'.format(get_agent_package_url()))
+        'Downloading agent package from: {0}'.format(
+            agent_package_url))
 
-    runner.run('wget -T 30 -O {0}/agent.tar.gz {1}'.format(
-        agent_config['base_dir'], get_agent_package_url()))
+    runner.run('wget -T 30 -O {0}/{1}-agent.tar.gz {2}'.format(
+        agent_config['base_dir'], agent_config['distro'], agent_package_url))
 
     runner.run(
-        'tar xzvf {0}/agent.tar.gz --strip=2 -C {1}'.format(
-            agent_config['base_dir'], agent_config['base_dir']))
+        'tar xzvf {0}/{1}-agent.tar.gz --strip=2 -C {2}'.format(
+            agent_config['base_dir'], agent_config['distro'],
+            agent_config['base_dir']))
 
     for link in ['archives', 'bin', 'include', 'lib']:
         link_path = '{0}/env/local/{1}'.format(agent_config['base_dir'], link)
@@ -114,7 +125,8 @@ def install(ctx, runner, agent_config, **kwargs):
                "{0}/env/bin/*".format(agent_config['base_dir']))
 
     # Remove downloaded agent package
-    runner.run('rm {0}/agent.tar.gz'.format(agent_config['base_dir']))
+    runner.run('rm {0}/{1}-agent.tar.gz'.format(
+        agent_config['base_dir'], agent_config['distro']))
 
     # Disable requiretty
     if agent_config['disable_requiretty']:
@@ -122,7 +134,8 @@ def install(ctx, runner, agent_config, **kwargs):
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
         runner.run('wget -T 30 -O {0} {1}'.format(
-            disable_requiretty_script, get_disable_requiretty_script_url()))
+            disable_requiretty_script, get_disable_requiretty_script_url(
+                agent_config['distro'])))
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -216,7 +229,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     create_celery_includes_file(ctx, runner, agent_config)
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
-    config_template = env.get_template(CELERY_CONFIG_PATH)
+    config_template = env.get_template(CELERY_CONFIG_PATH.format(
+        agent_config['distro']))
     config_template_values = {
         'includes_file_path': agent_config['includes_file'],
         'celery_base_dir': agent_config['celery_base_dir'],
@@ -236,7 +250,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'values: {0}'.format(config_template_values))
 
     config = config_template.render(config_template_values)
-    init_template = env.get_template(CELERY_INIT_PATH)
+    init_template = env.get_template(CELERY_INIT_PATH.format(
+        agent_config['distro']))
     init_template_values = {
         'celery_base_dir': agent_config['celery_base_dir'],
         'worker_modifier': agent_config['name']

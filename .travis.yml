@@ -46,7 +46,7 @@ install:
    - cd plugins/plugin-installer && pip install . && cd ../..
    - cd plugins/windows-plugin-installer && pip install . && cd ../..
    - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
-   - tar czf agent.tar.gz package
+   - tar czf Ubuntu-agent.tar.gz package
    - rm -rf package
 
    - virtualenv ~/env

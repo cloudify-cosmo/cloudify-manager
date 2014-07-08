@@ -33,16 +33,16 @@ from cloudify import manager
 
 # agent is created and served via python simple http server when
 # tests run in travis.
-AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/disable-require-tty.sh'  # NOQA
+AGENT_PACKAGE_URL = 'http://localhost:8000/Ubuntu-agent.tar.gz'
+DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'  # NOQA
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
 
 
-def _get_custom_agent_package_url():
+def _get_custom_agent_package_url(distro):
     return AGENT_PACKAGE_URL
 
 
-def _get_custom_disable_requiretty_script_url():
+def _get_custom_disable_requiretty_script_url(distro):
     return DISABLE_REQUIRETTY_SCRIPT_URL
 
 
@@ -86,10 +86,10 @@ def read_file(file_name):
 
 
 def get_resource(resource_name):
-    if t.CELERY_INIT_PATH in resource_name:
-        return read_file('celeryd-cloudify.init.jinja2')
-    elif t.CELERY_CONFIG_PATH in resource_name:
-        return read_file('celeryd-cloudify.conf.jinja2')
+    if 'celeryd-cloudify.init' in resource_name:
+        return read_file('Ubuntu-celeryd-cloudify.init.jinja2')
+    elif 'celeryd-cloudify.conf' in resource_name:
+        return read_file('Ubuntu-celeryd-cloudify.conf.jinja2')
     return None
 
 

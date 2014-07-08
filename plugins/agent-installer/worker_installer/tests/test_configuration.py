@@ -22,7 +22,7 @@ from worker_installer import init_worker_installer
 from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
 from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
-from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
+# from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
@@ -47,17 +47,20 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
 
     def test_vm_config_validation(self):
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={'cloudify_agent': {}})
+                                  properties={'cloudify_agent': {
+                                      'distro': 'Ubuntu', }})
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={
-                                      'cloudify_agent': {},
+                                  properties={'cloudify_agent': {
+                                      'distro': 'Ubuntu'},
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
-                                      'cloudify_agent': {'user': 'user'},
+                                      'cloudify_agent': {
+                                          'distro': 'Ubuntu',
+                                          'user': 'user'},
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(NonRecoverableError, m, ctx)
@@ -65,7 +68,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                   properties={
                                       'cloudify_agent': {
                                           'user': 'user',
-                                          'key': 'key.pem'
+                                          'key': 'key.pem',
+                                          'distro': 'Ubuntu',
                                       },
                                       'ip': '192.168.0.1'
                                   })
@@ -82,7 +86,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': 'user',
-                    'key': 'key.pem'
+                    'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -112,7 +117,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             deployment_id='test',
             properties={
                 'cloudify_agent': {
-                    'disable_requiretty': value
+                    'disable_requiretty': value,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -134,6 +140,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -151,7 +158,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 2,
-                    'max_workers': 5
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -172,7 +180,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 10,
-                    'max_workers': 5
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -188,7 +197,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': 'user',
                     'key': 'key.pem',
                     'min_workers': 'aaa',
-                    'max_workers': 5
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -206,12 +216,13 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'cloudify_agent': {
                     'user': 'user',
                     'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'min_workers': 2,
-                    'max_workers': 5
+                    'max_workers': 5,
                 }
             })
         )
@@ -230,6 +241,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': 'user',
+                    'distro': 'Ubuntu',
                 }
             },
             bootstrap_context=BootstrapContext({
@@ -248,6 +260,11 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             node_id=node_id,
             runtime_properties={
                 'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
@@ -268,6 +285,11 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             runtime_properties={
                 'ip': '192.168.0.1'
             },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
+            },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'agent_key_path': 'here',
@@ -285,7 +307,8 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             deployment_id='test',
             properties={
                 'cloudify_agent': {
-                    'workflows_worker': 'true'
+                    'workflows_worker': 'true',
+                    'distro': 'Ubuntu',
                 }
             },
             runtime_properties={
@@ -319,10 +342,10 @@ class ConfigurationCreationTest(unittest.TestCase):
             return f.read()
 
     def get_resource(self, resource_name):
-        if CELERY_INIT_PATH in resource_name:
-            return self.read_file('celeryd-cloudify.init.jinja2')
-        elif CELERY_CONFIG_PATH in resource_name:
-            return self.read_file('celeryd-cloudify.conf.jinja2')
+        if 'celeryd-cloudify.init' in resource_name:
+            return self.read_file('Ubuntu-celeryd-cloudify.init.jinja2')
+        elif 'celeryd-cloudify.conf' in resource_name:
+            return self.read_file('Ubuntu-celeryd-cloudify.conf.jinja2')
         return None
 
     def test_prepare_configuration(self):
