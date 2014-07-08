@@ -22,7 +22,7 @@ from worker_installer import init_worker_installer
 from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
 from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
-from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
+# from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
@@ -342,9 +342,9 @@ class ConfigurationCreationTest(unittest.TestCase):
             return f.read()
 
     def get_resource(self, resource_name):
-        if CELERY_INIT_PATH in resource_name:
+        if 'celeryd-cloudify.init' in resource_name:
             return self.read_file('Ubuntu-celeryd-cloudify.init.jinja2')
-        elif CELERY_CONFIG_PATH in resource_name:
+        elif 'celeryd-cloudify.conf' in resource_name:
             return self.read_file('Ubuntu-celeryd-cloudify.conf.jinja2')
         return None
 
