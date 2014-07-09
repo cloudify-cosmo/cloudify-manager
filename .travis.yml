@@ -42,7 +42,7 @@ install:
    - cd cloudify-plugins-common; pip install .; cd ..
 
    - cd plugins/agent-installer && pip install . && cd ../..
-   - cd plugins/windows-agent-installer && pip install . && cd ../..   
+   - cd plugins/windows-agent-installer && pip install . && cd ../..
    - cd plugins/plugin-installer && pip install . && cd ../..
    - cd plugins/windows-plugin-installer && pip install . && cd ../..
    - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
@@ -65,8 +65,8 @@ install:
 script:
    - flake8 plugins/agent-installer/
    - flake8 plugins/windows-agent-installer/
-   - flake8 plugins/plugin-installer/   
-   - flake8 plugins/windows-plugin-installer/   
+   - flake8 plugins/plugin-installer/
+   - flake8 plugins/windows-plugin-installer/
    - flake8 workflows/
    - flake8 rest-service/
    - flake8 tests/
@@ -82,8 +82,8 @@ script:
    - cd plugins/agent-installer
    - nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
-   - cd ..   
-   
+   - cd ..
+
 
 notifications:
   flowdock: 1563c50664ffcb851c73e5588ec241a5
