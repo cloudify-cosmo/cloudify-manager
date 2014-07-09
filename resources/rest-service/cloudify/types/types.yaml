@@ -162,6 +162,16 @@ plugins:
         properties:
             url: plugin_installer.zip
 
+    windows_agent_installer:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: worker_installer.zip
+
+    windows_plugin_installer:
+        derived_from: "cloudify.plugins.agent_plugin"
+        properties:
+            url: plugin_installer.zip
+
     workflows:
         derived_from: "cloudify.plugins.manager_plugin"
         properties:
