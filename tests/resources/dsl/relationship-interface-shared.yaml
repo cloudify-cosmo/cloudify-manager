@@ -32,16 +32,6 @@ blueprint:
 types:
     test_host_type:
         derived_from: cloudify.types.host
-        interfaces:
-            cloudify.interfaces.worker_installer:
-                - install: worker_installer.tasks.install
-                - start: worker_installer.tasks.start
-                - stop: worker_installer.tasks.stop
-                - uninstall: worker_installer.tasks.uninstall
-                - restart: worker_installer.tasks.restart
-            cloudify.interfaces.plugin_installer:
-                - install: plugin_installer.tasks.install
-
         properties:
             - target_property_key: target_property_value
             - property_name: target_runtime_property_key
