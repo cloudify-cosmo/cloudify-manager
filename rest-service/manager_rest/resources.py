@@ -731,6 +731,10 @@ class Nodes(Resource):
                                        type=str,
                                        required=False,
                                        location='args')
+        self._args_parser.add_argument('node_id',
+                                       type=str,
+                                       required=False,
+                                       location='args')
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Node.__name__),
@@ -751,8 +755,16 @@ class Nodes(Resource):
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
-        nodes = get_storage_manager().get_nodes(deployment_id,
-                                                include=_include)
+        node_id = args.get('node_id')
+        if deployment_id and node_id:
+            try:
+                nodes = [get_storage_manager().get_node(deployment_id,
+                                                        node_id)]
+            except manager_exceptions.NotFoundError:
+                nodes = []
+        else:
+            nodes = get_storage_manager().get_nodes(deployment_id,
+                                                    include=_include)
         return [responses.Node(**node.to_dict()) for node in nodes]
 
 

@@ -68,6 +68,13 @@ def get_state(ctx, **kwargs):
 
 
 @operation
+def get_state_with_ip(ctx, **kwargs):
+    result = get_state(ctx, **kwargs)
+    ctx.runtime_properties['ip'] = ctx.properties['test_ip']
+    return result
+
+
+@operation
 def stop(ctx, **kwargs):
     data = _get_data()
     ctx.logger.info("stopping machine: " + ctx.node_id)
