@@ -24,13 +24,13 @@ types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.worker_installer:
-                - install
-                - start
-                - stop
-                - uninstall
-                - restart
+                - install: worker_installer.tasks.install
+                - start: worker_installer.tasks.start
+                - stop: worker_installer.tasks.stop
+                - uninstall: worker_installer.tasks.uninstall
+                - restart: worker_installer.tasks.restart
             cloudify.interfaces.plugin_installer:
-                - install
+                - install: plugin_installer.tasks.install
             cloudify.interfaces.host:
                 - get_state
         properties:

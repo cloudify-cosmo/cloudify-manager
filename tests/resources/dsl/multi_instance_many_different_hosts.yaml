@@ -28,14 +28,6 @@ types:
     test_host:
         derived_from: cloudify.types.host
         interfaces:
-            cloudify.interfaces.worker_installer:
-                - install: worker_installer.tasks.install
-                - start: worker_installer.tasks.start
-                - stop: worker_installer.tasks.stop
-                - uninstall: worker_installer.tasks.uninstall
-                - restart: worker_installer.tasks.restart
-            cloudify.interfaces.plugin_installer:
-                - install: plugin_installer.tasks.install
             cloudify.interfaces.lifecycle:
                 - create: cloudmock.tasks.provision
                 - start: cloudmock.tasks.start

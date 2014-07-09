@@ -25,14 +25,6 @@ types:
             - nova_config: {}
             - neutron_config: {}
         interfaces:
-            cloudify.interfaces.worker_installer:
-                - install: worker_installer.tasks.install
-                - start: worker_installer.tasks.start
-                - stop: worker_installer.tasks.stop
-                - uninstall: worker_installer.tasks.uninstall
-                - restart: worker_installer.tasks.restart
-            cloudify.interfaces.plugin_installer:
-                - install: plugin_installer.tasks.install
             cloudify.interfaces.lifecycle:
                 - start: nova_plugin.server.start
                 - stop: nova_plugin.server.stop
