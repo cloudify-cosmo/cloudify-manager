@@ -31,8 +31,11 @@ from worker_installer.utils import is_on_management_worker
 
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
 AGENT_INSTALLER_PLUGIN_PATH = 'worker_installer.tasks'
+WINDOWS_AGENT_INSTALLER_PLUGIN_PATH = 'windows_agent_installer.tasks'
+WINDOWS_PLUGIN_INSTALLER_PLUGIN_PATH = 'windows_plugin_installer.tasks'
 CELERY_INCLUDES_LIST = [
-    AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH
+    AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH,
+    WINDOWS_AGENT_INSTALLER_PLUGIN_PATH, WINDOWS_PLUGIN_INSTALLER_PLUGIN_PATH
 ]
 
 CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
