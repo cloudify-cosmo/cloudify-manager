@@ -40,6 +40,8 @@ def provision(ctx, **kwargs):
     if ctx.node_id in machines:
         raise RuntimeError("machine with id [{0}] already exists"
                            .format(ctx.node_id))
+    if ctx.properties.get('test_ip'):
+        ctx.runtime_properties['ip'] = ctx.properties['test_ip']
     machines[ctx.node_id] = NOT_RUNNING
     _store_data(data)
 
@@ -65,13 +67,6 @@ def start(ctx, **kwargs):
 def get_state(ctx, **kwargs):
     data = _get_data()
     return data['machines'][ctx.node_id] == RUNNING
-
-
-@operation
-def get_state_with_ip(ctx, **kwargs):
-    result = get_state(ctx, **kwargs)
-    ctx.runtime_properties['ip'] = ctx.properties['test_ip']
-    return result
 
 
 @operation
