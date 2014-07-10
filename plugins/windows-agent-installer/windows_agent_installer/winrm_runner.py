@@ -40,7 +40,7 @@ def validate(session_config):
     if 'host' not in session_config:
         raise NonRecoverableError('Missing host in session_config')
     if session_config['host'] == '':
-        raise NonRecoverableError('host in empty in session_config')
+        raise NonRecoverableError('host is empty in session_config')
     if 'user' not in session_config:
         raise NonRecoverableError('Missing user in session_config')
     if 'password' not in session_config:
