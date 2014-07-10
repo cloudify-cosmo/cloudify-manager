@@ -48,6 +48,16 @@ types:
             cloudify.interfaces.lifecycle:
                 - create: testmockoperations.tasks.mock_operation_get_instance_ip_from_context
 
+relationships:
+    contained_in:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                - establish: testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
+        target_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                - establish: testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
+
 blueprint:
     name: simple_web_server
     nodes:
@@ -81,10 +91,10 @@ blueprint:
         -   name: contained2_in_host2_1
             type: contained2
             relationships:
-                -   type: cloudify.relationships.contained_in
+                -   type: contained_in
                     target: host2_1
         -   name: contained2_in_host2_2
             type: contained2
             relationships:
-                -   type: cloudify.relationships.contained_in
+                -   type: contained_in
                     target: host2_2

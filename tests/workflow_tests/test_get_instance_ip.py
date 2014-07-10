@@ -26,7 +26,6 @@ from plugins.testmockoperations.tasks import get_mock_operation_invocations
 class GetInstanceIPTest(TestCase):
 
     def test_get_instance_ip(self):
-        self.maxDiff = None
         dsl_path = resource("dsl/get_instance_ip.yaml")
         deploy(dsl_path)
 
@@ -41,5 +40,9 @@ class GetInstanceIPTest(TestCase):
             'host2_1': '3.3.3.3',
             'host2_2': '4.4.4.4',
             'contained2_in_host2_1': '3.3.3.3',
-            'contained2_in_host2_2': '4.4.4.4'
+            'contained2_in_host2_2': '4.4.4.4',
+            'host2_1_rel': '3.3.3.3',
+            'host2_2_rel': '4.4.4.4',
+            'contained2_in_host2_1_rel': '3.3.3.3',
+            'contained2_in_host2_2_rel': '4.4.4.4'
         }, mapping)
