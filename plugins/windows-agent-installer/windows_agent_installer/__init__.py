@@ -64,6 +64,8 @@ def init_worker_installer(func):
             cloudify_agent = {}
         prepare_configuration(ctx, cloudify_agent)
         kwargs['cloudify_agent'] = cloudify_agent
+        ctx.logger.info('Creating WinRMRunner from configuration : {0}'
+                        .format(cloudify_agent))
         kwargs['runner'] = WinRMRunner(
             session_config=cloudify_agent.copy(),
             logger=ctx.logger)
