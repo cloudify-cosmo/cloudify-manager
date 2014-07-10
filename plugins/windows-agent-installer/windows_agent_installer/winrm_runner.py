@@ -16,7 +16,7 @@
 __author__ = 'elip'
 
 import winrm
-from cloudify.exceptions import CommandExecutionException
+from cloudify.exceptions import CommandExecutionException, NonRecoverableError
 from cloudify.utils import CommandExecutionResponse
 from cloudify.utils import setup_default_logger
 
@@ -38,11 +38,13 @@ def defaults(session_config):
 def validate(session_config):
 
     if 'host' not in session_config:
-        raise ValueError('Missing host in session_config')
+        raise NonRecoverableError('Missing host in session_config')
+    if session_config['host'] == '':
+        raise NonRecoverableError('host in empty in session_config')
     if 'user' not in session_config:
-        raise ValueError('Missing user in session_config')
+        raise NonRecoverableError('Missing user in session_config')
     if 'password' not in session_config:
-        raise ValueError('Missing password in session_config')
+        raise NonRecoverableError('Missing password in session_config')
 
 
 class WinRMRunner(object):
@@ -69,8 +71,9 @@ class WinRMRunner(object):
             self.session_config['host'],
             self.session_config['port'],
             self.session_config['uri'])
-        return winrm.Session(winrm_url, auth=(self.session_config['user'],
-                                              self.session_config['password']))
+        session = winrm.Session(winrm_url, auth=(self.session_config['user'], self.session_config['password']))
+        self.logger.info("Session created : {0}".format(winrm_url))
+        return session
 
     def run(self, command, exit_on_failure=True):
 
