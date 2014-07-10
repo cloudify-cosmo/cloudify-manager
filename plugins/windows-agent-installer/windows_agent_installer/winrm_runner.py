@@ -72,9 +72,9 @@ class WinRMRunner(object):
             self.session_config['host'],
             self.session_config['port'],
             self.session_config['uri'])
-        session = winrm.Session(winrm_url,
-            auth=(self.session_config['user'],
-                  self.session_config['password']))
+        session = winrm.Session(url=winrm_url,
+                                auth=(self.session_config['user'],
+                                      self.session_config['password']))
         self.logger.info("Session created : {0}".format(winrm_url))
         return session
 
