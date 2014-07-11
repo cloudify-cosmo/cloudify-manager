@@ -182,11 +182,10 @@ def _set_default(dict, key, value):
 
 
 def _get_machine_ip(ctx):
-    if 'ip' in ctx.properties:
-        return ctx.properties['ip']  # priority for statically specifying ip.
+    if ctx.properties.get('ip'):
+        return ctx.properties['ip']
     if 'ip' in ctx.runtime_properties:
         return ctx.runtime_properties['ip']
     raise NonRecoverableError(
-        'ip property is not set for node: {0}. '
-        'This is mandatory for installing an agent remotely' .format(
-            ctx.node_id))
+        'ip property is not set for node: {0}. This is mandatory'
+        ' for installing a remote agent.'.format(ctx.node_id))
