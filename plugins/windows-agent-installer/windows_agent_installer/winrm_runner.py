@@ -64,7 +64,8 @@ class WinRMRunner(object):
         self.session_config = session_config
         self.session = self._create_session()
         self.logger = logger
-        logger.info("Session created : {0}".format(self.session.protocol.endpoint))
+        logger.info("Session created : {0}"
+                    .format(self.session.protocol.endpoint))
 
     def _create_session(self):
 
@@ -74,8 +75,8 @@ class WinRMRunner(object):
             self.session_config['port'],
             self.session_config['uri'])
         return winrm.Session(url=winrm_url,
-                                auth=(self.session_config['user'],
-                                      self.session_config['password']))
+                             auth=(self.session_config['user'],
+                                   self.session_config['password']))
 
     def run(self, command, exit_on_failure=True):
 
