@@ -64,7 +64,7 @@ class WinRMRunner(object):
         self.session_config = session_config
         self.session = self._create_session()
         self.logger = logger
-        logger.info("Session created : {0}".format(self.session.protocol))
+        logger.info("Session created : {0}".format(self.session.protocol.endpoint))
 
     def _create_session(self):
 
