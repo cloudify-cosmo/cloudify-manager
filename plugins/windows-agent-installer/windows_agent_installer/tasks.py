@@ -13,10 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import time
+from cloudify.constants import LOCAL_IP_KEY, MANAGER_IP_KEY
 
 from cloudify.decorators import operation
 from cloudify import utils
 from cloudify.exceptions import TimeoutException
+from cloudify.utils import get_local_ip
 from windows_agent_installer import init_worker_installer
 from windows_agent_installer import SERVICE_FAILURE_RESTART_DELAY_KEY, \
     SERVICE_START_TIMEOUT_KEY, \
@@ -105,6 +107,10 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                       AGENT_INCLUDES))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
+    env = '{0}={1} {2}={3}'.format(LOCAL_IP_KEY, cloudify_agent['host'],
+                                   MANAGER_IP_KEY, get_manager_ip())
+    runner.run('{0}\\nssm\\nssm.exe set {1} AppEnvironment {2}'
+                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, env))
     runner.run('sc config {0} start= auto'.format(AGENT_SERVICE_NAME))
     runner.run(
         'sc failure {0} reset= {1} actions= restart/{2}' .format(
