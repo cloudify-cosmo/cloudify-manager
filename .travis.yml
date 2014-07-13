@@ -35,7 +35,7 @@ install:
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
 
-   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b feature/CFY-900-containing-host-ip
    - cd cloudify-rest-client; pip install .; cd ..
 
    - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b feature/CFY-900-containing-host-ip
