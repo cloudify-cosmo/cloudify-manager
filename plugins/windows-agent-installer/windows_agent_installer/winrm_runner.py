@@ -96,7 +96,7 @@ class WinRMRunner(object):
                 if exit_on_failure:
                     raise error
 
-        self.logger.info(
+        self.logger.debug(
             '[{0}] run: {1}'.format(
                 self.session_config['host'],
                 command))
