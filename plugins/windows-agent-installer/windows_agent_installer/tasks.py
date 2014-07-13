@@ -107,7 +107,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                       AGENT_INCLUDES))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
-    env = '{0}={1} {2}={3}'.format(LOCAL_IP_KEY, get_local_ip(),
+    env = '{0}={1} {2}={3}'.format(LOCAL_IP_KEY, cloudify_agent['host'],
                                    MANAGER_IP_KEY, get_manager_ip())
     runner.run('{0}\\nssm\\nssm.exe set {1} AppEnvironment {2}'
                 .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, env))
