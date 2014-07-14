@@ -84,7 +84,7 @@ def install(ctx, plugins, **kwargs):
                     plugin['folder'])
 
         ctx.logger.info("Installing plugin from {0}".format(plugin['url']))
-        install_celery_plugin(plugin)
+        install_celery_plugin(plugin['url'])
 
 
 def install_celery_plugin(plugin_url):
