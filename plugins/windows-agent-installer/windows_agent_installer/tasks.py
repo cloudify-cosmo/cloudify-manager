@@ -236,11 +236,11 @@ def _wait_for_service_status(runner,
 
         service_state = runner.service_state(service_name)
         if desired_status.lower() == service_state.lower() \
-            and _pid_file_exists():
-                successful_consecutive_queries += 1
-                if successful_consecutive_queries == cloudify_agent['service'][
-                        SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
-                    return
+        and _pid_file_exists():
+            successful_consecutive_queries += 1
+            if successful_consecutive_queries == cloudify_agent['service'][
+                    SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
+                return
         else:
             successful_consecutive_queries = 0
         time.sleep(
@@ -255,12 +255,14 @@ def _wait_for_service_status(runner,
             timeout_in_seconds,
             _read_celery_log()))
 
+
 def _read_celery_log():
     log_file_path = '{0}\celery.log'\
                     .format(RUNTIME_AGENT_PATH)
     if os.path.exists(log_file_path):
         with open(log_file_path, "r") as myfile:
             return myfile.read()
+
 
 def _pid_file_exists():
     return os.path.exists('{0}\celery.pid'
