@@ -109,7 +109,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
     env = '{0}={1} {2}={3}'.format(LOCAL_IP_KEY, cloudify_agent['host'],
                                    MANAGER_IP_KEY, get_manager_ip())
-    runner.run('{0}\\nssm\\nssm.exe set {1} AppEnvironment {2}'
+    runner.run('{0}\\nssm\\nssm.exe set {1} AppEnvironmentExtra {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, env))
     runner.run('sc config {0} start= auto'.format(AGENT_SERVICE_NAME))
     runner.run(
