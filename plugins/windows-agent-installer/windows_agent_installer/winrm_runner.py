@@ -80,7 +80,7 @@ class WinRMRunner(object):
 
         def _chk(res):
             if res.status_code == 0:
-                self.logger.debug(
+                self.logger.info(
                     '[{0}] out: {1}'.format(
                         self.session_config['host'],
                         res.std_out))
