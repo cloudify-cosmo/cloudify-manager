@@ -89,7 +89,6 @@ def create_env_string(cloudify_agent):
     return env_string.strip()
 
 
-
 @operation
 @init_worker_installer
 def install(ctx, runner=None, cloudify_agent=None, **kwargs):
