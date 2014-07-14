@@ -236,7 +236,7 @@ def _wait_for_service_status(runner,
 
         service_state = runner.service_state(service_name)
         if desired_status.lower() == service_state.lower() \
-        and _pid_file_exists():
+            and _pid_file_exists():
             successful_consecutive_queries += 1
             if successful_consecutive_queries == cloudify_agent['service'][
                     SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
