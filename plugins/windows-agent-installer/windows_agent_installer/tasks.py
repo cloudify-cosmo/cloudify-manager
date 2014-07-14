@@ -118,6 +118,9 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
             cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
             cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY]))
 
+    ctx.logger.info('Creating parameters file from {0}'.format(params))
+    runner.put(params, '{0}\AppParameters'.format(RUNTIME_AGENT_PATH))
+
 
 @operation
 @init_worker_installer
