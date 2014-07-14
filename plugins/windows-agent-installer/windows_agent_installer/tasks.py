@@ -248,7 +248,7 @@ def _wait_for_service_status(runner,
             [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
     raise NonRecoverableError(
         "Service {0} did not reach {1} state in {2} seconds. "
-        "Error was:\n{0}"
+        "Error was: {3}"
         .format(
             service_name,
             desired_status,
