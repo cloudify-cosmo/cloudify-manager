@@ -30,12 +30,12 @@ def _update_includes(module_paths):
 
     runner = LocalCommandRunner()
     app_parameters = runner.run(
-        'cmd /c "{0} get CloudifyAgent AppParameters'
+        'cmd /c "{0} get CloudifyAgent AppParameters"'
         .format(NSSM_PATH)).std_out
     new_app_parameters = add_module_paths_to_includes(
         module_paths,
         app_parameters)
-    runner.run('cmd /c "{0} set CloudifyAgent AppParameters {1}'
+    runner.run('cmd /c "{0} set CloudifyAgent AppParameters {1}"'
                .format(NSSM_PATH, new_app_parameters))
 
 
