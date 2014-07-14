@@ -61,7 +61,7 @@ def _update_includes(module_paths):
         module_paths,
         app_parameters)
     LocalCommandRunner().run('cmd /c "{0} set CloudifyAgent AppParameters {1}"'
-               .format(NSSM_PATH, new_app_parameters))
+                             .format(NSSM_PATH, new_app_parameters))
 
     # Write new AppParameters
     write_app_parameters(new_app_parameters)
