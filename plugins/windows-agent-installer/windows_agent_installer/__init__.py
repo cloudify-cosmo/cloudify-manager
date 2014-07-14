@@ -117,11 +117,11 @@ def set_service_configuration_parameters(cloudify_agent):
     _set_default(
         cloudify_agent['service'],
         SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY,
-        5)
+        1)
     _set_default(
         cloudify_agent['service'],
         SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY,
-        3)
+        10)
     _set_default(
         cloudify_agent['service'],
         SERVICE_FAILURE_RESET_TIMEOUT_KEY,

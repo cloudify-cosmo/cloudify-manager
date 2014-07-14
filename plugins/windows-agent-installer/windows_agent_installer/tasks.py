@@ -12,12 +12,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import os
 import time
 from cloudify.constants import LOCAL_IP_KEY, MANAGER_IP_KEY
 
 from cloudify.decorators import operation
 from cloudify import utils
-from cloudify.exceptions import TimeoutException
+from cloudify.exceptions import NonRecoverableError
 from windows_agent_installer import init_worker_installer
 from windows_agent_installer import SERVICE_FAILURE_RESTART_DELAY_KEY, \
     SERVICE_START_TIMEOUT_KEY, \
@@ -244,8 +245,18 @@ def _wait_for_service_status(runner,
         time.sleep(
             cloudify_agent['service']
             [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
-    raise TimeoutException(
-        "Service {0} did not reach state {1} in {2} seconds" .format(
+    raise NonRecoverableError(
+        "Service {0} did not reach {1} state in {2} seconds. "
+        "Error was:\n{0}"
+        .format(
             service_name,
             desired_status,
-            timeout_in_seconds))
+            timeout_in_seconds,
+            _read_celery_log()))
+
+def _read_celery_log():
+    log_file_path = '{0}\celery.log'\
+                    .format(RUNTIME_AGENT_PATH)
+    if os.path.exists(log_file_path):
+        with open(log_file_path, "r") as myfile:
+            return myfile.read()
