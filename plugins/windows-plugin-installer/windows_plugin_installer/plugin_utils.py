@@ -63,6 +63,6 @@ def extract_module_paths(module_name):
         if module.endswith(".py") and "__init__" not in module:
             # the files paths are relative to the package __init__.py file.
             module_paths.append(
-                module.replace("../", "").replace("/", ".").replace(".py", "")
+                module.replace("..\\", "").replace("\\", ".").replace(".py", "")
                 .strip())
-    return module_paths
+    return ','.join(module_paths)
