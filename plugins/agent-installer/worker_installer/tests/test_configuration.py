@@ -277,6 +277,29 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         conf = m(ctx)
         self.assertEqual(conf['user'], 'john doe')
 
+    def test_ssh_port_default(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe',
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['port'], 22)
+
     def test_ssh_port_from_bootstrap_context(self):
         node_id = 'node_id'
         ctx = MockCloudifyContext(
@@ -301,6 +324,31 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         )
         conf = m(ctx)
         self.assertEqual(conf['port'], 2222)
+
+    def test_ssh_port_from_config_override_bootstrap(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                    'port': 3333
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe',
+                    'remote_execution_port': 2222
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['port'], 3333)
 
     def test_workflows_agent_config(self):
         ctx = MockCloudifyContext(

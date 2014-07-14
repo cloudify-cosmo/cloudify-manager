@@ -130,7 +130,7 @@ def _set_user(ctx, config):
 
 
 def _set_remote_execution_port(ctx, config):
-    if 'remote_execution_port' not in config:
+    if 'port' not in config:
         if ctx.bootstrap_context.cloudify_agent.remote_execution_port:
             config['port'] =\
                 ctx.bootstrap_context.cloudify_agent.remote_execution_port
