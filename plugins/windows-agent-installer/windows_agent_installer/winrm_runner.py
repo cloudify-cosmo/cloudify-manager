@@ -172,6 +172,12 @@ class WinRMRunner(object):
             .format(service_name))
         return response.std_out.strip()
 
+    def put(self, contents, path):
+        return self.run(
+            '''@powershell -Command "Add-Content {0} '{1}'"'''  # NOQA
+            .format(path, contents))
+
+
 
 class WinRMExecutionException(CommandExecutionException):
 
