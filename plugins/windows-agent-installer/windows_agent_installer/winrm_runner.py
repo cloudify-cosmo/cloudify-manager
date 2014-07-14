@@ -178,7 +178,6 @@ class WinRMRunner(object):
             .format(path, contents))
 
 
-
 class WinRMExecutionException(CommandExecutionException):
 
     """
