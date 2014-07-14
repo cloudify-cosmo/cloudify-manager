@@ -186,4 +186,4 @@ def _get_machine_ip(ctx):
         return ctx.runtime_properties['ip']
     raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
-        ' for installing a remote agent.'.format(ctx.node_id))
+        ' for manipulating a remote agent.'.format(ctx.node_id))
