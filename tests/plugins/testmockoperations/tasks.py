@@ -18,7 +18,7 @@ import tempfile
 import os
 import shutil
 
-from cloudify.manager import get_rest_client
+from cloudify.manager import get_rest_client, get_node_instance_ip
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError, RecoverableError
 
@@ -125,6 +125,31 @@ def mock_operation_from_custom_workflow(key, value, **_):
     mock_operation_invocation.append({
         key: value
     })
+
+
+@operation
+def mock_operation_get_instance_ip(ctx, **_):
+    mock_operation_invocation.append((
+        ctx.node_name, get_node_instance_ip(ctx.node_id)
+    ))
+    # mapped to cloudify.interfaces.host.get_state
+    return True
+
+
+@operation
+def mock_operation_get_instance_ip_from_context(ctx, **_):
+    mock_operation_invocation.append((
+        ctx.node_name, ctx.host_ip
+    ))
+    # mapped to cloudify.interfaces.host.get_state
+    return True
+
+
+@operation
+def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
+    mock_operation_invocation.append((
+        '{}_rel'.format(ctx.node_name), ctx.related.host_ip
+    ))
 
 
 @operation
