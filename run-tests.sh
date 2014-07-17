@@ -81,6 +81,8 @@ elif [ "$1" == "run-integration-tests" ]; then
 	git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
 	cd cloudify-plugins-common; pip install .; cd ..
 
+	cd rest-service && pip install . -r dev-requirements.txt && cd ..
+
    	cd workflows && pip install . && cd ..
    	cd tests && pip install . && cd ..
 
