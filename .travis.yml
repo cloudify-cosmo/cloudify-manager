@@ -7,6 +7,7 @@ services:
 
 env:
     - ACTION="test-plugins"
+    - ACTION="test-rest-service"
 
 script:
     - ./run-tests.sh $ACTION
