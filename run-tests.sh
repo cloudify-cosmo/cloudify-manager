@@ -61,8 +61,8 @@ elif [ "$1" == "run-integration-tests" ]; then
 	echo "### Running integration tests..."
    	sudo apt-get update && sudo apt-get install -qy python-dbus
   	dpkg -L python-dbus
-   	sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
-   	sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
+   	#sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
+   	#sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
    	wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb
    	sudo dpkg -i elasticsearch-1.0.1.deb
    	export PATH=$PATH:/usr/share/elasticsearch/bin
