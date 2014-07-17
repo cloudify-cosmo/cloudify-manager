@@ -6,8 +6,8 @@ services:
     - rabbitmq
 
 env:
-#    - ACTION="test-plugins"
-#    - ACTION="test-rest-service"
+    - ACTION="test-plugins"
+    - ACTION="test-rest-service"
     - ACTION="run-integration-tests"
     - ACTION="flake8"
 
