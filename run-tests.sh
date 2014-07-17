@@ -56,7 +56,7 @@ elif [ "$1" == "test-rest-service" ]; then
 	pip install nose
 	nosetests rest-service/manager_rest/test --nologcapture --nocapture
 
-elif [ "$1" == "run-integration-tests" ]; then
+#elif [ "$1" == "run-integration-tests" ]; then
 
 
 
