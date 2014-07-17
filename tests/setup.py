@@ -40,6 +40,7 @@ setup(
         "cloudify-rest-client==3.0",
         "pika==0.9.13",
         "bernhard==0.1.0",
-        'elasticsearch==1.0.0'
+        'elasticsearch==1.0.0',
+        'PyYAML==3.10'
     ]
 )
