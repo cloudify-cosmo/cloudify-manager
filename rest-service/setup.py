@@ -17,15 +17,7 @@ __author__ = 'dank'
 
 from setuptools import setup
 
-<<<<<<< HEAD
-DSL_PARSER_VERSION = '3.0'
-DSL_PARSER_BRANCH = '3.0'
-DSL_PARSER = 'https://github.com/cloudify-cosmo/cloudify-dsl-parser/tarball/{'\
-             '0}#egg=cloudify-dsl-parser-{1}'.format(
-                 DSL_PARSER_BRANCH, DSL_PARSER_VERSION)
-=======
 from manager_rest import get_version
->>>>>>> 3.0
 
 setup(
     name='cloudify-rest-service',
