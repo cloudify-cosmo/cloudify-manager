@@ -19,15 +19,18 @@ import unittest
 import os
 from os import path
 from worker_installer import init_worker_installer
+from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
 from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
-from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
+# from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
+from cloudify.context import BootstrapContext
+from cloudify.exceptions import NonRecoverableError
 
 
 @init_worker_installer
-def m(ctx, runner, worker_config, **kwargs):
-    return worker_config
+def m(ctx, runner, agent_config, **kwargs):
+    return agent_config
 
 
 class CeleryWorkerConfigurationTest(unittest.TestCase):
@@ -44,31 +47,35 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
 
     def test_vm_config_validation(self):
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={'worker_config': {}})
-        self.assertRaises(ValueError, m, ctx)
+                                  properties={'cloudify_agent': {
+                                      'distro': 'Ubuntu', }})
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
-                                  properties={
-                                      'worker_config': {},
+                                  properties={'cloudify_agent': {
+                                      'distro': 'Ubuntu'},
                                       'ip': '192.168.0.1'
                                   })
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
-                                      'worker_config': {'user': 'user'},
+                                      'cloudify_agent': {
+                                          'distro': 'Ubuntu',
+                                          'user': 'user'},
                                       'ip': '192.168.0.1'
                                   })
-        self.assertRaises(ValueError, m, ctx)
+        self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
-                                      'worker_config': {
+                                      'cloudify_agent': {
                                           'user': 'user',
-                                          'key': 'key.pem'
+                                          'key': 'key.pem',
+                                          'distro': 'Ubuntu',
                                       },
                                       'ip': '192.168.0.1'
                                   })
         m(ctx)
 
-    def test_worker_config(self):
+    def test_agent_config(self):
         node_id = 'node_id'
         ctx = MockCloudifyContext(
             deployment_id='test',
@@ -77,9 +84,10 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'ip': '192.168.0.1'
             },
             properties={
-                'worker_config': {
+                'cloudify_agent': {
                     'user': 'user',
-                    'key': 'key.pem'
+                    'key': 'key.pem',
+                    'distro': 'Ubuntu',
                 }
             }
         )
@@ -108,16 +116,255 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         ctx = MockCloudifyContext(
             deployment_id='test',
             properties={
-                'worker_config': {
-                    'disable_requiretty': value
+                'cloudify_agent': {
+                    'disable_requiretty': value,
+                    'distro': 'Ubuntu',
                 }
             }
         )
         if should_raise_exception:
-            self.assertRaises(ValueError, m, ctx)
+            self.assertRaises(NonRecoverableError, m, ctx)
         else:
             conf = m(ctx)
             self.assertEqual(expected, conf['disable_requiretty'])
+
+    def test_autoscale_configuration(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'distro': 'Ubuntu',
+                }
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], DEFAULT_MIN_WORKERS)
+        self.assertEqual(conf['max_workers'], DEFAULT_MAX_WORKERS)
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'min_workers': 2,
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
+                }
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], 2)
+        self.assertEqual(conf['max_workers'], 5)
+
+    def test_illegal_autoscale_configuration(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'min_workers': 10,
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
+                }
+            }
+        )
+        self.assertRaises(NonRecoverableError, m, ctx)
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'min_workers': 'aaa',
+                    'max_workers': 5,
+                    'distro': 'Ubuntu',
+                }
+            }
+        )
+        self.assertRaises(NonRecoverableError, m, ctx)
+
+    def test_autoscale_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': 'user',
+                    'key': 'key.pem',
+                    'distro': 'Ubuntu',
+                }
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'min_workers': 2,
+                    'max_workers': 5,
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], 2)
+        self.assertEqual(conf['max_workers'], 5)
+
+    def test_key_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': 'user',
+                    'distro': 'Ubuntu',
+                }
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here'
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['key'], 'here')
+
+    def test_user_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe'
+
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['user'], 'john doe')
+
+    def test_ssh_port_default(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe',
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['port'], 22)
+
+    def test_ssh_port_from_bootstrap_context(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe',
+                    'remote_execution_port': 2222
+
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['port'], 2222)
+
+    def test_ssh_port_from_config_override_bootstrap(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                    'port': 3333
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'here',
+                    'user': 'john doe',
+                    'remote_execution_port': 2222
+                }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['port'], 3333)
+
+    def test_workflows_agent_config(self):
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            properties={
+                'cloudify_agent': {
+                    'workflows_worker': 'true',
+                    'distro': 'Ubuntu',
+                }
+            },
+            runtime_properties={
+                'ip': '192.168.0.1'
+            }
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['name'], 'test_workflows')
 
 
 class MockFabricRunner(FabricRunner):
@@ -143,21 +390,21 @@ class ConfigurationCreationTest(unittest.TestCase):
             return f.read()
 
     def get_resource(self, resource_name):
-        if CELERY_INIT_PATH in resource_name:
-            return self.read_file('celeryd-cloudify.init.jinja2')
-        elif CELERY_CONFIG_PATH in resource_name:
-            return self.read_file('celeryd-cloudify.conf.jinja2')
+        if 'celeryd-cloudify.init' in resource_name:
+            return self.read_file('Ubuntu-celeryd-cloudify.init.jinja2')
+        elif 'celeryd-cloudify.conf' in resource_name:
+            return self.read_file('Ubuntu-celeryd-cloudify.conf.jinja2')
         return None
 
     def test_prepare_configuration(self):
         ctx = MockCloudifyContext(deployment_id='deployment_id')
-        worker_config = m(ctx)
+        agent_config = m(ctx)
         runner = MockFabricRunner()
         create_celery_configuration(ctx,
                                     runner,
-                                    worker_config,
+                                    agent_config,
                                     self.get_resource)
         self.assertEquals(3, len(runner.put_files))
-        self.assertTrue(worker_config['init_file'] in runner.put_files)
-        self.assertTrue(worker_config['config_file'] in runner.put_files)
-        self.assertTrue(worker_config['includes_file'] in runner.put_files)
+        self.assertTrue(agent_config['init_file'] in runner.put_files)
+        self.assertTrue(agent_config['config_file'] in runner.put_files)
+        self.assertTrue(agent_config['includes_file'] in runner.put_files)

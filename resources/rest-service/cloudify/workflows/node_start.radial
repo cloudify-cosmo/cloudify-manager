@@ -1,2 +1,0 @@
-define node_start
-    execute_operation operation: 'cloudify.interfaces.lifecycle.start'

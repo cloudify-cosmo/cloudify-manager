@@ -15,29 +15,33 @@
 
 __author__ = 'ran'
 
+
 from testenv import TestCase
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient, CosmoManagerRestCallError
+from testenv import get_resource as resource
+from testenv import deploy_application as deploy
+from testenv import create_rest_client
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class TestStorage(TestCase):
 
     def test_update_node_bad_version(self):
-        client = CosmoManagerRestClient('localhost')
+        deploy(resource("dsl/basic.yaml"))
+        client = create_rest_client()
+        instance = client.node_instances.list()[0]
+        instance = client.node_instances.get(instance.id)  # need the version
 
-        node_id = '1'
-        state_version = 1
-        result = client.put_node_state(node_id, {})
-        self.assertEquals(state_version, result['stateVersion'])
-        self.assertEquals('1', result['id'])
-        self.assertEquals({}, result['runtimeInfo'])
+        props = {'key': 'value'}
+        result = client.node_instances.update(instance.id,
+                                              state='started',
+                                              runtime_properties=props,
+                                              version=instance.version,)
+        self.assertEquals(instance.version+1, result.version)
+        self.assertEquals(instance.id, result.id)
+        self.assertDictContainsSubset(props, result.runtime_properties)
+        self.assertEquals('started', result.state)
 
-        result = client.update_node_state(node_id, {}, state_version)
-        self.assertEquals(2, result['stateVersion'])
-        self.assertEquals('1', result['id'])
-        self.assertEquals({}, result['runtimeInfo'])
-
-        # making another call with a bad state_version
+        # making another call with a bad version
         self.assertRaises(
-            CosmoManagerRestCallError, client.update_node_state,
-            node_id, {}, state_version)
+            CloudifyClientError, client.node_instances.update,
+            instance.id, version=1)

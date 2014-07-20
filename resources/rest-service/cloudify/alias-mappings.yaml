@@ -3,20 +3,7 @@ cloudify.types: cloudify/types/types.yaml
 cloudify.openstack: cloudify/types/openstack.yaml
 cloudify.bash: cloudify/types/bash.yaml
 cloudify.chef: cloudify/types/chef.yaml
-
-# workflows
-cloudify.workflows.install: cloudify/workflows/install.radial
-cloudify.workflows.uninstall: cloudify/workflows/uninstall.radial
-cloudify.workflows.node.create: cloudify/workflows/node_create.radial
-cloudify.workflows.node.configure: cloudify/workflows/node_configure.radial
-cloudify.workflows.node.start: cloudify/workflows/node_start.radial
-cloudify.workflows.node.stop: cloudify/workflows/node_stop.radial
-cloudify.workflows.node.delete: cloudify/workflows/node_delete.radial
-cloudify.workflows.host.start: cloudify/workflows/host_start.radial
-cloudify.workflows.depends_on_preconfigure: cloudify/workflows/depends_on_preconfigure.radial
-cloudify.workflows.depends_on_postconfigure: cloudify/workflows/depends_on_postconfigure.radial
-cloudify.workflows.depends_on_establish: cloudify/workflows/depends_on_establish.radial
-cloudify.workflows.depends_on_unlink: cloudify/workflows/depends_on_unlink.radial
+cloudify.puppet: cloudify/types/puppet.yaml
 
 # plugins
 app_module_installer: cloudify/plugins/app_module_installer.yaml
@@ -25,3 +12,6 @@ middleware_component_installer: cloudify/plugins/middleware_component_installer.
 celery_worker_installer: cloudify/plugins/worker_installer.yaml
 celery_plugin_installer: cloudify/plugins/plugin_installer.yaml
 vagrant_host_provisioner: cloudify/plugins/vagrant_host_provisioner.yaml
+
+# workflow plugins
+default_workflows: cloudify/plugins/workflows.yaml

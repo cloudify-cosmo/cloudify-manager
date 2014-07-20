@@ -7,6 +7,10 @@ services:
   - rabbitmq
 
 before_script:
+   - sudo apt-get update && sudo apt-get install -qy python-dbus
+   - dpkg -L python-dbus
+   - sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
+   - sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
    - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.deb
    - sudo dpkg -i elasticsearch-1.0.1.deb
    - export PATH=$PATH:/usr/share/elasticsearch/bin
@@ -23,11 +27,6 @@ before_script:
    - python -m SimpleHTTPServer 8000 &
 
 install:
-   - rvm install ruby-2.1.0
-   - rvm use ruby-2.1.0
-   - rvm --default use ruby-2.1.0
-   - gem install bundler
-   - cd workflow-service; bundle install; cd ..
    - sudo pip install virtualenv
    - sudo pip install flake8
 
@@ -35,33 +34,49 @@ install:
    - mkdir -p package/linux
    - virtualenv package/linux/env
    - source package/linux/env/bin/activate
-   - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
-   - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
-   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install --process-dependency-links . && cd ../../../../..
-   - tar czf agent.tar.gz package
-   - rm -r package
+
+   - git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+   - cd cloudify-rest-client; pip install .; cd ..
+
+   - git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
+   - cd cloudify-plugins-common; pip install .; cd ..
+
+   - cd plugins/agent-installer && pip install . && cd ../..
+   - cd plugins/windows-agent-installer && pip install . && cd ../..
+   - cd plugins/plugin-installer && pip install . && cd ../..
+   - cd plugins/windows-plugin-installer && pip install . && cd ../..
+   - cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
+   - tar czf Ubuntu-agent.tar.gz package
+   - rm -rf package
 
    - virtualenv ~/env
    - source ~/env/bin/activate
    - pip install nose
-   - cd plugins/agent-installer && pip install --process-dependency-links . && cd ../..
-   - cd plugins/plugin-installer && pip install --process-dependency-links . && cd ../..
-   - cd rest-service && pip install --process-dependency-links . && cd ..
-   - cd tests && pip install --process-dependency-links . && cd ..
+   - pip install fabric
+
+   - cd cloudify-rest-client; pip install .; cd ..
+   - cd cloudify-plugins-common; pip install .; cd ..
+   - cd plugins/windows-agent-installer; pip install .; cd ../..
+   - cd plugins/windows-plugin-installer; pip install .; cd ../..
+   - cd rest-service && pip install . -r dev-requirements.txt && cd ..
+   - cd workflows && pip install . && cd ..
+   - cd tests && pip install . && cd ..
 
 script:
    - flake8 plugins/agent-installer/
+   - flake8 plugins/windows-agent-installer/
    - flake8 plugins/plugin-installer/
+   - flake8 plugins/windows-plugin-installer/
+   - flake8 workflows/
    - flake8 rest-service/
    - flake8 tests/
 
-   - cd workflow-service
-   - rake
-   - cd ..
-
    - nosetests rest-service/manager_rest/test --nologcapture --nocapture
    - nosetests tests/workflow_tests --nologcapture --nocapture -v
+   - nosetests tests/workers_tests --nologcapture --nocapture -v
    - nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
+   - nosetests plugins/windows-plugin-installer/windows_plugin_installer/tests --nologcapture --nocapture
+   - nosetests plugins/windows-agent-installer/windows_agent_installer/tests --nologcapture --nocapture
 
    - echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
    - cd plugins/agent-installer
@@ -69,5 +84,6 @@ script:
    - nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
    - cd ..
 
+
 notifications:
-  hipchat: 60884046bb8dec459418f468ba68b9@cosmo
+  flowdock: 1563c50664ffcb851c73e5588ec241a5

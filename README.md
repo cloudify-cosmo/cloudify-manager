@@ -29,7 +29,6 @@ Make sure you have the following dependencies installed:
 * git.
 * Python 2.7 + pip.
 * OpenJDK-7.
-* Ruby 2.1.0.
 * Bundler.
 * RabbitMQ.
     * Make sure you have a default configured RabbitMQ server running after installing it.
@@ -76,23 +75,6 @@ sudo virtualenv <env_folder>
 
 # activate the virtual environment
 source <env_folder>/bin/activate
-```
-
-### Ruby 2.1.0 ###
-
-#### Install Using rvm ####
-- Install rvm as described [here](http://rvm.io/).
-- Install Ruby 2.1.0 using rvm:
-
-```
-# install (this might take some time)
-rvm install ruby-2.1.0
-
-# use
-rvm use ruby-2.1.0
-
-# install bundler
-gem install bundler
 ```
 
 ### RabbitMQ ###
@@ -150,15 +132,6 @@ cd cloudify-manager
 git checkout develop
 ```
 
-### Install workflow-service Project Dependencies ###
-
-Workflow service is a Sinatra Ruby project which runs on Ruby 2.1.0.
-We use `bundler` for installing its dependencies:
-```
-# in cloudify-manager folder
-cd workflow-service
-bundle install
-```
 
 ## Install rest-service Project Dependencies ##
 

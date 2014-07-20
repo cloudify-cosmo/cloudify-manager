@@ -16,9 +16,19 @@
 __author__ = 'idanmo'
 
 import os
-import cloudify
 from functools import wraps
-from worker_installer.utils import FabricRunner, is_deployment_worker
+
+import cloudify
+from cloudify.exceptions import NonRecoverableError
+
+from worker_installer.utils import (FabricRunner,
+                                    is_on_management_worker)
+
+DEFAULT_MIN_WORKERS = 2
+DEFAULT_MAX_WORKERS = 5
+DEFAULT_REMOTE_EXECUTION_PORT = 22
+DEFAULT_WAIT_STARTED_TIMEOUT = 15
+DEFAULT_WAIT_STARTED_INTERVAL = 1
 
 
 def _find_type_in_kwargs(cls, all_args):
@@ -26,7 +36,7 @@ def _find_type_in_kwargs(cls, all_args):
     if not result:
         return None
     if len(result) > 1:
-        raise RuntimeError(
+        raise NonRecoverableError(
             "Expected to find exactly one instance of {0} in "
             "kwargs but found {1}".format(cls, len(result)))
     return result[0]
@@ -38,77 +48,153 @@ def init_worker_installer(func):
         ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
-            raise RuntimeError('CloudifyContext not found in invocation args')
-        if ctx.properties and 'worker_config' in ctx.properties:
-            worker_config = ctx.properties['worker_config']
+            raise NonRecoverableError(
+                'CloudifyContext not found in invocation args')
+        if ctx.properties and 'cloudify_agent' in ctx.properties:
+            agent_config = ctx.properties['cloudify_agent']
         else:
-            worker_config = {}
-        prepare_configuration(ctx, worker_config)
-        kwargs['worker_config'] = worker_config
-        kwargs['runner'] = FabricRunner(ctx, worker_config)
+            agent_config = kwargs.get('cloudify_agent', {})
+        prepare_configuration(ctx, agent_config)
+        kwargs['agent_config'] = agent_config
+        kwargs['runner'] = FabricRunner(ctx, agent_config)
+        if not agent_config.get('distro'):
+            kwargs['agent_config']['distro'] = \
+                get_machine_distro(kwargs['runner'])
         return func(*args, **kwargs)
     return wrapper
 
 
+def get_machine_distro(runner):
+    return runner.run(
+        'python -c "import platform; print(platform.dist()[0])"')
+
+
 def get_machine_ip(ctx):
-    if 'ip' in ctx.properties:
+    if ctx.properties.get('ip'):
         return ctx.properties['ip']
     if 'ip' in ctx.runtime_properties:
         return ctx.runtime_properties['ip']
-    raise ValueError(
+    raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
         ' for installing agent via ssh.'.format(ctx.node_id))
 
 
-def prepare_configuration(ctx, worker_config):
-    if is_deployment_worker(ctx):
+def _prepare_and_validate_autoscale_params(ctx, config):
+    if 'min_workers' not in config and\
+            ctx.bootstrap_context.cloudify_agent.min_workers:
+        config['min_workers'] = \
+            ctx.bootstrap_context.cloudify_agent.min_workers
+    if 'max_workers' not in config and\
+            ctx.bootstrap_context.cloudify_agent.max_workers:
+        config['max_workers'] = \
+            ctx.bootstrap_context.cloudify_agent.max_workers
+
+    min_workers = config.get('min_workers', DEFAULT_MIN_WORKERS)
+    max_workers = config.get('max_workers', DEFAULT_MAX_WORKERS)
+
+    if not str(min_workers).isdigit():
+        raise NonRecoverableError('min_workers is supposed to be a number '
+                                  'but is: {0}'.format(min_workers))
+    if not str(max_workers).isdigit():
+        raise NonRecoverableError('max_workers is supposed to be a number '
+                                  'but is: {0}'.format(max_workers))
+    min_workers = int(min_workers)
+    max_workers = int(max_workers)
+    if int(min_workers) > int(max_workers):
+        raise NonRecoverableError(
+            'min_workers cannot be greater than max_workers '
+            '[min_workers={0}, max_workers={1}]'
+            .format(min_workers, max_workers))
+    config['min_workers'] = min_workers
+    config['max_workers'] = max_workers
+
+
+def _set_ssh_key(ctx, config):
+    if 'key' not in config:
+        if ctx.bootstrap_context.cloudify_agent.agent_key_path:
+            config['key'] = ctx.bootstrap_context.cloudify_agent.agent_key_path
+        else:
+            raise NonRecoverableError(
+                'Missing ssh key path in worker configuration '
+                '[cloudify_agent={0}'.format(config))
+
+
+def _set_user(ctx, config):
+    if 'user' not in config:
+        if ctx.bootstrap_context.cloudify_agent.user:
+            config['user'] = ctx.bootstrap_context.cloudify_agent.user
+        else:
+            raise NonRecoverableError(
+                'Missing user in worker configuration '
+                '[cloudify_agent={0}'.format(config))
+
+
+def _set_remote_execution_port(ctx, config):
+    if 'port' not in config:
+        if ctx.bootstrap_context.cloudify_agent.remote_execution_port:
+            config['port'] =\
+                ctx.bootstrap_context.cloudify_agent.remote_execution_port
+        else:
+            config['port'] = DEFAULT_REMOTE_EXECUTION_PORT
+
+
+def _set_wait_started_config(config):
+    if 'wait_started_timeout' not in config:
+        config['wait_started_timeout'] = DEFAULT_WAIT_STARTED_TIMEOUT
+    if 'wait_started_interval' not in config:
+        config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
+
+
+def prepare_configuration(ctx, agent_config):
+    if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
         # (not specific node)
         # use the same user we used when bootstrapping
         if 'MANAGEMENT_USER' in os.environ:
-            worker_config['user'] = os.environ['MANAGEMENT_USER']
+            agent_config['user'] = os.environ['MANAGEMENT_USER']
         else:
-            raise RuntimeError('Cannot determine user for deployment user:'
-                               'MANAGEMENT_USER is not set')
-        worker_config['name'] = ctx.deployment_id
+            raise NonRecoverableError(
+                'Cannot determine user for deployment user:'
+                'MANAGEMENT_USER is not set')
+        workflows_worker = agent_config['workflows_worker']\
+            if 'workflows_worker' in agent_config else False
+        suffix = '_workflows' if workflows_worker else ''
+        name = '{0}{1}'.format(ctx.deployment_id, suffix)
+        agent_config['name'] = name
     else:
-        worker_config['host'] = get_machine_ip(ctx)
-        if 'key' not in worker_config:
-            raise ValueError(
-                'Missing ssh key path in worker configuration '
-                '[worker_config={0}'.format(worker_config))
-        if 'user' not in worker_config:
-            raise ValueError(
-                'Missing user in worker configuration '
-                '[worker_config={0}'.format(worker_config))
-        if 'port' not in worker_config:
-            worker_config['port'] = 22
-        worker_config['name'] = ctx.node_id
+        agent_config['host'] = get_machine_ip(ctx)
+        _set_ssh_key(ctx, agent_config)
+        _set_user(ctx, agent_config)
+        _set_remote_execution_port(ctx, agent_config)
+        agent_config['name'] = ctx.node_id
 
-    home_dir = "/home/" + worker_config['user'] \
-        if worker_config['user'] != 'root' else '/root'
+    _set_wait_started_config(agent_config)
 
-    worker_config['celery_base_dir'] = home_dir
+    home_dir = "/home/" + agent_config['user'] \
+        if agent_config['user'] != 'root' else '/root'
 
-    worker_config['base_dir'] = '{0}/cloudify.{1}'.format(
-        home_dir, worker_config['name'])
-    worker_config['init_file'] = '/etc/init.d/celeryd-{0}'.format(
-        worker_config['name'])
-    worker_config['config_file'] = '/etc/default/celeryd-{0}'.format(
-        worker_config['name'])
-    worker_config['includes_file'] = '{0}/work/celeryd-includes'.format(
-        worker_config['base_dir'])
+    agent_config['celery_base_dir'] = home_dir
+
+    agent_config['base_dir'] = '{0}/cloudify.{1}'.format(
+        home_dir, agent_config['name'])
+    agent_config['init_file'] = '/etc/init.d/celeryd-{0}'.format(
+        agent_config['name'])
+    agent_config['config_file'] = '/etc/default/celeryd-{0}'.format(
+        agent_config['name'])
+    agent_config['includes_file'] = '{0}/work/celeryd-includes'.format(
+        agent_config['base_dir'])
 
     disable_requiretty = True
-    if 'disable_requiretty' in worker_config:
+    if 'disable_requiretty' in agent_config:
         disable_requiretty_value = str(
-            worker_config['disable_requiretty']).lower()
+            agent_config['disable_requiretty']).lower()
         if disable_requiretty_value.lower() == 'true':
             disable_requiretty = True
         elif disable_requiretty_value.lower() == 'false':
             disable_requiretty = False
         else:
-            raise ValueError(
+            raise NonRecoverableError(
                 'Value for disable_requiretty property should be true/false '
                 'but is: {0}'.format(disable_requiretty_value))
-    worker_config['disable_requiretty'] = disable_requiretty
+    agent_config['disable_requiretty'] = disable_requiretty
+    _prepare_and_validate_autoscale_params(ctx, agent_config)

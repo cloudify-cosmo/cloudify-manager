@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<entry key="fetchurl">https://opencm:g!ga0pencm@github.com/cloudify-cosmo/cloudify-manager.git</entry>
+<entry key="pushurl">https://opencm:g!ga0pencm@github.com/cloudify-cosmo/cloudify-manager.git</entry>
+</properties>

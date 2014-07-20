@@ -8,6 +8,8 @@ blueprint:
     nodes:
         -   name: "host"
             type: "cloudify.types.host"
+            properties:
+                install_agent: false
             interfaces:
                 cloudify.interfaces.lifecycle:
                     - create: cloudmock.tasks.provision
@@ -28,12 +30,3 @@ types:
                 - "make_reachable": testmockoperations.tasks.make_reachable
                 - "make_unreachable": testmockoperations.tasks.make_unreachable
                 - "set_property": testmockoperations.tasks.set_property
-        workflows:
-            create:
-                radial: |
-                    define mock_init
-                        execute_operation operation: 'make_reachable'
-            delete:
-                radial: |
-                    define mock_uninstall
-                        execute_operation operation: 'make_unreachable'

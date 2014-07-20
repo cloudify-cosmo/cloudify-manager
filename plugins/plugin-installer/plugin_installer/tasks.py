@@ -35,28 +35,42 @@ logger.level = logging.DEBUG
 
 
 @operation
-def install(ctx, plugin, **kwargs):
+def install(ctx, plugins, **kwargs):
     """
-    Installs plugin as celery task according to the provided plugins details.
-    plugin parameter is expected to be in the following format:
+    Installs plugins as celery tasks according to the provided plugins
+    details.
+    the plugins parameter is expected to be a list where each element is in
+    the following format:
             { name: "...", url: "..." } OR { name: "...", folder: "..." }
     The plugin url should be a URL pointing to either a zip or tar.gz file.
     The plugin folder should be a a folder name inside the blueprint
     'plugins' directory containing the plugin.
     """
 
-    if "folder" in plugin:
+    for plugin in plugins:
+        ctx.logger.info("Installing plugin {0}".format(plugin['name']))
 
-        # convert the folder into a url inside the file server
+        if plugin['name'] == 'workflows':
+            # special handling for the default workflows plugin, as it does not
+            # currently sit on the file server and is not under a blueprint
+            # context
+            plugin['url'] = '/opt/manager/cloudify-manager-develop/workflows'
+            install_celery_plugin(plugin)
+            continue
 
-        management_ip = get_cosmo_properties()["management_ip"]
-        if management_ip:
-            plugin["url"] = "http://{0}:53229/blueprints/{1}/plugins/{2}.zip"\
-                .format(management_ip, ctx.blueprint_id, plugin['folder'])
+        if "folder" in plugin:
 
-    ctx.logger.info("Installing plugin from URL --> {0}"
-                    .format(plugin['url']))
-    install_celery_plugin(plugin)
+            # convert the folder into a url inside the file server
+
+            management_ip = get_cosmo_properties()["management_ip"]
+            if management_ip:
+                plugin["url"] = \
+                    "http://{0}:53229/blueprints/{1}/plugins/{2}.zip"\
+                    .format(management_ip, ctx.blueprint_id, plugin['folder'])
+
+        ctx.logger.info("Installing plugin from URL --> {0}"
+                        .format(plugin['url']))
+        install_celery_plugin(plugin)
 
 
 def uninstall(plugin, __cloudify_id, **kwargs):
@@ -67,48 +81,12 @@ def uninstall(plugin, __cloudify_id, **kwargs):
     uninstall_celery_plugin(plugin['name'])
 
 
-@operation
-def verify_plugin(worker_id, plugin_name, operation, throw_on_failure,
-                  **kwargs):
-    """
-    Verifies that a plugin and and a specific operation is registered
-    within the celery worker
-    """
-    out = run_command("{0} inspect registered -d {1} --no-color"
-                      .format(get_celery(), worker_id))
-    lines = out.splitlines()
-    registered_operations = []
-    for line in lines:
-        processed_line = line.strip()
-        if processed_line.startswith("*"):
-            task_name = processed_line[1:].strip()
-            if task_name.startswith(plugin_name):
-                registered_operations.append(task_name)
-                if task_name == plugin_name + "." + operation:
-                    return True
-    # Could not locate registered plugin and the specified operation
-    if throw_on_failure:
-        raise RuntimeError(
-            """
-Unable to locate plugin {0} operation {1} in celery registered tasks,
-make sure the plugin has an implementation of
-this operation.
-Registered plugin operation are:
-{2}""".format(plugin_name, operation, registered_operations))
-    else:
-        return False
-
-
 def get_python():
     return get_prefix_for_command("python")
 
 
 def get_pip():
     return get_prefix_for_command("pip")
-
-
-def get_celery():
-    return get_prefix_for_command("celery")
 
 
 def get_prefix_for_command(command):

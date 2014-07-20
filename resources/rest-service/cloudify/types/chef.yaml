@@ -191,7 +191,7 @@ types:
 
     # A web server configured with chef
     # see docs for cloudify.types.chef.middleware_server
-    cloudify.types.bash.web_server:
+    cloudify.types.chef.web_server:
         derived_from: cloudify.types.web_server
         interfaces:
             cloudify.interfaces.lifecycle:

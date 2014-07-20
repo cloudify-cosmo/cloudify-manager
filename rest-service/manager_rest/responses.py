@@ -25,15 +25,13 @@ class BlueprintState(object):
     resource_fields = {
         'id': fields.String,
         'plan': fields.Raw,
-        'source': fields.Raw,
-        'createdAt': fields.String(attribute='created_at'),
-        'updatedAt': fields.String(attribute='updated_at')
+        'created_at': fields.String,
+        'updated_at': fields.String
     }
 
     def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
-        self.source = kwargs['source']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 
@@ -52,15 +50,30 @@ class BlueprintValidationStatus(object):
 
 
 @swagger.model
+class Workflow(object):
+
+    resource_fields = {
+        'name': fields.String,
+        'created_at': fields.String,
+        'parameters': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.name = kwargs['name']
+        self.created_at = kwargs['created_at']
+        self.parameters = kwargs['parameters']
+
+
+@swagger.model
+@swagger.nested(workflows=Workflow.__name__)
 class Deployment(object):
 
     resource_fields = {
         'id': fields.String,
-        # 'permalink': fields.Url('blueprint_ep')
-        'createdAt': fields.String(attribute='created_at'),
-        'updatedAt': fields.String(attribute='updated_at'),
-        'blueprintId': fields.String(attribute='blueprint_id'),
-        'plan': fields.Raw,
+        'created_at': fields.String,
+        'updated_at': fields.String,
+        'blueprint_id': fields.String,
+        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
     }
 
     def __init__(self, **kwargs):
@@ -69,36 +82,7 @@ class Deployment(object):
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
-        self.plan = kwargs['plan']
-
-
-@swagger.model
-class Workflow(object):
-
-    resource_fields = {
-        'name': fields.String,
-        'createdAt': fields.String(attribute='created_at')
-    }
-
-    def __init__(self, **kwargs):
-        self.name = kwargs['name']
-        self.created_at = kwargs['created_at']
-
-
-@swagger.model
-@swagger.nested(workflows=Workflow.__name__)
-class Workflows(object):
-
-    resource_fields = {
-        'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
-        'blueprintId': fields.String(attribute='blueprint_id'),
-        'deploymentId': fields.String(attribute='deployment_id')
-    }
-
-    def __init__(self, **kwargs):
         self.workflows = kwargs['workflows']
-        self.blueprint_id = kwargs['blueprint_id']
-        self.deployment_id = kwargs['deployment_id']
 
 
 @swagger.model
@@ -106,68 +90,95 @@ class Execution(object):
 
     resource_fields = {
         'id': fields.String,
-        'workflowId': fields.String(attribute='workflow_id'),
-        'blueprintId': fields.String(attribute='blueprint_id'),
-        'deploymentId': fields.String(attribute='deployment_id'),
+        'workflow_id': fields.String,
+        'blueprint_id': fields.String,
+        'deployment_id': fields.String,
         'status': fields.String,
         'error': fields.String,
-        'createdAt': fields.String(attribute='created_at')
+        'created_at': fields.String,
+        'parameters': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
-        self.internal_workflow_id = kwargs['internal_workflow_id']
         self.workflow_id = kwargs['workflow_id']
         self.blueprint_id = kwargs['blueprint_id']
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
+        self.parameters = kwargs['parameters']
 
 
 @swagger.model
-class DeploymentNode(object):
+class Node(object):
 
     resource_fields = {
         'id': fields.String,
-        'runtimeInfo': fields.Raw(attribute='runtime_info'),
-        'stateVersion': fields.Raw(attribute='state_version'),
-        'reachable': fields.Boolean,
+        'deployment_id': fields.String,
+        'blueprint_id': fields.String,
+        'type': fields.String,
+        'type_hierarchy': fields.Raw,
+        'number_of_instances': fields.String,
+        'host_id': fields.String,
+        'properties': fields.Raw,
+        'operations': fields.Raw,
+        'plugins': fields.Raw,
+        'plugins_to_install': fields.Raw,
+        'relationships': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.deployment_id = kwargs['deployment_id']
+        self.blueprint_id = kwargs['blueprint_id']
+        self.type = kwargs['type']
+        self.type_hierarchy = kwargs['type_hierarchy']
+        self.number_of_instances = kwargs['number_of_instances']
+        self.host_id = kwargs['host_id']
+        self.properties = kwargs['properties']
+        self.operations = kwargs['operations']
+        self.plugins = kwargs['plugins']
+        self.plugins_to_install = kwargs['plugins_to_install']
+        self.relationships = kwargs['relationships']
+
+
+@swagger.model
+class NodeInstance(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'node_id': fields.String,
+        'host_id': fields.String,
+        'relationships': fields.Raw,
+        'deployment_id': fields.String,
+        'runtime_properties': fields.Raw,
+        'version': fields.Raw,
         'state': fields.String
     }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.runtime_info = kwargs['runtime_info']
-        self.reachable = kwargs['reachable']
-        self.state_version = kwargs['state_version']
-        self.state = kwargs['state']
-
-
-@swagger.model
-@swagger.nested(nodes=DeploymentNode.__name__)
-class DeploymentNodes(object):
-
-    resource_fields = {
-        'deploymentId': fields.String(attribute='deployment_id'),
-        'nodes': fields.List(
-            fields.Nested(DeploymentNode.resource_fields))
-    }
-
-    def __init__(self, **kwargs):
         self.deployment_id = kwargs['deployment_id']
-        self.nodes = kwargs['nodes']
+        self.runtime_properties = kwargs['runtime_properties']
+        self.version = kwargs['version']
+        self.state = kwargs['state']
+        self.node_id = kwargs['node_id']
+        self.relationships = kwargs['relationships']
+        self.host_id = kwargs['host_id']
 
 
 @swagger.model
 class Status(object):
 
     resource_fields = {
-        'status': fields.String
+        'status': fields.String,
+        'services': fields.Raw
     }
 
     def __init__(self, **kwargs):
         self.status = kwargs['status']
+        self.services = kwargs['services']
 
 
 @swagger.model
@@ -192,3 +203,20 @@ class ProviderContext(object):
     def __init__(self, **kwargs):
         self.context = kwargs['context']
         self.name = kwargs['name']
+
+
+@swagger.model
+class Version(object):
+
+    resource_fields = {
+        'version': fields.String,
+        'build': fields.String,
+        'date': fields.String,
+        'commit': fields.String,
+    }
+
+    def __init__(self, **kwargs):
+        self.version = kwargs['version']
+        self.build = kwargs['build']
+        self.date = kwargs['date']
+        self.commit = kwargs['commit']

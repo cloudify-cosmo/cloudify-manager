@@ -1,0 +1,6 @@
+
+plugins:
+    workflows:
+        derived_from: "cloudify.plugins.manager_plugin"
+        properties:
+            url: "system-location"

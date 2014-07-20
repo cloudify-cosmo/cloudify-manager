@@ -23,6 +23,7 @@ import tempfile
 import uuid
 
 from cloudify.mocks import MockCloudifyContext
+from cloudify.context import BootstrapContext
 
 VAGRANT_MACHINE_IP = "10.0.0.5"
 MANAGER_IP = '10.0.0.1'
@@ -47,7 +48,7 @@ def get_local_context():
     return MockCloudifyContext(
         deployment_id=deployment_id,
         properties={
-            'worker_config': {
+            'cloudify_agent': {
                 'disable_requiretty': False
             }
         },
@@ -62,7 +63,7 @@ def get_remote_context():
     return MockCloudifyContext(
         node_id=node_id,
         properties={
-            'worker_config': {
+            'cloudify_agent': {
                 'user': 'vagrant',
                 'host': VAGRANT_MACHINE_IP,
                 'key': '~/.vagrant.d/insecure_private_key',
@@ -71,5 +72,13 @@ def get_remote_context():
         },
         runtime_properties={
             'ip': '127.0.0.1'
-        }
+        },
+        bootstrap_context=BootstrapContext({
+            'cloudify_agent': {
+                'min_workers': 2,
+                'max_workers': 5,
+                'user': 'john doe',
+                'remote_execution_port': 2222
+            }
+        })
     )

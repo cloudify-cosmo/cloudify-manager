@@ -1,7 +1,0 @@
-define depends_on_establish
-    execute_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
-                      relationship: '$v:relationship',
-                      run_on_node: 'source'
-    execute_operation operation: 'cloudify.interfaces.relationship_lifecycle.establish',
-                      relationship: '$v:relationship',
-                      run_on_node: 'target'

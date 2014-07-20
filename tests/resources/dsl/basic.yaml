@@ -7,6 +7,8 @@ blueprint:
     nodes:
         -   name: "webserver_host"
             type: "cloudify.types.host"
+            properties:
+                install_agent: false
             interfaces:
                 cloudify.interfaces.host:
                     - get_state: cloudmock.tasks.get_state
@@ -15,10 +17,3 @@ blueprint:
                     - start: cloudmock.tasks.start
                     - stop: cloudmock.tasks.stop
                     - delete: cloudmock.tasks.terminate
-
-workflows:
-    mock_workflow:
-        radial: |
-            define mock_workflow
-                execute_operation operation: 'make_mock_operation'
-

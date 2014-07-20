@@ -33,16 +33,16 @@ from cloudify import manager
 
 # agent is created and served via python simple http server when
 # tests run in travis.
-AGENT_PACKAGE_URL = 'http://localhost:8000/agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/disable-require-tty.sh'  # NOQA
+AGENT_PACKAGE_URL = 'http://localhost:8000/Ubuntu-agent.tar.gz'
+DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'  # NOQA
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
 
 
-def _get_custom_agent_package_url():
+def _get_custom_agent_package_url(distro):
     return AGENT_PACKAGE_URL
 
 
-def _get_custom_disable_requiretty_script_url():
+def _get_custom_disable_requiretty_script_url(distro):
     return DISABLE_REQUIRETTY_SCRIPT_URL
 
 
@@ -86,17 +86,17 @@ def read_file(file_name):
 
 
 def get_resource(resource_name):
-    if t.CELERY_INIT_PATH in resource_name:
-        return read_file('celeryd-cloudify.init.jinja2')
-    elif t.CELERY_CONFIG_PATH in resource_name:
-        return read_file('celeryd-cloudify.conf.jinja2')
+    if 'celeryd-cloudify.init' in resource_name:
+        return read_file('Ubuntu-celeryd-cloudify.init.jinja2')
+    elif 'celeryd-cloudify.conf' in resource_name:
+        return read_file('Ubuntu-celeryd-cloudify.conf.jinja2')
     return None
 
 
 class WorkerInstallerTestCase(unittest.TestCase):
 
     def assert_installed_plugins(self, ctx):
-        worker_name = ctx.properties['worker_config']['name']
+        worker_name = ctx.properties['cloudify_agent']['name']
         ctx.logger.info("extracting plugins from newly installed worker")
         plugins = _extract_registered_plugins(worker_name)
         if not plugins:
@@ -177,20 +177,20 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         t.stop(ctx)
         t.uninstall(ctx)
 
-        worker_config = ctx.properties['worker_config']
+        agent_config = ctx.properties['cloudify_agent']
 
-        plugins = _extract_registered_plugins(worker_config['name'])
+        plugins = _extract_registered_plugins(agent_config['name'])
         # make sure the worker has stopped
         self.assertEqual(0, len(plugins))
 
         # make sure files are deleted
         service_file_path = "/etc/init.d/celeryd-{0}".format(
-            worker_config['name'])
+            agent_config['name'])
         defaults_file_path = "/etc/default/celeryd-{0}".format(
-            worker_config['name'])
-        worker_home = worker_config['base_dir']
+            agent_config['name'])
+        worker_home = agent_config['base_dir']
 
-        runner = FabricRunner(worker_config)
+        runner = FabricRunner(agent_config)
 
         self.assertFalse(runner.exists(service_file_path))
         self.assertFalse(runner.exists(defaults_file_path))
@@ -243,20 +243,20 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         t.stop(ctx)
         t.uninstall(ctx)
 
-        worker_config = ctx.properties['worker_config']
+        agent_config = ctx.properties['cloudify_agent']
 
-        plugins = _extract_registered_plugins(worker_config['name'])
+        plugins = _extract_registered_plugins(agent_config['name'])
         # make sure the worker has stopped
         self.assertEqual(0, len(plugins))
 
         # make sure files are deleted
         service_file_path = "/etc/init.d/celeryd-{0}".format(
-            worker_config['name'])
+            agent_config['name'])
         defaults_file_path = "/etc/default/celeryd-{0}".format(
-            worker_config['name'])
-        worker_home = worker_config['base_dir']
+            agent_config['name'])
+        worker_home = agent_config['base_dir']
 
-        runner = FabricRunner(ctx, worker_config)
+        runner = FabricRunner(ctx, agent_config)
 
         self.assertFalse(runner.exists(service_file_path))
         self.assertFalse(runner.exists(defaults_file_path))
@@ -281,10 +281,10 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         kwargs = {'command': 'ls -l'}
         result = c.send_task(name='sudo_plugin.sudo.run',
                              kwargs=kwargs,
-                             queue=ctx.properties['worker_config']['name'])
+                             queue=ctx.properties['cloudify_agent']['name'])
         self.assertRaises(Exception, result.get, timeout=10)
         ctx = get_local_context()
-        ctx.properties['worker_config']['disable_requiretty'] = True
+        ctx.properties['cloudify_agent']['disable_requiretty'] = True
         t.install(ctx)
         t.start(ctx)
         self.assert_installed_plugins(ctx)
@@ -294,7 +294,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         kwargs = {'command': 'ls -l'}
         result = c.send_task(name='sudo_plugin.sudo.run',
                              kwargs=kwargs,
-                             queue=ctx.properties['worker_config']['name'])
+                             queue=ctx.properties['cloudify_agent']['name'])
         result.get(timeout=10)
 
 

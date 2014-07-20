@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from cloudify.decorators import operation
 
 
-class UpdatedNodeState(Exception):
+class UpdatedNodeInstance(Exception):
     pass
 
 
@@ -29,7 +29,7 @@ def get_state(**kwargs):
 
 @operation
 def nop_and_assert_no_runtime_update(ctx, **kwargs):
-    with mocked_update_node_state():
+    with mocked_update_node_instance():
         # nothing should happen here
         ctx.update()
 
@@ -38,7 +38,7 @@ def nop_and_assert_no_runtime_update(ctx, **kwargs):
 def read_runtime_properties_and_assert_no_runtime_update(ctx, **kwargs):
     props = ctx.runtime_properties
     ctx.logger.info('got these props: {0}'.format(props))
-    with mocked_update_node_state():
+    with mocked_update_node_instance():
         # nothing should happen here
         ctx.update()
 
@@ -48,25 +48,25 @@ def change_runtime_properties_and_assert_runtime_update(ctx, **kwargs):
     props = ctx.runtime_properties
     props['prop'] = 'value'
     ctx.logger.info('changed these props: {0}'.format(props))
-    with mocked_update_node_state():
+    with mocked_update_node_instance():
         try:
             # should actually try and update
             ctx.update()
-        except UpdatedNodeState:
+        except UpdatedNodeInstance:
             return
-    raise RuntimeError('update node state should have been called')
+    raise RuntimeError('update node instance should have been called')
 
 
 @contextmanager
-def mocked_update_node_state():
+def mocked_update_node_instance():
 
-    def mock_update_node_state(_):
-        raise UpdatedNodeState()
+    def mock_update_node_instance(_):
+        raise UpdatedNodeInstance()
 
     from cloudify import context
-    original_update_node_state = context.update_node_state
-    context.update_node_state = mock_update_node_state
+    original_update_node_instance = context.update_node_instance
+    context.update_node_instance = mock_update_node_instance
     try:
         yield
     finally:
-        context.update_node_state = original_update_node_state
+        context.update_node_instance = original_update_node_instance

@@ -16,46 +16,41 @@
 __author__ = 'idanmo'
 
 import uuid
-from testenv import undeploy_application as undeploy
-from workflow_tests.testenv import TestCase
-from workflow_tests.testenv import get_resource as resource
-from workflow_tests.testenv import deploy_application as deploy
-from workflow_tests.testenv import timeout
-from workflow_tests.testenv import run_search as search
-from workflow_tests.testenv import get_blueprint
-from workflow_tests.testenv import delete_blueprint
-from workflow_tests.testenv import publish_blueprint
-from workflow_tests.testenv import DEPLOYMENT_QUEUE_NAME
-from testenv import get_node_instance
-from testenv import get_deployment_nodes
-from cosmo_manager_rest_client.cosmo_manager_rest_client \
-    import CosmoManagerRestClient, CosmoManagerRestCallError
+import time
+from testenv import TestCase
+from testenv import get_resource as resource
+from testenv import deploy_application as deploy
+from testenv import timeout
+from testenv import send_task
+from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.executions import Execution
 
 
 class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
+        blueprint_id = self.id()
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEqual(blueprint_id, deployment.blueprintId)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = result.get(timeout=10)
 
         self.assertEquals(1, len(machines))
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
-        deployment, _ = deploy(dsl_path)
+        blueprint_id = self.id()
+        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEquals('mock_app', deployment.blueprintId)
+        self.assertEquals(blueprint_id, deployment.blueprint_id)
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state)\
+        states = send_task(testmock_get_state) \
             .get(timeout=10)
         self.assertEquals(2, len(states))
         self.assertTrue('host_node' in states[0]['id'])
@@ -64,7 +59,7 @@ class BasicWorkflowsTest(TestCase):
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
         from plugins.cloudmock.tasks import set_raise_exception_on_start
-        self.send_task(set_raise_exception_on_start).get(timeout=10)
+        send_task(set_raise_exception_on_start).get(timeout=10)
         dsl_path = resource("dsl/basic.yaml")
         try:
             deploy(dsl_path)
@@ -78,50 +73,17 @@ class BasicWorkflowsTest(TestCase):
 
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = send_task(testmock_get_state).get(timeout=10)
         node_runtime_props = None
         for k, v in states[1]['capabilities'].iteritems():
             if 'host_node' in k:
                 node_runtime_props = v
                 break
         self.assertEquals('value1', node_runtime_props['property1'])
-        # length should be 2 because of auto injected ip property
         self.assertEquals(1,
                           len(node_runtime_props),
                           msg='Expected 2 but contains: {0}'.format(
                               node_runtime_props))
-
-    def test_dsl_with_agent_plugin(self):
-        dsl_path = resource("dsl/with_plugin.yaml")
-        deploy(dsl_path, deployment_id=DEPLOYMENT_QUEUE_NAME)
-
-        from plugins.plugin_installer.tasks import get_installed_plugins as \
-            test_get_installed_plugins
-        result = self.send_task(test_get_installed_plugins)
-        installed_plugins = result.get(timeout=10)
-        self.assertTrue("test_plugin" in installed_plugins)
-
-    def test_dsl_with_manager_plugin(self):
-        dsl_path = resource("dsl/with_manager_plugin.yaml")
-        deployment, _ = deploy(dsl_path, deployment_id=DEPLOYMENT_QUEUE_NAME)
-        deployment_id = deployment.id
-
-        from plugins.worker_installer.tasks import \
-            RESTARTED, STARTED, INSTALLED, STOPPED, UNINSTALLED
-
-        from plugins.worker_installer.tasks \
-            import get_current_worker_state as \
-            test_get_current_worker_state
-        result = self.send_task(test_get_current_worker_state)
-        state = result.get(timeout=10)
-        self.assertEquals(state, [INSTALLED, STARTED, RESTARTED])
-
-        undeploy(deployment_id)
-        result = self.send_task(test_get_current_worker_state)
-        state = result.get(timeout=10)
-        self.assertEquals(state,
-                          [INSTALLED, STARTED,
-                           RESTARTED, STOPPED, UNINSTALLED])
 
     def test_non_existing_operation_exception(self):
         dsl_path = resource("dsl/wrong_operation_name.yaml")
@@ -132,23 +94,34 @@ class BasicWorkflowsTest(TestCase):
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        states = self.send_task(testmock_get_state).get(timeout=10)
+        states = send_task(testmock_get_state).get(timeout=10)
         from plugins.testmockoperations.tasks import \
             get_mock_operation_invocations as testmock_get__invocations
-        invocations = self.send_task(testmock_get__invocations).get(timeout=10)
+        invocations = send_task(testmock_get__invocations).get(timeout=10)
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual('mockpropvalue2', invocation['kwargs']['mockprop2'])
-        self.assertTrue('__cloudify_context' in invocation['kwargs'])
+        self.assertEqual('mockpropvalue2', invocation['properties']
+                                                     ['mockprop2'])
         self.assertEqual(states[0]['id'], invocation['id'])
+
+    def test_start_monitor_node_operation(self):
+        dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
+        deploy(dsl_path)
+        from plugins.testmockoperations.tasks import \
+            get_monitoring_operations_invocation
+        invocations = send_task(get_monitoring_operations_invocation)\
+            .get(timeout=10)
+        self.assertEqual(1, len(invocations))
+        invocation = invocations[0]
+        self.assertEqual('start_monitor', invocation['operation'])
 
     def test_plugin_get_resource(self):
         dsl_path = resource("dsl/get_resource_in_plugin.yaml")
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import \
             get_resource_operation_invocations as testmock_get_invocations
-        invocations = self.send_task(testmock_get_invocations).get(
+        invocations = send_task(testmock_get_invocations).get(
             timeout=10)
         self.assertEquals(1, len(invocations))
         invocation = invocations[0]
@@ -169,67 +142,192 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = 'my_new_blueprint'
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEqual(blueprint_id, deployment.blueprintId)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         from plugins.cloudmock.tasks import get_machines
-        result = self.send_task(get_machines)
+        result = send_task(get_machines)
         machines = result.get(timeout=10)
 
         self.assertEquals(1, len(machines))
-        result = search('')
+        result = self.client.search.run_query('')
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        # expecting 4 results - 1 blueprint, 1 deployment, 1 execution, 1 node.
-        self.assertEquals(4, len(hits))
+        self.assertEquals(7, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = 'my_new_blueprint'
+        blueprint_id = str(uuid.uuid4())
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
-        self.assertEqual(blueprint_id, deployment.blueprintId)
-        blueprint = get_blueprint(blueprint_id)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
+        blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, blueprint.id)
-        self.assertTrue(len(blueprint.plan) > 0)
-        self.assertEqual('None', blueprint.source)
+        self.assertTrue(len(blueprint['plan']) > 0)
 
     def test_delete_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = publish_blueprint(dsl_path)
+        blueprint_id = self.client.blueprints.upload(dsl_path,
+                                                     str(uuid.uuid4())).id
         # verifying blueprint exists
-        temp = get_blueprint(blueprint_id)
-        self.assertEqual(blueprint_id, temp.id)
+        result = self.client.blueprints.get(blueprint_id)
+        self.assertEqual(blueprint_id, result.id)
         # deleting blueprint
-        deleted_bp_id = delete_blueprint(blueprint_id).id
+        deleted_bp_id = self.client.blueprints.delete(blueprint_id).id
         self.assertEqual(blueprint_id, deleted_bp_id)
         # verifying blueprint does no longer exist
         try:
-            get_blueprint(blueprint_id)
+            self.client.blueprints.get(blueprint_id)
             self.fail("Got blueprint {0} successfully even though it "
                       "wasn't expected to exist".format(blueprint_id))
-        except CosmoManagerRestCallError:
+        except CloudifyClientError:
             pass
         # trying to delete a nonexistent blueprint
         try:
-            delete_blueprint(blueprint_id)
+            self.client.blueprints.delete(blueprint_id)
             self.fail("Deleted blueprint {0} successfully even though it "
                       "wasn't expected to exist".format(blueprint_id))
-        except CosmoManagerRestCallError:
+        except CloudifyClientError:
             pass
+
+    def test_delete_deployment(self):
+        dsl_path = resource("dsl/basic.yaml")
+        blueprint_id = self.id()
+        deployment_id = str(uuid.uuid4())
+
+        def change_execution_status(execution_id, status):
+            self.client.executions.update(execution_id, status)
+            time.sleep(5)  # waiting for elasticsearch to update...
+            executions = self.client.deployments.list_executions(deployment_id)
+            updated_execution = next(execution for execution in executions
+                                     if execution.id == execution_id)
+            self.assertEqual(status, updated_execution.status)
+
+        # verifying a deletion of a new deployment, i.e. one which hasn't
+        # been installed yet, and therefore all its nodes are still in
+        # 'uninitialized' state.
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        time.sleep(5)  # waiting for elasticsearch to update execution...
+        self.client.deployments.delete(deployment_id, False)
+        time.sleep(5)  # waiting for elasticsearch to clear deployment...
+        self.client.blueprints.delete(blueprint_id)
+
+        # recreating the deployment, this time actually deploying it too
+        _, execution_id = deploy(dsl_path,
+                                 blueprint_id=blueprint_id,
+                                 deployment_id=deployment_id,
+                                 wait_for_execution=True)
+
+        # execution is supposed to be 'terminated' anyway, but verifying it
+        # anyway (plus elasticsearch might need time to update..)
+        change_execution_status(execution_id, Execution.TERMINATED)
+
+        # verifying deployment exists
+        result = self.client.deployments.get(deployment_id)
+        self.assertEqual(deployment_id, result.id)
+
+        # retrieving deployment nodes
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node.id for node in nodes]
+
+        # setting one node's state to 'started' (making it a 'live' node)
+        # node must be read using get in order for it to have a version.
+        node = self.client.node_instances.get(nodes[0].id)
+        self.client.node_instances.update(node.id,
+                                          state='started',
+                                          version=node.version)
+
+        # setting the execution's status to 'started' so it'll prevent the
+        # deployment deletion
+        change_execution_status(execution_id, Execution.STARTED)
+
+        # attempting to delete the deployment - should fail because the
+        # execution is active
+        try:
+            self.client.deployments.delete(deployment_id)
+
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "should have had a running execution"
+                      .format(deployment_id))
+        except CloudifyClientError, e:
+            self.assertTrue('running executions' in str(e))
+
+        # setting the execution's status to 'terminated' so it won't prevent
+        #  the deployment deletion
+        change_execution_status(execution_id, Execution.TERMINATED)
+
+        # attempting to delete deployment - should fail because there are
+        # live nodes for this deployment
+        try:
+            self.client.deployments.delete(deployment_id)
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "should have had live nodes and the ignore_live_nodes "
+                      "flag was set to False".format(deployment_id))
+        except CloudifyClientError, e:
+            self.assertTrue('live nodes' in str(e))
+
+        # deleting deployment - this time there's no execution running,
+        # and using the ignore_live_nodes parameter to force deletion
+        deleted_deployment_id = self.client.deployments.delete(
+            deployment_id, True).id
+        self.assertEqual(deployment_id, deleted_deployment_id)
+
+        # verifying deployment does no longer exist
+        try:
+            self.client.deployments.get(deployment_id)
+            self.fail("Got deployment {0} successfully even though it "
+                      "wasn't expected to exist".format(deployment_id))
+        except CloudifyClientError, e:
+            self.assertTrue('not found' in str(e))
+
+        # verifying deployment's execution does no longer exist
+        try:
+            self.client.executions.get(execution_id)
+            self.fail('execution {0} still exists even though it should have '
+                      'been deleted when its deployment was deleted'
+                      .format(execution_id))
+        except CloudifyClientError, e:
+            self.assertTrue('not found' in str(e))
+
+        # verifying deployment's nodes do no longer exist
+        for node_id in nodes_ids:
+            try:
+                self.client.node_instances.get(node_id)
+                self.fail('node {0} still exists even though it should have '
+                          'been deleted when its deployment was deleted'
+                          .format(node_id))
+            except CloudifyClientError, e:
+                self.assertTrue('not found' in str(e))
+
+        # trying to delete a nonexistent deployment
+        try:
+            self.client.deployments.delete(deployment_id)
+            self.fail("Deleted deployment {0} successfully even though it "
+                      "wasn't expected to exist".format(deployment_id))
+        except CloudifyClientError, e:
+            self.assertTrue('not found' in str(e))
 
     def test_node_state_uninitialized(self):
         dsl_path = resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
-        client = CosmoManagerRestClient('localhost')
-        client.publish_blueprint(dsl_path, blueprint_id)
-        client.create_deployment(blueprint_id, deployment_id)
-        deployment_nodes = get_deployment_nodes(deployment_id)
-        self.assertEqual(1, len(deployment_nodes.nodes))
-        node_id = deployment_nodes.nodes[0].id
-        node_instance = get_node_instance(node_id)
-        self.assertEqual('uninitialized', node_instance['state'])
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+
+        def assert_deployment_nodes_length():
+            deployment_nodes = self.client.node_instances.list(
+                deployment_id=deployment_id)
+            self.assertEqual(1, len(deployment_nodes))
+
+        self.do_assertions(assert_deployment_nodes_length, timeout=30)
+
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        node_id = deployment_nodes[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        self.assertEqual('uninitialized', node_instance.state)
 
     def test_node_states(self):
         dsl_path = resource('dsl/node_states.yaml')
@@ -241,14 +339,15 @@ class BasicWorkflowsTest(TestCase):
                                deployment_id=deployment_id)
 
         from plugins.testmockoperations.tasks import get_node_states
-        node_states = self.send_task(get_node_states).get(timeout=10)
+        node_states = send_task(get_node_states).get(timeout=10)
 
         self.assertEquals(node_states, [
             'creating', 'configuring', 'starting'
         ])
 
-        deployment_nodes = get_deployment_nodes(deployment_id)
-        self.assertEqual(1, len(deployment_nodes.nodes))
-        node_id = deployment_nodes.nodes[0].id
-        node_instance = get_node_instance(node_id)
-        self.assertEqual('started', node_instance['state'])
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        self.assertEqual(1, len(deployment_nodes))
+        node_id = deployment_nodes[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        self.assertEqual('started', node_instance.state)

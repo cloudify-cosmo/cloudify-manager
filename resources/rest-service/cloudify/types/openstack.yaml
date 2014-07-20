@@ -31,6 +31,17 @@ types:
                 - delete: nova_plugin.server.delete
             cloudify.interfaces.host:
                 - get_state: nova_plugin.server.get_state
+    cloudify.openstack.windows_server:
+        derived_from: cloudify.openstack.server
+        interfaces:
+            cloudify.interfaces.worker_installer:
+                - install: windows_agent_installer.tasks.install
+                - start: windows_agent_installer.tasks.start
+                - stop: windows_agent_installer.tasks.stop
+                - uninstall: windows_agent_installer.tasks.uninstall
+                - restart: windows_agent_installer.tasks.restart
+            cloudify.interfaces.plugin_installer:
+                - install: windows_plugin_installer.tasks.install
 
     cloudify.openstack.subnet:
         derived_from: cloudify.types.subnet
@@ -57,7 +68,7 @@ types:
     cloudify.openstack.router:
         derived_from: cloudify.types.router
         properties:
-            - router
+            - router: {}
             - neutron_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
@@ -86,7 +97,7 @@ types:
     cloudify.openstack.floatingip:
         derived_from: cloudify.types.base
         properties:
-            - floatingip
+            - floatingip: {}
             - neutron_config: {}
         interfaces:
              cloudify.interfaces.lifecycle:
