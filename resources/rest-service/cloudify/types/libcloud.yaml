@@ -1,0 +1,67 @@
+##################################################################################
+# Cloudify Libcloud built in types and plugins definitions.
+##################################################################################
+
+imports:
+    - http://www.getcloudify.org/spec/cloudify/{{ cloudify_version }}/types.yaml
+
+plugins:
+    server_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-libcloud-plugin/archive/develop.zip
+    security_group_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-libcloud-plugin/archive/develop.zip
+    floating_ip_plugin:
+        derived_from: cloudify.plugins.manager_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-libcloud-plugin/archive/develop.zip
+
+types:
+    cloudify.libcloud.server:
+        derived_from: cloudify.types.host
+        properties:
+            - server
+            - connection_config: {}
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - start: server_plugin.server.start
+                - stop: server_plugin.server.stop
+                - delete: server_plugin.server.delete
+            cloudify.interfaces.host:
+                - get_state: server_plugin.server.get_state
+
+    cloudify.libcloud.security_group:
+        derived_from: cloudify.types.base
+        properties:
+            - security_group
+            - connection_config: {}
+            - rules: []
+            - disable_egress: false
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: security_group_plugin.security_group.create
+                - delete: security_group_plugin.security_group.delete
+
+    cloudify.openstack.floatingip:
+        derived_from: cloudify.types.base
+        properties:
+            - floatingip: {}
+            - connection_config: {}
+        interfaces:
+             cloudify.interfaces.lifecycle:
+                  - create: floating_ip_plugin.floating_ip.create
+                  - delete: floating_ip_plugin.floating_ip.delete
+
+relationships:
+    cloudify.openstack.server_connected_to_floating_ip:
+        derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                - establish: server_plugin.server.connect_floatingip
+                - unlink: server_plugin.server.disconnect_floatingip
+
+    cloudify.openstack.server_connected_to_security_group:
+        derived_from: cloudify.relationships.connected_to
