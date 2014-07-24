@@ -64,8 +64,6 @@ def init_worker_installer(func):
             cloudify_agent = {}
         prepare_configuration(ctx, cloudify_agent)
         kwargs['cloudify_agent'] = cloudify_agent
-        ctx.logger.info('Creating WinRMRunner from configuration : {0}'
-                        .format(cloudify_agent))
         kwargs['runner'] = WinRMRunner(
             session_config=cloudify_agent.copy(),
             logger=ctx.logger)
@@ -119,11 +117,11 @@ def set_service_configuration_parameters(cloudify_agent):
     _set_default(
         cloudify_agent['service'],
         SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY,
-        5)
+        1)
     _set_default(
         cloudify_agent['service'],
         SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY,
-        3)
+        10)
     _set_default(
         cloudify_agent['service'],
         SERVICE_FAILURE_RESET_TIMEOUT_KEY,
@@ -188,4 +186,4 @@ def _get_machine_ip(ctx):
         return ctx.runtime_properties['ip']
     raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
-        ' for installing a remote agent.'.format(ctx.node_id))
+        ' for manipulating a remote agent.'.format(ctx.node_id))

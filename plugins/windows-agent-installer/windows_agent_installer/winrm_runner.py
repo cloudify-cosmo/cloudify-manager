@@ -72,17 +72,15 @@ class WinRMRunner(object):
             self.session_config['host'],
             self.session_config['port'],
             self.session_config['uri'])
-        session = winrm.Session(url=winrm_url,
-                                auth=(self.session_config['user'],
-                                      self.session_config['password']))
-        self.logger.info("Session created : {0}".format(winrm_url))
-        return session
+        return winrm.Session(url=winrm_url,
+                             auth=(self.session_config['user'],
+                                   self.session_config['password']))
 
     def run(self, command, exit_on_failure=True):
 
         def _chk(res):
             if res.status_code == 0:
-                self.logger.debug(
+                self.logger.info(
                     '[{0}] out: {1}'.format(
                         self.session_config['host'],
                         res.std_out))
@@ -173,6 +171,11 @@ class WinRMRunner(object):
             '''@powershell -Command "(Get-Service -Name {0}).Status"'''  # NOQA
             .format(service_name))
         return response.std_out.strip()
+
+    def put(self, contents, path):
+        return self.run(
+            '''@powershell -Command "Add-Content {0} '{1}'"'''  # NOQA
+            .format(path, contents))
 
 
 class WinRMExecutionException(CommandExecutionException):

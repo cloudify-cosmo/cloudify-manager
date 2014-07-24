@@ -130,6 +130,14 @@ class FileStorageManager(object):
         ]
         return nodes
 
+    def get_node(self, deployment_id, node_id, **_):
+        data = self._load_data()
+        node_id = '{}_{}'.format(deployment_id, node_id)
+        if node_id in data[NODES]:
+            return data[NODES]
+        raise manager_exceptions.NotFoundError(
+            "Deployment {0} not found".format(deployment_id))
+
     def put_node(self, node):
         data = self._load_data()
         node_id = '{0}_{1}'.format(node.deployment_id, node.id)

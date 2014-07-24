@@ -13,30 +13,58 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 # ***************************************************************************/
+import os
 import sys
 
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import get_manager_ip, LocalCommandRunner
 from windows_plugin_installer import plugin_utils
 
 # Hard coded path for now - agents are always installed to this path.
 NSSM_PATH = 'C:\CloudifyAgent\\nssm\\nssm.exe'
 
-# Key for retrieving the parameters of a windows service.
-APP_PARAMETER_PARAMETER = 'AppParameters'
+# Holds the AppParameters set for the service
+APP_PARAMETERS_FILE_PATH = 'C:\CloudifyAgent\AppParameters'
+
+
+def read_app_parameters():
+    if not os.path.exists(APP_PARAMETERS_FILE_PATH):
+        raise NonRecoverableError(
+            '{0} does not exist'
+            .format(APP_PARAMETERS_FILE_PATH))
+    with open(name=APP_PARAMETERS_FILE_PATH, mode='r') as f:
+        app_parameters = f.read().strip()
+        if not app_parameters:
+            raise NonRecoverableError(
+                '{0} is blank'
+                .format(APP_PARAMETERS_FILE_PATH))
+        return app_parameters
+
+
+def write_app_parameters(app_parameters):
+    if not os.path.exists(APP_PARAMETERS_FILE_PATH):
+        raise NonRecoverableError(
+            '{0} does not exist'
+            .format(APP_PARAMETERS_FILE_PATH))
+    os.remove(APP_PARAMETERS_FILE_PATH)
+    with open(name=APP_PARAMETERS_FILE_PATH, mode='w') as f:
+        f.write(app_parameters)
 
 
 def _update_includes(module_paths):
 
-    runner = LocalCommandRunner()
-    app_parameters = runner.run(
-        'cmd /c "{0} get CloudifyAgent AppParameters'
-        .format(NSSM_PATH)).std_out
+    # Read current AppParameters
+    app_parameters = read_app_parameters()
+
     new_app_parameters = add_module_paths_to_includes(
         module_paths,
         app_parameters)
-    runner.run('cmd /c "{0} set CloudifyAgent AppParameters {1}'
-               .format(NSSM_PATH, new_app_parameters))
+    LocalCommandRunner().run('cmd /c "{0} set CloudifyAgent AppParameters {1}"'
+                             .format(NSSM_PATH, new_app_parameters))
+
+    # Write new AppParameters
+    write_app_parameters(new_app_parameters)
 
 
 def add_module_paths_to_includes(module_paths, app_parameters):
@@ -84,7 +112,7 @@ def install(ctx, plugins, **kwargs):
                     plugin['folder'])
 
         ctx.logger.info("Installing plugin from {0}".format(plugin['url']))
-        install_celery_plugin(plugin)
+        install_celery_plugin(plugin['url'])
 
 
 def install_celery_plugin(plugin_url):

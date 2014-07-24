@@ -12,11 +12,20 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import os
 import time
+from cloudify.constants import LOCAL_IP_KEY, \
+    MANAGER_IP_KEY, \
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY, \
+    MANAGER_FILE_SERVER_URL_KEY, MANAGER_REST_PORT_KEY
 
 from cloudify.decorators import operation
 from cloudify import utils
-from cloudify.exceptions import TimeoutException
+from cloudify.exceptions import NonRecoverableError
+from cloudify.utils import \
+    get_manager_file_server_blueprints_root_url, \
+    get_manager_file_server_url, \
+    get_manager_rest_service_port
 from windows_agent_installer import init_worker_installer
 from windows_agent_installer import SERVICE_FAILURE_RESTART_DELAY_KEY, \
     SERVICE_START_TIMEOUT_KEY, \
@@ -58,6 +67,26 @@ def get_agent_package_url():
 
 def get_manager_ip():
     return utils.get_manager_ip()
+
+
+def create_env_string(cloudify_agent):
+    env = {
+        LOCAL_IP_KEY:
+            cloudify_agent['host'],
+        MANAGER_IP_KEY:
+            get_manager_ip(),
+        MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY:
+            get_manager_file_server_blueprints_root_url(),
+        MANAGER_FILE_SERVER_URL_KEY:
+            get_manager_file_server_url(),
+        MANAGER_REST_PORT_KEY:
+            get_manager_rest_service_port()
+    }
+    env_string = ''
+    for key, value in env.iteritems():
+        env_string = '{0} {1}={2}'\
+                     .format(env_string, key, value)
+    return env_string.strip()
 
 
 @operation
@@ -105,12 +134,18 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                       AGENT_INCLUDES))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
+    env = create_env_string(cloudify_agent)
+    runner.run('{0}\\nssm\\nssm.exe set {1} AppEnvironmentExtra {2}'
+               .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, env))
     runner.run('sc config {0} start= auto'.format(AGENT_SERVICE_NAME))
     runner.run(
         'sc failure {0} reset= {1} actions= restart/{2}' .format(
             AGENT_SERVICE_NAME,
             cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
             cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY]))
+
+    ctx.logger.info('Creating parameters file from {0}'.format(params))
+    runner.put(params, '{0}\AppParameters'.format(RUNTIME_AGENT_PATH))
 
 
 @operation
@@ -229,7 +264,7 @@ def _wait_for_service_status(runner,
     while end_time > time.time():
 
         service_state = runner.service_state(service_name)
-        if desired_status.lower() == service_state.lower():
+        if desired_status.strip().lower() == service_state.strip().lower():
             successful_consecutive_queries += 1
             if successful_consecutive_queries == cloudify_agent['service'][
                     SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
@@ -239,8 +274,19 @@ def _wait_for_service_status(runner,
         time.sleep(
             cloudify_agent['service']
             [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
-    raise TimeoutException(
-        "Service {0} did not reach state {1} in {2} seconds" .format(
+    raise NonRecoverableError(
+        "Service {0} did not reach {1} state in {2} seconds. "
+        "Error was: {3}"
+        .format(
             service_name,
             desired_status,
-            timeout_in_seconds))
+            timeout_in_seconds,
+            _read_celery_log()))
+
+
+def _read_celery_log():
+    log_file_path = '{0}\celery.log'\
+                    .format(RUNTIME_AGENT_PATH)
+    if os.path.exists(log_file_path):
+        with open(log_file_path, "r") as myfile:
+            return myfile.read()

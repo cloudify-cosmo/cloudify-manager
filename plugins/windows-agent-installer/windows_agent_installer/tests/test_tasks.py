@@ -12,6 +12,10 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from cloudify.constants import \
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY, \
+    MANAGER_FILE_SERVER_URL_KEY, \
+    MANAGER_REST_PORT_KEY
 
 
 __author__ = 'elip'
@@ -110,3 +114,20 @@ class TestTasks(unittest.TestCase):
         self.assertFalse(
             runner.exists(
                 path='C:\{0}'.format(AGENT_EXEC_FILE_NAME)))
+
+    def test_create_env_string(self):
+
+        from windows_agent_installer.tasks import create_env_string
+
+        cloudify_agent = {
+            'host': '127.0.0.1'
+        }
+        import os
+        os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = 'url1'
+        os.environ[MANAGER_FILE_SERVER_URL_KEY] = 'url2'
+        os.environ[MANAGER_REST_PORT_KEY] = '80'
+        env_string = create_env_string(cloudify_agent)
+        expected = 'AGENT_IP=127.0.0.1 MANAGEMENT_IP=127.0.0.1 ' \
+                   'MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL=url1 ' \
+                   'MANAGER_FILE_SERVER_URL=url2 MANAGER_REST_PORT=80'
+        self.assertEqual(env_string, expected)

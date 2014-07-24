@@ -185,6 +185,13 @@ class ESStorageManager(object):
                                       **doc['_source'])
         return node
 
+    def get_node(self, deployment_id, node_id, include=None):
+        node_id = '{}_{}'.format(deployment_id, node_id)
+        return self._get_doc_and_deserialize(doc_id=node_id,
+                                             doc_type=NODE_TYPE,
+                                             model_class=DeploymentNode,
+                                             fields=include)
+
     def get_node_instances(self, deployment_id, include=None):
         query = None
         if deployment_id:

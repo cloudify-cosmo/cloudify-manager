@@ -48,11 +48,11 @@ class InitTest(unittest.TestCase):
         self.assertEqual(
             cloudify_agent['service']
             [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY],
-            5)
+            1)
         self.assertEqual(
             cloudify_agent['service']
             [SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY],
-            3)
+            10)
         self.assertEqual(
             cloudify_agent['service']
             [SERVICE_STOP_TIMEOUT_KEY],

@@ -18,29 +18,21 @@ __author__ = 'nirc'
 from setuptools import setup
 
 
-PLUGINS_COMMON_VERSION = "3.0"
-PLUGINS_COMMON_BRANCH = "feature/CFY-606-add-windows-agent"
-PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
-                 "/tarball/{0}#egg=cloudify-plugins-common-{1}".format(
-                     PLUGINS_COMMON_BRANCH, PLUGINS_COMMON_VERSION)
-
-
 setup(
     name='cloudify-windows-agent-installer-plugin',
-    version='3.0',
+    version='3.1',
     author='nirc',
     author_email='nirc@gigaspaces.com',
     packages=['windows_agent_installer'],
     license='LICENSE',
     description='Plugin for installing a Cloudify agent on a windows machine',
     install_requires=[
-        'cloudify-plugins-common',
+        'cloudify-plugins-common==3.1',
         'pywinrm==0.0.2dev',
     ],
     tests_require=[
         "nose",
         "python-novaclient==2.17.0",
         "python-neutronclient==2.3.4"
-    ],
-    dependency_links=[PLUGINS_COMMON]
+    ]
 )
