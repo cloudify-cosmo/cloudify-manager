@@ -6,9 +6,9 @@ services:
     - rabbitmq
 
 env:
+    - ACTION="run-integration-tests"
     - ACTION="test-plugins"
     - ACTION="test-rest-service"
-    - ACTION="run-integration-tests"
     - ACTION="flake8"
 
 script:
