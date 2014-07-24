@@ -34,7 +34,7 @@ setup(
         'Flask==0.10.1',
         'flask-restful==0.2.5',
         'flask-restful-swagger',
-        'cloudify-dsl-parser==3.0',
+        'cloudify-dsl-parser==3.1',
         'requests==2.2.1',
         'bernhard==0.1.0',
         'gunicorn==18.0',
