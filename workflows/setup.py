@@ -20,13 +20,13 @@ from setuptools import setup
 
 setup(
     name='cloudify-workflows',
-    version='3.0',
+    version='3.1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['workflows', 'system_workflows'],
     license='LICENSE',
     description='Default cloudify workflows',
     install_requires=[
-        'cloudify-plugins-common==3.0',
+        'cloudify-plugins-common==3.1',
     ]
 )

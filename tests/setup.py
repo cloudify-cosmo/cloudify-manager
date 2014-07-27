@@ -34,7 +34,7 @@ PLUGINS_COMMON = "https://github.com/cloudify-cosmo/cloudify-plugins-common" \
 
 setup(
     name='cloudify-tests',
-    version='3.0',
+    version='1.0',
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
     packages=['plugins',
@@ -50,8 +50,8 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.0",
-        "cloudify-rest-client==3.0",
+        "cloudify-plugins-common==3.1",
+        "cloudify-rest-client==3.1",
         "pika==0.9.13",
         "bernhard==0.1.0",
         'elasticsearch==1.0.0'
