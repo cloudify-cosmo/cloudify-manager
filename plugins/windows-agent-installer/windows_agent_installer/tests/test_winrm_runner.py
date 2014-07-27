@@ -26,7 +26,7 @@ from nose.tools import nottest
 
 
 TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo' \
-                         '/cloudify-dsl-parser/archive/develop.zip'
+                         '/cloudify-dsl-parser/archive/master.zip'
 
 
 @nottest

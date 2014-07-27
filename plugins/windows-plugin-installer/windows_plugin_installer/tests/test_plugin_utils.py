@@ -36,7 +36,7 @@ class PluginUtilsTest(unittest.TestCase):
         from windows_plugin_installer.plugin_utils import extract_plugin_name
 
         plugin_url = 'https://github.com/cloudify-cosmo/' \
-                     'cloudify-bash-plugin/archive/develop.zip'
+                     'cloudify-bash-plugin/archive/master.zip'
         self.assertEqual(
             'cloudify-bash-plugin',
             extract_plugin_name(plugin_url))
