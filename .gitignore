@@ -42,3 +42,6 @@ nosetests.xml
 .project
 .pydevproject
 .noseids
+
+# QuickBuild
+.qbcache/
