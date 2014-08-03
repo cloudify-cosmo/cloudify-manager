@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-tests',
-    version='1.0',
+    version='3.1a1',
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
     packages=['plugins',
