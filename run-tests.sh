@@ -25,6 +25,7 @@ if [ "$1" == "test-plugins" ]; then
 	virtualenv ~/env
 	source ~/env/bin/activate
 
+    pip install celery==3.0.24
 	cd cloudify-rest-client; pip install .; cd ..
 	cd cloudify-plugins-common; pip install .; cd ..
 	cd plugins/agent-installer && pip install . && cd ../..
