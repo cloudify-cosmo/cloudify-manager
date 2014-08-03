@@ -8,10 +8,12 @@ if [ "$1" == "test-plugins" ]; then
 	virtualenv package/linux/env
 	source package/linux/env/bin/activate
 
-	git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-	cd cloudify-rest-client; pip install .; cd ..
+    pip install celery==3.0.24
 
-	git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+    cd cloudify-rest-client; pip install .; cd ..
+
+    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
 	cd cloudify-plugins-common; pip install .; cd ..
 
 	cd plugins/agent-installer && pip install . && cd ../..
