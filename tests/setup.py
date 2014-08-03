@@ -36,8 +36,8 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.1",
-        "cloudify-rest-client==3.1",
+        "cloudify-plugins-common==3.1a1",
+        "cloudify-rest-client==3.1a1",
         "pika==0.9.13",
         "bernhard==0.1.0",
         'elasticsearch==1.0.0'

@@ -235,26 +235,32 @@ class CeleryWorkerProcess(object):
             "--include={0}".format(','.join(self._includes))
         ]
 
-        prevdir = os.getcwd()
-        os.chdir(os.path.join(self._tempdir, "plugins"))
+        working_dir = os.path.join(self._tempdir, "plugins")
+
+        env_conf = dict(
+            CELERY_QUEUES=self._queues,
+            TEMP_DIR=self._plugins_tempdir,
+            MANAGER_REST_PORT=str(self._manager_rest_port),
+            MANAGEMENT_IP='localhost',
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL='http://localhost:{0}/{1}'
+            .format(FILE_SERVER_PORT,
+                    FILE_SERVER_BLUEPRINTS_FOLDER),
+            MANAGER_FILE_SERVER_URL='http://localhost:{0}'.format(
+                FILE_SERVER_PORT),
+            AGENT_IP='localhost',
+            VIRTUALENV=dirname(dirname(python_path))
+        )
 
         environment = os.environ.copy()
-        environment['CELERY_QUEUES'] = self._queues
-        environment['TEMP_DIR'] = self._plugins_tempdir
-        environment['MANAGER_REST_PORT'] = str(self._manager_rest_port)
-        environment['MANAGEMENT_IP'] = 'localhost'
-        environment['MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL'] = \
-            'http://localhost:{0}/{1}'.format(FILE_SERVER_PORT,
-                                              FILE_SERVER_BLUEPRINTS_FOLDER)
-        environment['MANAGER_FILE_SERVER_URL'] = 'http://localhost:{0}' \
-            .format(FILE_SERVER_PORT)
+        environment.update(env_conf)
 
-        environment['AGENT_IP'] = 'localhost'
-        environment['VIRTUALENV'] = dirname(dirname(python_path))
-
-        logger.info("Starting celery worker with command {0}".format(
-            celery_command))
-        self._process = subprocess.Popen(celery_command, env=environment)
+        logger.info("Starting celery worker. [command={0} | env="
+                    "{1} | cwd={2}]".format(celery_command,
+                                            env_conf,
+                                            working_dir))
+        self._process = subprocess.Popen(celery_command,
+                                         env=environment,
+                                         cwd=working_dir)
 
         timeout = 60
         deadline = time.time() + timeout
@@ -273,7 +279,6 @@ class CeleryWorkerProcess(object):
                                                  self._process.returncode,
                                                  timeout))
 
-        os.chdir(prevdir)
         logger.info("Celery worker started [pid=%s]", self._process.pid)
 
     def close(self):
