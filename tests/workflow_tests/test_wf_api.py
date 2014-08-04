@@ -95,26 +95,26 @@ class WorkflowsAPITest(TestCase):
                parameters={'do_get': self.do_get})
 
     def test_fail_local_task_eventual_failure(self):
-        if self.do_get:
-            deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
-                   parameters={'do_get': self.do_get})
-        else:
-            self.assertRaises(RuntimeError,
-                              deploy,
-                              resource('dsl/workflow_api.yaml'),
-                              self._testMethodName,
-                              parameters={'do_get': self.do_get})
+        self._local_task_fail_impl(self._testMethodName)
 
     def test_fail_local_task_on_nonrecoverable_error(self):
+        if not self.do_get:
+            # setting infinite retries to make sure that the runtime error
+            # raised is not because we ran out of retries
+            # (no need to do this when self.do_get because the workflow will
+            #  ensure that only one try was attempted)
+            self.configure(retries=-1, interval=1)
+        self._local_task_fail_impl(self._testMethodName)
+
+    def _local_task_fail_impl(self, wf_name):
         if self.do_get:
-            deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+            deploy(resource('dsl/workflow_api.yaml'), wf_name,
                    parameters={'do_get': self.do_get})
         else:
-            self.configure(retries=-1, interval=1)
             self.assertRaises(RuntimeError,
                               deploy,
                               resource('dsl/workflow_api.yaml'),
-                              self._testMethodName,
+                              wf_name,
                               parameters={'do_get': self.do_get})
 
     def test_cancel_on_wait_for_task_termination(self):
