@@ -105,6 +105,18 @@ class WorkflowsAPITest(TestCase):
                               self._testMethodName,
                               parameters={'do_get': self.do_get})
 
+    def test_fail_local_task_on_nonrecoverable_error(self):
+        if self.do_get:
+            deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+                   parameters={'do_get': self.do_get})
+        else:
+            self.configure(retries=-1, interval=1)
+            self.assertRaises(RuntimeError,
+                              deploy,
+                              resource('dsl/workflow_api.yaml'),
+                              self._testMethodName,
+                              parameters={'do_get': self.do_get})
+
     def test_cancel_on_wait_for_task_termination(self):
         _, eid = deploy(
             resource('dsl/workflow_api.yaml'), self._testMethodName,

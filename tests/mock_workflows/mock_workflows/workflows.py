@@ -19,6 +19,7 @@ __author__ = 'dan'
 import time
 from cloudify.decorators import workflow
 from cloudify.workflows import api
+from cloudify.exceptions import NonRecoverableError
 
 
 @workflow
@@ -191,6 +192,31 @@ def test_fail_local_task(ctx, should_fail, do_get):
             if state[i+1] - state[i] < 1:
                 raise RuntimeError('Expected at least 1 second between each '
                                    'invocation')
+
+
+@workflow
+def test_fail_local_task_on_nonrecoverable_error(ctx, do_get, **_):
+    state = []
+
+    # mock local task
+    def fail():
+        state.append(time.time())
+        raise NonRecoverableError('FAIL')
+
+    # execute the task (with retries)
+    try:
+        result = ctx.local_task(fail)
+        if do_get:
+            result.get()
+            raise RuntimeError('Task should have failed')
+    except:
+        pass
+
+    # make assertions
+    if do_get:
+        if len(state) != 1:
+            raise RuntimeError('Expected 1 invocation, got {}'
+                               .format(len(state)))
 
 
 def get_instance(ctx):
