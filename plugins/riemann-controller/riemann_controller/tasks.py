@@ -14,24 +14,46 @@
 #  * limitations under the License.
 
 
-import time
+import os
+import shutil
+from os import path
+
 
 import bernhard
 
 from cloudify.decorators import operation
 
+RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
+
 
 @operation
 def create(ctx, **kwargs):
-    bernhard.Client().send({
-        'host': 'localhost',
-        'service': 'service',
-        'state': 'state',
-        'description': 'description',
-        'time': int(time.time()),
-    })
+    deployment_config_dir_path = _deployment_config_dir(ctx)
+    os.makedirs(deployment_config_dir_path)
+    shutil.copy(_deployment_config(),
+                path.join(deployment_config_dir_path, 'deployment.config'))
+    _send_configuration_event('start', deployment_config_dir_path)
 
 
 @operation
 def delete(ctx, **kwargs):
-    pass
+    deployment_config_dir_path = _deployment_config_dir(ctx)
+    _send_configuration_event('stop', deployment_config_dir_path)
+
+
+def _deployment_config_dir(ctx):
+    return os.path.join(os.environ[RIEMANN_CONFIGS_DIR],
+                        ctx.deployment_id)
+
+
+def _send_configuration_event(state, deployment_config_dir_path):
+    bernhard.Client().send({
+        'service': 'cloudify.configuration',
+        'state': state,
+        'description': deployment_config_dir_path,
+    })
+
+
+def _deployment_config():
+    return path.abspath(path.join(path.dirname(__file__),
+                                  'resources', 'deployment.config'))

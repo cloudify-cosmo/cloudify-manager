@@ -14,6 +14,9 @@
 #    * limitations under the License.
 
 
+import bernhard
+
+
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
@@ -24,4 +27,8 @@ class RiemannTest(TestCase):
     def test_riemann(self):
         dsl_path = resource("dsl/riemann_basic.yaml")
         deployment, _ = deploy(dsl_path)
-        print 1
+        client = bernhard.Client(port=5556)
+        client.send({
+            'service': 'testing',
+            'state': 'notsogood'
+        })

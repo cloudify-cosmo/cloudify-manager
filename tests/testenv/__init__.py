@@ -239,6 +239,7 @@ class CeleryWorkerProcess(object):
 
         env_conf = dict(
             CELERY_QUEUES=self._queues,
+            RIEMANN_CONFIGS_DIR=path.join(self._tempdir, 'riemann'),
             TEMP_DIR=self._plugins_tempdir,
             MANAGER_REST_PORT=str(self._manager_rest_port),
             MANAGEMENT_IP='localhost',
@@ -728,10 +729,13 @@ class TestEnvironment(object):
             # temp directory
             self._tempdir = tempfile.mkdtemp(suffix="test", prefix="cloudify")
             self._plugins_tempdir = path.join(self._tempdir, "cosmo-work")
+            self._riemann_tempdir = path.join(self._tempdir, "riemann")
             logger.info("Test environment will be stored in: %s",
                         self._tempdir)
             if not path.exists(self._plugins_tempdir):
                 os.makedirs(self._plugins_tempdir)
+            if not path.exists(self._riemann_tempdir):
+                os.makedirs(self._riemann_tempdir)
 
             # events/logs polling
             start_events_and_logs_polling()
