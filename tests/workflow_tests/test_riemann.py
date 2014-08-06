@@ -13,16 +13,15 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
 
-from cloudify.decorators import workflow
-
-
-@workflow
-def install(ctx, **kwargs):
-    ctx.execute_task('riemann_controller.tasks.create')
+from testenv import TestCase
+from testenv import get_resource as resource
+from testenv import deploy_application as deploy
 
 
-@workflow
-def uninstall(ctx, **kwargs):
-    ctx.execute_task('riemann_controller.tasks.delete')
+class RiemannTest(TestCase):
+
+    def test_riemann(self):
+        dsl_path = resource("dsl/riemann_basic.yaml")
+        deployment, _ = deploy(dsl_path)
+        print 1

@@ -395,15 +395,14 @@ class RiemannProcess(object):
     """
     Manages a riemann server process lifecycle.
     """
-    pid = None
-    _config_path = None
-    _process = None
-    _detector = None
-    _event = None
-    _riemann_logs = list()
 
     def __init__(self, config_path):
         self._config_path = config_path
+        self.pid = None
+        self._process = None
+        self._detector = None
+        self._event = None
+        self._riemann_logs = list()
 
     def _start_detector(self, process):
         pid_pattern = ".*PID\s(\d*)"
@@ -738,8 +737,7 @@ class TestEnvironment(object):
             start_events_and_logs_polling()
 
             # riemann
-            riemann_config_path = path.join(self._tempdir, "riemann.config")
-            self._generate_riemann_config(riemann_config_path)
+            riemann_config_path = self._get_riemann_config()
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
@@ -943,10 +941,18 @@ class TestEnvironment(object):
                 TestEnvironment._instance._elasticsearch_process:
             TestEnvironment._instance._elasticsearch_process.reset_data()
 
-    @classmethod
-    def _generate_riemann_config(cls, riemann_config_path):
-        source_path = get_resource('riemann/riemann.config')
-        shutil.copy(source_path, riemann_config_path)
+    @staticmethod
+    def _get_riemann_config():
+        init_file = __file__
+        testenv_dir = dirname(init_file)
+        tests_dir = dirname(testenv_dir)
+        manager_dir = dirname(tests_dir)
+        plugins_dir = os.path.join(manager_dir, 'plugins')
+        riemann_dir = os.path.join(plugins_dir, 'riemann-controller')
+        package_dir = os.path.join(riemann_dir, 'riemann_controller')
+        resources_dir = os.path.join(package_dir, 'resources')
+        manager_config = os.path.join(resources_dir, 'manager.config')
+        return manager_config
 
 
 def create_rest_client():
