@@ -17,7 +17,9 @@
 import os
 import shutil
 from os import path
-
+import socket
+import time
+import errno
 
 import bernhard
 
@@ -33,6 +35,7 @@ def create(ctx, **kwargs):
     shutil.copy(_deployment_config(),
                 path.join(deployment_config_dir_path, 'deployment.config'))
     _send_configuration_event('start', deployment_config_dir_path)
+    _verify_core_up(deployment_config_dir_path)
 
 
 @operation
@@ -57,3 +60,23 @@ def _send_configuration_event(state, deployment_config_dir_path):
 def _deployment_config():
     return path.abspath(path.join(path.dirname(__file__),
                                   'resources', 'deployment.config'))
+
+
+def _verify_core_up(deployment_config_dir_path, timeout=5):
+    end = time.time() + timeout
+    while time.time() < end:
+        try:
+            # if we managed to read the port properly, it is an indication
+            # that riemann started the core successfully. otherwise, it would
+            # delete this file and rethrow the exception it caught while trying
+            # to start the core
+            with (open(path.join(deployment_config_dir_path, 'port'))) as f:
+                port = int(f.read())
+            sock = socket.socket()
+            sock.connect(('localhost', port))
+            sock.close()
+            break
+        except IOError, e:
+            if e.errno in [errno.ENOENT, errno.ECONNREFUSED]:
+                time.sleep(0.1)
+            raise
