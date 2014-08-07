@@ -189,7 +189,7 @@ def setup_resources(api):
 
 
 class BlueprintsUpload(object):
-    def do_request(self, blueprint_id=None):
+    def do_request(self, blueprint_id):
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -297,7 +297,7 @@ class BlueprintsUpload(object):
 
     def _prepare_and_submit_blueprint(self, file_server_root,
                                       application_dir,
-                                      blueprint_id=None):
+                                      blueprint_id):
         application_file = self._extract_application_file(file_server_root,
                                                           application_dir)
 
@@ -385,41 +385,6 @@ class BlueprintsIdArchive(Resource):
 class Blueprints(Resource):
 
     @swagger.operation(
-        responseClass=responses.BlueprintState,
-        nickname="upload",
-        notes="Submitted blueprint should be a tar "
-              "gzipped directory containing the blueprint.",
-        parameters=[{'name': 'application_file_name',
-                     'description': 'File name of yaml '
-                                    'containing the "main" blueprint.',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'query',
-                     'defaultValue': 'blueprint.yaml'},
-                    {
-                        'name': 'body',
-                        'description': 'Binary form of the tar '
-                                       'gzipped blueprint directory',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': 'binary',
-                        'paramType': 'body'}
-                    ],
-        consumes=[
-            "application/octet-stream"
-        ]
-
-    )
-    @exceptions_handled
-    @marshal_with(responses.BlueprintState.resource_fields)
-    def post(self):
-        """
-        Upload a blueprint
-        """
-        return BlueprintsUpload().do_request()
-
-    @swagger.operation(
         responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
         nickname="list",
         notes="Returns a list a submitted blueprints."
@@ -471,7 +436,7 @@ class BlueprintsId(Resource):
                         'allowMultiple': False,
                         'dataType': 'binary',
                         'paramType': 'body',
-                        }],
+                    }],
         consumes=[
             "application/octet-stream"
         ]

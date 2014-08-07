@@ -74,7 +74,7 @@ class BlueprintsManager(object):
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url,
-                          resources_base_url, blueprint_id=None):
+                          resources_base_url, blueprint_id):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
@@ -84,8 +84,6 @@ class BlueprintsManager(object):
 
         now = str(datetime.now())
         parsed_plan = json.loads(plan)
-        if not blueprint_id:
-            blueprint_id = parsed_plan['name']
 
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
