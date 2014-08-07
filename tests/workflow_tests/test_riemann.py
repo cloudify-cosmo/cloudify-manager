@@ -15,7 +15,7 @@
 
 
 import bernhard
-
+from os import path
 
 from testenv import TestCase
 from testenv import get_resource as resource
@@ -32,8 +32,12 @@ class RiemannTest(TestCase):
         # we call the riemann.create task
         deployment, _ = deploy(dsl_path)
 
-        # new riemann core should be running on port 5556
-        self._send_riemann_event()
+        # fetch port
+        with open(path.join(self.riemann_workdir, deployment.id, 'port')) as f:
+            port = int(f.read())
+
+        # new riemann core should be running on port
+        self._send_riemann_event(port)
 
         # undeploy so we can safely delete
         undeploy(deployment.id)
@@ -44,19 +48,23 @@ class RiemannTest(TestCase):
             executions = self.client.executions.list(deployment.id)
             terminated = all([e.status == 'terminated' for e in executions])
             self.assertTrue(terminated)
+            node_instances = self.client.node_instances.list(deployment.id)
+            deleted = all([ni.state == 'deleted' for ni in node_instances])
+            self.assertTrue(deleted)
         self.do_assertions(assertion)
 
         # we call the riemann.delete task
         self.client.deployments.delete(deployment.id)
 
-        # riemann core should no longer be running on port 5556
+        # riemann core should no longer be running on port
         def assertion():
             self.assertRaises(bernhard.TransportError,
-                              self._send_riemann_event)
+                              self._send_riemann_event,
+                              port)
         self.do_assertions(assertion)
 
-    def _send_riemann_event(self):
-        client = bernhard.Client(port=5556)
+    def _send_riemann_event(self, port):
+        client = bernhard.Client(port=port)
         client.send({
             'service': 'testing',
             'state': 'notsogood'

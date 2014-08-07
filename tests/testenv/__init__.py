@@ -696,6 +696,10 @@ class TestCase(unittest.TestCase):
     def do_assertions(assertions_func, timeout=10, *args, **kwargs):
         return do_retries(assertions_func, timeout, AssertionError, **kwargs)
 
+    @property
+    def riemann_workdir(self):
+        return TestEnvironment.riemann_workdir()
+
 
 class TestEnvironment(object):
     """
@@ -957,6 +961,12 @@ class TestEnvironment(object):
         resources_dir = os.path.join(package_dir, 'resources')
         manager_config = os.path.join(resources_dir, 'manager.config')
         return manager_config
+
+    @staticmethod
+    def riemann_workdir():
+        if TestEnvironment._instance:
+            return TestEnvironment._instance._riemann_tempdir
+        return None
 
 
 def create_rest_client():
