@@ -1,8 +1,0 @@
-imports:
-    - cloudify.types
-
-blueprint:
-    name: riemann
-    nodes:
-        -   name: riemann
-            type: cloudify.types.base

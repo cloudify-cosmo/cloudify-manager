@@ -111,6 +111,6 @@ def uninstall(ctx, **kwargs):
 
         # Stop deployment policy engine core
         ctx.send_event('Stopping deployment policy engine core'),
-        ctx.execute_task('riemann_controller.tasks.create'))
+        ctx.execute_task('riemann_controller.tasks.delete'))
 
     return graph.execute()
