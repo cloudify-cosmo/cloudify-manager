@@ -21,8 +21,6 @@ from os import path
 
 import bernhard
 
-from cloudify_rest_client.exceptions import CloudifyClientError
-
 from workers_tests import WorkersTestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
