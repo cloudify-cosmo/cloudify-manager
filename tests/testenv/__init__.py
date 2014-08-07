@@ -455,6 +455,12 @@ class RiemannProcess(object):
                 self.pid))
             os.system("kill {0}".format(self.pid))
 
+    def restart(self):
+        self.close()
+        while self._find_existing_riemann_process():
+            time.sleep(0.1)
+        self.start()
+
     def _find_existing_riemann_process(self):
         from subprocess import CalledProcessError
         pattern = "\w*\s*(\d*).*"
@@ -691,6 +697,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.restart_celery_operations_worker()
         TestEnvironment.restart_celery_workflows_worker()
         TestEnvironment.reset_elasticsearch_data()
+        TestEnvironment.clean_riemann_tempdir()
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, *args, **kwargs):
@@ -918,11 +925,22 @@ class TestEnvironment(object):
         """
         Removes and creates a new plugins temporary directory.
         """
+        TestEnvironment._clean_tempdir('_plugins_tempdir')
+
+    @staticmethod
+    def clean_riemann_tempdir():
+        """
+        Removes and creates a new plugins temporary directory.
+        """
+        TestEnvironment._clean_tempdir('_riemann_tempdir')
+
+    @staticmethod
+    def _clean_tempdir(prop):
         if TestEnvironment._instance:
-            plugins_tempdir = TestEnvironment._instance._plugins_tempdir
-            if path.exists(plugins_tempdir):
-                shutil.rmtree(plugins_tempdir)
-                os.makedirs(plugins_tempdir)
+            tmpdir = getattr(TestEnvironment._instance, prop)
+            if path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+                os.makedirs(tmpdir)
 
     @staticmethod
     def create_celery_worker(queue):
@@ -942,6 +960,12 @@ class TestEnvironment(object):
                 (TestEnvironment._instance._celery_workflows_worker_process):
             TestEnvironment._instance._celery_workflows_worker_process \
                 .restart()
+
+    @staticmethod
+    def restart_riemann():
+        if TestEnvironment._instance and \
+                (TestEnvironment._instance._riemann_process):
+            TestEnvironment._instance._riemann_process.restart()
 
     @staticmethod
     def reset_elasticsearch_data():
