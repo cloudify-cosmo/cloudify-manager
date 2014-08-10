@@ -150,7 +150,7 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
     if deployment_workflows is not None:
         workflows = [responses.Workflow(
             name=wf_name, created_at=None, parameters=wf.get(
-                'parameters', [])) for wf_name, wf
+                'parameters', dict())) for wf_name, wf
             in deployment_workflows.iteritems()]
 
         deployment_dict['workflows'] = workflows
