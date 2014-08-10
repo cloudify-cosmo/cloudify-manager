@@ -31,7 +31,8 @@ RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
 @operation
 def create(ctx, **kwargs):
     deployment_config_dir_path = _deployment_config_dir(ctx)
-    os.makedirs(deployment_config_dir_path)
+    if not os.path.isdir(deployment_config_dir_path):
+        os.makedirs(deployment_config_dir_path)
     shutil.copy(_deployment_config(),
                 path.join(deployment_config_dir_path, 'deployment.config'))
     _send_configuration_event('start', deployment_config_dir_path)
