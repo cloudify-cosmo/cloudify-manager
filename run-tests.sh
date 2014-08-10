@@ -74,10 +74,8 @@ run_intergration_tests()
     export PATH=$PATH:/usr/share/elasticsearch/bin
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
-    wget http://aphyr.com/riemann/riemann_0.2.2_all.deb
-    sudo dpkg -i riemann_0.2.2_all.deb
-    sudo touch /var/log/riemann/riemann.log
-    sudo chmod 666 /var/log/riemann/riemann.log
+    wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
+    sudo dpkg -i riemann_0.2.6_all.deb
     sudo test -d /dev/shm && sudo rm -rf /dev/shm
     sudo ln -Tsf /{run,dev}/shm
     sudo chmod 777 /dev/shm  # for celery worker
