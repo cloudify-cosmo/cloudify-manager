@@ -77,9 +77,9 @@ def install(ctx, **kwargs):
                 kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     # Start deployment policy engine core
-    sequence.add(
-        ctx.send_event('Starting deployment policy engine core'),
-        ctx.execute_task('riemann_controller.tasks.create'))
+    # sequence.add(
+    #     ctx.send_event('Starting deployment policy engine core'),
+    #     ctx.execute_task('riemann_controller.tasks.create'))
 
     return graph.execute()
 
@@ -110,7 +110,7 @@ def uninstall(ctx, **kwargs):
             kwargs=WORKFLOWS_WORKER_PAYLOAD),
 
         # Stop deployment policy engine core
-        ctx.send_event('Stopping deployment policy engine core'),
-        ctx.execute_task('riemann_controller.tasks.delete'))
+        # ctx.send_event('Stopping deployment policy engine core'),
+        # ctx.execute_task('riemann_controller.tasks.delete'))
 
     return graph.execute()

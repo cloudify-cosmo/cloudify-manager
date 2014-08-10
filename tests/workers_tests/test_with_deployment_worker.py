@@ -110,8 +110,8 @@ class TestWithDeploymentWorker(WorkersTestCase):
         self.assertEquals(state, AFTER_INSTALL_STAGES)
 
         # test riemann core started successfully
-        riemann_core_port = self._read_riemann_core_port()
-        self._send_riemann_event(riemann_core_port)
+        # riemann_core_port = self._read_riemann_core_port()
+        # self._send_riemann_event(riemann_core_port)
 
         # start agent worker
         node_id = self._list_nodes()[0].id
@@ -153,12 +153,12 @@ class TestWithDeploymentWorker(WorkersTestCase):
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
         # validate riemann core is no longer running
-        def _riemann_core_down_assertions():
-            self.assertRaises(IOError, self._read_riemann_core_port)
-            self.assertRaises(bernhard.TransportError,
-                              self._send_riemann_event,
-                              riemann_core_port)
-        self.do_assertions(_riemann_core_down_assertions)
+        # def _riemann_core_down_assertions():
+        #     self.assertRaises(IOError, self._read_riemann_core_port)
+        #     self.assertRaises(bernhard.TransportError,
+        #                       self._send_riemann_event,
+        #                       riemann_core_port)
+        # self.do_assertions(_riemann_core_down_assertions)
 
     def _execute(self, workflow):
         execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
