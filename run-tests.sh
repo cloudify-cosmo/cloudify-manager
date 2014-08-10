@@ -84,6 +84,7 @@ run_intergration_tests()
 
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
+    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
@@ -115,5 +116,5 @@ case $1 in
     test-plugins         ) test_plugins;;
     test-rest-service    ) test_rest_service;;
     run-integration-tests) run_intergration_tests;;
-    run_flake8           ) run_flake8;;
+    flake8               ) run_flake8;;
 esac
