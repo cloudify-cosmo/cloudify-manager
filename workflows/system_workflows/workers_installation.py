@@ -109,8 +109,8 @@ def uninstall(ctx, **kwargs):
             task_name='worker_installer.tasks.uninstall',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
-        # Stop deployment policy engine core
-        # ctx.send_event('Stopping deployment policy engine core'),
-        # ctx.execute_task('riemann_controller.tasks.delete'))
+    #     Stop deployment policy engine core
+    #     ctx.send_event('Stopping deployment policy engine core'),
+    #     ctx.execute_task('riemann_controller.tasks.delete'))
 
     return graph.execute()
