@@ -17,6 +17,9 @@ __author__ = 'dank'
 
 import uuid
 import time
+from os import path
+
+import bernhard
 
 from workers_tests import WorkersTestCase
 from testenv import get_resource as resource
@@ -49,6 +52,10 @@ AFTER_UNINSTALL_STAGES = AFTER_INSTALL_STAGES + [STOPPED, UNINSTALLED]
 
 
 class TestWithDeploymentWorker(WorkersTestCase):
+    """
+    This test is the only one (for the time this docstring was written)
+    to test the real workers installation / un-installation workflows.
+    """
 
     def setUp(self):
         super(TestWithDeploymentWorker, self).setUp()
@@ -102,6 +109,10 @@ class TestWithDeploymentWorker(WorkersTestCase):
                           args=[DEPLOYMENT_WORKFLOWS_QUEUE])
         self.assertEquals(state, AFTER_INSTALL_STAGES)
 
+        # test riemann core started successfully
+        # riemann_core_port = self._read_riemann_core_port()
+        # self._send_riemann_event(riemann_core_port)
+
         # start agent worker
         node_id = self._list_nodes()[0].id
         agent_worker = TestEnvironment.create_celery_worker(node_id)
@@ -141,6 +152,14 @@ class TestWithDeploymentWorker(WorkersTestCase):
                           args=[node_id])
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
+        # validate riemann core is no longer running
+        # def _riemann_core_down_assertions():
+        #     self.assertRaises(IOError, self._read_riemann_core_port)
+        #     self.assertRaises(bernhard.TransportError,
+        #                       self._send_riemann_event,
+        #                       riemann_core_port)
+        # self.do_assertions(_riemann_core_down_assertions)
+
     def _execute(self, workflow):
         execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
         wait_for_execution_to_end(execution)
@@ -151,3 +170,14 @@ class TestWithDeploymentWorker(WorkersTestCase):
 
     def _get(self, task, queue, args=None):
         return send_task(task, queue=queue, args=args).get(timeout=10)
+
+    def _read_riemann_core_port(self):
+        with open(path.join(self.riemann_workdir, DEPLOYMENT_ID, 'port')) as f:
+            return int(f.read())
+
+    def _send_riemann_event(self, port):
+        client = bernhard.Client(port=port)
+        client.send({
+            'service': 'testing',
+            'state': 'notsogood'
+        })
