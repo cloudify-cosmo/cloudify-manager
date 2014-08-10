@@ -80,4 +80,5 @@ def _verify_core_up(deployment_config_dir_path, timeout=5):
         except IOError, e:
             if e.errno in [errno.ENOENT, errno.ECONNREFUSED]:
                 time.sleep(0.1)
-            raise
+            else:
+                raise

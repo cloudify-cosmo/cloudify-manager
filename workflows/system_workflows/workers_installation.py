@@ -107,7 +107,7 @@ def uninstall(ctx, **kwargs):
         ctx.send_event('Uninstall deployment workflows worker'),
         ctx.execute_task(
             task_name='worker_installer.tasks.uninstall',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD),
+            kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
         # Stop deployment policy engine core
         # ctx.send_event('Stopping deployment policy engine core'),
