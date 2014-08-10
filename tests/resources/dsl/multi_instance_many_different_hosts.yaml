@@ -2,29 +2,27 @@ imports:
   - "cloudify.types"
   - "cloudmock.yaml"
 
-blueprint:
-    name: multi_instance_many_different_hosts
-    nodes:
-        -   name: host1
-            type: test_host
-            instances:
-                deploy: 5
-            properties:
-                install_agent: false
-        -   name: host2
-            type: test_host
-            instances:
-                deploy: 5
-            properties:
-                install_agent: false
-        -   name: host3
-            type: test_host
-            instances:
-                deploy: 5
-            properties:
-                install_agent: false
+node_templates:
+    host1:
+        type: test_host
+        instances:
+            deploy: 5
+        properties:
+            install_agent: false
+    host2:
+        type: test_host
+        instances:
+            deploy: 5
+        properties:
+            install_agent: false
+    host3:
+        type: test_host
+        instances:
+            deploy: 5
+        properties:
+            install_agent: false
 
-types:
+node_types:
     test_host:
         derived_from: cloudify.types.host
         interfaces:

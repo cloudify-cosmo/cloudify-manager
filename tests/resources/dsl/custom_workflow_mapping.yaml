@@ -2,21 +2,19 @@ imports:
     - "cloudify.types"
     - "cloudmock.yaml"
 
-blueprint:
-    name: "simple_web_server"
-    nodes:
-        -   name: "webserver_host"
-            type: "cloudify.types.host"
-            properties:
-                install_agent: false
-            interfaces:
-                cloudify.interfaces.host:
-                    - get_state: cloudmock.tasks.get_state
-                cloudify.interfaces.lifecycle:
-                    - create: cloudmock.tasks.provision
-                    - start: cloudmock.tasks.start
-                    - stop: cloudmock.tasks.stop
-                    - delete: cloudmock.tasks.terminate
+node_templates:
+    "webserver_host":
+        type: "cloudify.types.host"
+        properties:
+            install_agent: false
+        interfaces:
+            cloudify.interfaces.host:
+                - get_state: cloudmock.tasks.get_state
+            cloudify.interfaces.lifecycle:
+                - create: cloudmock.tasks.provision
+                - start: cloudmock.tasks.start
+                - stop: cloudmock.tasks.stop
+                - delete: cloudmock.tasks.terminate
 
 workflows:
     custom: workflows.idonotexist.so.do.try.running.me

@@ -2,24 +2,24 @@ imports:
     - "cloudify.types"
     - "testmockoperations.yaml"
 
-blueprint:
-    name: "mock_app"
-    nodes:
-        -   name: "host_node"
-            type: "mock_type"
+node_templates:
+    "host_node":
+        type: "mock_type"
 
-        -   name: "db_node"
-            type: "mock_type"
-            relationships:
-                - type: "cloudify.relationships.contained_in"
-                  target: "host_node"
+    "db_node":
+        type: "mock_type"
+        relationships:
+            - type: "cloudify.relationships.contained_in"
+              target: "host_node"
 
-types:
+node_types:
     mock_type:
         derived_from: "cloudify.types.base"
         properties:
-            - property_name: property1
-            - value: value1
+            property_name:
+                default: property1
+            value:
+                default: value1
         interfaces:
             cloudify.interfaces.lifecycle:
                 - start: testmockoperations.tasks.make_reachable

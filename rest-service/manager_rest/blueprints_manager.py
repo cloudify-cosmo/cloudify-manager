@@ -319,15 +319,13 @@ class BlueprintsManager(object):
         """
 
         merged_execution_parameters = dict()
-        workflow_parameters = workflow.get('parameters', [])
+        workflow_parameters = workflow.get('parameters', dict())
         execution_parameters = execution_parameters or dict()
 
-        workflow_parameters_names = set()
         missing_mandatory_parameters = set()
 
-        for param in workflow_parameters:
-            if isinstance(param, basestring):
-                workflow_parameters_names.add(param)
+        for param_name, param in workflow_parameters.iteritems():
+            if 'default' not in param:
                 # parameter without a default value - ensure one was
                 # provided via execution parameters
                 if param not in execution_parameters:
@@ -337,8 +335,6 @@ class BlueprintsManager(object):
                 merged_execution_parameters[param] = \
                     execution_parameters[param]
             else:
-                param_name = param.keys()[0]
-                workflow_parameters_names.add(param_name)
                 merged_execution_parameters[param_name] = \
                     execution_parameters[param_name] if \
                     param_name in execution_parameters else param[param_name]
@@ -351,7 +347,7 @@ class BlueprintsManager(object):
                         workflow_name, ','.join(missing_mandatory_parameters)))
 
         custom_parameters = {k: v for k, v in execution_parameters.iteritems()
-                             if k not in workflow_parameters_names}
+                             if k not in workflow_parameters}
 
         if not allow_custom_parameters and custom_parameters:
             raise \

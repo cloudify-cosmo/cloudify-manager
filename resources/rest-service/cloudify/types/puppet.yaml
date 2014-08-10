@@ -12,13 +12,13 @@ plugins:
             url: https://github.com/cloudify-cosmo/cloudify-puppet-plugin/archive/develop.tar.gz
 
 
-types:
+node_types:
     cloudify.types.puppet.middleware_server:
         derived_from: cloudify.types.middleware_server
         properties:
             # All Puppet related configuration goes inside
             # the "puppet_config" property.
-            - puppet_config
+            puppet_config: {}
 
                 # server (required)
                 # ------
@@ -174,7 +174,7 @@ types:
     cloudify.types.puppet.app_server:
         derived_from: cloudify.types.app_server
         properties:
-            - puppet_config
+            puppet_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create:    puppet_plugin.operations.operation
@@ -186,7 +186,7 @@ types:
     cloudify.types.puppet.db_server:
         derived_from: cloudify.types.db_server
         properties:
-            - puppet_config
+            puppet_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create:    puppet_plugin.operations.operation
@@ -198,7 +198,7 @@ types:
     cloudify.types.puppet.web_server:
         derived_from: cloudify.types.web_server
         properties:
-            - puppet_config
+            puppet_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create:    puppet_plugin.operations.operation
@@ -211,7 +211,7 @@ types:
     cloudify.types.puppet.message_bus_server:
         derived_from: cloudify.types.message_bus_server
         properties:
-            - puppet_config
+            puppet_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create:    puppet_plugin.operations.operation
@@ -223,7 +223,7 @@ types:
     cloudify.types.puppet.app_module:
         derived_from: cloudify.types.app_module
         properties:
-            - puppet_config
+            puppet_config: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create:    puppet_plugin.operations.operation

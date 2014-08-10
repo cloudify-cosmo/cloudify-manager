@@ -3,50 +3,50 @@ imports:
     - testmockoperations.yaml
     - mock_workflows_plugin.yaml
 
-blueprint:
-    name: test_workflow_properties
-    nodes:
-        -   name: test_node
-            type: cloudify.types.base
-            interfaces:
-                test:
-                    - op1: testmockoperations.tasks.mock_operation_from_custom_workflow
-                    - op2:
-                        mapping: testmockoperations.tasks.fail
-                        properties:
-                            fail_count: 2
-                    - op3:
-                        mapping: testmockoperations.tasks.fail
-                        properties:
-                            fail_count: 3
-                    - sleep: testmockoperations.tasks.sleep
-                    - fail: testmockoperations.tasks.fail
+node_templates:
+    test_node:
+        type: cloudify.types.base
+        interfaces:
+            test:
+                - op1: testmockoperations.tasks.mock_operation_from_custom_workflow
+                - op2:
+                    mapping: testmockoperations.tasks.fail
+                    properties:
+                        fail_count: 2
+                - op3:
+                    mapping: testmockoperations.tasks.fail
+                    properties:
+                        fail_count: 3
+                - sleep: testmockoperations.tasks.sleep
+                - fail: testmockoperations.tasks.fail
 
 workflows:
     test_simple:
         mapping: mock_workflows.workflows.test_simple
-        parameters: [do_get, key, value]
+        parameters: {do_get: {}, key: {}, value: {}}
     test_fail_remote_task_eventual_success:
         mapping: mock_workflows.workflows.test_fail_remote_task_eventual_success
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_fail_remote_task_eventual_failure:
         mapping: mock_workflows.workflows.test_fail_remote_task_eventual_failure
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_fail_local_task_eventual_success:
         mapping: mock_workflows.workflows.test_fail_local_task_eventual_success
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_fail_local_task_eventual_failure:
         mapping: mock_workflows.workflows.test_fail_local_task_eventual_failure
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_fail_local_task_on_nonrecoverable_error:
         mapping: mock_workflows.workflows.test_fail_local_task_on_nonrecoverable_error
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_cancel_on_wait_for_task_termination:
         mapping: mock_workflows.workflows.test_cancel_on_wait_for_task_termination
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_cancel_on_task_retry_interval:
         mapping: mock_workflows.workflows.test_cancel_on_task_retry_interval
-        parameters: [do_get]
+        parameters: {do_get: {}}
     test_illegal_non_graph_to_graph_mode:
         mapping: mock_workflows.workflows.test_illegal_non_graph_to_graph_mode
-        parameters: [{stub: stub}]
+        parameters:
+            stub:
+                default: stub

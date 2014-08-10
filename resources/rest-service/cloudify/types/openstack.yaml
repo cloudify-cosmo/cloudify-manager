@@ -16,14 +16,17 @@ plugins:
             url: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/1.0.zip
 
 
-types:
+node_types:
     cloudify.openstack.server:
         derived_from: cloudify.types.host
         properties:
-            - server
-            - management_network_name: ''
-            - nova_config: {}
-            - neutron_config: {}
+            server: {}
+            management_network_name:
+                default: ''
+            nova_config:
+                default: {}
+            neutron_config:
+                default: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - start: nova_plugin.server.start
@@ -46,8 +49,9 @@ types:
     cloudify.openstack.subnet:
         derived_from: cloudify.types.subnet
         properties:
-            - subnet
-            - neutron_config: {}
+            subnet: {}
+            neutron_config:
+                default: {}
         interfaces:
              cloudify.interfaces.lifecycle:
                   - create: neutron_plugin.subnet.create
@@ -56,10 +60,13 @@ types:
     cloudify.openstack.security_group:
         derived_from: cloudify.types.base
         properties:
-            - security_group
-            - neutron_config: {}
-            - rules: []
-            - disable_egress: false
+            security_group: {}
+            neutron_config:
+                default: {}
+            rules:
+                default: []
+            disable_egress:
+                default: false
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create: neutron_plugin.security_group.create
@@ -68,8 +75,10 @@ types:
     cloudify.openstack.router:
         derived_from: cloudify.types.router
         properties:
-            - router: {}
-            - neutron_config: {}
+            router:
+                default: {}
+            neutron_config:
+                default: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create: neutron_plugin.router.create
@@ -78,8 +87,9 @@ types:
     cloudify.openstack.port:
         derived_from: cloudify.types.base
         properties:
-            - port
-            - neutron_config: {}
+            port: {}
+            neutron_config:
+                default: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create: neutron_plugin.port.create
@@ -87,8 +97,9 @@ types:
     cloudify.openstack.network:
         derived_from: cloudify.types.network
         properties:
-            - network
-            - neutron_config: {}
+            network: {}
+            neutron_config:
+                default: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create: neutron_plugin.network.create
@@ -97,8 +108,10 @@ types:
     cloudify.openstack.floatingip:
         derived_from: cloudify.types.base
         properties:
-            - floatingip: {}
-            - neutron_config: {}
+            floatingip:
+                default: {}
+            neutron_config:
+                default: {}
         interfaces:
              cloudify.interfaces.lifecycle:
                   - create: neutron_plugin.floatingip.create
