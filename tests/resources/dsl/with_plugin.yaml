@@ -13,27 +13,27 @@ plugins:
         properties:
             url: "http://test_agent_plugin.zip"
 
-types:
+node_types:
     test_host:
         derived_from: cloudify.types.host
         properties:
-            -   install_agent: true
-            -   cloudify_agent:
+            install_agent:
+                default: true
+            cloudify_agent:
+                default:
                     name: ${node_id}
 
-blueprint:
-    name: "simple_web_server"
-    nodes:
-        -   name: "webserver_host"
-            type: test_host
-            interfaces:
-                cloudify.interfaces.host:
-                    - get_state: cloudmock.tasks.get_state
-                cloudify.interfaces.lifecycle:
-                    - create: cloudmock.tasks.provision
-                    - start: cloudmock.tasks.start
-                    - stop: cloudmock.tasks.stop
-                    - delete: cloudmock.tasks.terminate
-                cloudify.interfaces.test_lifecycle:
-                    - create: test_plugin.tasks.start
-                    - stop: test_management_plugin.stop
+node_templates:
+    "webserver_host":
+        type: test_host
+        interfaces:
+            cloudify.interfaces.host:
+                - get_state: cloudmock.tasks.get_state
+            cloudify.interfaces.lifecycle:
+                - create: cloudmock.tasks.provision
+                - start: cloudmock.tasks.start
+                - stop: cloudmock.tasks.stop
+                - delete: cloudmock.tasks.terminate
+            cloudify.interfaces.test_lifecycle:
+                - create: test_plugin.tasks.start
+                - stop: test_management_plugin.stop

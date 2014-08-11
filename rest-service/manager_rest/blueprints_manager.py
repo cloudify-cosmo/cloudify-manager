@@ -74,7 +74,7 @@ class BlueprintsManager(object):
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url,
-                          resources_base_url, blueprint_id=None):
+                          resources_base_url, blueprint_id):
         # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
@@ -84,8 +84,6 @@ class BlueprintsManager(object):
 
         now = str(datetime.now())
         parsed_plan = json.loads(plan)
-        if not blueprint_id:
-            blueprint_id = parsed_plan['name']
 
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
@@ -321,15 +319,13 @@ class BlueprintsManager(object):
         """
 
         merged_execution_parameters = dict()
-        workflow_parameters = workflow.get('parameters', [])
+        workflow_parameters = workflow.get('parameters', dict())
         execution_parameters = execution_parameters or dict()
 
-        workflow_parameters_names = set()
         missing_mandatory_parameters = set()
 
-        for param in workflow_parameters:
-            if isinstance(param, basestring):
-                workflow_parameters_names.add(param)
+        for param_name, param in workflow_parameters.iteritems():
+            if 'default' not in param:
                 # parameter without a default value - ensure one was
                 # provided via execution parameters
                 if param not in execution_parameters:
@@ -339,8 +335,6 @@ class BlueprintsManager(object):
                 merged_execution_parameters[param] = \
                     execution_parameters[param]
             else:
-                param_name = param.keys()[0]
-                workflow_parameters_names.add(param_name)
                 merged_execution_parameters[param_name] = \
                     execution_parameters[param_name] if \
                     param_name in execution_parameters else param[param_name]
@@ -353,7 +347,7 @@ class BlueprintsManager(object):
                         workflow_name, ','.join(missing_mandatory_parameters)))
 
         custom_parameters = {k: v for k, v in execution_parameters.iteritems()
-                             if k not in workflow_parameters_names}
+                             if k not in workflow_parameters}
 
         if not allow_custom_parameters and custom_parameters:
             raise \

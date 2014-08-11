@@ -5,12 +5,10 @@
 # It is not recommended to use different Chef versions on same server and we
 # do not test such configuration. Example:
 #
-#     nodes:
-#         -
-#             name: server
+#     node_templates:
+#         server:
 #             ...
-#         -
-#             name: chef_node_1
+#         chef_node_1:
 #             type: app_server_chef
 #             properties:
 #                 chef_config:
@@ -20,8 +18,7 @@
 #                 -
 #                     type: cloudify.relationships.contained_in
 #                     target: server  # *** Same server ***
-#         -
-#             name: chef_node_2
+#         chef_node_2:
 #             type: app_server_chef
 #             properties:
 #                 chef_config:
@@ -45,13 +42,13 @@ plugins:
         properties:
             url: https://github.com/cloudify-cosmo/cloudify-chef-plugin/archive/1.0.zip
 
-types:
+node_types:
     cloudify.types.chef.middleware_server:
         derived_from: cloudify.types.middleware_server
         properties:
             # All Chef related configuration goes inside
             # the "chef_config" property.
-            - chef_config
+            chef_config: {}
 
                 # Alternative 1: Chef Solo
                 #
@@ -201,7 +198,7 @@ types:
                 - stop:      chef_plugin.operations.operation
                 - delete:    chef_plugin.operations.operation
         properties:
-            - chef_config
+            chef_config: {}
 
     # An app server configured with chef
     # see docs for cloudify.types.chef.middleware_server
@@ -215,7 +212,7 @@ types:
                 - stop:      chef_plugin.operations.operation
                 - delete:    chef_plugin.operations.operation
         properties:
-            - chef_config
+            chef_config: {}
 
     # A db server configured with chef
     # see docs for cloudify.types.chef.middleware_server
@@ -229,7 +226,7 @@ types:
                 - stop:      chef_plugin.operations.operation
                 - delete:    chef_plugin.operations.operation
         properties:
-            - chef_config
+            chef_config: {}
 
     # A message bus server configured with chef
     # see docs for cloudify.types.chef.middleware_server
@@ -243,7 +240,7 @@ types:
                 - stop:      chef_plugin.operations.operation
                 - delete:    chef_plugin.operations.operation
         properties:
-            - chef_config
+            chef_config: {}
 
     # An app module configured with chef
     # see docs for cloudify.types.chef.middleware_server
@@ -257,7 +254,7 @@ types:
                 - stop:      chef_plugin.operations.operation
                 - delete:    chef_plugin.operations.operation
         properties:
-            - chef_config
+            chef_config: {}
 
 relationships:
     cloudify.chef.depends_on:
