@@ -21,20 +21,31 @@ import socket
 import time
 import errno
 
+import requests
 import bernhard
 
 from cloudify.decorators import operation
+
+from riemann_controller import config
 
 RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
 
 
 @operation
-def create(ctx, **kwargs):
+def create(ctx, policy_types=None, groups=None, **kwargs):
+    policy_types = policy_types or {}
+    groups = groups or {}
+    _process_policy_type_sources(ctx, policy_types)
     deployment_config_dir_path = _deployment_config_dir(ctx)
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
-    shutil.copy(_deployment_config(),
-                path.join(deployment_config_dir_path, 'deployment.config'))
+    with open(_deployment_config_template()) as f:
+        deployment_config_template = f.read()
+    with open(path.join(deployment_config_dir_path,
+                        'deployment.config'), 'w') as f:
+        f.write(config.create(policy_types,
+                              groups,
+                              deployment_config_template))
     _send_configuration_event('start', deployment_config_dir_path)
     _verify_core_up(deployment_config_dir_path)
 
@@ -58,9 +69,10 @@ def _send_configuration_event(state, deployment_config_dir_path):
     })
 
 
-def _deployment_config():
+def _deployment_config_template():
     return path.abspath(path.join(path.dirname(__file__),
-                                  'resources', 'deployment.config'))
+                                  'resources',
+                                  'deployment.config.template'))
 
 
 def _verify_core_up(deployment_config_dir_path, timeout=5):
@@ -82,3 +94,23 @@ def _verify_core_up(deployment_config_dir_path, timeout=5):
                 time.sleep(0.1)
             else:
                 raise
+
+
+def _process_policy_type_sources(ctx, policy_types):
+    for policy_type in policy_types.values():
+        policy_type['source'] = _process_source(ctx, policy_type['source'])
+
+
+def _process_source(ctx, source):
+    schema, location = source.split('://')
+    if schema in ['http', 'https']:
+        return requests.get(source).text
+    elif schema == 'file':
+        with open(location) as f:
+            return f.read()
+    elif schema == 'resource':
+        return ctx.get_resource(location)
+    elif schema == 'blueprint':
+        return ctx.get_blueprint_resource(location)
+    else:
+        return source

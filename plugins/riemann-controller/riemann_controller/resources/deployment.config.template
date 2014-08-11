@@ -1,0 +1,17 @@
+; vim: filetype=clojure
+
+(periodically-expire 5)
+
+(let [index (index)]
+  (streams
+    (default :ttl 60 index)
+
+    {% for stream in streams %}
+    ; generated
+    ; [group={{stream.metadata.group}},
+    ;  policy={{stream.metadata.policy}},
+    ;  policy_type={{stream.metadata.policy_type}},
+    ;  members={{stream.metadata.members}}]
+    {{stream.data}}
+
+    {% endfor %}))

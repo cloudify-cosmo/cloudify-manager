@@ -26,7 +26,7 @@ setup(
               'riemann_controller.resources'],
     package_data={'riemann_controller.resources': [
         'manager.config',
-        'deployment.config'
+        'deployment.config.template'
     ]},
     license='LICENSE',
     description='Plugin for creating riemann configuration'
