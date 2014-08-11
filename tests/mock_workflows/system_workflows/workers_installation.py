@@ -21,7 +21,8 @@ from cloudify.decorators import workflow
 @workflow
 def install(ctx, **kwargs):
     # taken from original workers_installation workflow
-    ctx.execute_task('riemann_controller.tasks.create')
+    ctx.execute_task('riemann_controller.tasks.create',
+                     kwargs=kwargs.get('policy_configuration', {}))
 
 
 @workflow
