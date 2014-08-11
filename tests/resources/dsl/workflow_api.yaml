@@ -38,6 +38,9 @@ workflows:
     test_fail_local_task_eventual_failure:
         mapping: mock_workflows.workflows.test_fail_local_task_eventual_failure
         parameters: [do_get]
+    test_fail_local_task_on_nonrecoverable_error:
+        mapping: mock_workflows.workflows.test_fail_local_task_on_nonrecoverable_error
+        parameters: [do_get]
     test_cancel_on_wait_for_task_termination:
         mapping: mock_workflows.workflows.test_cancel_on_wait_for_task_termination
         parameters: [do_get]

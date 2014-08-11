@@ -42,3 +42,8 @@ nosetests.xml
 .project
 .pydevproject
 .noseids
+
+# QuickBuild
+.qbcache/
+
+riemann.log

@@ -24,13 +24,12 @@ from os import path
 
 import pip
 
-from celery.utils.log import get_task_logger
 from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
 from cloudify.utils import get_cosmo_properties
 from cloudify.decorators import operation
 
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger('default')
 logger.level = logging.DEBUG
 
 
@@ -46,6 +45,8 @@ def install(ctx, plugins, **kwargs):
     The plugin folder should be a a folder name inside the blueprint
     'plugins' directory containing the plugin.
     """
+    global logger
+    logger = ctx.logger
 
     for plugin in plugins:
         ctx.logger.info("Installing plugin {0}".format(plugin['name']))

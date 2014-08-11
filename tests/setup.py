@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-tests',
-    version='1.0',
+    version='3.1a1',
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
     packages=['plugins',
@@ -36,10 +36,10 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.1",
-        "cloudify-rest-client==3.1",
+        "cloudify-plugins-common==3.1a1",
+        "cloudify-rest-client==3.1a1",
         "pika==0.9.13",
-        "bernhard==0.1.0",
+        "bernhard==0.1.1",
         'elasticsearch==1.0.0'
     ]
 )

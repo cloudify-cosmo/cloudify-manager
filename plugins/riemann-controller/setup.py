@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,27 +13,28 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanmo'
 
 from setuptools import setup
 
-PLUGINS_COMMON_VERSION = "3.0"
-PLUGINS_COMMON_BRANCH = "3.0"
-PLUGINS_COMMON = "https://github.com/cloudify-cosmo" \
-                 "/cloudify-plugins-common/tarball/{0}" \
-    .format(PLUGINS_COMMON_BRANCH)
 
 setup(
-    name='mock-sudo-plugin',
+    name='cloudify-riemann-controller-plugin',
     version='3.1a1',
-    author='idanmo',
-    author_email='idan@gigaspaces.com',
-    packages=['sudo_plugin'],
+    author='Gigaspaces',
+    author_email='cosmo-admin@gigaspaces.com',
+    packages=['riemann_controller',
+              'riemann_controller.resources'],
+    package_data={'riemann_controller.resources': [
+        'manager.config',
+        'deployment.config'
+    ]},
     license='LICENSE',
-    description='Plugin for running simple bash scripts',
+    description='Plugin for creating riemann configuration'
+                ' based on blueprint policies and starting '
+                ' a riemann core with generated configuration',
     install_requires=[
-        "cloudify-plugins-common"
+        'cloudify-plugins-common==3.1a1',
+        'jinja2==2.7.2',
+        'bernhard==0.1.1'
     ],
-    dependency_links=["{0}#egg=cloudify-plugins-common-{1}"
-                      .format(PLUGINS_COMMON,
-                              PLUGINS_COMMON_VERSION)])
+)

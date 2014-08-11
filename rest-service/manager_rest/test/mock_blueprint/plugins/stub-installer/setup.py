@@ -21,7 +21,7 @@ import setuptools
 setuptools.setup(
     zip_safe=False,
     name='stub-installer',
-    version='0.1.0',
+    version='3.1a1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['stub_app_installer'],
