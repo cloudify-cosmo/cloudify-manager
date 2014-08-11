@@ -6,12 +6,11 @@
   (streams
     (default :ttl 60 index)
 
-    {% for stream in streams %}
-    ; generated
-    ; [group={{stream.metadata.group}},
-    ;  policy={{stream.metadata.policy}},
-    ;  policy_type={{stream.metadata.policy_type}},
-    ;  members={{stream.metadata.members}}]
-    {{stream.data}}
+{% for stream in streams %}
+; group={{stream.metadata.group}}
+; policy={{stream.metadata.policy}}
+; policy_type={{stream.metadata.policy_type}}
+; members={{stream.metadata.members | join(", ")}}
+{{stream.data}}
 
-    {% endfor %}))
+{% endfor %}))

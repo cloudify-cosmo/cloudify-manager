@@ -1,0 +1,27 @@
+imports:
+    - cloudify.types
+
+node_templates:
+    node:
+        type: cloudify.types.base
+
+policy_types:
+    policy:
+        properties:
+            key1:
+                default: value1
+            key2:
+                default: value2
+            key3:
+                description: key3 description
+        source: file:///home/dan/work/riemann/policy.config.template
+
+groups:
+    group:
+        members: [node]
+        policies:
+            policy:
+                type: policy
+                properties:
+                    key2: group_value2
+                    key3: group_value3
