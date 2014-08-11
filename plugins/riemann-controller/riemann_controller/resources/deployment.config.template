@@ -1,5 +1,3 @@
-; vim: filetype=clojure
-
 (periodically-expire 5)
 
 (let [index (index)]

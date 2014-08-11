@@ -88,12 +88,14 @@ def _verify_core_up(deployment_config_dir_path, timeout=5):
             sock = socket.socket()
             sock.connect(('localhost', port))
             sock.close()
-            break
+            return
         except IOError, e:
             if e.errno in [errno.ENOENT, errno.ECONNREFUSED]:
                 time.sleep(0.1)
             else:
                 raise
+    raise RuntimeError('Riemann was has not started in {} seconds'
+                       .format(timeout))
 
 
 def _process_policy_type_sources(ctx, policy_types):
