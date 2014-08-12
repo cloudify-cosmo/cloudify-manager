@@ -15,7 +15,6 @@
 
 
 import os
-import shutil
 from os import path
 import socket
 import time

@@ -17,7 +17,6 @@
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import send_task
 
 
 class TestPolicies(TestCase):
@@ -25,4 +24,3 @@ class TestPolicies(TestCase):
     def test_policies(self):
         dsl_path = resource("dsl/with_policies.yaml")
         deploy(dsl_path)
-        print '1'
