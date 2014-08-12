@@ -328,16 +328,16 @@ class BlueprintsManager(object):
             if 'default' not in param:
                 # parameter without a default value - ensure one was
                 # provided via execution parameters
-                if param not in execution_parameters:
-                    missing_mandatory_parameters.add(param)
+                if param_name not in execution_parameters:
+                    missing_mandatory_parameters.add(param_name)
                     continue
 
-                merged_execution_parameters[param] = \
-                    execution_parameters[param]
+                merged_execution_parameters[param_name] = \
+                    execution_parameters[param_name]
             else:
                 merged_execution_parameters[param_name] = \
                     execution_parameters[param_name] if \
-                    param_name in execution_parameters else param[param_name]
+                    param_name in execution_parameters else param['default']
 
         if missing_mandatory_parameters:
             raise \

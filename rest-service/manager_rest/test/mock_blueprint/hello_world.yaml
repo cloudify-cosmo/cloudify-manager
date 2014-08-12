@@ -1,4 +1,3 @@
-
 imports:
     - cloudify.types
     - cloudify.openstack
@@ -9,15 +8,17 @@ plugins:
         properties:
             url: https://github.com/CloudifySource/cosmo-plugin-python-webserver/archive/develop.zip
 
-types:
+node_types:
     openstack_host:
         derived_from: cloudify.types.host
         properties:
-            -   cloudify_agent:
+            cloudify_agent:
+                default:
                     user: ubuntu
                     port: 22
                     key: ~/.ssh/cloudify-agents.pem
-            -   nova_config:
+            nova_config:
+                default:
                     region: az-2.region-a.geo-1
                     instance:
                         name: web_server_vm_idan

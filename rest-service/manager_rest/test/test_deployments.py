@@ -154,23 +154,23 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEquals(3, len(workflows))
         self.assertEquals(workflows[1]['name'], 'install')
         self.assertTrue('created_at' in workflows[1])
-        self.assertEquals([], workflows[1]['parameters'])
+        self.assertEquals({}, workflows[1]['parameters'])
         self.assertEquals(workflows[2]['name'], 'uninstall')
         self.assertTrue('created_at' in workflows[2])
-        self.assertEquals([], workflows[2]['parameters'])
+        self.assertEquals({}, workflows[2]['parameters'])
         self.assertEquals(workflows[0]['name'], 'mock_workflow')
         self.assertTrue('created_at' in workflows[0])
-        parameters = [
-            {'optional_param': 'test_default_value'},
-            'mandatory_param',
-            'mandatory_param2',
-            {
-                'nested_param': {
+        parameters = {
+            'optional_param': {'default': 'test_default_value'},
+            'mandatory_param': {},
+            'mandatory_param2': {},
+            'nested_param': {
+                'default': {
                     'key': 'test_key',
                     'value': 'test_value'
                 }
             }
-        ]
+        }
         self.assertEquals(parameters, workflows[0]['parameters'])
 
     def test_delete_deployment_verify_nodes_deletion(self):
