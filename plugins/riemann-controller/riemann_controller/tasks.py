@@ -43,7 +43,8 @@ def create(ctx, policy_types=None, groups=None, **kwargs):
         deployment_config_template = f.read()
     with open(path.join(deployment_config_dir_path,
                         'deployment.config'), 'w') as f:
-        f.write(config.create(policy_types,
+        f.write(config.create(ctx,
+                              policy_types,
                               groups,
                               deployment_config_template))
     _send_configuration_event('start', deployment_config_dir_path)

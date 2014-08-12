@@ -25,22 +25,20 @@ def _stream(data, metadata):
     }
 
 
-def create(policy_types, groups, config_template):
+def create(ctx, policy_types, groups, config_template):
     streams = []
     for group_name, group in groups.items():
-        node_name = group['members'][0]
         for policy_name, policy in group['policies'].items():
             template = Template(policy_types[policy['type']]['source'])
-            template_properties = policy['properties']
-            template_properties.update({
-                'node_name': node_name
-            })
-            data = template.render(**template_properties)
             metadata = {
                 'group': group_name,
                 'policy': policy_name,
                 'policy_type': policy['type'],
-                'members': group['members']
+                'members': group['members'],
+                'ctx': ctx
             }
+            template_vars = policy['properties']
+            template_vars['_metadata'] = metadata
+            data = template.render(**template_vars)
             streams.append(_stream(data, metadata))
-    return Template(config_template).render(streams=streams)
+    return Template(config_template).render(streams=streams, ctx=ctx)
