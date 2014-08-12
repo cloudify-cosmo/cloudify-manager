@@ -13,16 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from collections import namedtuple
 
 from jinja2 import Template
-
-
-def _stream(data, metadata):
-    return {
-        'data': data,
-        'metadata': metadata
-    }
 
 
 def create(ctx, policy_types, groups, config_template):
@@ -40,5 +32,8 @@ def create(ctx, policy_types, groups, config_template):
             template_vars = policy['properties']
             template_vars['_metadata'] = metadata
             data = template.render(**template_vars)
-            streams.append(_stream(data, metadata))
+            streams.append({
+                'data': data,
+                'metadata': metadata
+            })
     return Template(config_template).render(streams=streams, ctx=ctx)

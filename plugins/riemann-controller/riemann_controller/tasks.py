@@ -105,15 +105,17 @@ def _process_policy_type_sources(ctx, policy_types):
 
 
 def _process_source(ctx, source):
-    schema, location = source.split('://')
+    split = source.split('://')
+    schema = split[0]
+    the_rest = ''.join(split[1:])
     if schema in ['http', 'https']:
         return requests.get(source).text
     elif schema == 'file':
-        with open(location) as f:
+        with open(the_rest) as f:
             return f.read()
     elif schema == 'resource':
-        return ctx.get_resource(location)
+        return ctx.get_resource(the_rest)
     elif schema == 'blueprint':
-        return ctx.get_blueprint_resource(location)
+        return ctx.get_blueprint_resource(the_rest)
     else:
         return source
