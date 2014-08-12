@@ -69,14 +69,14 @@ class TestDeploymentWorkflows(TestCase):
         workflows = self.client.deployments.get(deployment_id).workflows
         execute_op_workflow = next(wf for wf in workflows if
                                    wf.name == 'another_execute_operation')
-        expected_params = [
-            {u'node_id': u'test_node'},
-            u'operation',
-            {
-                u'properties': {
+        expected_params = {
+            u'node_id': {u'default': u'test_node'},
+            u'operation': {},
+            u'properties': {
+                u'default': {
                     u'key': u'test_key',
                     u'value': u'test_value'
                 }
             }
-        ]
+        }
         self.assertEqual(expected_params, execute_op_workflow.parameters)
