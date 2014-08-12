@@ -8,17 +8,15 @@ imports:
     - hello_world.yaml
 
 # The blueprint contains two nodes, a vm and a web server hosted in it.
-blueprint:
-    name: hello_world
-    nodes:
-        -   name: vm
-            type: cloudify.types.host
+node_templates:
+    vm:
+        type: cloudify.types.host
 
-        -   name: http_web_server
-            type: cloudify.types.web_server
-            properties:
-                port: 8080
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: vm
+    http_web_server:
+        type: cloudify.types.web_server
+        properties:
+            port: 8080
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: vm
 

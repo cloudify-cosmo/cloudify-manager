@@ -176,7 +176,8 @@ class BaseServerTestCase(unittest.TestCase):
         except urllib2.HTTPError:
             return False
 
-    def post_blueprint_args(self, blueprint_file_name=None, blueprint_id=None):
+    def put_blueprint_args(self, blueprint_file_name=None,
+                           blueprint_id='blueprint'):
         def make_tarfile(output_filename, source_dir):
             with tarfile.open(output_filename, "w:gz") as tar:
                 tar.add(source_dir, arcname=os.path.basename(source_dir))
@@ -188,11 +189,7 @@ class BaseServerTestCase(unittest.TestCase):
             make_tarfile(tar_path, source_dir)
             return tar_path
 
-        if blueprint_id is not None:
-            resource_path = '/blueprints/{0}'.format(blueprint_id)
-        else:
-            resource_path = '/blueprints'
-
+        resource_path = '/blueprints/{0}'.format(blueprint_id)
         result = [
             resource_path,
             tar_mock_blueprint(),
@@ -207,9 +204,9 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def put_deployment(self, deployment_id='deployment',
-                       blueprint_file_name=None):
-        blueprint_response = self.post_file(
-            *self.post_blueprint_args(blueprint_file_name)).json
+                       blueprint_file_name=None, blueprint_id='blueprint'):
+        blueprint_response = self.put_file(
+            *self.put_blueprint_args(blueprint_file_name, blueprint_id)).json
         try:
             blueprint_id = blueprint_response['id']
             # Execute post deployment
