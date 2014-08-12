@@ -45,3 +45,5 @@ nosetests.xml
 
 # QuickBuild
 .qbcache/
+
+riemann.log

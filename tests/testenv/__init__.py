@@ -239,6 +239,7 @@ class CeleryWorkerProcess(object):
 
         env_conf = dict(
             CELERY_QUEUES=self._queues,
+            RIEMANN_CONFIGS_DIR=path.join(self._tempdir, 'riemann'),
             TEMP_DIR=self._plugins_tempdir,
             MANAGER_REST_PORT=str(self._manager_rest_port),
             MANAGEMENT_IP='localhost',
@@ -395,15 +396,14 @@ class RiemannProcess(object):
     """
     Manages a riemann server process lifecycle.
     """
-    pid = None
-    _config_path = None
-    _process = None
-    _detector = None
-    _event = None
-    _riemann_logs = list()
 
     def __init__(self, config_path):
         self._config_path = config_path
+        self.pid = None
+        self._process = None
+        self._detector = None
+        self._event = None
+        self._riemann_logs = list()
 
     def _start_detector(self, process):
         pid_pattern = ".*PID\s(\d*)"
@@ -454,6 +454,12 @@ class RiemannProcess(object):
             logger.info("Shutting down riemann server [pid={0}]".format(
                 self.pid))
             os.system("kill {0}".format(self.pid))
+
+    def restart(self):
+        self.close()
+        while self._find_existing_riemann_process():
+            time.sleep(0.1)
+        self.start()
 
     def _find_existing_riemann_process(self):
         from subprocess import CalledProcessError
@@ -691,10 +697,15 @@ class TestCase(unittest.TestCase):
         TestEnvironment.restart_celery_operations_worker()
         TestEnvironment.restart_celery_workflows_worker()
         TestEnvironment.reset_elasticsearch_data()
+        TestEnvironment.clean_riemann_tempdir()
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, *args, **kwargs):
         return do_retries(assertions_func, timeout, AssertionError, **kwargs)
+
+    @property
+    def riemann_workdir(self):
+        return TestEnvironment.riemann_workdir()
 
 
 class TestEnvironment(object):
@@ -729,17 +740,19 @@ class TestEnvironment(object):
             # temp directory
             self._tempdir = tempfile.mkdtemp(suffix="test", prefix="cloudify")
             self._plugins_tempdir = path.join(self._tempdir, "cosmo-work")
+            self._riemann_tempdir = path.join(self._tempdir, "riemann")
             logger.info("Test environment will be stored in: %s",
                         self._tempdir)
             if not path.exists(self._plugins_tempdir):
                 os.makedirs(self._plugins_tempdir)
+            if not path.exists(self._riemann_tempdir):
+                os.makedirs(self._riemann_tempdir)
 
             # events/logs polling
             start_events_and_logs_polling()
 
             # riemann
-            riemann_config_path = path.join(self._tempdir, "riemann.config")
-            self._generate_riemann_config(riemann_config_path)
+            riemann_config_path = self._get_riemann_config()
             self._riemann_process = RiemannProcess(riemann_config_path)
             self._riemann_process.start()
 
@@ -912,11 +925,22 @@ class TestEnvironment(object):
         """
         Removes and creates a new plugins temporary directory.
         """
+        TestEnvironment._clean_tempdir('_plugins_tempdir')
+
+    @staticmethod
+    def clean_riemann_tempdir():
+        """
+        Removes and creates a new plugins temporary directory.
+        """
+        TestEnvironment._clean_tempdir('_riemann_tempdir')
+
+    @staticmethod
+    def _clean_tempdir(prop):
         if TestEnvironment._instance:
-            plugins_tempdir = TestEnvironment._instance._plugins_tempdir
-            if path.exists(plugins_tempdir):
-                shutil.rmtree(plugins_tempdir)
-                os.makedirs(plugins_tempdir)
+            tmpdir = getattr(TestEnvironment._instance, prop)
+            if path.exists(tmpdir):
+                shutil.rmtree(tmpdir)
+                os.makedirs(tmpdir)
 
     @staticmethod
     def create_celery_worker(queue):
@@ -938,15 +962,35 @@ class TestEnvironment(object):
                 .restart()
 
     @staticmethod
+    def restart_riemann():
+        if TestEnvironment._instance and \
+                (TestEnvironment._instance._riemann_process):
+            TestEnvironment._instance._riemann_process.restart()
+
+    @staticmethod
     def reset_elasticsearch_data():
         if TestEnvironment._instance and \
                 TestEnvironment._instance._elasticsearch_process:
             TestEnvironment._instance._elasticsearch_process.reset_data()
 
-    @classmethod
-    def _generate_riemann_config(cls, riemann_config_path):
-        source_path = get_resource('riemann/riemann.config')
-        shutil.copy(source_path, riemann_config_path)
+    @staticmethod
+    def _get_riemann_config():
+        init_file = __file__
+        testenv_dir = dirname(init_file)
+        tests_dir = dirname(testenv_dir)
+        manager_dir = dirname(tests_dir)
+        plugins_dir = os.path.join(manager_dir, 'plugins')
+        riemann_dir = os.path.join(plugins_dir, 'riemann-controller')
+        package_dir = os.path.join(riemann_dir, 'riemann_controller')
+        resources_dir = os.path.join(package_dir, 'resources')
+        manager_config = os.path.join(resources_dir, 'manager.config')
+        return manager_config
+
+    @staticmethod
+    def riemann_workdir():
+        if TestEnvironment._instance:
+            return TestEnvironment._instance._riemann_tempdir
+        return None
 
 
 def create_rest_client():

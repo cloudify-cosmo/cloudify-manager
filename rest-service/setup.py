@@ -35,7 +35,7 @@ setup(
         'flask-restful-swagger',
         'cloudify-dsl-parser==3.1a1',
         'requests==2.2.1',
-        'bernhard==0.1.0',
+        'bernhard==0.1.1',
         'gunicorn==18.0',
         'PyYAML==3.10',
         'elasticsearch==1.0.0',
