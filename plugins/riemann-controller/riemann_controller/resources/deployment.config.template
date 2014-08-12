@@ -9,7 +9,6 @@
 ; policy={{stream.metadata.policy}}
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
-; deployment_id={{ctx.deployment_id}}
 (where* (is-node-name "{{stream.metadata.members[0]}}")
 {{stream.data}})
 
