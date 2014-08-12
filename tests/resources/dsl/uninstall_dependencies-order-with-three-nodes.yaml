@@ -3,31 +3,29 @@ imports:
     - "testmockoperations.yaml"
     - "connectionconfigurermock.yaml"
 
-blueprint:
-    name: "mock_app"
-    nodes:
-        -   name: "containing_node"
-            type: "mock_type"
+node_templates:
+    "containing_node":
+        type: "mock_type"
 
-        -   name: "contained_in_node2"
-            type: "mock_type"
-            relationships:
-                - type: "cloudify.relationships.contained_in"
-                  target: "contained_in_node1"
-                  source_interfaces:
-                      cloudify.interfaces.relationship_lifecycle:
-                          - unlink: connection_configurer_mock.tasks.unconfigure_connection
+    "contained_in_node2":
+        type: "mock_type"
+        relationships:
+            - type: "cloudify.relationships.contained_in"
+              target: "contained_in_node1"
+              source_interfaces:
+                  cloudify.interfaces.relationship_lifecycle:
+                      - unlink: connection_configurer_mock.tasks.unconfigure_connection
 
-        -   name: "contained_in_node1"
-            type: "mock_type"
-            relationships:
-                - type: "cloudify.relationships.contained_in"
-                  target: "containing_node"
-                  target_interfaces:
-                      cloudify.interfaces.relationship_lifecycle:
-                          - unlink: connection_configurer_mock.tasks.unconfigure_connection
+    "contained_in_node1":
+        type: "mock_type"
+        relationships:
+            - type: "cloudify.relationships.contained_in"
+              target: "containing_node"
+              target_interfaces:
+                  cloudify.interfaces.relationship_lifecycle:
+                      - unlink: connection_configurer_mock.tasks.unconfigure_connection
 
-types:
+node_types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:

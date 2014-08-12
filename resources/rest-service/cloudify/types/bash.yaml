@@ -10,7 +10,7 @@ plugins:
         properties:
             url: https://github.com/cloudify-cosmo/cloudify-bash-plugin/archive/1.0.zip
 
-types:
+node_types:
 
     # A web server configured with bash scripts
     cloudify.types.bash.web_server:
@@ -23,7 +23,7 @@ types:
                 - stop: bash_runner.tasks.run
                 - delete: bash_runner.tasks.run
         properties:
-            - scripts
+            scripts: {}
 
     # An app server configured with bash scripts
     cloudify.types.bash.app_server:
@@ -36,7 +36,7 @@ types:
                 - stop: bash_runner.tasks.run
                 - delete: bash_runner.tasks.run
         properties:
-            - scripts
+            scripts: {}
 
     # A db server configured with bash scripts
     cloudify.types.bash.db_server:
@@ -49,7 +49,7 @@ types:
                 - stop: bash_runner.tasks.run
                 - delete: bash_runner.tasks.run
         properties:
-            - scripts
+            scripts: {}
 
     # A message bus server configured with bash scripts
     cloudify.types.bash.message_bus_server:
@@ -62,7 +62,7 @@ types:
                 - stop: bash_runner.tasks.run
                 - delete: bash_runner.tasks.run
         properties:
-            - scripts
+            scripts: {}
 
     # An app module configured with bash scripts
     cloudify.types.bash.app_module:
@@ -75,4 +75,4 @@ types:
                 - stop: bash_runner.tasks.run
                 - delete: bash_runner.tasks.run
         properties:
-            - scripts
+            scripts: {}

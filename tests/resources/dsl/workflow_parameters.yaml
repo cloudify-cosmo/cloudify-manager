@@ -3,30 +3,33 @@ imports:
     - testmockoperations.yaml
     - mock_workflows_plugin.yaml
 
-blueprint:
-    name: test_workflow_properties
-    nodes:
-        -   name: test_node
-            type: cloudify.types.base
-            interfaces:
-                test_interface:
-                    - operation: testmockoperations.tasks.mock_operation_from_custom_workflow
+node_templates:
+    test_node:
+        type: cloudify.types.base
+        interfaces:
+            test_interface:
+                - operation: testmockoperations.tasks.mock_operation_from_custom_workflow
 
 workflows:
     execute_operation:
         mapping: mock_workflows.workflows.execute_operation
         parameters:
-            - node_id: test_node
-            - operation: test_interface.operation
-            - properties:
-                  key: test_key
-                  value: test_value
+            node_id:
+                default: test_node
+            operation:
+                default: test_interface.operation
+            properties:
+                default:
+                    key: test_key
+                    value: test_value
 
     another_execute_operation:
         mapping: mock_workflows.workflows.execute_operation
         parameters:
-            - node_id: test_node
-            - operation
-            - properties:
-                  key: test_key
-                  value: test_value
+            node_id:
+                default: test_node
+            operation: {}
+            properties:
+                default:
+                    key: test_key
+                    value: test_value

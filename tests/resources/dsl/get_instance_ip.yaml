@@ -3,11 +3,12 @@ imports:
     - cloudmock.yaml
     - testmockoperations.yaml
 
-types:
+node_types:
     host1:
         derived_from: cloudify.types.host
         properties:
-            - install_agent: false
+            install_agent:
+                default: false
         interfaces:
             cloudify.interfaces.host:
                 - get_state: testmockoperations.tasks.mock_operation_get_instance_ip
@@ -17,7 +18,7 @@ types:
     host1_runtime:
         derived_from: host1
         properties:
-            - test_ip
+            test_ip: {}
     host1_static:
         derived_from: host1
     contained1:
@@ -29,7 +30,8 @@ types:
     host2:
         derived_from: cloudify.types.host
         properties:
-            - install_agent: false
+            install_agent:
+                default: false
         interfaces:
             cloudify.interfaces.host:
                 - get_state: testmockoperations.tasks.mock_operation_get_instance_ip_from_context
@@ -39,7 +41,7 @@ types:
     host2_runtime:
         derived_from: host2
         properties:
-            - test_ip
+            test_ip: {}
     host2_static:
         derived_from: host2
     contained2:
@@ -58,43 +60,41 @@ relationships:
             cloudify.interfaces.relationship_lifecycle:
                 - establish: testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
 
-blueprint:
-    name: simple_web_server
-    nodes:
-        -   name: host1_1
-            type: host1_runtime
-            properties:
-                test_ip: 1.1.1.1
-        -   name: host1_2
-            type: host1_static
-            properties:
-                ip: 2.2.2.2
-        -   name: contained1_in_host1_1
-            type: contained1
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host1_1
-        -   name: contained1_in_host1_2
-            type: contained1
-            relationships:
-                -   type: cloudify.relationships.contained_in
-                    target: host1_2
+node_templates:
+    host1_1:
+        type: host1_runtime
+        properties:
+            test_ip: 1.1.1.1
+    host1_2:
+        type: host1_static
+        properties:
+            ip: 2.2.2.2
+    contained1_in_host1_1:
+        type: contained1
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host1_1
+    contained1_in_host1_2:
+        type: contained1
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: host1_2
 
-        -   name: host2_1
-            type: host2_runtime
-            properties:
-                test_ip: 3.3.3.3
-        -   name: host2_2
-            type: host2_static
-            properties:
-                ip: 4.4.4.4
-        -   name: contained2_in_host2_1
-            type: contained2
-            relationships:
-                -   type: contained_in
-                    target: host2_1
-        -   name: contained2_in_host2_2
-            type: contained2
-            relationships:
-                -   type: contained_in
-                    target: host2_2
+    host2_1:
+        type: host2_runtime
+        properties:
+            test_ip: 3.3.3.3
+    host2_2:
+        type: host2_static
+        properties:
+            ip: 4.4.4.4
+    contained2_in_host2_1:
+        type: contained2
+        relationships:
+            -   type: contained_in
+                target: host2_1
+    contained2_in_host2_2:
+        type: contained2
+        relationships:
+            -   type: contained_in
+                target: host2_2
