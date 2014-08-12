@@ -14,11 +14,14 @@
 #    * limitations under the License.
 
 
+from nose.tools import nottest
+
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 
 
+@nottest
 class TestPolicies(TestCase):
 
     def test_policies(self):
