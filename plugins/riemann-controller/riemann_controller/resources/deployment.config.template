@@ -1,3 +1,5 @@
+(rabbitmq-queue "{{ctx.deployment_id}}-riemann")
+
 (periodically-expire 5)
 
 (let [index (index)]
