@@ -19,6 +19,7 @@ from nose.tools import nottest
 from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
+from testenv import undeploy_application as undeploy
 
 
 @nottest
@@ -26,4 +27,6 @@ class TestPolicies(TestCase):
 
     def test_policies(self):
         dsl_path = resource("dsl/with_policies.yaml")
-        deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
+        undeploy(deployment.id)
+        self.client.deployments.delete(deployment.id)

@@ -8,12 +8,8 @@ node_templates:
 policy_types:
     policy:
         properties:
-            key1:
-                default: value1
-            key2:
-                default: value2
-            key3:
-                description: key3 description
+                key:
+                    description: key description
         source: file:///home/dan/work/riemann/policy.config.template
 
 groups:
@@ -23,5 +19,4 @@ groups:
             policy:
                 type: policy
                 properties:
-                    key2: group_value2
-                    key3: group_value3
+                    key: value

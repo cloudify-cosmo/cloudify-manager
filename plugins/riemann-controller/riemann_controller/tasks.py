@@ -19,9 +19,10 @@ from os import path
 import socket
 import time
 import errno
+import json
 
 import requests
-import bernhard
+import pika
 
 from cloudify.decorators import operation
 
@@ -46,14 +47,14 @@ def create(ctx, policy_types=None, groups=None, **kwargs):
                               policy_types,
                               groups,
                               deployment_config_template))
-    _send_configuration_event('start', deployment_config_dir_path)
+    _publish_configuration_event(ctx, 'start', deployment_config_dir_path)
     _verify_core_up(deployment_config_dir_path)
 
 
 @operation
 def delete(ctx, **kwargs):
     deployment_config_dir_path = _deployment_config_dir(ctx)
-    _send_configuration_event('stop', deployment_config_dir_path)
+    _publish_configuration_event(ctx, 'stop', deployment_config_dir_path)
 
 
 def _deployment_config_dir(ctx):
@@ -61,12 +62,28 @@ def _deployment_config_dir(ctx):
                         ctx.deployment_id)
 
 
-def _send_configuration_event(state, deployment_config_dir_path):
-    bernhard.Client().send({
-        'service': 'cloudify.configuration',
-        'state': state,
-        'description': deployment_config_dir_path,
-    })
+def _publish_configuration_event(ctx, state, deployment_config_dir_path):
+    manager_queue = 'manager-riemann'
+    connection = pika.BlockingConnection()
+    try:
+        channel = connection.channel()
+        channel.queue_declare(
+            queue=manager_queue,
+            auto_delete=True,
+            durable=False,
+            exclusive=False)
+        channel.basic_publish(
+            exchange='',
+            routing_key=manager_queue,
+            body=json.dumps({
+                'service': 'cloudify.configuration',
+                'state': state,
+                'config_path': deployment_config_dir_path,
+                'deployment_id': ctx.deployment_id,
+                'time': int(time.time())
+            }))
+    finally:
+        connection.close()
 
 
 def _deployment_config_template():
@@ -76,25 +93,20 @@ def _deployment_config_template():
 
 
 def _verify_core_up(deployment_config_dir_path, timeout=5):
+    ok_path = path.join(deployment_config_dir_path, 'ok')
     end = time.time() + timeout
     while time.time() < end:
         try:
-            # if we managed to read the port properly, it is an indication
-            # that riemann started the core successfully. otherwise, it would
-            # delete this file and rethrow the exception it caught while trying
-            # to start the core
-            with (open(path.join(deployment_config_dir_path, 'port'))) as f:
-                port = int(f.read())
-            sock = socket.socket()
-            sock.connect(('localhost', port))
-            sock.close()
+            # after the core is started this file is written as an indication
+            with (open(ok_path)) as f:
+                assert f.read().strip() == 'ok'
             return
         except IOError, e:
-            if e.errno in [errno.ENOENT, errno.ECONNREFUSED]:
+            if e.errno in [errno.ENOENT]:
                 time.sleep(0.1)
             else:
                 raise
-    raise RuntimeError('Riemann was has not started in {} seconds'
+    raise RuntimeError('Riemann core was has not started in {} seconds'
                        .format(timeout))
 
 
