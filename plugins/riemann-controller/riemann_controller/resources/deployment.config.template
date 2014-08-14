@@ -1,4 +1,4 @@
-(rabbitmq-queue "{{ctx.deployment_id}}-riemann")
+(amqp-queue-consumer "{{ctx.deployment_id}}-riemann")
 
 (periodically-expire 5)
 
