@@ -431,7 +431,7 @@ class RiemannProcess(object):
             return
 
         command = [
-            'riemann',
+            path.join(path.dirname(self._config_path), 'riemann'),
             self._config_path
         ]
         self._process = subprocess.Popen(command,
