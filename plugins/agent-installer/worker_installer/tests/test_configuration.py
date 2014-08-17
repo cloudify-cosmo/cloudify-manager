@@ -29,6 +29,10 @@ from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
 
 
+# for tests purposes, need a path to a file which will always exist
+KEY_FILE_PATH = '/var/log/syslog'
+
+
 @init_worker_installer
 def m(ctx, runner, agent_config, **kwargs):
     return agent_config
@@ -69,7 +73,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                   properties={
                                       'cloudify_agent': {
                                           'user': getpass.getuser(),
-                                          'key': 'key.pem',
+                                          'key': KEY_FILE_PATH,
                                           'distro': 'Ubuntu',
                                       },
                                       'ip': '192.168.0.1'
@@ -87,7 +91,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
-                    'key': 'key.pem',
+                    'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
                 }
             }
@@ -140,7 +144,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
-                    'key': 'key.pem',
+                    'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
                 }
             }
@@ -157,7 +161,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
-                    'key': 'key.pem',
+                    'key': KEY_FILE_PATH,
                     'min_workers': 2,
                     'max_workers': 5,
                     'distro': 'Ubuntu',
@@ -179,7 +183,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
-                    'key': 'key.pem',
+                    'key': KEY_FILE_PATH,
                     'min_workers': 10,
                     'max_workers': 5,
                     'distro': 'Ubuntu',
@@ -196,7 +200,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
-                    'key': 'key.pem',
+                    'key': KEY_FILE_PATH,
                     'min_workers': 'aaa',
                     'max_workers': 5,
                     'distro': 'Ubuntu',
@@ -216,7 +220,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
-                    'key': 'key.pem',
+                    'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
                 }
             },
@@ -247,12 +251,12 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
-                    'agent_key_path': 'here'
+                    'agent_key_path': KEY_FILE_PATH
                 }
             })
         )
         conf = m(ctx)
-        self.assertEqual(conf['key'], 'here')
+        self.assertEqual(conf['key'], KEY_FILE_PATH)
 
     def test_user_from_bootstrap_context(self):
         node_id = 'node_id'
@@ -269,7 +273,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
-                    'agent_key_path': 'here',
+                    'agent_key_path': KEY_FILE_PATH,
                     'user': getpass.getuser()
 
                 }
@@ -293,7 +297,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
-                    'agent_key_path': 'here',
+                    'agent_key_path': KEY_FILE_PATH,
                     'user': getpass.getuser(),
                 }
             })
@@ -316,7 +320,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
-                    'agent_key_path': 'here',
+                    'agent_key_path': KEY_FILE_PATH,
                     'user': getpass.getuser(),
                     'remote_execution_port': 2222
 
@@ -342,7 +346,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
-                    'agent_key_path': 'here',
+                    'agent_key_path': KEY_FILE_PATH,
                     'user': getpass.getuser(),
                     'remote_execution_port': 2222
                 }
