@@ -17,6 +17,7 @@ __author__ = 'idanmo'
 
 import unittest
 import os
+import getpass
 from os import path
 from worker_installer import init_worker_installer
 from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
@@ -36,7 +37,7 @@ def m(ctx, runner, agent_config, **kwargs):
 class CeleryWorkerConfigurationTest(unittest.TestCase):
 
     def setUp(self):
-        os.environ['MANAGEMENT_USER'] = 'user'
+        os.environ['MANAGEMENT_USER'] = getpass.getuser()
 
     def test_deployment_config(self):
         ctx = MockCloudifyContext(deployment_id='deployment_id')
@@ -60,14 +61,14 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                   properties={
                                       'cloudify_agent': {
                                           'distro': 'Ubuntu',
-                                          'user': 'user'},
+                                          'user': getpass.getuser()},
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={
                                       'cloudify_agent': {
-                                          'user': 'user',
+                                          'user': getpass.getuser(),
                                           'key': 'key.pem',
                                           'distro': 'Ubuntu',
                                       },
@@ -85,7 +86,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'key': 'key.pem',
                     'distro': 'Ubuntu',
                 }
@@ -138,7 +139,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'key': 'key.pem',
                     'distro': 'Ubuntu',
                 }
@@ -155,7 +156,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'key': 'key.pem',
                     'min_workers': 2,
                     'max_workers': 5,
@@ -177,7 +178,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'key': 'key.pem',
                     'min_workers': 10,
                     'max_workers': 5,
@@ -194,7 +195,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'key': 'key.pem',
                     'min_workers': 'aaa',
                     'max_workers': 5,
@@ -214,7 +215,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'key': 'key.pem',
                     'distro': 'Ubuntu',
                 }
@@ -240,7 +241,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
-                    'user': 'user',
+                    'user': getpass.getuser(),
                     'distro': 'Ubuntu',
                 }
             },
@@ -269,13 +270,13 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'agent_key_path': 'here',
-                    'user': 'john doe'
+                    'user': getpass.getuser()
 
                 }
             })
         )
         conf = m(ctx)
-        self.assertEqual(conf['user'], 'john doe')
+        self.assertEqual(conf['user'], getpass.getuser())
 
     def test_ssh_port_default(self):
         node_id = 'node_id'
@@ -293,7 +294,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'agent_key_path': 'here',
-                    'user': 'john doe',
+                    'user': getpass.getuser(),
                 }
             })
         )
@@ -316,7 +317,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'agent_key_path': 'here',
-                    'user': 'john doe',
+                    'user': getpass.getuser(),
                     'remote_execution_port': 2222
 
                 }
@@ -342,7 +343,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             bootstrap_context=BootstrapContext({
                 'cloudify_agent': {
                     'agent_key_path': 'here',
-                    'user': 'john doe',
+                    'user': getpass.getuser(),
                     'remote_execution_port': 2222
                 }
             })
@@ -379,7 +380,7 @@ class MockFabricRunner(FabricRunner):
 class ConfigurationCreationTest(unittest.TestCase):
 
     def setUp(self):
-        os.environ['MANAGEMENT_USER'] = 'user'
+        os.environ['MANAGEMENT_USER'] = getpass.getuser()
         os.environ['MANAGER_REST_PORT'] = '8100'
         os.environ['MANAGEMENT_IP'] = '192.168.0.1'
         os.environ['AGENT_IP'] = '192.168.0.2'
