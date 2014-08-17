@@ -480,7 +480,8 @@ class RiemannProcess(object):
         return None
 
     def _lengohr_jar_path(self):
-        lib_url = 'http://localhost:8000/lengohr.jar'
+        lib_url = 'https://s3-eu-west-1.amazonaws.com' \
+                  '/gigaspaces-repository-eu/lengohr/2.11.0/lengohr.jar'
         lib_name = 'lengohr'
         version = '2.11.0'
         lib_dir = os.path.join(self._libs_path, lib_name, version)
