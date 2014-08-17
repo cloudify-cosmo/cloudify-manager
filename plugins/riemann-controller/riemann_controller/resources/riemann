@@ -1,9 +1,28 @@
 #!/bin/bash -e
 
 CONFIG=$1
-RIEMANN_HOME="$(dirname $(which riemann))/.."
+
+RIEMANN_HOME="$(dirname $(which riemann))/../"
+
+# Path in manual installation
 RIEMANN_JAR="${RIEMANN_HOME}/lib/riemann.jar"
+if [[ ! -f "${RIEMANN_JAR}" ]]; then
+    # Path when installing .deb package
+    RIEMANN_JAR="/usr/lib/riemann/riemann.jar"
+    if [[ ! -f "${RIEMANN_JAR}" ]]; then
+        echo "Failed locating riemann.jar"
+        exit 1
+    fi
+fi
+
+# Injected by test, otherwise, checks if it sits next to riemann.jar
 LENGOHR_JAR="${LENGOHR_JAR=${RIEMANN_HOME}/lib/lengohr.jar}"
+
+if [[ ! -f "${LENGOHR_JAR}" ]]; then
+    echo "Failed locating lengohr.jar"
+    exit 1
+fi
+
 MAIN_CLASS="riemann.bin"
 OPTS="-XX:+UseConcMarkSweepGC \
       -XX:+UseParNewGC \
@@ -13,4 +32,4 @@ OPTS="-XX:+UseConcMarkSweepGC \
       -XX:+UseCompressedOops \
       -XX:+CMSClassUnloadingEnabled"
 
-exec java ${OPTS} -cp "${RIEMANN_JAR}:${LENGOHR_JAR}" ${MAIN_CLASS} ${CONFIG}
+exec java ${OPTS} -cp "${LENGOHR_JAR}:${RIEMANN_JAR}" ${MAIN_CLASS} ${CONFIG}

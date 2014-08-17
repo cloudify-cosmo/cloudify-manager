@@ -29,4 +29,4 @@ class TestPolicies(TestCase):
         dsl_path = resource("dsl/with_policies.yaml")
         deployment, _ = deploy(dsl_path)
         undeploy(deployment.id)
-        self.client.deployments.delete(deployment.id)
+        # self.client.deployments.delete(deployment.id)
