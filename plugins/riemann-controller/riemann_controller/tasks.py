@@ -16,7 +16,6 @@
 
 import os
 from os import path
-import socket
 import time
 import errno
 import json
