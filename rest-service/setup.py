@@ -32,7 +32,7 @@ setup(
         'six==1.6.1',
         'Flask==0.10.1',
         'flask-restful==0.2.5',
-        'flask-restful-swagger',
+        'flask-restful-swagger==0.12',
         'cloudify-dsl-parser==3.1a1',
         'requests==2.2.1',
         'bernhard==0.1.1',
