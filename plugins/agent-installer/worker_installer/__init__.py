@@ -16,6 +16,7 @@
 __author__ = 'idanmo'
 
 import os
+import pwd
 from functools import wraps
 
 import cloudify
@@ -170,8 +171,7 @@ def prepare_configuration(ctx, agent_config):
 
     _set_wait_started_config(agent_config)
 
-    home_dir = "/home/" + agent_config['user'] \
-        if agent_config['user'] != 'root' else '/root'
+    home_dir = pwd.getpwnam(agent_config['user']).pw_dir
 
     agent_config['celery_base_dir'] = home_dir
 
