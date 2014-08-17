@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 CONFIG=$1
-RIEMANN_HOME="$(realpath $(dirname $(which riemann))/..)"
+RIEMANN_HOME="$(dirname $(which riemann))/.."
 RIEMANN_JAR="${RIEMANN_HOME}/lib/riemann.jar"
 LENGOHR_JAR="${LENGOHR_JAR=${RIEMANN_HOME}/lib/lengohr.jar}"
 MAIN_CLASS="riemann.bin"
