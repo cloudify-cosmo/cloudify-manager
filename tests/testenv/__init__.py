@@ -397,8 +397,9 @@ class RiemannProcess(object):
     Manages a riemann server process lifecycle.
     """
 
-    def __init__(self, config_path):
+    def __init__(self, config_path, libs_path):
         self._config_path = config_path
+        self._libs_path = libs_path
         self.pid = None
         self._process = None
         self._detector = None
@@ -430,13 +431,17 @@ class RiemannProcess(object):
                 self.pid))
             return
 
+        env = os.environ.copy()
+        env['LENGOHR_JAR'] = self._lengohr_jar_path()
+
         command = [
             path.join(path.dirname(self._config_path), 'riemann'),
             self._config_path
         ]
         self._process = subprocess.Popen(command,
                                          stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT)
+                                         stderr=subprocess.STDOUT,
+                                         env=env)
         self._event = threading.Event()
         self._detector = threading.Thread(target=self._start_detector,
                                           kwargs={'process': self._process})
@@ -473,6 +478,28 @@ class RiemannProcess(object):
         except CalledProcessError:
             pass
         return None
+
+    def _lengohr_jar_path(self):
+        lib_url = 'http://localhost:8000/lengohr.jar'
+        lib_name = 'lengohr'
+        version = '2.11.0'
+        lib_dir = os.path.join(self._libs_path, lib_name, version)
+        lib_path = os.path.join(lib_dir, 'lengohr.jar')
+        if not os.path.isdir(lib_dir):
+            logger.info("Downloading lengohr jar. This should only happen"
+                        " once so don't worry about it too much")
+            os.makedirs(lib_dir)
+            self.download_file(url=lib_url, target=lib_path)
+        return lib_path
+
+    @staticmethod
+    def download_file(url, target):
+        r = requests.get(url, stream=True)
+        with open(target, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
 
 
 class ElasticSearchProcess(object):
@@ -753,7 +780,9 @@ class TestEnvironment(object):
 
             # riemann
             riemann_config_path = self._get_riemann_config()
-            self._riemann_process = RiemannProcess(riemann_config_path)
+            libs_path = self._get_libs_path()
+            self._riemann_process = RiemannProcess(riemann_config_path,
+                                                   libs_path)
             self._riemann_process.start()
 
             # elasticsearch
@@ -974,17 +1003,26 @@ class TestEnvironment(object):
             TestEnvironment._instance._elasticsearch_process.reset_data()
 
     @staticmethod
-    def _get_riemann_config():
+    def _get_manager_root():
         init_file = __file__
         testenv_dir = dirname(init_file)
         tests_dir = dirname(testenv_dir)
         manager_dir = dirname(tests_dir)
+        return manager_dir
+
+    @classmethod
+    def _get_riemann_config(cls):
+        manager_dir = cls._get_manager_root()
         plugins_dir = os.path.join(manager_dir, 'plugins')
         riemann_dir = os.path.join(plugins_dir, 'riemann-controller')
         package_dir = os.path.join(riemann_dir, 'riemann_controller')
         resources_dir = os.path.join(package_dir, 'resources')
         manager_config = os.path.join(resources_dir, 'manager.config')
         return manager_config
+
+    @classmethod
+    def _get_libs_path(cls):
+        return path.join(cls._get_manager_root(), '.libs')
 
     @staticmethod
     def riemann_workdir():

@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 CONFIG=$1
-LIBS="${HOME}/bin/riemann-0.2.6/lib"
-RIEMANN_JAR="${LIBS}/riemann.jar"
-LENGOHR_JAR="${LIBS}/lengohr.jar"
+RIEMANN_HOME="$(realpath $(dirname $(which riemann))/..)"
+RIEMANN_JAR="${RIEMANN_HOME}/lib/riemann.jar"
+LENGOHR_JAR="${LENGOHR_JAR=${RIEMANN_HOME}/lib/lengohr.jar}"
 MAIN_CLASS="riemann.bin"
 OPTS="-XX:+UseConcMarkSweepGC \
       -XX:+UseParNewGC \
