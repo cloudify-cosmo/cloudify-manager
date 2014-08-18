@@ -15,6 +15,7 @@
 
 __author__ = 'ran'
 
+import json
 from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
 from manager_rest import manager_exceptions
@@ -291,13 +292,19 @@ class ESStorageManager(object):
                                 DeploymentNodeInstance)
 
     def update_node_instance(self, node):
-        update_doc_data = node.to_dict()
-        # deleting version field as it's maintained by ES internally
-        del(update_doc_data['version'])
-        # removing fields with value None as they're not to be updated
-        update_doc_data = \
-            {k: v for k, v in update_doc_data.iteritems() if v is not None}
-        update_doc = {'doc': update_doc_data}
+        update_doc = {'script': ''}
+
+        new_state = node.state
+        new_runtime_props = node.runtime_properties
+
+        if new_state is not None:
+            update_doc['script'] += \
+                '; ctx._source.put("state", "{0}") ;'.format(new_state)
+
+        if new_runtime_props is not None:
+            update_doc['script'] += \
+                '; ctx._source.put("runtime_properties", {0}) ;'.format(
+                    json.dumps(new_runtime_props))
 
         try:
             self._get_es_conn().update(index=STORAGE_INDEX_NAME,
