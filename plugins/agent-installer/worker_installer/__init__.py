@@ -119,6 +119,11 @@ def _set_ssh_key(ctx, config):
                 'Missing ssh key path in worker configuration '
                 '[cloudify_agent={0}'.format(config))
 
+    if not os.path.isfile(config['key']):
+        raise NonRecoverableError(
+            'Cannot find keypair file, expected file path was {'
+            '0}'.format(config['key']))
+
 
 def _set_user(ctx, config):
     if 'user' not in config:
