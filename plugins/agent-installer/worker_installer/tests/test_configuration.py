@@ -305,6 +305,28 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         conf = m(ctx)
         self.assertEqual(conf['port'], 22)
 
+    def test_bad_key_path(self):
+        node_id = 'node_id'
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'distro': 'Ubuntu',
+                },
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'agent_key_path': 'bad_key_path',
+                    'user': getpass.getuser(),
+                }
+            })
+        )
+        self.assertRaises(NonRecoverableError, m, ctx)
+
     def test_ssh_port_from_bootstrap_context(self):
         node_id = 'node_id'
         ctx = MockCloudifyContext(
