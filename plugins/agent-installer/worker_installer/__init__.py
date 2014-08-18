@@ -16,6 +16,7 @@
 __author__ = 'idanmo'
 
 import os
+import pwd
 from functools import wraps
 
 import cloudify
@@ -118,6 +119,11 @@ def _set_ssh_key(ctx, config):
                 'Missing ssh key path in worker configuration '
                 '[cloudify_agent={0}'.format(config))
 
+    if not os.path.isfile(config['key']):
+        raise NonRecoverableError(
+            'Cannot find keypair file, expected file path was {'
+            '0}'.format(config['key']))
+
 
 def _set_user(ctx, config):
     if 'user' not in config:
@@ -170,8 +176,7 @@ def prepare_configuration(ctx, agent_config):
 
     _set_wait_started_config(agent_config)
 
-    home_dir = "/home/" + agent_config['user'] \
-        if agent_config['user'] != 'root' else '/root'
+    home_dir = pwd.getpwnam(agent_config['user']).pw_dir
 
     agent_config['celery_base_dir'] = home_dir
 
