@@ -432,7 +432,7 @@ class RiemannProcess(object):
             return
 
         env = os.environ.copy()
-        env['LENGOHR_JAR'] = self._lengohr_jar_path()
+        env['LANGOHR_JAR'] = self._langohr_jar_path()
 
         command = [
             path.join(path.dirname(self._config_path), 'riemann'),
@@ -479,15 +479,15 @@ class RiemannProcess(object):
             pass
         return None
 
-    def _lengohr_jar_path(self):
+    def _langohr_jar_path(self):
         lib_url = 'https://s3-eu-west-1.amazonaws.com' \
-                  '/gigaspaces-repository-eu/lengohr/2.11.0/lengohr.jar'
-        lib_name = 'lengohr'
+                  '/gigaspaces-repository-eu/langohr/2.11.0/langohr.jar'
+        lib_name = 'langohr'
         version = '2.11.0'
         lib_dir = os.path.join(self._libs_path, lib_name, version)
-        lib_path = os.path.join(lib_dir, 'lengohr.jar')
+        lib_path = os.path.join(lib_dir, 'langohr.jar')
         if not os.path.isdir(lib_dir):
-            logger.info("Downloading lengohr jar. This should only happen"
+            logger.info("Downloading langohr jar. This should only happen"
                         " once so don't worry about it too much")
             os.makedirs(lib_dir)
             self.download_file(url=lib_url, target=lib_path)
