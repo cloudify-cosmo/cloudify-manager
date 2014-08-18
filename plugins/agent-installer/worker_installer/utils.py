@@ -44,10 +44,6 @@ class FabricRunner(object):
         if not self.local:
             self.host_string = '%(user)s@%(host)s:%(port)s' % config
             self.key_filename = config['key']
-            if not os.path.isfile(self.key_filename):
-                raise NonRecoverableError(
-                    'Cannot find keypair file, expected file path was {'
-                    '0}'.format(self.key_filename))
 
     def ping(self):
         self.run('echo "ping!"')
