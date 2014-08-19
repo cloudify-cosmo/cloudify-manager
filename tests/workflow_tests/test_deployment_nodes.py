@@ -79,8 +79,8 @@ class TestDeploymentNodes(TestCase):
         self.assertTrue('new_key' in node_instance.runtime_properties)
         self.assertEquals('new_value',
                           node_instance.runtime_properties['new_key'])
-        # Verifying the older properties are still there too (partial update)
-        self.assertEquals(3, len(node_instance.runtime_properties))
+        # Verifying the older runtime properties no longer exist
+        self.assertEquals(1, len(node_instance.runtime_properties))
 
         # Updating both state and runtime properties (updating an existing
         # key in runtime properties)
@@ -93,7 +93,7 @@ class TestDeploymentNodes(TestCase):
         # Verifying state has updated
         self.assertEquals('final_state', node_instance.state)
         # Verifying the update to the runtime properties
-        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEquals(1, len(node_instance.runtime_properties))
         self.assertEquals('another_value',
                           node_instance.runtime_properties['new_key'])
 
@@ -105,6 +105,51 @@ class TestDeploymentNodes(TestCase):
         # Verifying state hasn't changed
         self.assertEquals('final_state', node_instance.state)
         # Verifying the runtime properties haven't changed
-        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEquals(1, len(node_instance.runtime_properties))
         self.assertEquals('another_value',
                           node_instance.runtime_properties['new_key'])
+
+    def test_update_node_instance_runtime_properties(self):
+        dsl_path = resource("dsl/set-property.yaml")
+        deployment, _ = deploy(dsl_path)
+
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment.id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+
+        # Initial assertions
+        self.assertIsNotNone(node_instance.version)
+        self.assertEquals(2, len(node_instance.runtime_properties))
+
+        # Updating the runtime properties with a new key
+        node_instance = self.client.node_instances.update(
+            node_id,
+            version=node_instance.version,
+            runtime_properties={'new_key': 'new_value'})
+
+        # Verifying the new property is in the node's runtime properties
+        self.assertTrue('new_key' in node_instance.runtime_properties)
+        self.assertEquals('new_value',
+                          node_instance.runtime_properties['new_key'])
+        # Verifying the older runtime properties no longer exist
+        self.assertEquals(1, len(node_instance.runtime_properties))
+
+        # Updating an existing key in runtime properties
+        node_instance = self.client.node_instances.update(
+            node_id,
+            version=node_instance.version,
+            runtime_properties={'new_key': 'another_value'})
+
+        # Verifying the update to the runtime properties
+        self.assertEquals(1, len(node_instance.runtime_properties))
+        self.assertEquals('another_value',
+                          node_instance.runtime_properties['new_key'])
+
+        # Cleaning up the runtime properties
+        node_instance = self.client.node_instances.update(
+            node_id,
+            version=node_instance.version,
+            runtime_properties={})
+
+        # Verifying the node no longer has any runtime properties
+        self.assertEquals(0, len(node_instance.runtime_properties))

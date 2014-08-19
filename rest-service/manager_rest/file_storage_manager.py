@@ -170,27 +170,18 @@ class FileStorageManager(object):
         data[EXECUTIONS][execution_id] = execution
         self._dump_data(data)
 
-    def update_node_instance(self, node):
+    def update_node_instance(self, node_update):
         data = self._load_data()
-        if node.id not in data[NODE_INSTANCES]:
+        if node_update.id not in data[NODE_INSTANCES]:
             raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node.id))
-        prev_instance = data[NODE_INSTANCES][node.id]
-        deployment_id = prev_instance.deployment_id
-        prev_rt_info = prev_instance.to_dict()['runtime_properties'] or {}
-        merged_rt_info = dict(prev_rt_info.items() +
-                              node.runtime_properties.items()) if node\
-            .runtime_properties else prev_rt_info
-        new_state = node.state or prev_instance.to_dict()['state']
-        node = DeploymentNodeInstance(
-            id=node.id,
-            node_id=prev_instance.node_id,
-            relationships=prev_instance.relationships,
-            host_id=prev_instance.host_id,
-            deployment_id=deployment_id,
-            runtime_properties=merged_rt_info,
-            state=new_state,
-            version=node.version+1)
+                "Node {0} not found".format(node_update.id))
+        node = data[NODE_INSTANCES][node_update.id]
+
+        if node_update.state is not None:
+            node.state = node_update.state
+        if node_update.runtime_properties is not None:
+            node.runtime_properties = node_update.runtime_properties
+
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
