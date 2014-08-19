@@ -38,6 +38,7 @@ def create(ctx, policy_types=None, groups=None, **kwargs):
     deployment_config_dir_path = _deployment_config_dir(ctx)
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
+        os.chmod(deployment_config_dir_path, 0777)
     with open(_deployment_config_template()) as f:
         deployment_config_template = f.read()
     with open(path.join(deployment_config_dir_path,
