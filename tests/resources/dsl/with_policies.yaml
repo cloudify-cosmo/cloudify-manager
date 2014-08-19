@@ -1,10 +1,15 @@
 imports:
     - cloudify.types
+    - testmockoperations.yaml
+    - mock_workflows_plugin.yaml
     - policies/threshold.yaml
 
 node_templates:
     node:
         type: cloudify.types.base
+        interfaces:
+            test:
+                - op1: testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
     threshold_group:
@@ -15,3 +20,6 @@ groups:
                 properties:
                     metric: TODO
                     threshold: 60
+
+workflows:
+    threshold_exceeded: mock_workflows.workflows.test_policies_1
