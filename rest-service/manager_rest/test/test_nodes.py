@@ -81,7 +81,7 @@ class NodesTest(BaseServerTestCase):
         self.assertEqual('value',
                          response.json['runtime_properties']['new_key'])
 
-    def test_patch_node_merge(self):
+    def test_patch_node_runtime_props_update(self):
         self.put_node_instance(
             instance_id='1234',
             deployment_id='111',
@@ -94,9 +94,39 @@ class NodesTest(BaseServerTestCase):
             'version': 2})
         self.assertEqual(200, response.status_code)
         self.assertEqual('1234', response.json['id'])
-        self.assertEqual(2, len(response.json['runtime_properties']))
-        self.assertEqual('value', response.json['runtime_properties']['key'])
+        self.assertEqual(1, len(response.json['runtime_properties']))
         self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
+
+    def test_patch_node_runtime_props_overwrite(self):
+        self.put_node_instance(
+            instance_id='1234',
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+        response = self.patch('/node-instances/1234', {
+            'runtime_properties': {'key': 'value2'},
+            'version': 2})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('1234', response.json['id'])
+        self.assertEqual(1, len(response.json['runtime_properties']))
+        self.assertEqual('value2', response.json['runtime_properties']['key'])
+
+    def test_patch_node_runtime_props_cleanup(self):
+        self.put_node_instance(
+            instance_id='1234',
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+        response = self.patch('/node-instances/1234', {
+            'runtime_properties': {},
+            'version': 2})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('1234', response.json['id'])
+        self.assertEqual(0, len(response.json['runtime_properties']))
 
     def test_partial_patch_node(self):
         self.put_node_instance(
@@ -138,7 +168,6 @@ class NodesTest(BaseServerTestCase):
                                   'version': 5
                               })
         self.assertEqual(200, response.status_code)
-        self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
         self.assertEqual('ddd', response.json['runtime_properties']['ccc'])
         self.assertEqual('b-state', response.json['state'])
 
