@@ -82,7 +82,7 @@ run_intergration_tests()
 
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b CFY-1134-modify-runtime-properties-api
+    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
