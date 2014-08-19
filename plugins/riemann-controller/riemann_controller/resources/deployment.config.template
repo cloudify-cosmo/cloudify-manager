@@ -1,0 +1,17 @@
+(amqp-queue-consumer "{{ctx.deployment_id}}-riemann")
+
+(periodically-expire 5)
+
+(let [index (index)]
+  (streams
+    (default :ttl 60 index)
+
+{% for stream in streams %}
+; group={{stream.metadata.group}}
+; policy={{stream.metadata.policy}}
+; policy_type={{stream.metadata.policy_type}}
+; members={{stream.metadata.members | join(", ")}}
+(where* (is-node-name "{{stream.metadata.members[0]}}")
+{{stream.data}})
+
+{% endfor %}))

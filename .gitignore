@@ -47,3 +47,4 @@ nosetests.xml
 .qbcache/
 
 riemann.log
+.libs

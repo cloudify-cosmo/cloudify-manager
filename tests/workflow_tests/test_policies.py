@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,19 +13,20 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
 
-from cloudify.decorators import workflow
+from nose.tools import nottest
 
-
-@workflow
-def install(ctx, **kwargs):
-    # taken from original workers_installation workflow
-    ctx.execute_task('riemann_controller.tasks.create',
-                     kwargs=kwargs.get('policy_configuration', {}))
+from testenv import TestCase
+from testenv import get_resource as resource
+from testenv import deploy_application as deploy
+from testenv import undeploy_application as undeploy
 
 
-@workflow
-def uninstall(ctx, **kwargs):
-    # taken from original workers_installation workflow
-    ctx.execute_task('riemann_controller.tasks.delete')
+@nottest
+class TestPolicies(TestCase):
+
+    def test_policies(self):
+        dsl_path = resource("dsl/with_policies.yaml")
+        deployment, _ = deploy(dsl_path)
+        undeploy(deployment.id)
+        # self.client.deployments.delete(deployment.id)
