@@ -13,8 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
-
+import uuid
 
 from testenv import TestCase
 from testenv import get_resource as resource
@@ -45,3 +44,20 @@ class TestStorage(TestCase):
         self.assertRaises(
             CloudifyClientError, client.node_instances.update,
             instance.id, version=1)
+
+    def test_deployment_inputs(self):
+        blueprint_id = str(uuid.uuid4())
+        blueprint = self.client.blueprints.upload(resource("dsl/basic.yaml"),
+                                                  blueprint_id)
+        inputs = blueprint.plan['inputs']
+        self.assertEqual(1, len(inputs))
+        self.assertTrue('install_agent' in inputs)
+        self.assertFalse(inputs['install_agent']['default'])
+        self.assertTrue(
+            len(inputs['install_agent']['description']) > 0)
+        deployment_id = str(uuid.uuid4())
+        deployment = self.client.deployments.create(blueprint.id,
+                                                    deployment_id)
+        self.assertEqual(1, len(deployment.inputs))
+        self.assertTrue('install_agent' in deployment.inputs)
+        self.assertFalse(deployment.inputs['install_agent'])

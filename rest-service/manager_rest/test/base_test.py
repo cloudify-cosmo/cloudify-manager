@@ -203,21 +203,18 @@ class BaseServerTestCase(unittest.TestCase):
         result.append(data)
         return result
 
-    def put_deployment(self, deployment_id='deployment',
-                       blueprint_file_name=None, blueprint_id='blueprint'):
+    def put_deployment(self,
+                       deployment_id='deployment',
+                       blueprint_file_name=None,
+                       blueprint_id='blueprint',
+                       inputs=None):
         blueprint_response = self.put_file(
             *self.put_blueprint_args(blueprint_file_name, blueprint_id)).json
-        try:
-            blueprint_id = blueprint_response['id']
-            # Execute post deployment
-            deployment_response = self.put(
-                '/deployments/{0}'.format(deployment_id),
-                {'blueprint_id': blueprint_id}).json
-            return (blueprint_id, deployment_response['id'],
-                    blueprint_response,
-                    deployment_response)
-        except:
-            raise RuntimeError(blueprint_response)
+        blueprint_id = blueprint_response['id']
+        deployment = self.client.deployments.create(blueprint_id,
+                                                    deployment_id,
+                                                    inputs=inputs)
+        return blueprint_id, deployment.id, blueprint_response, deployment
 
     def _build_url(self, resource_path, query_params):
         query_string = ''
