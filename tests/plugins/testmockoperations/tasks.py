@@ -65,6 +65,14 @@ def set_property(ctx, **kwargs):
 
 
 @operation
+def del_property(ctx, **kwargs):
+    property_name = ctx.properties['property_name']
+    ctx.logger.info('Deleting property [{0}] for node: {1}'
+                    .format(property_name, ctx.node_id))
+    del(ctx.runtime_properties[property_name])
+
+
+@operation
 def touch(**kwargs):
     global touched_time
     touched_time = time.time()

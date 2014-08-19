@@ -15,7 +15,7 @@ node_templates:
                 - create: cloudmock.tasks.provision
                 - configure: testmockoperations.tasks.set_property
                 - start: cloudmock.tasks.start
-
+                - delete: testmockoperations.tasks.del_property
 node_types:
     test_host_type:
         derived_from: cloudify.types.host
