@@ -125,12 +125,8 @@ def _process_source(ctx, source):
     the_rest = ''.join(split[1:])
     if schema in ['http', 'https']:
         return requests.get(source).text
-    elif schema == 'file':
+    elif schema == 'file' and the_rest:
         with open(the_rest) as f:
             return f.read()
-    elif schema == 'resource':
-        return ctx.get_resource(the_rest)
-    elif schema == 'blueprint':
-        return ctx.get_blueprint_resource(the_rest)
     else:
-        return source
+        return ctx.get_resource(source)
