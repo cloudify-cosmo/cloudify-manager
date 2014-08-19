@@ -10,7 +10,7 @@ test_plugins()
 
     pip install celery==3.0.24
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b CFY-1134-modify-runtime-properties-api
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
 
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
@@ -80,7 +80,7 @@ run_intergration_tests()
     sudo ln -Tsf /{run,dev}/shm
     sudo chmod 777 /dev/shm  # for celery worker
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b CFY-1134-modify-runtime-properties-api
     cd cloudify-rest-client; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
