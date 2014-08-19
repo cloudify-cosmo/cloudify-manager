@@ -65,6 +65,12 @@ def set_property(ctx, **kwargs):
 
 
 @operation
+def del_property(ctx, **kwargs):
+
+
+
+
+@operation
 def touch(**kwargs):
     global touched_time
     touched_time = time.time()
