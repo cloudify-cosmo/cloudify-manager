@@ -24,6 +24,7 @@ import requests
 import pika
 
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
 
 from riemann_controller import config
 
@@ -92,7 +93,7 @@ def _deployment_config_template():
                                   'deployment.config.template'))
 
 
-def _verify_core_up(deployment_config_dir_path, timeout=5):
+def _verify_core_up(deployment_config_dir_path, timeout=30):
     ok_path = path.join(deployment_config_dir_path, 'ok')
     end = time.time() + timeout
     while time.time() < end:
@@ -106,8 +107,8 @@ def _verify_core_up(deployment_config_dir_path, timeout=5):
                 time.sleep(0.1)
             else:
                 raise
-    raise RuntimeError('Riemann core was has not started in {} seconds'
-                       .format(timeout))
+    raise NonRecoverableError('Riemann core was has not started in {} seconds'
+                              .format(timeout))
 
 
 def _process_policy_type_sources(ctx, policy_types):
