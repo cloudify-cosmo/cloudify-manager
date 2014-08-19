@@ -80,12 +80,14 @@ run_intergration_tests()
     sudo ln -Tsf /{run,dev}/shm
     sudo chmod 777 /dev/shm  # for celery worker
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b CFY-1123-tosca-inputs
     cd cloudify-rest-client; pip install .; cd ..
+    git clone https://github.com/cloudify-cosmo/cloudify-dsl-parser --depth=1 -b CFY-1123-tosca-inputs
+    cd cloudify-dsl-parser; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
 
-    cd rest-service && pip install . -r dev-requirements.txt && cd ..
+    cd rest-service && pip install . && cd ..
 
     cd plugins/riemann-controller && pip install . && cd ../..
     cd workflows && pip install . && cd ..
