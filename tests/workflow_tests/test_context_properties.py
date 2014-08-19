@@ -40,7 +40,6 @@ class TestContextProperties(TestCase):
             node_id).runtime_properties
         self.assertNotIn('property_name', node_runtime_props)
 
-
     def test_no_update_runtime_properties(self):
         dsl_path = resource("dsl/update-node-state.yaml")
         # simply expecting workflow execution to succeed
