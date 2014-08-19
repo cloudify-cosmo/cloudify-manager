@@ -49,7 +49,8 @@ def create(ctx, policy_types=None, groups=None, **kwargs):
                               groups,
                               deployment_config_template))
     _publish_configuration_event(ctx, 'start', deployment_config_dir_path)
-    _verify_core_up(deployment_config_dir_path)
+    _verify_core_up(deployment_config_dir_path,
+                    timeout=ctx.bootstrap_context.policy_engine.start_timeout)
 
 
 @operation
@@ -93,7 +94,9 @@ def _deployment_config_template():
                                   'deployment.config.template'))
 
 
-def _verify_core_up(deployment_config_dir_path, timeout=30):
+def _verify_core_up(deployment_config_dir_path, timeout):
+    if timeout is None:
+        timeout = 30
     ok_path = path.join(deployment_config_dir_path, 'ok')
     end = time.time() + timeout
     while time.time() < end:
@@ -104,7 +107,7 @@ def _verify_core_up(deployment_config_dir_path, timeout=30):
             return
         except IOError, e:
             if e.errno in [errno.ENOENT]:
-                time.sleep(0.1)
+                time.sleep(0.5)
             else:
                 raise
     raise NonRecoverableError('Riemann core was has not started in {} seconds'
