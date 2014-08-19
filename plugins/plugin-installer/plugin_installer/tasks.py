@@ -32,7 +32,7 @@ from cloudify.decorators import operation
 logger = logging.getLogger('default')
 logger.level = logging.DEBUG
 
-manager_branch = 'CFY-1049-policies'
+manager_branch = 'master'
 
 
 @operation
