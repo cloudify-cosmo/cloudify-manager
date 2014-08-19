@@ -1,22 +1,17 @@
 imports:
     - cloudify.types
+    - policies/threshold.yaml
 
 node_templates:
     node:
         type: cloudify.types.base
 
-policy_types:
-    policy:
-        properties:
-                key:
-                    description: key description
-        source: file:///home/dan/work/riemann/policy.config.template
-
 groups:
-    group:
+    threshold_group:
         members: [node]
         policies:
-            policy:
-                type: policy
+            threshold_policy:
+                type: threshold
                 properties:
-                    key: value
+                    metric: TODO
+                    threshold: 60

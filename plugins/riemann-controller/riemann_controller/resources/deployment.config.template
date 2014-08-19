@@ -2,7 +2,8 @@
 
 (periodically-expire 5)
 
-(let [index (index)]
+(let [index (index)
+      deployment-id "{{ctx.deployment_id}}"]
   (streams
     (default :ttl 60 index)
 
