@@ -470,7 +470,8 @@ class BlueprintsManager(object):
                 'workflow_plugins_to_install'],
             'policy_configuration': {
                 'policy_types': deployment_plan['policy_types'],
-                'groups': deployment_plan['groups']
+                'policy_triggers': deployment_plan['policy_triggers'],
+                'groups': deployment_plan['groups'],
             },
             '__cloudify_context': context
         }

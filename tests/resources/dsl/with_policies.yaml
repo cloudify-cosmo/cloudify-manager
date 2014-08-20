@@ -3,6 +3,7 @@ imports:
     - testmockoperations.yaml
     - mock_workflows_plugin.yaml
     - policies/threshold.yaml
+    - triggers/execute_workflow.yaml
 
 node_templates:
     node:
@@ -20,6 +21,11 @@ groups:
                 properties:
                     metric: TODO
                     threshold: 60
+                triggers:
+                    threshold_exceeded_workflow:
+                        type: execute_workflow
+                        parameters:
+                            workflow: threshold_exceeded
 
 workflows:
     threshold_exceeded: mock_workflows.workflows.test_policies_1

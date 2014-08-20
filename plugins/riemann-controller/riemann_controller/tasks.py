@@ -39,31 +39,7 @@ def create(policy_types=None,
            **_):
     policy_types = policy_types or {}
     groups = groups or {}
-
-    if groups:
-        policy_triggers = policy_triggers or {
-            'execute_workflow': {
-                'source': 'file://{}'.format(
-                    path.join(path.dirname(__file__),
-                              'resources',
-                              'execute_workflow.clj'))
-            }
-        }
-        for group in groups.values():
-            for policy in group['policies'].values():
-                policy['triggers'] = {
-                    'threshold_exceeded_workflow': {
-                        'type': 'execute_workflow',
-                        'parameters': {
-                            'workflow': 'threshold_exceeded',
-                            'workflow_parameters': {},
-                            'socket_timeout': 1000,
-                            'conn_timeout': 1000
-                        }
-                    }
-                }
-    else:
-        policy_triggers = {}
+    policy_triggers = policy_triggers or {}
 
     _process_sources(policy_triggers)
     _process_sources(policy_types)
