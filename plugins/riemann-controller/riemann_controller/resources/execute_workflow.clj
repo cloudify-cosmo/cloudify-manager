@@ -1,6 +1,6 @@
 (fn execute-workflow
   [ctx]
-    (let [deployment-id       (:deployemnt_id ctx)
+    (let [deployment-id       (:deployment-id ctx)
           manager-ip          "127.0.0.1"
           manager-rest-port   8100
           base-uri            (str "http://" manager-ip ":" manager-rest-port)

@@ -46,7 +46,7 @@ def create(policy_types=None,
                 'source': 'file://{}'.format(
                     path.join(path.dirname(__file__),
                               'resources',
-                              'execute_workflow'))
+                              'execute_workflow.clj'))
             }
         }
         for group in groups.values():
@@ -73,6 +73,8 @@ def create(policy_types=None,
         os.chmod(deployment_config_dir_path, 0777)
     with open(_deployment_config_template()) as f:
         deployment_config_template = f.read()
+    with open(os.path.join(_deployment_config_dir(), 'groups'), 'w') as f:
+        f.write(json.dumps(groups))
     with open(path.join(deployment_config_dir_path,
                         'deployment.config'), 'w') as f:
         f.write(config.create(ctx,
@@ -80,11 +82,8 @@ def create(policy_types=None,
                               policy_triggers,
                               groups,
                               deployment_config_template))
-    with open(os.path.join(_deployment_config_dir(), 'groups'), 'w') as f:
-        f.write(json.dumps(groups))
     _publish_configuration_event('start', deployment_config_dir_path)
-    _verify_core_up(deployment_config_dir_path,
-                    timeout=ctx.bootstrap_context.policy_engine.start_timeout)
+    _verify_core_up(deployment_config_dir_path)
 
 
 @operation
@@ -128,9 +127,8 @@ def _deployment_config_template():
                                   'deployment.config.template'))
 
 
-def _verify_core_up(deployment_config_dir_path, timeout):
-    if timeout is None:
-        timeout = 30
+def _verify_core_up(deployment_config_dir_path):
+    timeout = ctx.bootstrap_context.policy_engine.start_timeout or 30
     ok_path = path.join(deployment_config_dir_path, 'ok')
     end = time.time() + timeout
     while time.time() < end:
