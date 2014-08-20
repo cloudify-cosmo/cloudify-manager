@@ -435,7 +435,7 @@ class RiemannProcess(object):
         env['LANGOHR_JAR'] = self._langohr_jar_path()
 
         command = [
-            path.join(path.dirname(self._config_path), 'riemann'),
+            get_resource(path.join('riemann', 'riemann.sh')),
             self._config_path
         ]
         self._process = subprocess.Popen(command,
