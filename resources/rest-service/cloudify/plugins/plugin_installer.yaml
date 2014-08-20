@@ -1,9 +1,0 @@
-
-imports:
-    - "cloudify.types"
-
-plugins:
-    plugin_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: "cloudify/poc/plugins/celery-worker-plugin-installer.zip"
