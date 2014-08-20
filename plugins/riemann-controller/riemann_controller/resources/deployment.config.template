@@ -18,8 +18,8 @@
 {% for stream in streams %}
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
-(let [group "{{stream.metadata.group}}"
-      policy "{{stream.metadata.policy}}"]
+(let [group-name "{{stream.metadata.group}}"
+      policy-name "{{stream.metadata.policy}}"]
 (where* (is-node-name "{{stream.metadata.members[0]}}")
 {{stream.data}})
 {% endfor %})))

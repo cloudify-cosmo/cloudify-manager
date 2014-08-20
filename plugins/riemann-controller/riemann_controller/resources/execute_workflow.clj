@@ -17,9 +17,3 @@
          :socket-timeout (:socket_timeout parameters)
          :conn-timeout   (:conn_timeout parameters)
          :body           body})))
-
-; (defmacro execute-workflow
-;   ([workflow]
-;   `(execute-workflow* ~workflow ~'deployment-id))
-;   ([workflow opts]
-;   `(execute-workflow* ~workflow ~'deployment-id ~opts)))
