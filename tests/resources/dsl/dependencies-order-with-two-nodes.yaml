@@ -1,6 +1,6 @@
 imports:
-    - "cloudify.types"
-    - "testmockoperations.yaml"
+    - cloudify.types
+    - testmockoperations-plugin.yaml
 
 node_templates:
     "host_node":
@@ -22,5 +22,5 @@ node_types:
                 default: value1
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations.tasks.make_reachable
-                - create: testmockoperations.tasks.set_property
+                - start: testmockoperations-plugin.testmockoperations.tasks.make_reachable
+                - create: testmockoperations-plugin.testmockoperations.tasks.set_property

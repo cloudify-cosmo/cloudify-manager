@@ -1,37 +1,37 @@
 imports:
-    - "cloudify.types"
-    - "testmockoperations.yaml"
-    - "connectionconfigurermock.yaml"
+    - cloudify.types
+    - testmockoperations-plugin.yaml
+    - connectionconfigurermock-plugin.yaml
 
 node_templates:
-    "containing_node":
-        type: "mock_type"
+    containing_node:
+        type: mock_type
 
-    "contained_in_node2":
-        type: "mock_type"
+    contained_in_node2:
+        type: mock_type
         relationships:
-            - type: "cloudify.relationships.contained_in"
-              target: "contained_in_node1"
+            - type: cloudify.relationships.contained_in
+              target: contained_in_node1
               source_interfaces:
                   cloudify.interfaces.relationship_lifecycle:
-                      - unlink: connection_configurer_mock.tasks.unconfigure_connection
+                      - unlink: connection-configurer-mock-plugin.connection_configurer_mock.tasks.unconfigure_connection
 
-    "contained_in_node1":
-        type: "mock_type"
+    contained_in_node1:
+        type: mock_type
         relationships:
-            - type: "cloudify.relationships.contained_in"
-              target: "containing_node"
+            - type: cloudify.relationships.contained_in
+              target: containing_node
               target_interfaces:
                   cloudify.interfaces.relationship_lifecycle:
-                      - unlink: connection_configurer_mock.tasks.unconfigure_connection
+                      - unlink: connection-configurer-mock-plugin.connection_configurer_mock.tasks.unconfigure_connection
 
 node_types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - "create": testmockoperations.tasks.make_reachable
-                - "delete": testmockoperations.tasks.make_unreachable
+                - create: testmockoperations-plugin.testmockoperations.tasks.make_reachable
+                - delete: testmockoperations-plugin.testmockoperations.tasks.make_unreachable
             cloudify.interfaces.monitor_lifecycle:
-                            - start: testmockoperations.tasks.start_monitor
-                            - stop: testmockoperations.tasks.stop_monitor
+                            - start: testmockoperations-plugin.testmockoperations.tasks.start_monitor
+                            - stop: testmockoperations-plugin.testmockoperations.tasks.stop_monitor

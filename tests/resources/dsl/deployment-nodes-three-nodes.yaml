@@ -1,6 +1,6 @@
 imports:
     - "cloudify.types"
-    - "testmockoperations.yaml"
+    - testmockoperations-plugin.yaml
 
 node_templates:
     "containing_node":
@@ -21,4 +21,4 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             mock_interface:
-                - make_reachable: testmockoperations.tasks.make_reachable
+                - make_reachable: testmockoperations-plugin.testmockoperations.tasks.make_reachable

@@ -1,6 +1,6 @@
 imports:
     - cloudify.types
-    - testmockoperations.yaml
+    - testmockoperations-plugin.yaml
 
 node_templates:
     test_node:
@@ -10,6 +10,6 @@ node_templates:
         interfaces:
             cloudify.interfaces.host:
                 - get_state:
-                    mapping: testmockoperations.tasks.host_get_state
+                    mapping: testmockoperations-plugin.testmockoperations.tasks.host_get_state
                     properties:
                         false_count: 3

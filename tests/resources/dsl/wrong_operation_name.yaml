@@ -1,14 +1,14 @@
 imports:
-    - "cloudify.types"
-    - testmockoperations.yaml
+    - cloudify.types
+    - testmockoperations-plugin.yaml
 
 node_templates:
-    "mock_node":
-        type: "mock_type"
+    mock_node:
+        type: mock_type
 
 node_types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations.non_existent
+                - start: testmockoperations-plugin.testmockoperations.non_existent

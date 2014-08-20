@@ -1,6 +1,6 @@
 imports:
     - cloudify.types
-    - testmockoperations.yaml
+    - testmockoperations-plugin.yaml
     - mock_workflows_plugin.yaml
 
 node_templates:
@@ -8,10 +8,10 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             test_interface:
-                - operation: testmockoperations.tasks.mock_operation_from_custom_workflow
-                - sleep_operation: testmockoperations.tasks.sleep
+                - operation: testmockoperations-plugin.testmockoperations.tasks.mock_operation_from_custom_workflow
+                - sleep_operation: testmockoperations-plugin.testmockoperations.tasks.sleep
 
 workflows:
-    sleep: mock_workflows.workflows.sleep
-    sleep_with_cancel_support: mock_workflows.workflows.sleep_with_cancel_support
-    sleep_with_graph_usage: mock_workflows.workflows.sleep_with_graph_usage
+    sleep: mock-workflows-plugin.mock_workflows.workflows.sleep
+    sleep_with_cancel_support: mock-workflows-plugin.mock_workflows.workflows.sleep_with_cancel_support
+    sleep_with_graph_usage: mock-workflows-plugin.mock_workflows.workflows.sleep_with_graph_usage

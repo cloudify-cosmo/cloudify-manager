@@ -18,19 +18,19 @@ node_types:
     # A tier in a topology
     cloudify.types.tier: 
         derived_from: cloudify.types.base
-        
+
     # A host (physical / virtual or LXC) in a topology
     cloudify.types.host:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.worker_installer:
-                - install: worker_installer.tasks.install
-                - start: worker_installer.tasks.start
-                - stop: worker_installer.tasks.stop
-                - uninstall: worker_installer.tasks.uninstall
-                - restart: worker_installer.tasks.restart
+                - install: agent-installer.worker_installer.tasks.install
+                - start: agent-installer.worker_installer.tasks.start
+                - stop: agent-installer.worker_installer.tasks.stop
+                - uninstall: agent-installer.worker_installer.tasks.uninstall
+                - restart: agent-installer.worker_installer.tasks.restart
             cloudify.interfaces.plugin_installer:
-                - install: plugin_installer.tasks.install
+                - install: plugin-installer.plugin_installer.tasks.install
             cloudify.interfaces.host:
                 - get_state
         properties:
@@ -56,7 +56,7 @@ node_types:
     # An isolated virtual layer 2 domain or a logical / virtual switch
     cloudify.types.network:
         derived_from: cloudify.types.base
-    
+
     # An isolated virtual layer 3 subnet with IP range
     cloudify.types.subnet:
         derived_from: cloudify.types.base
@@ -134,8 +134,8 @@ relationships:
 # Workflows
 ##################################################################################
 workflows:
-    install: workflows.default.install
-    uninstall: workflows.default.uninstall
+    install: workflows-runner.workflows.default.install
+    uninstall: workflows-runner.workflows.default.uninstall
 
 ##################################################################################
 # Base artifact definitions
@@ -147,37 +147,27 @@ plugins:
 
     # Remote plugin artifact
     cloudify.plugins.remote_plugin:
-        derived_from: "cloudify.plugins.plugin"
+        derived_from: cloudify.plugins.plugin
 
     # Worker plugin artifact - runs on Cloudify agent
     cloudify.plugins.agent_plugin:
-        derived_from: "cloudify.plugins.plugin"
+        derived_from: cloudify.plugins.plugin
 
     # Worker plugin artifact - runs on a dedicated worker for the deployment
     cloudify.plugins.manager_plugin:
-        derived_from: "cloudify.plugins.plugin"
+        derived_from: cloudify.plugins.plugin
 
-    worker_installer:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: worker_installer.zip
+    agent-installer:
+        derived_from: cloudify.plugins.manager_plugin
 
-    plugin_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: plugin_installer.zip
+    plugin-installer:
+        derived_from: cloudify.plugins.agent_plugin
 
-    windows_agent_installer:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: worker_installer.zip
+    windows-agent-installer:
+        derived_from: cloudify.plugins.manager_plugin
 
-    windows_plugin_installer:
-        derived_from: "cloudify.plugins.agent_plugin"
-        properties:
-            url: plugin_installer.zip
+    windows-plugin-installer:
+        derived_from: cloudify.plugins.agent_plugin
 
-    workflows:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: workflows.zip
+    workflows-runner:
+        derived_from: cloudify.plugins.manager_plugin

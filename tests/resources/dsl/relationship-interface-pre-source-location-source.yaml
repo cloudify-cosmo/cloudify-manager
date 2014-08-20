@@ -6,4 +6,4 @@ relationships:
         derived_from: cloudify.relationships.connected_to
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - postconfigure: connection_configurer_mock.tasks.configure_connection
+                - postconfigure: connection-configurer-mock-plugin.connection_configurer_mock.tasks.configure_connection
