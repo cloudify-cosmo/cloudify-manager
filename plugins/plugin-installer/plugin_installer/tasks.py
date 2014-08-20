@@ -51,7 +51,7 @@ def install(ctx, plugins, **kwargs):
     for plugin in plugins:
         ctx.logger.info("Installing plugin {0}".format(plugin['name']))
 
-        if plugin['name'] == 'workflows':
+        if plugin['name'] == 'workflows-runner':
             # special handling for the default workflows plugin, as it does not
             # currently sit on the file server and is not under a blueprint
             # context
