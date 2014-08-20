@@ -1,7 +1,0 @@
-###
-# cloudmock plugin definition.
-plugins:
-    cloudmock:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "cloudmock.zip"

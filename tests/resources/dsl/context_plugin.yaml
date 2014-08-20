@@ -1,5 +1,0 @@
-plugins:
-    context_plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "cloudmock.zip"
