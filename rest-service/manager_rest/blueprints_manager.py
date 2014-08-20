@@ -13,9 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
-
-
 import json
 import time
 import uuid
@@ -23,6 +20,7 @@ from datetime import datetime
 from flask import g, current_app
 
 from dsl_parser import tasks
+from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -243,17 +241,21 @@ class BlueprintsManager(object):
             execution_id, new_status, '')
         return self.get_execution(execution_id)
 
-    def create_deployment(self, blueprint_id, deployment_id):
+    def create_deployment(self, blueprint_id, deployment_id, inputs=None):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
-        deployment_json_plan = tasks.prepare_deployment_plan(plan)
-        deployment_plan = json.loads(deployment_json_plan)
+        try:
+            deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
+        except (MissingRequiredInputError, UnknownInputError), e:
+            raise manager_exceptions.BadParametersError(str(e))
+        deployment_plan = deployment_plan
 
         now = str(datetime.now())
         new_deployment = models.Deployment(
             id=deployment_id,
             blueprint_id=blueprint_id, created_at=now, updated_at=now,
-            workflows=deployment_plan['workflows'])
+            workflows=deployment_plan['workflows'],
+            inputs=deployment_plan['inputs'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)

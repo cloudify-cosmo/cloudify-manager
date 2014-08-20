@@ -120,7 +120,7 @@ def abort_workflow_service_operation(workflow_service_error):
 
 def abort_error(error):
     abort(error.http_code,
-          message='{0}: {1}'.format(error.http_code, str(error)),
+          message=str(error),
           error_code=error.error_code)
 
 
@@ -130,10 +130,21 @@ def verify_json_content_type():
             'Content type must be application/json')
 
 
-def verify_parameter_in_request_body(param, request_json):
+def verify_parameter_in_request_body(param,
+                                     request_json,
+                                     param_type=None,
+                                     optional=False):
     if param not in request_json:
+        if optional:
+            return
         raise manager_exceptions.BadParametersError(
             'Missing {0} in json request body'.format(param))
+    if param_type and not isinstance(request_json[param], param_type):
+        raise manager_exceptions.BadParametersError(
+            '{0} parameter is expected to be of type {1} but is of type '
+            '{2}'.format(param,
+                         param_type.__name__,
+                         type(request_json[param]).__name__))
 
 
 def verify_and_convert_bool(attribute_name, str_bool):
@@ -648,9 +659,13 @@ class DeploymentsId(Resource):
         verify_json_content_type()
         request_json = request.json
         verify_parameter_in_request_body('blueprint_id', request_json)
+        verify_parameter_in_request_body('inputs',
+                                         request_json,
+                                         param_type=dict,
+                                         optional=True)
         blueprint_id = request.json['blueprint_id']
         deployment = get_blueprints_manager().create_deployment(
-            blueprint_id, deployment_id)
+            blueprint_id, deployment_id, inputs=request_json.get('inputs', {}))
         return responses.Deployment(
             **_replace_workflows_field_for_deployment_response(
                 deployment.to_dict())), 201
