@@ -2,17 +2,24 @@
 
 (periodically-expire 5)
 
+{% for trigger_name, trigger in policy_triggers.iteritems()  %}
+
+(register-policy-trigger "{{ctx.deployment_id}}" "{{trigger_name}}"
+{{trigger.source}})
+
+{% endfor %}
+
 (let [index (index)
       deployment-id "{{ctx.deployment_id}}"]
-  (streams
-    (default :ttl 60 index)
+(streams
+
+(default :ttl 60 index)
 
 {% for stream in streams %}
-; group={{stream.metadata.group}}
-; policy={{stream.metadata.policy}}
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
+(let [group "{{stream.metadata.group}}"
+      policy "{{stream.metadata.policy}}"]
 (where* (is-node-name "{{stream.metadata.members[0]}}")
 {{stream.data}})
-
-{% endfor %}))
+{% endfor %})))

@@ -23,6 +23,7 @@ import json
 import requests
 import pika
 
+from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
@@ -32,11 +33,41 @@ RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
 
 
 @operation
-def create(ctx, policy_types=None, groups=None, **kwargs):
+def create(policy_types=None,
+           policy_triggers=None,
+           groups=None,
+           **_):
     policy_types = policy_types or {}
     groups = groups or {}
-    _process_policy_type_sources(ctx, policy_types)
-    deployment_config_dir_path = _deployment_config_dir(ctx)
+
+    if groups:
+        policy_triggers = policy_triggers or {
+            'execute_workflow': {
+                'source': 'file://{}'.format(
+                    path.join(path.dirname(__file__),
+                              'resources',
+                              'execute_workflow'))
+            }
+        }
+        for group in groups.values():
+            for policy in group['policies'].values():
+                policy['triggers'] = {
+                    'threshold_exceeded_workflow': {
+                        'type': 'execute_workflow',
+                        'parameters': {
+                            'workflow': 'threshold_exceeded',
+                            'workflow_parameters': {},
+                            'socket_timeout': 1000,
+                            'conn_timeout': 1000
+                        }
+                    }
+                }
+    else:
+        policy_triggers = {}
+
+    _process_sources(policy_triggers)
+    _process_sources(policy_types)
+    deployment_config_dir_path = _deployment_config_dir()
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
         os.chmod(deployment_config_dir_path, 0777)
@@ -46,25 +77,28 @@ def create(ctx, policy_types=None, groups=None, **kwargs):
                         'deployment.config'), 'w') as f:
         f.write(config.create(ctx,
                               policy_types,
+                              policy_triggers,
                               groups,
                               deployment_config_template))
-    _publish_configuration_event(ctx, 'start', deployment_config_dir_path)
+    with open(os.path.join(_deployment_config_dir(), 'groups'), 'w') as f:
+        f.write(json.dumps(groups))
+    _publish_configuration_event('start', deployment_config_dir_path)
     _verify_core_up(deployment_config_dir_path,
                     timeout=ctx.bootstrap_context.policy_engine.start_timeout)
 
 
 @operation
-def delete(ctx, **kwargs):
-    deployment_config_dir_path = _deployment_config_dir(ctx)
-    _publish_configuration_event(ctx, 'stop', deployment_config_dir_path)
+def delete(**_):
+    deployment_config_dir_path = _deployment_config_dir()
+    _publish_configuration_event('stop', deployment_config_dir_path)
 
 
-def _deployment_config_dir(ctx):
+def _deployment_config_dir():
     return os.path.join(os.environ[RIEMANN_CONFIGS_DIR],
                         ctx.deployment_id)
 
 
-def _publish_configuration_event(ctx, state, deployment_config_dir_path):
+def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
     connection = pika.BlockingConnection()
     try:
@@ -114,12 +148,12 @@ def _verify_core_up(deployment_config_dir_path, timeout):
                               .format(timeout))
 
 
-def _process_policy_type_sources(ctx, policy_types):
-    for policy_type in policy_types.values():
-        policy_type['source'] = _process_source(ctx, policy_type['source'])
+def _process_sources(sources):
+    for source in sources.values():
+        source['source'] = _process_source(source['source'])
 
 
-def _process_source(ctx, source):
+def _process_source(source):
     split = source.split('://')
     schema = split[0]
     the_rest = ''.join(split[1:])
