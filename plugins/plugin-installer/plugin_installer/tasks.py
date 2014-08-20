@@ -32,6 +32,8 @@ from cloudify.decorators import operation
 logger = logging.getLogger('default')
 logger.level = logging.DEBUG
 
+manager_branch = 'master'
+
 
 @operation
 def install(ctx, plugins, **kwargs):
@@ -55,7 +57,8 @@ def install(ctx, plugins, **kwargs):
             # special handling for the default workflows plugin, as it does not
             # currently sit on the file server and is not under a blueprint
             # context
-            plugin['url'] = '/opt/manager/cloudify-manager-master/workflows'
+            plugin['url'] = '/opt/manager/cloudify-manager-{}/workflows'\
+                            .format(manager_branch)
             install_celery_plugin(plugin)
             continue
 

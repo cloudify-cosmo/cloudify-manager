@@ -17,9 +17,9 @@ __author__ = 'dank'
 
 import uuid
 import time
+import errno
 from os import path
 
-import bernhard
 
 from workers_tests import WorkersTestCase
 from testenv import get_resource as resource
@@ -110,8 +110,7 @@ class TestWithDeploymentWorker(WorkersTestCase):
         self.assertEquals(state, AFTER_INSTALL_STAGES)
 
         # test riemann core started successfully
-        # riemann_core_port = self._read_riemann_core_port()
-        # self._send_riemann_event(riemann_core_port)
+        self.assertTrue(self._is_riemann_core_up())
 
         # start agent worker
         node_id = self._list_nodes()[0].id
@@ -153,12 +152,7 @@ class TestWithDeploymentWorker(WorkersTestCase):
         self.assertEquals(state, AFTER_UNINSTALL_STAGES)
 
         # validate riemann core is no longer running
-        # def _riemann_core_down_assertions():
-        #     self.assertRaises(IOError, self._read_riemann_core_port)
-        #     self.assertRaises(bernhard.TransportError,
-        #                       self._send_riemann_event,
-        #                       riemann_core_port)
-        # self.do_assertions(_riemann_core_down_assertions)
+        self.assertFalse(self._is_riemann_core_up())
 
     def _execute(self, workflow):
         execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
@@ -171,13 +165,12 @@ class TestWithDeploymentWorker(WorkersTestCase):
     def _get(self, task, queue, args=None):
         return send_task(task, queue=queue, args=args).get(timeout=10)
 
-    def _read_riemann_core_port(self):
-        with open(path.join(self.riemann_workdir, DEPLOYMENT_ID, 'port')) as f:
-            return int(f.read())
-
-    def _send_riemann_event(self, port):
-        client = bernhard.Client(port=port)
-        client.send({
-            'service': 'testing',
-            'state': 'notsogood'
-        })
+    def _is_riemann_core_up(self):
+        try:
+            with open(path.join(self.riemann_workdir,
+                                DEPLOYMENT_ID, 'ok')) as f:
+                return f.read().strip() == 'ok'
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                return False
+            raise

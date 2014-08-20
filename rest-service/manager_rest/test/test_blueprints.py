@@ -17,6 +17,7 @@ __author__ = 'dan'
 
 
 from base_test import BaseServerTestCase
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class BlueprintsTestCase(BaseServerTestCase):
@@ -26,8 +27,10 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEquals(0, len(result.json))
 
     def test_get_nonexistent_blueprint(self):
-        get_blueprint_response = self.get('/blueprints/15').json
-        self.assertTrue('404' in get_blueprint_response['message'])
+        try:
+            self.client.blueprints.get('15')
+        except CloudifyClientError, e:
+            self.assertEqual(404, e.status_code)
 
     def test_post_and_then_search(self):
         post_blueprints_response = self.put_file(

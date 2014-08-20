@@ -18,6 +18,7 @@ __author__ = 'dan'
 
 from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class DeploymentsTestCase(BaseServerTestCase):
@@ -293,3 +294,37 @@ class DeploymentsTestCase(BaseServerTestCase):
                 'Failed finding node with prefix {0}'.format(starts_with))
         assert_node_exists('vm')
         assert_node_exists('http_web_server')
+
+    def test_inputs(self):
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_inputs.yaml',
+            blueprint_id='5566',
+            deployment_id=self.DEPLOYMENT_ID,
+            inputs={'http_web_server_port': '8080'})
+        try:
+            self.put_deployment(
+                blueprint_file_name='blueprint_with_inputs.yaml',
+                blueprint_id='1122',
+                deployment_id=self.DEPLOYMENT_ID,
+                inputs='illegal')
+        except CloudifyClientError, e:
+            self.assertTrue('inputs parameter is expected' in str(e))
+        try:
+            self.put_deployment(
+                blueprint_id='3344',
+                blueprint_file_name='blueprint_with_inputs.yaml',
+                deployment_id=self.DEPLOYMENT_ID,
+                inputs={'some_input': '1234'})
+        except CloudifyClientError, e:
+            self.assertTrue('was not specified' in str(e))
+        try:
+            self.put_deployment(
+                blueprint_id='7788',
+                blueprint_file_name='blueprint_with_inputs.yaml',
+                deployment_id=self.DEPLOYMENT_ID,
+                inputs={
+                    'http_web_server_port': '1234',
+                    'unknown_input': 'yey'
+                })
+        except CloudifyClientError, e:
+            self.assertTrue('Unknown input' in str(e))
