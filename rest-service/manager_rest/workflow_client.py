@@ -31,7 +31,7 @@ class WorkflowClient(object):
                          deployment_id,
                          execution_id,
                          execution_parameters=None):
-        task_name = '{}.{}'.format(workflow['plugin'], workflow['operation'])
+        task_name = workflow['operation']
         if env_workflows_queue:
             # used by integration tests
             task_queue = env_workflows_queue
