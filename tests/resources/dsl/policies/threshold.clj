@@ -1,4 +1,1 @@
-(fn [event]
-  (do
-    (process-policy-triggers)
-    (info "processed policy triggers")))
+process-policy-triggers
