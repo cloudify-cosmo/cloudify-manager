@@ -118,7 +118,7 @@ def _verify_core_up(deployment_config_dir_path):
                 time.sleep(0.5)
             else:
                 raise
-    raise NonRecoverableError('Riemann core was has not started in {} seconds'
+    raise NonRecoverableError('Riemann core has not started in {} seconds'
                               .format(timeout))
 
 
