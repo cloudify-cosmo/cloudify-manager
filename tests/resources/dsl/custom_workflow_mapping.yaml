@@ -17,4 +17,4 @@ node_templates:
                 - delete: cloudmock-plugin.cloudmock.tasks.terminate
 
 workflows:
-    custom: workflows.idonotexist.so.do.try.running.me
+    custom: workflows-runner.workflows.idonotexist.so.do.try.running.me
