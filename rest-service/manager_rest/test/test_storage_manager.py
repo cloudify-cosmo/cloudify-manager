@@ -59,7 +59,10 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         plan={'name': 'my-bp'},
                                         permalink=None,
                                         workflows={},
-                                        inputs={})
+                                        inputs={},
+                                        policy_types={},
+                                        policy_triggers={},
+                                        groups={})
         storage_manager.instance().put_deployment('dep-1', deployment1)
 
         deployment2 = models.Deployment(id='dep-2',
@@ -69,7 +72,10 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         plan={'name': 'my-bp'},
                                         permalink=None,
                                         workflows={},
-                                        inputs={})
+                                        inputs={},
+                                        policy_types={},
+                                        policy_triggers={},
+                                        groups={})
         storage_manager.instance().put_deployment('dep-2', deployment2)
 
         deployment3 = models.Deployment(id='dep-3',
@@ -79,7 +85,10 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         plan={'name': 'my-bp'},
                                         permalink=None,
                                         workflows={},
-                                        inputs={})
+                                        inputs={},
+                                        policy_types={},
+                                        policy_triggers={},
+                                        groups={})
         storage_manager.instance().put_deployment('dep-3', deployment3)
 
         blueprint_deployments = storage_manager.instance()\
@@ -100,10 +109,13 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 plan={'field': 'value'},
                                 permalink=None,
                                 workflows={},
-                                inputs={})
+                                inputs={},
+                                policy_types={},
+                                policy_triggers={},
+                                groups={})
 
         serialized_dep = dep.to_dict()
-        self.assertEquals(7, len(serialized_dep))
+        self.assertEquals(10, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
