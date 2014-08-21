@@ -3,10 +3,10 @@ imports:
     - cloudmock-plugin.yaml
 
 plugins:
-    test_management_plugin:
+    test-management-plugin:
         derived_from: cloudify.plugins.manager_plugin
 
-    test_plugin:
+    test-plugin:
         derived_from: cloudify.plugins.agent_plugin
 
 node_types:
@@ -31,5 +31,5 @@ node_templates:
                 - stop: cloudmock-plugin.cloudmock.tasks.stop
                 - delete: cloudmock-plugin.cloudmock.tasks.terminate
             cloudify.interfaces.test_lifecycle:
-                - create: test_plugin.tasks.start
-                - stop: test_management_plugin.stop
+                - create: test-plugin.test_plugin.tasks.start
+                - stop: test-management-plugin.test_management_plugin.stop
