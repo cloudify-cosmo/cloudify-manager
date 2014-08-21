@@ -112,8 +112,8 @@ def _verify_core_up(deployment_config_dir_path):
     while time.time() < end:
         try:
             # after the core is started this file is written as an indication
-            with (open(ok_path)) as f:
-                assert f.read().strip() == 'ok'
+            with (open(ok_path)):
+                pass
             return
         except IOError, e:
             if e.errno in [errno.ENOENT]:
