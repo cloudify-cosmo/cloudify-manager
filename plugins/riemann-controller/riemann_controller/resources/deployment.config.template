@@ -22,4 +22,4 @@
       policy-name "{{stream.metadata.policy}}"]
 (where* (is-node-name "{{stream.metadata.members[0]}}")
 {{stream.data}}))
-{% endfor %})))
+{% endfor %}))
