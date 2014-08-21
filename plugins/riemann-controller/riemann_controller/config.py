@@ -17,7 +17,7 @@
 from jinja2 import Template
 
 
-def create(ctx, policy_types, groups, config_template):
+def create(ctx, policy_types, policy_triggers, groups, config_template):
     streams = []
     for group_name, group in groups.items():
         for policy_name, policy in group['policies'].items():
@@ -36,4 +36,7 @@ def create(ctx, policy_types, groups, config_template):
                 'data': data,
                 'metadata': metadata
             })
-    return Template(config_template).render(streams=streams, ctx=ctx)
+    return Template(config_template).render(
+        streams=streams,
+        policy_triggers=policy_triggers,
+        ctx=ctx)

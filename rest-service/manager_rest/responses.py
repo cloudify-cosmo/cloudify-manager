@@ -74,7 +74,10 @@ class Deployment(object):
         'updated_at': fields.String,
         'blueprint_id': fields.String,
         'workflows': fields.List(fields.Nested(Workflow.resource_fields)),
-        'inputs': fields.Raw
+        'inputs': fields.Raw,
+        'policy_types': fields.Raw,
+        'policy_triggers': fields.Raw,
+        'groups': fields.Raw
     }
 
     def __init__(self, **kwargs):
@@ -85,6 +88,9 @@ class Deployment(object):
         self.blueprint_id = kwargs['blueprint_id']
         self.workflows = kwargs['workflows']
         self.inputs = kwargs['inputs']
+        self.policy_types = kwargs['policy_types']
+        self.policy_triggers = kwargs['policy_triggers']
+        self.groups = kwargs['groups']
 
 
 @swagger.model
