@@ -15,10 +15,11 @@
 
 
 import os
-from os import path
 import time
 import errno
 import json
+import subprocess
+from os import path
 
 import requests
 import pika
@@ -29,6 +30,7 @@ from cloudify.exceptions import NonRecoverableError
 from riemann_controller import config
 
 RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
+RIEMANN_LOG_PATH = '/tmp/riemann.log'
 
 
 @operation
@@ -110,8 +112,14 @@ def _verify_core_up(deployment_config_dir_path, timeout):
                 time.sleep(0.5)
             else:
                 raise
-    raise NonRecoverableError('Riemann core was has not started in {} seconds'
-                              .format(timeout))
+    riemann_log_output = subprocess.check_output(
+        'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+
+    raise NonRecoverableError('Riemann core has not started in {} seconds.\n'
+                              'tail -n 100 {}:\n {}'
+                              .format(timeout,
+                                      RIEMANN_LOG_PATH,
+                                      riemann_log_output))
 
 
 def _process_policy_type_sources(ctx, policy_types):
