@@ -255,7 +255,10 @@ class BlueprintsManager(object):
             id=deployment_id,
             blueprint_id=blueprint_id, created_at=now, updated_at=now,
             workflows=deployment_plan['workflows'],
-            inputs=deployment_plan['inputs'])
+            inputs=deployment_plan['inputs'],
+            policy_types=deployment_plan['policy_types'],
+            policy_triggers=deployment_plan['policy_triggers'],
+            groups=deployment_plan['groups'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id, deployment_id, plan)
