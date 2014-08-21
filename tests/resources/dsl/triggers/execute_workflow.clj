@@ -1,8 +1,8 @@
 (fn execute-workflow
   [ctx]
     (let [deployment-id       (:deployment-id ctx)
-          manager-ip          "127.0.0.1"
-          manager-rest-port   8100
+          manager-ip          (or (System/getenv "MANAGEMENT_IP") "127.0.0.1")
+          manager-rest-port   (or (Integer/parseInt (System/getenv "MANAGER_REST_PORT")) 80)
           base-uri            (str "http://" manager-ip ":" manager-rest-port)
           endpoint            (str "/deployments/" deployment-id "/executions")
           resource-uri        (str base-uri endpoint)
