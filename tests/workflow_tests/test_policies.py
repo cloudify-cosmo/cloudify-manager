@@ -20,7 +20,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import send_task
-#from testenv import undeploy_application as undeploy
+# from testenv import undeploy_application as undeploy
 
 from plugins.testmockoperations.tasks import \
     get_mock_operation_invocations as testmock_get_invocations
