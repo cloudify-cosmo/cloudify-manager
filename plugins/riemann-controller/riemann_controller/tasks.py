@@ -33,6 +33,7 @@ from riemann_controller import config
 RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
 RIEMANN_LOG_PATH = '/tmp/riemann.log'
 
+
 @operation
 def create(policy_types=None,
            policy_triggers=None,
