@@ -9,9 +9,9 @@
           parameters          (:parameters ctx)
           workflow            (:workflow parameters)
           workflow-parameters (:workflow_parameters parameters)
-          body                (cheshire/generate-string {:workflow_id workflow
-                                                         :parameters workflow-parameters})]
-      (http/post resource-uri
+          body                (cheshire.core/generate-string {:workflow_id workflow
+                                                              :parameters workflow-parameters})]
+      (clj-http.client/post resource-uri
         {:content-type   :json
          :accept         :json
          :socket-timeout (:socket_timeout parameters)
