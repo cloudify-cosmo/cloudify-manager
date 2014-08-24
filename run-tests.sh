@@ -10,7 +10,7 @@ test_plugins()
 
     pip install celery==3.0.24
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b feature/CFY-1165-add-server-traceback
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
 
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
@@ -55,7 +55,7 @@ test_plugins()
 test_rest_service()
 {
     echo "### Testing rest-service..."
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b feature/CFY-1165-add-server-traceback
     cd cloudify-rest-client; pip install .; cd ..
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
     pip install nose
