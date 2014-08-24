@@ -1,7 +1,7 @@
 imports:
     - cloudify.types
-    - testmockoperations-plugin.yaml
-    - connectionconfigurermock-plugin.yaml
+    - testmockoperations.yaml
+    - connectionconfigurermock.yaml
 
 node_templates:
     containing_node:
@@ -14,7 +14,7 @@ node_templates:
               target: contained_in_node1
               source_interfaces:
                   cloudify.interfaces.relationship_lifecycle:
-                      - unlink: connection-configurer-mock-plugin.connection_configurer_mock.tasks.unconfigure_connection
+                      - unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
 
     contained_in_node1:
         type: mock_type
@@ -23,15 +23,15 @@ node_templates:
               target: containing_node
               target_interfaces:
                   cloudify.interfaces.relationship_lifecycle:
-                      - unlink: connection-configurer-mock-plugin.connection_configurer_mock.tasks.unconfigure_connection
+                      - unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
 
 node_types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: testmockoperations-plugin.testmockoperations.tasks.make_reachable
-                - delete: testmockoperations-plugin.testmockoperations.tasks.make_unreachable
+                - create: connection_configurer_mock.testmockoperations.tasks.make_reachable
+                - delete: connection_configurer_mock.testmockoperations.tasks.make_unreachable
             cloudify.interfaces.monitor_lifecycle:
-                            - start: testmockoperations-plugin.testmockoperations.tasks.start_monitor
-                            - stop: testmockoperations-plugin.testmockoperations.tasks.stop_monitor
+                            - start: connection_configurer_mock.testmockoperations.tasks.start_monitor
+                            - stop: connection_configurer_mock.testmockoperations.tasks.stop_monitor

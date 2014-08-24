@@ -24,13 +24,13 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.worker_installer:
-                - install: agent-installer.worker_installer.tasks.install
-                - start: agent-installer.worker_installer.tasks.start
-                - stop: agent-installer.worker_installer.tasks.stop
-                - uninstall: agent-installer.worker_installer.tasks.uninstall
-                - restart: agent-installer.worker_installer.tasks.restart
+                - install: agent_installer.worker_installer.tasks.install
+                - start: agent_installer.worker_installer.tasks.start
+                - stop: agent_installer.worker_installer.tasks.stop
+                - uninstall: agent_installer.worker_installer.tasks.uninstall
+                - restart: agent_installer.worker_installer.tasks.restart
             cloudify.interfaces.plugin_installer:
-                - install: plugin-installer.plugin_installer.tasks.install
+                - install: plugin_installer.plugin_installer.tasks.install
             cloudify.interfaces.host:
                 - get_state
         properties:
@@ -134,8 +134,8 @@ relationships:
 # Workflows
 ##################################################################################
 workflows:
-    install: workflows-runner.workflows.default.install
-    uninstall: workflows-runner.workflows.default.uninstall
+    install: default_workflows.workflows.default.install
+    uninstall: default_workflows.workflows.default.uninstall
 
 ##################################################################################
 # Base artifact definitions
@@ -157,17 +157,17 @@ plugins:
     cloudify.plugins.manager_plugin:
         derived_from: cloudify.plugins.plugin
 
-    agent-installer:
+    agent_installer:
         derived_from: cloudify.plugins.manager_plugin
 
-    plugin-installer:
+    plugin_installer:
         derived_from: cloudify.plugins.agent_plugin
 
-    windows-agent-installer:
+    windows_agent_installer:
         derived_from: cloudify.plugins.manager_plugin
 
-    windows-plugin-installer:
+    windows_plugin_installer:
         derived_from: cloudify.plugins.agent_plugin
 
-    workflows-runner:
+    default_workflows:
         derived_from: cloudify.plugins.manager_plugin

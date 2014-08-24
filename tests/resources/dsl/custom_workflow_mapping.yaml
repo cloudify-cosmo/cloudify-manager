@@ -1,6 +1,6 @@
 imports:
     - cloudify.types
-    - cloudmock-plugin.yaml
+    - cloudmock.yaml
 
 node_templates:
     webserver_host:
@@ -9,12 +9,12 @@ node_templates:
             install_agent: false
         interfaces:
             cloudify.interfaces.host:
-                - get_state: cloudmock-plugin.cloudmock.tasks.get_state
+                - get_state: cloudmock.cloudmock.tasks.get_state
             cloudify.interfaces.lifecycle:
-                - create: cloudmock-plugin.cloudmock.tasks.provision
-                - start: cloudmock-plugin.cloudmock.tasks.start
-                - stop: cloudmock-plugin.cloudmock.tasks.stop
-                - delete: cloudmock-plugin.cloudmock.tasks.terminate
+                - create: cloudmock.cloudmock.tasks.provision
+                - start: cloudmock.cloudmock.tasks.start
+                - stop: cloudmock.cloudmock.tasks.stop
+                - delete: cloudmock.cloudmock.tasks.terminate
 
 workflows:
-    custom: workflows-runner.workflows.idonotexist.so.do.try.running.me
+    custom: default_workflows.workflows.idonotexist.so.do.try.running.me

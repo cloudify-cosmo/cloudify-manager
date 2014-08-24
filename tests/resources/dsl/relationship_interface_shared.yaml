@@ -1,8 +1,8 @@
 imports:
     - cloudify.types
-    - cloudmock-plugin.yaml
-    - connectionconfigurermock-plugin.yaml
-    - testmockoperations-plugin.yaml
+    - cloudmock.yaml
+    - connectionconfigurermock.yaml
+    - testmockoperations.yaml
 
 node_templates:
     host:
@@ -11,18 +11,18 @@ node_templates:
             install_agent: false
         interfaces:
             cloudify.interfaces.host:
-                - get_state: cloudmock-plugin.cloudmock.tasks.get_state
+                - get_state: cloudmock.cloudmock.tasks.get_state
             cloudify.interfaces.lifecycle:
-                - create: cloudmock-plugin.cloudmock.tasks.provision
-                - configure: testmockoperations-plugin.testmockoperations.tasks.set_property
-                - start: cloudmock-plugin.cloudmock.tasks.start
+                - create: cloudmock.cloudmock.tasks.provision
+                - configure: testmockoperations.testmockoperations.tasks.set_property
+                - start: cloudmock.cloudmock.tasks.start
     mock_node_that_connects_to_host:
         type: test_app_module_type
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: testmockoperations-plugin.testmockoperations.tasks.touch
-                - configure: testmockoperations-plugin.testmockoperations.tasks.set_property
-                - start: testmockoperations-plugin.testmockoperations.tasks.make_reachable
+                - create: testmockoperations.testmockoperations.tasks.touch
+                - configure: testmockoperations.testmockoperations.tasks.set_property
+                - start: testmockoperations.testmockoperations.tasks.make_reachable
         relationships:
             -   type: cloudify.relationships.connected_to
                 target: host
@@ -38,7 +38,7 @@ node_types:
             value:
                 default: target_runtime_property_value
     test_app_module_type:
-        derived_from: "cloudify.types.app_module"
+        derived_from: cloudify.types.app_module
         properties:
             source_property_key:
                 default: source_property_value

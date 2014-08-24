@@ -1,5 +1,5 @@
 ###
 # connection configurer mock plugin definition.
 plugins:
-    connection-configurer-mock-plugin:
+    connection_configurer_mock:
         derived_from: cloudify.plugins.remote_plugin

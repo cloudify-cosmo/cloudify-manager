@@ -1,5 +1,0 @@
-plugins:
-    testmockoperations-plugin:
-        derived_from: "cloudify.plugins.remote_plugin"
-        properties:
-            url: "mock_interface.zip"

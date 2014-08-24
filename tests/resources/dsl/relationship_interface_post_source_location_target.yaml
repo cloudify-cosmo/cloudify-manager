@@ -1,9 +1,9 @@
 imports:
-    - relationship-interface-shared.yaml
+    - relationship_interface_shared.yaml
 
 relationships:
     connected_to:
         derived_from: cloudify.relationships.connected_to
         target_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - establish: connection-configurer-mock-plugin.connection_configurer_mock.tasks.configure_connection
+                - establish: connection_configurer_mock.connection_configurer_mock.tasks.configure_connection

@@ -90,12 +90,12 @@ class TestWithDeploymentWorker(WorkersTestCase):
         deployment_plugins = self._get(get_installed_plugins,
                                        queue=DEPLOYMENT_ID)
 
-        self.assertIn('test-management-plugin', deployment_plugins)
+        self.assertIn('test_management', deployment_plugins)
 
         # test plugin installed in deployment workflows worker
         workflow_plugin = self._get(get_installed_plugins,
                                     queue=DEPLOYMENT_WORKFLOWS_QUEUE)
-        self.assertIn('workflows-runner', workflow_plugin)
+        self.assertIn('workflows', workflow_plugin)
 
         # test valid deployment worker installation order
         state = self._get(get_worker_state, queue=MANAGEMENT,

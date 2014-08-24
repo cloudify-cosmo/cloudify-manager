@@ -1,7 +1,7 @@
 imports:
     - cloudify.types
-    - cloudmock-plugin.yaml
-    - testmockoperations-plugin.yaml
+    - cloudmock.yaml
+    - testmockoperations.yaml
 
 node_types:
     host1:
@@ -11,10 +11,10 @@ node_types:
                 default: false
         interfaces:
             cloudify.interfaces.host:
-                - get_state: testmockoperations-plugin.testmockoperations.tasks.mock_operation_get_instance_ip
+                - get_state: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip
             cloudify.interfaces.lifecycle:
-                - create: cloudmock-plugin.cloudmock.tasks.provision
-                - start: cloudmock-plugin.cloudmock.tasks.start
+                - create: cloudmock.cloudmock.tasks.provision
+                - start: cloudmock.cloudmock.tasks.start
     host1_runtime:
         derived_from: host1
         properties:
@@ -25,7 +25,7 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: testmockoperations-plugin.testmockoperations.tasks.mock_operation_get_instance_ip
+                - create: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip
 
     host2:
         derived_from: cloudify.types.host
@@ -34,10 +34,10 @@ node_types:
                 default: false
         interfaces:
             cloudify.interfaces.host:
-                - get_state: testmockoperations-plugin.testmockoperations.tasks.mock_operation_get_instance_ip_from_context
+                - get_state: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip_from_context
             cloudify.interfaces.lifecycle:
-                - create: cloudmock-plugin.cloudmock.tasks.provision
-                - start: cloudmock-plugin.cloudmock.tasks.start
+                - create: cloudmock.cloudmock.tasks.provision
+                - start: cloudmock.cloudmock.tasks.start
     host2_runtime:
         derived_from: host2
         properties:
@@ -48,17 +48,17 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: testmockoperations-plugin.testmockoperations.tasks.mock_operation_get_instance_ip_from_context
+                - create: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip_from_context
 
 relationships:
     contained_in:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - establish: testmockoperations-plugin.testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
+                - establish: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
         target_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - establish: testmockoperations-plugin.testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
+                - establish: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
 
 node_templates:
     host1_1:

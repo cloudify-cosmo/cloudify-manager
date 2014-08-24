@@ -1,5 +1,3 @@
-###
-# cloudmock plugin definition.
 plugins:
-    cloudmock-plugin:
+    testmockoperations:
         derived_from: cloudify.plugins.remote_plugin

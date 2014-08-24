@@ -23,7 +23,7 @@ from testenv import deploy_application as deploy
 class TestDeploymentNodes(TestCase):
 
     def test_get_deployment_nodes(self):
-        dsl_path = resource("dsl/deployment-nodes-three-nodes.yaml")
+        dsl_path = resource("dsl/deployment_nodes_three_nodes.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
 
@@ -43,7 +43,7 @@ class TestDeploymentNodes(TestCase):
         self.do_assertions(assert_node_states, timeout=30)
 
     def test_partial_update_node_instance(self):
-        dsl_path = resource("dsl/set-property.yaml")
+        dsl_path = resource("dsl/set_property.yaml")
         deployment, _ = deploy(dsl_path)
 
         node_id = self.client.node_instances.list(
@@ -110,7 +110,7 @@ class TestDeploymentNodes(TestCase):
                           node_instance.runtime_properties['new_key'])
 
     def test_update_node_instance_runtime_properties(self):
-        dsl_path = resource("dsl/set-property.yaml")
+        dsl_path = resource("dsl/set_property.yaml")
         deployment, _ = deploy(dsl_path)
 
         node_id = self.client.node_instances.list(

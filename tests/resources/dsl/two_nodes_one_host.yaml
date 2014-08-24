@@ -1,7 +1,7 @@
 imports:
     - cloudify.types
-    - cloudmock-plugin.yaml
-    - testmockoperations-plugin.yaml
+    - cloudmock.yaml
+    - testmockoperations.yaml
 
 node_templates:
     host:
@@ -10,8 +10,8 @@ node_templates:
             install_agent: false
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: cloudmock-plugin.cloudmock.tasks.provision
-                - start: cloudmock-plugin.cloudmock.tasks.start
+                - create: cloudmock.cloudmock.tasks.provision
+                - start: cloudmock.cloudmock.tasks.start
     node_in_host:
         type: mock_type
         relationships:
@@ -24,7 +24,7 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             mock_interface:
-                - touch: testmockoperations-plugin.testmockoperations.tasks.touch
-                - make_reachable: testmockoperations-plugin.testmockoperations.tasks.make_reachable
-                - make_unreachable: testmockoperations-plugin.testmockoperations.tasks.make_unreachable
-                - set_property: testmockoperations-plugin.testmockoperations.tasks.set_property
+                - touch: testmockoperations.testmockoperations.tasks.touch
+                - make_reachable: testmockoperations.testmockoperations.tasks.make_reachable
+                - make_unreachable: testmockoperations.testmockoperations.tasks.make_unreachable
+                - set_property: testmockoperations.testmockoperations.tasks.set_property

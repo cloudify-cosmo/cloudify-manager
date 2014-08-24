@@ -1,6 +1,6 @@
 imports:
     - cloudify.types
-    - testmockoperations-plugin.yaml
+    - testmockoperations.yaml
 
 node_templates:
     single_node:
@@ -13,6 +13,6 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 - start:
-                      mapping: testmockoperations-plugin.testmockoperations.tasks.get_resource_operation
+                      mapping: testmockoperations.testmockoperations.tasks.get_resource_operation
                       properties:
-                          resource_path: 'basic.yaml'
+                          resource_path: basic.yaml

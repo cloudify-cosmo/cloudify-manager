@@ -42,7 +42,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEquals(1, len(machines))
 
     def test_dependencies_order_with_two_nodes(self):
-        dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
+        dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
         blueprint_id = self.id()
         deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
 
@@ -68,7 +68,7 @@ class BasicWorkflowsTest(TestCase):
             pass
 
     def test_cloudify_runtime_properties_injection(self):
-        dsl_path = resource("dsl/dependencies-order-with-two-nodes.yaml")
+        dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
         deploy(dsl_path)
 
         from plugins.testmockoperations.tasks import get_state as \
@@ -90,7 +90,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertRaises(RuntimeError, deploy, dsl_path)
 
     def test_inject_properties_to_operation(self):
-        dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
+        dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
@@ -106,7 +106,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(states[0]['id'], invocation['id'])
 
     def test_start_monitor_node_operation(self):
-        dsl_path = resource("dsl/hardcoded-operation-properties.yaml")
+        dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
         deploy(dsl_path)
         from plugins.testmockoperations.tasks import \
             get_monitoring_operations_invocation

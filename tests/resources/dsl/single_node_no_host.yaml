@@ -1,10 +1,10 @@
 imports:
     - cloudify.types
-    - testmockoperations-plugin.yaml
+    - testmockoperations.yaml
 
 node_templates:
-    "single_node":
-        type: "mock_type"
+    single_node:
+        type: mock_type
 
 
 node_types:
@@ -12,10 +12,10 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations-plugin.testmockoperations.tasks.make_reachable
-                - stop: testmockoperations-plugin.testmockoperations.tasks.make_unreachable
+                - start: testmockoperations.testmockoperations.tasks.make_reachable
+                - stop: testmockoperations.testmockoperations.tasks.make_unreachable
             mock_interface:
-                - touch: testmockoperations-plugin.testmockoperations.tasks.touch
-                - make_reachable: testmockoperations-plugin.testmockoperations.tasks.make_reachable
-                - make_unreachable: testmockoperations-plugin.testmockoperations.tasks.make_unreachable
-                - set_property: testmockoperations-plugin.testmockoperations.tasks.set_property
+                - touch: testmockoperations.testmockoperations.tasks.touch
+                - make_reachable: testmockoperations.testmockoperations.tasks.make_reachable
+                - make_unreachable: testmockoperations.testmockoperations.tasks.make_unreachable
+                - set_property: testmockoperations.testmockoperations.tasks.set_property

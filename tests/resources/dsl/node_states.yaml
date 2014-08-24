@@ -1,14 +1,14 @@
 imports:
     - cloudify.types
-    - testmockoperations-plugin.yaml
+    - testmockoperations.yaml
 
 node_templates:
     node1234:
         type: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: testmockoperations-plugin.testmockoperations.tasks.append_node_state
-                - configure: testmockoperations-plugin.testmockoperations.tasks.append_node_state
-                - start: testmockoperations-plugin.testmockoperations.tasks.append_node_state
-                - stop: testmockoperations-plugin.testmockoperations.tasks.append_node_state
-                - delete: testmockoperations-plugin.testmockoperations.tasks.append_node_state
+                - create: testmockoperations.testmockoperations.tasks.append_node_state
+                - configure: testmockoperations.testmockoperations.tasks.append_node_state
+                - start: testmockoperations.testmockoperations.tasks.append_node_state
+                - stop: testmockoperations.testmockoperations.tasks.append_node_state
+                - delete: testmockoperations.testmockoperations.tasks.append_node_state

@@ -1,7 +1,7 @@
 imports:
     - cloudify.types
-    - testmockoperations-plugin.yaml
-    - mock-workflows-plugin.yaml
+    - testmockoperations.yaml
+    - mock_workflows.yaml
     - policies/threshold.yaml
     - triggers/execute_workflow.yaml
 
@@ -10,7 +10,7 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             test:
-                - op1: testmockoperations-plugin.testmockoperations.tasks.mock_operation_from_custom_workflow
+                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
     threshold_group:
@@ -28,4 +28,4 @@ groups:
                             workflow: threshold_exceeded
 
 workflows:
-    threshold_exceeded: mock-workflows-plugin.mock_workflows.workflows.test_policies_1
+    threshold_exceeded: mock_workflows.mock_workflows.workflows.test_policies_1
