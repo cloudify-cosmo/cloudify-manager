@@ -45,7 +45,8 @@ class BlueprintState(SerializableObject):
 class Deployment(SerializableObject):
 
     fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
-              'workflows', 'permalink', 'inputs'}
+              'workflows', 'permalink', 'inputs', 'policy_types',
+              'policy_triggers', 'groups'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -54,6 +55,9 @@ class Deployment(SerializableObject):
         self.blueprint_id = kwargs['blueprint_id']
         self.workflows = kwargs['workflows']
         self.inputs = kwargs['inputs']
+        self.policy_types = kwargs['policy_types']
+        self.policy_triggers = kwargs['policy_triggers']
+        self.groups = kwargs['groups']
         self.permalink = None  # TODO: implement
 
 

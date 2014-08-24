@@ -433,9 +433,11 @@ class RiemannProcess(object):
 
         env = os.environ.copy()
         env['LANGOHR_JAR'] = self._langohr_jar_path()
+        env['MANAGEMENT_IP'] = '127.0.0.1'
+        env['MANAGER_REST_PORT'] = str(MANAGER_REST_PORT)
 
         command = [
-            path.join(path.dirname(self._config_path), 'riemann'),
+            get_resource(path.join('riemann', 'riemann.sh')),
             self._config_path
         ]
         self._process = subprocess.Popen(command,
@@ -734,6 +736,22 @@ class TestCase(unittest.TestCase):
     @property
     def riemann_workdir(self):
         return TestEnvironment.riemann_workdir()
+
+    def publish_riemann_event(self, deployment_id, node_name,
+                              host='localhost',
+                              service='service',
+                              state='state',
+                              metric=1):
+        event = {
+            'host': host,
+            'service': service,
+            'state': state,
+            'metric': metric,
+            'time': int(time.time()),
+            'node_name': node_name
+        }
+        queue = '{}-riemann'.format(deployment_id)
+        publish_event(queue, event)
 
 
 class TestEnvironment(object):
@@ -1184,6 +1202,22 @@ def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         name=task_name,
         args=args,
         queue=queue)
+
+
+def publish_event(queue, event):
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
+    channel = connection.channel()
+    channel.queue_declare(
+        queue=queue,
+        auto_delete=True,
+        durable=False,
+        exclusive=False)
+    channel.basic_publish(exchange='',
+                          routing_key=queue,
+                          body=json.dumps(event))
+    channel.close()
+    connection.close()
 
 
 def delete_provider_context():

@@ -1,0 +1,15 @@
+policy_triggers:
+    execute_workflow:
+        parameters:
+            workflow:
+                description: workflow to execute
+            workflow_parameters:
+                description: workflow paramters
+                default: {}
+            socket_timeout:
+                description: socket timeout when making request to manager rest in ms
+                default: 1000
+            conn_timeout:
+                description: connection timeout when making request to manager rest in ms
+                default: 1000
+        source: triggers/execute_workflow.clj
