@@ -10,7 +10,7 @@ test_plugins()
 
     pip install celery==3.0.24
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
+    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1 -b
     cd cloudify-rest-client; pip install .; cd ..
 
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
