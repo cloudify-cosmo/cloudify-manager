@@ -15,56 +15,67 @@
 
 
 import os
-from os import path
 import time
 import errno
 import json
+import subprocess
+from os import path
 
 import requests
 import pika
 
+from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
 from riemann_controller import config
 
 RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
+RIEMANN_LOG_PATH = '/tmp/riemann.log'
 
 
 @operation
-def create(ctx, policy_types=None, groups=None, **kwargs):
+def create(policy_types=None,
+           policy_triggers=None,
+           groups=None,
+           **_):
     policy_types = policy_types or {}
     groups = groups or {}
-    _process_policy_type_sources(ctx, policy_types)
-    deployment_config_dir_path = _deployment_config_dir(ctx)
+    policy_triggers = policy_triggers or {}
+
+    _process_sources(policy_triggers)
+    _process_sources(policy_types)
+    deployment_config_dir_path = _deployment_config_dir()
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
         os.chmod(deployment_config_dir_path, 0777)
     with open(_deployment_config_template()) as f:
         deployment_config_template = f.read()
+    with open(os.path.join(_deployment_config_dir(), 'groups'), 'w') as f:
+        f.write(json.dumps(groups))
     with open(path.join(deployment_config_dir_path,
                         'deployment.config'), 'w') as f:
         f.write(config.create(ctx,
                               policy_types,
+                              policy_triggers,
                               groups,
                               deployment_config_template))
-    _publish_configuration_event(ctx, 'start', deployment_config_dir_path)
-    _verify_core_up(deployment_config_dir_path,
-                    timeout=ctx.bootstrap_context.policy_engine.start_timeout)
+    _publish_configuration_event('start', deployment_config_dir_path)
+    _verify_core_up(deployment_config_dir_path)
 
 
 @operation
-def delete(ctx, **kwargs):
-    deployment_config_dir_path = _deployment_config_dir(ctx)
-    _publish_configuration_event(ctx, 'stop', deployment_config_dir_path)
+def delete(**_):
+    deployment_config_dir_path = _deployment_config_dir()
+    _publish_configuration_event('stop', deployment_config_dir_path)
 
 
-def _deployment_config_dir(ctx):
+def _deployment_config_dir():
     return os.path.join(os.environ[RIEMANN_CONFIGS_DIR],
                         ctx.deployment_id)
 
 
-def _publish_configuration_event(ctx, state, deployment_config_dir_path):
+def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
     connection = pika.BlockingConnection()
     try:
@@ -94,32 +105,38 @@ def _deployment_config_template():
                                   'deployment.config.template'))
 
 
-def _verify_core_up(deployment_config_dir_path, timeout):
-    if timeout is None:
-        timeout = 30
+def _verify_core_up(deployment_config_dir_path):
+    timeout = ctx.bootstrap_context.policy_engine.start_timeout or 30
     ok_path = path.join(deployment_config_dir_path, 'ok')
     end = time.time() + timeout
     while time.time() < end:
         try:
             # after the core is started this file is written as an indication
-            with (open(ok_path)) as f:
-                assert f.read().strip() == 'ok'
+            with (open(ok_path)):
+                pass
             return
         except IOError, e:
             if e.errno in [errno.ENOENT]:
                 time.sleep(0.5)
             else:
                 raise
-    raise NonRecoverableError('Riemann core was has not started in {} seconds'
-                              .format(timeout))
+
+    riemann_log_output = subprocess.check_output(
+        'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+
+    raise NonRecoverableError('Riemann core has not started in {} seconds.\n'
+                              'tail -n 100 {}:\n {}'
+                              .format(timeout,
+                                      RIEMANN_LOG_PATH,
+                                      riemann_log_output))
 
 
-def _process_policy_type_sources(ctx, policy_types):
-    for policy_type in policy_types.values():
-        policy_type['source'] = _process_source(ctx, policy_type['source'])
+def _process_sources(sources):
+    for source in sources.values():
+        source['source'] = _process_source(source['source'])
 
 
-def _process_source(ctx, source):
+def _process_source(source):
     split = source.split('://')
     schema = split[0]
     the_rest = ''.join(split[1:])

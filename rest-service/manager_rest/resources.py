@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+import StringIO
 
 __author__ = 'dan'
 
@@ -23,6 +24,7 @@ import urllib
 import tempfile
 import shutil
 import uuid
+import traceback
 from functools import wraps
 from os import path
 
@@ -43,6 +45,7 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 from manager_rest import get_version_data
+
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -109,19 +112,15 @@ class marshal_with(object):
         return wrapper
 
 
-def abort_workflow_service_operation(workflow_service_error):
-    abort(500,
-          message='Workflow service failed with status code {0},'
-                  ' full response {1}'.format(
-                      workflow_service_error.status_code,
-                      workflow_service_error.json),
-          error_code=manager_exceptions.INTERNAL_SERVER_ERROR_CODE)
-
-
 def abort_error(error):
+
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+
     abort(error.http_code,
           message=str(error),
-          error_code=error.error_code)
+          error_code=error.error_code,
+          server_traceback=s_traceback.getvalue())
 
 
 def verify_json_content_type():
@@ -406,6 +405,7 @@ class Blueprints(Resource):
         """
         List uploaded blueprints
         """
+
         return get_blueprints_manager().blueprints_list(_include)
 
 

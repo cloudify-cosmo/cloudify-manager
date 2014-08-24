@@ -1,22 +1,31 @@
 imports:
     - cloudify.types
+    - testmockoperations.yaml
+    - mock_workflows_plugin.yaml
+    - policies/threshold.yaml
+    - triggers/execute_workflow.yaml
 
 node_templates:
     node:
         type: cloudify.types.base
-
-policy_types:
-    policy:
-        properties:
-                key:
-                    description: key description
-        source: file:///home/dan/work/riemann/policy.config.template
+        interfaces:
+            test:
+                - op1: testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
-    group:
+    threshold_group:
         members: [node]
         policies:
-            policy:
-                type: policy
+            threshold_policy:
+                type: threshold
                 properties:
-                    key: value
+                    metric: TODO
+                    threshold: 60
+                triggers:
+                    threshold_exceeded_workflow:
+                        type: execute_workflow
+                        parameters:
+                            workflow: threshold_exceeded
+
+workflows:
+    threshold_exceeded: mock_workflows.workflows.test_policies_1

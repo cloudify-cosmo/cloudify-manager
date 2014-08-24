@@ -1,0 +1,8 @@
+policy_types:
+    threshold:
+        properties:
+            metric:
+                description: metric name
+            threshold:
+                description: metric threshold
+        source: policies/threshold.clj
