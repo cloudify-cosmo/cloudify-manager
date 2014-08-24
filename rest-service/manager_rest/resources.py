@@ -148,6 +148,8 @@ def verify_parameter_in_request_body(param,
 
 
 def verify_and_convert_bool(attribute_name, str_bool):
+    if isinstance(str_bool, bool):
+        return str_bool
     if str_bool.lower() == 'true':
         return True
     if str_bool.lower() == 'false':
