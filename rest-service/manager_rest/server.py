@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import StringIO
 
 __author__ = 'dan'
 
@@ -105,11 +106,15 @@ app = setup_app()
 
 @app.errorhandler(500)
 def internal_error(e):
+
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+
     response = jsonify(
         {"message":
          "Internal error occurred in manager REST server - {0}: {1}"
             .format(type(e).__name__, str(e)),
          "error_code": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
-         "traceback": traceback.format_tb(sys.exc_info()[2])})
+         "server_traceback": s_traceback.getvalue()})
     response.status_code = 500
     return response
