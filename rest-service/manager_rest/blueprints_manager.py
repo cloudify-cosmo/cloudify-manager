@@ -246,9 +246,11 @@ class BlueprintsManager(object):
         plan = blueprint.plan
         try:
             deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
-        except (MissingRequiredInputError, UnknownInputError), e:
-            raise manager_exceptions.BadParametersError(str(e))
-        deployment_plan = deployment_plan
+        except MissingRequiredInputError, e:
+            raise manager_exceptions.MissingRequiredDeploymentInputError(
+                str(e))
+        except UnknownInputError, e:
+            raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
         now = str(datetime.now())
         new_deployment = models.Deployment(
@@ -261,7 +263,9 @@ class BlueprintsManager(object):
             groups=deployment_plan['groups'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
-        self._create_deployment_nodes(blueprint_id, deployment_id, plan)
+        self._create_deployment_nodes(blueprint_id,
+                                      deployment_id,
+                                      deployment_plan)
 
         self._install_deployment_workers(new_deployment, deployment_plan, now)
 

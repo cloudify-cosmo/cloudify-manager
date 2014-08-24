@@ -210,6 +210,12 @@ class BaseServerTestCase(unittest.TestCase):
                        inputs=None):
         blueprint_response = self.put_file(
             *self.put_blueprint_args(blueprint_file_name, blueprint_id)).json
+
+        if 'error_code' in blueprint_response:
+            raise RuntimeError(
+                '{} - {}'.format(blueprint_response['error_code'],
+                                 blueprint_response['message']))
+
         blueprint_id = blueprint_response['id']
         deployment = self.client.deployments.create(blueprint_id,
                                                     deployment_id,

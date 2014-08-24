@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
-
 
 from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
@@ -301,6 +299,8 @@ class DeploymentsTestCase(BaseServerTestCase):
             blueprint_id='5566',
             deployment_id=self.DEPLOYMENT_ID,
             inputs={'http_web_server_port': '8080'})
+        node = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server')
+        self.assertEqual('8080', node.properties['port'])
         try:
             self.put_deployment(
                 blueprint_file_name='blueprint_with_inputs.yaml',

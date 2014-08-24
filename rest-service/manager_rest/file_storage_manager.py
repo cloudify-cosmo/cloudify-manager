@@ -134,7 +134,7 @@ class FileStorageManager(object):
         data = self._load_data()
         node_id = '{}_{}'.format(deployment_id, node_id)
         if node_id in data[NODES]:
-            return data[NODES]
+            return data[NODES][node_id]
         raise manager_exceptions.NotFoundError(
             "Deployment {0} not found".format(deployment_id))
 

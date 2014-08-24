@@ -66,7 +66,9 @@ def exceptions_handled(func):
                 manager_exceptions.DeploymentWorkersNotYetInstalledError,
                 manager_exceptions.IllegalExecutionParametersError,
                 manager_exceptions.IllegalActionError,
-                manager_exceptions.NoSuchIncludeFieldError) as e:
+                manager_exceptions.NoSuchIncludeFieldError,
+                manager_exceptions.MissingRequiredDeploymentInputError,
+                manager_exceptions.UnknownDeploymentInputError) as e:
             abort_error(e)
     return wrapper
 
