@@ -1,7 +1,7 @@
 imports:
     - cloudify.types
     - testmockoperations-plugin.yaml
-    - mock_workflows_plugin.yaml
+    - mock-workflows-plugin.yaml
 
 node_templates:
     test_node:
