@@ -26,6 +26,15 @@ groups:
                         type: execute_workflow
                         parameters:
                             workflow: threshold_exceeded
+                            workflow_parameters:
+                                key: node_id
+                                value: { get_property: [SELF, node_id] }
 
 workflows:
-    threshold_exceeded: mock_workflows.workflows.test_policies_1
+    threshold_exceeded:
+        mapping: mock_workflows.workflows.test_policies_1
+        parameters:
+            key:
+                description: a key to write
+            value:
+                description: a value to write

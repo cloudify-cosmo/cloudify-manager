@@ -221,11 +221,11 @@ def test_fail_local_task_on_nonrecoverable_error(ctx, do_get, **_):
 
 
 @workflow
-def test_policies_1(ctx, **_):
+def test_policies_1(ctx, key, value, **_):
     instance = list(ctx.get_node('node').instances)[0]
     instance.execute_operation('test.op1', {
-        'key': 'op1_key',
-        'value': 'op1_value'
+        'key': key,
+        'value': value
     })
 
 

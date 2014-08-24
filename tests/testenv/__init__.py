@@ -737,7 +737,10 @@ class TestCase(unittest.TestCase):
     def riemann_workdir(self):
         return TestEnvironment.riemann_workdir()
 
-    def publish_riemann_event(self, deployment_id, node_name,
+    def publish_riemann_event(self,
+                              deployment_id,
+                              node_name,
+                              node_id='',
                               host='localhost',
                               service='service',
                               state='state',
@@ -748,7 +751,8 @@ class TestCase(unittest.TestCase):
             'state': state,
             'metric': metric,
             'time': int(time.time()),
-            'node_name': node_name
+            'node_name': node_name,
+            'node_id': node_id
         }
         queue = '{}-riemann'.format(deployment_id)
         publish_event(queue, event)

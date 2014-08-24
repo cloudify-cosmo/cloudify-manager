@@ -28,8 +28,16 @@ class TestPolicies(TestCase):
     def test_policies(self):
         dsl_path = resource("dsl/with_policies.yaml")
         deployment, _ = deploy(dsl_path)
+
+        def assertion():
+            instances = self.client.node_instances.list(deployment.id)
+            self.assertEqual(1, len(instances))
+        self.do_assertions(assertion)
+
+        instance = self.client.node_instances.list(deployment.id)[0]
         self.publish_riemann_event(deployment.id,
-                                   node_name='node')
+                                   node_name='node',
+                                   node_id=instance.id)
 
         def assertion():
             executions = self.client.executions.list(deployment.id)
@@ -37,5 +45,8 @@ class TestPolicies(TestCase):
             invocations = send_task(testmock_get_invocations).get(timeout=10)
             self.assertEqual(1, len(invocations))
             invocation = invocations[0]
-            self.assertEqual('op1_value', invocation['op1_key'])
+            instances = self.client.node_instances.list(deployment.id)
+            self.assertEqual(1, len(instances))
+            instance = instances[0]
+            self.assertEqual(instance.id, invocation['node_id'])
         self.do_assertions(assertion)
