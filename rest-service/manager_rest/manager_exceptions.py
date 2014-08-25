@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 
 INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
@@ -138,6 +136,30 @@ class NoSuchIncludeFieldError(ManagerException):
         super(NoSuchIncludeFieldError, self).__init__(
             400,
             NoSuchIncludeFieldError.NO_SUCH_INCLUDE_FIELD_ERROR,
+            *args,
+            **kwargs
+        )
+
+
+class MissingRequiredDeploymentInputError(ManagerException):
+    ERROR_CODE = 'missing_required_deployment_input_error'
+
+    def __init__(self, *args, **kwargs):
+        super(MissingRequiredDeploymentInputError, self).__init__(
+            400,
+            MissingRequiredDeploymentInputError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
+class UnknownDeploymentInputError(ManagerException):
+    ERROR_CODE = 'unknown_deployment_input_error'
+
+    def __init__(self, *args, **kwargs):
+        super(UnknownDeploymentInputError, self).__init__(
+            400,
+            UnknownDeploymentInputError.ERROR_CODE,
             *args,
             **kwargs
         )
