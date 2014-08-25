@@ -33,6 +33,7 @@ groups:
                                 custom_key: metric
                                 custom_value: { get_property: [SELF, metric] }
 
+workflows:
     threshold_exceeded:
         mapping: mock_workflows.mock_workflows.workflows.test_policies_1
         parameters:
