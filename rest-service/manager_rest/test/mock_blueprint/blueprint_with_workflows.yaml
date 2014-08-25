@@ -22,7 +22,7 @@ node_templates:
 
 workflows:
     mock_workflow:
-        mapping: workflows.default.install
+        mapping: default_workflows.workflows.default.install
         parameters:
             optional_param:
                 default: test_default_value

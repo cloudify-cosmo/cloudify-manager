@@ -8,6 +8,6 @@ node_templates:
         interfaces:
             cloudify.interfaces.lifecycle:
                 - create:
-                    mapping: testmockoperations.tasks.fail
+                    mapping: testmockoperations.testmockoperations.tasks.fail
                     properties:
                         fail_count: 5

@@ -25,14 +25,14 @@ class TestRelationships(TestCase):
 
     def test_pre_source_started_location_source(self):
         dsl_path = resource(
-            "dsl/relationship-interface-pre-source-location-source.yaml")
+            "dsl/relationship_interface_pre_source_location_source.yaml")
         deploy(dsl_path)
         self.verify_assertions(hook='pre-init',
                                runs_on_source=True)
 
     def test_post_source_started_location_target(self):
         dsl_path = resource(
-            "dsl/relationship-interface-post-source-location-target.yaml")
+            "dsl/relationship_interface_post_source_location_target.yaml")
         deploy(dsl_path)
         self.verify_assertions(hook='post-init',
                                runs_on_source=False)

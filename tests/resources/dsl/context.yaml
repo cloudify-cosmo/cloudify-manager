@@ -1,0 +1,3 @@
+plugins:
+    context:
+        derived_from: cloudify.plugins.remote_plugin

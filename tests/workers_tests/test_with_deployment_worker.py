@@ -20,7 +20,6 @@ import time
 import errno
 from os import path
 
-
 from workers_tests import WorkersTestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
@@ -29,7 +28,6 @@ from testenv import send_task
 from testenv import TestEnvironment
 from testenv import do_retries
 from testenv import verify_workers_installation_complete
-
 from plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
     teardown_plugin_file_based_mode as teardown_cloudmock)
@@ -92,7 +90,7 @@ class TestWithDeploymentWorker(WorkersTestCase):
         deployment_plugins = self._get(get_installed_plugins,
                                        queue=DEPLOYMENT_ID)
 
-        self.assertIn('test_management_plugin', deployment_plugins)
+        self.assertIn('test_management', deployment_plugins)
 
         # test plugin installed in deployment workflows worker
         workflow_plugin = self._get(get_installed_plugins,
@@ -123,7 +121,7 @@ class TestWithDeploymentWorker(WorkersTestCase):
 
         # test plugins installed in agent worker
         agent_plugins = self._get(get_installed_plugins, queue=node_id)
-        self.assertIn('test_plugin', agent_plugins)
+        self.assertIn('test-plugin', agent_plugins)
 
         # test valid agent worker installation order
         state = self._get(get_worker_state, queue=DEPLOYMENT_ID,

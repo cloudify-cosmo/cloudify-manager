@@ -1,7 +1,7 @@
 imports:
     - cloudify.types
     - testmockoperations.yaml
-    - mock_workflows_plugin.yaml
+    - mock_workflows.yaml
     - policies/threshold.yaml
     - triggers/execute_workflow.yaml
 
@@ -10,7 +10,7 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             test:
-                - op1: testmockoperations.tasks.mock_operation_from_custom_workflow
+                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
     threshold_group:
@@ -33,9 +33,8 @@ groups:
                                 custom_key: metric
                                 custom_value: { get_property: [SELF, metric] }
 
-workflows:
     threshold_exceeded:
-        mapping: mock_workflows.workflows.test_policies_1
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_1
         parameters:
             key:
                 description: a key to write

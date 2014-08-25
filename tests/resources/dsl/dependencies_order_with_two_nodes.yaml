@@ -1,0 +1,26 @@
+imports:
+    - cloudify.types
+    - testmockoperations.yaml
+
+node_templates:
+    host_node:
+        type: mock_type
+
+    db_node:
+        type: mock_type
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: host_node
+
+node_types:
+    mock_type:
+        derived_from: cloudify.types.base
+        properties:
+            property_name:
+                default: property1
+            value:
+                default: value1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - start: testmockoperations.testmockoperations.tasks.make_reachable
+                - create: testmockoperations.testmockoperations.tasks.set_property

@@ -24,7 +24,7 @@ from testenv import undeploy_application as undeploy
 class TestContextProperties(TestCase):
 
     def test_update_runtime_properties(self):
-        dsl_path = resource("dsl/set-property.yaml")
+        dsl_path = resource("dsl/set_property.yaml")
 
         # testing set property
         deployment, _ = deploy(dsl_path)
@@ -41,6 +41,6 @@ class TestContextProperties(TestCase):
         self.assertNotIn('property_name', node_runtime_props)
 
     def test_no_update_runtime_properties(self):
-        dsl_path = resource("dsl/update-node-state.yaml")
+        dsl_path = resource("dsl/update_node_state.yaml")
         # simply expecting workflow execution to succeed
         deploy(dsl_path)

@@ -1,17 +1,2 @@
 # yaml files
 cloudify.types: cloudify/types/types.yaml
-cloudify.openstack: cloudify/types/openstack.yaml
-cloudify.bash: cloudify/types/bash.yaml
-cloudify.chef: cloudify/types/chef.yaml
-cloudify.puppet: cloudify/types/puppet.yaml
-
-# plugins
-app_module_installer: cloudify/plugins/app_module_installer.yaml
-host_provisioner: cloudify/plugins/host_provisioner.yaml
-middleware_component_installer: cloudify/plugins/middleware_component_installer.yaml
-celery_worker_installer: cloudify/plugins/worker_installer.yaml
-celery_plugin_installer: cloudify/plugins/plugin_installer.yaml
-vagrant_host_provisioner: cloudify/plugins/vagrant_host_provisioner.yaml
-
-# workflow plugins
-default_workflows: cloudify/plugins/workflows.yaml

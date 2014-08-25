@@ -113,7 +113,7 @@ class TestUninstallDeployment(TestCase):
 
     def test_stop_monitor_node_operation(self):
         dsl_path = resource(
-            "dsl/hardcoded-operation-properties.yaml")
+            "dsl/hardcoded_operation_properties.yaml")
         print('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id

@@ -1,5 +1,0 @@
-plugins:
-    mock_workflows:
-        derived_from: "cloudify.plugins.manager_plugin"
-        properties:
-            url: "stub"
