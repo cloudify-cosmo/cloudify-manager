@@ -234,5 +234,49 @@ def test_policies_1(ctx, key, value,
     })
 
 
+@workflow
+def operation_mapping1(ctx, **_):
+    node1 = list(ctx.get_node('node1').instances)[0]
+    node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]
+    node3_rel = list(list(ctx.get_node('node3').instances)[0].relationships)[0]
+    node1.execute_operation('test.operation')
+    node2_rel.execute_source_operation('test.operation')
+    node3_rel.execute_target_operation('test.operation')
+
+
+@workflow
+def operation_mapping2(ctx, value, **_):
+    node1 = list(ctx.get_node('node1').instances)[0]
+    node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]
+    node3_rel = list(list(ctx.get_node('node3').instances)[0].relationships)[0]
+    node1.execute_operation('test.operation', kwargs={
+        'value': value
+    }, allow_kwargs_override=True)
+    node2_rel.execute_source_operation('test.operation', kwargs={
+        'value': value
+    }, allow_kwargs_override=True)
+    node3_rel.execute_target_operation('test.operation', kwargs={
+        'value': value
+    }, allow_kwargs_override=True)
+
+
+@workflow
+def operation_mapping3(ctx, value, **_):
+    def expect_error(func):
+        try:
+            func('test.operation', kwargs={
+                'value': value
+            }).get()
+        except RuntimeError, e:
+            assert 'Duplicate' in e.message
+
+    node1 = list(ctx.get_node('node1').instances)[0]
+    node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]
+    node3_rel = list(list(ctx.get_node('node3').instances)[0].relationships)[0]
+    expect_error(node1.execute_operation)
+    expect_error(node2_rel.execute_source_operation)
+    expect_error(node3_rel.execute_target_operation)
+
+
 def get_instance(ctx):
     return next(next(ctx.nodes).instances)

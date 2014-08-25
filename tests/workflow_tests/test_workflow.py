@@ -101,8 +101,6 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual('mockpropvalue2', invocation['properties']
-                                                     ['mockprop2'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
     def test_start_monitor_node_operation(self):
