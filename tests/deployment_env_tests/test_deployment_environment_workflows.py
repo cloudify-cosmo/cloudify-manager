@@ -20,7 +20,7 @@ import time
 import errno
 from os import path
 
-from workers_tests import WorkersTestCase
+from deployment_env_tests import DeploymentEnvTestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import wait_for_execution_to_end
@@ -49,19 +49,19 @@ AFTER_INSTALL_STAGES = [INSTALLED, STARTED, RESTARTED]
 AFTER_UNINSTALL_STAGES = AFTER_INSTALL_STAGES + [STOPPED, UNINSTALLED]
 
 
-class TestWithDeploymentWorker(WorkersTestCase):
+class TestDeploymentEnvironmentWorkflows(DeploymentEnvTestCase):
     """
     This test is the only one (for the time this docstring was written)
     to test the real deployment environment creation / deletion workflows.
     """
 
     def setUp(self):
-        super(TestWithDeploymentWorker, self).setUp()
+        super(TestDeploymentEnvironmentWorkflows, self).setUp()
         setup_cloudmock()
 
     def tearDown(self):
         teardown_cloudmock()
-        super(TestWithDeploymentWorker, self).tearDown()
+        super(TestDeploymentEnvironmentWorkflows, self).tearDown()
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
         # start deployment workers

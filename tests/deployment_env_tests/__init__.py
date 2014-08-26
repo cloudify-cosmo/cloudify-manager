@@ -35,7 +35,7 @@ def tearDown():
     TestEnvironment.destroy()
 
 
-class WorkersTestCase(TestCase):
+class DeploymentEnvTestCase(TestCase):
     """
     A test case for cosmo workers tests.
     """
@@ -45,11 +45,11 @@ class WorkersTestCase(TestCase):
         TestEnvironment.create(TestEnvironmentScope.CLASS, False)
 
     def setUp(self):
-        super(WorkersTestCase, self).setUp()
+        super(DeploymentEnvTestCase, self).setUp()
         setup_plugin_installer()
         setup_worker_installer()
 
     def tearDown(self):
         teardown_worker_installer()
         teardown_plugin_installer()
-        super(WorkersTestCase, self).tearDown()
+        super(DeploymentEnvTestCase, self).tearDown()
