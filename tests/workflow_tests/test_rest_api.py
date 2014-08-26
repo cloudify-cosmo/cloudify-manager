@@ -80,3 +80,11 @@ class RestAPITest(TestCase):
         blueprint_by_id = self.client.blueprints.get(blueprint_id)
         self.assertDictContainsSubset(blueprint_by_id, blueprints[0])
         self.assertDictContainsSubset(blueprints[0], blueprint_by_id)
+
+    def test_deployments(self):
+        deployments = self.client.deployments.list()
+        self.assertEqual(1, len(deployments))
+        deployment_id = deployments[0].id
+        deployment_by_id = self.client.deployments.get(deployment_id)
+        self.assertDictContainsSubset(deployment_by_id, deployments[0])
+        self.assertDictContainsSubset(deployments[0], deployment_by_id)
