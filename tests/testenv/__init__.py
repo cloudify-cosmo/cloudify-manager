@@ -744,8 +744,8 @@ class TestCase(unittest.TestCase):
                               node_id='',
                               host='localhost',
                               service='service',
-                              state='state',
-                              metric=1):
+                              state='',
+                              metric=0):
         event = {
             'host': host,
             'service': service,

@@ -5,4 +5,11 @@ policy_types:
                 description: metric name
             threshold:
                 description: metric threshold
+            upper_bound:
+                description: |
+                    boolean value for describing the semantics of the threshold.
+                    if 'true': metrics whose value if bigger then the threshold
+                    will cause the triggers to be processed. if 'false': metrics
+                    with values lower then the threshold will do so.
+                default: true
         source: policies/threshold.clj
