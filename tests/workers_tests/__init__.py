@@ -28,7 +28,7 @@ from plugins.plugin_installer.tasks import (
 
 
 def setUp():
-    TestEnvironment.create(use_mock_workers_installation=False)
+    TestEnvironment.create(use_mock_deployment_environment_workflows=False)
 
 
 def tearDown():

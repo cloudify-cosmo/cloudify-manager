@@ -27,7 +27,7 @@ WORKFLOWS_WORKER_PAYLOAD = {
 
 
 @workflow
-def install(ctx, **kwargs):
+def create(ctx, **kwargs):
 
     graph = ctx.graph_mode()
     sequence = graph.sequence()
@@ -86,7 +86,7 @@ def install(ctx, **kwargs):
 
 
 @workflow
-def uninstall(ctx, **kwargs):
+def delete(ctx, **kwargs):
 
     graph = ctx.graph_mode()
     sequence = graph.sequence()

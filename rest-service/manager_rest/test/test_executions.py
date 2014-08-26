@@ -30,9 +30,9 @@ class ExecutionsTestCase(BaseServerTestCase):
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         executions = self.get('/deployments/{0}/executions'
                               .format(deployment_response['id'])).json
-        # expecting 1 execution (workers installation)
+        # expecting 1 execution (create_deployment_environment)
         self.assertEquals(1, len(executions))
-        self.assertEquals('workers_installation',
+        self.assertEquals('create_deployment_environment',
                           executions[0]['workflow_id'])
 
     def test_get_execution_by_id(self):

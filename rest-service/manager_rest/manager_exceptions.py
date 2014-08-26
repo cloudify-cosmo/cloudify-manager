@@ -97,15 +97,15 @@ class ExistingRunningExecutionError(ManagerException):
             .EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
 
 
-class DeploymentWorkersNotYetInstalledError(ManagerException):
-    DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE = \
-        'deployment_workers_not_yet_installed_error'
+class DeploymentEnvironmentCreationInProgressError(ManagerException):
+    DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
+        'deployment_environment_creation_in_progress_error'
 
     def __init__(self, *args, **kwargs):
-        super(DeploymentWorkersNotYetInstalledError, self).__init__(
+        super(DeploymentEnvironmentCreationInProgressError, self).__init__(
             400,
-            DeploymentWorkersNotYetInstalledError
-            .DEPLOYMENT_WORKERS_NOT_YET_INSTALLED_ERROR_CODE,
+            DeploymentEnvironmentCreationInProgressError
+            .DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE,
             *args, **kwargs)
 
 

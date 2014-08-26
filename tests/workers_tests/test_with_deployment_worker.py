@@ -27,7 +27,7 @@ from testenv import wait_for_execution_to_end
 from testenv import send_task
 from testenv import TestEnvironment
 from testenv import do_retries
-from testenv import verify_workers_installation_complete
+from testenv import verify_deployment_environment_creation_complete
 from plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
     teardown_plugin_file_based_mode as teardown_cloudmock)
@@ -52,7 +52,7 @@ AFTER_UNINSTALL_STAGES = AFTER_INSTALL_STAGES + [STOPPED, UNINSTALLED]
 class TestWithDeploymentWorker(WorkersTestCase):
     """
     This test is the only one (for the time this docstring was written)
-    to test the real workers installation / un-installation workflows.
+    to test the real deployment environment creation / deletion workflows.
     """
 
     def setUp(self):
@@ -82,8 +82,8 @@ class TestWithDeploymentWorker(WorkersTestCase):
         # create deployment
         self.client.deployments.create(blueprint_id, DEPLOYMENT_ID)
 
-        # waiting for the deployment workers installation to complete
-        do_retries(verify_workers_installation_complete, 15,
+        # waiting for the deployment environment creation to complete
+        do_retries(verify_deployment_environment_creation_complete, 15,
                    deployment_id=DEPLOYMENT_ID)
 
         # test plugin installed in deployment operations worker
