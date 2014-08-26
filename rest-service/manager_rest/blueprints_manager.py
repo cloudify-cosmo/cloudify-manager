@@ -137,7 +137,7 @@ class BlueprintsManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        self._uninstall_deployment_workers(deployment_id)
+        self._delete_deployment_environment(deployment_id)
         return storage.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
@@ -151,7 +151,7 @@ class BlueprintsManager(object):
                     workflow_id, deployment_id))
         workflow = deployment.workflows[workflow_id]
 
-        self._verify_deployment_workers_installed_successfully(deployment_id)
+        self._verify_deployment_environment_created_successfully(deployment_id)
 
         # validate no execution is currently in progress
         if not force:
@@ -267,7 +267,8 @@ class BlueprintsManager(object):
                                       deployment_id,
                                       deployment_plan)
 
-        self._install_deployment_workers(new_deployment, deployment_plan, now)
+        self._create_deployment_environment(new_deployment, deployment_plan,
+                                            now)
 
         node_instances = deployment_plan['node_instances']
         for node_instance in node_instances:
@@ -386,92 +387,92 @@ class BlueprintsManager(object):
             prepared_relationships.append(relationship)
         return prepared_relationships
 
-    def _verify_deployment_workers_installed_successfully(self,
-                                                          deployment_id,
-                                                          is_retry=False):
-        workers_installation_execution = next(
+    def _verify_deployment_environment_created_successfully(self,
+                                                            deployment_id,
+                                                            is_retry=False):
+        deployment_env_creation_execution = next(
             (execution for execution in
              get_storage_manager().get_deployment_executions(
                  deployment_id) if execution.workflow_id ==
-                'workers_installation'),
+                'create_deployment_environment'),
             None)
 
-        if not workers_installation_execution:
-            raise RuntimeError('Failed to find "workers_installation" '
-                               'execution for deployment {0}'.format(
+        if not deployment_env_creation_execution:
+            raise RuntimeError('Failed to find "create_deployment_environment"'
+                               ' execution for deployment {0}'.format(
                                    deployment_id))
 
         # Because of ES eventual consistency, we need to get the execution by
         # its id in order to make sure the read status is correct.
-        workers_installation_execution = get_storage_manager().get_execution(
-            workers_installation_execution.id)
+        deployment_env_creation_execution = \
+            get_storage_manager().get_execution(
+                deployment_env_creation_execution.id)
 
-        if workers_installation_execution.status == \
+        if deployment_env_creation_execution.status == \
                 models.Execution.TERMINATED:
-            # workers installation is complete
+            # deployment environment creation is complete
             return
-        elif workers_installation_execution.status == models.Execution.STARTED:
-            # workers installation is still in process
+        elif deployment_env_creation_execution.status == \
+                models.Execution.STARTED:
+            # deployment environment creation is still in process
             raise manager_exceptions\
-                .DeploymentWorkersNotYetInstalledError(
-                    'Deployment workers are still being installed, '
+                .DeploymentEnvironmentCreationInProgressError(
+                    'Deployment environment creation is still in progress, '
                     'try again in a minute')
-        elif workers_installation_execution.status == models.Execution.FAILED:
-            # workers installation workflow failed
+        elif deployment_env_creation_execution.status == \
+                models.Execution.FAILED:
+            # deployment environment creation execution failed
             raise RuntimeError(
-                "Can't launch executions since workers for deployment {0} "
-                'failed to be installed: {1}'.format(
-                    deployment_id, workers_installation_execution.error))
-        elif workers_installation_execution.status in (
+                "Can't launch executions since environment creation for "
+                "deployment {0} has failed: {1}".format(
+                    deployment_id, deployment_env_creation_execution.error))
+        elif deployment_env_creation_execution.status in (
             models.Execution.CANCELLED, models.Execution.CANCELLING,
                 models.Execution.FORCE_CANCELLING):
-            # workers installation workflow is got cancelled
+            # deployment environment creation execution got cancelled
             raise RuntimeError(
-                "Can't launch executions since workers for deployment {0} "
-                'installation has been cancelled [status={1}]'.format(
-                    deployment_id, workers_installation_execution.status))
+                "Can't launch executions since the environment creation for "
+                "deployment {0} has been cancelled [status={1}]".format(
+                    deployment_id, deployment_env_creation_execution.status))
 
         # status is 'pending'. Waiting for a few seconds and retrying to
         # verify (to avoid eventual consistency issues). If this is already a
         # failed retry, it might mean there was a problem with the Celery task
         if not is_retry:
             time.sleep(5)
-            self._verify_deployment_workers_installed_successfully(
+            self._verify_deployment_environment_created_successfully(
                 deployment_id, True)
         else:
-            # workers installation failed but not on the workflow level -
-            # retrieving the celery task's status for the error message,
-            # and the error object from celery if one is available
+            # deployment environment creation failed but not on the workflow
+            # level - retrieving the celery task's status for the error
+            # message, and the error object from celery if one is available
             celery_task_status = celery_client().get_task_status(
-                workers_installation_execution.id)
+                deployment_env_creation_execution.id)
             error_message = \
-                "Can't launch executions since workers for deployment {0}" \
-                " haven't been installed (Execution status is still " \
-                "'{1}'). Celery task status is ".format(
-                    deployment_id, workers_installation_execution.status)
+                "Can't launch executions since environment for deployment {" \
+                "0} hasn't been created (Execution status is still '{1}'). " \
+                "Celery task status is ".format(
+                    deployment_id, deployment_env_creation_execution.status)
             if celery_task_status != CELERY_TASK_STATE_FAILURE:
                 raise RuntimeError(
                     "{0} {1}".format(error_message, celery_task_status))
             else:
                 celery_error = celery_client().get_failed_task_error(
-                    workers_installation_execution.id)
+                    deployment_env_creation_execution.id)
                 raise RuntimeError(
                     "{0} {1}; Error is of type {2}; Error message: {3}"
                     .format(error_message, celery_task_status,
                             celery_error.__class__.__name__, celery_error))
 
-    def _install_deployment_workers(self,
-                                    deployment,
-                                    deployment_plan,
-                                    now):
-        workers_installation_task_id = str(uuid.uuid4())
-        wf_id = 'workers_installation'
-        workers_install_task_name = \
-            'system_workflows.workers_installation.install'
+    def _create_deployment_environment(self, deployment, deployment_plan, now):
+        deployment_env_creation_task_id = str(uuid.uuid4())
+        wf_id = 'create_deployment_environment'
+        deployment_env_creation_task_name = \
+            'system_workflows.deployment_environment.create'
 
         context = self._build_context_from_deployment(
-            deployment, workers_installation_task_id, wf_id,
-            workers_install_task_name)
+            deployment, deployment_env_creation_task_id, wf_id,
+            deployment_env_creation_task_name)
         kwargs = {
             'management_plugins_to_install': deployment_plan[
                 'management_plugins_to_install'],
@@ -486,7 +487,7 @@ class BlueprintsManager(object):
         }
 
         new_execution = models.Execution(
-            id=workers_installation_task_id,
+            id=deployment_env_creation_task_id,
             status=models.Execution.PENDING,
             created_at=now,
             blueprint_id=deployment.blueprint_id,
@@ -497,9 +498,9 @@ class BlueprintsManager(object):
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
         celery_client().execute_task(
-            workers_install_task_name,
+            deployment_env_creation_task_name,
             'cloudify.management',
-            workers_installation_task_id,
+            deployment_env_creation_task_id,
             kwargs=kwargs)
 
     def _build_context_from_deployment(self, deployment, task_id, wf_id,
@@ -514,23 +515,23 @@ class BlueprintsManager(object):
             'workflow_id': wf_id,
         }
 
-    def _uninstall_deployment_workers(self, deployment_id):
+    def _delete_deployment_environment(self, deployment_id):
         deployment = get_storage_manager().get_deployment(deployment_id)
 
-        workers_uninstallation_task_id = str(uuid.uuid4())
-        wf_id = 'workers_uninstallation'
-        workers_uninstall_task_name = \
-            'system_workflows.workers_installation.uninstall'
+        deployment_env_deletion_task_id = str(uuid.uuid4())
+        wf_id = 'delete_deployment_environment'
+        deployment_env_deletion_task_name = \
+            'system_workflows.deployment_environment.delete'
 
         context = self._build_context_from_deployment(
             deployment,
-            workers_uninstallation_task_id,
+            deployment_env_deletion_task_id,
             wf_id,
-            workers_uninstall_task_name)
+            deployment_env_deletion_task_name)
         kwargs = {'__cloudify_context': context}
 
         new_execution = models.Execution(
-            id=workers_uninstallation_task_id,
+            id=deployment_env_deletion_task_id,
             status=models.Execution.PENDING,
             created_at=str(datetime.now()),
             blueprint_id=deployment.blueprint_id,
@@ -540,21 +541,22 @@ class BlueprintsManager(object):
             parameters=self._get_only_user_execution_parameters(kwargs))
         get_storage_manager().put_execution(new_execution.id, new_execution)
 
-        uninstall_workers_task_async_result = celery_client().execute_task(
-            workers_uninstall_task_name,
-            'cloudify.management',
-            workers_uninstallation_task_id,
-            kwargs=kwargs)
+        deployment_env_deletion_task_async_result = \
+            celery_client().execute_task(
+                deployment_env_deletion_task_name,
+                'cloudify.management',
+                deployment_env_deletion_task_id,
+                kwargs=kwargs)
 
-        # wait for workers uninstall to complete
-        uninstall_workers_task_async_result.get(timeout=300,
-                                                propagate=True)
-        # verify uninstall completed successfully
+        # wait for deployment environment deletion to complete
+        deployment_env_deletion_task_async_result.get(timeout=300,
+                                                      propagate=True)
+        # verify deployment environment deletion completed successfully
         execution = get_storage_manager().get_execution(
-            workers_uninstallation_task_id)
+            deployment_env_deletion_task_id)
         if execution.status != models.Execution.TERMINATED:
-            raise RuntimeError('Failed to uninstall deployment workers for '
-                               'deployment {0}'.format(deployment_id))
+            raise RuntimeError('Failed to delete environment for deployment '
+                               '{0}'.format(deployment_id))
 
     def _get_only_user_execution_parameters(self, execution_parameters):
         return {k: v for k, v in execution_parameters.iteritems()

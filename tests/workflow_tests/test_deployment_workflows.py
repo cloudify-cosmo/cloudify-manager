@@ -20,7 +20,7 @@ import uuid
 from testenv import (TestCase,
                      wait_for_execution_to_end,
                      do_retries,
-                     verify_workers_installation_complete,
+                     verify_deployment_environment_creation_complete,
                      send_task,
                      get_resource as resource,
                      deploy_application as deploy)
@@ -46,7 +46,7 @@ class TestDeploymentWorkflows(TestCase):
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        do_retries(verify_workers_installation_complete, 30,
+        do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
         execution = self.client.deployments.execute(deployment_id,
                                                     'execute_operation')

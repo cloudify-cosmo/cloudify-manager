@@ -113,12 +113,12 @@ class DeploymentsTestCase(BaseServerTestCase):
                           deployment_response['id'])
         self.assertIsNotNone(execution['created_at'])
         executions = self.get(resource_path).json
-        # expecting two exectuions - one 'install' and one
-        # 'workers_installation'
+        # expecting two executions - 'install' and
+        # 'create_deployment_environment'
         self.assertEquals(2, len(executions))
         self.assertIn(execution['id'],
                       [executions[0]['id'], executions[1]['id']])
-        self.assertIn('workers_installation',
+        self.assertIn('create_deployment_environment',
                       [executions[1]['workflow_id'],
                        executions[0]['workflow_id']])
 
