@@ -19,13 +19,13 @@ from cloudify.decorators import workflow
 
 
 @workflow
-def install(ctx, **kwargs):
-    # taken from original workers_installation workflow
+def create(ctx, **kwargs):
+    # taken from original deployment_environment create workflow
     ctx.execute_task('riemann_controller.tasks.create',
                      kwargs=kwargs.get('policy_configuration', {}))
 
 
 @workflow
-def uninstall(ctx, **kwargs):
-    # taken from original workers_installation workflow
+def delete(ctx, **kwargs):
+    # taken from original deployment_environment delete workflow
     ctx.execute_task('riemann_controller.tasks.delete')

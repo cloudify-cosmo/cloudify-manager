@@ -119,7 +119,7 @@ def stop_monitor(ctx, **kwargs):
 
 @operation
 def mock_operation(ctx, **kwargs):
-    mockprop = ctx.properties['mockprop']
+    mockprop = get_prop('mockprop', ctx, kwargs)
     global mock_operation_invocation
     mock_operation_invocation.append({
         'id': ctx.node_id,
@@ -162,7 +162,7 @@ def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
 
 @operation
 def get_resource_operation(ctx, **kwargs):
-    resource_path = ctx.properties['resource_path']
+    resource_path = get_prop('resource_path', ctx, kwargs)
     # trying to retrieve a resource
     res1 = ctx.download_resource(resource_path)
     if not res1:
@@ -231,19 +231,21 @@ def sleep(ctx, **kwargs):
 
 @operation
 def fail(ctx, **kwargs):
-    fail_count = ctx.properties.get('fail_count',
-                                    kwargs.get('fail_count',
-                                               1000000))
+    fail_count = get_prop('fail_count', ctx, kwargs, 1000000)
+
     global failure_invocation
     failure_invocation.append(time.time())
     if len(failure_invocation) > fail_count:
         return
 
     message = 'TEST_EXPECTED_FAIL'
-    if ctx.properties.get('non_recoverable'):
+    non_recoverable = get_prop('non_recoverable', ctx, kwargs, False)
+    recoverable = get_prop('recoverable', ctx, kwargs, False)
+    retry_after = get_prop('retry_after', ctx, kwargs)
+
+    if non_recoverable:
         exception = NonRecoverableError(message)
-    elif ctx.properties.get('recoverable'):
-        retry_after = ctx.properties['retry_after']
+    elif recoverable:
         exception = RecoverableError(message, retry_after=retry_after)
     else:
         exception = RuntimeError(message)
@@ -258,10 +260,12 @@ def get_fail_invocations(**_):
 
 
 @operation
-def host_get_state(ctx, **_):
+def host_get_state(ctx, **kwargs):
     global host_get_state_invocation
     host_get_state_invocation.append(time.time())
-    if len(host_get_state_invocation) <= ctx.properties['false_count']:
+    if len(host_get_state_invocation) <= get_prop('false_count',
+                                                  ctx,
+                                                  kwargs):
         return False
     return True
 
@@ -270,3 +274,12 @@ def host_get_state(ctx, **_):
 def get_host_get_state_invocations(**_):
     global host_get_state_invocation
     return host_get_state_invocation
+
+
+def get_prop(prop_name, ctx, kwargs, default=None):
+    if prop_name in kwargs:
+        return kwargs[prop_name]
+    elif prop_name in ctx.properties:
+        return ctx.properties[prop_name]
+    else:
+        return default

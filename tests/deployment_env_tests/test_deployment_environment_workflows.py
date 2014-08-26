@@ -20,14 +20,14 @@ import time
 import errno
 from os import path
 
-from workers_tests import WorkersTestCase
+from deployment_env_tests import DeploymentEnvTestCase
 from testenv import get_resource as resource
 from testenv import MANAGEMENT_NODE_ID as MANAGEMENT
 from testenv import wait_for_execution_to_end
 from testenv import send_task
 from testenv import TestEnvironment
 from testenv import do_retries
-from testenv import verify_workers_installation_complete
+from testenv import verify_deployment_environment_creation_complete
 from plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
     teardown_plugin_file_based_mode as teardown_cloudmock)
@@ -49,19 +49,19 @@ AFTER_INSTALL_STAGES = [INSTALLED, STARTED, RESTARTED]
 AFTER_UNINSTALL_STAGES = AFTER_INSTALL_STAGES + [STOPPED, UNINSTALLED]
 
 
-class TestWithDeploymentWorker(WorkersTestCase):
+class TestDeploymentEnvironmentWorkflows(DeploymentEnvTestCase):
     """
     This test is the only one (for the time this docstring was written)
-    to test the real workers installation / un-installation workflows.
+    to test the real deployment environment creation / deletion workflows.
     """
 
     def setUp(self):
-        super(TestWithDeploymentWorker, self).setUp()
+        super(TestDeploymentEnvironmentWorkflows, self).setUp()
         setup_cloudmock()
 
     def tearDown(self):
         teardown_cloudmock()
-        super(TestWithDeploymentWorker, self).tearDown()
+        super(TestDeploymentEnvironmentWorkflows, self).tearDown()
 
     def test_dsl_with_agent_plugin_and_manager_plugin(self):
         # start deployment workers
@@ -82,8 +82,8 @@ class TestWithDeploymentWorker(WorkersTestCase):
         # create deployment
         self.client.deployments.create(blueprint_id, DEPLOYMENT_ID)
 
-        # waiting for the deployment workers installation to complete
-        do_retries(verify_workers_installation_complete, 15,
+        # waiting for the deployment environment creation to complete
+        do_retries(verify_deployment_environment_creation_complete, 15,
                    deployment_id=DEPLOYMENT_ID)
 
         # test plugin installed in deployment operations worker
@@ -95,7 +95,7 @@ class TestWithDeploymentWorker(WorkersTestCase):
         # test plugin installed in deployment workflows worker
         workflow_plugin = self._get(get_installed_plugins,
                                     queue=DEPLOYMENT_WORKFLOWS_QUEUE)
-        self.assertIn('workflows', workflow_plugin)
+        self.assertIn('default_workflows', workflow_plugin)
 
         # test valid deployment worker installation order
         state = self._get(get_worker_state, queue=MANAGEMENT,
@@ -121,7 +121,7 @@ class TestWithDeploymentWorker(WorkersTestCase):
 
         # test plugins installed in agent worker
         agent_plugins = self._get(get_installed_plugins, queue=node_id)
-        self.assertIn('test-plugin', agent_plugins)
+        self.assertIn('test', agent_plugins)
 
         # test valid agent worker installation order
         state = self._get(get_worker_state, queue=DEPLOYMENT_ID,

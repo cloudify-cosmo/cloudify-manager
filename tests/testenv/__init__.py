@@ -333,8 +333,8 @@ class CeleryWorkerProcess(object):
     @staticmethod
     def _build_includes():
         includes = []
-        # adding the mock workflow plugin for workers installation
-        includes.append("system_workflows.workers_installation")
+        # adding the mock workflow plugin for deployment environment workflows
+        includes.append("system_workflows.deployment_environment")
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path \
@@ -355,9 +355,10 @@ class CeleryWorkerProcess(object):
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
     def __init__(self, tempdir, plugins_tempdir,
-                 manager_rest_port, use_mock_workers_installation=True):
+                 manager_rest_port,
+                 use_mock_deployment_environment_workflows=True):
         includes = ["workflows.default", "plugin_installer.tasks"]
-        if use_mock_workers_installation:
+        if use_mock_deployment_environment_workflows:
             includes.append("mock_workflows.workflows")
         super(CeleryWorkflowsWorkerProcess, self).__init__(
             tempdir, plugins_tempdir, manager_rest_port,
@@ -779,7 +780,7 @@ class TestEnvironment(object):
     _scope = None
     _file_server_process = None
 
-    def __init__(self, scope, use_mock_workers_installation=True):
+    def __init__(self, scope, use_mock_deployment_environment_workflows=True):
         try:
             TestEnvironmentScope.validate(scope)
 
@@ -840,7 +841,7 @@ class TestEnvironment(object):
 
             app_path = path.join(self._tempdir, "plugins")
             # copying plugins
-            if not use_mock_workers_installation:
+            if not use_mock_deployment_environment_workflows:
                 for plugin_path in [plugins_path, workflow_plugin_path]:
                     logger.info("Copying %s to %s", plugin_path, app_path)
                     distutils.dir_util.copy_tree(plugin_path, app_path)
@@ -861,10 +862,10 @@ class TestEnvironment(object):
                     workflow_plugin_workflows_path, app_workflows_path)
 
             # celery operations worker
-            # if using real worker installation workflow then 2 workers are
+            # if using real deployment environment workflows then 2 workers are
             # needed on the management queue
             num_of_management_workers = \
-                1 if use_mock_workers_installation else 2
+                1 if use_mock_deployment_environment_workflows else 2
             self._celery_operations_worker_process = \
                 CeleryOperationsWorkerProcess(
                     self._tempdir,
@@ -879,7 +880,7 @@ class TestEnvironment(object):
                     self._tempdir,
                     self._plugins_tempdir,
                     MANAGER_REST_PORT,
-                    use_mock_workers_installation)
+                    use_mock_deployment_environment_workflows)
             self._celery_workflows_worker_process.start()
 
             # workaround to update path
@@ -950,7 +951,7 @@ class TestEnvironment(object):
 
     @staticmethod
     def create(scope=TestEnvironmentScope.PACKAGE,
-               use_mock_workers_installation=True):
+               use_mock_deployment_environment_workflows=True):
         """
         Creates the test environment if not already created.
         :param scope: The scope the test environment is created at.
@@ -958,7 +959,7 @@ class TestEnvironment(object):
         if not TestEnvironment._instance:
             TestEnvironment._instance = TestEnvironment(
                 scope,
-                use_mock_workers_installation)
+                use_mock_deployment_environment_workflows)
         return TestEnvironment._instance
 
     @staticmethod
@@ -1122,7 +1123,7 @@ def deploy_and_execute_workflow(dsl_path,
         deployment_id = str(uuid.uuid4())
     deployment = client.deployments.create(blueprint.id, deployment_id)
 
-    do_retries(verify_workers_installation_complete, 30,
+    do_retries(verify_deployment_environment_creation_complete, 30,
                deployment_id=deployment_id)
 
     execution = client.deployments.execute(deployment_id, workflow_name,
@@ -1134,16 +1135,17 @@ def deploy_and_execute_workflow(dsl_path,
     return deployment, execution.id
 
 
-def verify_workers_installation_complete(deployment_id):
-    # a workaround for waiting for the workers installation to complete
+def verify_deployment_environment_creation_complete(deployment_id):
+    # a workaround for waiting for the deployment environment creation to
+    # complete
     client = create_rest_client()
     execs = client.deployments.list_executions(deployment_id)
     if not execs \
         or execs[0].status != Execution.TERMINATED \
-            or execs[0].workflow_id != 'workers_installation':
+            or execs[0].workflow_id != 'create_deployment_environment':
         raise RuntimeError(
             "Expected a single execution for workflow "
-            "'workers_installation' with status 'terminated'; "
+            "'create_deployment_environment' with status 'terminated'; "
             "Found these executions instead: {0}".format(
                 json.dumps(execs, indent=2)))
 

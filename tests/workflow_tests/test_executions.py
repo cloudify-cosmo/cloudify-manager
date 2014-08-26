@@ -21,7 +21,7 @@ import uuid
 from testenv import (TestCase,
                      wait_for_execution_to_end,
                      do_retries,
-                     verify_workers_installation_complete,
+                     verify_deployment_environment_creation_complete,
                      send_task,
                      get_resource as resource,
                      deploy_application as deploy)
@@ -75,8 +75,9 @@ class ExecutionsTest(TestCase):
         def assertions():
             deployments_executions = self.client.deployments.list_executions(
                 deployment.id)
-            # expecting 2 executions (1 for workers installation and 1
-            # execution of 'install'). Checking the install execution's status
+            # expecting 2 executions (1 for deployment environment
+            # creation and 1 execution of 'install'). Checking the install
+            # execution's status
             self.assertEquals(2, len(deployments_executions))
             self.assertIn(execution_id, [deployments_executions[0].id,
                                          deployments_executions[1].id])
@@ -95,7 +96,7 @@ class ExecutionsTest(TestCase):
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        do_retries(verify_workers_installation_complete, 30,
+        do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
         execution_parameters = {
             'operation': 'test_interface.operation',
@@ -161,7 +162,7 @@ class ExecutionsTest(TestCase):
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        do_retries(verify_workers_installation_complete, 30,
+        do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
         execution = self.client.deployments.execute(
             deployment_id, workflow_id)

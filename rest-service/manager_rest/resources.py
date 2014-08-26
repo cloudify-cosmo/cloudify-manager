@@ -55,7 +55,8 @@ def exceptions_handled(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (manager_exceptions.ConflictError,
+        except (
+                manager_exceptions.ConflictError,
                 manager_exceptions.NotFoundError,
                 manager_exceptions.DependentExistsError,
                 manager_exceptions.NonexistentWorkflowError,
@@ -63,12 +64,13 @@ def exceptions_handled(func):
                 manager_exceptions.UnsupportedContentTypeError,
                 manager_exceptions.InvalidBlueprintError,
                 manager_exceptions.ExistingRunningExecutionError,
-                manager_exceptions.DeploymentWorkersNotYetInstalledError,
                 manager_exceptions.IllegalExecutionParametersError,
                 manager_exceptions.IllegalActionError,
                 manager_exceptions.NoSuchIncludeFieldError,
                 manager_exceptions.MissingRequiredDeploymentInputError,
-                manager_exceptions.UnknownDeploymentInputError) as e:
+                manager_exceptions.UnknownDeploymentInputError,
+                manager_exceptions.DeploymentEnvironmentCreationInProgressError
+        ) as e:
             abort_error(e)
     return wrapper
 
