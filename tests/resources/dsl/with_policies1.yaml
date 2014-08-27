@@ -1,9 +1,9 @@
 imports:
-    - cloudify.types
+    - cloudify/types/types.yaml
+    - cloudify/triggers/execute_workflow.yaml
     - testmockoperations.yaml
     - mock_workflows.yaml
     - policies/nop.yaml
-    - triggers/execute_workflow.yaml
 
 node_templates:
     node:

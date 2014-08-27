@@ -22,4 +22,4 @@ policy_triggers:
             conn_timeout:
                 description: connection timeout when making request to manager rest in ms
                 default: 1000
-        source: triggers/execute_workflow.clj
+        source: cloudify/triggers/execute_workflow.clj

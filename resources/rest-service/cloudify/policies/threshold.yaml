@@ -12,4 +12,4 @@ policy_types:
                     will cause the triggers to be processed. if 'false': metrics
                     with values lower then the threshold will do so.
                 default: true
-        source: policies/threshold.clj
+        source: cloudify/policies/threshold.clj
