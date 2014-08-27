@@ -1,0 +1,61 @@
+imports:
+    - cloudify.types
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+    - policies/threshold.yaml
+    - triggers/execute_workflow.yaml
+
+node_templates:
+    node:
+        type: cloudify.types.base
+        interfaces:
+            test:
+                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+
+groups:
+    threshold_group:
+        members: [node]
+        policies:
+            threshold_policy_uppper_bound:
+                type: threshold
+                properties:
+                    metric: service
+                    threshold: 100
+                    upper_bound: true
+                triggers:
+                    upper_bound_trigger:
+                        type: execute_workflow
+                        parameters:
+                            workflow: upper_bound_workflow
+                            workflow_parameters:
+                                value: { get_property: [SELF, metric]}
+            threshold_policy_lower_bound:
+                type: threshold
+                properties:
+                    metric: service
+                    threshold: 100
+                    upper_bound: false
+                triggers:
+                    lower_bound_trigger:
+                        type: execute_workflow
+                        parameters:
+                            workflow: lower_bound_workflow
+                            workflow_parameters:
+                                value: { get_property: [SELF, metric]}
+
+
+workflows:
+    upper_bound_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_2
+        parameters:
+            key:
+                default: upper
+            value:
+                description: the metric value
+    lower_bound_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_2
+        parameters:
+            key:
+                default: lower
+            value:
+                description: the metric value
