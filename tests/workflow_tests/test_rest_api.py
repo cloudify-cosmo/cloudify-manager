@@ -122,4 +122,3 @@ class RestAPITest(TestCase):
                          execution_by_id.workflow_id)
         self.assertEqual(execution_from_list['blueprint_id'],
                          execution_by_id['blueprint_id'])
-
