@@ -191,7 +191,7 @@ policy_types:
                     will cause the triggers to be processed. if 'false': metrics
                     with values lower then the threshold will do so.
                 default: true
-        source: cloudify/policies/threshold.clj
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1210-policy-resources/resources/rest-service/cloudify/policies/threshold.clj
 
 ##################################################################################
 # Policy triggers definitions
@@ -221,4 +221,4 @@ policy_triggers:
             conn_timeout:
                 description: Connection timeout when making request to manager REST in ms
                 default: 1000
-        source: cloudify/triggers/execute_workflow.clj
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1210-policy-resources/resources/rest-service/cloudify/triggers/execute_workflow.clj
