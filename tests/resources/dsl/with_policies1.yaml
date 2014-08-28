@@ -2,7 +2,7 @@ imports:
     - cloudify.types
     - testmockoperations.yaml
     - mock_workflows.yaml
-    - policies/threshold.yaml
+    - policies/nop.yaml
     - triggers/execute_workflow.yaml
 
 node_templates:
@@ -13,19 +13,16 @@ node_templates:
                 - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
-    threshold_group:
+    some_group:
         members: [node]
         policies:
-            threshold_policy:
-                type: threshold
-                properties:
-                    metric: TODO
-                    threshold: 60
+            some_policy:
+                type: nop
                 triggers:
-                    threshold_exceeded_workflow:
+                    some_workflow_trigger:
                         type: execute_workflow
                         parameters:
-                            workflow: threshold_exceeded
+                            workflow: some_workflow
                             allow_custom_parameters: true
                             workflow_parameters:
                                 key: node_id
@@ -34,7 +31,7 @@ groups:
                                 custom_value: { get_property: [SELF, metric] }
 
 workflows:
-    threshold_exceeded:
+    some_workflow:
         mapping: mock_workflows.mock_workflows.workflows.test_policies_1
         parameters:
             key:

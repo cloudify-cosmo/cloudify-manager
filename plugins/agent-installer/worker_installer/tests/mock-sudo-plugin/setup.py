@@ -25,7 +25,7 @@ PLUGINS_COMMON = "https://github.com/cloudify-cosmo" \
 
 setup(
     name='mock-sudo-plugin',
-    version='3.1a2',
+    version='3.1a3',
     author='idanmo',
     author_email='idan@gigaspaces.com',
     packages=['sudo_plugin'],

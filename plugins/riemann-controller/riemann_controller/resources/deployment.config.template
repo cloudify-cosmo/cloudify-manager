@@ -28,6 +28,6 @@
                                         "{{stream.metadata.group}}"
                                         "{{stream.metadata.policy}}"
                                         deployment-processing-queue)]
-(where* (is-node-name "{{stream.metadata.members[0]}}")
+(where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
 {{stream.data}}))
 {% endfor %}))

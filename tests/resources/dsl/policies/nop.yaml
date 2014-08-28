@@ -1,0 +1,3 @@
+policy_types:
+    nop:
+        source: policies/nop.clj
