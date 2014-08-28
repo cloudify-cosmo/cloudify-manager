@@ -1,7 +1,5 @@
 imports:
     - cloudify/types/types.yaml
-    - cloudify/policies/threshold.yaml
-    - cloudify/triggers/execute_workflow.yaml
     - testmockoperations.yaml
     - mock_workflows.yaml
 
