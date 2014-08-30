@@ -26,7 +26,8 @@ import pika
 
 from cloudify import ctx
 from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import NonRecoverableError, HttpException
+from cloudify.manager import get_resource
 
 from riemann_controller import config
 
@@ -140,10 +141,26 @@ def _process_source(source):
     split = source.split('://')
     schema = split[0]
     the_rest = ''.join(split[1:])
-    if schema in ['http', 'https']:
-        return requests.get(source).text
-    elif schema == 'file' and the_rest:
-        with open(the_rest) as f:
-            return f.read()
-    else:
+
+    try:
+        if schema in ['http', 'https']:
+            return requests.get(source).text
+        elif schema == 'file' and the_rest:
+            with open(the_rest) as f:
+                return f.read()
+    except IOError, e:
+        raise NonRecoverableError('Failed processing source: {} ({})'
+                                  .format(source, e.message))
+
+    try:
+        # try downloading blueprint resource
         return ctx.get_resource(source)
+    except HttpException:
+        pass
+    try:
+        # try downloading cloudify resource
+        return get_resource(source)
+    except HttpException:
+        pass
+    raise NonRecoverableError('Failed processing source: {}'
+                              .format(source))

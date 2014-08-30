@@ -906,6 +906,8 @@ class TestEnvironment(object):
             resources_path = path.join(resources_path, 'resources')
             copy_resources(fileserver_dir, resources_path)
 
+            self.patch_source_urls(fileserver_dir)
+
             # manager rest
             file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
             self._manager_rest_process = ManagerRestProcess(
@@ -1053,6 +1055,26 @@ class TestEnvironment(object):
         if TestEnvironment._instance:
             return TestEnvironment._instance._riemann_tempdir
         return None
+
+    def patch_source_urls(self, resources):
+        with open(path.join(resources,
+                            'cloudify', 'types', 'types.yaml')) as f:
+            types_yaml = yaml.safe_load(f.read())
+        for policy_type in types_yaml.get('policy_types', {}).values():
+            in_path = '/cloudify/policies/'
+            source = policy_type['source']
+            if in_path in source:
+                source = source[source.index(in_path) + 1:]
+            policy_type['source'] = source
+        for policy_trigger in types_yaml.get('policy_triggers', {}).values():
+            in_path = '/cloudify/triggers/'
+            source = policy_trigger['source']
+            if in_path in source:
+                source = source[source.index(in_path) + 1:]
+            policy_trigger['source'] = source
+        with open(path.join(resources,
+                            'cloudify', 'types', 'types.yaml'), 'w') as f:
+            f.write(yaml.safe_dump(types_yaml))
 
 
 def create_rest_client():
