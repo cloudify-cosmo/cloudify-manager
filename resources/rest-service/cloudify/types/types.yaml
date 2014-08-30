@@ -178,7 +178,7 @@ plugins:
 ##################################################################################
 policy_types:
 
-    threshold:
+    cloudify.policies.types.threshold:
         properties:
             metric:
                 description: The metric name
@@ -198,7 +198,7 @@ policy_types:
 ##################################################################################
 policy_triggers:
 
-    execute_workflow:
+    cloudify.policies.triggers.execute_workflow:
         parameters:
             workflow:
                 description: Workflow name to execute

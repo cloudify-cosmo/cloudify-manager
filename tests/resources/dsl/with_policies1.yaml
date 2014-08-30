@@ -19,7 +19,7 @@ groups:
                 type: nop
                 triggers:
                     some_workflow_trigger:
-                        type: execute_workflow
+                        type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: some_workflow
                             allow_custom_parameters: true
