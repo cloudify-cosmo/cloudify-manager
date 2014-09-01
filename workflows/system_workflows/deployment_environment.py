@@ -32,7 +32,7 @@ def create(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    management_plugins = kwargs['management_plugins_to_install']
+    deployment_plugins = kwargs['deployment_plugins_to_install']
     workflow_plugins = kwargs['workflow_plugins_to_install']
 
     # installing the operations worker
@@ -44,13 +44,13 @@ def create(ctx, **kwargs):
         ctx.execute_task(
             task_name='worker_installer.tasks.start'))
 
-    if management_plugins:
+    if deployment_plugins:
         sequence.add(
             ctx.send_event('Installing deployment operations plugins'),
             ctx.execute_task(
                 task_queue=ctx.deployment_id,
                 task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': management_plugins}),
+                kwargs={'plugins': deployment_plugins}),
             ctx.execute_task(
                 task_name='worker_installer.tasks.restart'))
 

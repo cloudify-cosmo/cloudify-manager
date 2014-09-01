@@ -20,6 +20,7 @@ from datetime import datetime
 from flask import g, current_app
 
 from dsl_parser import tasks
+from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
 from manager_rest import models
 from manager_rest import manager_exceptions
@@ -474,8 +475,8 @@ class BlueprintsManager(object):
             deployment, deployment_env_creation_task_id, wf_id,
             deployment_env_creation_task_name)
         kwargs = {
-            'management_plugins_to_install': deployment_plan[
-                'management_plugins_to_install'],
+            DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
+                DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
                 'workflow_plugins_to_install'],
             'policy_configuration': {

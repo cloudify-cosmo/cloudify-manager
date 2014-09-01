@@ -142,35 +142,25 @@ workflows:
 ##################################################################################
 plugins:
 
-    # Basic plugin artifact
-    cloudify.plugins.plugin: { }
-
-    # Remote plugin artifact
-    cloudify.plugins.remote_plugin:
-        derived_from: cloudify.plugins.plugin
-
-    # Worker plugin artifact - runs on Cloudify agent
-    cloudify.plugins.agent_plugin:
-        derived_from: cloudify.plugins.plugin
-
-    # Worker plugin artifact - runs on a dedicated worker for the deployment
-    cloudify.plugins.manager_plugin:
-        derived_from: cloudify.plugins.plugin
-
     agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        source: system
 
     plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
+        executor: central_deployment_agent
+        source: system
 
     windows_agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        source: system
 
     windows_plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
+        executor: central_deployment_agent
+        source: system
 
     default_workflows:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        source: system
 
 
 ##################################################################################
