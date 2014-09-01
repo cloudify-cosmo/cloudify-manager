@@ -70,7 +70,7 @@ run_intergration_tests()
     #sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
     #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
     wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
-    sudo dpkg -i elasticsearch-1.0.1.deb
+    sudo dpkg -i elasticsearch-1.3.2.deb
     export PATH=$PATH:/usr/share/elasticsearch/bin
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
