@@ -82,19 +82,19 @@ node_types:
         derived_from: cloudify.types.base
 
     cloudify.types.db_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     cloudify.types.web_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
         properties:
             port:
                 default: 80
 
     cloudify.types.app_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     cloudify.types.message_bus_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     # An application artifact to deploy
     cloudify.types.app_module:
@@ -124,10 +124,10 @@ relationships:
                 default: all_to_all
 
     cloudify.relationships.connected_to:
-        derived_from: "cloudify.relationships.depends_on"
+        derived_from: cloudify.relationships.depends_on
 
     cloudify.relationships.contained_in:
-        derived_from: "cloudify.relationships.depends_on"
+        derived_from: cloudify.relationships.depends_on
 
 
 ##################################################################################
