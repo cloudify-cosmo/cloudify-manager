@@ -53,7 +53,9 @@ class WinRMRunner(object):
     def __init__(
             self,
             session_config,
-            logger=setup_default_logger('WinRMRunner')):
+            logger=None):
+
+        logger = logger or setup_default_logger('WinRMRunner')
 
         # Validations - [host, user, password]
         validate(session_config)
