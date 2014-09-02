@@ -97,16 +97,6 @@ class ESStorageManager(object):
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
-    def _update_doc(self, doc_type, doc_id, value):
-        try:
-            self._get_es_conn().index(index=STORAGE_INDEX_NAME,
-                                      doc_type=doc_type, id=doc_id,
-                                      body=value)
-        except elasticsearch.exceptions.ConflictError:
-            raise manager_exceptions.ConflictError(
-                'Version conflict when updating {0} - {1}'.format(
-                    doc_type, doc_id))
-
     def _delete_doc(self, doc_type, doc_id, model_class, id_field='id'):
         try:
             res = self._get_es_conn().delete(STORAGE_INDEX_NAME, doc_type,
@@ -321,11 +311,10 @@ class ESStorageManager(object):
         updated = current.to_dict()
         del updated['version']
 
-        try:
-            self._update_doc(NODE_INSTANCE_TYPE, node.id, updated)
-        except elasticsearch.exceptions.ConflictError:
-            raise manager_exceptions.ConflictError(
-                'Node update conflict: mismatching versions')
+        self._get_es_conn().index(index=STORAGE_INDEX_NAME,
+                                  doc_type=NODE_INSTANCE_TYPE,
+                                  id=node.id,
+                                  body=updated)
 
     def put_provider_context(self, provider_context):
         doc_data = provider_context.to_dict()
