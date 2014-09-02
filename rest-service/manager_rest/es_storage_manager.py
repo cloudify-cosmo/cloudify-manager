@@ -13,11 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
 
-import json
-from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
+from elasticsearch import Elasticsearch
+
 from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
