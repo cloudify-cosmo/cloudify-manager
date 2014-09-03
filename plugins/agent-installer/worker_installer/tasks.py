@@ -41,27 +41,30 @@ CELERY_INCLUDES_LIST = [
 CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL =\
+DISABLE_REQUIRETTY_SCRIPT_PATH = \
     '/packages/scripts/{0}-agent-disable-requiretty.sh'
 
-SUPPORTED_DISTROS = ('Ubuntu', 'debian', 'centos')
+
+def get_agent_resource_url(ctx, agent_config, resource):
+    """returns an agent's resource url
+    """
+    if agent_config.get(resource + '_path'):
+        return '{0}/{1}/{2}'.format(
+            utils.get_manager_file_server_blueprints_root_url(),
+            ctx.blueprint.id, agent_config[resource + '_path'])
+    else:
+        resource_path = locals()['{0}_PATH'.format(resource.upper())]
+        return '{0}/{1}'.format(
+            utils.get_manager_file_server_url(),
+            resource_path.format(agent_config['distro']))
 
 
-def get_agent_package_url(distro):
+def get_agent_resource_path(ctx, agent_config, resource):
+    """returns an agent's resource path
+    (like.. RIGHT THIS MOMENT, this doesn't work)
     """
-    Returns the agent package url the package will be downloaded from.
-    """
-    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
-                            AGENT_PACKAGE_PATH.format(distro))
-
-
-def get_disable_requiretty_script_url(distro):
-    """
-    Returns the disable requiretty script url the script will be downloaded
-    from.
-    """
-    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
-                            DISABLE_REQUIRETTY_SCRIPT_URL.format(distro))
+    resource_path = locals()['{0}_PATH'.format(resource.upper())]
+    return resource_path.format(agent_config['distro'])
 
 
 def get_celery_includes_list():
@@ -72,12 +75,11 @@ def get_celery_includes_list():
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
 
-    if agent_config['distro'] not in SUPPORTED_DISTROS:
-        ctx.logger.error('distro {} not supported '
-                         'when installing agent'.format(
-                             agent_config['distro']))
-        raise RuntimeError('unsupported distribution')
-    agent_package_url = get_agent_package_url(agent_config['distro'])
+    try:
+        agent_package_url = get_agent_resource_url(
+            ctx, agent_config, 'agent_package')
+    except:
+        raise NonRecoverableError('failed to retrieve agent package url')
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -86,9 +88,8 @@ def install(ctx, runner, agent_config, **kwargs):
         "installing celery worker {0}".format(agent_config['name']))
 
     if worker_exists(runner, agent_config):
-        ctx.logger.info("Worker for deployment {0} "
-                        "is already installed. nothing to do."
-                        .format(ctx.deployment_id))
+        ctx.logger.info("Worker for deployment {0} is already installed. "
+                        "nothing to do.".format(ctx.deployment_id))
         return
 
     ctx.logger.info(
@@ -97,16 +98,14 @@ def install(ctx, runner, agent_config, **kwargs):
     runner.run('mkdir -p {0}'.format(agent_config['base_dir']))
 
     ctx.logger.debug(
-        'Downloading agent package from: {0}'.format(
-            agent_package_url))
+        'Downloading agent package from: {0}'.format(agent_package_url))
 
-    runner.run('wget -T 30 -O {0}/{1}-agent.tar.gz {2}'.format(
-        agent_config['base_dir'], agent_config['distro'], agent_package_url))
+    runner.run('wget -T 30 -O {0}/agent.tar.gz {2}'.format(
+        agent_config['base_dir'], agent_package_url))
 
     runner.run(
-        'tar xzvf {0}/{1}-agent.tar.gz --strip=2 -C {2}'.format(
-            agent_config['base_dir'], agent_config['distro'],
-            agent_config['base_dir']))
+        'tar xzvf {0}/agent.tar.gz --strip=2 -C {2}'.format(
+            agent_config['base_dir'], agent_config['base_dir']))
 
     for link in ['archives', 'bin', 'include', 'lib']:
         link_path = '{0}/env/local/{1}'.format(agent_config['base_dir'], link)
@@ -115,7 +114,7 @@ def install(ctx, runner, agent_config, **kwargs):
             runner.run('ln -s {0}/env/{1} {2}'.format(
                 agent_config['base_dir'], link, link_path))
         except Exception as e:
-            ctx.logger.warn('Error process link: {0} [error={1}] - '
+            ctx.logger.warn('Error processing link: {0} [error={1}] - '
                             'ignoring..'.format(link_path, str(e)))
 
     create_celery_configuration(
@@ -128,17 +127,21 @@ def install(ctx, runner, agent_config, **kwargs):
                "{0}/env/bin/*".format(agent_config['base_dir']))
 
     # Remove downloaded agent package
-    runner.run('rm {0}/{1}-agent.tar.gz'.format(
-        agent_config['base_dir'], agent_config['distro']))
+    runner.run('rm {0}/agent.tar.gz'.format(agent_config['base_dir']))
 
     # Disable requiretty
     if agent_config['disable_requiretty']:
+        try:
+            disable_requiretty_script_url = get_agent_resource_url(
+                ctx, agent_config, 'disable_requiretty_script')
+        except:
+            raise NonRecoverableError(
+                'failed to retrieve disable-requiretty script url')
         ctx.logger.debug("Removing requiretty in sudoers file")
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
         runner.run('wget -T 30 -O {0} {1}'.format(
-            disable_requiretty_script, get_disable_requiretty_script_url(
-                agent_config['distro'])))
+            disable_requiretty_script, disable_requiretty_script_url))
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
