@@ -128,7 +128,7 @@ def install_celery_plugin(plugin_url):
     :return:
     '''
 
-    command = 'cmd /c "{0}\Scripts\pip.exe install --process-dependency-links {1}"'\
+    command = 'cmd /c "{0}\Scripts\pip.exe install {1}"'\
               .format(sys.prefix, plugin_url)
     LocalCommandRunner().run(command)
 

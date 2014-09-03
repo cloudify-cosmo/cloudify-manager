@@ -137,7 +137,7 @@ def install_celery_plugin(plugin):
 
     # this will install the plugin and
     # its dependencies into the python installation
-    command = "{0} install --process-dependency-links {1}"\
+    command = "{0} install {1}"\
               .format(get_pip(), plugin_url)
     run_command(command)
     logger.debug("installed plugin {0} and "
