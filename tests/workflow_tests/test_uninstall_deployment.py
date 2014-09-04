@@ -20,7 +20,7 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import undeploy_application as undeploy
 from testenv import send_task
-from plugins.cloudmock import tasks as cloudmock
+from mock_plugins.cloudmock import tasks as cloudmock
 import time
 
 
@@ -38,9 +38,9 @@ class TestUninstallDeployment(TestCase):
         undeploy(deployment_id)
         logger.info('undeploy completed')
 
-        from plugins.testmockoperations.tasks import get_state as \
+        from mock_plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
-        from plugins.testmockoperations.tasks import is_unreachable_called
+        from mock_plugins.testmockoperations.tasks import is_unreachable_called
         states = send_task(testmock_get_state).get(timeout=10)
         node_id = states[0]['id']
 
@@ -63,7 +63,7 @@ class TestUninstallDeployment(TestCase):
         undeploy(deployment_id)
         self.logger.info('undeploy completed')
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = result.get(timeout=10)
 
@@ -81,10 +81,10 @@ class TestUninstallDeployment(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
         # Checking that uninstall wasn't called on the contained node
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_unreachable_call_order \
             as testmock_get_unreachable_call_order
-        from plugins.testmockoperations.tasks import get_state \
+        from mock_plugins.testmockoperations.tasks import get_state \
             as testmock_get_state
         states = send_task(testmock_get_state).get(timeout=10)
         node1_id = states[0]['id']
@@ -98,7 +98,7 @@ class TestUninstallDeployment(TestCase):
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
 
-        from plugins.connection_configurer_mock.tasks import get_state \
+        from mock_plugins.connection_configurer_mock.tasks import get_state \
             as config_get_state
         configurer_state = send_task(config_get_state).get(timeout=10)
         self.assertEquals(2, len(configurer_state))
@@ -123,7 +123,7 @@ class TestUninstallDeployment(TestCase):
         undeploy(deployment_id)
         print('undeploy completed')
         # test stop monitor invocations
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_monitoring_operations_invocation
         invocations = send_task(get_monitoring_operations_invocation) \
             .get(timeout=10)
@@ -145,7 +145,7 @@ class TestUninstallDeployment(TestCase):
         time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = result.get(timeout=10)
 

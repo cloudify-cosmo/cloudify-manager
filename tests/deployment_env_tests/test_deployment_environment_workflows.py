@@ -28,11 +28,11 @@ from testenv import send_task
 from testenv import TestEnvironment
 from testenv import do_retries
 from testenv import verify_deployment_environment_creation_complete
-from plugins.cloudmock.tasks import (
+from mock_plugins.cloudmock.tasks import (
     setup_plugin_file_based_mode as setup_cloudmock,
     teardown_plugin_file_based_mode as teardown_cloudmock)
-from plugins.plugin_installer.tasks import get_installed_plugins
-from plugins.worker_installer.tasks import (
+from mock_plugins.plugin_installer.tasks import get_installed_plugins
+from mock_plugins.worker_installer.tasks import (
     get_worker_state,
     RESTARTED,
     STARTED,

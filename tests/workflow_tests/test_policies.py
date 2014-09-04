@@ -19,7 +19,7 @@ from testenv import get_resource as resource
 from testenv import deploy_application as deploy
 from testenv import send_task
 
-from plugins.testmockoperations.tasks import \
+from mock_plugins.testmockoperations.tasks import \
     get_mock_operation_invocations as testmock_get_invocations
 
 

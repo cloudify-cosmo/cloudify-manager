@@ -52,7 +52,7 @@ class TestDeploymentWorkflows(TestCase):
                                                     'execute_operation')
         wait_for_execution_to_end(execution)
 
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_mock_operation_invocations
 
         invocations = send_task(get_mock_operation_invocations).get(timeout=10)

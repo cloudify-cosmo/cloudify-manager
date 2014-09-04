@@ -19,10 +19,10 @@ __author__ = 'ran'
 from testenv import TestEnvironment
 from testenv import TestEnvironmentScope
 from testenv import TestCase
-from plugins.worker_installer.tasks import (
+from mock_plugins.worker_installer.tasks import (
     setup_plugin as setup_worker_installer,
     teardown_plugin as teardown_worker_installer)
-from plugins.plugin_installer.tasks import (
+from mock_plugins.plugin_installer.tasks import (
     setup_plugin as setup_plugin_installer,
     teardown_plugin as teardown_plugin_installer)
 

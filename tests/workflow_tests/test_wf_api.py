@@ -21,7 +21,7 @@ from testenv import TestCase
 from testenv import get_resource as resource
 from testenv import deploy_and_execute_workflow as deploy
 from testenv import send_task
-from plugins.testmockoperations.tasks import (get_mock_operation_invocations,
+from mock_plugins.testmockoperations.tasks import (get_mock_operation_invocations,
                                               get_fail_invocations)
 
 from testenv import delete_provider_context, restore_provider_context

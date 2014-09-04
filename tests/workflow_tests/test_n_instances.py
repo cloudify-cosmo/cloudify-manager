@@ -27,12 +27,12 @@ class TestMultiInstanceApplication(TestCase):
         dsl_path = resource("dsl/multi_instance.yaml")
         deploy(dsl_path)
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = set(result.get(timeout=10))
         self.assertEquals(2, len(machines))
 
-        from plugins.testmockoperations.tasks import get_state as get_state
+        from mock_plugins.testmockoperations.tasks import get_state as get_state
         apps_state = send_task(get_state).get(timeout=10)
         machines_with_apps = set([])
         for app_state in apps_state:
@@ -44,7 +44,7 @@ class TestMultiInstanceApplication(TestCase):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
         deploy(dsl_path)
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = set(result.get(timeout=10))
         self.assertEquals(15, len(machines))

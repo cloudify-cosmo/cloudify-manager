@@ -35,7 +35,7 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = result.get(timeout=10)
 
@@ -48,7 +48,7 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertEquals(blueprint_id, deployment.blueprint_id)
 
-        from plugins.testmockoperations.tasks import get_state as \
+        from mock_plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
         states = send_task(testmock_get_state) \
             .get(timeout=10)
@@ -58,7 +58,7 @@ class BasicWorkflowsTest(TestCase):
 
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
-        from plugins.cloudmock.tasks import set_raise_exception_on_start
+        from mock_plugins.cloudmock.tasks import set_raise_exception_on_start
         send_task(set_raise_exception_on_start).get(timeout=10)
         dsl_path = resource("dsl/basic.yaml")
         try:
@@ -71,7 +71,7 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
         deploy(dsl_path)
 
-        from plugins.testmockoperations.tasks import get_state as \
+        from mock_plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
         states = send_task(testmock_get_state).get(timeout=10)
         node_runtime_props = None
@@ -92,10 +92,10 @@ class BasicWorkflowsTest(TestCase):
     def test_inject_properties_to_operation(self):
         dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
         deploy(dsl_path)
-        from plugins.testmockoperations.tasks import get_state as \
+        from mock_plugins.testmockoperations.tasks import get_state as \
             testmock_get_state
         states = send_task(testmock_get_state).get(timeout=10)
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_mock_operation_invocations as testmock_get__invocations
         invocations = send_task(testmock_get__invocations).get(timeout=10)
         self.assertEqual(1, len(invocations))
@@ -106,7 +106,7 @@ class BasicWorkflowsTest(TestCase):
     def test_start_monitor_node_operation(self):
         dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
         deploy(dsl_path)
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_monitoring_operations_invocation
         invocations = send_task(get_monitoring_operations_invocation)\
             .get(timeout=10)
@@ -117,7 +117,7 @@ class BasicWorkflowsTest(TestCase):
     def test_plugin_get_resource(self):
         dsl_path = resource("dsl/get_resource_in_plugin.yaml")
         deploy(dsl_path)
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_resource_operation_invocations as testmock_get_invocations
         invocations = send_task(testmock_get_invocations).get(
             timeout=10)
@@ -142,7 +142,7 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = result.get(timeout=10)
 
@@ -336,7 +336,7 @@ class BasicWorkflowsTest(TestCase):
                                blueprint_id=blueprint_id,
                                deployment_id=deployment_id)
 
-        from plugins.testmockoperations.tasks import get_node_states
+        from mock_plugins.testmockoperations.tasks import get_node_states
         node_states = send_task(get_node_states).get(timeout=10)
 
         self.assertEquals(node_states, [

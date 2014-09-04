@@ -2,4 +2,5 @@
 # cloudmock plugin definition.
 plugins:
     cloudmock:
-        derived_from: cloudify.plugins.remote_plugin
+        executor: central_deployment_agent
+        source: dummy

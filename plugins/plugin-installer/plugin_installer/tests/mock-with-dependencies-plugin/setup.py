@@ -27,10 +27,8 @@ setup(
     license='LICENSE',
     description='Mock plugin for test',
     install_requires=[
-        "cosmo-plugin-python-webserver"
-    ],
-    dependency_links=["https://github.com/CloudifySource"
-                      "/cosmo-plugin-python-webserver"
-                      "/tarball/develop#egg=cosmo"
-                      "-plugin-python-webserver-0.1.0"]
+        # Just some dependency.
+        # we assert for this name in the tests code.
+        'simplejson'
+    ]
 )

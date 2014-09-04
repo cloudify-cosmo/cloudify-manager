@@ -62,7 +62,7 @@ class ExecutionsTest(TestCase):
             'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
 
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_mock_operation_invocations
 
         invocations = send_task(get_mock_operation_invocations).get(timeout=10)
@@ -112,7 +112,7 @@ class ExecutionsTest(TestCase):
             allow_custom_parameters=True)
         wait_for_execution_to_end(execution)
 
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_mock_operation_invocations
 
         invocations = send_task(get_mock_operation_invocations).get(timeout=10)
@@ -191,7 +191,7 @@ class ExecutionsTest(TestCase):
     def _assert_execution_cancelled(self, execution):
         self.assertEquals(Execution.CANCELLED, execution.status)
 
-        from plugins.testmockoperations.tasks import \
+        from mock_plugins.testmockoperations.tasks import \
             get_mock_operation_invocations
 
         invocations = send_task(get_mock_operation_invocations).get(timeout=10)

@@ -46,12 +46,12 @@ class TestRelationships(TestCase):
             node_id_id_prefix = 'host'
             related_id_prefix = 'mock_node_that_connects_to_host'
 
-        from plugins.cloudmock.tasks import get_machines
+        from mock_plugins.cloudmock.tasks import get_machines
         result = send_task(get_machines)
         machines = result.get(timeout=10)
         self.assertEquals(1, len(machines))
 
-        from plugins.connection_configurer_mock.tasks import get_state \
+        from mock_plugins.connection_configurer_mock.tasks import get_state \
             as config_get_state
         result = send_task(config_get_state)
 
@@ -109,9 +109,9 @@ class TestRelationships(TestCase):
 
         connector_timestamp = state['time']
 
-        from plugins.testmockoperations.tasks import get_state \
+        from mock_plugins.testmockoperations.tasks import get_state \
             as testmock_get_state
-        from plugins.testmockoperations.tasks import get_touched_time \
+        from mock_plugins.testmockoperations.tasks import get_touched_time \
             as testmock_get_touch_time
         state = send_task(testmock_get_state).get(timeout=10)[0]
         touched_timestamp = send_task(testmock_get_touch_time)\

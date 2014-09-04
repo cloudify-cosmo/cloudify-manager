@@ -134,8 +134,8 @@ relationships:
 # Workflows
 ##################################################################################
 workflows:
-    install: default_workflows.workflows.default.install
-    uninstall: default_workflows.workflows.default.uninstall
+    install: default_workflows.cloudify.plugins.workflows.install
+    uninstall: default_workflows.cloudify.plugins.workflows.uninstall
 
 ##################################################################################
 # Base artifact definitions

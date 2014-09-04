@@ -31,18 +31,19 @@ import unittest
 from os import path
 from functools import wraps
 from multiprocessing import Process
-from os.path import dirname, abspath
+from os.path import dirname
+import json
 
 import yaml
 import pika
-import json
 import elasticsearch
 import requests
 from celery import Celery
+
 from cloudify.constants import MANAGEMENT_NODE_ID
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
-import plugins
+import mock_plugins
 import mock_workflows
 
 
@@ -198,7 +199,7 @@ class CeleryWorkerProcess(object):
 
     def __init__(self,
                  tempdir,
-                 plugins_tempdir,
+                 env_dir,
                  manager_rest_port,
                  name,
                  queues,
@@ -211,7 +212,7 @@ class CeleryWorkerProcess(object):
         self._celery_log_file = path.join(tempdir, "celery-{}.log".format(
             name))
         self._tempdir = tempdir
-        self._plugins_tempdir = plugins_tempdir
+        self._env_dir = env_dir
         self._manager_rest_port = manager_rest_port
         self._includes = includes
         self._queues = ','.join(queues)
@@ -235,12 +236,12 @@ class CeleryWorkerProcess(object):
             "--include={0}".format(','.join(self._includes))
         ]
 
-        working_dir = os.path.join(self._tempdir, "plugins")
+        working_dir = self._env_dir
 
         env_conf = dict(
             CELERY_QUEUES=self._queues,
             RIEMANN_CONFIGS_DIR=path.join(self._tempdir, 'riemann'),
-            TEMP_DIR=self._plugins_tempdir,
+            TEMP_DIR=self._env_dir,
             MANAGER_REST_PORT=str(self._manager_rest_port),
             MANAGEMENT_IP='localhost',
             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL='http://localhost:{0}/{1}'
@@ -331,37 +332,32 @@ class CeleryWorkerProcess(object):
         return None
 
     @staticmethod
-    def _build_includes():
-        includes = []
+    def _build_includes(env_dir):
+
         # adding the mock workflow plugin for deployment environment workflows
-        includes.append("system_workflows.deployment_environment")
+        includes = ['cloudify_system_workflows.deployment_environment']
 
-        # iterate over the mock plugins directory and include all of them
-        mock_plugins_path = os.path \
-            .join(dirname(dirname(abspath(__file__))), "plugins")
-
-        for plugin_dir_name in os.walk(mock_plugins_path).next()[1]:
-            tasks_path = os.path \
-                .join(mock_plugins_path, plugin_dir_name, "tasks.py")
-            if os.path.exists(tasks_path):
-                includes.append("{0}.tasks".format(plugin_dir_name))
-            else:
-                logger.warning(
-                    "Could not find tasks.py file under plugin {0}. This "
-                    "plugin will not be loaded!".format(plugin_dir_name))
+        for plugin_dir_name in os.walk(env_dir).next()[1]:
+            for module_name in os.walk(os.path.join(
+                    env_dir,
+                    plugin_dir_name)).next()[2]:
+                if '__init__' not in module_name:
+                    includes.append('{0}.{1}'
+                                    .format(plugin_dir_name,
+                                            os.path.splitext(module_name)[0]))
         return includes
 
 
 class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
-    def __init__(self, tempdir, plugins_tempdir,
+    def __init__(self, tempdir, env_dir,
                  manager_rest_port,
                  use_mock_deployment_environment_workflows=True):
-        includes = ["workflows.default", "plugin_installer.tasks"]
+        includes = ['cloudify.plugins.workflows', 'plugin_installer.tasks']
         if use_mock_deployment_environment_workflows:
             includes.append("mock_workflows.workflows")
         super(CeleryWorkflowsWorkerProcess, self).__init__(
-            tempdir, plugins_tempdir, manager_rest_port,
+            tempdir, env_dir, manager_rest_port,
             name='workflows',
             queues=CELERY_WORKFLOWS_QUEUE_LIST,
             includes=includes,
@@ -370,26 +366,26 @@ class CeleryWorkflowsWorkerProcess(CeleryWorkerProcess):
 
 class CeleryOperationsWorkerProcess(CeleryWorkerProcess):
 
-    def __init__(self, tempdir, plugins_tempdir,
+    def __init__(self, tempdir, env_dir,
                  manager_rest_port, concurrency=1):
         super(CeleryOperationsWorkerProcess, self).__init__(
-            tempdir, plugins_tempdir, manager_rest_port,
+            tempdir, env_dir, manager_rest_port,
             name='operations',
             queues=CELERY_QUEUES_LIST,
-            includes=self._build_includes(),
+            includes=self._build_includes(env_dir),
             hostname='cloudify.management',
             concurrency=concurrency)
 
 
 class CeleryTestWorkerProcess(CeleryWorkerProcess):
 
-    def __init__(self, tempdir, plugins_tempdir,
+    def __init__(self, tempdir, env_dir,
                  manager_rest_port, queue):
         super(CeleryTestWorkerProcess, self).__init__(
-            tempdir, plugins_tempdir, manager_rest_port,
+            tempdir, env_dir, manager_rest_port,
             name=queue,
             queues=[queue],
-            includes=self._build_includes(),
+            includes=self._build_includes(env_dir),
             hostname=queue)
 
 
@@ -721,7 +717,7 @@ class TestCase(unittest.TestCase):
         self.logger = logging.getLogger(self._testMethodName)
         self.logger.setLevel(logging.INFO)
         self.client = create_rest_client()
-        TestEnvironment.clean_plugins_tempdir()
+        TestEnvironment.clean_env_tempdir()
         restore_provider_context()
 
     def tearDown(self):
@@ -776,26 +772,22 @@ class TestEnvironment(object):
     _elasticsearch_process = None
     _manager_rest_process = None
     _tempdir = None
-    _plugins_tempdir = None
     _scope = None
+    _env_dir = None
     _file_server_process = None
 
     def __init__(self, scope, use_mock_deployment_environment_workflows=True):
         try:
             TestEnvironmentScope.validate(scope)
 
-            logger.info("Setting up test environment... [scope={0}]".format(
-                scope))
+            logger.info("Setting up test environment... [scope={0}]".format(scope))
             self._scope = scope
 
             # temp directory
-            self._tempdir = tempfile.mkdtemp(suffix="test", prefix="cloudify")
-            self._plugins_tempdir = path.join(self._tempdir, "cosmo-work")
+            self._tempdir = tempfile.mkdtemp(prefix='cloudify-integration-tests-')
+            self._env_dir = path.join(self._tempdir, 'env')
             self._riemann_tempdir = path.join(self._tempdir, "riemann")
-            logger.info("Test environment will be stored in: %s",
-                        self._tempdir)
-            if not path.exists(self._plugins_tempdir):
-                os.makedirs(self._plugins_tempdir)
+            logger.info("Test environment will be stored in: %s", self._tempdir)
             if not path.exists(self._riemann_tempdir):
                 os.makedirs(self._riemann_tempdir)
 
@@ -813,53 +805,15 @@ class TestEnvironment(object):
             self._elasticsearch_process = ElasticSearchProcess()
             self._elasticsearch_process.start()
 
-            # copy all plugins to app path
-            try:
-                import workflows
-                # workflows/__init__.py(c)
-                workflow_plugin_path = path.abspath(workflows.__file__)
-                # workflows/
-                workflow_plugin_path = path.dirname(workflow_plugin_path)
-                # package / egg folder
-                workflow_plugin_path = path.dirname(workflow_plugin_path)
-            except ImportError:
-                # cloudify-manager/tests/plugins/__init__.py(c)
-                workflow_plugin_path = path.abspath(plugins.__file__)
-                # cloudify-manager/tests/plugins
-                workflow_plugin_path = path.dirname(workflow_plugin_path)
-                # cloudify-manager/tests
-                workflow_plugin_path = path.dirname(workflow_plugin_path)
-                # cloudify-manager
-                workflow_plugin_path = path.dirname(workflow_plugin_path)
-                # cloudify-manager/workflows
-                workflow_plugin_path = path.join(workflow_plugin_path,
-                                                 'workflows')
-
-            plugins_path = path.dirname(path.realpath(plugins.__file__))
-            mock_workflow_plugins = path.dirname(path.realpath(
-                mock_workflows.__file__))
-
-            app_path = path.join(self._tempdir, "plugins")
             # copying plugins
-            if not use_mock_deployment_environment_workflows:
-                for plugin_path in [plugins_path, workflow_plugin_path]:
-                    logger.info("Copying %s to %s", plugin_path, app_path)
-                    distutils.dir_util.copy_tree(plugin_path, app_path)
-            else:
-                # copying plugins and mock workflows
-                for plugin_path in [plugins_path, mock_workflow_plugins]:
-                    logger.info("Copying %s to %s", plugin_path, app_path)
-                    distutils.dir_util.copy_tree(plugin_path, app_path)
-                # copying the actual default install/uninstall workflow
-                # plugin manually
-                workflow_plugin_workflows_path = path.join(
-                    workflow_plugin_path, 'workflows')
-                app_workflows_path = path.join(app_path, 'workflows')
-                logger.info("Copying %s to %s",
-                            workflow_plugin_workflows_path,
-                            app_workflows_path)
-                distutils.dir_util.copy_tree(
-                    workflow_plugin_workflows_path, app_workflows_path)
+            mock_plugins_path = path.dirname(path.realpath(mock_plugins.__file__))
+            logger.info("Copying %s to %s", mock_plugins_path, self._env_dir)
+            distutils.dir_util.copy_tree(mock_plugins_path, self._env_dir)
+
+            # copying workflows
+            mock_workflow_plugins = path.dirname(path.realpath(mock_workflows.__file__))
+            logger.info("Copying %s to %s", mock_workflow_plugins, self._env_dir)
+            distutils.dir_util.copy_tree(mock_workflow_plugins, self._env_dir)
 
             # celery operations worker
             # if using real deployment environment workflows then 2 workers are
@@ -869,7 +823,7 @@ class TestEnvironment(object):
             self._celery_operations_worker_process = \
                 CeleryOperationsWorkerProcess(
                     self._tempdir,
-                    self._plugins_tempdir,
+                    self._env_dir,
                     MANAGER_REST_PORT,
                     num_of_management_workers)
             self._celery_operations_worker_process.start()
@@ -878,7 +832,7 @@ class TestEnvironment(object):
             self._celery_workflows_worker_process = \
                 CeleryWorkflowsWorkerProcess(
                     self._tempdir,
-                    self._plugins_tempdir,
+                    self._env_dir,
                     MANAGER_REST_PORT,
                     use_mock_deployment_environment_workflows)
             self._celery_workflows_worker_process.start()
@@ -942,12 +896,12 @@ class TestEnvironment(object):
             self._file_server_process.stop()
         if self._tempdir:
             logger.info("Deleting test environment from: %s", self._tempdir)
-            # shutil.rmtree(self._tempdir, ignore_errors=True)
+            shutil.rmtree(self._tempdir, ignore_errors=True)
 
     def _create_celery_worker(self, queue):
         return CeleryTestWorkerProcess(
             self._tempdir,
-            self._plugins_tempdir,
+            self._env_dir,
             MANAGER_REST_PORT,
             queue)
 
@@ -976,11 +930,11 @@ class TestEnvironment(object):
             TestEnvironment._instance._destroy()
 
     @staticmethod
-    def clean_plugins_tempdir():
+    def clean_env_tempdir():
         """
         Removes and creates a new plugins temporary directory.
         """
-        TestEnvironment._clean_tempdir('_plugins_tempdir')
+        TestEnvironment._clean_tempdir('_env_dir')
 
     @staticmethod
     def clean_riemann_tempdir():

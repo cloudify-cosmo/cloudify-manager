@@ -469,7 +469,7 @@ class BlueprintsManager(object):
         deployment_env_creation_task_id = str(uuid.uuid4())
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
-            'system_workflows.deployment_environment.create'
+            'cloudify_system_workflows.deployment_environment.create'
 
         context = self._build_context_from_deployment(
             deployment, deployment_env_creation_task_id, wf_id,
@@ -522,7 +522,7 @@ class BlueprintsManager(object):
         deployment_env_deletion_task_id = str(uuid.uuid4())
         wf_id = 'delete_deployment_environment'
         deployment_env_deletion_task_name = \
-            'system_workflows.deployment_environment.delete'
+            'cloudify_system_workflows.deployment_environment.delete'
 
         context = self._build_context_from_deployment(
             deployment,

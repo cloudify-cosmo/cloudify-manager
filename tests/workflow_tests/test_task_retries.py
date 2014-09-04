@@ -21,7 +21,7 @@ from testenv import get_resource as resource, deploy_application as deploy
 from testenv import delete_provider_context, restore_provider_context
 from testenv import send_task
 
-from plugins.testmockoperations.tasks import (get_fail_invocations,
+from mock_plugins.testmockoperations.tasks import (get_fail_invocations,
                                               get_host_get_state_invocations)
 
 INFINITY = -1
