@@ -9,8 +9,11 @@ env:
     - ACTION="run-integration-tests"
     - ACTION="test-plugins"
     - ACTION="test-rest-service"
-    - ACTION="flake8"
+    - ACTION="flake8"'
+    - TOX_ENV=py26
 
+install:
+    - pip install tox
 script:
     - ./run-tests.sh $ACTION
-    - tox -e py26
+    - tox -e $TOX_ENV
