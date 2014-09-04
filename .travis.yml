@@ -13,3 +13,4 @@ env:
 
 script:
     - ./run-tests.sh $ACTION
+    - tox -e py26
