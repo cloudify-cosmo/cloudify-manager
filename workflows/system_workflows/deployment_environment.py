@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
-
 
 from cloudify.decorators import workflow
 
@@ -52,7 +50,8 @@ def create(ctx, **kwargs):
                 task_name='plugin_installer.tasks.install',
                 kwargs={'plugins': management_plugins}),
             ctx.execute_task(
-                task_name='worker_installer.tasks.restart'))
+                task_name='worker_installer.tasks.restart',
+                send_task_events=False))
 
     # installing the workflows worker
     sequence.add(
@@ -74,6 +73,7 @@ def create(ctx, **kwargs):
                 kwargs={'plugins': workflow_plugins}),
             ctx.execute_task(
                 task_name='worker_installer.tasks.restart',
+                send_task_events=False,
                 kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     # Start deployment policy engine core

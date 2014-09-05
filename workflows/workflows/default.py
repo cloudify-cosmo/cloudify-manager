@@ -259,7 +259,8 @@ def _host_post_start(host_node_instance):
                 kwargs={
                     'plugins': host_node_instance.node.plugins_to_install}),
             host_node_instance.execute_operation(
-                'cloudify.interfaces.worker_installer.restart')
+                'cloudify.interfaces.worker_installer.restart',
+                send_task_events=False)
         ]
     return tasks
 
