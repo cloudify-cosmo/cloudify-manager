@@ -66,6 +66,8 @@ def get_celery_includes_list():
 def download_resource_on_host(logger, runner, url, destination_path):
     """downloads a resource from the fileserver on the agent's host
     """
+    logger.debug('attempting to download {0} to {1}'.format(
+        url, destination_path))
     logger.debug('checking if wget exists on the host machine')
     r = runner.run('which wget')
     if r.succeeded:
@@ -78,6 +80,7 @@ def download_resource_on_host(logger, runner, url, destination_path):
         logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
         return runner.run('curl {0} -O {1}'.format(
             url, destination_path))
+    logger.warn('could not download resource')
     return r.succeeded
 
 
@@ -95,7 +98,6 @@ def install(ctx, runner, agent_config, **kwargs):
 
     ctx.logger.info(
         "installing celery worker {0}".format(agent_config['name']))
-
     if worker_exists(runner, agent_config):
         ctx.logger.info("Worker for deployment {0} is already installed. "
                         "nothing to do.".format(ctx.deployment_id))
@@ -103,16 +105,17 @@ def install(ctx, runner, agent_config, **kwargs):
 
     ctx.logger.info(
         'Installing celery worker [cloudify_agent={0}]'.format(agent_config))
-
     runner.run('mkdir -p {0}'.format(agent_config['base_dir']))
 
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(agent_package_url))
-
-    download_resource_on_host(
+    r = download_resource_on_host(
         ctx.logger, runner, agent_package_url, '{0}/{1}'.format(
             agent_config['base_dir'], 'agent.tar.gz'))
+    if not r:
+        raise NonRecoverableError('failed to download agent package')
 
+    ctx.logger.debug('extracting agent package on host')
     runner.run(
         'tar xzvf {0}/agent.tar.gz --strip=2 -C {2}'.format(
             agent_config['base_dir'], agent_config['base_dir']))
@@ -151,9 +154,12 @@ def install(ctx, runner, agent_config, **kwargs):
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
 
-        download_resource_on_host(
+        r = download_resource_on_host(
             ctx.logger, runner, disable_requiretty_script_url,
             disable_requiretty_script)
+        if not r:
+            raise NonRecoverableError(
+                'failed to download disable-requiretty script')
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -292,8 +298,13 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     celery_init_url = get_agent_resource_url(
         ctx, agent_config, 'celery_init_path')
 
-    download_resource_on_host(ctx.logger, runner, celery_config_url, config)
-    download_resource_on_host(ctx.logger, runner, celery_init_url, init)
+    r = download_resource_on_host(
+        ctx.logger, runner, celery_config_url, config)
+    if not r:
+        raise NonRecoverableError('failed to download celery config file')
+    r = download_resource_on_host(ctx.logger, runner, celery_init_url, init)
+    if not r:
+        raise NonRecoverableError('failed to download celery init file')
 
 
 def create_celery_includes_file(ctx, runner, agent_config):
