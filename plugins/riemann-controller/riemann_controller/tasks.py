@@ -78,16 +78,25 @@ def _deployment_config_dir():
 
 def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
+    exchange_name = 'cloudify-monitoring'
     connection = pika.BlockingConnection()
     try:
         channel = connection.channel()
+        channel.exchange_declare(exchange=exchange_name,
+                                 type='topic',
+                                 durable=False,
+                                 auto_delete=True,
+                                 internal=False)
         channel.queue_declare(
             queue=manager_queue,
             auto_delete=True,
             durable=False,
             exclusive=False)
+        channel.queue_bind(exchange=exchange_name,
+                           queue=manager_queue,
+                           routing_key=manager_queue)
         channel.basic_publish(
-            exchange='',
+            exchange=exchange_name,
             routing_key=manager_queue,
             body=json.dumps({
                 'service': 'cloudify.configuration',

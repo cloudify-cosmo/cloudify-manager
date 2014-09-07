@@ -1234,16 +1234,26 @@ def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         queue=queue)
 
 
-def publish_event(queue, event):
+def publish_event(queue, event,
+                  exchange_name='cloudify-monitoring',
+                  exchange_type='topic'):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
+    channel.exchange_declare(exchange=exchange_name,
+                             type=exchange_type,
+                             durable=False,
+                             auto_delete=True,
+                             internal=False)
     channel.queue_declare(
         queue=queue,
         auto_delete=True,
         durable=False,
         exclusive=False)
-    channel.basic_publish(exchange='',
+    channel.queue_bind(exchange=exchange_name,
+                       queue=queue,
+                       routing_key=queue)
+    channel.basic_publish(exchange=exchange_name,
                           routing_key=queue,
                           body=json.dumps(event))
     channel.close()
