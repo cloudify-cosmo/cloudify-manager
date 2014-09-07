@@ -16,4 +16,3 @@ node_templates:
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: vm
-

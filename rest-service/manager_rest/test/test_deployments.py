@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
 
 from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
@@ -328,3 +329,36 @@ class DeploymentsTestCase(BaseServerTestCase):
                 })
         except CloudifyClientError, e:
             self.assertTrue('Unknown input' in str(e))
+
+    def test_outputs(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_outputs.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        instances = self.client.node_instances.list(deployment_id=id_)
+
+        vm = [x for x in instances if x.node_id == 'vm'][0]
+        vm_props = {'ip': '10.0.0.1'}
+        self.client.node_instances.update(vm.id, runtime_properties=vm_props)
+
+        ws = [x for x in instances if x.node_id == 'http_web_server'][0]
+        ws_props = {'port': 8080}
+        self.client.node_instances.update(ws.id, runtime_properties=ws_props)
+
+        response = self.client.deployments.outputs.get(id_)
+        self.assertEqual(id_, response.deployment_id)
+        outputs = response.outputs
+        self.assertTrue('ip_address' in outputs)
+        self.assertTrue('port' in outputs)
+        self.assertEqual('Web site IP address.',
+                         outputs['ip_address']['description'])
+        self.assertEqual('10.0.0.1', outputs['ip_address']['value'][0])
+        self.assertEqual('Web site port.', outputs['port']['description'])
+        self.assertEqual(80, outputs['port']['value'])
+
+        endpoint = outputs['endpoint']['value']
+
+        self.assertEqual('http', endpoint['type'])
+        self.assertEqual('10.0.0.1', endpoint['ip'][0])
+        self.assertEqual(8080, endpoint['port'][0])

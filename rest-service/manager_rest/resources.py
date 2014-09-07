@@ -13,9 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-import StringIO
-
-__author__ = 'dan'
 
 import os
 import tarfile
@@ -25,6 +22,7 @@ import tempfile
 import shutil
 import uuid
 import traceback
+import StringIO
 from functools import wraps
 from os import path
 
@@ -191,6 +189,8 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdExecutions,
                      '/deployments/<string:deployment_id>/executions')
+    api.add_resource(DeploymentsIdOutputs,
+                     '/deployments/<string:deployment_id>/outputs')
     api.add_resource(Nodes,
                      '/nodes')
     api.add_resource(NodeInstances,
@@ -903,6 +903,23 @@ class NodeInstancesId(Resource):
         return responses.NodeInstance(
             **get_storage_manager().get_node_instance(
                 node_instance_id).to_dict())
+
+
+class DeploymentsIdOutputs(Resource):
+
+    @swagger.operation(
+        responseClass=responses.DeploymentOutputs.__name__,
+        nickname="get",
+        notes="Gets a specific deployment outputs."
+    )
+    @exceptions_handled
+    @marshal_with(responses.DeploymentOutputs.resource_fields)
+    def get(self, deployment_id, **_):
+        """Get deployment outputs"""
+        outputs = get_blueprints_manager().evaluate_deployment_outputs(
+            deployment_id)
+        return responses.DeploymentOutputs(deployment_id=deployment_id,
+                                           outputs=outputs)
 
 
 class DeploymentsIdExecutions(Resource):

@@ -67,6 +67,10 @@ class MockHTTPClient(HTTPClient):
             response = self.app.post(self._build_url(uri, params),
                                      content_type='application/json',
                                      data=json.dumps(data))
+        elif 'patch' in requests_method.__name__:
+            response = self.app.patch(self._build_url(uri, params),
+                                      content_type='application/json',
+                                      data=json.dumps(data))
         else:
             raise NotImplemented()
         if response.status_code != expected_status_code:
@@ -94,6 +98,7 @@ class BaseServerTestCase(unittest.TestCase):
         mock_http_client = MockHTTPClient(self.app)
         self.client.blueprints.api = mock_http_client
         self.client.deployments.api = mock_http_client
+        self.client.deployments.outputs.api = mock_http_client
         self.client.executions.api = mock_http_client
         self.client.nodes.api = mock_http_client
         self.client.node_instances.api = mock_http_client

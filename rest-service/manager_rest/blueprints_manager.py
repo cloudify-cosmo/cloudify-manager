@@ -19,8 +19,11 @@ import uuid
 from datetime import datetime
 from flask import g, current_app
 
+from dsl_parser import functions
 from dsl_parser import tasks
 from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
+from dsl_parser.utils import scan_properties
+
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -260,7 +263,8 @@ class BlueprintsManager(object):
             inputs=deployment_plan['inputs'],
             policy_types=deployment_plan['policy_types'],
             policy_triggers=deployment_plan['policy_triggers'],
-            groups=deployment_plan['groups'])
+            groups=deployment_plan['groups'],
+            outputs=deployment_plan['outputs'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id,
@@ -293,6 +297,34 @@ class BlueprintsManager(object):
                              deployment_id=deployment_id)
 
         return new_deployment
+
+    @staticmethod
+    def evaluate_deployment_outputs(deployment_id):
+        deployment = get_blueprints_manager().get_deployment(
+            deployment_id, include=['outputs'])
+
+        context = {}
+
+        def handler(dict_, k, v, _):
+            func = functions.parse(v)
+            if isinstance(func, functions.GetAttribute):
+                attributes = []
+                if 'node_instances' not in context:
+                    sm = get_storage_manager()
+                    context['node_instances'] = sm.get_node_instances(
+                        deployment_id)
+                for instance in context['node_instances']:
+                    if instance.node_id == func.node_name:
+                        attributes.append(
+                            instance.runtime_properties.get(
+                                func.attribute_name) if
+                            instance.runtime_properties else None)
+                dict_[k] = attributes
+
+        scan_properties(deployment.outputs,
+                        handler,
+                        '{0}.outputs'.format(deployment_id))
+        return deployment.outputs
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:
