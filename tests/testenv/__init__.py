@@ -758,7 +758,10 @@ class TestCase(unittest.TestCase):
             'node_id': node_id
         }
         queue = '{}-riemann'.format(deployment_id)
-        publish_event(queue, event)
+        routing_key = deployment_id
+        publish_event(queue,
+                      routing_key,
+                      event)
 
 
 class TestEnvironment(object):
@@ -1234,7 +1237,9 @@ def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         queue=queue)
 
 
-def publish_event(queue, event,
+def publish_event(queue,
+                  routing_key,
+                  event,
                   exchange_name='cloudify-monitoring',
                   exchange_type='topic'):
     connection = pika.BlockingConnection(
@@ -1252,9 +1257,9 @@ def publish_event(queue, event,
         exclusive=False)
     channel.queue_bind(exchange=exchange_name,
                        queue=queue,
-                       routing_key=queue)
+                       routing_key=routing_key)
     channel.basic_publish(exchange=exchange_name,
-                          routing_key=queue,
+                          routing_key=routing_key,
                           body=json.dumps(event))
     channel.close()
     connection.close()
