@@ -120,6 +120,7 @@ def install(ctx, runner, agent_config, **kwargs):
         'tar xzvf {0}/agent.tar.gz --strip=2 -C {2}'.format(
             agent_config['base_dir'], agent_config['base_dir']))
 
+    ctx.logger.debug('configuring virtualenv')
     for link in ['archives', 'bin', 'include', 'lib']:
         link_path = '{0}/env/local/{1}'.format(agent_config['base_dir'], link)
         try:
