@@ -84,7 +84,7 @@ def install(ctx, **kwargs):
             # If this is a host node, we need to add specific host start
             # tasks such as waiting for it to start and installing the agent
             # worker (if necessary)
-            if not ctx.local and _is_host_node(instance):
+            if _is_host_node(instance):
                 sequence.add(*_host_post_start(instance))
 
             sequence.add(
@@ -156,7 +156,7 @@ def uninstall(ctx, **kwargs):
 
             sequence.add(set_state_stopping_tasks[instance.id],
                          instance.send_event('Stopping node'))
-            if not ctx.local and _is_host_node(instance):
+            if _is_host_node(instance):
                 sequence.add(*_host_pre_stop(instance))
             sequence.add(stop_node_tasks[instance.id],
                          instance.set_state('stopped'),
