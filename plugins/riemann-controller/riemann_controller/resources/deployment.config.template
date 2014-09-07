@@ -30,4 +30,7 @@
                                         deployment-processing-queue)]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
 {{stream.data}}))
+
+prn
+
 {% endfor %}))

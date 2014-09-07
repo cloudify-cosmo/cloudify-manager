@@ -8,7 +8,8 @@ RIEMANN_HOME="$(dirname $(which riemann))/../"
 RIEMANN_JAR="${RIEMANN_HOME}/lib/riemann.jar"
 if [[ ! -f "${RIEMANN_JAR}" ]]; then
     # Path when installing .deb package
-    RIEMANN_JAR="/usr/lib/riemann/riemann.jar"
+#    RIEMANN_JAR="/usr/lib/riemann/riemann.jar"
+    RIEMANN_JAR="/usr/local/Cellar/riemann/0.2.6/libexec/lib/riemann.jar"
     if [[ ! -f "${RIEMANN_JAR}" ]]; then
         echo "Failed locating riemann.jar"
         exit 1
@@ -32,4 +33,5 @@ OPTS="-XX:+UseConcMarkSweepGC \
       -XX:+UseCompressedOops \
       -XX:+CMSClassUnloadingEnabled"
 
+echo starting rieman
 exec java ${OPTS} -cp "${LANGOHR_JAR}:${RIEMANN_JAR}" ${MAIN_CLASS} ${CONFIG}

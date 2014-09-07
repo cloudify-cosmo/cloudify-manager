@@ -335,6 +335,7 @@ class CeleryWorkerProcess(object):
         includes = []
         # adding the mock workflow plugin for deployment environment workflows
         includes.append("system_workflows.deployment_environment")
+        includes.append("diamond_agent.tasks")
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path \
@@ -414,6 +415,7 @@ class RiemannProcess(object):
             line = process.stdout.readline().rstrip()
             if line != '':
                 self._riemann_logs.append(line)
+                logger.info('riemann: {}'.format(line))
                 if not self.pid:
                     match = re.match(pid_pattern, line)
                     if match:

@@ -1,0 +1,66 @@
+imports:
+    - cloudify/types/types.yaml
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+    - policies/nop.yaml
+
+plugins:
+    diamond:
+        derived_from: cloudify.plugins.remote_plugin
+
+node_types:
+    monitor_type:
+        derived_from: cloudify.types.base
+        properties:
+            config:
+                default:
+                    interval: 10
+
+node_templates:
+    node:
+        type: monitor_type
+        interfaces:
+            cloudify.interfaces.monitor_lifecycle:
+                - start: diamond.diamond_agent.tasks.install
+                - stop: diamond.diamond_agent.tasks.stop
+            test:
+                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+    node2:
+        type: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - start:
+                    mapping: testmockoperations.testmockoperations.tasks.sleep
+                    properties:
+                        sleep: 30
+        relationships:
+            - target: node
+              type: cloudify.relationships.depends_on
+
+
+groups:
+    some_group:
+        members: [node]
+        policies:
+            some_policy:
+                type: nop
+                triggers:
+                    some_workflow_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: some_workflow
+                            allow_custom_parameters: true
+                            workflow_parameters:
+                                key: node_id
+                                value: { get_property: [SELF, node_id] }
+                                custom_key: metric
+                                custom_value: { get_property: [SELF, metric] }
+
+workflows:
+    some_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_1
+        parameters:
+            key:
+                description: a key to write
+            value:
+                description: a value to write

@@ -43,6 +43,24 @@ class TestPolicies(TestCase):
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
+    def test_policies_flow2(self):
+        """
+        Tests policy/trigger/group creation and processing flow
+        """
+        dsl_path = resource("dsl/with_policies3.yaml")
+        deployment, _ = deploy(dsl_path)
+        self.deployment_id = deployment.id
+        self.instance_id = self.wait_for_node_instance().id
+        #
+        # metric_value = 123
+        #
+        # self.publish(metric=metric_value)
+        #
+        # self.wait_for_executions(3)
+        # invocations = self.wait_for_invocations(2)
+        # self.assertEqual(self.instance_id, invocations[0]['node_id'])
+        # self.assertEqual(123, invocations[1]['metric'])
+
     def test_threshold_policy(self):
         dsl_path = resource("dsl/with_policies2.yaml")
         deployment, _ = deploy(dsl_path)
