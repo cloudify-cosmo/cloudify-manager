@@ -63,6 +63,18 @@ def get_celery_includes_list():
     return CELERY_INCLUDES_LIST
 
 
+def download_resource_on_host(runner, url, destination_path):
+    r = runner.run('which wget')
+    if r.succeeded:
+        return runner.run('wget -T 30 {0} -O {1}'.format(
+            url, destination_path))
+    r = runner.run('which curl')
+    if r.succeeded:
+        return runner.run('curl {0} -O {1}'.format(
+            url, destination_path))
+    return r.succeeded
+
+
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
@@ -92,12 +104,9 @@ def install(ctx, runner, agent_config, **kwargs):
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(agent_package_url))
 
-    try:
-        runner.run('wget -T 30 {0} -O {1}/agent.tar.gz'.format(
-            agent_package_url, agent_config['base_dir']))
-    except:
-        runner.run('curl {0} -O {1}/agent.tar.gz'.format(
-            agent_package_url, agent_config['base_dir']))
+    download_resource_on_host(
+        runner, agent_package_url, '{0}/{1}'.format(
+            agent_config['base_dir'], 'agent.tar.gz'))
 
     runner.run(
         'tar xzvf {0}/agent.tar.gz --strip=2 -C {2}'.format(
@@ -136,12 +145,9 @@ def install(ctx, runner, agent_config, **kwargs):
         ctx.logger.debug("Removing requiretty in sudoers file")
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
-        try:
-            runner.run('wget -T 30 {0} -O {1}'.format(
-                disable_requiretty_script_url, disable_requiretty_script))
-        except:
-            runner.run('curl {0} -O {1}'.format(
-                disable_requiretty_script_url, disable_requiretty_script))
+
+        download_resource_on_host(
+            runner, disable_requiretty_script_url, disable_requiretty_script)
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -279,14 +285,9 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         ctx, agent_config, 'celery_config_path')
     celery_init_url = get_agent_resource_url(
         ctx, agent_config, 'celery_init_path')
-    try:
-        runner.run('wget -T 30 {0} -O {1}'.format(celery_config_url, config))
-    except:
-        runner.run('curl {0} -O {1}'.format(celery_config_url, config))
-    try:
-        runner.run('wget -T 30 {0} -O {1}'.format(celery_init_url, init))
-    except:
-        runner.run('curl {0} -O {1}'.format(celery_init_url, init))
+
+    download_resource_on_host(runner, celery_config_url, config)
+    download_resource_on_host(runner, celery_init_url, init)
 
 
 def create_celery_includes_file(ctx, runner, agent_config):
