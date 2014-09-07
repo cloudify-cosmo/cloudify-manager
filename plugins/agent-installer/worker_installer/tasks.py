@@ -63,13 +63,19 @@ def get_celery_includes_list():
     return CELERY_INCLUDES_LIST
 
 
-def download_resource_on_host(runner, url, destination_path):
+def download_resource_on_host(logger, runner, url, destination_path):
+    """downloads a resource from the fileserver on the agent's host
+    """
+    logger.debug('checking if wget exists on the host machine')
     r = runner.run('which wget')
     if r.succeeded:
+        logger.debug('wget-ing {0} to {1}'.format(url, destination_path))
         return runner.run('wget -T 30 {0} -O {1}'.format(
             url, destination_path))
+    logger.debug('checking if curl exists on the host machine')
     r = runner.run('which curl')
     if r.succeeded:
+        logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
         return runner.run('curl {0} -O {1}'.format(
             url, destination_path))
     return r.succeeded
@@ -78,7 +84,6 @@ def download_resource_on_host(runner, url, destination_path):
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
-
     try:
         agent_package_url = get_agent_resource_url(
             ctx, agent_config, 'agent_package_path')
@@ -105,7 +110,7 @@ def install(ctx, runner, agent_config, **kwargs):
         'Downloading agent package from: {0}'.format(agent_package_url))
 
     download_resource_on_host(
-        runner, agent_package_url, '{0}/{1}'.format(
+        ctx.logger, runner, agent_package_url, '{0}/{1}'.format(
             agent_config['base_dir'], 'agent.tar.gz'))
 
     runner.run(
@@ -147,7 +152,8 @@ def install(ctx, runner, agent_config, **kwargs):
             agent_config['base_dir'])
 
         download_resource_on_host(
-            runner, disable_requiretty_script_url, disable_requiretty_script)
+            ctx.logger, runner, disable_requiretty_script_url,
+            disable_requiretty_script)
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -286,8 +292,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     celery_init_url = get_agent_resource_url(
         ctx, agent_config, 'celery_init_path')
 
-    download_resource_on_host(runner, celery_config_url, config)
-    download_resource_on_host(runner, celery_init_url, init)
+    download_resource_on_host(ctx.logger, runner, celery_config_url, config)
+    download_resource_on_host(ctx.logger, runner, celery_init_url, init)
 
 
 def create_celery_includes_file(ctx, runner, agent_config):
