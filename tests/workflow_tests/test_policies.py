@@ -47,19 +47,19 @@ class TestPolicies(TestCase):
         """
         Tests policy/trigger/group creation and processing flow
         """
-        dsl_path = resource("dsl/with_policies3.yaml")
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
-        #
-        # metric_value = 123
-        #
-        # self.publish(metric=metric_value)
-        #
-        # self.wait_for_executions(3)
-        # invocations = self.wait_for_invocations(2)
-        # self.assertEqual(self.instance_id, invocations[0]['node_id'])
-        # self.assertEqual(123, invocations[1]['metric'])
+        try:
+            dsl_path = resource("dsl/with_policies3.yaml")
+            deployment, _ = deploy(dsl_path)
+            self.deployment_id = deployment.id
+            self.instance_id = self.wait_for_node_instance().id
+            expected_metric_value = 42
+            self.wait_for_executions(3)
+            invocations = self.wait_for_invocations(1)
+            self.assertEqual(expected_metric_value, invocations[0]['metric'])
+        finally:
+            from diamond_agent import tasks
+            from cloudify.mocks import MockCloudifyContext
+            tasks.stop(MockCloudifyContext())
 
     def test_threshold_policy(self):
         dsl_path = resource("dsl/with_policies2.yaml")
@@ -136,10 +136,10 @@ class TestPolicies(TestCase):
         self.do_assertions(assertion)
         return send_task(testmock_get_invocations).get(timeout=10)
 
-    def wait_for_node_instance(self):
+    def wait_for_node_instance(self, expected_count=1):
         def assertion():
             instances = self.client.node_instances.list(self.deployment_id)
-            self.assertEqual(1, len(instances))
+            self.assertEqual(expected_count, len(instances))
         self.do_assertions(assertion)
         return self.client.node_instances.list(self.deployment_id)[0]
 
