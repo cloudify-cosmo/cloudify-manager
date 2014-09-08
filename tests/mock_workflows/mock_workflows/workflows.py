@@ -101,7 +101,7 @@ def sleep_with_graph_usage(ctx, **kwargs):
 def test_simple(ctx, do_get, key, value, **_):
     instance = get_instance(ctx)
     set_state_result = instance.set_state(
-        'test_state', runtime_properties={key: value})
+        'test_state')
     if do_get:
         set_state_result.get()
     execute_operation_result = instance.execute_operation(
