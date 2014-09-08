@@ -43,12 +43,12 @@ class TestPolicies(TestCase):
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
-    def test_policies_flow2(self):
+    def test_policies_flow_with_diamond(self):
         """
         Tests policy/trigger/group creation and processing flow
         """
         try:
-            dsl_path = resource("dsl/with_policies3.yaml")
+            dsl_path = resource("dsl/with_policies_and_diamond.yaml")
             deployment, _ = deploy(dsl_path)
             self.deployment_id = deployment.id
             self.instance_id = self.wait_for_node_instance().id
@@ -136,10 +136,10 @@ class TestPolicies(TestCase):
         self.do_assertions(assertion)
         return send_task(testmock_get_invocations).get(timeout=10)
 
-    def wait_for_node_instance(self, expected_count=1):
+    def wait_for_node_instance(self):
         def assertion():
             instances = self.client.node_instances.list(self.deployment_id)
-            self.assertEqual(expected_count, len(instances))
+            self.assertEqual(1, len(instances))
         self.do_assertions(assertion)
         return self.client.node_instances.list(self.deployment_id)[0]
 
