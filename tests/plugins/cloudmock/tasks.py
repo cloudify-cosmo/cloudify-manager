@@ -13,16 +13,19 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
 
 import os
 import json
+
+from cloudify import ctx
 from cloudify.decorators import operation
 
 DATA_FILE_PATH = '/tmp/cloudmock-data.json'
 
 RUNNING = "running"
 NOT_RUNNING = "not_running"
+
+DEFAULT_VM_IP = '10.0.0.1'
 
 mem_data = {
     'machines': {},
@@ -32,7 +35,7 @@ mem_data = {
 
 
 @operation
-def provision(ctx, **kwargs):
+def provision(**kwargs):
     data = _get_data()
     machines = data['machines']
     ctx.logger.info("cloudmock provision: [node_id=%s, machines=%s]",
@@ -42,12 +45,14 @@ def provision(ctx, **kwargs):
                            .format(ctx.node_id))
     if ctx.properties.get('test_ip'):
         ctx.runtime_properties['ip'] = ctx.properties['test_ip']
+    else:
+        ctx.runtime_properties['ip'] = DEFAULT_VM_IP
     machines[ctx.node_id] = NOT_RUNNING
     _store_data(data)
 
 
 @operation
-def start(ctx, **kwargs):
+def start(**kwargs):
     data = _get_data()
     machines = data['machines']
     ctx.send_event('starting machine event')
@@ -64,13 +69,13 @@ def start(ctx, **kwargs):
 
 
 @operation
-def get_state(ctx, **kwargs):
+def get_state(**kwargs):
     data = _get_data()
     return data['machines'][ctx.node_id] == RUNNING
 
 
 @operation
-def stop(ctx, **kwargs):
+def stop(**kwargs):
     data = _get_data()
     ctx.logger.info("stopping machine: " + ctx.node_id)
     if ctx.node_id not in data['machines']:
@@ -83,7 +88,7 @@ def stop(ctx, **kwargs):
 
 
 @operation
-def terminate(ctx, **kwargs):
+def terminate(**kwargs):
     data = _get_data()
     ctx.logger.info("terminating machine: " + ctx.node_id)
     if ctx.node_id not in data['machines']:

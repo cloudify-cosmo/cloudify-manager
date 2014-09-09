@@ -21,3 +21,8 @@ node_templates:
                 - start: cloudmock.cloudmock.tasks.start
                 - stop: cloudmock.cloudmock.tasks.stop
                 - delete: cloudmock.cloudmock.tasks.terminate
+
+outputs:
+    ip_address:
+        description: Web server VM ip address.
+        value: { get_attribute: [ webserver_host, ip ] }
