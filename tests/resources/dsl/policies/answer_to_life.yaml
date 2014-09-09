@@ -1,0 +1,3 @@
+policy_types:
+    answer_to_life:
+        source: policies/answer_to_life.clj

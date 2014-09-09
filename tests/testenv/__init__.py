@@ -335,6 +335,7 @@ class CeleryWorkerProcess(object):
         includes = []
         # adding the mock workflow plugin for deployment environment workflows
         includes.append("system_workflows.deployment_environment")
+        includes.append("diamond_agent.tasks")
 
         # iterate over the mock plugins directory and include all of them
         mock_plugins_path = os.path \
@@ -756,7 +757,10 @@ class TestCase(unittest.TestCase):
             'node_id': node_id
         }
         queue = '{}-riemann'.format(deployment_id)
-        publish_event(queue, event)
+        routing_key = deployment_id
+        publish_event(queue,
+                      routing_key,
+                      event)
 
 
 class TestEnvironment(object):
@@ -1232,17 +1236,29 @@ def send_task(task, args=None, queue=CLOUDIFY_MANAGEMENT_QUEUE):
         queue=queue)
 
 
-def publish_event(queue, event):
+def publish_event(queue,
+                  routing_key,
+                  event,
+                  exchange_name='cloudify-monitoring',
+                  exchange_type='topic'):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
+    channel.exchange_declare(exchange=exchange_name,
+                             type=exchange_type,
+                             durable=False,
+                             auto_delete=True,
+                             internal=False)
     channel.queue_declare(
         queue=queue,
         auto_delete=True,
         durable=False,
         exclusive=False)
-    channel.basic_publish(exchange='',
-                          routing_key=queue,
+    channel.queue_bind(exchange=exchange_name,
+                       queue=queue,
+                       routing_key=routing_key)
+    channel.basic_publish(exchange=exchange_name,
+                          routing_key=routing_key,
                           body=json.dumps(event))
     channel.close()
     connection.close()

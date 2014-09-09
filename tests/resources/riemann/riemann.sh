@@ -10,8 +10,12 @@ if [[ ! -f "${RIEMANN_JAR}" ]]; then
     # Path when installing .deb package
     RIEMANN_JAR="/usr/lib/riemann/riemann.jar"
     if [[ ! -f "${RIEMANN_JAR}" ]]; then
-        echo "Failed locating riemann.jar"
-        exit 1
+    # # Path when installing with brew
+    RIEMANN_JAR="/usr/local/Cellar/riemann/0.2.6/libexec/lib/riemann.jar"
+        if [[ ! -f "${RIEMANN_JAR}" ]]; then
+            echo "Failed locating riemann.jar"
+            exit 1
+        fi
     fi
 fi
 

@@ -247,6 +247,15 @@ def test_policies_2(ctx, key, value,
 
 
 @workflow
+def test_policies_3(ctx, key, value, **_):
+    instance = list(ctx.get_node('node').instances)[0]
+    instance.execute_operation('test.op1', kwargs={
+        'key': key,
+        'value': value
+    })
+
+
+@workflow
 def operation_mapping1(ctx, **_):
     node1 = list(ctx.get_node('node1').instances)[0]
     node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]

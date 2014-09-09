@@ -1,4 +1,4 @@
-(amqp-queue-consumer "{{ctx.deployment_id}}-riemann")
+(amqp-queue-consumer "{{ctx.deployment_id}}-riemann" "{{ctx.deployment_id}}")
 
 (periodically-expire 5)
 
