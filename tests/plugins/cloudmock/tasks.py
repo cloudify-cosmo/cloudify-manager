@@ -25,8 +25,6 @@ DATA_FILE_PATH = '/tmp/cloudmock-data.json'
 RUNNING = "running"
 NOT_RUNNING = "not_running"
 
-DEFAULT_VM_IP = '10.0.0.1'
-
 mem_data = {
     'machines': {},
     'raise_exception_on_start': False,
@@ -45,8 +43,6 @@ def provision(**kwargs):
                            .format(ctx.node_id))
     if ctx.properties.get('test_ip'):
         ctx.runtime_properties['ip'] = ctx.properties['test_ip']
-    else:
-        ctx.runtime_properties['ip'] = DEFAULT_VM_IP
     machines[ctx.node_id] = NOT_RUNNING
     _store_data(data)
 
