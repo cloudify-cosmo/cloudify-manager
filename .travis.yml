@@ -9,7 +9,8 @@ env:
     - ACTION="run-integration-tests"
     - ACTION="test-plugins"
     - ACTION="test-rest-service"
-    - ACTION="flake8"'
+    - ACTION="flake8"
+    - ACTION="plugin-installer-py26"
 
 install:
     - pip install tox
