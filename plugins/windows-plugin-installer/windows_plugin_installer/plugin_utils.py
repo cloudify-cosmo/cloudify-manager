@@ -61,6 +61,13 @@ def extract_module_paths(module_name):
              .format(sys.prefix, module_name)).std_out.splitlines()
     for module in files:
         if module.endswith(".py") and "__init__" not in module:
+            if module.endswith("-script.py"):
+                script_stripped = module[:-len("-script.py")]
+                potential_exe_file = "{0}.exe".format(script_stripped)
+                if potential_exe_file in files:
+                    # file is a console script "entry_point"
+                    continue
+
             # the files paths are relative to the package __init__.py file.
             module_paths.append(
                 module.replace("..\\", "").replace("\\", ".")
