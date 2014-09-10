@@ -106,7 +106,7 @@ run_flake8()
     pip install flake8
     flake8 plugins/agent-installer/
     flake8 plugins/windows-agent-installer/
-    # flake8 plugins/plugin-installer/
+    flake8 plugins/plugin-installer/
     flake8 plugins/windows-plugin-installer/
     flake8 plugins/riemann-controller/
     flake8 workflows/
@@ -114,9 +114,15 @@ run_flake8()
     flake8 tests/
 }
 
+run_plugin_installer_py26()
+{
+    pip install tox
+    cd plugins/plugin-installer && tox -e py26
+}
 case $1 in
     test-plugins         ) test_plugins;;
     test-rest-service    ) test_rest_service;;
     run-integration-tests) run_intergration_tests;;
     flake8               ) run_flake8;;
+    plugin-installer-py26) run_plugin_installer_py26;;
 esac
