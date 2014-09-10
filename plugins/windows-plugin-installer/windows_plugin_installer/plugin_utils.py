@@ -62,15 +62,11 @@ def extract_module_paths(module_name):
     for module in files:
         if module.endswith(".py") and "__init__" not in module:
             if module.endswith("-script.py"):
-                last_dir_occurence = module.rfind("\\")
-                if last_dir_occurence != -1:
-                    script_name =\
-                        module[last_dir_occurence+1:-len("-script.py")]
-                    exe_file = "{0}\\{1}.exe".format(
-                        module[:last_dir_occurence], script_name)
-                    if exe_file in files:
-                        # file is a console script "entry_point"
-                        pass
+                script_stripped = module[:-len("-script.py")]
+                potential_exe_file = "{0}.exe".format(script_stripped)
+                if potential_exe_file in files:
+                    # file is a console script "entry_point"
+                    pass
 
             # the files paths are relative to the package __init__.py file.
             module_paths.append(
