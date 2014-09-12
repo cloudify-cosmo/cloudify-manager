@@ -13,10 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
 
 from testenv import TestCase
-from testenv import get_resource as resource
+from testenv.utils import get_resource as resource
 from testenv import deploy_application as deploy
 
 
@@ -110,7 +109,7 @@ class TestDeploymentNodes(TestCase):
                           node_instance.runtime_properties['new_key'])
 
     def test_update_node_instance_runtime_properties(self):
-        dsl_path = resource("dsl/set_property.yaml")
+        dsl_path = resource('dsl/set_property.yaml')
         deployment, _ = deploy(dsl_path)
 
         node_id = self.client.node_instances.list(

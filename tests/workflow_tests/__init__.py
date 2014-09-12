@@ -13,15 +13,19 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
-
 
 from testenv import TestEnvironment
+from testenv import TestEnvironmentScope
+
+"""
+This code is executed when the tests
+are run as an entire package (e.g 'nosttests workflows_tests/')
+"""
 
 
 def setUp():
-    TestEnvironment.create()
+    TestEnvironment.create(TestEnvironmentScope.PACKAGE)
 
 
 def tearDown():
-    TestEnvironment.destroy()
+    TestEnvironment.destroy(TestEnvironmentScope.PACKAGE)

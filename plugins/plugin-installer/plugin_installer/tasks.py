@@ -171,3 +171,10 @@ def _virtualenv(command):
                         'bin',
                         command)
 
+
+def local_directory_handler(plugin):
+    pass
+
+
+def url_handler(plugin):
+    pass

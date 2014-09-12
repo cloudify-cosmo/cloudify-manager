@@ -13,12 +13,11 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
 
 from testenv import TestCase
-from testenv import get_resource as resource
+from testenv.utils import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import undeploy_application as undeploy
+from testenv.utils import undeploy_application as undeploy
 
 
 class TestContextProperties(TestCase):

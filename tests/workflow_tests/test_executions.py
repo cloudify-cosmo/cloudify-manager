@@ -13,40 +13,37 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
-__author__ = 'dan'
-
 import time
 import uuid
-from testenv import (TestCase,
-                     wait_for_execution_to_end,
-                     do_retries,
-                     verify_deployment_environment_creation_complete,
-                     send_task,
-                     get_resource as resource,
-                     deploy_application as deploy)
+
+from testenv.utils import wait_for_execution_to_end
+from testenv.utils import do_retries
+from testenv.utils import verify_deployment_environment_creation_complete
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
+from testenv import TestCase
 from cloudify_rest_client.executions import Execution
 
 
 class ExecutionsTest(TestCase):
 
     def test_cancel_execution(self):
-        execution = self._execute_and_cancel_execution(
+        execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_cancel_support')
-        self._assert_execution_cancelled(execution)
+        self._assert_execution_cancelled(execution, deployment_id)
 
     def test_force_cancel_execution(self):
-        execution = self._execute_and_cancel_execution(
+        execution, deployment_id = self._execute_and_cancel_execution(
             'sleep', True)
-        self._assert_execution_cancelled(execution)
+        self._assert_execution_cancelled(execution, deployment_id)
 
     def test_cancel_execution_with_graph_workflow(self):
-        execution = self._execute_and_cancel_execution(
+        execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_graph_usage')
-        self._assert_execution_cancelled(execution)
+        self._assert_execution_cancelled(execution, deployment_id)
 
     def test_cancel_execution_and_then_force_cancel(self):
-        execution = self._execute_and_cancel_execution(
+        execution, deployment_id = self._execute_and_cancel_execution(
             'sleep', False, False)
 
         # cancel didn't work (unsupported) - use force-cancel instead
@@ -55,17 +52,17 @@ class ExecutionsTest(TestCase):
         wait_for_execution_to_end(execution)
         execution = self.client.executions.get(execution.id)
 
-        self._assert_execution_cancelled(execution)
+        self._assert_execution_cancelled(execution, deployment_id)
 
     def test_cancel_execution_before_it_started(self):
-        execution = self._execute_and_cancel_execution(
+        execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
-
-        from mock_plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        data = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )
+        invocations = data.get('mock_operation_invocation', {})
         self.assertEqual(0, len(invocations))
 
     def test_get_deployments_executions_with_status(self):
@@ -111,11 +108,10 @@ class ExecutionsTest(TestCase):
             parameters=execution_parameters,
             allow_custom_parameters=True)
         wait_for_execution_to_end(execution)
-
-        from mock_plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0],
                              {'different-key': 'different-value'})
@@ -186,14 +182,13 @@ class ExecutionsTest(TestCase):
         if wait_for_termination:
             wait_for_execution_to_end(execution)
             execution = self.client.executions.get(execution.id)
-        return execution
+        return execution, deployment_id
 
-    def _assert_execution_cancelled(self, execution):
+    def _assert_execution_cancelled(self, execution, deployment_id):
         self.assertEquals(Execution.CANCELLED, execution.status)
-
-        from mock_plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'before-sleep': None})

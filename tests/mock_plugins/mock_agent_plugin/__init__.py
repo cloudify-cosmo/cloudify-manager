@@ -13,19 +13,3 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
-
-from cloudify.decorators import workflow
-
-
-@workflow
-def create(ctx, **kwargs):
-    # taken from original deployment_environment create workflow
-    ctx.execute_task('riemann_controller.tasks.create',
-                     kwargs=kwargs.get('policy_configuration', {}))
-
-
-@workflow
-def delete(ctx, **kwargs):
-    # taken from original deployment_environment delete workflow
-    ctx.execute_task('riemann_controller.tasks.delete')

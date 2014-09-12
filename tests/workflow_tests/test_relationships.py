@@ -16,9 +16,8 @@
 __author__ = 'dank'
 
 from testenv import TestCase
-from testenv import get_resource as resource
+from testenv.utils import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import send_task
 
 
 class TestRelationships(TestCase):
@@ -26,18 +25,20 @@ class TestRelationships(TestCase):
     def test_pre_source_started_location_source(self):
         dsl_path = resource(
             "dsl/relationship_interface_pre_source_location_source.yaml")
-        deploy(dsl_path)
-        self.verify_assertions(hook='pre-init',
+        deployment, _ = deploy(dsl_path)
+        self.verify_assertions(deployment.id,
+                               hook='pre-init',
                                runs_on_source=True)
 
     def test_post_source_started_location_target(self):
         dsl_path = resource(
             "dsl/relationship_interface_post_source_location_target.yaml")
-        deploy(dsl_path)
-        self.verify_assertions(hook='post-init',
+        deployment, _ = deploy(dsl_path)
+        self.verify_assertions(deployment.id,
+                               hook='post-init',
                                runs_on_source=False)
 
-    def verify_assertions(self, hook, runs_on_source):
+    def verify_assertions(self, deployment_id, hook, runs_on_source):
 
         if runs_on_source:
             node_id_id_prefix = 'mock_node_that_connects_to_host'
@@ -45,25 +46,23 @@ class TestRelationships(TestCase):
         else:
             node_id_id_prefix = 'host'
             related_id_prefix = 'mock_node_that_connects_to_host'
-
-        from mock_plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = result.get(timeout=10)
+        machines = self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment_id
+        )['machines']
         self.assertEquals(1, len(machines))
 
-        from mock_plugins.connection_configurer_mock.tasks import get_state \
-            as config_get_state
-        result = send_task(config_get_state)
-
-        state = result.get(timeout=10)[0]
-
+        state = self.get_plugin_data(
+            plugin_name='connection_configurer_mock',
+            deployment_id=deployment_id
+        )['state'][0]
         node_id = state['id']
         related_id = state['related_id']
 
         self.assertTrue(node_id.startswith(node_id_id_prefix))
         self.assertTrue(related_id.startswith(related_id_prefix))
 
-        from testenv import is_node_started
+        from testenv.utils import is_node_started
         self.assertTrue(is_node_started(related_id))
 
         if runs_on_source:
@@ -109,13 +108,14 @@ class TestRelationships(TestCase):
 
         connector_timestamp = state['time']
 
-        from mock_plugins.testmockoperations.tasks import get_state \
-            as testmock_get_state
-        from mock_plugins.testmockoperations.tasks import get_touched_time \
-            as testmock_get_touch_time
-        state = send_task(testmock_get_state).get(timeout=10)[0]
-        touched_timestamp = send_task(testmock_get_touch_time)\
-            .get(timeout=10)
+        state = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['state'][0]
+        touched_timestamp = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['touched_time']
 
         reachable_timestamp = state['time']
         if hook == 'pre-init':

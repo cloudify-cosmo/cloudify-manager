@@ -13,121 +13,98 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
+import os
 
 from cloudify.decorators import operation
-import os
-import json
-
-DATA_FILE_PATH = '/tmp/agent-installer-data.json'
-
-INSTALLED = "installed"
-STARTED = "started"
-STOPPED = "stopped"
-UNINSTALLED = "uninstalled"
-RESTARTED = "restarted"
+from testenv.processes.celery import CeleryWorkerProcess
+from testenv.utils import update_storage
 
 
 @operation
 def install(ctx, **kwargs):
-    agent_config = _fix_worker(ctx, **kwargs)
-    data = _get_data()
+    worker = get_instance(ctx, **kwargs)
+    ctx.logger.info('Installing worker {0}'.format(worker.name))
+    worker.create_dirs()
+    with update_storage(ctx) as data:
+        data[worker.name] = data.get(worker.name, {})
+        data[worker.name]['states'] = data[worker.name].get('states', [])
+        data[worker.name]['states'].append('installed')
+        data[worker.name]['pids'] = []
 
-    ctx.logger.info("Installing worker {0}".format(agent_config["name"]))
-    data['workers_state'][agent_config["name"]] = [INSTALLED]
-    _store_data(data)
 
 
 @operation
 def start(ctx, **kwargs):
-    agent_config = _fix_worker(ctx, **kwargs)
-    data = _get_data()
+    worker = get_instance(ctx, **kwargs)
+    ctx.logger.info('Starting worker {0}'.format(worker.name))
+    worker.start()
 
-    ctx.logger.info("Starting worker {0}".format(agent_config["name"]))
-    # adding a consumer that handles tasks from a
-    # queue called agent_config["name"]
-    ctx.logger.info("Workers state before change is {0}".format(
-        data['workers_state']))
-    data['workers_state'][agent_config["name"]].append(STARTED)
-    _store_data(data)
+    with update_storage(ctx) as data:
+        data[worker.name] = data.get(worker.name, {})
+        data[worker.name]['states'] = data[worker.name].get('states', [])
+        data[worker.name]['states'].append('started')
+        data[worker.name]['pids'] = worker.pids
 
 
 @operation
 def restart(ctx, **kwargs):
-    agent_config = _fix_worker(ctx, **kwargs)
-    data = _get_data()
-
-    ctx.logger.info("Restarting worker {0}".format(agent_config["name"]))
-    data['workers_state'][agent_config["name"]].append(RESTARTED)
-    _store_data(data)
+    stop(ctx, **kwargs)
+    start(ctx, **kwargs)
 
 
 @operation
 def stop(ctx, **kwargs):
-    agent_config = _fix_worker(ctx, **kwargs)
-    data = _get_data()
-
-    ctx.logger.info("Stopping worker {0}".format(agent_config["name"]))
-    if agent_config["name"] not in data['workers_state']:
-        ctx.logger.debug("No worker. nothing to do.")
-        return
-    data['workers_state'][agent_config["name"]].append(STOPPED)
-    _store_data(data)
+    worker = get_instance(ctx, **kwargs)
+    ctx.logger.info('Stopping worker {0}'.format(worker.name))
+    worker.stop()
+    with update_storage(ctx) as data:
+        data[worker.name] = data.get(worker.name, {})
+        data[worker.name]['states'] = data[worker.name].get('states', [])
+        data[worker.name]['states'].append('stopped')
+        data[worker.name]['pids'] = []
 
 
 @operation
 def uninstall(ctx, **kwargs):
-    agent_config = _fix_worker(ctx, **kwargs)
-    data = _get_data()
-
-    ctx.logger.info("Uninstalling worker {0}".format(agent_config["name"]))
-    if agent_config["name"] not in data['workers_state']:
-        ctx.logger.debug("No worker. nothing to do.")
-        return
-    data['workers_state'][agent_config["name"]].append(UNINSTALLED)
-    _store_data(data)
-
-
-@operation
-def get_worker_state(worker_name, **kwargs):
-    data = _get_data()
-    return data['workers_state'][worker_name]
+    worker = get_instance(ctx, **kwargs)
+    ctx.logger.info('Uninstalling worker {0}'.format(worker.name))
+    worker.delete_dirs()
+    with update_storage(ctx) as data:
+        data[worker.name] = data.get(worker.name, {})
+        data[worker.name]['states'] = data[worker.name].get('states', [])
+        data[worker.name]['states'].append('uninstalled')
+        data[worker.name]['pids'] = []
 
 
 def _fix_worker(ctx, **kwargs):
     agent_config = {}
     if _is_workflows_worker(kwargs):
         agent_config['name'] = '{0}_workflows'.format(ctx.deployment_id)
+        agent_config['includes'] = ['cloudify.plugins.workflows']
     elif ctx.node_id is None:
         agent_config['name'] = ctx.deployment_id
+        agent_config['includes'] = None
     else:
         agent_config['name'] = ctx.node_id
+        agent_config['includes'] = None
     return agent_config
 
 
 def _is_workflows_worker(config_container):
-    return 'cloudify_agent' in config_container and \
-           'workflows_worker' in config_container['cloudify_agent'] and \
-           config_container['cloudify_agent']['workflows_worker']
+    if 'cloudify_agent' in config_container:
+        cloudify_agent = config_container['cloudify_agent']
+        if 'workflows_worker' in cloudify_agent:
+            workflows_worker = cloudify_agent['workflows_worker']
+            return workflows_worker
+    return False
 
 
-def _get_data():
-    with open(DATA_FILE_PATH, 'r') as f:
-        data = json.load(f)
-        return data
-
-
-def _store_data(data):
-    with open(DATA_FILE_PATH, 'w') as f:
-        json.dump(data, f)
-
-
-def setup_plugin():
-    data = {
-        'workers_state': {}
-    }
-    _store_data(data)
-
-
-def teardown_plugin():
-    os.remove(DATA_FILE_PATH)
+def get_instance(ctx, **kwargs):
+    agent_config = _fix_worker(ctx, **kwargs)
+    worker_name = agent_config['name']
+    test_working_dir = os.environ['TEST_WORKING_DIR']
+    return CeleryWorkerProcess(
+        queues=[worker_name],
+        test_working_dir=test_working_dir,
+        includes=agent_config['includes']
+    )

@@ -13,31 +13,40 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
 
 import uuid
 import time
+import errno
+
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
-from testenv import timeout
-from testenv import send_task
+from testenv.utils import get_resource as resource
+from testenv.utils import do_retries
+from testenv.utils import timeout
+from testenv.utils import verify_deployment_environment_creation_complete
+from testenv.utils import deploy_application as deploy
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
+from testenv.utils import undeploy_application as undeploy
+from os import path
 
 
 class BasicWorkflowsTest(TestCase):
 
     def test_execute_operation(self):
-        dsl_path = resource("dsl/basic.yaml")
+        dsl_path = resource('dsl/basic.yaml')
         blueprint_id = self.id()
-        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy(
+            dsl_path,
+            blueprint_id=blueprint_id,
+            timeout_seconds=15
+        )
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
-        from mock_plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = result.get(timeout=10)
+        machines = self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment.id
+        )['machines']
 
         self.assertEquals(1, len(machines))
 
@@ -48,32 +57,33 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertEquals(blueprint_id, deployment.blueprint_id)
 
-        from mock_plugins.testmockoperations.tasks import get_state as \
-            testmock_get_state
-        states = send_task(testmock_get_state) \
-            .get(timeout=10)
+        states = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['state']
         self.assertEquals(2, len(states))
         self.assertTrue('host_node' in states[0]['id'])
         self.assertTrue('db_node' in states[1]['id'])
 
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
-        from mock_plugins.cloudmock.tasks import set_raise_exception_on_start
-        send_task(set_raise_exception_on_start).get(timeout=10)
+        deployment_id = str(uuid.uuid4())
         dsl_path = resource("dsl/basic.yaml")
         try:
-            deploy(dsl_path)
+            deploy(dsl_path, deployment_id=deployment_id)
             self.fail('expected exception')
-        except Exception:
+        except Exception as e:
+            if e.message:
+                self.logger.info(e.message)
             pass
 
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
-        deploy(dsl_path)
-
-        from mock_plugins.testmockoperations.tasks import get_state as \
-            testmock_get_state
-        states = send_task(testmock_get_state).get(timeout=10)
+        deployment, _ = deploy(dsl_path)
+        states = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['state']
         node_runtime_props = None
         for k, v in states[1]['capabilities'].iteritems():
             if 'host_node' in k:
@@ -91,13 +101,15 @@ class BasicWorkflowsTest(TestCase):
 
     def test_inject_properties_to_operation(self):
         dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
-        deploy(dsl_path)
-        from mock_plugins.testmockoperations.tasks import get_state as \
-            testmock_get_state
-        states = send_task(testmock_get_state).get(timeout=10)
-        from mock_plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations as testmock_get__invocations
-        invocations = send_task(testmock_get__invocations).get(timeout=10)
+        deployment, _ = deploy(dsl_path)
+        states = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['state']
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
@@ -105,22 +117,22 @@ class BasicWorkflowsTest(TestCase):
 
     def test_start_monitor_node_operation(self):
         dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
-        deploy(dsl_path)
-        from mock_plugins.testmockoperations.tasks import \
-            get_monitoring_operations_invocation
-        invocations = send_task(get_monitoring_operations_invocation)\
-            .get(timeout=10)
+        deployment, _ = deploy(dsl_path)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['monitoring_operations_invocation']
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('start_monitor', invocation['operation'])
 
     def test_plugin_get_resource(self):
         dsl_path = resource("dsl/get_resource_in_plugin.yaml")
-        deploy(dsl_path)
-        from mock_plugins.testmockoperations.tasks import \
-            get_resource_operation_invocations as testmock_get_invocations
-        invocations = send_task(testmock_get_invocations).get(
-            timeout=10)
+        deployment, _ = deploy(dsl_path)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['get_resource_operation_invocation']
         self.assertEquals(1, len(invocations))
         invocation = invocations[0]
         with open(resource("dsl/basic.yaml")) as f:
@@ -142,10 +154,10 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
-        from mock_plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = result.get(timeout=10)
-
+        machines = self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment.id
+        )['machines']
         self.assertEquals(1, len(machines))
         result = self.client.search.run_query('')
         hits = map(lambda x: x['_source'], result['hits']['hits'])
@@ -192,12 +204,12 @@ class BasicWorkflowsTest(TestCase):
         blueprint_id = self.id()
         deployment_id = str(uuid.uuid4())
 
-        def change_execution_status(execution_id, status):
-            self.client.executions.update(execution_id, status)
+        def change_execution_status(_execution_id, status):
+            self.client.executions.update(_execution_id, status)
             time.sleep(5)  # waiting for elasticsearch to update...
             executions = self.client.deployments.list_executions(deployment_id)
             updated_execution = next(execution for execution in executions
-                                     if execution.id == execution_id)
+                                     if execution.id == _execution_id)
             self.assertEqual(status, updated_execution.status)
 
         # verifying a deletion of a new deployment, i.e. one which hasn't
@@ -205,9 +217,12 @@ class BasicWorkflowsTest(TestCase):
         # 'uninitialized' state.
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        time.sleep(5)  # waiting for elasticsearch to update execution...
+        do_retries(verify_deployment_environment_creation_complete, 30,
+                   deployment_id=deployment_id)
+
+        time.sleep(10)  # waiting for elasticsearch to update execution...
         self.client.deployments.delete(deployment_id, False)
-        time.sleep(5)  # waiting for elasticsearch to clear deployment...
+        time.sleep(10)  # waiting for elasticsearch to clear deployment...
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
@@ -315,9 +330,9 @@ class BasicWorkflowsTest(TestCase):
         self.client.deployments.create(blueprint_id, deployment_id)
 
         def assert_deployment_nodes_length():
-            deployment_nodes = self.client.node_instances.list(
+            _deployment_nodes = self.client.node_instances.list(
                 deployment_id=deployment_id)
-            self.assertEqual(1, len(deployment_nodes))
+            self.assertEqual(1, len(_deployment_nodes))
 
         self.do_assertions(assert_deployment_nodes_length, timeout=30)
 
@@ -335,10 +350,10 @@ class BasicWorkflowsTest(TestCase):
         deployment, _ = deploy(dsl_path,
                                blueprint_id=blueprint_id,
                                deployment_id=deployment_id)
-
-        from mock_plugins.testmockoperations.tasks import get_node_states
-        node_states = send_task(get_node_states).get(timeout=10)
-
+        node_states = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['node_states']
         self.assertEquals(node_states, [
             'creating', 'configuring', 'starting'
         ])
@@ -349,3 +364,82 @@ class BasicWorkflowsTest(TestCase):
         node_id = deployment_nodes[0].id
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('started', node_instance.state)
+
+    def test_deploy_with_agent_worker(self):
+        dsl_path = resource('dsl/with_agent_worker.yaml')
+        deployment, _ = deploy(dsl_path)
+        deployment_nodes = self.client.node_instances.list(deployment_id=deployment.id)
+        webserver_nodes = filter(lambda node: 'host' not in node.node_id, deployment_nodes)
+        self.assertEquals(1, len(webserver_nodes))
+        webserver_node = webserver_nodes[0]
+        invocations = self.get_plugin_data(
+            plugin_name='mock_agent_plugin',
+            host_id=webserver_node.host_id
+        )[webserver_node.id]
+
+        expected_invocations = ['create', 'start']
+        self.assertListEqual(invocations, expected_invocations)
+
+        undeploy(deployment_id=deployment.id)
+        invocations = self.get_plugin_data(
+            plugin_name='mock_agent_plugin',
+            host_id=webserver_node.host_id
+        )[webserver_node.id]
+
+        expected_invocations = ['create', 'start', 'stop', 'delete']
+        self.assertListEqual(invocations, expected_invocations)
+
+    def test_deployment_creation_workflow(self):
+
+        dsl_path = resource('dsl/basic.yaml')
+        deployment, _ = deploy(dsl_path)
+
+        def _is_riemann_core_up():
+            try:
+                with open(path.join(self.riemann_workdir, deployment.id, 'ok')) as f:
+                    return f.read().strip() == 'ok'
+            except IOError, e:
+                if e.errno == errno.ENOENT:
+                    return False
+                raise
+
+        self.assertTrue(_is_riemann_core_up())
+
+        deployment_operations_worker_name = deployment.id
+        deployment_workflows_worker_name = '{0}_workflows'.format(deployment.id)
+
+        data = self.get_plugin_data(plugin_name='worker_installer',
+                                    worker_name='cloudify.management',
+                                    deployment_id=deployment.id)
+
+        # assert both deployment and workflows plugins
+        # were installed and started
+        self.assertEqual(data[deployment_operations_worker_name]['states'],
+                         ['installed', 'started', 'stopped', 'started'])
+        self.assertEqual(data[deployment_workflows_worker_name]['states'], ['installed', 'started'])
+        self.assertTrue(data[deployment_operations_worker_name]['pids'])
+        self.assertTrue(data[deployment_workflows_worker_name]['pids'])
+
+        undeploy(deployment.id, delete_deployment=True)
+
+        data = self.get_plugin_data(plugin_name='worker_installer',
+                                    worker_name='cloudify.management',
+                                    deployment_id=deployment.id)
+
+        # assert both deployment and workflows plugins
+        # were stopped and uninstalled
+        self.assertEqual(data[deployment_operations_worker_name]['states'],
+                         ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
+        self.assertEqual(data[deployment_workflows_worker_name]['states'],
+                         ['installed', 'started', 'stopped', 'uninstalled'])
+        self.assertFalse(data[deployment_operations_worker_name]['pids'])
+        self.assertFalse(data[deployment_workflows_worker_name]['pids'])
+
+        self.assertFalse(_is_riemann_core_up())
+
+
+
+
+
+
+

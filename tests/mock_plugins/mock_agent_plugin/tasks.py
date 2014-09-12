@@ -14,31 +14,33 @@
 #    * limitations under the License.
 
 
-from time import time
 from cloudify.decorators import operation
 from testenv.utils import update_storage
 
 
 @operation
-def configure_connection(ctx, **kwargs):
-    append_to_state(ctx)
+def create(ctx, **kwargs):
+    with update_storage(ctx) as data:
+        data[ctx.node_id] = data.get(ctx.node_id, [])
+        data[ctx.node_id].append('create')
 
 
 @operation
-def unconfigure_connection(ctx, **kwargs):
-    append_to_state(ctx)
-
-
-def append_to_state(ctx):
+def start(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data['state'] = data.get('state', [])
-        data['state'].append({
-            'id': ctx.node_id,
-            'related_id': ctx.related.node_id,
-            'time': time(),
-            'properties': dict(ctx.properties),
-            'runtime_properties': dict(ctx.runtime_properties),
-            'related_properties': ctx.related.properties,
-            'related_runtime_properties': ctx.related.runtime_properties,
-            'capabilities': ctx.capabilities.get_all()
-        })
+        data[ctx.node_id] = data.get(ctx.node_id, [])
+        data[ctx.node_id].append('start')
+
+
+@operation
+def stop(ctx, **kwargs):
+    with update_storage(ctx) as data:
+        data[ctx.node_id] = data.get(ctx.node_id, [])
+        data[ctx.node_id].append('stop')
+
+
+@operation
+def delete(ctx, **kwargs):
+    with update_storage(ctx) as data:
+        data[ctx.node_id] = data.get(ctx.node_id, [])
+        data[ctx.node_id].append('delete')

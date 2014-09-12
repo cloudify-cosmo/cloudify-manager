@@ -15,12 +15,8 @@
 
 
 from testenv import TestCase
-from testenv import get_resource as resource
+from testenv.utils import get_resource as resource
 from testenv import deploy_application as deploy
-from testenv import send_task
-
-from mock_plugins.testmockoperations.tasks import \
-    get_mock_operation_invocations as testmock_get_invocations
 
 
 class TestPolicies(TestCase):
@@ -29,7 +25,7 @@ class TestPolicies(TestCase):
         """
         Tests policy/trigger/group creation and processing flow
         """
-        dsl_path = resource("dsl/with_policies1.yaml")
+        dsl_path = resource('dsl/with_policies1.yaml')
         deployment, _ = deploy(dsl_path)
         self.deployment_id = deployment.id
         self.instance_id = self.wait_for_node_instance().id
@@ -39,7 +35,7 @@ class TestPolicies(TestCase):
         self.publish(metric=metric_value)
 
         self.wait_for_executions(3)
-        invocations = self.wait_for_invocations(2)
+        invocations = self.wait_for_invocations(deployment.id, 2)
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
@@ -58,31 +54,32 @@ class TestPolicies(TestCase):
                 self.current_executions = current_executions
                 self.threshold = threshold
 
-            def publish_above_threshold(self, do_assert):
+            def publish_above_threshold(self, deployment_id, do_assert):
                 self.test_case.logger.info('Publish above threshold')
                 self.test_case.publish(self.threshold + 1)
                 if do_assert:
                     self.inc()
-                    self.assertion(upper=True)
+                    self.assertion(deployment_id, upper=True)
 
-            def publish_below_threshold(self, do_assert):
+            def publish_below_threshold(self, deployment_id, do_assert):
                 self.test_case.logger.info('Publish below threshold')
                 self.test_case.publish(self.threshold - 1)
                 if do_assert:
                     self.inc()
-                    self.assertion(upper=False)
+                    self.assertion(deployment_id, upper=False)
 
             def inc(self):
                 self.current_executions += 1
                 self.current_invocations += 1
 
-            def assertion(self, upper):
+            def assertion(self, deployment_id, upper):
                 self.test_case.logger.info('waiting for {} executions'
                                            .format(self.current_executions))
                 self.test_case.wait_for_executions(self.current_executions)
                 self.test_case.logger.info('waiting for {} invocations'
                                            .format(self.current_invocations))
                 invocations = self.test_case.wait_for_invocations(
+                    deployment_id,
                     self.current_invocations)
                 if upper:
                     key = 'upper'
@@ -100,10 +97,10 @@ class TestPolicies(TestCase):
                         current_invocations=0)
 
         for _ in range(2):
-            tester.publish_above_threshold(do_assert=True)
-            tester.publish_above_threshold(do_assert=False)
-            tester.publish_below_threshold(do_assert=True)
-            tester.publish_below_threshold(do_assert=False)
+            tester.publish_above_threshold(deployment.id, do_assert=True)
+            tester.publish_above_threshold(deployment.id, do_assert=False)
+            tester.publish_below_threshold(deployment.id, do_assert=True)
+            tester.publish_below_threshold(deployment.id, do_assert=False)
 
     def wait_for_executions(self, expected_count):
         def assertion():
@@ -111,12 +108,19 @@ class TestPolicies(TestCase):
             self.assertEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 
-    def wait_for_invocations(self, expected_count):
+    def wait_for_invocations(self, deployment_id, expected_count):
         def assertion():
-            invocations = send_task(testmock_get_invocations).get(timeout=10)
-            self.assertEqual(expected_count, len(invocations))
+            _invocations = self.get_plugin_data(
+                plugin_name='testmockoperations',
+                deployment_id=deployment_id
+            )['mock_operation_invocation']
+            self.assertEqual(expected_count, len(_invocations))
         self.do_assertions(assertion)
-        return send_task(testmock_get_invocations).get(timeout=10)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
+        return invocations
 
     def wait_for_node_instance(self):
         def assertion():

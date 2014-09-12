@@ -13,128 +13,73 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
 
-import os
-import json
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
+from testenv.utils import update_storage
 
-DATA_FILE_PATH = '/tmp/cloudmock-data.json'
-
-RUNNING = "running"
-NOT_RUNNING = "not_running"
-
-mem_data = {
-    'machines': {},
-    'raise_exception_on_start': False,
-    'raise_exception_on_stop': False
-}
+RUNNING = 'running'
+NOT_RUNNING = 'not_running'
 
 
 @operation
 def provision(ctx, **kwargs):
-    data = _get_data()
-    machines = data['machines']
-    ctx.logger.info("cloudmock provision: [node_id=%s, machines=%s]",
-                    ctx.node_id, machines)
-    if ctx.node_id in machines:
-        raise RuntimeError("machine with id [{0}] already exists"
-                           .format(ctx.node_id))
-    if ctx.properties.get('test_ip'):
-        ctx.runtime_properties['ip'] = ctx.properties['test_ip']
-    machines[ctx.node_id] = NOT_RUNNING
-    _store_data(data)
+    with update_storage(ctx) as data:
+        machines = data.get('machines', {})
+        if ctx.node_id in machines:
+            raise NonRecoverableError('machine with id [{0}] already exists'
+                                      .format(ctx.node_id))
+        if ctx.properties.get('test_ip'):
+            ctx.runtime_properties['ip'] = ctx.properties['test_ip']
+        machines[ctx.node_id] = NOT_RUNNING
+        data['machines'] = machines
 
 
 @operation
 def start(ctx, **kwargs):
-    data = _get_data()
-    machines = data['machines']
-    ctx.send_event('starting machine event')
-    ctx.logger.info("cloudmock start: [node_id={0}, machines={1}]".format(
-        ctx.node_id, machines))
-    if ctx.node_id not in machines:
-        raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(ctx.node_id))
-    machines[ctx.node_id] = RUNNING
-    ctx.runtime_properties['id'] = ctx.node_id
-    if data['raise_exception_on_start']:
-        raise RuntimeError('Exception raised from CloudMock.start()!')
-    _store_data(data)
+    with update_storage(ctx) as data:
+        machines = data.get('machines', {})
+        ctx.send_event('starting machine event')
+        ctx.logger.info('cloudmock start: [node_id={0}, machines={1}]'
+                        .format(ctx.node_id, machines))
+        if ctx.node_id not in machines:
+            raise NonRecoverableError('machine with id [{0}] does not exist'
+                                      .format(ctx.node_id))
+        machines[ctx.node_id] = RUNNING
+        ctx.runtime_properties['id'] = ctx.node_id
+
+
+@operation
+def start_error(ctx, **kwargs):
+    raise RuntimeError('Exception raised from cloudmock.start()!')
+
+
+@operation
+def stop_error(ctx, **kwargs):
+    raise RuntimeError('Exception raised from cloudmock.stop()!')
 
 
 @operation
 def get_state(ctx, **kwargs):
-    data = _get_data()
-    return data['machines'][ctx.node_id] == RUNNING
+    with update_storage(ctx) as data:
+        return data['machines'][ctx.node_id] == RUNNING
 
 
 @operation
 def stop(ctx, **kwargs):
-    data = _get_data()
-    ctx.logger.info("stopping machine: " + ctx.node_id)
-    if ctx.node_id not in data['machines']:
-        raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(ctx.node_id))
-    if data['raise_exception_on_stop']:
-        raise RuntimeError('Exception raised from CloudMock.stop()!')
-    data['machines'][ctx.node_id] = NOT_RUNNING
-    _store_data(data)
+    with update_storage(ctx) as data:
+        ctx.logger.info('stopping machine: {0}'.format(ctx.node_id))
+        if ctx.node_id not in data['machines']:
+            raise RuntimeError('machine with id [{0}] does not exist'
+                               .format(ctx.node_id))
+        data['machines'][ctx.node_id] = NOT_RUNNING
 
 
 @operation
 def terminate(ctx, **kwargs):
-    data = _get_data()
-    ctx.logger.info("terminating machine: " + ctx.node_id)
-    if ctx.node_id not in data['machines']:
-        raise RuntimeError("machine with id [{0}] does not exist"
-                           .format(ctx.node_id))
-    del data['machines'][ctx.node_id]
-    _store_data(data)
-
-
-@operation
-def get_machines(**kwargs):
-    data = _get_data()
-    return data['machines']
-
-
-@operation
-def set_raise_exception_on_start(**kwargs):
-    data = _get_data()
-    data['raise_exception_on_start'] = True
-    _store_data(data)
-
-
-@operation
-def set_raise_exception_on_stop(**kwargs):
-    data = _get_data()
-    data['raise_exception_on_stop'] = True
-    _store_data(data)
-
-
-def _get_data():
-    if os.path.exists(DATA_FILE_PATH):
-        with open(DATA_FILE_PATH, 'r') as f:
-            data = json.load(f)
-            return data
-    return mem_data
-
-
-def _store_data(data):
-    if os.path.exists(DATA_FILE_PATH):
-        with open(DATA_FILE_PATH, 'w') as f:
-            json.dump(data, f)
-    else:
-        global mem_data
-        mem_data = data
-
-
-def setup_plugin_file_based_mode():
-    open(DATA_FILE_PATH, 'w').close()  # creating the file
-    global mem_data
-    _store_data(mem_data)
-
-
-def teardown_plugin_file_based_mode():
-    os.remove(DATA_FILE_PATH)
+    with update_storage(ctx) as data:
+        ctx.logger.info('terminating machine: {0}'.format(ctx.node_id))
+        if ctx.node_id not in data['machines']:
+            raise RuntimeError('machine with id [{0}] does not exist'
+                               .format(ctx.node_id))
+        del data['machines'][ctx.node_id]

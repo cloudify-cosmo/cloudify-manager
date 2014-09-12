@@ -13,48 +13,32 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
-
-from cloudify.decorators import operation
+import shutil
 import os
-import json
+import mock_plugins
 
-
-DATA_FILE_PATH = '/tmp/plugin-installer-data.json'
+from os.path import join
+from os.path import dirname
+from os.path import basename
+from cloudify.decorators import operation
+from shutil import ignore_patterns
 
 
 @operation
 def install(ctx, plugins, **kwargs):
 
-    installed_plugins = _get_installed_plugins()
-
     for plugin in plugins:
-        ctx.logger.info("in plugin_installer.install --> "
-                        "installing plugin {0}".format(plugin))
-        installed_plugins.append(plugin['name'])
-
-    _store_installed_plugins(installed_plugins)
+        ctx.logger.info('Installing plugin {0}'.format(plugin['name']))
+        install_plugin(plugin)
 
 
-@operation
-def get_installed_plugins(**kwargs):
-    return _get_installed_plugins()
-
-
-def _get_installed_plugins():
-    with open(DATA_FILE_PATH, 'r') as f:
-        installed_plugins = json.load(f)
-        return installed_plugins
-
-
-def _store_installed_plugins(installed_plugins):
-    with open(DATA_FILE_PATH, 'w') as f:
-        json.dump(installed_plugins, f)
-
-
-def setup_plugin():
-    _store_installed_plugins([])
-
-
-def teardown_plugin():
-    os.remove(DATA_FILE_PATH)
+def install_plugin(plugin):
+    plugin_dir = os.path.join(
+        dirname(mock_plugins.__file__),
+        plugin['source']
+    )
+    dst = join(os.environ['ENV_DIR'], basename(plugin_dir))
+    if not os.path.exists(dst):
+        shutil.copytree(src=plugin_dir,
+                        dst=dst,
+                        ignore=ignore_patterns('*.pyc'))

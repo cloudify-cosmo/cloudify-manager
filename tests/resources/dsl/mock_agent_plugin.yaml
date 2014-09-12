@@ -1,0 +1,4 @@
+plugins:
+    mock_agent_plugin:
+        executor: host_agent
+        source: mock_agent_plugin

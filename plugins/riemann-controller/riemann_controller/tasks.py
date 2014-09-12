@@ -40,6 +40,7 @@ def create(policy_types=None,
            policy_triggers=None,
            groups=None,
            **_):
+
     policy_types = policy_types or {}
     groups = groups or {}
     policy_triggers = policy_triggers or {}

@@ -13,13 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
 
-import os
 from manager_rest.celery_client import celery_client as client
-
-# used by integration tests
-env_workflows_queue = os.environ.get('CLOUDIFY_WORKFLOWS_QUEUE')
 
 
 class WorkflowClient(object):
@@ -32,11 +27,7 @@ class WorkflowClient(object):
                          execution_id,
                          execution_parameters=None):
         task_name = workflow['operation']
-        if env_workflows_queue:
-            # used by integration tests
-            task_queue = env_workflows_queue
-        else:
-            task_queue = '{}_workflows'.format(deployment_id)
+        task_queue = '{}_workflows'.format(deployment_id)
 
         execution_parameters['__cloudify_context'] = {
             'workflow_id': name,

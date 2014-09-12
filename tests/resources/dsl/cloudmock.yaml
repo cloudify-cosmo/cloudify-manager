@@ -1,6 +1,4 @@
-###
-# cloudmock plugin definition.
 plugins:
     cloudmock:
         executor: central_deployment_agent
-        source: dummy
+        source: cloudmock

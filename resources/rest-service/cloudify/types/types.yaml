@@ -147,7 +147,7 @@ plugins:
         source: system
 
     plugin_installer:
-        executor: central_deployment_agent
+        executor: host_agent
         source: system
 
     windows_agent_installer:
