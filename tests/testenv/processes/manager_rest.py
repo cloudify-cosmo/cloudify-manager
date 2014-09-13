@@ -88,7 +88,7 @@ class ManagerRestProcess(object):
         started = False
         attempt = 1
         while not started and time.time() < end_time:
-            time.sleep(1)
+            time.sleep(0.5)
             logger.info('Testing connection to manager rest service. '
                         '(Attempt: {0}/{1})'.format(attempt, timeout))
             attempt += 1

@@ -42,43 +42,19 @@ from testenv.processes.riemann import RiemannProcess
 from testenv import utils
 from cloudify.utils import setup_default_logger
 from testenv.processes.celery import CeleryWorkerProcess
-from cloudify.utils import id_generator
 from testenv.utils import timestamp
 from testenv.utils import update_storage
 from testenv.utils import deploy_application
 
 logger = setup_default_logger('TESTENV')
-test_env_instance = None
-
-
-class TestEnvironmentScope(object):
-    CLASS = "CLASS"
-    MODULE = "MODULE"
-    PACKAGE = "PACKAGE"
-
-    @staticmethod
-    def validate(scope):
-        if scope not in [
-            TestEnvironmentScope.CLASS,
-            TestEnvironmentScope.MODULE,
-            TestEnvironmentScope.PACKAGE
-        ]:
-            raise AttributeError('Unknown test environment scope: ' +
-                                 str(scope))
+testenv_instance = None
 
 
 class TestCase(unittest.TestCase):
+
     """
     A test case for cloudify integration tests.
     """
-
-    @classmethod
-    def setUpClass(cls):
-        TestEnvironment.create(TestEnvironmentScope.CLASS)
-
-    @classmethod
-    def tearDownClass(cls):
-        TestEnvironment.destroy(TestEnvironmentScope.CLASS)
 
     def setUp(self):
         self.logger = logging.getLogger(self._testMethodName)
@@ -88,81 +64,47 @@ class TestCase(unittest.TestCase):
         TestEnvironment.start_celery_management_worker()
 
     def tearDown(self):
-        TestEnvironment.stop_celery_management_worker()
         TestEnvironment.reset_elasticsearch_data()
-        TestEnvironment.kill_celery_workers()
+        TestEnvironment.stop_celery_management_worker()
 
-    def get_plugin_data(self, plugin_name, deployment_id=None, host_id=None, workflows=False, worker_name=False):
+    def get_plugin_data(self, plugin_name,
+                        deployment_id=None):
 
         """
-        Retrieve the plugin state for a curtain deployment agent or host agent.
+        Retrieve the plugin state for a curtain deployment.
 
         :param deployment_id: the deployment id in question.
-                              use this for querying deployment agents.
-        :param host_id: the host id in question.
-                        use this for querying host agents.
         :param plugin_name: the plugin in question.
         :return: plugin data relevant for the deployment.
         :rtype dict
         """
 
-        # validations
-        if host_id and deployment_id:
-            raise RuntimeError("Cannot specify both 'deployment_id' and 'host_id'")
-        if not host_id and not deployment_id and not worker_name:
-            raise RuntimeError("Must specify either 'deployment_id' or 'host_id' or 'worker_name'")
-        if host_id and workflows:
-            raise RuntimeError('Host agent plugins cannot be workflows')
-        if worker_name and host_id:
-            raise RuntimeError("Cannot specify both 'worker_name' and 'host_id'")
-
-        global test_env_instance
+        global testenv_instance
 
         # create worker instance to
         # get the workdir
 
-        queue = None
-        if worker_name:
-            queue = worker_name
-        elif deployment_id:
-            if workflows:
-                queue = '{0}_workflows'.format(deployment_id)
-            else:
-                queue = deployment_id
-        elif host_id:
-            queue = host_id
-
         worker = CeleryWorkerProcess(
-            queues=[queue],
-            test_working_dir=test_env_instance.test_working_dir
+            queues=['cloudify.management'],
+            test_working_dir=testenv_instance.test_working_dir
         )
 
         return self._get_plugin_data(
             plugin_name=plugin_name,
             deployment_id=deployment_id,
-            host_id=host_id,
             worker_work_dir=worker.workdir
         )
 
     def _get_plugin_data(self,
                          plugin_name,
                          deployment_id,
-                         host_id,
                          worker_work_dir):
         storage_file_path = os.path.join(
             worker_work_dir,
             '{0}.json'.format(plugin_name)
         )
-        if not os.path.exists(storage_file_path):
-            return {}
         with open(storage_file_path, 'r') as f:
             data = json.load(f)
-            if host_id:
-                # a host agent always belongs to
-                # a single deployment
-                return data.itervalues().next()
-            # all other agents save
-            # data per deployment
             if deployment_id not in data:
                 data[deployment_id] = {}
             return data.get(deployment_id)
@@ -205,21 +147,16 @@ class TestEnvironment(object):
     file_server_process = None
     celery_management_worker_process = None
 
-    def __init__(self, scope):
+    def __init__(self, test_working_dir):
+        super(TestEnvironment, self).__init__()
+        self.test_working_dir = test_working_dir
+        self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
+
+    def create(self):
+
         try:
 
-            logger.info('Setting up test environment... [scope={0}]'.format(scope))
-            self.scope = scope
-
-            unique_name = 'TestEnvironment-{0}'.format(id_generator(4))
-
-            self.test_working_dir = os.path.join(
-                TOP_LEVEL_DIR,
-                unique_name
-            )
-            os.makedirs(self.test_working_dir)
-
-            self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
+            logger.info('Setting up test environment...')
 
             # events/logs polling
             start_events_and_logs_polling()
@@ -234,24 +171,37 @@ class TestEnvironment(object):
             traceback.print_exc(file=s_traceback)
             logger.error("Error in test environment setup: %s", error)
             logger.error(s_traceback.getvalue())
-            self.destroy_test_env()
+            self.destroy()
             raise
 
     def start_management_worker(self):
+
+        import mock_plugins
+        mock_plugins_path = os.path.dirname(mock_plugins.__file__)
 
         self.celery_management_worker_process = CeleryWorkerProcess(
             queues=['cloudify.management'],
             test_working_dir=self.test_working_dir,
 
-            # these two plugins are already installed.
+            # these plugins are already installed.
             # so we just need to append to the includes.
             # note that these are not mocks, but the actual production
             # code plugins.
 
-            includes=[
+            additional_includes=[
                 'riemann_controller.tasks',
-                'cloudify_system_workflows.deployment_environment'
-            ]
+                'cloudify_system_workflows.deployment_environment',
+                'cloudify.plugins.workflows'
+            ],
+
+            # we need higher concurrency since
+            # 'deployment_environment.create' calls
+            # 'plugin_installer.install' as a sub-task
+            # and they are both executed inside
+            # this worker
+            concurrency=2,
+
+            plugins_dir=mock_plugins_path
         )
 
         self.celery_management_worker_process.start()
@@ -289,7 +239,6 @@ class TestEnvironment(object):
             path.dirname(path.dirname(path.dirname(__file__)))
         manager_rest_path = path.join(manager_rest_path, 'rest-service')
         sys.path.append(manager_rest_path)
-
         os.mkdir(self.fileserver_dir)
         from manager_rest.file_server import FileServer
         from manager_rest.util import copy_resources
@@ -307,31 +256,8 @@ class TestEnvironment(object):
 
         self.patch_source_urls(self.fileserver_dir)
 
-    def kill_non_management_celery_workers(self):
-
-        def kill_workers(state_path):
-            with open(state_path, 'r') as state:
-                data = json.load(state)
-                for deployment_id in data.keys():
-                    for worker_state in data[deployment_id].values():
-                        worker_pids = worker_state['pids']
-                        if worker_pids:
-                            logger.info('Killing processes {0}'.format(str(worker_pids)))
-                            os.system('kill -9 {0}'.format(' '.join(worker_pids)))
-            logger.info('Deleting {0}'.format(state_path))
-            os.remove(state_path)
-
-        import os
-        for root, dirs, files in os.walk(self.test_working_dir):
-            for f in files:
-                # workers are created only
-                # via the worker installer, yey
-                if f == 'worker_installer.json':
-                    kill_workers(os.path.join(root, f))
-
-    def destroy_test_env(self):
-        logger.info('Destroying test environment... [scope={0}]'.format(
-            self.scope))
+    def destroy(self):
+        logger.info('Destroying test environment...')
         if self.riemann_process:
             self.riemann_process.close()
         if self.elasticsearch_process:
@@ -340,6 +266,7 @@ class TestEnvironment(object):
             self.manager_rest_process.close()
         if self.file_server_process:
             self.file_server_process.stop()
+        self.kill_celery_workers()
         self.delete_working_directory()
 
     def delete_working_directory(self):
@@ -363,50 +290,29 @@ class TestEnvironment(object):
         return path.join(cls._get_manager_root(), '.libs')
 
     @staticmethod
-    def create(scope):
-
-        """
-        Creates the test environment if not already created.
-        Save the environment as a global instance for further access.
-
-        :param scope: The scope the test environment is created at.
-        """
-        global test_env_instance
-        if not test_env_instance:
-            test_env_instance = TestEnvironment(scope)
-        return test_env_instance
-
-    @staticmethod
-    def destroy(scope):
-        """
-        Destroys the test environment if the provided scope matches the scope
-        the environment was created with.
-        :param scope: The scope this method is invoked from.
-        """
-        global test_env_instance
-        if test_env_instance and test_env_instance.scope == scope:
-            test_env_instance.destroy_test_env()
-
-    @staticmethod
     def kill_celery_workers():
-        global test_env_instance
-        test_env_instance.kill_non_management_celery_workers()
+        logger.info('Killing all celery processes...')
+        os.system('pkill -f celery -9')
 
     @staticmethod
     def reset_elasticsearch_data():
-        global test_env_instance
-        if test_env_instance and test_env_instance.elasticsearch_process:
-            test_env_instance.elasticsearch_process.reset_data()
+        global testenv_instance
+        testenv_instance.elasticsearch_process.reset_data()
 
     @staticmethod
     def stop_celery_management_worker():
-        global test_env_instance
-        test_env_instance.celery_management_worker_process.stop()
+        global testenv_instance
+        testenv_instance.celery_management_worker_process.stop()
 
     @staticmethod
     def start_celery_management_worker():
-        global test_env_instance
-        test_env_instance.start_management_worker()
+        global testenv_instance
+        testenv_instance.start_management_worker()
+
+    @staticmethod
+    def riemann_workdir():
+        global testenv_instance
+        return testenv_instance.celery_management_worker_process.riemann_config_dir
 
     @staticmethod
     def _get_manager_root():
@@ -415,13 +321,6 @@ class TestEnvironment(object):
         tests_dir = dirname(testenv_dir)
         manager_dir = dirname(tests_dir)
         return manager_dir
-
-    @staticmethod
-    def riemann_workdir():
-        global test_env_instance
-        if test_env_instance and test_env_instance.celery_management_worker_process:
-            return test_env_instance.celery_management_worker_process.riemann_config_dir
-        return None
 
     @staticmethod
     def patch_source_urls(resources):
@@ -489,8 +388,6 @@ def start_events_and_logs_polling():
     polling_thread.start()
 
 
-# TODO - This is a duplication from the CLI.
-# TODO - What can we do?
 def _create_event_message(event):
     context = event['context']
     deployment_id = context['deployment_id']

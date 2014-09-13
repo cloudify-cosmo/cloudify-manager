@@ -28,7 +28,6 @@ class TestUninstallDeployment(TestCase):
         dsl_path = resource("dsl/single_node_no_host.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
 
         states = self.get_plugin_data(
@@ -50,15 +49,10 @@ class TestUninstallDeployment(TestCase):
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
 
-        self.logger.info('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        self.logger.info('deploy completed')
 
-        self.logger.info('starting undeploy process')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
-        self.logger.info('undeploy completed')
 
         machines = self.get_plugin_data(
             plugin_name='cloudmock',
@@ -72,7 +66,6 @@ class TestUninstallDeployment(TestCase):
             "dsl/uninstall_dependencies-order-with-three-nodes.yaml")
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
         # Checking that uninstall wasn't called on the contained node
         states = self.get_plugin_data(
@@ -109,14 +102,9 @@ class TestUninstallDeployment(TestCase):
     def test_stop_monitor_node_operation(self):
         dsl_path = resource(
             "dsl/hardcoded_operation_properties.yaml")
-        print('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        print('deploy completed')
-        print('starting undeploy process')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
-        print('undeploy completed')
         # test stop monitor invocations
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
@@ -132,7 +120,6 @@ class TestUninstallDeployment(TestCase):
         dsl_path = resource('dsl/basic_stop_error.yaml')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
 
         machines = self.get_plugin_data(

@@ -58,12 +58,18 @@ class ExecutionsTest(TestCase):
         execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
-        data = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )
-        invocations = data.get('mock_operation_invocation', {})
-        self.assertEqual(0, len(invocations))
+        try:
+            self.get_plugin_data(
+                plugin_name='testmockoperations',
+                deployment_id=deployment_id
+            )
+            self.fail('Expected storage to not exist since '
+                      'execution was canceled before it started.')
+        except IOError:
+            # no task should have been invoked.
+            # hence, no storage file should
+            # have been created.
+            pass
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")

@@ -58,7 +58,7 @@ class ElasticSearchProcess(object):
                 if e.message:
                     logger.warning(e.message)
                 pass
-            time.sleep(1)
+            time.sleep(0.5)
         if not up:
             raise RuntimeError("Elasticsearch service is not responding @ {"
                                "0} (response: {1})".format(service_url, res))
@@ -69,7 +69,7 @@ class ElasticSearchProcess(object):
             self._pid = self._get_service_pid()
             if self._pid is not None:
                 break
-            time.sleep(1)
+            time.sleep(0.5)
         if self._pid is None:
             raise RuntimeError("Failed to start elasticsearch service within "
                                "a {0} seconds timeout".format(timeout))
@@ -81,7 +81,7 @@ class ElasticSearchProcess(object):
             pid = self._get_service_pid()
             if pid is None:
                 break
-            time.sleep(1)
+            time.sleep(0.5)
         if pid is not None:
             raise RuntimeError("Failed to stop elasticsearch service within "
                                "a {0} seconds timeout".format(timeout))
@@ -112,8 +112,6 @@ class ElasticSearchProcess(object):
         self._create_schema()
 
     def close(self):
-        if self._process:
-            self._process.kill()
         if self._pid:
             logger.info('Shutting down elasticsearch service [pid=%s]',
                         self._pid)
@@ -138,7 +136,7 @@ class ElasticSearchProcess(object):
                         raise RuntimeError(
                             'Elasticsearch index was not deleted after '
                             '30 seconds')
-                    time.sleep(1)
+                    time.sleep(0.5)
             except BaseException as e:
                 logger.warn('Ignoring caught exception on Elasticsearch delete'
                             ' index - {0}: {1}'.format(e.__class__, e.message))
@@ -156,7 +154,7 @@ class ElasticSearchProcess(object):
                 if time.time() > deadline:
                     raise RuntimeError(
                         'Elasticsearch data was not deleted after 30 seconds')
-                time.sleep(1)
+                time.sleep(0.5)
         except Exception as e:
             logger.warn(
                 'Elasticsearch reset data failed: {0}'.format(e.message))

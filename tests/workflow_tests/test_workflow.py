@@ -206,7 +206,7 @@ class BasicWorkflowsTest(TestCase):
 
         def change_execution_status(_execution_id, status):
             self.client.executions.update(_execution_id, status)
-            time.sleep(5)  # waiting for elasticsearch to update...
+            time.sleep(2)  # waiting for elasticsearch to update...
             executions = self.client.deployments.list_executions(deployment_id)
             updated_execution = next(execution for execution in executions
                                      if execution.id == _execution_id)
@@ -220,9 +220,8 @@ class BasicWorkflowsTest(TestCase):
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
 
-        time.sleep(10)  # waiting for elasticsearch to update execution...
         self.client.deployments.delete(deployment_id, False)
-        time.sleep(10)  # waiting for elasticsearch to clear deployment...
+        time.sleep(5)  # elasticsearch...
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
@@ -374,7 +373,7 @@ class BasicWorkflowsTest(TestCase):
         webserver_node = webserver_nodes[0]
         invocations = self.get_plugin_data(
             plugin_name='mock_agent_plugin',
-            host_id=webserver_node.host_id
+            deployment_id=deployment.id
         )[webserver_node.id]
 
         expected_invocations = ['create', 'start']
@@ -383,7 +382,7 @@ class BasicWorkflowsTest(TestCase):
         undeploy(deployment_id=deployment.id)
         invocations = self.get_plugin_data(
             plugin_name='mock_agent_plugin',
-            host_id=webserver_node.host_id
+            deployment_id=deployment.id
         )[webserver_node.id]
 
         expected_invocations = ['create', 'start', 'stop', 'delete']
@@ -409,7 +408,6 @@ class BasicWorkflowsTest(TestCase):
         deployment_workflows_worker_name = '{0}_workflows'.format(deployment.id)
 
         data = self.get_plugin_data(plugin_name='worker_installer',
-                                    worker_name='cloudify.management',
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
@@ -417,13 +415,10 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(data[deployment_operations_worker_name]['states'],
                          ['installed', 'started', 'stopped', 'started'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'], ['installed', 'started'])
-        self.assertTrue(data[deployment_operations_worker_name]['pids'])
-        self.assertTrue(data[deployment_workflows_worker_name]['pids'])
 
         undeploy(deployment.id, delete_deployment=True)
 
         data = self.get_plugin_data(plugin_name='worker_installer',
-                                    worker_name='cloudify.management',
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
@@ -432,8 +427,6 @@ class BasicWorkflowsTest(TestCase):
                          ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
                          ['installed', 'started', 'stopped', 'uninstalled'])
-        self.assertFalse(data[deployment_operations_worker_name]['pids'])
-        self.assertFalse(data[deployment_workflows_worker_name]['pids'])
 
         self.assertFalse(_is_riemann_core_up())
 

@@ -34,19 +34,18 @@ logger = setup_default_logger('celery_worker_process')
 
 class CeleryWorkerProcess(object):
 
-    _process = None
-
     # populated by start
     pids = []
 
     def __init__(self,
                  queues,
                  test_working_dir,
-                 includes=None,
+                 additional_includes=None,
                  name=None,
                  hostname=None,
                  manager_rest_port=MANAGER_REST_PORT,
-                 concurrency=1):
+                 concurrency=1,
+                 plugins_dir=None):
 
         self.test_working_dir = test_working_dir
         self.name = name or queues[0]
@@ -55,7 +54,8 @@ class CeleryWorkerProcess(object):
         self.queues = ','.join(queues)
         self.hostname = hostname or queues[0]
         self.concurrency = concurrency
-        self.includes = includes or []
+        self.additional_includes = additional_includes or []
+        self.plugins_dir = plugins_dir
         self.riemann_config_dir = path.join(self.test_working_dir, 'riemann')
 
         # work folder for this worker
@@ -81,18 +81,20 @@ class CeleryWorkerProcess(object):
             os.makedirs(self.envdir)
 
     def delete_dirs(self):
-        # don't remove the working directory
-        # for the sake of test assertion
-        shutil.rmtree(self.envdir)
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir)
+        if os.path.exists(self.envdir):
+            shutil.rmtree(self.envdir)
 
     def start(self):
 
+        self._copy_plugins()
         self.create_dirs()
-        self._copy_package_plugins()
 
         # includes should always have
         # the initial includes configuration.
-        self.includes.extend(self._build_includes())
+        includes = self._build_includes()
+        includes.extend(self.additional_includes)
 
         python_path = sys.executable
 
@@ -108,7 +110,7 @@ class CeleryWorkerProcess(object):
             '--pidfile={0}'.format(self.celery_pid_file),
             '--queues={0}'.format(self.queues),
             '--concurrency={0}'.format(self.concurrency),
-            '--include={0}'.format(','.join(self.includes))
+            '--include={0}'.format(','.join(includes))
         ]
 
         env_conf = dict(
@@ -137,9 +139,9 @@ class CeleryWorkerProcess(object):
                                             env_conf,
                                             self.envdir))
 
-        self._process = subprocess.Popen(celery_command,
-                                         env=environment,
-                                         cwd=self.envdir)
+        subprocess.Popen(celery_command,
+                         env=environment,
+                         cwd=self.envdir)
 
         timeout = 60
         worker_name = 'celery.{}'.format(self.name)
@@ -151,14 +153,14 @@ class CeleryWorkerProcess(object):
                 if stats:
                     # save celery pids for easy access
                     self.pids = self._get_celery_process_ids()
-                    logger.info("Celery worker started [pid=%s]", self._process.pid)
-                    time.sleep(2)
+                    logger.info('Celery worker started [pids=%s]',
+                                ','.join(self.pids))
                     return
-                time.sleep(1)
+                time.sleep(0.5)
             except BaseException as e:
                 logger.warning('Error when inspecting celery : {0}'.format(e.message))
                 logger.warning('Retrying...')
-                time.sleep(1)
+                time.sleep(0.5)
         raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
                                   .format(timeout))
 
@@ -171,6 +173,7 @@ class CeleryWorkerProcess(object):
             logger.info('Shutting down {0} worker [pid={1}]'
                         .format(self.name, self.pids))
             os.system('kill -9 {0}'.format(' '.join(self.pids)))
+        self.delete_dirs()
 
     def _get_celery_process_ids(self):
         from subprocess import CalledProcessError
@@ -205,28 +208,11 @@ class CeleryWorkerProcess(object):
                     includes.append(full_module_path)
         return includes
 
-    def _copy_package_plugins(self):
+    def _copy_plugins(self):
 
-        # each worker will have these plugins
-        # just like in production mode
-        # since they are a part of the agent package
-
-        from mock_plugins import worker_installer
-        worker_installer_plugin = path.dirname(worker_installer.__file__)
-        dest = os.path.join(self.envdir, os.path.basename(worker_installer_plugin))
-        if not os.path.exists(dest):
+        if self.plugins_dir:
             shutil.copytree(
-                src=worker_installer_plugin,
-                dst=dest,
-                ignore=shutil.ignore_patterns('*.pyc')
-            )
-
-        from mock_plugins import plugin_installer
-        plugin_installer_plugin = path.dirname(plugin_installer.__file__)
-        dest = os.path.join(self.envdir, os.path.basename(plugin_installer_plugin))
-        if not os.path.exists(dest):
-            shutil.copytree(
-                src=plugin_installer_plugin,
-                dst=dest,
+                src=self.plugins_dir,
+                dst=self.envdir,
                 ignore=shutil.ignore_patterns('*.pyc')
             )

@@ -25,10 +25,10 @@ from functools import wraps
 from celery import Celery
 from multiprocessing import Process
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
+from cloudify.utils import setup_default_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
 from os import path
-from cloudify_rest_client.node_instances import NodeInstance
 from testenv.processes.manager_rest import MANAGER_REST_PORT
 
 
@@ -50,8 +50,19 @@ celery.conf.update(
 )
 
 
+logger = setup_default_logger('testenv.utils')
+
+
+def task_exists(name, *args):
+    logger.info('task_exists invoked with : {0}'
+                .format(args))
+    if 'non_existent' in name:
+        raise RuntimeError()
+    return True
+
+
 def deploy_application(dsl_path,
-                       timeout_seconds=240,
+                       timeout_seconds=30,
                        blueprint_id=None,
                        deployment_id=None,
                        wait_for_execution=True):
@@ -85,7 +96,8 @@ def deploy_and_execute_workflow(dsl_path,
         deployment_id = str(uuid.uuid4())
     deployment = client.deployments.create(blueprint.id, deployment_id)
 
-    do_retries(verify_deployment_environment_creation_complete, 30,
+    do_retries(func=verify_deployment_environment_creation_complete,
+               timeout_seconds=30,
                deployment_id=deployment_id)
 
     execution = client.deployments.execute(deployment_id, workflow_name,
@@ -95,20 +107,7 @@ def deploy_and_execute_workflow(dsl_path,
         wait_for_execution_to_end(execution,
                                   timeout_seconds=timeout_seconds)
 
-    do_retries(verify_node_instances_state, 10,
-               deployment_id=deployment_id,
-               expected_state='started')
-
     return deployment, execution.id
-
-
-def verify_node_instances_state(deployment_id, expected_state):
-    client = create_rest_client()
-    node_instances = client.node_instances.list(deployment_id=deployment_id)
-    for node_instance in node_instances:
-        if node_instance.state != expected_state:
-            return False
-    return True
 
 
 def verify_deployment_environment_creation_complete(deployment_id):
@@ -173,7 +172,7 @@ def wait_for_execution_to_end(execution, timeout_seconds=240):
     client = create_rest_client()
     deadline = time.time() + timeout_seconds
     while execution.status not in Execution.END_STATES:
-        time.sleep(1)
+        time.sleep(0.5)
         execution = client.executions.get(execution.id)
         if time.time() > deadline:
             raise TimeoutException()
@@ -193,7 +192,7 @@ def do_retries(func, timeout_seconds=10, exception_class=BaseException, **kwargs
         except exception_class:
             if time.time() > deadline:
                 raise
-            time.sleep(1)
+            time.sleep(0.5)
 
 
 def do_retries_boolean(func, timeout_seconds=10, **kwargs):
