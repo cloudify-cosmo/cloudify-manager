@@ -25,7 +25,6 @@ import unittest
 import json
 import pika
 import yaml
-import cloudify_system_workflows
 
 from os.path import dirname
 from os import path
@@ -243,16 +242,17 @@ class TestEnvironment(object):
         self.celery_management_worker_process = CeleryWorkerProcess(
             queues=['cloudify.management'],
             test_working_dir=self.test_working_dir,
-            includes=['riemann_controller.tasks']
-        )
 
-        cloudify_system_workflows_plugin = path.dirname(cloudify_system_workflows.__file__)
-        dst = os.path.join(self.celery_management_worker_process.envdir,
-                           os.path.basename(cloudify_system_workflows_plugin))
-        if not os.path.exists(dst):
-            shutil.copytree(src=cloudify_system_workflows_plugin,
-                            dst=dst,
-                            ignore=shutil.ignore_patterns('*.pyc'))
+            # these two plugins are already installed.
+            # so we just need to append to the includes.
+            # note that these are not mocks, but the actual production
+            # code plugins.
+
+            includes=[
+                'riemann_controller.tasks',
+                'cloudify_system_workflows.deployment_environment'
+            ]
+        )
 
         self.celery_management_worker_process.start()
 
@@ -340,7 +340,7 @@ class TestEnvironment(object):
             self.manager_rest_process.close()
         if self.file_server_process:
             self.file_server_process.stop()
-        # self.delete_working_directory()
+        self.delete_working_directory()
 
     def delete_working_directory(self):
         if os.path.exists(self.test_working_dir):

@@ -29,11 +29,6 @@ from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 from cloudify.celery import celery as celery_client
 
 
-# each worker will have these plugins
-# just like in production mode
-# since they are a part of the agent package
-PACKAGE_PLUGINS = ['worker_installer.tasks', 'plugin_installer.tasks']
-
 logger = setup_default_logger('celery_worker_process')
 
 
@@ -61,7 +56,6 @@ class CeleryWorkerProcess(object):
         self.hostname = hostname or queues[0]
         self.concurrency = concurrency
         self.includes = includes or []
-        self.includes.extend(PACKAGE_PLUGINS)
         self.riemann_config_dir = path.join(self.test_working_dir, 'riemann')
 
         # work folder for this worker
@@ -208,13 +202,14 @@ class CeleryWorkerProcess(object):
                     full_module_path = '{0}.{1}'\
                         .format(plugin_dir_name,
                                 os.path.splitext(module_name)[0])
-                    # ignore package plugin
-                    # they are already part of the includes
-                    if full_module_path not in PACKAGE_PLUGINS:
-                        includes.append(full_module_path)
+                    includes.append(full_module_path)
         return includes
 
     def _copy_package_plugins(self):
+
+        # each worker will have these plugins
+        # just like in production mode
+        # since they are a part of the agent package
 
         from mock_plugins import worker_installer
         worker_installer_plugin = path.dirname(worker_installer.__file__)
