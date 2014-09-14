@@ -46,7 +46,7 @@ class MockHTTPClient(HTTPClient):
     def _build_url(resource_path, query_params):
         query_string = ''
         if query_params and len(query_params) > 0:
-            query_string += '&' + urllib.urlencode(query_params)
+            query_string += urllib.urlencode(query_params) + '&'
             return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
         return resource_path
 
@@ -218,8 +218,8 @@ class BaseServerTestCase(unittest.TestCase):
 
         if 'error_code' in blueprint_response:
             raise RuntimeError(
-                '{} - {}'.format(blueprint_response['error_code'],
-                                 blueprint_response['message']))
+                '{}: {}'.format(blueprint_response['error_code'],
+                                blueprint_response['message']))
 
         blueprint_id = blueprint_response['id']
         deployment = self.client.deployments.create(blueprint_id,

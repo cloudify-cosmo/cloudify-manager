@@ -171,11 +171,13 @@ class ESStorageManager(object):
                                    'blueprint_id', blueprint_id),
                                fields=include)
 
-    def get_deployment_executions(self, deployment_id, include=None):
+    def get_executions(self, deployment_id=None, include=None):
+        query = None
+        if deployment_id:
+            query = self._build_field_value_filter('deployment_id',
+                                                   deployment_id)
         return self._list_docs(EXECUTION_TYPE, Execution,
-                               self._build_field_value_filter(
-                                   'deployment_id', deployment_id),
-                               fields=include)
+                               query=query, fields=include)
 
     def get_node_instance(self, node_instance_id, include=None):
         doc = self._get_doc(NODE_INSTANCE_TYPE,

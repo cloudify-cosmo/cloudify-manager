@@ -13,10 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 
 from base_test import BaseServerTestCase
+from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
 
@@ -28,8 +27,9 @@ class ExecutionsTestCase(BaseServerTestCase):
     def test_get_deployment_executions_empty(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-        executions = self.get('/deployments/{0}/executions'
-                              .format(deployment_response['id'])).json
+
+        executions = self.client.executions.list(deployment_id=deployment_id)
+
         # expecting 1 execution (create_deployment_environment)
         self.assertEquals(1, len(executions))
         self.assertEquals('create_deployment_environment',
@@ -39,13 +39,9 @@ class ExecutionsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        get_execution = self.get(get_execution_resource).json
-        self.assertEquals(get_execution['status'], 'terminated')
+        execution = self.client.executions.start(deployment_id, 'install')
+        get_execution = self.client.executions.get(execution.id)
+        self.assertEquals(get_execution.status, 'terminated')
         self.assertEquals(get_execution['blueprint_id'], blueprint_id)
         self.assertEquals(get_execution['deployment_id'],
                           deployment_response['id'])
@@ -60,50 +56,42 @@ class ExecutionsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'param1': 'val1', 'param2': 'val2'}
-        response = self.post(resource_path, {
-            'workflow_id': 'install',
-            'parameters': parameters,
-            'allow_custom_parameters': 'true'
-        })
-        self.assertEquals(201, response.status_code)
-        execution = response.json
-        self.assertEqual(parameters, execution['parameters'])
+        execution = self.client.executions.start(deployment_id,
+                                                   'install',
+                                                   parameters,
+                                                   allow_custom_parameters=True)
+        self.assertEqual(parameters, execution.parameters)
 
     def test_execute_with_custom_parameters_not_allowed(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'param1': 'val1', 'param2': 'val2'}
-        resp = self.post(resource_path, {
-            'workflow_id': 'install',
-            'parameters': parameters
-        })
-        self.assertEquals(400, resp.status_code)
-        self.assertEquals(
-            resp.json['error_code'],
-            manager_exceptions.IllegalExecutionParametersError.
-            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE)
+        try:
+            self.client.executions.start(deployment_id,
+                                           'install',
+                                           parameters)
+        except exceptions.CloudifyClientError, e:
+            self.assertEquals(400, e.status_code)
+            expected_error = manager_exceptions.IllegalExecutionParametersError
+            self.assertEquals(
+                expected_error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+                e.error_code)
+            self.assertIn('param1', e.message)
+            self.assertIn('param2', e.message)
         # ensure all custom parameters are mentioned in the error message
-        self.assertIn('param1', resp.json['message'])
-        self.assertIn('param2', resp.json['message'])
 
     def test_get_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'mandatory_param': 'value',
                       'mandatory_param2': 'value2'}
-        execution = self.post(resource_path, {
-            'workflow_id': 'mock_workflow',
-            'parameters': parameters
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
+        execution = self.client.executions.start(deployment_id,
+                                                   'mock_workflow',
+                                                   parameters)
         expected_executions_params = {
             'mandatory_param': 'value',
             'mandatory_param2': 'value2',
@@ -113,24 +101,20 @@ class ExecutionsTestCase(BaseServerTestCase):
                 'value': 'test_value'
             }
         }
-        self.assertEqual(expected_executions_params, execution['parameters'])
+        self.assertEqual(expected_executions_params, execution.parameters)
 
     def test_execution_parameters_override_over_workflow_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        # overriding 'optional_param' with a value of a different type
         parameters = {'mandatory_param': 'value',
                       'mandatory_param2': 'value2',
                       'optional_param': {'overridden_value': 'obj'}}
-        execution = self.post(resource_path, {
-            'workflow_id': 'mock_workflow',
-            'parameters': parameters
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
+        execution = self.client.executions.start(deployment_id,
+                                                   'mock_workflow',
+                                                   parameters)
+        # overriding 'optional_param' with a value of a different type
         expected_executions_params = {
             'mandatory_param': 'value',
             'mandatory_param2': 'value2',
@@ -140,24 +124,19 @@ class ExecutionsTestCase(BaseServerTestCase):
                 'value': 'test_value'
             }
         }
-        self.assertEqual(expected_executions_params, execution['parameters'])
+        self.assertEqual(expected_executions_params, execution.parameters)
 
     def test_execution_parameters_override_no_recursive_merge(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        # overriding one of 'nested_param' subfields
         parameters = {'mandatory_param': 'value',
                       'mandatory_param2': 'value2',
                       'nested_param': {'key': 'overridden_value'}}
-        execution = self.post(resource_path, {
-            'workflow_id': 'mock_workflow',
-            'parameters': parameters
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
+        execution = self.client.executions.start(deployment_id,
+                                                   'mock_workflow',
+                                                   parameters)
         # expecting 'nested_param' to only have the one subfield - there's
         # no recursive merge for parameters, so the second key ('value')
         # should no longer appear
@@ -169,53 +148,53 @@ class ExecutionsTestCase(BaseServerTestCase):
                 'key': 'overridden_value'
             }
         }
-        self.assertEqual(expected_executions_params, execution['parameters'])
+        self.assertEqual(expected_executions_params, execution.parameters)
 
     def test_missing_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
         parameters = {'optional_param': 'some_value'}
-        response = self.post(resource_path, {
-            'workflow_id': 'mock_workflow',
-            'parameters': parameters
-        })
-        self.assertEquals(400, response.status_code)
-        self.assertEquals(
-            response.json['error_code'],
-            manager_exceptions.IllegalExecutionParametersError.
-            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE)
-        # ensure all missing mandatory parameters are mentioned in message
-        self.assertIn('mandatory_param', response.json['message'])
-        self.assertIn('mandatory_param2', response.json['message'])
+        try:
+            self.client.executions.start(deployment_id,
+                                           'mock_workflow',
+                                           parameters)
+            self.fail()
+        except exceptions.CloudifyClientError, e:
+            self.assertEquals(400, e.status_code)
+            error = manager_exceptions.IllegalExecutionParametersError
+            self.assertEquals(
+                error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+                e.error_code)
+            # ensure all missing mandatory parameters are mentioned in message
+            self.assertIn('mandatory_param', e.message)
+            self.assertIn('mandatory_param2', e.message)
 
     def test_bad_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
-
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        parameters = 'not_a_dictionary'
-        response = self.post(resource_path, {
-            'workflow_id': 'mock_workflow',
-            'parameters': parameters
-        })
-        self.assertEquals(400, response.status_code)
-        self.assertEquals(
-            response.json['error_code'],
-            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
-
-        parameters = '[still_not_a_dictionary]'
-        response = self.post(resource_path, {
-            'workflow_id': 'mock_workflow',
-            'parameters': parameters
-        })
-        self.assertEquals(400, response.status_code)
-        self.assertEquals(
-            response.json['error_code'],
-            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
+        try:
+            self.client.executions.start(deployment_id,
+                                           'mock_workflow',
+                                           'not_a_dictionary')
+            self.fail()
+        except exceptions.CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            bad_params_error = manager_exceptions.BadParametersError
+            self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
+                             e.error_code)
+        try:
+            self.client.executions.start(deployment_id,
+                                           'mock_workflow',
+                                           '[still_not_a_dictionary]')
+            self.fail()
+        except exceptions.CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            bad_params_error = manager_exceptions.BadParametersError
+            self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
+                             e.error_code)
 
     def test_passing_parameters_parameter_to_execute(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -223,28 +202,17 @@ class ExecutionsTestCase(BaseServerTestCase):
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         # passing a None parameters value to the execution
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        parameters = None
-        response = self.post(resource_path, {
-            'workflow_id': 'install',
-            'parameters': parameters
-        })
-        self.assertEquals(201, response.status_code)
-        get_execution_resource = '/executions/{0}'.format(response.json['id'])
-        execution = self.get(get_execution_resource).json
-        self.assertEquals('terminated', execution['status'])
+        execution = self.client.executions.start(deployment_id, 'install')
+        execution = self.client.executions.get(execution.id)
+        self.assertEquals('terminated', execution.status)
 
     def test_bad_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
-        self.assertEquals('terminated', execution['status'])
+        execution = self.client.executions.start(deployment_id, 'install')
+        execution = self.client.executions.get(execution.id)
+        self.assertEquals('terminated', execution.status)
         # making a bad update request - not passing the required 'status'
         # parameter
         resp = self.patch('/executions/{0}'.format(execution['id']), {})
@@ -258,37 +226,29 @@ class ExecutionsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
-        self.assertEquals('terminated', execution['status'])
-        self._modify_execution_status(execution['id'], 'new_status')
+        execution = self.client.executions.start(deployment_id, 'install')
+        execution = self.client.executions.get(execution.id)
+        self.assertEquals('terminated', execution.status)
+        self._modify_execution_status(execution.id, 'new_status')
 
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
-        get_execution_resource = '/executions/{0}'.format(execution['id'])
-        execution = self.get(get_execution_resource).json
-        self.assertEquals('terminated', execution['status'])
-        self.assertEquals('', execution['error'])
-        execution = self.patch('/executions/{0}'.format(execution['id']),
-                               {'status': 'new-status',
-                                'error': 'some error'}).json
-        self.assertEquals('new-status', execution['status'])
-        self.assertEquals('some error', execution['error'])
+        execution = self.client.executions.start(deployment_id, 'install')
+        execution = self.client.executions.get(execution.id)
+        self.assertEquals('terminated', execution.status)
+        self.assertEquals('', execution.error)
+        execution = self.client.executions.update(execution.id,
+                                                  'new-status',
+                                                  'some error')
+        self.assertEquals('new-status', execution.status)
+        self.assertEquals('some error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
-        execution = self._modify_execution_status(execution['id'],
+        execution = self._modify_execution_status(execution.id,
                                                   'final-status')
-        self.assertEquals('', execution['error'])
+        self.assertEquals('', execution.error)
 
     def test_update_nonexistent_execution(self):
         resp = self.patch('/executions/1234', {'status': 'new-status'})
@@ -406,18 +366,18 @@ class ExecutionsTestCase(BaseServerTestCase):
                                              expected_status_code):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
 
-        self._modify_execution_status(execution['id'], 'pending')
+        execution = self.client.executions.start(deployment_id, 'install')
+        self._modify_execution_status(execution.id, 'pending')
 
-        response = self.post(resource_path, {
-            'workflow_id': 'install',
-            'force': str(is_use_force).lower()
-        })
-        self.assertEqual(expected_status_code, response.status_code)
+        if expected_status_code >= 400:
+            try:
+                self.client.executions.start(deployment_id,
+                                               'install',
+                                               force=is_use_force)
+                self.fail()
+            except exceptions.CloudifyClientError, e:
+                self.assertEqual(expected_status_code, e.status_code)
 
     def test_get_non_existent_execution(self):
         resource_path = '/executions/idonotexist'
@@ -425,7 +385,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(response.status_code, 404)
 
     def _modify_execution_status(self, execution_id, new_status):
-        resource_path = '/executions/{0}'.format(execution_id)
-        execution = self.patch(resource_path, {'status': new_status}).json
-        self.assertEquals(new_status, execution['status'])
+        execution = self.client.executions.update(execution_id, new_status)
+        self.assertEquals(new_status, execution.status)
         return execution

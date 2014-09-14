@@ -1152,8 +1152,8 @@ def deploy_and_execute_workflow(dsl_path,
     do_retries(verify_deployment_environment_creation_complete, 30,
                deployment_id=deployment_id)
 
-    execution = client.deployments.execute(deployment_id, workflow_name,
-                                           parameters=parameters or {})
+    execution = client.executions.start(deployment_id, workflow_name,
+                                        parameters=parameters or {})
 
     if wait_for_execution:
         wait_for_execution_to_end(execution, timeout=timeout)
@@ -1165,7 +1165,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
     # a workaround for waiting for the deployment environment creation to
     # complete
     client = create_rest_client()
-    execs = client.deployments.list_executions(deployment_id)
+    execs = client.executions.list(deployment_id)
     if not execs \
         or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':

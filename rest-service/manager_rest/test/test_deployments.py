@@ -104,16 +104,12 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
-        self.assertEquals(execution['workflow_id'], 'install')
-        self.assertEquals(execution['blueprint_id'], blueprint_id)
-        self.assertEquals(execution['deployment_id'],
-                          deployment_response['id'])
-        self.assertIsNotNone(execution['created_at'])
-        executions = self.get(resource_path).json
+        execution = self.client.executions.start(deployment_id, 'install')
+        self.assertEquals('install', execution.workflow_id)
+        self.assertEquals(blueprint_id, execution['blueprint_id'])
+        self.assertEquals(deployment_id, execution.deployment_id)
+        self.assertIsNotNone(execution.created_at)
+        executions = self.client.executions.list(deployment_id=deployment_id)
         # expecting two executions - 'install' and
         # 'create_deployment_environment'
         self.assertEquals(2, len(executions))
@@ -127,22 +123,25 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        response = self.post(resource_path, {
-            'workflow_id': 'nonexisting-workflow-id'
-        })
-        self.assertEqual(400, response.status_code)
-        self.assertEquals(response.json['error_code'],
-                          manager_exceptions.NonexistentWorkflowError
-                          .NONEXISTENT_WORKFLOW_ERROR_CODE)
+        try:
+            self.client.executions.start(deployment_id,
+                                         'nonexisting-workflow-id')
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            error = manager_exceptions.NonexistentWorkflowError
+            self.assertEquals(error.NONEXISTENT_WORKFLOW_ERROR_CODE,
+                              e.error_code)
 
     def test_listing_executions_for_nonexistent_deployment(self):
-        resource_path = '/deployments/{0}/executions'.format('doesnotexist')
-        response = self.get(resource_path)
-        self.assertEqual(404, response.status_code)
-        self.assertEquals(
-            response.json['error_code'],
-            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
+        try:
+            self.client.executions.list(deployment_id='doesnotexist')
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(404, e.status_code)
+            self.assertEquals(
+                manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE,
+                e.error_code)
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,

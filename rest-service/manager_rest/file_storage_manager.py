@@ -202,10 +202,12 @@ class FileStorageManager(object):
         return [deployment for deployment in deployments
                 if deployment.blueprint_id == blueprint_id]
 
-    def get_deployment_executions(self, deployment_id, **_):
+    def get_executions(self, deployment_id=None, include=None):
         executions = self.executions_list()
-        return [execution for execution in executions if execution
-                .deployment_id == deployment_id]
+        if deployment_id:
+            executions = [
+                e for e in executions if e.deployment_id == deployment_id]
+        return executions
 
     def get_blueprint(self, blueprint_id, include=None):
         data = self._load_data()
