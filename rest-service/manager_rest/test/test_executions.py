@@ -58,9 +58,9 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         parameters = {'param1': 'val1', 'param2': 'val2'}
         execution = self.client.executions.start(deployment_id,
-                                                   'install',
-                                                   parameters,
-                                                   allow_custom_parameters=True)
+                                                 'install',
+                                                 parameters,
+                                                 allow_custom_parameters=True)
         self.assertEqual(parameters, execution.parameters)
 
     def test_execute_with_custom_parameters_not_allowed(self):
@@ -70,8 +70,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         parameters = {'param1': 'val1', 'param2': 'val2'}
         try:
             self.client.executions.start(deployment_id,
-                                           'install',
-                                           parameters)
+                                         'install',
+                                         parameters)
         except exceptions.CloudifyClientError, e:
             self.assertEquals(400, e.status_code)
             expected_error = manager_exceptions.IllegalExecutionParametersError
@@ -90,8 +90,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         parameters = {'mandatory_param': 'value',
                       'mandatory_param2': 'value2'}
         execution = self.client.executions.start(deployment_id,
-                                                   'mock_workflow',
-                                                   parameters)
+                                                 'mock_workflow',
+                                                 parameters)
         expected_executions_params = {
             'mandatory_param': 'value',
             'mandatory_param2': 'value2',
@@ -112,8 +112,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                       'mandatory_param2': 'value2',
                       'optional_param': {'overridden_value': 'obj'}}
         execution = self.client.executions.start(deployment_id,
-                                                   'mock_workflow',
-                                                   parameters)
+                                                 'mock_workflow',
+                                                 parameters)
         # overriding 'optional_param' with a value of a different type
         expected_executions_params = {
             'mandatory_param': 'value',
@@ -135,8 +135,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                       'mandatory_param2': 'value2',
                       'nested_param': {'key': 'overridden_value'}}
         execution = self.client.executions.start(deployment_id,
-                                                   'mock_workflow',
-                                                   parameters)
+                                                 'mock_workflow',
+                                                 parameters)
         # expecting 'nested_param' to only have the one subfield - there's
         # no recursive merge for parameters, so the second key ('value')
         # should no longer appear
@@ -158,8 +158,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         parameters = {'optional_param': 'some_value'}
         try:
             self.client.executions.start(deployment_id,
-                                           'mock_workflow',
-                                           parameters)
+                                         'mock_workflow',
+                                         parameters)
             self.fail()
         except exceptions.CloudifyClientError, e:
             self.assertEquals(400, e.status_code)
@@ -177,8 +177,8 @@ class ExecutionsTestCase(BaseServerTestCase):
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
         try:
             self.client.executions.start(deployment_id,
-                                           'mock_workflow',
-                                           'not_a_dictionary')
+                                         'mock_workflow',
+                                         'not_a_dictionary')
             self.fail()
         except exceptions.CloudifyClientError, e:
             self.assertEqual(400, e.status_code)
@@ -187,8 +187,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                              e.error_code)
         try:
             self.client.executions.start(deployment_id,
-                                           'mock_workflow',
-                                           '[still_not_a_dictionary]')
+                                         'mock_workflow',
+                                         '[still_not_a_dictionary]')
             self.fail()
         except exceptions.CloudifyClientError, e:
             self.assertEqual(400, e.status_code)
@@ -373,8 +373,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         if expected_status_code >= 400:
             try:
                 self.client.executions.start(deployment_id,
-                                               'install',
-                                               force=is_use_force)
+                                             'install',
+                                             force=is_use_force)
                 self.fail()
             except exceptions.CloudifyClientError, e:
                 self.assertEqual(expected_status_code, e.status_code)

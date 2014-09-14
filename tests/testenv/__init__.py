@@ -1182,8 +1182,7 @@ def undeploy_application(deployment_id, timeout=240):
     path.
     """
     client = create_rest_client()
-    execution = client.deployments.execute(deployment_id,
-                                           'uninstall')
+    execution = client.executions.start(deployment_id, 'uninstall')
     wait_for_execution_to_end(execution, timeout=timeout)
 
     if execution.error and execution.error != 'None':

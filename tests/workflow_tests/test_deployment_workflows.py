@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
-
 
 import uuid
 from testenv import (TestCase,
@@ -48,8 +46,8 @@ class TestDeploymentWorkflows(TestCase):
         self.client.deployments.create(blueprint_id, deployment_id)
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
-        execution = self.client.deployments.execute(deployment_id,
-                                                    'execute_operation')
+        execution = self.client.executions.start(deployment_id,
+                                                 'execute_operation')
         wait_for_execution_to_end(execution)
 
         from plugins.testmockoperations.tasks import \

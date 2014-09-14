@@ -106,7 +106,7 @@ class ExecutionsTest(TestCase):
             },
             'custom-parameter': "doesn't matter"
         }
-        execution = self.client.deployments.execute(
+        execution = self.client.executions.start(
             deployment_id, 'another_execute_operation',
             parameters=execution_parameters,
             allow_custom_parameters=True)
@@ -164,7 +164,7 @@ class ExecutionsTest(TestCase):
         self.client.deployments.create(blueprint_id, deployment_id)
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
-        execution = self.client.deployments.execute(
+        execution = self.client.executions.start(
             deployment_id, workflow_id)
 
         node_inst_id = self.client.node_instances.list(deployment_id)[0].id

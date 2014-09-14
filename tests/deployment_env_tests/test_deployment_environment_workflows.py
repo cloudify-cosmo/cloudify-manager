@@ -153,7 +153,7 @@ class TestDeploymentEnvironmentWorkflows(DeploymentEnvTestCase):
         self.assertFalse(self._is_riemann_core_up())
 
     def _execute(self, workflow):
-        execution = self.client.deployments.execute(DEPLOYMENT_ID, workflow)
+        execution = self.client.executions.start(DEPLOYMENT_ID, workflow)
         wait_for_execution_to_end(execution)
         time.sleep(3)  # wait for execution status to update in elasticsearch
 
