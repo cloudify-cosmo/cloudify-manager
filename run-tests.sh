@@ -81,7 +81,7 @@ run_intergration_tests()
     sudo chmod 777 /dev/shm  # for celery worker
 
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    cd cloudify-rest-client; git checkout CFY-1163-flatten-rest-api; pip install .; cd ..
+    cd cloudify-rest-client; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
