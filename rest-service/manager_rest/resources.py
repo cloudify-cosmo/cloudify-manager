@@ -512,8 +512,9 @@ class Executions(Resource):
         """List executions"""
         deployment_id = request.args.get('deployment_id')
         if deployment_id:
-            get_storage_manager().get_deployment(deployment_id, include=['id'])
-        executions = get_storage_manager().get_executions(
+            get_blueprints_manager().get_deployment(deployment_id,
+                                                    include=['id'])
+        executions = get_blueprints_manager().executions_list(
             deployment_id=deployment_id, include=_include)
         return [responses.Execution(**e.to_dict()) for e in executions]
 

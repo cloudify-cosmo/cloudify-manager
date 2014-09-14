@@ -73,8 +73,8 @@ class ExecutionsTest(TestCase):
         deployment, execution_id = deploy(dsl_path)
 
         def assertions():
-            deployments_executions = self.client.deployments.list_executions(
-                deployment.id)
+            deployments_executions = self.client.executions.list(
+                deployment_id=deployment.id)
             # expecting 2 executions (1 for deployment environment
             # creation and 1 execution of 'install'). Checking the install
             # execution's status

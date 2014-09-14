@@ -56,14 +56,16 @@ class BlueprintsManager(object):
     def deployments_list(self, include=None):
         return self.sm.deployments_list(include=include)
 
-    def executions_list(self, include=None):
-        return self.sm.executions_list(include=include)
+    def executions_list(self, deployment_id=None, include=None):
+        return self.sm.executions_list(deployment_id=deployment_id,
+                                       include=include)
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
 
     def get_deployment(self, deployment_id, include=None):
-        return self.sm.get_deployment(deployment_id, include=include)
+        return self.sm.get_deployment(deployment_id=deployment_id,
+                                      include=include)
 
     def get_execution(self, execution_id, include=None):
         return self.sm.get_execution(execution_id, include=include)
@@ -109,7 +111,7 @@ class BlueprintsManager(object):
         storage.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
-        executions = storage.get_executions(deployment_id=deployment_id)
+        executions = storage.executions_list(deployment_id=deployment_id)
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
@@ -154,7 +156,7 @@ class BlueprintsManager(object):
 
         # validate no execution is currently in progress
         if not force:
-            executions = get_storage_manager().get_executions(
+            executions = get_storage_manager().executions_list(
                 deployment_id=deployment_id)
             running = [
                 e.id for e in executions if
@@ -421,7 +423,7 @@ class BlueprintsManager(object):
                                                             is_retry=False):
         deployment_env_creation_execution = next(
             (execution for execution in
-             get_storage_manager().get_executions(
+             get_storage_manager().executions_list(
                  deployment_id=deployment_id) if execution.workflow_id ==
                 'create_deployment_environment'),
             None)

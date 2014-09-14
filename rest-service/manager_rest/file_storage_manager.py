@@ -193,21 +193,17 @@ class FileStorageManager(object):
         data = self._load_data()
         return data[DEPLOYMENTS].values()
 
-    def executions_list(self, **_):
-        data = self._load_data()
-        return data[EXECUTIONS].values()
+    def executions_list(self, deployment_id=None, **_):
+        executions = self._load_data()[EXECUTIONS].values()
+        if deployment_id:
+            executions = [
+                e for e in executions if e.deployment_id == deployment_id]
+        return executions
 
     def get_blueprint_deployments(self, blueprint_id, **_):
         deployments = self.deployments_list()
         return [deployment for deployment in deployments
                 if deployment.blueprint_id == blueprint_id]
-
-    def get_executions(self, deployment_id=None, include=None):
-        executions = self.executions_list()
-        if deployment_id:
-            executions = [
-                e for e in executions if e.deployment_id == deployment_id]
-        return executions
 
     def get_blueprint(self, blueprint_id, include=None):
         data = self._load_data()
