@@ -181,14 +181,14 @@ def setup_resources(api):
                      '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
+    api.add_resource(Executions,
+                     '/executions')
     api.add_resource(ExecutionsId,
                      '/executions/<string:execution_id>')
     api.add_resource(Deployments,
                      '/deployments')
     api.add_resource(DeploymentsId,
                      '/deployments/<string:deployment_id>')
-    api.add_resource(DeploymentsIdExecutions,
-                     '/deployments/<string:deployment_id>/executions')
     api.add_resource(DeploymentsIdOutputs,
                      '/deployments/<string:deployment_id>/outputs')
     api.add_resource(Nodes,
@@ -496,6 +496,57 @@ class BlueprintsId(Resource):
         shutil.rmtree(uploaded_blueprint_folder)
 
         return responses.BlueprintState(**blueprint.to_dict()), 200
+
+
+class Executions(Resource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Execution.__name__),
+        nickname="list",
+        notes="Returns a list of executions for the optionally provided "
+              "deployment id."
+    )
+    @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
+    def get(self, _include=None):
+        """List executions"""
+        deployment_id = request.args.get('deployment_id')
+        if deployment_id:
+            get_blueprints_manager().get_deployment(deployment_id,
+                                                    include=['id'])
+        executions = get_blueprints_manager().executions_list(
+            deployment_id=deployment_id, include=_include)
+        return [responses.Execution(**e.to_dict()) for e in executions]
+
+    @exceptions_handled
+    @marshal_with(responses.Execution.resource_fields)
+    def post(self):
+        """Execute a workflow"""
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('deployment_id', request_json)
+        verify_parameter_in_request_body('workflow_id', request_json)
+
+        allow_custom_parameters = verify_and_convert_bool(
+            'allow_custom_parameters',
+            request_json.get('allow_custom_parameters', 'false'))
+        force = verify_and_convert_bool(
+            'force',
+            request_json.get('force', 'false'))
+
+        deployment_id = request.json['deployment_id']
+        workflow_id = request.json['workflow_id']
+        parameters = request.json.get('parameters', None)
+
+        if parameters is not None and parameters.__class__ is not dict:
+            raise manager_exceptions.BadParametersError(
+                "request body's 'parameters' field must be a dict but"
+                " is of type {0}".format(parameters.__class__.__name__))
+
+        execution = get_blueprints_manager().execute_workflow(
+            deployment_id, workflow_id, parameters=parameters,
+            allow_custom_parameters=allow_custom_parameters, force=force)
+        return responses.Execution(**execution.to_dict()), 201
 
 
 class ExecutionsId(Resource):
@@ -920,70 +971,6 @@ class DeploymentsIdOutputs(Resource):
             deployment_id)
         return responses.DeploymentOutputs(deployment_id=deployment_id,
                                            outputs=outputs)
-
-
-class DeploymentsIdExecutions(Resource):
-
-    @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Execution.__name__),
-        nickname="list",
-        notes="Returns a list of executions for the provided deployment."
-    )
-    @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
-    def get(self, deployment_id, _include=None):
-        """
-        List deployment executions
-        """
-        get_storage_manager().get_deployment(deployment_id, include=['id'])
-        executions = get_blueprints_manager().get_deployment_executions(
-            deployment_id, include=_include)
-        return [responses.Execution(**e.to_dict()) for e in executions]
-
-    @swagger.operation(
-        responseClass=responses.Execution,
-        nickname="execute",
-        notes="Executes the provided workflow under the given deployment "
-              "context.",
-        parameters=[{'name': 'body',
-                     'description': 'Workflow execution request',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': requests_schema.ExecutionRequest.__name__,
-                     'paramType': 'body'}],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
-    def post(self, deployment_id):
-        """
-        Execute a workflow
-        """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('workflow_id', request_json)
-
-        allow_custom_parameters = verify_and_convert_bool(
-            'allow_custom_parameters',
-            request_json.get('allow_custom_parameters', 'false'))
-        force = verify_and_convert_bool(
-            'force',
-            request_json.get('force', 'false'))
-
-        workflow_id = request.json['workflow_id']
-        parameters = request.json.get('parameters', None)
-
-        if parameters is not None and parameters.__class__ is not dict:
-            raise manager_exceptions.BadParametersError(
-                "request body's 'parameters' field must be a dict but"
-                " is of type {0}".format(parameters.__class__.__name__))
-
-        execution = get_blueprints_manager().execute_workflow(
-            deployment_id, workflow_id, parameters=parameters,
-            allow_custom_parameters=allow_custom_parameters, force=force)
-        return responses.Execution(**execution.to_dict()), 201
 
 
 def _query_elastic_search(index=None, doc_type=None, body=None):

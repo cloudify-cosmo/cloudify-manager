@@ -125,7 +125,8 @@ class TestPolicies(TestCase):
 
     def wait_for_executions(self, expected_count):
         def assertion():
-            executions = self.client.executions.list(self.deployment_id)
+            executions = self.client.executions.list(
+                deployment_id=self.deployment_id)
             self.assertEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 
